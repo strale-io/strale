@@ -22,7 +22,21 @@ cryptographically linked to the commit and workflow run that produced it.
 > configuration. Renaming or moving `release-npm.yml` breaks publishing until
 > the npm-side config is updated to match.
 
-## One-time setup on npmjs.com
+## One-time setup
+
+### 1. Create the protected GitHub environment (do this first)
+
+The release job runs in an environment called `npm-release`. Publishing is
+irreversible and a tag can point at any commit on any branch, so this is the
+approval gate:
+
+1. Repo → **Settings** → **Environments** → **New environment** → `npm-release`.
+2. Enable **Required reviewers** and add yourself.
+
+Without this the environment is auto-created on first use with no protection,
+and a tag push publishes unattended.
+
+### 2. Enable trusted publishing on npmjs.com
 
 Trusted publishing has to be enabled per package by the package owner. This
 cannot be done from CI — it needs a logged-in session on npmjs.com.
@@ -36,8 +50,12 @@ For **each** of the five packages above:
    - **Organization or user:** `strale-io`
    - **Repository:** `strale`
    - **Workflow filename:** `release-npm.yml`
-   - **Environment:** leave empty
+   - **Environment:** `npm-release`
 5. Save.
+
+Setting the Environment field pins npm to releases that passed the approval gate
+above. Leaving it empty also works, but then npm accepts a publish from this
+workflow regardless of which environment it ran in.
 
 Run a dry run (below) before cutting a real release to check the packaging.
 
@@ -56,6 +74,21 @@ Run a dry run (below) before cutting a real release to check the packaging.
 - Do not create a replacement long-lived token. If one is ever genuinely needed
   as a fallback, it should be a **granular access token**, read-write, scoped to
   exactly these five packages, no organization access, shortest workable expiry.
+
+## Why the workflow looks the way it does
+
+Two details are load-bearing and easy to "tidy" into breakage:
+
+- **No `registry-url:` on `actions/setup-node`.** With it, setup-node writes
+  `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` into an `.npmrc` and points
+  `NPM_CONFIG_USERCONFIG` at it. With no token set that line is empty, npm decides
+  authentication is already configured, and never performs the OIDC exchange — the
+  publish fails `ENEEDAUTH`/`E404` even though trusted publishing is set up correctly.
+  `registry.npmjs.org` is npm's default, so omitting it costs nothing.
+  (npm's own documented example carries this defect — see actions/setup-node#1551.)
+- **Node 22, not 20.** npm documents trusted publishing as requiring npm >= 11.5.1
+  *and* Node >= 22.14.0. npm 11 installs fine on Node 20, so the mismatch would only
+  appear at publish time.
 
 ## Releasing
 

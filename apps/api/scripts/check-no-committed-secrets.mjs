@@ -15,6 +15,15 @@
  *
  * Scans tracked files only — untracked and gitignored files are the developer's
  * business; what matters is what reaches the public history.
+ *
+ * SCOPE LIMIT, stated deliberately: this scans the working tree, not each commit
+ * in a PR. A credential added in one commit and removed in a later commit on the
+ * same branch is invisible here. That is safe *only* because this repo squash-
+ * merges, so the intermediate commits never reach main and the tree scanned here
+ * is exactly what lands. `allow_merge_commit` is still enabled on the repo: if a
+ * PR is ever landed as a true merge commit, that assumption breaks and the
+ * intermediate commits will not have been covered. Either keep squash-merging,
+ * or extend this to scan added lines from `git diff <base>...HEAD`.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
@@ -23,13 +32,25 @@ const NUL = String.fromCharCode(0);
 
 const PATTERNS = [
   { name: "Strale/Stripe live secret key", re: /sk_live_[A-Za-z0-9]{24,}/g },
+  { name: "Stripe restricted key", re: /rk_live_[A-Za-z0-9]{24,}/g },
+  { name: "Stripe webhook secret", re: /whsec_[A-Za-z0-9]{32,}/g },
   { name: "npm access token", re: /npm_[A-Za-z0-9]{36}/g },
-  { name: "GitHub personal access token", re: /ghp_[A-Za-z0-9]{36}/g },
+  { name: "GitHub token", re: /gh[pousr]_[A-Za-z0-9]{36}/g },
   { name: "GitHub fine-grained PAT", re: /github_pat_[A-Za-z0-9_]{70,}/g },
   { name: "Anthropic API key", re: /sk-ant-[A-Za-z0-9_-]{90,}/g },
-  { name: "AWS access key id", re: /AKIA[0-9A-Z]{16}/g },
+  { name: "OpenAI project key", re: /sk-proj-[A-Za-z0-9_-]{40,}/g },
+  { name: "AWS access key id", re: /(?:AKIA|ASIA)[0-9A-Z]{16}/g },
+  { name: "Google API key", re: /AIza[0-9A-Za-z_-]{35}/g },
+  { name: "Slack token", re: /xox[baprs]-[0-9A-Za-z-]{20,}/g },
   { name: "Notion integration token", re: /ntn_[A-Za-z0-9]{40,}/g },
+  { name: "Private key block", re: /-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----/g },
 ];
+
+// Vendors ship deliberately-fake credentials in their own documentation, and
+// those get pasted into READMEs. AWS's canonical AKIAIOSFODNN7EXAMPLE matches
+// the pattern above by design. Because this gate scans the whole tree, one such
+// paste would red-line every PR in the repo, so exclude the known-fake forms.
+const isPlaceholder = (v) => v.endsWith("EXAMPLE");
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -58,6 +79,7 @@ for (const file of files) {
     let m;
     while ((m = re.exec(text)) !== null) {
       const line = text.slice(0, m.index).split("\n").length;
+      if (isPlaceholder(m[0])) continue;
       findings.push({ file, line, name, value: m[0] });
     }
   }

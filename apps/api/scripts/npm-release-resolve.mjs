@@ -69,6 +69,15 @@ if (tag) {
   }
 }
 
+// A tag of `strale-mcp@` yields an empty version, which is falsy — the
+// agreement check below used to skip entirely and publish whatever the manifest
+// happened to hold. `*@*` matches that tag, so validate the shape explicitly.
+if (tag) {
+  if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(expectedVersion ?? "")) {
+    fail(`tag "${tag}" does not carry a valid semver version`);
+  }
+}
+
 if (expectedVersion && expectedVersion !== target.version) {
   fail(
     `tag says ${expectedVersion} but ${target.dir}/package.json says ${target.version}. ` +
@@ -81,8 +90,37 @@ if (expectedVersion && expectedVersion !== target.version) {
 const pkg = JSON.parse(readFileSync(`${target.dir}/package.json`, "utf8"));
 const repoUrl = typeof pkg.repository === "string" ? pkg.repository : pkg.repository?.url;
 if (!repoUrl) fail(`${target.dir}/package.json has no "repository" field; provenance attestation requires one`);
-if (!/github\.com[/:]strale-io\/strale(\.git)?$/.test(repoUrl.replace(/^git\+/, ""))) {
-  fail(`${target.dir}/package.json repository "${repoUrl}" does not point at strale-io/strale; provenance would be rejected`);
+
+/**
+ * True when an npm `repository` value resolves to github.com/strale-io/strale.
+ *
+ * Parses the host rather than substring-matching it: an unanchored
+ * /github\.com.../ test also accepts https://evil.example.com/notgithub.com/strale-io/strale.
+ * Accepts every form npm itself accepts, so a correct manifest is never rejected
+ * with a misleading "provenance would be rejected".
+ */
+function resolvesToStraleIo(raw) {
+  const u = String(raw).trim().replace(/^git\+/, "");
+  const strip = (t) => t.replace(/\.git$/, "").replace(/\/$/, "");
+  const TARGET = "strale-io/strale";
+
+  const shorthand = u.match(/^(?:github:)?([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/);
+  if (shorthand) return strip(shorthand[1]) === TARGET;
+
+  const ssh = u.match(/^git@github\.com:(.+)$/);
+  if (ssh) return strip(ssh[1]) === TARGET;
+
+  try {
+    const parsed = new URL(u.replace(/^ssh:\/\//, "https://").replace(/^git:\/\//, "https://"));
+    if (parsed.hostname !== "github.com" && parsed.hostname !== "www.github.com") return false;
+    return strip(parsed.pathname.replace(/^\//, "")) === TARGET;
+  } catch {
+    return false;
+  }
+}
+
+if (!resolvesToStraleIo(repoUrl)) {
+  fail(`${target.dir}/package.json repository "${repoUrl}" does not resolve to github.com/strale-io/strale; provenance would be rejected`);
 }
 
 const out = { dir: target.dir, name: target.name, version: target.version };

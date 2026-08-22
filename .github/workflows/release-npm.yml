@@ -41,17 +41,32 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Publishing is irreversible, and a tag can point at any commit on any
+    # branch. Protect this environment with a required reviewer so a tag push
+    # cannot publish unattended. See docs/release/npm-publishing.md.
+    environment: npm-release
     permissions:
       contents: read
       id-token: write # required: this is what trusted publishing exchanges
     steps:
       - uses: actions/checkout@v4
 
+      # No registry-url on purpose. actions/setup-node would write
+      # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN} into an .npmrc and
+      # point NPM_CONFIG_USERCONFIG at it. With no token set that line is empty,
+      # npm concludes auth is already configured, and it never performs the OIDC
+      # exchange -- the publish then fails ENEEDAUTH/E404 with trusted publishing
+      # correctly set up. registry.npmjs.org is npms default, so omitting this
+      # loses nothing. See actions/setup-node#1551, npm/documentation#1960 --
+      # npms own documented example carries the defect.
+      #
+      # Node 22: npm documents trusted publishing as requiring npm >= 11.5.1 AND
+      # Node >= 22.14.0. npm 11 installs happily on Node 20, so the mismatch
+      # would only surface at publish time.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
-          registry-url: "https://registry.npmjs.org"
 
       # Node 20 ships npm 10.x; trusted publishing needs >= 11.5.1. Pinned to
       # the 11.x line rather than @latest: this tool performs an irreversible
@@ -100,7 +115,17 @@ jobs:
           NAME: ${{ steps.target.outputs.name }}
           VERSION: ${{ steps.target.outputs.version }}
         run: |
-          existing=$(npm view "$NAME@$VERSION" version 2>/dev/null || true)
+          set +e
+          existing=$(npm view "$NAME@$VERSION" version 2>/tmp/npmview.err)
+          rc=$?
+          set -e
+          # rc!=0 is expected only when the package/version does not exist (E404).
+          # Any other failure means we verified nothing; do not call that a pass.
+          if [ $rc -ne 0 ] && ! grep -q "E404" /tmp/npmview.err; then
+            echo "::error::npm view failed for $NAME@$VERSION; cannot confirm the version is unpublished"
+            cat /tmp/npmview.err
+            exit 1
+          fi
           if [ -n "$existing" ]; then
             echo "::error::$NAME@$VERSION is already on npm. Versions are immutable — bump and re-tag."
             exit 1
@@ -112,6 +137,7 @@ jobs:
         run: npm pack --dry-run
 
       - name: Publish
+        id: publish
         if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
         working-directory: ${{ steps.target.outputs.dir }}
         run: npm publish
@@ -123,9 +149,9 @@ jobs:
         run: |
           {
             echo "### ${NAME}@${VERSION}"
-            if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.dry_run }}" = "false" ]; then
+            if [ "${{ steps.publish.outcome }}" = "success" ]; then
               echo "Published with provenance via trusted publishing."
             else
-              echo "Dry run — packed and validated, nothing published."
+              echo "Not published (dry run or skipped) — packed and validated only."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
