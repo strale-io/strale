@@ -309,7 +309,9 @@ solutionExecuteRoute.post(
     // ── 5. Execute solution steps ─────────────────────────────────────
     let execResult;
     try {
-      execResult = await executeSolution(sol.id, inputs as Record<string, unknown>);
+      execResult = await executeSolution(sol.id, inputs as Record<string, unknown>, {
+        userId: user?.id ?? null,
+      });
     } catch (err) {
       const latencyMs = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : String(err);

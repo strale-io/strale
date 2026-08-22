@@ -8,8 +8,14 @@ import {
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import {
   assertBillableOutput,
+  outcomeFromError,
+  outcomeFromOutput,
   shouldCountAgainstCapability,
 } from "../lib/execution-outcome.js";
+import {
+  computeServedFree,
+  recordAnonymousInvocation,
+} from "../lib/invocation-facts.js";
 import {
   wallets,
   walletTransactions,
@@ -267,6 +273,11 @@ type CapabilityInfo = {
   dataSource: string | null;
   dataClassification: string | null;
   freshnessCategory: string | null;
+  // Routing only. An earlier comment here said the invocation-fact writer
+  // derives is_free_tier from this field; it does not, and has not since the
+  // derivation was replaced by computeServedFree(). The field was already
+  // selected before WP9 and is used to choose an execution path.
+  isFreeTier: boolean;
   dataUpdateCycleDays: number | null;
   datasetLastUpdated: Date | null;
   // SA.2b (F-A-003, F-A-009): manifest-declared PII classification.
@@ -330,20 +341,117 @@ export async function spendCapWouldExceed(
   return null;
 }
 
-/** Execute with retry for non-deterministic capabilities. */
-function executeWithRetry(
+/**
+ * Who the invocation fact should be attributed to.
+ *
+ * Threaded as an explicit parameter rather than read from a context, so adding
+ * a fifth execution path to this route is a COMPILE error until it says whose
+ * call it is. WP4 was accepted with one of five rails silently unwired; a
+ * required parameter is the cheapest way to make that particular mistake
+ * unavailable.
+ */
+/**
+ * Who the invocation fact belongs to, as a discriminated union.
+ *
+ * The union is the guard. Only the anonymous variant carries `servedFree`, so
+ * the three authenticated execution paths cannot express "this was served free"
+ * even by accident -- it is a type error, not a convention. Review found seven
+ * of nine call sites unguarded when this was a plain boolean, and the previous
+ * two rounds each fixed it by pinning one more file with a source-text
+ * assertion, which is how it kept coming back one file over.
+ */
+type InvocationActor =
+  | {
+      kind: "anonymous";
+      /**
+       * Was this call served WITHOUT payment? Computed once in executeFreeTier
+       * and handed to both the transaction row and the fact, because two
+       * independent derivations of it have been falsified in opposite
+       * directions.
+       */
+      servedFree: boolean;
+    }
+  | { kind: "account"; userId: string };
+
+/**
+ * Execute with retry for non-deterministic capabilities.
+ *
+ * WP9: this is also where the `/v1/do` rail records its invocation fact. The
+ * route has FOUR call sites (anonymous free-tier, authenticated free-tier, sync
+ * and async)
+ * and WP4 was accepted with one of five rails silently unwired — recording at
+ * the wrapper instead of at each caller makes that failure unavailable. A new
+ * execution path added to this route inherits the fact by construction, because
+ * there is no way to run an executor here without going through this function.
+ *
+ * One fact per LOGICAL invocation, not per retry attempt: a call that succeeds
+ * on its second try is a success, and counting the attempt separately would
+ * both understate quality and break the floor's fact-vs-transaction
+ * completeness cross-check.
+ */
+/**
+ * Write the invocation fact WITHOUT extending an open wallet transaction.
+ *
+ * `executeSync` runs the executor inside `db.transaction`, holding the wallet
+ * row under FOR UPDATE. `recordInvocation` uses the base handle, not that `tx`,
+ * so awaiting it there reserved a SECOND connection from the same 30-connection
+ * pool while the first was still held — thirty concurrent paid calls would each
+ * hold one and queue for a thirty-first that only they could free, exiting only
+ * via the transaction's 15s idle-in-transaction timeout, as a wave of failed
+ * paid calls whose vendor cost had already been spent.
+ *
+ * Before WP9 nothing inside that transaction touched a second connection, and
+ * the comment at the top of the block exists specifically to bound how long the
+ * wallet lock is held. So the fact is tracked rather than awaited: the write
+ * still completes and still blocks shutdown until it does, but it no longer sits
+ * inside the lock. `recordInvocation` never throws and is explicitly
+ * best-effort, so nothing downstream depended on the await.
+ */
+function recordFactWithoutHoldingTheLock(
+  fact: Parameters<typeof recordAnonymousInvocation>[0],
+): void {
+  void trackBackgroundTask(
+    `invocation-fact:${fact.rail}:${fact.capabilitySlug}`,
+    recordAnonymousInvocation(fact),
+  );
+}
+
+async function executeWithRetry(
   executor: (input: Record<string, unknown>) => Promise<any>,
   input: Record<string, unknown>,
   capability: CapabilityInfo,
+  actor: InvocationActor,
 ): Promise<any> {
-  if (capability.capabilityType === "deterministic") {
-    return executor(input);
+  const startedAt = Date.now();
+  try {
+    const result =
+      capability.capabilityType === "deterministic"
+        ? await executor(input)
+        : await withRetry(() => executor(input), {
+            maxRetries: 1,
+            baseDelayMs: 1000,
+            slug: capability.slug,
+          });
+    recordFactWithoutHoldingTheLock({
+      capabilitySlug: capability.slug,
+      rail: "v1_do",
+      userId: actor.kind === "account" ? actor.userId : null,
+      servedFree: actor.kind === "anonymous" ? actor.servedFree : false,
+      latencyMs: Date.now() - startedAt,
+      outcome: outcomeFromOutput(capability.slug, result?.output),
+    });
+    return result;
+  } catch (err) {
+    recordFactWithoutHoldingTheLock({
+      capabilitySlug: capability.slug,
+      rail: "v1_do",
+      userId: actor.kind === "account" ? actor.userId : null,
+      servedFree: actor.kind === "anonymous" ? actor.servedFree : false,
+      latencyMs: Date.now() - startedAt,
+      outcome: outcomeFromError(err),
+    });
+    throw err;
   }
-  return withRetry(() => executor(input), {
-    maxRetries: 1,
-    baseDelayMs: 1000,
-    slug: capability.slug,
-  });
 }
 
 // ─── MCP client detection from User-Agent ────────────────────────────────────
@@ -1334,6 +1442,17 @@ async function executeFreeTier(
   const startTime = Date.now();
   const marker = getTransparencyMarker(capability.transparencyTag);
 
+  // ONE value, two writes. This function serves three anonymous cases -- a
+  // genuinely free-tier capability, a progressive-unlock call, and an X-Payment
+  // call -- and only the last of those was paid for. Computed here and handed to
+  // both the transaction row below and the invocation fact, because two
+  // independent derivations of the same fact is precisely what review falsified
+  // twice: the transaction is UPDATEd to is_free_tier=false on successful x402
+  // settlement (see the settlement update further down), and production shows
+  // 5 of 5 such rows are false, so any derivation that answered "free" for them
+  // would drop genuinely paid traffic out of the quality floor.
+  const servedFree = computeServedFree(c.get("x402_paid" as any));
+
   // Create a persisted transaction record so the audit trail is verifiable.
   // MED-10: write client_ip_hash directly so the free-tier rate-limit query
   // hits a top-level indexed column instead of audit_trail JSONB.
@@ -1349,13 +1468,15 @@ async function executeFreeTier(
       priceCents: 0,
       transparencyMarker: marker,
       dataJurisdiction: getProcessingJurisdictions(capability.capabilityType, capability.transparencyTag).join(","),
-      isFreeTier: true,
+      // The same variable the fact gets. Two derivations of one fact is what
+      // review falsified twice.
+      isFreeTier: servedFree,
       clientIpHash: reqCtxForInsert?.ipHash ?? null,
     })
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability);
+    const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "anonymous", servedFree });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1614,7 +1735,7 @@ async function executeFreeTierAuthenticated(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability);
+    const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "account", userId: user.id });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1905,7 +2026,7 @@ async function executeSync(
 
     // Execute the capability
     try {
-      const capResult = await executeWithRetry(executor, executionInput, capability);
+      const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "account", userId: user.id });
       assertBillableOutput(capability.slug, capResult.output);
       const latencyMs = Date.now() - startTime;
 
@@ -2349,6 +2470,7 @@ async function executeAsync(
     `async-exec:${capability.slug}:${transactionId}`,
     executeInBackground(
       db,
+      { kind: "account", userId: user.id },
       executor,
       executionInput,
       transactionId,
@@ -2405,6 +2527,7 @@ async function executeAsync(
 
 async function executeInBackground(
   db: ReturnType<typeof getDb>,
+  actor: InvocationActor,
   executor: (input: Record<string, unknown>) => Promise<any>,
   executionInput: Record<string, unknown>,
   transactionId: string,
@@ -2434,7 +2557,7 @@ async function executeInBackground(
     // the optimistic debit. The race forces the catch block to run when
     // the wall-clock budget is up.
     const capResult = await executeWithHardTimeout(
-      executeWithRetry(executor, executionInput, capability),
+      executeWithRetry(executor, executionInput, capability, actor),
       EXEC_HARD_TIMEOUT_MS,
     );
     assertBillableOutput(capability.slug, capResult.output);

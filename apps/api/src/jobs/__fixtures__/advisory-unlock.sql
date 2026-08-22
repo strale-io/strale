@@ -1,0 +1,1 @@
+SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})

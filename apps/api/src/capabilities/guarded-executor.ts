@@ -40,6 +40,8 @@ import {
   type CapabilityResult,
   getExecutor,
 } from "./index.js";
+import { outcomeFromError, outcomeFromOutput } from "../lib/execution-outcome.js";
+import { recordInvocation, type InvocationRail } from "../lib/invocation-facts.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -620,13 +622,47 @@ export async function guardedExecute(
   slug: string,
   input: CapabilityInput,
   ctx: InvocationContext,
+  rail: InvocationRail,
 ): Promise<CapabilityResult> {
   await assertGuardedAllow(slug, ctx);
   const executor: CapabilityExecutor | undefined = getExecutor(slug);
   if (!executor) {
     throw new Error(`Executor not registered for ${slug}`);
   }
-  return executor(input);
+  // WP9: this function RUNS an executor, so it records what happened. No RAIL
+  // uses it — every rail calls `assertGuardedAllow` and drives the executor
+  // itself — but `scripts/onboard.ts` and `scripts/smoke-test.ts` do, which is
+  // why `rail` had to be threaded through them. An executor-
+  // invoking helper that records nothing is a ready-made way for the next rail
+  // to be invisible to the quality floor. The `rail` parameter is required
+  // rather than derived, because "which entry point is this" is not something
+  // the cost-control context knows, and guessing it would put a wrong answer in
+  // an evidence table.
+  const startedAt = Date.now();
+  try {
+    const result = await executor(input);
+    await recordInvocation({
+      capabilitySlug: slug,
+      rail,
+      contextKind: ctx.kind,
+      userId: ctx.kind === "customer_paid" ? ctx.userId : null,
+      transactionId: ctx.kind === "customer_paid" ? ctx.transactionId : null,
+      latencyMs: Date.now() - startedAt,
+      outcome: outcomeFromOutput(slug, result.output),
+    });
+    return result;
+  } catch (err) {
+    await recordInvocation({
+      capabilitySlug: slug,
+      rail,
+      contextKind: ctx.kind,
+      userId: ctx.kind === "customer_paid" ? ctx.userId : null,
+      transactionId: ctx.kind === "customer_paid" ? ctx.transactionId : null,
+      latencyMs: Date.now() - startedAt,
+      outcome: outcomeFromError(err),
+    });
+    throw err;
+  }
 }
 
 /**

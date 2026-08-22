@@ -296,7 +296,7 @@ async function executeCapability(
         kind: "internal_test",
         suiteId: "onboard-script",
         reason: "manual",
-      }),
+      }, "onboarding"),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Timeout after 30s")), 30_000),
       ),

@@ -120,7 +120,7 @@ async function smokeTest(
           kind: "internal_test",
           suiteId: knownAnswerSuite.id,
           reason: "manual",
-        }),
+        }, "harness"),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Timeout after 30s")), 30_000),
         ),
@@ -201,7 +201,7 @@ async function smokeTest(
           kind: "internal_test",
           suiteId: negativeSuite.id,
           reason: "manual",
-        }),
+        }, "harness"),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Timeout after 15s")), 15_000),
         ),

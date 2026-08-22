@@ -93,26 +93,26 @@ describe("ALLOW_MATRIX", () => {
   it("free_unlimited × customer_paid → allow", async () => {
     stubMeta({ slug: "x", cost_class: "free_unlimited" });
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("x", {}, customerCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("x", {}, customerCtx(), "harness")).resolves.toBeDefined();
     expect(mockExecutor).toHaveBeenCalledTimes(1);
   });
 
   it("free_unlimited × internal_test → allow", async () => {
     stubMeta({ slug: "x", cost_class: "free_unlimited" });
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("x", {}, internalCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("x", {}, internalCtx(), "harness")).resolves.toBeDefined();
     expect(mockExecutor).toHaveBeenCalledTimes(1);
   });
 
   it("paid_prepaid × customer_paid → allow", async () => {
     stubMeta({ slug: "x", cost_class: "paid_prepaid" });
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("x", {}, customerCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("x", {}, customerCtx(), "harness")).resolves.toBeDefined();
   });
 
   it("paid_prepaid × internal_test → refuse", async () => {
     stubMeta({ slug: "x", cost_class: "paid_prepaid" });
-    await expect(guardedExecute("x", {}, internalCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("x", {}, internalCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityInvocationRefusedError,
     );
     expect(mockExecutor).not.toHaveBeenCalled();
@@ -120,14 +120,14 @@ describe("ALLOW_MATRIX", () => {
 
   it("paid_prepaid × ci → refuse", async () => {
     stubMeta({ slug: "x", cost_class: "paid_prepaid" });
-    await expect(guardedExecute("x", {}, ciCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("x", {}, ciCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityInvocationRefusedError,
     );
   });
 
   it("paid_prepaid × health_probe → refuse", async () => {
     stubMeta({ slug: "x", cost_class: "paid_prepaid" });
-    await expect(guardedExecute("x", {}, probeCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("x", {}, probeCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityInvocationRefusedError,
     );
   });
@@ -135,12 +135,12 @@ describe("ALLOW_MATRIX", () => {
   it("paid_subscription × health_probe → allow (subs absorb probes)", async () => {
     stubMeta({ slug: "x", cost_class: "paid_subscription" });
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("x", {}, probeCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("x", {}, probeCtx(), "harness")).resolves.toBeDefined();
   });
 
   it("paid_subscription × internal_test → refuse (preserves fair-use)", async () => {
     stubMeta({ slug: "x", cost_class: "paid_subscription" });
-    await expect(guardedExecute("x", {}, internalCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("x", {}, internalCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityInvocationRefusedError,
     );
   });
@@ -148,7 +148,7 @@ describe("ALLOW_MATRIX", () => {
   it("free_quota × customer_paid → allow (no budget check)", async () => {
     stubMeta({ slug: "x", cost_class: "free_quota", quota_window: "monthly", quota_cap: 50 });
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("x", {}, customerCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("x", {}, customerCtx(), "harness")).resolves.toBeDefined();
     // Only 1 DB call (cost-meta SELECT). No budget INSERT for customer_paid.
     expect(mockDbExecute).toHaveBeenCalledTimes(1);
   });
@@ -160,7 +160,7 @@ describe("ALLOW_MATRIX", () => {
       { test_count: 3, budget_cap: 10, alert_30_fired_at: new Date(), alert_50_fired_at: new Date(), alert_80_fired_at: new Date(), hard_stop_fired_at: null },
     ]);
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("x", {}, internalCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("x", {}, internalCtx(), "harness")).resolves.toBeDefined();
     expect(mockExecutor).toHaveBeenCalledTimes(1);
   });
 });
@@ -171,12 +171,12 @@ describe("NULL_DECISIONS (unclassified cap_class)", () => {
   it("null × customer_paid → allow (preserves traffic during GRACE)", async () => {
     stubMeta({ slug: "x", cost_class: null });
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("x", {}, customerCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("x", {}, customerCtx(), "harness")).resolves.toBeDefined();
   });
 
   it("null × internal_test → CapabilityNotClassifiedError", async () => {
     stubMeta({ slug: "x", cost_class: null });
-    await expect(guardedExecute("x", {}, internalCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("x", {}, internalCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityNotClassifiedError,
     );
     expect(mockExecutor).not.toHaveBeenCalled();
@@ -184,14 +184,14 @@ describe("NULL_DECISIONS (unclassified cap_class)", () => {
 
   it("null × health_probe → refuse", async () => {
     stubMeta({ slug: "x", cost_class: null });
-    await expect(guardedExecute("x", {}, probeCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("x", {}, probeCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityNotClassifiedError,
     );
   });
 
   it("null × ci → refuse", async () => {
     stubMeta({ slug: "x", cost_class: null });
-    await expect(guardedExecute("x", {}, ciCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("x", {}, ciCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityNotClassifiedError,
     );
   });
@@ -476,7 +476,7 @@ describe("budget-counter bind shapes (DEC-20260504-A)", () => {
       { test_count: 1, budget_cap: 40, alert_30_fired_at: null, alert_50_fired_at: null, alert_80_fired_at: null, hard_stop_fired_at: null },
     ]);
     mockExecutor.mockResolvedValueOnce({ output: {}, provenance: { source: "x", fetched_at: "" } });
-    await guardedExecute("x", {}, internalCtx());
+    await guardedExecute("x", {}, internalCtx(), "harness");
     for (const call of mockDbExecute.mock.calls) {
       for (const arg of call) {
         expect(containsDate(arg)).toBe(false);
@@ -500,7 +500,7 @@ describe("seedCostMetaForOnboarding (pre-insert verification)", () => {
   it("un-fixed ordering (pinned): no DB row + no seed → internal_test refused", async () => {
     // No capabilities row for this slug — SELECT returns zero rows.
     mockDbExecute.mockImplementationOnce(async () => []);
-    await expect(guardedExecute("brand-new-cap", {}, internalCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("brand-new-cap", {}, internalCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityNotClassifiedError,
     );
     expect(mockExecutor).not.toHaveBeenCalled();
@@ -516,7 +516,7 @@ describe("seedCostMetaForOnboarding (pre-insert verification)", () => {
       quota_reset_dom: null,
     });
     mockExecutor.mockResolvedValueOnce({ output: { ok: true }, provenance: { source: "x", fetched_at: "" } });
-    await expect(guardedExecute("brand-new-cap", {}, internalCtx())).resolves.toBeDefined();
+    await expect(guardedExecute("brand-new-cap", {}, internalCtx(), "harness")).resolves.toBeDefined();
     expect(mockExecutor).toHaveBeenCalledTimes(1);
     // The cache hit must have prevented the DB lookup entirely.
     expect(mockDbExecute).not.toHaveBeenCalled();
@@ -530,7 +530,7 @@ describe("seedCostMetaForOnboarding (pre-insert verification)", () => {
       quota_cap: null,
       quota_reset_dom: null,
     });
-    await expect(guardedExecute("paid-new-cap", {}, internalCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("paid-new-cap", {}, internalCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityInvocationRefusedError,
     );
     expect(mockExecutor).not.toHaveBeenCalled();
@@ -567,7 +567,7 @@ describe("seedCostMetaForOnboarding (pre-insert verification)", () => {
       quota_reset_dom: null,
     });
     mockDbExecute.mockImplementationOnce(async () => []);
-    await expect(guardedExecute("different-cap", {}, internalCtx())).rejects.toBeInstanceOf(
+    await expect(guardedExecute("different-cap", {}, internalCtx(), "harness")).rejects.toBeInstanceOf(
       CapabilityNotClassifiedError,
     );
   });

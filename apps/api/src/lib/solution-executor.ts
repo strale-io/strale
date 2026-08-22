@@ -26,6 +26,12 @@ import {
   BudgetExhaustedError,
 } from "../capabilities/guarded-executor.js";
 import { sanitizeFailureReason } from "./sanitize.js";
+import {
+  outcomeFromError,
+  outcomeFromOutput,
+  outcomeFromPlatformFault,
+} from "./execution-outcome.js";
+import { recordPaidInvocation } from "./invocation-facts.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
 import { logWarn } from "./log.js";
 
@@ -330,6 +336,14 @@ export function gateTrips(output: unknown, gate: GateCondition): boolean {
 export async function executeSolution(
   solutionId: string,
   inputs: Record<string, unknown>,
+  /**
+   * Who the per-step invocation facts belong to (WP9). Required, not optional:
+   * a defaulted actor would silently attribute every step to nobody, and "the
+   * parameter was threaded in and then never written" is a mistake this
+   * codebase has already shipped once. The x402 rail genuinely has no account,
+   * which is why `userId` is nullable rather than the parameter being absent.
+   */
+  actor: { userId: string | null },
 ): Promise<SolutionExecutionResult | null> {
   const db = getDb();
   // WP8: eligibility is deliberately NOT read here. It is re-read per group at
@@ -505,6 +519,12 @@ export async function executeSolution(
       }
 
       const stepStartMs = Date.now();
+      // Which phase threw. This try covers OUR input mapping and OUR output
+      // enrichment as well as the capability's executor, and WP9 turns what
+      // used to be an unrecorded step failure into a row an armed floor reads.
+      // Without this, a bug in our own plumbing counts toward delisting a
+      // capability that did nothing wrong.
+      let phase: "input" | "executor" | "enrich" = "input";
       try {
         // Map solution inputs to step inputs using seed-data syntax
         const stepInput: Record<string, unknown> = {};
@@ -543,18 +563,49 @@ export async function executeSolution(
           if (v === null || v === undefined) delete stepInput[k];
         }
 
+        phase = "executor";
         const result = await executor(stepInput);
+        phase = "enrich";
         // Enrich company data outputs with derived fields (e.g., vat_number)
         const output = enrichCompanyOutput(
           step.capabilitySlug,
           result.output as Record<string, unknown>,
         );
+        // WP9 — the defect this package exists to close. A bundle writes ONE
+        // transaction with `capability_id = NULL`, so before this line a
+        // capability invoked only inside solutions produced no per-capability
+        // record anywhere and the quality floor could not see it at all: it
+        // could fail every bundle call it served and never become
+        // quarantinable, because as far as the floor's query was concerned it
+        // had no traffic.
+        //
+        // Assessed on the ENRICHED output, which is what the customer receives
+        // and what the solution's own aggregate outcome is computed from —
+        // assessing the raw result here would let the step's quality record and
+        // its billing verdict disagree about the same call.
+        await recordPaidInvocation({
+          capabilitySlug: step.capabilitySlug,
+          rail: "solution_step",
+          solutionId,
+          userId: actor.userId,
+          latencyMs: Date.now() - stepStartMs,
+          outcome: outcomeFromOutput(step.capabilitySlug, output),
+        });
         stepResults[step.capabilitySlug] = output;
         // F-B-016: index by step position, not completion order.
         completedSteps[stepIndex.get(step)!] = output;
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
+        await recordPaidInvocation({
+          capabilitySlug: step.capabilitySlug,
+          rail: "solution_step",
+          solutionId,
+          userId: actor.userId,
+          latencyMs: Date.now() - stepStartMs,
+          outcome:
+            phase === "executor" ? outcomeFromError(err) : outcomeFromPlatformFault(err),
+        });
         stepErrors.push(`${step.capabilitySlug}: ${msg.slice(0, 200)}`);
         stepResults[step.capabilitySlug] = { error: sanitizeFailureReason(msg) };
         // F-B-016: on error, still mark the slot with an error marker so

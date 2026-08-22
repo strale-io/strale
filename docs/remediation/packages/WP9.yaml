@@ -1,0 +1,638 @@
+package: WP9
+title: Capability Invocation Facts
+status: REVIEW_PASSED_AWAITING_FOUNDER_APPROVAL
+depends_on: [WP4, WP8]
+risks: [CR-06]
+
+objective: >
+  Record what a capability invocation actually did, once, as a fact — so the
+  quality floor and the breaker reason from evidence rather than from whichever
+  table happens to have a row.
+
+# Measured against PRODUCTION, not read off the audit.
+production_evidence:
+  the_floor_joins_on_capability_id: >
+    jobs/quality-floor.ts:172 — `JOIN transactions t ON t.capability_id = c.id`.
+    That is the entire basis on which a capability is quarantined or proposed
+    for deactivation.
+  solution_steps_produce_no_such_row: >
+    A solution execution writes ONE transaction with `capability_id = NULL` and
+    `solution_slug` set. The individual step results live inside that row's
+    `output.steps` JSONB. 694 such rows exist, all with a null capability_id.
+    So a capability invoked as a solution step produces ZERO rows carrying its
+    id, and the floor's join cannot see it at all.
+  hidden_volume: >
+    126 sub-calls in the last 30 days are buried in `output.steps` and invisible
+    to the floor, against 178,277 direct capability rows (overwhelmingly the
+    internal harness). The absolute number is small today; the structural gap is
+    not, and it grows with every bundle sold.
+  what_this_means_concretely: >
+    A capability that fails ONLY inside bundles is invisible to the quality
+    floor. It cannot be quarantined, because as far as the floor's query is
+    concerned it has no traffic. Conversely a capability quarantined on direct
+    traffic keeps being invoked as a step until WP8 gated that — and WP8's gate
+    is the only thing standing between the two views today.
+
+defects:
+  no_invocation_record: >
+    There is no row that says "capability X was invoked at time T and this is
+    what happened". There is a transaction row, which conflates the CALL
+    (billing, rail, customer) with the INVOCATION (did this capability work).
+    For a direct call the two coincide; for a solution step they do not, and the
+    step's outcome is stored as JSON inside someone else's row.
+  the_floor_reads_billing_rows_for_a_quality_question: >
+    `transactions` is a billing artefact. Using it as the quality signal is why
+    the floor needs `is_free_tier = false`, an internal-email exclusion list, a
+    deleted_at filter and a status whitelist — four filters that exist to undo
+    the fact that it is reading the wrong table.
+  wp4_outcome_is_computed_then_discarded: >
+    lib/execution-outcome.ts already produces exactly the fact this package
+    needs — success, failure_class, billable, fault, counts_against_capability,
+    output_assessment. It is used for the billing decision and then thrown away.
+    The invocation fact should be that outcome, persisted.
+
+design:
+  one_row_per_invocation: >
+    Written wherever a capability executor is invoked — the /v1/do rails, the
+    x402 capability rail, and each solution STEP. Carries the capability slug,
+    the canonical ExecutionOutcome fields, and latency.
+    NOT the parent transaction: the column exists and the writer passes it
+    through, but no rail supplies one, so it is null for 100% of writes and its
+    index is dead. An earlier version of this line claimed the linkage as
+    delivered and review was right to call it false. Populating it is a
+    one-line-per-site change and is deliberately out of scope here.
+  the_floor_consumes_facts: >
+    Replacing a join on billing rows with a read of invocation facts makes
+    solution steps count. That is the exit condition, and the acceptance signal
+    is that a capability failing only inside bundles becomes quarantinable.
+    An earlier version of this line claimed the swap "removes the four
+    compensating filters". It does not, and review said so: the fact branch
+    still carries a free-tier filter, an internal-account exclusion and a
+    verdict discriminator, and adds context_kind. Only deleted_at goes, and only
+    because the column does not exist on facts. The gain is that solution steps
+    are visible, not that the query gets shorter.
+  not_a_second_audit_trail: >
+    Deliberately distinct from the transaction audit record and from
+    health_monitor_events. This answers "did this capability work", nothing
+    else. It carries no customer content, so it is not subject to the 90-day
+    content redaction and can be retained on its own schedule.
+
+exit_conditions:
+  - one immutable invocation fact per capability execution, including solution sub-calls
+  - the quality floor consumes facts rather than joining billing rows
+  - a capability failing only inside bundles is quarantinable, proved by test
+  - the fact carries the WP4 canonical outcome rather than re-deriving one
+  - a guard prevents a new invocation path skipping the fact
+  - independent adversarial review passes
+
+# ── Migration and retention implications, recorded explicitly ────────────────
+migration:
+  block: "0101_capability_invocations"
+  ledger_id: "0101_capability_invocations"
+  ledger_identity: >
+    Distinct from main's 0100_relistUrlToMarkdown, and that is the half of the
+    collision fix that matters. startup_migration_ledger.block is a PRIMARY KEY
+    and it is what tells a one-shot block it has already fired, so two blocks
+    sharing an id means whichever runs second reads the other's row and skips
+    its own work forever. Renaming the function alone would have left that
+    intact. Four invariants now enforce it: no two blocks share a ledger id, no
+    ONE NUMBER names two migrations, every registered block has a distinct
+    number prefix, and block numbers only ever increase.
+  renumbered_from_0100: >
+    origin/main landed runMigration0100_relistUrlToMarkdown (c6a3b16) while this
+    branch was open. Two structurally different migrations sharing a block id
+    makes the id useless as an audit key, and the block list is the one file
+    here whose ordering is safety-critical. Renumbered and merged; the migration
+    file was rebuilt additively from origin/main rather than hand-resolved,
+    because the first conflict resolution silently dropped three lines from the
+    tail of main's function.
+  creates: >
+    capability_invocations, three indexes (slug+created, transaction, created),
+    and an append-only trigger. Defer-not-throw: a throw aborts boot and a failed
+    Railway deploy does not cut over (DEC-20260504-C). Until the table exists the
+    floor falls back to its transactions query -- true only because the floor
+    asks to_regclass FIRST, in its own round trip. The first version asserted
+    that fallback and did not implement it: Postgres resolves relations at parse
+    time, so the epoch probe would have raised on a missing table, the error
+    would have escaped the decision loop, and the tick would have written no
+    decisions AND no heartbeat. The heartbeat is the DEC-20260504-C proof that
+    the job ran, so a deferred migration would have taken the armed quality
+    floor down and erased the evidence of its own failure. Found by review.
+  trigger_is_created_not_recreated: >
+    The first version ran DROP TRIGGER IF EXISTS then CREATE TRIGGER on every
+    boot. Blocks receive the DB handle rather than a transaction, so those
+    autocommit separately -- every boot (~4/day in prod) opened a window with no
+    append-only protection on a table whose entire purpose is immutability, and
+    took ACCESS EXCLUSIVE on a table the customer path inserts into. Now created
+    only when pg_trigger says it is absent. The function stays CREATE OR
+    REPLACE, which takes no lock on the table.
+  no_lock_timeout: >
+    Block 0101 deliberately does NOT set one. SET LOCAL lock_timeout outside a
+    transaction block is discarded, and blocks are handed the DB handle, so the
+    idiom two neighbouring blocks use has never done anything there either. A
+    bound that does not bind is worse than none, because the next reader
+    believes the DDL is protected. Safety comes instead from no statement taking
+    a heavy lock on an existing table.
+  append_only_rule: >
+    UPDATE is refused outright. DELETE is refused only inside 35 days — the
+    floor's 30-day window plus margin. Blocking DELETE outright would make the
+    table unprunable and guarantee a future incident whose only fix is dropping
+    the trigger, i.e. the protection disappearing exactly when someone is under
+    pressure. Bounding it targets the real threat: erasing evidence the floor is
+    about to read.
+  no_backfill: >
+    Deliberately none. Backfilling ~180k rows from historical transactions inside
+    a startup migration is a bulk write under DEC-20260504-B, and the epoch
+    bridge removes the need for it — facts from the first one written,
+    transactions before that instant. Nothing is double-counted and the
+    transactions branch contributes nothing once the table outlives the window.
+  deploy_verification_trigger: >
+    The trigger must be verified, not assumed. Block 0101 now queries pg_trigger
+    after creating it and THROWS if the count is not 1, and the floor
+    independently refuses to read facts when the trigger is missing. Both exist
+    because a table without its append-only trigger is worse than no table:
+    to_regclass still reports it present, so the floor would decide delistings
+    from rows anything could have rewritten. There is a real path to that state
+    even with correct code -- CREATE TABLE autocommits, so a block that defers
+    midway leaves the table present and unprotected while reporting "deferred".
+  deploy_verification: >
+    DEC-20260504-C requires querying prod for the effect, not reading a log line.
+    After deploy: SELECT to_regclass('public.capability_invocations') must be
+    non-null; SELECT count(*) FROM capability_invocations WHERE created_at >
+    NOW() - INTERVAL '1 hour' must be non-zero once traffic has flowed; and the
+    next quality-floor tick's heartbeat event must carry evidence_holes = 0.
+
+retention:
+  window_days: 180
+  guard_days: 35
+  rationale: >
+    Six times the floor's 30-day window. Not a compliance artefact and not on the
+    1095-day tier: a fact carries no customer content by design — no inputs, no
+    outputs, no error strings, only the verdict — so nothing here is what the
+    90-day content redaction exists to remove, and nothing an Art. 15 or Art. 17
+    request reaches. The purge is LIMIT-paginated per DEC-20260504-B; the table
+    is created empty so the first run has no backlog, but it accrues roughly 6k
+    rows a day once the writer is live.
+  invariant_tested: >
+    Retention must stay strictly above the trigger's delete guard, and the
+    TypeScript constant must match the interval the migration installs. Both are
+    asserted, because the failure mode of them drifting is a purge that throws
+    nightly inside a bulk job — the class of failure this platform has let run
+    unnoticed for days before.
+
+mutation_results:
+  tool: apps/api/scripts/mutation-test.mjs
+  protocol: "green -> red -> green, clean tree at both ends"
+  caught:
+    - "fold ignores fact rows entirely"
+    - "fact failures always count, ignoring the WP4 verdict"
+    - "solution steps stop recording on the FAILURE path"
+    - "guardedExecute stops deriving a failure outcome"
+    - "revenue taken from the fact instead of the billing table"
+    - "x402 gateway stops deriving a failure outcome"
+    - "/v1/do stops recording entirely"
+  claim_withdrawn: >
+    An earlier version of this list claimed a mutation "epoch bridge dropped so
+    the floor reads only billing rows" was caught. Review checked and found no
+    test referencing the epoch at all, so nothing could have reddened
+    behaviourally -- the mutation I actually ran was on the fold source
+    discriminator and I labelled it wrongly. Withdrawn. The epoch bridge is now
+    covered by source-level assertions in jobs/quality-floor.test.ts.
+
+  survived_then_fixed:
+    - >
+      Removing ONE of guardedExecute's two recordInvocation calls survived. The
+      guard asked whether a file records at all, and a file that records only its
+      successes passes that question while handing the floor a completion rate
+      that can never fall below 100% no matter how broken the capability is —
+      worse than no signal, because it reads as health. The rail-completeness
+      invariant now requires two record sites and at least one error-outcome
+      derivation PER FILE, so wiring one rail twice cannot cover for another
+      wired once. The mutation now reddens.
+
+exit_condition_status:
+  immutable_invocation_facts_incl_solution_subcalls: MET
+  floor_consumes_facts_not_billing_rows: MET
+  bundle_only_capability_is_quarantinable: MET      # proved by test, mutation-checked
+  fact_carries_wp4_outcome_not_a_rederivation: MET
+  guard_prevents_a_new_path_skipping_the_fact: MET  # found a real hole in guardedExecute
+  rail_completeness_invariant: MET                  # added after a mutation survived
+  migration_and_retention_recorded: MET
+  independent_adversarial_review: PASS  # round 15, zero blocking findings
+
+# Not part of this package. Recorded so the boundary is explicit rather than
+# assumed: the public-copy correction, the production-authorization controls
+# (branch controls/production-authorization) and the stranded-transaction
+# reconciliation are separate artefacts and must not enter this PR.
+out_of_scope:
+  - public-copy correction (docs/remediation/PUBLIC-COPY-CORRECTION.md)
+  - production authorization controls (controls/production-authorization)
+  - stranded-transaction reconciliation (Brief A)
+
+# -- Independent review round 1: FAIL, five blocking findings, all remediated --
+review_round_1:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  b1_deferred_migration_killed_the_floor: >
+    The epoch probe named capability_invocations unconditionally. Block 0101 is
+    defer-not-throw, so on a deferred block the probe raises, the error escapes
+    past the decision loop, and the tick writes no decisions AND no heartbeat --
+    the DEC-20260504-C proof query being the very thing that stops being
+    written. The floor is armed in production: 78 enforce ticks in 20 days, 8
+    quarantines. Fixed by asking to_regclass first, in its own round trip, and
+    skipping the fact query entirely when the table is absent.
+  b2_lock_timeout_was_a_no_op: >
+    SET LOCAL outside a transaction block is discarded and blocks get the DB
+    handle. The intended 3s DDL bound did not exist; the real bound was the 30s
+    statement_timeout, and a timed-out lock wait would defer the block -- which
+    under B-1 killed the floor. Removed, with the reason recorded, rather than
+    left as a bound that does not bind.
+  b3_revenue_lost_the_internal_account_exclusion: >
+    Revenue moved out of the fold, which had summed price_cents over rows that
+    had already passed the internal-account, free-tier and clamp filters. The
+    replacement query carried none of them. Measured against production: 202
+    active capabilities went from zero external revenue to non-zero purely on
+    internal accounts, so requiresHuman -- the flag deciding whether a
+    deactivation proposal is a Petter-only call -- stopped discriminating.
+    Filters restored.
+  b4_the_load_bearing_defence_did_not_exist: >
+    invocation-facts.ts documented two defences and called the volume
+    cross-check the load-bearing one, on the grounds that a marker event is
+    written to the same database that just refused the fact. Only the marker
+    existed. Now implemented as detectFactVolumeShortfall, deliberately coarse
+    because facts and transactions do not correspond one-to-one by design.
+  b5_the_prescribed_proof_query_returned_nothing: >
+    evidence_holes appeared only on per-decision events, but a zero-decision
+    tick is the steady state, so the DEC-20260504-C verification this package
+    prescribed could not be run at all. The heartbeat now carries
+    facts_table_present, fact_epoch, evidence_holes and evidence_shortfalls.
+  dead_code_removed: >
+    droppedInvocationFactCount() was documented as exposed for the health
+    surface and had zero consumers.
+  still_open_non_blocking:
+    - >
+      N-2: composite capabilities such as website-to-company invoke other
+      executors in-process via getExecutor and record no facts -- structurally
+      the same defect WP9 closes for solution steps. Dormant today; that
+      capability is deactivated in production. The guard cannot see it because
+      it searches for the literal customer_paid context marker, which such a
+      file does not contain. Recorded rather than fixed: widening the guard to
+      every getExecutor caller would flag the provider chain and the test
+      harness, which legitimately do not record.
+    - >
+      N-1: recordInvocation was awaited on a separate pooled connection inside
+      the open wallet transaction. CLOSED in round 6 -- /v1/do now records via
+      recordFactWithoutHoldingTheLock, and a test forbids the await. Left here
+      because the finding is part of the record; the state is not.
+    - >
+      N-6: the table stores user_id for 180 days and the trigger refuses UPDATE
+      unconditionally, so there is no mechanism to honour an Art. 16 or Art. 17
+      request against it. "No customer content" is not the same as "no personal
+      data". Needs a decision, not necessarily a code change.
+
+# -- Independent review round 2: FAIL, four blocking findings, all remediated --
+review_round_2:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  blk1_the_trigger_guard_was_hollow: >
+    Inverting IF NOT EXISTS to IF EXISTS in block 0101 left every test green.
+    The trigger would then never be created on a fresh table, leaving it fully
+    mutable while to_regclass still reported it present -- so the floor would
+    treat rewritable rows as authoritative evidence for a delisting. Nothing
+    anywhere verified the trigger existed: not the block, not the heartbeat, not
+    the deploy-verification query. Three fixes: the block verifies via
+    pg_trigger and throws if absent, the floor checks independently and falls
+    back to billing rows when unprotected, and the guard now asserts the sense
+    of the condition rather than the presence of the words.
+  blk2_the_threshold_could_be_reduced_to_nothing: >
+    Setting FACT_SHORTFALL_RATIO to 0 -- which makes the cross-check unable to
+    ever fire -- passed the whole suite, because the comparison lived in SQL no
+    test executed. Extracted to a pure exported isFactVolumeShortfall with
+    direct behavioural tests. Round 1 found this defence documented and not
+    implemented; round 2 found it implemented in a form that could be silently
+    returned to nothing.
+  blk2b_the_window_was_six_times_too_wide: >
+    Both CTEs bounded on the fact epoch alone. Since the epoch is MIN(created_at)
+    over a table retained 180 days, the comparison window grew to six times the
+    floor's 30-day decision window: a capability losing 100% of the last 30 days
+    scored 150/180 and never fired. It worked on the day it shipped and weakened
+    every day after. Now bounded to the later of the epoch and 30 days ago.
+  blk3_the_fact_clamp_guard_matched_the_revenue_query: >
+    The fact-query slice ran to end-of-file, so it also covered the revenue
+    query, which carries an identical promotion clamp. Removing the clamp from
+    the FACT source left both substrings intact and the test green -- exactly the
+    "grace period that held on one source and not the other" the test says it
+    exists to prevent. Slice now bounded, with a length assertion so an
+    over-narrow slice cannot pass vacuously either.
+  blk4_block_number_collision: >
+    Renumbered 0100 to 0101 and merged origin/main. do.ts auto-merged (main
+    changed the free-tier front door, this branch changed all four
+    executeWithRetry call sites in the same file) and was re-verified by the
+    full suite rather than assumed.
+  non_blocking_fixed:
+    - "N-2: the retention purge named capability_invocations unconditionally, reproducing B-1 one job over -- it is the last step of the sweep, so a missing table would have thrown before retention-cleanup-done was logged and lost the summary for every rule that had already run."
+    - "N-5: the claim that no statement in block 0101 takes a heavy lock was wrong -- CREATE INDEX IF NOT EXISTS opens the relation under SHARE before its existence check, which conflicts with INSERT. Corrected to what is actually true: nothing takes a LONG lock."
+    - "N-6: nineteen guardedExecute calls in its test file passed three arguments after the rail parameter became required. tsconfig excludes *.test.ts, so tsc never saw them; at runtime they inserted rail: undefined into a NOT NULL column and recordInvocation swallowed the error, so the tests exercised a permanently-failing fact write and stayed green."
+  non_blocking_recorded_not_fixed:
+    - >
+      N-1: context_kind is hardcoded customer_paid at every live write site, so
+      the schema comment claiming it is what makes harness traffic filterable
+      overstates it -- the harness exclusion still rests on the email-pattern
+      list. Harmless today (the harness calls getExecutor in-process and writes
+      no facts at all) but the stated mechanism is not the real one.
+    - >
+      N-3: revenue reaches a capability only through transactions.capability_id,
+      so a bundle-only capability gets requiresHuman = false even when its steps
+      earn real bundle revenue. WP9 makes such capabilities evaluable for the
+      first time, so it creates the case. Bounded -- deactivation is never
+      automatic -- but it is the flag that names a Petter-only decision.
+    - >
+      N-4: the epoch boundary can double-count a handful of rows. executeSync
+      inserts the transaction before running the executor, so a call in flight
+      when the first fact is written lands on both branches. Negligible in
+      volume; the docstring claim "nothing is double-counted" was absolute and
+      is now qualified.
+    - >
+      Tests are excluded from tsconfig repo-wide, which is how N-6 stayed
+      invisible. That is a repo-wide gap, not a WP9 one.
+
+# -- Independent review round 3: FAIL, three blocking findings, all remediated --
+review_round_3:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  blk1_the_fact_branch_discarded_the_refusal_taxonomy: >
+    A design defect, not a slip, and the most serious finding in the package.
+    WP9 made outcomeFromError the sole authority on whether a failure counts
+    against a capability. That function excused only the three cost-gate errors:
+    it did not know about CapabilityRefusalError and never consulted
+    classifyTransactionFailure. So every string in the curated caller-input and
+    ToS sets -- built incident by incident over months -- became a counted
+    failure the moment the epoch passed. One authority is the right goal; the
+    authority chosen was the weaker of the two.
+    Modelled against production with real error strings: product-reviews-extract
+    100% -> 9.3% completion (39 excused failures, 14 of them Trustpilot ToS
+    refusals, which are answers the platform is REQUIRED to give under
+    DEC-20260428-A); us-company-data 100% -> 33%; url-to-markdown 71% -> 53% --
+    the free-tier front door that main quarantined at 05:58Z on 2026-08-22 and
+    un-quarantined by adding those very strings to CALLER_INPUT_RE. WP9 would
+    have made that fix inert. Fixed by having outcomeFromError consult both the
+    refusal discriminator and the taxonomy.
+  blk1_the_tests_pinned_both_answers_at_once: >
+    The same string, "Missing required input fields: iban", was asserted as
+    EXCUSED on a transaction row (lib/quality-floor.test.ts) and as COUNTED on a
+    fact row (lib/invocation-facts.test.ts), with a comment declaring the second
+    correct. The reasoning in that comment was right -- the fact should win over
+    the string -- and the example was wrong, because it pinned an authority that
+    could not yet answer the question. Replaced with a regression test over the
+    real production strings.
+  blk2_round_twos_own_fix_was_hollow: >
+    toContain("EXISTS (") is satisfied by "NOT EXISTS (", and that mutation
+    survived. Inverted, factsProtected is true exactly when the trigger is
+    ABSENT: a healthy production would never read facts at all, and an
+    unprotected table would be trusted. Sixth hollow assertion in this program
+    and the second consecutive one to appear inside the remediation for the
+    previous one.
+  blk3_the_cross_checks_inputs_were_untested: >
+    Round 2 moved the threshold into a tested pure function; the two counts
+    feeding it came from SQL no test executed. Making the fact CTE permanently
+    empty survived: every capability with >=10 billed calls would look like
+    total evidence loss, every quarantine platform-wide would be suppressed, and
+    the armed safety mechanism would silently disarm with nothing failing. Third
+    consecutive round this same defence has been found unguarded somewhere new.
+  non_blocking_fixed:
+    - "N-1: the cross-check CTEs measured different populations -- the fact side lacked the internal-account exclusion, inflating facts and biasing toward SILENCE, the unsafe direction since silence means the floor proceeds on possibly-holed evidence."
+    - "N-3: the retention table-present guard was hollow by the same substring trick; inverted it never deletes (unbounded growth) AND runs the DELETE when the table is absent."
+    - "N-4: the x402 double-record flag was unguarded, so a non-billable output could write two facts, one of them recording success -- inflating the completion rate the floor decides on."
+    - "N-6: CREATE TABLE autocommits, so a block failing between the table and the trigger left the writer filling an unguarded table -- and because the floor keys its epoch on MIN(created_at), a later boot creating the trigger would make that whole era authoritative evidence. Those rows are now discarded before protection is installed; on the normal path the table is empty and nothing is deleted."
+    - "N-7: the floor probed pg_trigger by name alone, which pg_trigger does not guarantee unique (it is unique on tgrelid+tgname). Qualified via to_regclass, which returns NULL rather than raising when the table is absent."
+    - "N-2: two comments contradicted each other about whether the harness reaches /v1/do over HTTP. It does not -- it calls getExecutor in-process and writes no facts at all."
+  suite_flakiness_measured_not_assumed: >
+    Review round 3 could not reproduce the "flaky on main too" claim from a
+    single green run of main. Measured properly, three full runs each:
+    origin/main failed 0, 5, 5 tests; this branch failed 9, 0, 5. Both branches
+    are flaky at comparable magnitude, so the flakiness is pre-existing and not
+    introduced here -- but the earlier claim rested on too little evidence and
+    the reviewer was right to reject it.
+  still_open_non_blocking:
+    - >
+      N-5: recordInvocation acquires a second pooled connection inside the open
+      wallet transaction. The hazard is pool exhaustion, not transaction
+      poisoning -- 30 concurrent sync paid calls each holding a connection and
+      requesting a second only they can free. Unreachable at current volumes
+      (busiest capability: 778 calls/30d) and recorded rather than fixed,
+      because the alternative -- writing the fact on the wallet transaction --
+      would let a bookkeeping failure roll back a customer's paid call.
+    - >
+      N-3 from round 2 still stands: revenue reaches a capability only through
+      transactions.capability_id, so a bundle-only capability gets
+      requiresHuman = false even when its steps earn real bundle revenue.
+    - >
+      N-6 from round 2 still stands in part: the trigger-verification throw is
+      swallowed into a "deferred to next boot" outcome that nothing escalates.
+      The floor degrades safely and the heartbeat carries
+      facts_table_protected: false, but nothing alerts on it.
+
+# -- Independent review round 4: FAIL, four blocking findings, all remediated --
+review_round_4:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  note: >
+    Two of the four were already being fixed when the reviewer ran, in response
+    to the founder blocker on migration numbering, and it saw the uncommitted
+    edits in the worktree. It reported that plainly and reviewed the committed
+    head instead, which is the right call.
+  founder_blocker_block_number_collision: >
+    Raised independently by the founder and by review round 2. The function
+    rename was done in round 2; round 4 completed it properly. WP9's block now
+    carries its own ledger id and writes its own ledger row. Three tests prove
+    the one-shot work runs exactly once: it purges on first install and never
+    again, it refuses rather than bulk-deleting past a ceiling, and it does not
+    record itself as applied when it fails partway. Verified that main's 0100 is
+    byte-identical to origin/main and that the BLOCKS array contains every block
+    main has plus 0101.
+  b1_the_eighth_hollow_assertion: >
+    Created by round 3's own remediation. Adding the purge gate introduced a
+    second `await hasImmutableTrigger(tx)` call site, which then satisfied the
+    verification's guard on its own -- so replacing the verification with a
+    constant left the block reporting "present and verified" for a table with no
+    trigger, suite green. Third time a hollow assertion has been created inside
+    the fix for the previous one; the cause each time is a file-scoped toContain
+    matching a substring that survives the break. Pinned by the whole assignment.
+  b2_unbounded_boot_delete: >
+    DELETE FROM capability_invocations with no WHERE and no LIMIT, in the boot
+    path, gated only on the trigger being absent. Reachable three ways, one of
+    which the block's own docstring predicts: drop the trigger for maintenance,
+    reboot, and the whole fact table is destroyed. Now gated on the ledger so it
+    can only fire on a genuine first install, and bounded by a ceiling above
+    which it refuses and defers. DEC-20260504-B is cited by this same PR for the
+    retention purge on this same table; the boot DELETE had neither a bound nor
+    a plan.
+  b3_the_visibility_fields_were_unguarded: >
+    Everything from outcomeFromOutput down was mutation-checked; the fields
+    deciding whether the row is READ AT ALL were not. Setting a solution step's
+    isFreeTier to a literal true makes every bundle fact fail the floor's
+    is_free_tier filter, so bundle-only capabilities go back to invisible -- the
+    single defect this package exists to close -- and the headline test stays
+    green because it hand-builds rows and never exercises the writer.
+  b4_the_harness_question_answered_from_code: >
+    Review found ~10k internal transactions a day carrying a capability_id and
+    could not identify the client, and inferred something was calling /v1/do. It
+    is lib/test-runner.ts:1875, which invokes executors in-process and INSERTs
+    its own transaction row directly. It never calls /v1/do and never calls
+    recordInvocation. So the harness is ~98% of transactions and zero facts, the
+    null client_meta and idempotency_key are explained, and the contradictory
+    comment claiming it reaches /v1/do over HTTP is corrected.
+  non_blocking_fixed:
+    - "A tautological assertion: the retention test sliced FROM the DELETE and then asserted the DELETE was in the slice."
+    - "Cutoff DIRECTION now asserted on the invocation-fact purge. Nothing in this repo asserted cutoff direction on any purge before; review demonstrated that inverting it on purgeTransactions survives the whole suite today. That one is pre-existing and out of WP9's scope, but it means nothing would have caught the same slip here."
+    - "The invocation-fact purge's cutoff parameter renamed to factCutoff so its WHERE line is uniquely addressable by a mutation, the same reasoning as the revenue query's rt alias."
+  billing_semantics_unchanged_verified: >
+    Round 3's taxonomy fix touched the money path, so review traced every
+    consumer. outcomeFromError returns billable: false in EVERY branch, before
+    and after, so no call that previously settled or charged now does not, or
+    vice versa. Its consumers are fact construction (the error is re-thrown
+    unchanged) and shouldCountAgainstCapability, which gates only the circuit
+    breaker. aggregateSolutionOutcome is fed exclusively from outcomeFromOutput
+    and never sees outcomeFromError. The taxonomy's config/timeout/upstream/
+    internal classes still reach the provider branch and still count.
+  floor_verdicts_after_the_taxonomy_fix: >
+    Modelled by review against 30 days of production traffic through the SHIPPED
+    classifier: product-reviews-extract 9.3% -> 100% (4 eligible, no verdict),
+    us-company-data 33% -> 100% (6 eligible, no verdict), url-to-markdown 52.6%
+    -> 71.4% (ok). Opposite direction checked: exactly two capabilities drop
+    below the 10-call minimum, both with ZERO counted failures, so no genuinely
+    broken capability is hidden. The pre-epoch transaction branch already applies
+    this taxonomy, so the fix restores parity rather than introducing blindness.
+  not_mutation_proven:
+    - >
+      The ledger-write ORDER assertion compares source indices, and the mutation
+      that would break it is a code MOVE, which the single-line mutation tool
+      cannot express. The related property -- that the verification throws
+      before the ledger row is written -- is mutation-proven separately.
+
+# ── Review rounds 5–14 ────────────────────────────────────────────────────────
+#
+# Rounds 1–4 are recorded above. This section covers the rest. It is deliberately
+# terse per round: the commit messages carry the full reasoning, and a manifest
+# that restates them goes stale the way the round 1–4 entries did.
+review_rounds_5_to_14:
+  verdicts: "FAIL every round. Blocking counts: 2, 3, 2, 1, 1, 1, 5, 1, 3, 1."
+  what_the_series_was_actually_about: >
+    Almost none of these were defects in what WP9 does. They were defects in what
+    GUARDS it. The mechanism was largely right by round 4; fourteen rounds went
+    into making it impossible to break silently, on a floor that is armed in
+    production and delists real capabilities.
+  the_recurring_shape: >
+    Nineteen assertions were caught HOLLOW -- each matched a substring that
+    survived the break it was meant to catch. Four of them were introduced INSIDE
+    the remediation for the previous one. The pattern each time: a guard pinned
+    one file, one call site, one column or one clause, and the identical
+    one-token change stayed available in the next one over. Naming it early would
+    have saved rounds; each fix was locally correct and globally one step behind.
+  how_it_terminated: >
+    By escalating the unit of assertion until there was nothing "one over" left.
+    Call sites -> the whole file. One column -> the whole projection. One clause
+    -> the whole STATEMENT, snapshotted to a committed fixture and compared
+    against the template's own backticks, with a coverage test that counts the
+    SQL calls in the module and demands a fixture for each. That coverage test
+    failed on its first run and named three statements that had been missed, and
+    a later round found the comparison itself was a substring test.
+  notable_findings:
+    - "R5: the free-tier value was derived from the capability flag; /v1/do stamps is_free_tier true for anonymous X-Payment and progressive-unlock calls on PAID capabilities."
+    - "R7: the replacement derivation was falsified in the OPPOSITE direction -- a successful anonymous X-Payment call is UPDATEd back to false on settlement (5 of 5 such rows in production). Wrong both ways, which is the signal it should never have been a derivation. It is now computed once at the route and handed to both writes."
+    - "R8: servedFree was guarded at one of nine call sites. Fixed by removing the field from eight of them rather than guarding it there: paid rails call recordPaidInvocation, which cannot express free-tier, and the do.ts actor is a discriminated union whose account variant has no such field."
+    - "R10/R12: the fact query's SELECT list was pinned four of seven columns; the three left out (day, recent, n) were each a total silent disarm -- collapsing failure-day granularity makes the burst guard fire forever so NOTHING is ever quarantined, while the heartbeat still reports evaluated: N."
+    - "R11: `f.user_id NOT IN (` survived inverting the predicate's leading IS NULL OR. 2,522 of 2,597 floor-eligible rows in 30 days carry a NULL user_id, so the mutation removed 97.1% of the floor's evidence, silently, and the volume cross-check could not see it because its own CTE kept the NULL branch."
+    - "R11: nothing asserted the two row arrays are joined. Dropping ...factRows left every fact-query pin intact -- they are all slices bounded by that very line."
+    - "R13: inverting the fact query's WHERE c.is_active = true deletes WP9 entirely while the DEC-20260504-C proof query this package prescribes returns a healthy reading."
+    - "R14: the snapshot compared a substring, so a clause APPENDED to any statement was invisible. LIMIT 1 on the fact query, HAVING false on the revenue query."
+  mine_not_the_reviewers:
+    - "A mutation result recorded as caught that nothing could have caught (R3, withdrawn)."
+    - "Two revenue assertions satisfied by both the correct and the broken form."
+    - "A guard whose regex contained two literal 0x08 bytes from a mangled escape -- it could not fail, and read as a guard for a whole commit."
+    - "A guard that skipped any file MENTIONING the field it was added to guard."
+    - "An assertion deleted by a cleanup whose replacement silently matched nothing."
+    - "An assert-against-itself: the expected value came from the same constant it was meant to exclude."
+    - "A source-typecheck gate run in place of the scripts gate, whose silence I read as a pass; CI caught it."
+  still_open_non_blocking:
+    - "The x402 rail awaits its fact write on the request path; /v1/do deliberately does not. No pool hazard there (no wallet lock), but the latency is real."
+    - "transaction_id is null for 100% of writes -- no rail supplies one. The column and index are kept; both claims now say so."
+    - "A bundle-only capability that is quarantined has no automatic route back: promotion reads test_results, and paid capabilities are not proactively tested."
+    - "No Postgres-backed harness exists for jobs/quality-floor.ts. The snapshot suite says the SQL is what was reviewed; it cannot say the SQL is correct."
+
+# ── Review round 15: PASS ─────────────────────────────────────────────────────
+review_round_15:
+  verdict: PASS
+  blocking: 0
+  blocking_by_round: "5, 4, 3, 4, 2, 3, 2, 1, 1, 1, 5, 1, 3, 1, 0"
+  reviewer_judgement: >
+    "WP9 does what it claims, and it is safe to merge and deploy, with the
+    caveats below." The reviewer verified the end-to-end consequence
+    behaviourally, confirmed money behaviour is unchanged in every branch,
+    confirmed the degradation story in every direction (no table, unprotected
+    table, empty table all fall back to the pre-WP9 transactions query), and
+    could not find a twentieth hollow assertion.
+  caveat_fixed_before_merge: >
+    The solution executor's try spans OUR input mapping and OUR output
+    enrichment as well as the executor call. Before WP9 that did not matter --
+    a step failure produced no per-capability row at all. WP9 makes those rows
+    real, so a bug in our own plumbing would have arrived as fault "provider"
+    and counted toward delisting a capability that did nothing wrong. Fixed:
+    the loop tracks which phase threw, and outcomeFromPlatformFault carries
+    fault "strale" and does not count.
+  hygiene_fixed:
+    - "The producer side of suppressedForIncompleteEvidence was unasserted -- inert today because the job ORs it with its own maps, but the field exists so that redundancy is real rather than assumed."
+    - "The record-call block window was a fixed 400 characters with 14 characters of slack in do.ts; bounded at the call's own closing brace now."
+  reviewer_observations_not_fixed:
+    - "The snapshot comparison is positionally blind: two statements swapped between fixtures survive. Not reachable by the one-token class this series found fourteen times -- it costs cutting and pasting two ~30-line SQL blocks past each other, the most visible diff a reviewer can get."
+    - "The drizzle write that actually delists (visible/x402_enabled flags) is unasserted. PRE-EXISTING and outside this diff -- the identical line is on origin/main -- but it is the one write in the job with irreversible customer-facing effect and deserves its own ticket."
+    - "transactions.is_free_tier for anonymous x402 /v1/do calls changed from true-then-UPDATEd-false to false at insert. No-op on the success path (5 of 5 production rows were already false); the delta is failed x402 calls, which no longer consume an IP's free-tier daily quota and are now visible to the floor's pre-epoch branch. Both directions look correct; single-digit volume."
+  the_honest_ceiling: >
+    Nobody has executed the floor's SQL against a real Postgres. There is no
+    DB-backed harness for jobs/quality-floor.ts, and production mutation is
+    frozen. The snapshot suite can say the SQL is what fifteen rounds of review
+    looked at; it can never say the SQL is correct. That is the ceiling on this
+    entire review, the reviewers' included.
+
+final_mutation_set:
+  head: 62c9f5d3adaed22ab93d4d6c8a1d4ae2755780b8
+  count: 20
+  result: "all green -> red -> green, clean tree at both ends"
+
+# ── Landing: the real-Postgres proof ─────────────────────────────────────────
+real_postgres_proof:
+  file: apps/api/src/jobs/quality-floor.integration.test.ts
+  lane: "integration-db (CI service container, postgres:16)"
+  method: >
+    Runs the ACTUAL production paths -- runMigration0101_capabilityInvocations
+    and runQualityFloorOnce -- against an ephemeral Postgres built by the same
+    drizzle-kit push + startup-migrations sequence production boots with.
+    Nothing is re-implemented or pasted: a test containing a copy of the query
+    would prove only that the copy parses. Dry run, so the same per-decision
+    events with the same arithmetic are written without flipping any flag.
+  cases_9_of_9_pass:
+    - "block 0101 creates the table, indexes and trigger; the trigger actually refuses an UPDATE and an in-window DELETE"
+    - "main's 0100_relistUrlToMarkdown ledger row does not suppress 0101"
+    - "the floor executes and reaches a verdict -- the SQL parses and runs"
+    - "6 pre-epoch transactions + 6 post-epoch facts = 12 eligible: not 6 (lost branch), not 18 (double count)"
+    - "a transaction postdating the epoch is not counted a second time"
+    - "a counted post-epoch failure reduces completion to 5/15 and reaches dry_run_would_quarantine"
+    - "40 refusals do not reduce it -- 12 eligible at 7/12, where counting them would give 7/52"
+    - "a solution-step fact reaches a verdict with ZERO direct capability transactions"
+    - "holed evidence suppresses rather than quarantines, and still surfaces the proposal"
+  what_the_database_corrected: >
+    Two design assumptions. The floor writes a per-decision event only for a
+    capability BELOW the threshold, so the first three fixtures were healthy and
+    asserted against events that by design never existed. And cleanup must use
+    TRUNCATE: the append-only trigger refuses to delete anything inside the
+    35-day window, and a row-level BEFORE DELETE trigger does not fire on
+    TRUNCATE.
+  mutations: "8 run, 7 caught. The survivor -- disabling the pure core's suppression gate -- is genuine defence-in-depth: the job's own check still fires, and disabling THAT layer reddens. The core is mutation-proven separately at unit level."
+  scope_of_the_claim: >
+    This proves the SQL executes and partitions evidence as claimed on a schema
+    built by the same migrations production runs. It proves NOTHING about the
+    production floor, which has not seen this code. The post-deploy
+    reconciliation in the PR body remains required, and ephemeral-DB
+    correctness must not be reported as production correctness.
+
+landing:
+  merged_forward_onto: "origin/main after #361 and #364"
+  conflicts: none
+  wp9_owned_code_after_merge: byte-identical
+  production_authorization_incident: "closed -- controls accepted on main in #364"
