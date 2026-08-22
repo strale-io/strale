@@ -31,7 +31,7 @@ import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 import { sql } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
+import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 
 interface DupGroupRow {
   capability_slug: string;
@@ -43,7 +43,7 @@ interface DupGroupRow {
 }
 
 async function main() {
-  const db = getDb();
+  const db = openOperatorDrizzle();
 
   const rows = await db.execute(sql`
     SELECT

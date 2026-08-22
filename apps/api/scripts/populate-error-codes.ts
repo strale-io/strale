@@ -3,17 +3,19 @@
  *
  * Usage: npx tsx scripts/populate-error-codes.ts
  */
+
+import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 import { eq } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
 import { capabilities } from "../src/db/schema.js";
 import { getErrorCodes } from "../src/data/error-codes.js";
 
 async function populate() {
-  const db = getDb();
+  const db = openOperatorWriteDrizzle(autonomousAuthority("catalogue_metadata_sync", "DEC-20260812-A"));
 
   const allCaps = await db
     .select({ slug: capabilities.slug })

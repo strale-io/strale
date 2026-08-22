@@ -23,6 +23,8 @@
  *   npx tsx scripts/onboard.ts --manifest manifests/new-cap.yaml --backfill --discover --fix
  */
 
+import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
@@ -39,7 +41,7 @@ import {
 } from "../src/lib/onboarding-gates.js";
 import type { Manifest, ManifestExpectedField, ManifestLimitation, ManifestKnownAnswerFixture } from "../src/lib/capability-manifest-types.js";
 import { getKnownAnswerFixtures } from "../src/lib/capability-manifest-types.js";
-import { getDb as getDbForValidation } from "../src/db/index.js";
+import { openOperatorDrizzle as readOnlyDbForValidation } from "../src/lib/operator-db.js";
 import { capabilities as capabilitiesTable } from "../src/db/schema.js";
 import { logWarn } from "../src/lib/log.js";
 // Cluster 2 Phase 3 C1: transactional persist + hook wiring.
@@ -48,7 +50,6 @@ import { persistCapability, diffAndUpdateLimitations } from "../src/lib/capabili
 import { normalizeManifestToRow } from "../src/lib/capability-manifest.js";
 
 import { eq, and } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
 import {
   capabilities,
   testSuites,
@@ -195,7 +196,7 @@ async function runOrchestrator(
   let existingRow: Record<string, unknown> & { slug: string } | null = null;
   if (ctx.mode === "backfill") {
     try {
-      const [row] = await getDbForValidation()
+      const [row] = await readOnlyDbForValidation()
         .select()
         .from(capabilitiesTable)
         .where(eq(capabilitiesTable.slug, manifest.slug))
@@ -864,7 +865,7 @@ async function onboard(
   flags: { strict: boolean; fix: boolean; discover: boolean },
   manifestPath: string,
 ): Promise<void> {
-  const db = getDb();
+  const db = openOperatorWriteDrizzle(autonomousAuthority("capability_onboarding", "DEC-20260812-A"));
 
   // Check if capability already exists
   const [existing] = await db
@@ -1120,7 +1121,7 @@ async function backfill(
   flags: { strict: boolean; fix: boolean; discover: boolean; force: boolean; bypassAuthority?: boolean },
   manifestPath: string,
 ): Promise<void> {
-  const db = getDb();
+  const db = openOperatorWriteDrizzle(autonomousAuthority("capability_onboarding", "DEC-20260812-A"));
 
   // Verify the capability exists AND load the full row for Phase 4a
   // authority decisions (hybrid: fill-null-only; manifest-drift: throw).
@@ -1493,7 +1494,7 @@ async function runBatch(
   }
 
   // Resumability: check which capabilities already exist
-  const db = getDb();
+  const db = openOperatorWriteDrizzle(autonomousAuthority("capability_onboarding", "DEC-20260812-A"));
   const existingRows = await db
     .select({ slug: capabilities.slug })
     .from(capabilities);

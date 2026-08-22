@@ -124,12 +124,14 @@
  * scoped to their current (already-restored) state — active/input/
  * quarantine_reason are untouched.
  */
+
+import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 import { sql } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
 
 const CAPABILITY_SLUG = "swedish-company-data";
 
@@ -538,7 +540,7 @@ class DryRunRollback extends Error {}
 async function main() {
   const apply = process.argv.includes("--apply");
   const upgradeRules = process.argv.includes("--upgrade-rules");
-  const db = getDb();
+  const db = openOperatorWriteDrizzle(autonomousAuthority("fixture_refresh", "DEC-20260812-A"));
 
   printBudgetArithmetic();
 

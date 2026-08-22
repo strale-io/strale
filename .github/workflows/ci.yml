@@ -260,4 +260,13 @@ jobs:
       # throttled-upstream audit that produced Block 0082 is exactly the
       # class of drift this catches, so it goes live here.
       - run: node apps/api/scripts/check-cost-class-coherence.mjs
+
+      # 2026-08-22 production-authorization incident. The whole authority model
+      # rests on one property: the production write credential is readable in
+      # exactly ONE module, which demands an Authority before releasing it. If
+      # any other file can read it, a writable connection can be opened with no
+      # authority attached and the model is decorative. That property is a grep,
+      # so it is checked by one, on every change, rather than trusted.
+      - run: node scripts/guard-production-write-access.mjs
+
       - run: npm test

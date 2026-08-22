@@ -73,7 +73,9 @@
  * already fresh gets ONLY its `test_mode` flipped, so the conversion
  * itself never manufactures an unnecessary live recapture.
  */
-import postgres from "postgres";
+
+import { openOperatorWriteDb } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import {
   planMigration,
   TARGET_SLUGS,
@@ -116,7 +118,7 @@ async function main() {
   }
 
   const targetSlugs = resolveTargetSlugs();
-  const sql = postgres(dbUrl, { ssl: false, max: 1 });
+  const sql = openOperatorWriteDb(autonomousAuthority("fixture_refresh", "DEC-20260812-A"));
 
   try {
     const rows = await sql<

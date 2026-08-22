@@ -14,7 +14,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 
 import { eq, and } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
+import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 import {
   capabilities,
   testSuites,
@@ -78,7 +78,7 @@ async function validateCapability(slug: string, apply = false): Promise<{
   checks: CheckResult[];
   passed: boolean;
 }> {
-  const db = getDb();
+  const db = openOperatorDrizzle();
   const checks: CheckResult[] = [];
 
   // 1. Capability exists in database
@@ -375,7 +375,7 @@ async function main() {
     process.exit(1);
   }
 
-  const db = getDb();
+  const db = openOperatorDrizzle();
 
   if (allMode) {
     const rows = await db
