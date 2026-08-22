@@ -226,7 +226,7 @@ describe("no serving path may skip the fact", () => {
     for (const file of walk(SRC)) {
       const body = readFileSync(file, "utf8");
       if (!body.includes(`kind: "customer_paid"`)) continue;
-      if (!/record(Customer)?Invocation\(/.test(body)) {
+      if (!/record(?:Paid|Anonymous|Customer)?Invocation\(/.test(body)) {
         offenders.push(file.slice(SRC.length + 1).replace(/\\/g, "/"));
       }
     }
@@ -234,7 +234,8 @@ describe("no serving path may skip the fact", () => {
       offenders,
       "These files invoke a capability as a paying customer but record no " +
         "invocation fact, so the quality floor cannot see their traffic. " +
-        "Call recordCustomerInvocation() from lib/invocation-facts.ts on BOTH the " +
+        "Call recordPaidInvocation() (or, on the anonymous rail, "
+        + "recordAnonymousInvocation()) on BOTH the " +
         "success and the failure path.",
     ).toEqual([]);
   });
@@ -253,7 +254,7 @@ describe("no serving path may skip the fact", () => {
       .filter((f) => {
         const body = readFileSync(f, "utf8");
         return (
-          body.includes(`kind: "customer_paid"`) && /record(Customer)?Invocation\(/.test(body)
+          body.includes(`kind: "customer_paid"`) && /record(?:Paid|Anonymous|Customer)?Invocation\(/.test(body)
         );
       })
       .map((f) => f.slice(SRC.length + 1).split(sep).join("/"))
@@ -290,7 +291,7 @@ describe("no serving path may skip the fact", () => {
       // counts as a record site. The wrapper itself is asserted below to
       // delegate to the one authority.
       const calls = (
-        body.match(/(?:record(?:Customer)?Invocation|recordFactWithoutHoldingTheLock)\(\{/g) ?? []
+        body.match(/(?:record(?:Paid|Anonymous|Customer)?Invocation|recordFactWithoutHoldingTheLock)\(\{/g) ?? []
       ).length;
       const fromError = (body.match(/outcomeFromError\(/g) ?? []).length;
       if (calls < 2 || fromError < 1) {
@@ -299,7 +300,7 @@ describe("no serving path may skip the fact", () => {
     }
     // The wrapper must delegate, not reimplement.
     const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
-    expect(doRoute).toContain("recordCustomerInvocation(fact)");
+    expect(doRoute).toContain("recordAnonymousInvocation(fact)");
     // And /v1/do must NOT await the write. executeSync runs the executor inside
     // db.transaction holding the wallet row FOR UPDATE, and the writer uses the
     // base handle rather than that tx -- so awaiting there reserves a SECOND
@@ -307,17 +308,10 @@ describe("no serving path may skip the fact", () => {
     // Thirty concurrent paid calls each hold one and queue for a thirty-first
     // only they can free, exiting via the 15s idle-in-transaction timeout as a
     // wave of failed paid calls whose vendor cost was already spent.
-    expect(doRoute).not.toContain("await recordCustomerInvocation(");
-    // ONE value, two writes. The transaction row and the fact must receive the
-    // same variable, because two independent derivations of "was this served
-    // free" have now been falsified in opposite directions by review.
-    expect(doRoute).toContain('const servedFree = !c.get("x402_paid" as any);');
-    expect(doRoute).toContain("isFreeTier: servedFree,");
-    expect(doRoute).toContain("{ userId: null, servedFree }");
+    expect(doRoute).not.toContain("await recordAnonymousInvocation(");
     // BOTH record sites, counted. `toContain` passed while one of the two was
     // forged, because the other still carried the string -- the same
     // half-a-rail shape that got through in round 4.
-    expect((doRoute.match(/servedFree: actor\.servedFree,/g) ?? []).length).toBe(2);
     expect(doRoute).toContain("void trackBackgroundTask(");
 
     expect(
@@ -328,78 +322,69 @@ describe("no serving path may skip the fact", () => {
     ).toEqual([]);
   });
 
-  it("no serving path can express the fields that decide whether its fact is readable", () => {
-    // Rounds 3, 4 and 5 each found the same one-token kill in a file the
-    // previous round's guard did not cover: set a writer's `contextKind` to
-    // "internal_test" or its `isFreeTier` to true, and the floor stops reading
-    // that rail entirely -- a silent disarm, with a green suite. Each round the
-    // fix was another source-text assertion, and each round it moved one file
-    // over.
+  it("only the anonymous rail can say a call was served free", () => {
+    // Review found seven of nine `servedFree` sites unguarded, including the
+    // solution rail -- the one WP9 exists for, and the only one with no
+    // volume-cross-check backstop, since a bundle-only capability has no
+    // transaction row to compare facts against. Each of the two previous rounds
+    // fixed this by pinning one more file with a source-text assertion, which
+    // is how it kept coming back one file over.
     //
-    // The guards were chasing call sites instead of removing them. Customer
-    // rails now call recordCustomerInvocation, which sets `contextKind` itself
-    // and DERIVES `isFreeTier` from the capability flag plus the absence of an
-    // account -- the same two facts the transaction row derives it from. So
-    // there is nothing at a call site left to get wrong, and this asserts that
-    // rather than asserting the absence of a particular wrong value.
-    const writers = [
-      "routes/do.ts",
+    // So "free" is now unsayable outside the one place it can be true. Paid
+    // rails call recordPaidInvocation, which takes no free-tier input at all;
+    // only /v1/do's anonymous branch calls recordAnonymousInvocation, and the
+    // three authenticated /v1/do paths pass an actor union variant that has no
+    // such field -- a type error, not a convention.
+    const offenders: string[] = [];
+    for (const rel of [
       "routes/solution-execute.ts",
       "routes/x402-gateway-v2.ts",
       "lib/solution-executor.ts",
-    ];
-    const offenders: string[] = [];
-    for (const rel of writers) {
+    ]) {
       const body = readFileSync(join(SRC, rel), "utf8");
+      if (/servedFree/.test(body)) offenders.push(`${rel} can still say a call was free`);
       if (/contextKind:/.test(body)) offenders.push(`${rel} sets contextKind`);
-      // Nothing about free-tier can be expressed at a writer any more: the
-      // parameter type no longer has the field, so supplying it is a TS2353
-      // excess-property error. What the writer DOES put in the row is asserted
-      // behaviourally in invocation-facts.writer.test.ts, which mocks the
-      // database and checks the row field by field -- four one-token mutations
-      // inside the INSERT survived the entire source-text suite before it
-      // existed.
-      if (/capabilityIsFreeTier/.test(body)) {
-        offenders.push(`${rel} still decides free-tier from the capability flag`);
-      }
-      if (/recordInvocation\(\{/.test(body)) {
-        offenders.push(`${rel} calls recordInvocation directly instead of recordCustomerInvocation`);
+      if (/recordAnonymousInvocation/.test(body)) {
+        offenders.push(`${rel} uses the anonymous writer`);
       }
     }
     expect(
       offenders,
-      "A customer-serving rail must not decide these fields. Call " +
-        "recordCustomerInvocation and let one authority derive them.",
+      "A paid rail must call recordPaidInvocation, which cannot express " +
+        "free-tier. Only /v1/do's anonymous branch may say a call was free.",
     ).toEqual([]);
 
-    // And the authority is genuinely singular: exactly one place in the whole
-    // source writes the customer context kind.
-    const all = walk(SRC)
+    // And the anonymous writer is reachable from exactly one file.
+    const anonWriters = walk(SRC)
+      .filter((f) => /recordAnonymousInvocation\(/.test(readFileSync(f, "utf8")))
+      .map((f) => f.slice(SRC.length + 1).split(sep).join("/"))
+      .sort();
+    expect(anonWriters).toEqual(["lib/invocation-facts.ts", "routes/do.ts"]);
+
+    // Exactly one file writes the customer context kind.
+    const ctxWriters = walk(SRC)
       .filter((f) => /contextKind: "customer_paid"/.test(readFileSync(f, "utf8")))
       .map((f) => f.slice(SRC.length + 1).split(sep).join("/"));
-    expect(all).toEqual(["lib/invocation-facts.ts"]);
+    expect(ctxWriters).toEqual(["lib/invocation-facts.ts"]);
   });
 
-  it("passes the rail's free-tier value straight through, deriving nothing", () => {
-    // The writer must NOT re-derive this. Two derivations were falsified in
-    // opposite directions: from the capability flag (missed that /v1/do stamps
-    // true for anonymous X-Payment and progressive-unlock calls on PAID
-    // capabilities) and from the rail plus absence of an account (missed that a
-    // SUCCESSFUL X-Payment call is UPDATEd back to false on settlement -- 5 of 5
-    // such rows in production are false). Whether a call was paid is decided at
-    // the route, before settlement, and nothing about the fact reveals it.
-    // Comments stripped: this is about the CODE. A negative assertion that
-    // matches prose is the hollow-assertion pattern in miniature -- the
-    // docstring below deliberately names both falsified derivations, and a
-    // naive `not.toContain` would fail on the documentation of the very bug it
-    // is guarding against.
-    const src = readFileSync(join(SRC, "lib/invocation-facts.ts"), "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, "")
-      .replace(/(^|[^:])\/\/.*$/gm, "$1");
-    expect(src).toContain("isFreeTier: servedFree,");
-    expect(src).not.toContain("rail ===");
-    expect(src).not.toContain("capabilityIsFreeTier");
+  it("the three authenticated /v1/do paths cannot express free-tier at all", () => {
+    // The actor is a discriminated union: only its anonymous variant carries
+    // servedFree. `{ kind: "account", userId }` supplying it is a type error, so
+    // this is enforced by tsc and pinned here so the union cannot quietly
+    // collapse back to a plain boolean.
+    const doRoute = readFileSync(join(SRC, "routes/do.ts"), "utf8");
+    expect(doRoute).toContain('| { kind: "account"; userId: string };');
+    expect((doRoute.match(/\{ kind: "account", userId: user\.id \}/g) ?? []).length).toBe(3);
+    expect((doRoute.match(/\{ kind: "anonymous", servedFree \}/g) ?? []).length).toBe(1);
+    // ONE value, two writes: the transaction row and the fact get the same
+    // variable, computed once.
+    expect(
+      (doRoute.match(/servedFree: actor\.kind === "anonymous" \? actor\.servedFree : false,/g) ?? [])
+        .length,
+    ).toBe(2);
   });
+
 
   it("the solution executor assesses the enriched output, not the raw result", () => {
     // The customer receives the enriched output and the solution's aggregate

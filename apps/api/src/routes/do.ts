@@ -12,7 +12,7 @@ import {
   outcomeFromOutput,
   shouldCountAgainstCapability,
 } from "../lib/execution-outcome.js";
-import { recordCustomerInvocation } from "../lib/invocation-facts.js";
+import { recordAnonymousInvocation } from "../lib/invocation-facts.js";
 import {
   wallets,
   walletTransactions,
@@ -347,16 +347,28 @@ export async function spendCapWouldExceed(
  * required parameter is the cheapest way to make that particular mistake
  * unavailable.
  */
-interface InvocationActor {
-  userId: string | null;
-  /**
-   * Was this call served without payment? Computed ONCE per route path and
-   * handed to both the transaction row and the invocation fact, so the two
-   * cannot disagree. That is the invariant; the value itself is not derivable
-   * inside the writer, because whether a call was paid is decided here.
-   */
-  servedFree: boolean;
-}
+/**
+ * Who the invocation fact belongs to, as a discriminated union.
+ *
+ * The union is the guard. Only the anonymous variant carries `servedFree`, so
+ * the three authenticated execution paths cannot express "this was served free"
+ * even by accident -- it is a type error, not a convention. Review found seven
+ * of nine call sites unguarded when this was a plain boolean, and the previous
+ * two rounds each fixed it by pinning one more file with a source-text
+ * assertion, which is how it kept coming back one file over.
+ */
+type InvocationActor =
+  | {
+      kind: "anonymous";
+      /**
+       * Was this call served WITHOUT payment? Computed once in executeFreeTier
+       * and handed to both the transaction row and the fact, because two
+       * independent derivations of it have been falsified in opposite
+       * directions.
+       */
+      servedFree: boolean;
+    }
+  | { kind: "account"; userId: string };
 
 /**
  * Execute with retry for non-deterministic capabilities.
@@ -393,11 +405,11 @@ interface InvocationActor {
  * best-effort, so nothing downstream depended on the await.
  */
 function recordFactWithoutHoldingTheLock(
-  fact: Parameters<typeof recordCustomerInvocation>[0],
+  fact: Parameters<typeof recordAnonymousInvocation>[0],
 ): void {
   void trackBackgroundTask(
     `invocation-fact:${fact.rail}:${fact.capabilitySlug}`,
-    recordCustomerInvocation(fact),
+    recordAnonymousInvocation(fact),
   );
 }
 
@@ -420,8 +432,8 @@ async function executeWithRetry(
     recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
-      userId: actor.userId,
-      servedFree: actor.servedFree,
+      userId: actor.kind === "account" ? actor.userId : null,
+      servedFree: actor.kind === "anonymous" ? actor.servedFree : false,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromOutput(capability.slug, result?.output),
     });
@@ -430,8 +442,8 @@ async function executeWithRetry(
     recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
-      userId: actor.userId,
-      servedFree: actor.servedFree,
+      userId: actor.kind === "account" ? actor.userId : null,
+      servedFree: actor.kind === "anonymous" ? actor.servedFree : false,
       latencyMs: Date.now() - startedAt,
       outcome: outcomeFromError(err),
     });
@@ -1461,7 +1473,7 @@ async function executeFreeTier(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: null, servedFree });
+    const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "anonymous", servedFree });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -1720,7 +1732,7 @@ async function executeFreeTierAuthenticated(
     .returning({ id: transactions.id });
 
   try {
-    const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, servedFree: false });
+    const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "account", userId: user.id });
     assertBillableOutput(capability.slug, capResult.output);
     const latencyMs = Date.now() - startTime;
 
@@ -2011,7 +2023,7 @@ async function executeSync(
 
     // Execute the capability
     try {
-      const capResult = await executeWithRetry(executor, executionInput, capability, { userId: user.id, servedFree: false });
+      const capResult = await executeWithRetry(executor, executionInput, capability, { kind: "account", userId: user.id });
       assertBillableOutput(capability.slug, capResult.output);
       const latencyMs = Date.now() - startTime;
 
@@ -2455,7 +2467,7 @@ async function executeAsync(
     `async-exec:${capability.slug}:${transactionId}`,
     executeInBackground(
       db,
-      { userId: user.id, servedFree: false },
+      { kind: "account", userId: user.id },
       executor,
       executionInput,
       transactionId,

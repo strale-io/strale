@@ -27,7 +27,7 @@ import {
 } from "../capabilities/guarded-executor.js";
 import { sanitizeFailureReason } from "./sanitize.js";
 import { outcomeFromError, outcomeFromOutput } from "./execution-outcome.js";
-import { recordCustomerInvocation } from "./invocation-facts.js";
+import { recordPaidInvocation } from "./invocation-facts.js";
 import { enrichCompanyOutput } from "../capabilities/lib/enrich-company-output.js";
 import { logWarn } from "./log.js";
 
@@ -571,14 +571,11 @@ export async function executeSolution(
         // and what the solution's own aggregate outcome is computed from —
         // assessing the raw result here would let the step's quality record and
         // its billing verdict disagree about the same call.
-        await recordCustomerInvocation({
+        await recordPaidInvocation({
           capabilitySlug: step.capabilitySlug,
           rail: "solution_step",
           solutionId,
           userId: actor.userId,
-          // A bundle has a real price; there is no free solution rail, and the
-          // parent transaction records the same.
-          servedFree: false,
           latencyMs: Date.now() - stepStartMs,
           outcome: outcomeFromOutput(step.capabilitySlug, output),
         });
@@ -588,14 +585,11 @@ export async function executeSolution(
         stepTimings.push({ capabilitySlug: step.capabilitySlug, latencyMs: Date.now() - stepStartMs });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        await recordCustomerInvocation({
+        await recordPaidInvocation({
           capabilitySlug: step.capabilitySlug,
           rail: "solution_step",
           solutionId,
           userId: actor.userId,
-          // A bundle has a real price; there is no free solution rail, and the
-          // parent transaction records the same.
-          servedFree: false,
           latencyMs: Date.now() - stepStartMs,
           outcome: outcomeFromError(err),
         });

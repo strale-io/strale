@@ -52,7 +52,7 @@ import {
   outcomeFromError,
   outcomeFromOutput,
 } from "../lib/execution-outcome.js";
-import { recordCustomerInvocation } from "../lib/invocation-facts.js";
+import { recordPaidInvocation } from "../lib/invocation-facts.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
@@ -1544,12 +1544,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   let factRecorded = false;
   try {
     result = await executor(inputs);
-    await recordCustomerInvocation({
+    await recordPaidInvocation({
       capabilitySlug: cap.slug,
       rail: "x402_gateway",
       // x402 callers have no account -- payment IS the auth, so never free.
       userId: null,
-      servedFree: false,
       latencyMs: Date.now() - startMs,
       outcome: outcomeFromOutput(cap.slug, result.output),
     });
@@ -1575,12 +1574,11 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     const latencyMs = Date.now() - startMs;
     const sanitized = sanitizeFailureReason(message);
     if (!factRecorded) {
-      await recordCustomerInvocation({
+      await recordPaidInvocation({
         capabilitySlug: cap.slug,
         rail: "x402_gateway",
         userId: null,
-        servedFree: false,
-        latencyMs,
+          latencyMs,
         outcome: outcomeFromError(err),
       });
     }

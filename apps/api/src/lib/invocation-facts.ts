@@ -144,38 +144,45 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
  * sides, which is what keeps the fact branch and the pre-epoch transaction
  * branch measuring the same population.
  */
-export async function recordCustomerInvocation(
-  fact: Omit<InvocationFact, "contextKind" | "isFreeTier"> & {
-    /**
-     * Was this call served WITHOUT payment?
-     *
-     * The one field a rail still supplies, because the writer cannot know it:
-     * whether a call was paid is decided at the route, before settlement, and
-     * no property of the fact reveals it. What CAN be enforced, and is, is that
-     * the rail computes it once and hands the same variable to both the
-     * transaction row and this fact — so the two cannot disagree, which is the
-     * invariant that actually matters.
-     *
-     * Two earlier derivations were falsified by review. Reading the
-     * capability's own free-tier flag missed that `/v1/do` stamps
-     * `is_free_tier: true` for anonymous X-Payment and progressive-unlock calls
-     * on PAID capabilities. Deriving `rail === "v1_do" && no account` then
-     * missed the opposite case: a successful anonymous X-Payment call has its
-     * transaction UPDATEd back to `is_free_tier: false` on settlement
-     * (do.ts:1526), and production shows 5 of 5 such rows are false. That
-     * derivation would have excluded genuinely PAID traffic from the floor
-     * post-epoch when pre-epoch it was included — removing coverage from the
-     * primary rail rather than adding it.
-     */
-    servedFree: boolean;
-  },
+/**
+ * Record a fact for a PAID customer invocation.
+ *
+ * Takes no free-tier input, and that is the point. Seven of the nine call sites
+ * that used to supply one had no guard, and review kept finding the same defect
+ * one file over because each round pinned one more file with a source-text
+ * assertion. A rail that cannot say "free" cannot say it wrongly.
+ */
+export async function recordPaidInvocation(
+  fact: Omit<InvocationFact, "contextKind" | "isFreeTier">,
+): Promise<void> {
+  await recordInvocation({ ...fact, contextKind: "customer_paid", isFreeTier: false });
+}
+
+/**
+ * Record a fact for an invocation on the ANONYMOUS `/v1/do` rail.
+ *
+ * The only entry point that may say a call was served free, because it is the
+ * only one where that can be true: `executeFreeTier` serves three anonymous
+ * cases — a genuinely free-tier capability, a progressive-unlock call, and an
+ * X-Payment call — and only the last was paid for.
+ *
+ * `servedFree` is supplied rather than derived because the writer cannot know
+ * it: whether a call was paid is decided at the route, before settlement, and
+ * nothing about the fact reveals it. Two derivations have been falsified in
+ * opposite directions — reading the capability's flag missed the two paid cases
+ * that stamp `is_free_tier: true`, and reading the rail plus absence of an
+ * account missed that a SUCCESSFUL X-Payment call is UPDATEd back to false on
+ * settlement (5 of 5 such rows in production are false).
+ *
+ * So the enforceable invariant is not that the writer computes it, but that the
+ * route computes it ONCE and both the transaction row and this fact get the
+ * same variable.
+ */
+export async function recordAnonymousInvocation(
+  fact: Omit<InvocationFact, "contextKind" | "isFreeTier"> & { servedFree: boolean },
 ): Promise<void> {
   const { servedFree, ...rest } = fact;
-  await recordInvocation({
-    ...rest,
-    contextKind: "customer_paid",
-    isFreeTier: servedFree,
-  });
+  await recordInvocation({ ...rest, contextKind: "customer_paid", isFreeTier: servedFree });
 }
 
 /** Marker event type. The floor reads this; nothing else writes it. */

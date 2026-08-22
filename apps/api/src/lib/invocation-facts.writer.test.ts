@@ -38,7 +38,8 @@ vi.mock("../db/index.js", () => ({
   },
 }));
 
-const { recordCustomerInvocation, recordInvocation } = await import("./invocation-facts.js");
+const { recordPaidInvocation, recordAnonymousInvocation, recordInvocation } =
+  await import("./invocation-facts.js");
 const { outcomeFromOutput, outcomeFromError } = await import("./execution-outcome.js");
 
 beforeEach(() => {
@@ -50,11 +51,10 @@ const OK = outcomeFromOutput("dns-lookup", { records: ["1.2.3.4"] });
 
 describe("the row a customer invocation actually writes", () => {
   it("stamps the customer context, and no caller can change it", async () => {
-    await recordCustomerInvocation({
+    await recordPaidInvocation({
       capabilitySlug: "dns-lookup",
       rail: "v1_do",
       userId: "u1",
-      servedFree: false,
       latencyMs: 12,
       outcome: OK,
     });
@@ -68,11 +68,10 @@ describe("the row a customer invocation actually writes", () => {
   it("carries the WP4 verdict into the row rather than a constant", async () => {
     // Both directions. A row that always says success, or never counts a
     // failure, is the silent-disarm shape: the floor reads it as health.
-    await recordCustomerInvocation({
+    await recordPaidInvocation({
       capabilitySlug: "dns-lookup",
       rail: "v1_do",
       userId: "u1",
-      servedFree: false,
       latencyMs: 1,
       outcome: OK,
     });
@@ -81,11 +80,10 @@ describe("the row a customer invocation actually writes", () => {
 
     inserted.length = 0;
     const broken = outcomeFromError(new Error("Zefix API error: HTTP 503"));
-    await recordCustomerInvocation({
+    await recordPaidInvocation({
       capabilitySlug: "swiss-company-data",
       rail: "v1_do",
       userId: "u1",
-      servedFree: false,
       latencyMs: 1,
       outcome: broken,
     });
@@ -96,11 +94,10 @@ describe("the row a customer invocation actually writes", () => {
 
     inserted.length = 0;
     const refused = outcomeFromError(new Error("Missing required input fields: iban"));
-    await recordCustomerInvocation({
+    await recordPaidInvocation({
       capabilitySlug: "iban-validate",
       rail: "v1_do",
       userId: "u1",
-      servedFree: false,
       latencyMs: 1,
       outcome: refused,
     });
@@ -126,7 +123,7 @@ describe("the row a customer invocation actually writes", () => {
     // structurally in invocation-facts.test.ts, and asserted here as pass-through.
     for (const servedFree of [true, false]) {
       inserted.length = 0;
-      await recordCustomerInvocation({
+      await recordAnonymousInvocation({
         capabilitySlug: "dns-lookup",
         rail: "v1_do",
         userId: null,
@@ -137,14 +134,12 @@ describe("the row a customer invocation actually writes", () => {
       expect(inserted[0].isFreeTier, `servedFree=${servedFree}`).toBe(servedFree);
     }
 
-    // And it is genuinely pass-through, not a coincidence of the rail: the same
-    // value survives on a rail where free-tier is never correct.
+    // And the paid writer cannot say free at all -- it takes no such input.
     inserted.length = 0;
-    await recordCustomerInvocation({
+    await recordPaidInvocation({
       capabilitySlug: "dns-lookup",
       rail: "x402_gateway",
       userId: null,
-      servedFree: false,
       latencyMs: 1,
       outcome: OK,
     });
@@ -156,7 +151,7 @@ describe("the row a customer invocation actually writes", () => {
     // its result because bookkeeping failed helps nobody.
     dbRefuses = true;
     await expect(
-      recordCustomerInvocation({
+      recordAnonymousInvocation({
         capabilitySlug: "dns-lookup",
         rail: "v1_do",
         userId: null,
