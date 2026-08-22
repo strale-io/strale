@@ -43,7 +43,7 @@ const PATTERNS = [
   { name: "Google API key", re: /AIza[0-9A-Za-z_-]{35}/g },
   { name: "Slack token", re: /xox[baprs]-[0-9A-Za-z-]{20,}/g },
   { name: "Notion integration token", re: /ntn_[A-Za-z0-9]{40,}/g },
-  { name: "Private key block", re: /-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----/g },
+  { name: "Private key block", re: /-----BEGIN (?:RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----[\r\n]+[A-Za-z0-9+\/=]{40}/g },
 ];
 
 // Vendors ship deliberately-fake credentials in their own documentation, and
@@ -66,6 +66,12 @@ const ALLOWLIST_PATH = "apps/api/scripts/committed-secrets-allowlist.txt";
  * value you are willing to write down in plaintext here. A real credential
  * therefore cannot be allowlisted -- writing it would leak it -- so the only
  * way past this gate for a real secret is to rotate it and take it out.
+ *
+ * That property holds ONLY while every pattern's match contains the secret
+ * itself. A pattern matching a fixed, zero-entropy marker (a bare PEM header,
+ * say) would let one entry exempt every real secret sharing that marker. If you
+ * add a pattern, make sure the match includes the high-entropy material -- see
+ * the private-key pattern, which requires key bytes rather than the header.
  */
 function loadAllowlist() {
   let raw;
@@ -98,9 +104,6 @@ const files = trackedFiles();
 const findings = [];
 
 for (const file of files) {
-  // The allowlist holds matched literals by design; scanning it would flag
-  // every entry it exempts.
-  if (file.split(BACKSLASH).join("/") === ALLOWLIST_PATH) continue;
   let text;
   try {
     if (statSync(file).size > MAX_BYTES) continue;
@@ -116,11 +119,31 @@ for (const file of files) {
     while ((m = re.exec(text)) !== null) {
       const line = text.slice(0, m.index).split("\n").length;
       if (isPlaceholder(m[0])) continue;
-      const allowKey = file.split(BACKSLASH).join("/") + SEP + m[0];
+      const normalised = file.split(BACKSLASH).join("/");
+
+      // Inside the allowlist itself, only the literal half of a well-formed
+      // entry is exempt. Anything else there -- a comment, a stray paste -- is
+      // scanned like any other file, so the allowlist is not a hiding place.
+      if (normalised === ALLOWLIST_PATH) {
+        const lineStart = text.lastIndexOf(LF, m.index) + 1;
+        const sepAt = text.indexOf(" :: ", lineStart);
+        const lineEnd = text.indexOf(LF, lineStart);
+        const sepOnThisLine = sepAt !== -1 && (lineEnd === -1 || sepAt < lineEnd);
+        if (sepOnThisLine && m.index >= sepAt + 4) continue;
+      }
+
+      const allowKey = normalised + SEP + m[0];
       if (allowlist.has(allowKey)) { allowlist.set(allowKey, true); continue; }
       findings.push({ file, line, name, value: m[0] });
     }
   }
+}
+
+const stale = [...allowlist.entries()].filter(([, used]) => !used).map(([k]) => k.split(SEP)[0]);
+if (stale.length > 0) {
+  console.error("check-no-committed-secrets: NOTICE - allowlist entries matching nothing:");
+  for (const f of stale) console.error("  " + f);
+  console.error("  Either the file changed, or the entry is malformed. Entries are exactly: <path> :: <matched text>");
 }
 
 if (findings.length > 0) {
@@ -133,13 +156,6 @@ if (findings.length > 0) {
   console.error("Do not just delete the line and commit: once pushed, the value is public");
   console.error("and stays in history. Rotate the credential first, then remove it.");
   process.exit(1);
-}
-
-const stale = [...allowlist.entries()].filter(([, used]) => !used).map(([k]) => k.split(SEP)[0]);
-if (stale.length > 0) {
-  console.log("check-no-committed-secrets: NOTICE - stale allowlist entries, no longer matching anything:");
-  for (const f of stale) console.log("  " + f);
-  console.log("  Remove them from " + ALLOWLIST_PATH);
 }
 
 console.log("check-no-committed-secrets: clean (" + files.length + " tracked files scanned)");

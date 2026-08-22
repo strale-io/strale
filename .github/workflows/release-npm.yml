@@ -138,7 +138,12 @@ jobs:
 
       - name: Publish
         id: publish
-        if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
+        # `inputs` is empty on non-dispatch events, and GitHub Actions coerces
+        # null == false to TRUE. Harmless while the only other trigger is the
+        # tag push (whose disjunct is already true), but adding a schedule,
+        # pull_request or workflow_call trigger would make an unguarded
+        # publish the default. Bind the dry-run test to its own event.
+        if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
         working-directory: ${{ steps.target.outputs.dir }}
         run: npm publish
 
