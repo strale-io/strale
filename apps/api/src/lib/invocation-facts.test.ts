@@ -404,6 +404,43 @@ describe("no serving path may skip the fact", () => {
     expect(body).toContain("outcome: outcomeFromOutput(step.capabilitySlug, output)");
   });
 
+  it("every rail attributes the fact to the capability it actually invoked", () => {
+    // capability_slug is the floor's JOIN key -- `JOIN capability_invocations f
+    // ON f.capability_slug = s.slug` -- so a fact attributed to the wrong slug
+    // is worse than a missing one: it credits or blames a capability that never
+    // ran. Attributing bundle-step successes elsewhere while failures stay
+    // correct drives a bundle-only capability toward 0% and an armed quarantine.
+    //
+    // The neighbouring ARGUMENT on the same statement was pinned and this field
+    // was not, which is the column-one-over shape again. Counted, so forging
+    // one of two sites cannot hide behind the other.
+    // Scoped to the RECORD CALLS, not counted file-wide: in
+    // solution-executor.ts the same expression appears nine times, mostly in
+    // stepTimings, so a whole-file count would be satisfied by the wrong
+    // occurrences entirely.
+    const expected: Array<[string, string]> = [
+      ["lib/solution-executor.ts", "capabilitySlug: step.capabilitySlug,"],
+      ["routes/do.ts", "capabilitySlug: capability.slug,"],
+      ["routes/x402-gateway-v2.ts", "capabilitySlug: cap.slug,"],
+      ["capabilities/guarded-executor.ts", "capabilitySlug: slug,"],
+    ];
+    for (const [rel, field] of expected) {
+      const src = readFileSync(join(SRC, rel), "utf8");
+      const blocks: string[] = [];
+      // do.ts records through its no-lock wrapper, so that name counts too.
+      const marker =
+        /(?:record(?:Paid|Anonymous)?Invocation|recordFactWithoutHoldingTheLock)\(\{/g;
+      for (let m = marker.exec(src); m !== null; m = marker.exec(src)) {
+        blocks.push(src.slice(m.index, m.index + 400));
+      }
+      // Both rails record on the success path and the failure path.
+      expect(blocks.length, `${rel} record sites`).toBe(2);
+      for (const [i, block] of blocks.entries()) {
+        expect(block, `${rel} record site ${i}`).toContain(field);
+      }
+    }
+  });
+
   it("every rail assesses the OUTPUT, not the result wrapper", () => {
     // `result` is `{output, provenance}` -- an object with no `error` key, so
     // assessOutput calls it usable and outcomeFromOutput returns success:true,

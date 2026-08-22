@@ -25,7 +25,7 @@
  * DB-backed harness for this job, that is the difference between a change being
  * caught and a change being invisible.
  *
- * All EIGHT statements the module issues, not a chosen subset. The coverage
+ * All NINE statements the module issues, not a chosen subset. The coverage
  * test below counts the tagged-template calls in the source and requires a
  * fixture for each, because a snapshot suite that silently stops covering a new
  * query is this same failure one level up -- and it earned its place
@@ -54,6 +54,12 @@ const fixture = (name: string) =>
   lf(readFileSync(join(HERE, "__fixtures__", name), "utf8"));
 
 const STATEMENTS: Array<[string, string, string]> = [
+  [
+    "advisory-unlock.sql",
+    "releases the tick's single-instance lock",
+    "Untyped, which is why the first version of the coverage counter could not " +
+      "see it.",
+  ],
   [
     "advisory-lock.sql",
     "makes the tick single-instance",
@@ -113,8 +119,23 @@ describe("WP9 — the floor's SQL is what was reviewed", () => {
       const expected = fixture(name);
       // Sanity: a fixture that emptied itself would make this vacuous.
       expect(expected.trim().length, `${name} fixture is empty`).toBeGreaterThan(40);
+      // Bounded by the template's own backticks, which is what makes this an
+      // equality rather than a containment.
+      //
+      // The first version asserted `SOURCE.includes(expected)`. That is
+      // satisfied by any source in which the fixture appears SOMEWHERE, so text
+      // added after the fixture's last character but before the closing
+      // backtick left the fixture intact as a substring and the statement
+      // changed with the suite green. Two mutations proved it: `LIMIT 1`
+      // appended to the fact query reduces the entire post-epoch evidence
+      // branch to one row per tick, and `HAVING false` appended to the revenue
+      // query empties revenueBySlug so requiresHuman is never true. Both are
+      // findings this package already fixed once, reachable again by append.
+      //
+      // The backtick bound also removes the truncation hole: a fixture cut
+      // short no longer ends where a backtick is, so it cannot match.
       expect(
-        SOURCE.includes(expected),
+        SOURCE.includes("`" + expected + "`"),
         `${name} no longer matches src/jobs/quality-floor.ts.\n\n` +
           `${why}\n\n` +
           "If the change is deliberate, update " +
@@ -129,12 +150,27 @@ describe("WP9 — the floor's SQL is what was reviewed", () => {
     // A snapshot suite that silently stops covering a new query is the same
     // failure one level up. Count the tagged-template SQL calls in the module
     // and require a fixture for each.
-    const issued = (SOURCE.match(/await sql</g) ?? []).length;
+    // `await sql<` misses UNTYPED tagged templates, and the module already had
+    // one -- the advisory unlock, which has no row type because it needs none.
+    // Any future INSERT/UPDATE/DELETE will be written untyped for the same
+    // reason, i.e. invisible to a generic-only counter.
+    const issued = (SOURCE.match(/await sql[<`]/g) ?? []).length;
     expect(
       issued,
       "A new SQL statement was added to jobs/quality-floor.ts without a " +
         "snapshot fixture. Add one to src/jobs/__fixtures__/ and list it in " +
         "STATEMENTS above.",
     ).toBe(STATEMENTS.length);
+  });
+
+  it("lists each fixture once", () => {
+    // The count above is satisfied by a duplicate entry: add a ninth statement
+    // plus a second row pointing at an already-listed fixture and 9 === 9,
+    // while the new statement is uncovered. Vitest allows duplicate `it()`
+    // titles, so it would not even look odd in the output.
+    const names = STATEMENTS.map(([n]) => n);
+    expect(new Set(names).size, `duplicate fixture entries: ${names.join(", ")}`).toBe(
+      names.length,
+    );
   });
 });
