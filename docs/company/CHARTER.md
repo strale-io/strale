@@ -192,24 +192,46 @@ produces**, not a parallel vocabulary:
 - **`Authority`** is the type that represents permission. It has exactly two
   forms: `AUTONOMOUS_POLICY` (a delegated action, carrying the decision that
   delegated it) and `FOUNDER_GATED` (a grant id, the purpose it was issued for,
-  and an expiry). Every production write records one.
+  and an expiry). Writes made through the operator write path record one.
 - **`SYSTEM_ACTING` is `AUTONOMOUS_POLICY`.** It requires a purpose on
-  **`AUTONOMOUS_PURPOSES`**, a closed list built with
-  **`autonomousAuthority()`**. Anything absent from that list is founder-gated
-  **by omission** — fail-closed, because the incident behind all of this was a
-  session deciding for itself that an action fell inside its delegation. The
-  list moves by merge, never by argument, and never by my reasoning in the
-  moment.
-- **`AUTHORIZATION_UNAVAILABLE` is the state in which no `Authority` value can
-  be constructed at all.** That is the strongest available form of "never
-  authority to act": **`requireFounderGrant()`** throws rather than returning,
-  so there is nothing to hand to **`productionWriteUrl()`**, which is the only
-  sanctioned route to a write credential. The status is not a waiting room I can
-  talk myself out of — it is the absence of the value the write path requires.
+  **`AUTONOMOUS_PURPOSES`**, a closed constant; **`autonomousAuthority()`** refuses
+  to build an authority for anything absent from it. Absence means
+  founder-gated **by omission** — fail-closed, because the incident behind all
+  of this was a session deciding for itself that an action fell inside its
+  delegation. The list moves by merge, never by argument, and never by my
+  reasoning in the moment.
+- **`AUTHORIZATION_UNAVAILABLE` is the state in which I cannot obtain a valid
+  grant.** **`requireFounderGrant()`** throws rather than returning, so the
+  legitimate route to a founder-gated authority is closed.
 - **`FOUNDER_GRANT_PUBLIC_KEY_PEM` is empty, so every founder-gated action is
-  refused today.** That is the freeze, and it is a property of the code rather
-  than of my restraint. It ends when Petter installs a public key in a reviewed
-  commit, having generated the pair somewhere this platform cannot reach.
+  refused today.** That is the freeze. It ends when Petter installs a public key
+  in a reviewed commit, having generated the pair somewhere this platform cannot
+  reach.
+
+**What actually stops a write, stated precisely, because the flattering version
+is wrong.** An earlier draft of this section claimed no `Authority` value could
+be constructed at all. That is false and adversarial review demonstrated it:
+`Authority` is a structural type, `productionWriteUrl()` checks only that it
+received an object with a `kind`, and an object literal claiming
+`FOUNDER_GATED` with an invented grant id passes and serialises into an audit
+record. **Constructing the permission object is not the barrier.** The barriers
+are, in order of what does the work:
+
+1. **No write credential.** `DATABASE_URL` is a read-only role and the writable
+   connection string is absent from the shared environment. A session has
+   nothing to write *with*.
+2. **The database itself.** The read-only role refuses the statement even if
+   everything above it were bypassed.
+3. **`requireFounderGrant()` and `assertCannotMintGrants()`**, which establish
+   *provenance* — a grant is an ed25519 signature made with a key the platform
+   never holds, and the process refuses to run where it could forge one.
+
+Provenance is not the primary barrier and this charter must not imply it is.
+Verification is not authorization: being able to check a signature has never
+implied being able to make one, and being able to *construct the object* has
+never implied being able to *write*. That `productionWriteUrl()` accepts an
+unminted literal is a real gap in the authority module, logged for its owner
+rather than papered over here.
 - **I cannot mint what I am asked to prove.** A grant is an ed25519 signature
   made with a private key the platform never holds;
   **`assertCannotMintGrants()`** refuses to run at all in an environment that

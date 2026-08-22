@@ -106,7 +106,29 @@ const ACTIVITY_LOG_OPENINGS = [
 /** The five fields the charter requires on every founder escalation. */
 export const ESCALATION_FIELDS = ["choice", "established", "options", "recommendation", "consequence"] as const;
 
-const NOTHING_TO_DECIDE = /nothing needs your decision/i;
+/**
+ * The exemption sentence — matched against the WHOLE section, anchored.
+ *
+ * It was previously a substring search anywhere in the section, which made
+ * every escalation check bypassable by one clause:
+ *
+ *   Nothing needs your decision today, except one thing.
+ *   FOUNDER_DECISION
+ *   Should we double the price of everything? Tell me.
+ *
+ * linted clean — no fields required, and the check that rejects an already-done
+ * `SYSTEM_ACTING` item under this heading was disabled by the same branch. The
+ * exemption now applies only when the section says that and nothing else.
+ */
+const NOTHING_TO_DECIDE = /^nothing needs your decision(?: today)?[.!]?$/i;
+
+function claimsNothingToDecide(section: string): boolean {
+  const meaningful = section
+    .split(/\r?\n/)
+    .map((l) => l.replace(/[*_`]/g, "").trim())
+    .filter(Boolean);
+  return meaningful.length === 1 && NOTHING_TO_DECIDE.test(meaningful[0]!);
+}
 
 /**
  * Statuses, per CHARTER.md § "Three statuses".
@@ -260,10 +282,10 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
       severity: "error", rule: "empty-decision-section",
       message: 'the "Needs your decision" section is empty — say "Nothing needs your decision today." explicitly',
     });
-  } else if (!NOTHING_TO_DECIDE.test(decide) || /\bAUTHORIZATION_UNAVAILABLE\b/.test(decide)) {
-    // A section may carry both: nothing to DECIDE, and something settled that I
-    // am not permitted to execute. Those are different facts, so the
-    // nothing-to-decide sentence does not exempt a handover from its fields.
+  } else if (!claimsNothingToDecide(decide)) {
+    // Exempt only when the section is that sentence and nothing else. A section
+    // carrying anything further — a handover, an escalation, a caveat — is
+    // checked in full, however it opens.
     const blocks = splitByStatus(decide);
 
     if (blocks.some((b) => b.status === "SYSTEM_ACTING")) {

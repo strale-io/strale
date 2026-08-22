@@ -282,6 +282,25 @@ describe("escalations carry all five fields or they are not ready", () => {
     expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
   });
 
+  it("is not exempted by a nothing-to-decide sentence with a rider", () => {
+    // Found by adversarial review: the exemption was a substring search, so one
+    // clause disabled every field check AND the already-executed check.
+    const r = lintBrief(goodBrief({
+      decide: "Nothing needs your decision today, except one thing.\n\n" +
+              "FOUNDER_DECISION\n\nShould we double the price of everything? Tell me.",
+    }));
+    expect(r.ok, "a rider must not exempt the section").toBe(false);
+    expect(r.findings.filter((f) => f.rule === "escalation-incomplete").length).toBe(5);
+  });
+
+  it("is not exempted when a handover follows the sentence", () => {
+    const r = lintBrief(goodBrief({
+      decide: "Nothing needs your decision today.\n\nAUTHORIZATION_UNAVAILABLE\n\n**Settled:** the records should be closed.",
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.rule === "handover-incomplete")).toBe(true);
+  });
+
   it("accepts the explicit nothing-to-decide line", () => {
     const r = lintBrief(goodBrief({ decide: "Nothing needs your decision today." }));
     expect(r.ok).toBe(true);

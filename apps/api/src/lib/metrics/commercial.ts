@@ -531,9 +531,12 @@ export function interpret(input: {
   const rose = input.priorTopShare != null && c.topShare > input.priorTopShare + 0.005;
   const growing = g.kind === "rising";
   if (c.payers === 0) {
-    // Reachable whenever every paying call is unattributable. Saying "one
-    // buyer" here would be the same sentence as the genuine single-customer
-    // case, and it would sit next to a coverage line contradicting it.
+    // Not reachable from the shipped caller today — `payerFacts` returns
+    // `unavailable` when nobody is identified, so the CLI routes to the `!c`
+    // branch first. Kept because `interpret()` is exported and pure: any future
+    // caller that builds a Concentration itself hits this, and the alternative
+    // was `payers <= 1` emitting the genuine single-customer sentence for an
+    // empty set, next to a coverage line contradicting it.
     out.push({
       topic: "coverage",
       text: "No payment in this period can be traced to a buyer, so nothing here supports any statement about how many customers we have.",

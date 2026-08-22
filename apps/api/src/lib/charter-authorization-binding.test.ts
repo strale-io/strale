@@ -94,8 +94,8 @@ describe("the charter binds to the authority model that actually landed", () => 
   const NOT_MODULE_EXPORTS = new Set([
     // Our own status vocabulary — names for shapes, not symbols.
     "SYSTEM_ACTING", "FOUNDER_DECISION", "AUTHORIZATION_UNAVAILABLE",
-    // Discriminants of the exported `Authority` union, not exports themselves.
-    "AUTONOMOUS_POLICY", "FOUNDER_GATED",
+    // Discriminants and fields of the exported `Authority` union, not exports.
+    "AUTONOMOUS_POLICY", "FOUNDER_GATED", "kind",
     // Decision-queue classes.
     "approval_required", "preauthorized_notice", "your_call",
     // Environment and other modules.
@@ -112,13 +112,24 @@ describe("the charter binds to the authority model that actually landed", () => 
   ] as const;
 
   /**
-   * Type-only exports the charter names. These are erased at runtime, so
-   * `Object.keys` cannot see them and a runtime check would wrongly fail — the
-   * binding is enforced by the compile-time reference below instead: delete or
-   * rename `Authority` in the module and this file stops typechecking.
+   * Type-only exports the charter names.
+   *
+   * These are erased at runtime, so `Object.keys` cannot see them. The obvious
+   * fix — a compile-time reference like `type _X = authority.Authority` — is
+   * WORTHLESS here and the first version of this file used it anyway while
+   * claiming in a comment that "a rename breaks compilation". It does not:
+   * test files under `src/lib` are typechecked by no tsconfig project in this
+   * repo — `tsconfig.json` excludes test files, and `tsconfig.scripts.json`
+   * covers only the scripts and test directories — and vitest transpiles
+   * without checking types. Deleting the type would have left every gate green.
+   *
+   * That is F5 incident 6 — a hollow assertion shipped inside the F5
+   * remediation, the second consecutive attempt to get this file right. So the
+   * check is done the only way that actually holds here: read the module's
+   * source and look for the export.
    */
   const REQUIRED_TYPES = ["Authority"] as const;
-  type _AuthorityIsExported = authority.Authority;
+  const MODULE_SOURCE = readFileSync(join(HERE, "production-authority.ts"), "utf8");
 
   it("names the authority model's real symbols", () => {
     for (const n of REQUIRED_RUNTIME) {
@@ -127,6 +138,10 @@ describe("the charter binds to the authority model that actually landed", () => 
     }
     for (const n of REQUIRED_TYPES) {
       expect(charter(), `CHARTER.md must reference \`${n}\``).toMatch(new RegExp(`\`${n}\``));
+      expect(
+        MODULE_SOURCE,
+        `${n} must be a type exported by lib/production-authority.ts`,
+      ).toMatch(new RegExp(`^export type ${n}\\b`, "m"));
     }
   });
 

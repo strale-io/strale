@@ -269,8 +269,11 @@ cd apps/api && npx tsx scripts/check-ceo-brief.ts
 ```
 
 It fails the run on: a missing or reordered section, technical tokens in the
-prose, an over-long brief, an activity-log opening, or a "Needs your decision"
-entry missing any of its five required fields. It runs in CI over every brief in
+prose, an activity-log opening, a brief past the 900-word hard ceiling, or a
+"Needs your decision" entry missing any of its required fields. Merely being
+over the ~600-word target is a **warning**, not a failure — the target is a
+target, and a day with two genuine founder decisions legitimately costs more
+than one with none. It runs in CI over every brief in
 `docs/company/briefs/`, so a later session cannot quietly regress the format.
 The machine check is a floor, not the standard — question 3 above is the one
 that actually matters and no script can ask it.

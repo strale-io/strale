@@ -114,7 +114,10 @@ async function main() {
     // presenting these as activations would launder an unmeasurable claim
     // through a list that looks like evidence.
     console.log("  unavailable — cannot yet tell a first purchase from a returning buyer");
-    console.log(`  (first purchase of each payer, for reference only: ${
+    // NOT "each payer": activatingSlugs() drops anyone seen in the lookback,
+    // so this is a subset and printing it beside the payer count invites the
+    // reader to pair them. Labelled for what it is.
+    console.log(`  (unattributed subset, reference only — excludes payers seen earlier: ${
       slugs.map((s) => s.slug).join(", ") || "none"})`);
   } else {
     console.log(slugs.length === 0

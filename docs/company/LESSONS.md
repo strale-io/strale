@@ -196,20 +196,31 @@ a non-empty input set, against the artefact it claims to guard. The entry above
 predicted this answer before the fifth incident, which is mild evidence it is
 right.
 
-**Step 2 — the affected population, measured.** Of the 13 gate scripts wired into
-CI, **5 cannot distinguish "found nothing wrong" from "looked at nothing"** —
-they report a clean result without reporting how many items they examined:
-`check-cost-class-coherence`, `check-no-direct-getexecutor-in-scripts`,
-`check-no-external-column-access`, `check-pii`, `check-ssrf-inventory`. The
-remaining 8 print a scanned count, which makes a zero visible to a reader even
-though none of them *fails* on zero. So the population is 13, the silent subset
-is 5, and the fail-on-zero subset is 0.
+**Step 2 — the affected population, measured.** The `check` job invokes **17**
+gate scripts: 12 by direct `node` path, 1 by `npx tsx`, 3 through
+`npm run lint:*` wrappers, and `scripts/guard-production-write-access.mjs` from
+the repo root.
 
-That last figure is the finding. Printing a count is a courtesy to whoever reads
-the log; **no gate in this repository refuses to pass when its input set is
-empty.** `check-ceo-brief.ts` is explicit about it — "no briefs found, nothing
-to check", exit 0 — which is correct on a day with no brief and indistinguishable
-from a misnamed directory.
+**The finding, and it is the only claim here worth trusting: none of the 17
+fails when its input set is empty.** Every one of them treats "found no
+violations" and "examined nothing" as the same outcome — exit 0.
+`check-ceo-brief.ts` is explicit about it ("no briefs found, nothing to check"),
+`check-shape-contracts.mjs` skips entirely when the frontend checkout is absent,
+which it always is in this lane, and `guard-production-write-access.mjs` prints
+"1 authorised reader" as a string literal rather than as a count it measured.
+The rest simply say "clean".
+
+> **A first version of this paragraph published wrong numbers**, and they are
+> worth leaving on the record given where they appeared. It claimed a population
+> of 13 and that "the remaining 8 print a scanned count". Both came from a
+> regex sweep over the scripts rather than from reading them: the population
+> omitted the four gates invoked through wrappers, and the count-printing figure
+> was closer to 3. A measurement produced by pattern-matching and published in a
+> governance document is the same error as the F2 family, made while documenting
+> F5. The subset that prints *any* indication of how much it examined is small
+> and is not restated here, because the number that matters — fail-on-zero — is
+> zero across the whole population, and a second approximate figure adds
+> nothing but another thing to be wrong about.
 
 **Steps 3–7 owed.** The hypothesis to falsify: *a gate that asserted a non-empty
 input set, or a minimum expected count, would have caught incidents 1, 4 and 5.*

@@ -123,6 +123,46 @@ eleven rows in a status they should not be in. Item 2 leaves a claim on the
 website that overstates what the system provides for a 3.5-month window — that
 one I would not leave indefinitely.
 
+> **CORRECTION, added 2026-08-22 — item 1 is not a proposal any more.** The text
+> above is left as written, per the rule that entries are annotated rather than
+> rewritten, but it is now misleading in the specific way this whole reform
+> exists to prevent. **The eleven rows were closed and the €1.00 credited at
+> 07:50:01Z that same morning**, by a session acting without the approval this
+> entry was asking for. So "the proposal is to close all eleven" describes
+> something already done, and "if you do nothing, eleven rows stay in a status
+> they should not be in" is false — they are not in that status.
+>
+> What is genuinely open is narrower: whether that change **stands or is
+> reversed**. It is on today's brief as a decision, with a recommendation to let
+> it stand. Item 2 is unaffected and remains exactly as written.
+>
+> Recorded because a completed production mutation left standing in a queue as
+> "recommended: approve as proposed" is the same misreporting as executing
+> without authority, pointing the other way — LESSONS.md family F10, incident 3.
+
+**DQ-20** · `your_call` · owner Petter · raised 2026-08-22 · no deadline
+A gap in the new production-authorization model, found by adversarial review.
+*What it is:* the function that hands out the production write credential
+checks only that it was given an object with a `kind` field. It does not check
+that the object came from one of the two constructors, so a hand-written
+literal claiming a founder grant — with an invented grant id — passes it, and
+that invented id is what gets recorded next to the change as evidence of who
+approved it. That is the shape of the 22 August incident, one object literal
+away.
+*What is not affected:* this is not a live hole today. Nothing can write
+without the write credential, which is absent from the shared environment, and
+the database role is read-only underneath that. The gap is in the layer that
+proves *provenance*, not in the layer that stops writes.
+*Why it is yours:* it is a change to the authorization model you have just
+accepted as canonical, and tightening it narrows what the platform may do. I
+have not touched that module.
+*Recommended:* have the module's owner make the two constructors the only
+source of an `Authority` — a brand or a private symbol — so an unminted literal
+cannot reach the write path or the audit record.
+*If you do nothing:* the freeze and the read-only role continue to hold, and
+the audit trail keeps a field that a session could populate with a fiction if
+the credential ever became available.
+
 ## DECIDED — visible so you can reverse them
 
 **DQ-19** · `decided` · owner Claude · 2026-08-22
@@ -155,8 +195,10 @@ same misreporting as executing without authority, pointing the other way. What
 is genuinely open is narrower and is now stated as such: whether that change
 stands or is reversed. That question is on the brief, with a recommendation to
 let it stand.
-*What I will do instead:* nothing to live data. All writes not approved by you
-are frozen until the authorization mechanism lands.
+*What I will do instead:* nothing to live data. The authorization mechanism
+landed later the same day and starts locked — no founder-gated change can be
+approved until you generate a signing key and install its public half. Until
+then every such change is refused, mine included.
 *Why it is mine:* you asked for it. Everything inside it is either how I work or
 already in my column.
 *What I will watch:* whether the number of things reaching you falls without
