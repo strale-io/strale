@@ -1,6 +1,6 @@
 package: WP9
 title: Capability Invocation Facts
-status: REVIEW_PASSED_AWAITING_FOUNDER_APPROVAL
+status: MERGED_DEPLOYED_UNDER_OBSERVATION
 depends_on: [WP4, WP8]
 risks: [CR-06]
 
@@ -636,3 +636,65 @@ landing:
   conflicts: none
   wp9_owned_code_after_merge: byte-identical
   production_authorization_incident: "closed -- controls accepted on main in #364"
+
+# ── Merged and deployed ──────────────────────────────────────────────────────
+shipped:
+  approved_head: 7d02165a72742261b0101097ab39df2e6481502c
+  merged_head: e05c55aa7a8fa6b70182b0c1df696b539bd28f31
+  merge_commit: 56c0b0b62803918c57c799b6d2c69867b19491d6
+  deployed_sha: 56c0b0b62803
+  deployed_at: "2026-08-22T17:06:06Z (block 0101 applied)"
+  head_moved_before_merge: >
+    Branch protection requires up-to-date-with-base, and main advanced (#362,
+    #365) between approval and merge. The forward merge changed the head SHA
+    from the approved 7d02165a to e05c55aa. WP9-OWNED CODE IS BYTE-IDENTICAL
+    across that merge -- verified by diffing every WP9 file, which returned
+    empty -- and the two incoming commits touch none of them. Reported rather
+    than glossed, because "approved at exact head" was the instruction and the
+    head is not the one that was named. The alternative was `gh pr merge
+    --admin`, which bypasses branch protection; using it would have been the
+    same self-granted-permission move the 2026-08-22 authorization incident was
+    about, so it was not used.
+
+# ── Immediate post-deploy reconciliation, read-only ──────────────────────────
+post_deploy_reconciliation:
+  run_at: "2026-08-22T17:22Z, ~16 minutes after cut-over"
+  method: "SELECT only. No traffic generated, no production write."
+  passed:
+    - "capability_invocations exists (to_regclass non-null)"
+    - "immutable trigger present on the right relation (pg_trigger match = 1)"
+    - "0101_capability_invocations in the ledger exactly once, applied 17:06:06Z"
+    - "0100_relistUrlToMarkdown still present -- the two ids are independent in production, as the integration test proved they would be"
+    - "quality-floor heartbeat 17:21:45Z: facts_table_present=true, facts_table_protected=true, evidence_holes=0, evidence_shortfalls=0, mode=enforce, evaluated=102"
+    - "zero invocation_fact_write_failed events"
+  outstanding_traffic_dependent:
+    - "facts arriving on v1_do / x402_gateway: NONE YET. Zero external calls in the 16 minutes since cut-over -- 30 transactions, all of them the internal harness, which invokes executors in-process and by design writes no facts."
+    - "minimum fact timestamp: unverifiable while the table is empty."
+    - "solution_step facts: awaiting bundle traffic."
+  deliberately_not_done: >
+    No call was made to /v1/do, the x402 gateway or any solution to manufacture
+    a fact. Reconciliation evidence produced by the reconciler is not evidence.
+  first_tick_behaviour: >
+    The first post-deploy tick evaluated 102 capabilities in enforce mode and
+    quarantined nothing, which is the expected reading: the fact table is empty,
+    so the epoch is NOW() and the transaction branch covers the whole window --
+    exactly the pre-WP9 behaviour the epoch bridge is designed to fall back to.
+
+# ── Two-week watch ───────────────────────────────────────────────────────────
+watch:
+  opened: 2026-08-22
+  closes: 2026-09-05
+  signal: "health_monitor_events where event_type='quality_floor' and action_taken='suppressed_incomplete_evidence'"
+  baseline: "0 all time as of 2026-08-22T17:22Z"
+  why: >
+    29 slugs currently carry enough external traffic to be in range of the
+    volume cross-check. If suppression starts appearing broadly, WP9 has QUIETED
+    the floor rather than extended it. That direction is safe -- suppression
+    withholds a delisting, it never causes one -- but it is not the intent, and
+    it would mean facts are systematically trailing transactions.
+  also_watch:
+    - "The first solution_step fact whose slug has no direct transaction traffic. That is the defect closing, and it is the single observation that proves WP9 works in production rather than on a fixture."
+    - "evidence_shortfalls on the daily tick_complete heartbeat."
+  escalate_if: >
+    Any suppressed_incomplete_evidence event, or any invocation_fact_write_failed
+    event, or a tick reporting facts_table_protected=false.
