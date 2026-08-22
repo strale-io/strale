@@ -31,15 +31,17 @@ import {
 const ACTION: FounderGatedAction = "close-stranded-transactions";
 
 describe("ordinary autonomous credentials cannot execute a founder-gated write", () => {
-  const saved = { ...process.env };
-
   beforeEach(() => {
     resetGrantVerifier();
     delete process.env.FOUNDER_GRANT;
   });
 
   afterEach(() => {
-    process.env = { ...saved };
+    // Restore only the key this file touches. See the note in
+    // alerting.isolation.test.ts: `process.env = {...saved}` swaps Node's live
+    // environment object for a plain one and breaks every later test file that
+    // shares the worker.
+    delete process.env.FOUNDER_GRANT;
     resetGrantVerifier();
   });
 

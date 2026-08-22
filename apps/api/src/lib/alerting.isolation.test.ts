@@ -40,8 +40,6 @@ async function loadAlerting() {
 }
 
 describe("sendAlert is isolated from the test runner", () => {
-  const saved = { ...process.env };
-
   beforeEach(() => {
     send.mockClear();
     // Simulate the leak precisely: a live key present in the worker, exactly as
@@ -51,7 +49,15 @@ describe("sendAlert is isolated from the test runner", () => {
   });
 
   afterEach(() => {
-    process.env = { ...saved };
+    // Restore the KEYS this file touches — never `process.env = {...saved}`.
+    // Assigning to process.env replaces Node's live environment object with a
+    // plain one for the whole worker, and vitest reuses a worker across test
+    // files. Doing that here took 12 unrelated tests down in files that run
+    // later in the same worker (admin-apply-migrations, internal-auth, verify,
+    // transactions, wallet) — every one of them a consumer of the secrets
+    // `test-env-setup.ts` installs.
+    delete process.env.RESEND_API_KEY;
+    delete process.env.ALERT_ALLOW_IN_TEST;
   });
 
   it("does not reach Resend for a warning, the severity that escaped", async () => {
