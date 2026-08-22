@@ -58,10 +58,15 @@ design:
     the canonical ExecutionOutcome fields, latency, and the parent transaction
     if there is one.
   the_floor_consumes_facts: >
-    Replacing a join on billing rows with a read of invocation facts removes the
-    four compensating filters and makes solution steps count. That is the exit
-    condition, and the acceptance signal is that a capability failing only
-    inside bundles becomes quarantinable.
+    Replacing a join on billing rows with a read of invocation facts makes
+    solution steps count. That is the exit condition, and the acceptance signal
+    is that a capability failing only inside bundles becomes quarantinable.
+    An earlier version of this line claimed the swap "removes the four
+    compensating filters". It does not, and review said so: the fact branch
+    still carries a free-tier filter, an internal-account exclusion and a
+    verdict discriminator, and adds context_kind. Only deleted_at goes, and only
+    because the column does not exist on facts. The gain is that solution steps
+    are visible, not that the query gets shorter.
   not_a_second_audit_trail: >
     Deliberately distinct from the transaction audit record and from
     health_monitor_events. This answers "did this capability work", nothing
@@ -83,7 +88,29 @@ migration:
     capability_invocations, three indexes (slug+created, transaction, created),
     and an append-only trigger. Defer-not-throw: a throw aborts boot and a failed
     Railway deploy does not cut over (DEC-20260504-C). Until the table exists the
-    floor falls back to its transactions query, which is today's behaviour.
+    floor falls back to its transactions query -- true only because the floor
+    asks to_regclass FIRST, in its own round trip. The first version asserted
+    that fallback and did not implement it: Postgres resolves relations at parse
+    time, so the epoch probe would have raised on a missing table, the error
+    would have escaped the decision loop, and the tick would have written no
+    decisions AND no heartbeat. The heartbeat is the DEC-20260504-C proof that
+    the job ran, so a deferred migration would have taken the armed quality
+    floor down and erased the evidence of its own failure. Found by review.
+  trigger_is_created_not_recreated: >
+    The first version ran DROP TRIGGER IF EXISTS then CREATE TRIGGER on every
+    boot. Blocks receive the DB handle rather than a transaction, so those
+    autocommit separately -- every boot (~4/day in prod) opened a window with no
+    append-only protection on a table whose entire purpose is immutability, and
+    took ACCESS EXCLUSIVE on a table the customer path inserts into. Now created
+    only when pg_trigger says it is absent. The function stays CREATE OR
+    REPLACE, which takes no lock on the table.
+  no_lock_timeout: >
+    Block 0100 deliberately does NOT set one. SET LOCAL lock_timeout outside a
+    transaction block is discarded, and blocks are handed the DB handle, so the
+    idiom two neighbouring blocks use has never done anything there either. A
+    bound that does not bind is worse than none, because the next reader
+    believes the DDL is protected. Safety comes instead from no statement taking
+    a heavy lock on an existing table.
   append_only_rule: >
     UPDATE is refused outright. DELETE is refused only inside 35 days — the
     floor's 30-day window plus margin. Blocking DELETE outright would make the
@@ -131,9 +158,16 @@ mutation_results:
     - "solution steps stop recording on the FAILURE path"
     - "guardedExecute stops deriving a failure outcome"
     - "revenue taken from the fact instead of the billing table"
-    - "epoch bridge dropped so the floor reads only billing rows"
     - "x402 gateway stops deriving a failure outcome"
     - "/v1/do stops recording entirely"
+  claim_withdrawn: >
+    An earlier version of this list claimed a mutation "epoch bridge dropped so
+    the floor reads only billing rows" was caught. Review checked and found no
+    test referencing the epoch at all, so nothing could have reddened
+    behaviourally -- the mutation I actually ran was on the fold source
+    discriminator and I labelled it wrongly. Withdrawn. The epoch bridge is now
+    covered by source-level assertions in jobs/quality-floor.test.ts.
+
   survived_then_fixed:
     - >
       Removing ONE of guardedExecute's two recordInvocation calls survived. The
@@ -163,3 +197,62 @@ out_of_scope:
   - public-copy correction (docs/remediation/PUBLIC-COPY-CORRECTION.md)
   - production authorization controls (controls/production-authorization)
   - stranded-transaction reconciliation (Brief A)
+
+# -- Independent review round 1: FAIL, five blocking findings, all remediated --
+review_round_1:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  b1_deferred_migration_killed_the_floor: >
+    The epoch probe named capability_invocations unconditionally. Block 0100 is
+    defer-not-throw, so on a deferred block the probe raises, the error escapes
+    past the decision loop, and the tick writes no decisions AND no heartbeat --
+    the DEC-20260504-C proof query being the very thing that stops being
+    written. The floor is armed in production: 78 enforce ticks in 20 days, 8
+    quarantines. Fixed by asking to_regclass first, in its own round trip, and
+    skipping the fact query entirely when the table is absent.
+  b2_lock_timeout_was_a_no_op: >
+    SET LOCAL outside a transaction block is discarded and blocks get the DB
+    handle. The intended 3s DDL bound did not exist; the real bound was the 30s
+    statement_timeout, and a timed-out lock wait would defer the block -- which
+    under B-1 killed the floor. Removed, with the reason recorded, rather than
+    left as a bound that does not bind.
+  b3_revenue_lost_the_internal_account_exclusion: >
+    Revenue moved out of the fold, which had summed price_cents over rows that
+    had already passed the internal-account, free-tier and clamp filters. The
+    replacement query carried none of them. Measured against production: 202
+    active capabilities went from zero external revenue to non-zero purely on
+    internal accounts, so requiresHuman -- the flag deciding whether a
+    deactivation proposal is a Petter-only call -- stopped discriminating.
+    Filters restored.
+  b4_the_load_bearing_defence_did_not_exist: >
+    invocation-facts.ts documented two defences and called the volume
+    cross-check the load-bearing one, on the grounds that a marker event is
+    written to the same database that just refused the fact. Only the marker
+    existed. Now implemented as detectFactVolumeShortfall, deliberately coarse
+    because facts and transactions do not correspond one-to-one by design.
+  b5_the_prescribed_proof_query_returned_nothing: >
+    evidence_holes appeared only on per-decision events, but a zero-decision
+    tick is the steady state, so the DEC-20260504-C verification this package
+    prescribed could not be run at all. The heartbeat now carries
+    facts_table_present, fact_epoch, evidence_holes and evidence_shortfalls.
+  dead_code_removed: >
+    droppedInvocationFactCount() was documented as exposed for the health
+    surface and had zero consumers.
+  still_open_non_blocking:
+    - >
+      N-2: composite capabilities such as website-to-company invoke other
+      executors in-process via getExecutor and record no facts -- structurally
+      the same defect WP9 closes for solution steps. Dormant today; that
+      capability is deactivated in production. The guard cannot see it because
+      it searches for the literal customer_paid context marker, which such a
+      file does not contain. Recorded rather than fixed: widening the guard to
+      every getExecutor caller would flag the provider chain and the test
+      harness, which legitimately do not record.
+    - >
+      N-1: recordInvocation is awaited on a separate pooled connection inside
+      the open wallet transaction. It cannot poison that transaction, but it is
+      a nested pool acquisition and carries no timeout of its own.
+    - >
+      N-6: the table stores user_id for 180 days and the trigger refuses UPDATE
+      unconditionally, so there is no mechanism to honour an Art. 16 or Art. 17
+      request against it. "No customer content" is not the same as "no personal
+      data". Needs a decision, not necessarily a code change.

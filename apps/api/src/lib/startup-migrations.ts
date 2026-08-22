@@ -2010,8 +2010,21 @@ export async function runMigration0100_capabilityInvocations(
   const startedAt = Date.now();
   let outcome: string;
 
+  // No `SET LOCAL lock_timeout` here, deliberately. Blocks receive the drizzle
+  // DB HANDLE, not a transaction (see runStartupMigrations), so every statement
+  // autocommits in its own implicit transaction and `SET LOCAL` is discarded
+  // before the next one runs — Postgres even says so: "SET LOCAL can only be
+  // used in transaction blocks". Two other blocks use the same idiom and it has
+  // never done anything there either. Writing a bound that does not bind is
+  // worse than having none, because the next reader believes the DDL is
+  // protected. The effective bound is the connection-level statement_timeout
+  // (30s) from db/index.ts.
+  //
+  // What actually keeps this safe is that no statement below takes a heavy lock
+  // on an existing table: the table is only created when absent, and the
+  // trigger is only created when absent. There is no per-boot DDL churn on a
+  // table the customer path writes to.
   try {
-    await tx.execute(sql`SET LOCAL lock_timeout = '3s'`);
     await tx.execute(sql`
       CREATE TABLE IF NOT EXISTS "capability_invocations" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2069,14 +2082,34 @@ export async function runMigration0100_capabilityInvocations(
       END;
       $fn$ LANGUAGE plpgsql
     `);
+    // Created only when absent, never dropped and recreated.
+    //
+    // The first version ran DROP TRIGGER IF EXISTS followed by CREATE TRIGGER on
+    // every boot. Because these autocommit separately (see the lock_timeout note
+    // above), that opened a real if brief window on every boot — roughly four a
+    // day in production — during which the append-only protection was absent
+    // from a table whose entire purpose is immutability. It also took ACCESS
+    // EXCLUSIVE on a table the customer path inserts into, on every boot, with
+    // a 30s statement_timeout as the only bound; a lock wait that timed out
+    // would defer the whole block, and until this was fixed a deferred block
+    // took the quality floor down with it.
+    //
+    // The FUNCTION is still CREATE OR REPLACE, so the trigger's behaviour can
+    // still be corrected by a deploy — replacing a function takes no lock on
+    // the table.
     await tx.execute(sql`
-      DROP TRIGGER IF EXISTS "capability_invocations_immutable_trg"
-        ON "capability_invocations"
-    `);
-    await tx.execute(sql`
-      CREATE TRIGGER "capability_invocations_immutable_trg"
-        BEFORE UPDATE OR DELETE ON "capability_invocations"
-        FOR EACH ROW EXECUTE FUNCTION "capability_invocations_immutable"()
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_trigger
+          WHERE tgname = 'capability_invocations_immutable_trg'
+            AND tgrelid = 'public.capability_invocations'::regclass
+        ) THEN
+          CREATE TRIGGER "capability_invocations_immutable_trg"
+            BEFORE UPDATE OR DELETE ON "capability_invocations"
+            FOR EACH ROW EXECUTE FUNCTION "capability_invocations_immutable"();
+        END IF;
+      END $$;
     `);
 
     outcome = "table, indexes and append-only trigger present";

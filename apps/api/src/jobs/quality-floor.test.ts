@@ -133,3 +133,124 @@ describe("quality-floor evidence window — genuine new failures still re-quaran
     expect(d.action).toBe("quarantine");
   });
 });
+
+/**
+ * WP9 — the SQL the floor actually issues.
+ *
+ * The first independent review found five blocking defects here and observed
+ * that nothing tested this query at all: `foldTrafficRows` was fed hand-built
+ * rows, so every assertion was about the fold and none about the thing that
+ * decides which rows exist. These assertions read the source with comments
+ * STRIPPED, so a claim in a docstring cannot satisfy one.
+ */
+describe("WP9 — the floor's fact/transaction sources", () => {
+  const src = readCode("quality-floor.ts");
+  const migration = readCode("../lib/startup-migrations.ts");
+
+  it("asks whether the fact table exists before mentioning it in a query", () => {
+    // Postgres resolves relations at parse time, so a query that merely NAMES a
+    // missing table fails however it is guarded internally. Block 0100 is
+    // defer-not-throw, so the table genuinely may not be there -- and an
+    // unguarded probe would throw past the decision loop, leaving the tick with
+    // no decisions AND no heartbeat. The heartbeat is the DEC-20260504-C proof
+    // that the job ran, so the failure would erase its own evidence, on a floor
+    // that is armed in production rather than dry-run.
+    expect(src).toContain(`to_regclass('public.capability_invocations') IS NOT NULL AS ready`);
+    // And the fact query must be conditional on that answer, not merely the
+    // epoch value.
+    expect(src).toMatch(/const factRows = factsReady\s*\?/);
+    expect(src).toMatch(/const epoch = factsReady\s*\?/);
+  });
+
+  it("keeps the two sources disjoint across the epoch", () => {
+    // Transactions strictly below, facts at or above. Overlap would double-count
+    // a capability's traffic; a gap would silently drop a day of it.
+    expect(src).toContain("AND t.created_at < ${epoch}::timestamptz");
+    expect(src).toContain("WHERE f.created_at >= GREATEST(s.win_start, ${epoch}::timestamptz)");
+  });
+
+  it("applies the promotion clamp to the fact source too", () => {
+    // A grace period that held on one source and not the other would
+    // reintroduce the contaminated-window bounce the clamp exists to stop.
+    const factQuery = src.slice(src.indexOf("const factRows"));
+    expect(factQuery).toContain("COALESCE(lp.promoted_at, '-infinity'::timestamptz)");
+    expect(factQuery).toContain("GREATEST(s.win_start,");
+  });
+
+  it("excludes harness and free-tier traffic from the fact source", () => {
+    // The fact branch has no `is_free_tier` column on transactions to lean on,
+    // so the equivalent exclusions have to be spelled out or ~98% of platform
+    // traffic would be read as customer experience.
+    const factQuery = src.slice(src.indexOf("const factRows"));
+    expect(factQuery).toContain("AND f.context_kind = 'customer_paid'");
+    expect(factQuery).toContain("AND f.is_free_tier = false");
+    expect(factQuery).toContain("f.user_id NOT IN (");
+  });
+
+  it("keeps internal accounts out of the revenue figure", () => {
+    // Regression on a measured defect: the first version of the revenue query
+    // dropped the internal-account exclusion, the free-tier filter and the
+    // promotion clamp, because revenue moved out of a fold that had already
+    // applied them. 202 active capabilities went from zero external revenue to
+    // non-zero purely on internal accounts, so `requiresHuman` -- the flag that
+    // decides whether a deactivation proposal is a Petter-only call -- stopped
+    // discriminating. lib/internal-accounts.ts names revenue explicitly.
+    const revenueQuery = src.slice(
+      src.indexOf("const revenueRows"),
+      src.indexOf("const revenueBySlug"),
+    );
+    expect(revenueQuery).toContain("SUM(t.price_cents)");
+    expect(revenueQuery).toContain("email LIKE ANY(");
+    expect(revenueQuery).toContain("COALESCE(t.is_free_tier, false) = false");
+    expect(revenueQuery).toContain("COALESCE(lp.promoted_at, '-infinity'::timestamptz)");
+  });
+
+  it("cross-checks fact volume against billed volume, not only marker events", () => {
+    // The module's own safety argument calls this the load-bearing defence, on
+    // the grounds that a marker event is written to the same database that just
+    // refused the fact -- so it is absent exactly when the cause is "the
+    // database was unreachable". It was documented and not implemented.
+    expect(src).toContain("async function detectFactVolumeShortfall");
+    expect(src).toContain("FROM capability_invocations");
+    expect(src).toMatch(/volumeShortfall = factsReady/);
+    // And it must actually gate the action, not merely be computed.
+    expect(src).toContain("holes > 0 || shortfall !== null");
+    expect(src).toContain("mode === \"enforce\" && !evidenceIncomplete");
+  });
+
+  it("puts the fact-source state on the heartbeat, where a zero-decision tick can be verified", () => {
+    // WP9's own post-deploy verification asks whether the floor is reading
+    // complete evidence. A zero-decision tick is the expected steady state, so
+    // a field that appears only on per-decision events cannot answer it, and a
+    // proof query returning nothing is the same as skipping verification.
+    const heartbeat = src.slice(src.indexOf(`actionTaken: "tick_complete"`));
+    expect(heartbeat).toContain("facts_table_present: factsReady");
+    expect(heartbeat).toContain("fact_epoch: epoch.toISOString()");
+    expect(heartbeat).toContain("evidence_holes: holedEvidence.size");
+    expect(heartbeat).toContain("evidence_shortfalls: volumeShortfall.size");
+  });
+
+  it("never drops the append-only trigger it just installed", () => {
+    // The first version ran DROP TRIGGER IF EXISTS then CREATE TRIGGER on every
+    // boot. Those autocommit separately -- blocks get the DB handle, not a
+    // transaction -- so every boot opened a window with no append-only
+    // protection on a table whose whole purpose is immutability, and took
+    // ACCESS EXCLUSIVE on a table the customer path writes to.
+    expect(migration).not.toContain(
+      `DROP TRIGGER IF EXISTS "capability_invocations_immutable_trg"`,
+    );
+    expect(migration).toContain("FROM pg_trigger");
+    expect(migration).toContain("tgname = 'capability_invocations_immutable_trg'");
+  });
+
+  it("does not pretend to set a lock timeout that cannot take effect", () => {
+    // `SET LOCAL` outside a transaction block is discarded, and blocks receive
+    // the DB handle rather than a transaction. A bound that does not bind is
+    // worse than none: the next reader believes the DDL is protected.
+    const block = migration.slice(
+      migration.indexOf("runMigration0100_capabilityInvocations"),
+    );
+    const body = block.slice(0, block.indexOf("export async function", 1) + 1 || undefined);
+    expect(body).not.toContain("SET LOCAL lock_timeout");
+  });
+});

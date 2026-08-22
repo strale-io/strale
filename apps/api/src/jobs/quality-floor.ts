@@ -70,6 +70,15 @@ const STARTUP_DELAY_MS = 15 * 60 * 1000; // let boot rush + first traffic settle
 const INTERVAL_MS = 24 * 60 * 60 * 1000;
 const ADVISORY_LOCK_ID = 20260812; // cross-instance dedup
 
+/**
+ * Volume cross-check thresholds. Coarse on purpose — facts and transactions do
+ * not correspond one-to-one by design, so a tight ratio would fire on every
+ * solution step and every rolled-back wallet transaction, and a check that
+ * fires constantly is a check that gets ignored.
+ */
+const FACT_SHORTFALL_MIN_TRANSACTIONS = 10;
+const FACT_SHORTFALL_RATIO = 0.5;
+
 export interface FloorTrafficRow {
   slug: string;
   lifecycle_state: string;
@@ -159,6 +168,79 @@ export function foldTrafficRows(
   });
 }
 
+/**
+ * Evidence-completeness check 2: does the fact count look sane next to the
+ * billing rows for the same capability and window?
+ *
+ * This is the check that survives the failure mode check 1 cannot see. A
+ * marker event is written to the same database that just refused a fact, so
+ * when the cause is "the database was unreachable" there is no marker either,
+ * and a holed window is indistinguishable from a quiet one. Comparing volumes
+ * needs no cooperation from the writer that failed.
+ *
+ * The comparison is deliberately COARSE. Facts and transactions do not
+ * correspond one-to-one and are not meant to:
+ *
+ *   - solution steps produce facts with no transaction of their own (the whole
+ *     point of WP9), so facts legitimately EXCEED transactions;
+ *   - a wallet transaction that rolls back after execution leaves a committed
+ *     fact with no transaction row, because the fact is written on a separate
+ *     pooled connection;
+ *   - the settlement reconciler writes `failed` transactions for crashed
+ *     processes that never invoked an executor, so transactions legitimately
+ *     exceed facts.
+ *
+ * So this fires only on gross loss: a capability with real billed traffic in
+ * the post-epoch window and almost no facts to match it. A tight ratio would
+ * cry wolf on every one of the cases above, and a check that fires constantly
+ * is a check that gets ignored.
+ */
+async function detectFactVolumeShortfall(
+  sql: postgres.Sql,
+  epoch: Date,
+): Promise<Map<string, string>> {
+  const rows = await sql<
+    { slug: string; facts: number; txns: number }[]
+  >`
+    WITH txn AS (
+      SELECT c.slug, COUNT(*)::int AS n
+      FROM capabilities c
+      JOIN transactions t ON t.capability_id = c.id
+      WHERE c.is_active = true
+        AND t.created_at >= ${epoch}::timestamptz
+        AND t.status IN ('completed', 'failed')
+        AND t.deleted_at IS NULL
+        AND COALESCE(t.is_free_tier, false) = false
+        AND (t.user_id IS NULL OR t.user_id NOT IN (
+          SELECT id FROM users
+          WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
+             OR email = ANY(${EXTRA_EXCLUDED_EMAILS})
+        ))
+      GROUP BY c.slug
+    ),
+    fct AS (
+      SELECT capability_slug AS slug, COUNT(*)::int AS n
+      FROM capability_invocations
+      WHERE created_at >= ${epoch}::timestamptz
+        AND context_kind = 'customer_paid'
+        AND is_free_tier = false
+      GROUP BY capability_slug
+    )
+    SELECT txn.slug, COALESCE(fct.n, 0) AS facts, txn.n AS txns
+    FROM txn LEFT JOIN fct ON fct.slug = txn.slug
+    WHERE txn.n >= ${FACT_SHORTFALL_MIN_TRANSACTIONS}
+      AND COALESCE(fct.n, 0) < txn.n * ${FACT_SHORTFALL_RATIO}`;
+
+  return new Map(
+    rows.map((r) => [
+      r.slug,
+      `only ${r.facts} invocation fact(s) recorded against ${r.txns} billed ` +
+        `call(s) since the fact epoch — the evidence for this capability is ` +
+        `incomplete, so no delisting decision may rest on it`,
+    ]),
+  );
+}
+
 export function isEnforceMode(): boolean {
   return process.env.QUALITY_FLOOR_ENFORCE === "true";
 }
@@ -183,39 +265,62 @@ export async function runQualityFloorOnce(): Promise<{
 
     const mode = isEnforceMode() ? "enforce" : "dry_run";
     try {
+      // ── Is the fact table there at all? ─────────────────────────────────
+      //
+      // Asked FIRST, in its own round trip, because block 0100 is
+      // defer-not-throw and a deferred block leaves no table. Postgres resolves
+      // relations at parse time, so a query merely MENTIONING
+      // `capability_invocations` raises `relation does not exist` however it is
+      // guarded internally — the whole statement fails before any WHERE clause
+      // runs. That error would propagate out of this function, and the floor
+      // would record no decisions AND no `tick_complete` heartbeat: the
+      // DEC-20260504-C proof that the job ran at all is the very thing that
+      // stops being written. The floor is armed in production, not dry-run, so
+      // it has to degrade to its previous behaviour rather than die quietly.
+      const [{ ready: factsReady }] = await sql<{ ready: boolean }[]>`
+        SELECT to_regclass('public.capability_invocations') IS NOT NULL AS ready`;
+
       // ── The epoch bridge (WP9) ──────────────────────────────────────────
       //
-      // The floor now reads INVOCATION FACTS, not billing rows. But the facts
-      // table starts empty on the deploy that creates it, so a clean swap would
-      // blind the floor for thirty days — it would see zero traffic everywhere
-      // and quietly do nothing, which is the worst possible failure for a
-      // safety mechanism because it looks exactly like "all healthy".
+      // The floor reads INVOCATION FACTS, not billing rows. But the facts table
+      // starts empty on the deploy that creates it, so a clean swap would blind
+      // the floor for thirty days — it would see zero traffic everywhere and
+      // quietly do nothing, which is the worst possible failure for a safety
+      // mechanism because it looks exactly like "all healthy".
       //
       // So: facts from the instant the first one was written, transactions
       // before it. The two never overlap, so nothing is double-counted, and the
       // transaction branch contributes nothing once the table is older than the
-      // window — at which point it can be deleted. This is a bridge with an
-      // expiry date, not a permanent second authority.
+      // window — at which point it can be deleted. A bridge with an expiry
+      // date, not a permanent second authority.
       //
-      // Fail-safe by construction: if the fact writer is broken and the table
-      // is empty, MIN() is NULL, the epoch is NOW(), and the floor reads
-      // transactions for the whole window — exactly today's behaviour.
-      const [{ epoch }] = await sql<{ epoch: Date }[]>`
-        SELECT COALESCE(MIN(created_at), NOW()) AS epoch FROM capability_invocations`;
+      // Fail-safe twice over: no table, or an empty one, both put the epoch at
+      // NOW() and read transactions for the whole window — exactly today's
+      // behaviour.
+      const epoch = factsReady
+        ? (
+            await sql<{ epoch: Date }[]>`
+              SELECT COALESCE(MIN(created_at), NOW()) AS epoch
+                FROM capability_invocations`
+          )[0].epoch
+        : new Date();
 
-      // `lp.promoted_at`: the latest ENFORCE-mode promotion for this slug,
-      // per the "promotion grace" fix (2026-08-16). Dry-run promotions never
-      // wrote a real listing change, so they must never move the window —
-      // filtered via `details->>'mode' = 'enforce'`. GREATEST() keeps the
-      // window's upper bound at 30d when there is no promotion (or it is
-      // older than 30d): the clamp can only ever narrow the window, never
-      // widen it past the DEC-20260812-A default.
+      // `lp.promoted_at`: the latest ENFORCE-mode promotion for this slug, per
+      // the "promotion grace" fix (2026-08-16). Dry-run promotions never wrote a
+      // real listing change, so they must never move the window — filtered via
+      // `details->>'mode' = 'enforce'`. GREATEST() keeps the window's upper
+      // bound at 30d when there is no promotion (or it is older than 30d): the
+      // clamp can only ever narrow the window, never widen it past the
+      // DEC-20260812-A default.
       //
-      // Both branches below read `scope`, so the clamp applies identically to
-      // facts and to transactions. A promotion grace that held on one source
+      // The two sources are read as two queries rather than one UNION ALL so
+      // that the fact query can be SKIPPED ENTIRELY when the table is absent.
+      // A UNION cannot be conditionally parsed. Both read the same `scope` CTE
+      // text, so the clamp and the active-capability filter are identical
+      // across them by construction — a grace period that held on one source
       // and not the other would reintroduce the contaminated-window bounce the
       // clamp exists to stop.
-      const rows = await sql<FloorTrafficRow[]>`
+      const transactionRows = await sql<FloorTrafficRow[]>`
         WITH scope AS (
           SELECT c.id, c.slug, c.lifecycle_state, c.visible, c.x402_enabled,
                  GREATEST(
@@ -232,35 +337,7 @@ export async function runQualityFloorOnce(): Promise<{
               AND e.details->>'mode' = 'enforce'
           ) lp ON true
           WHERE c.is_active = true
-        ),
-        internal AS (
-          SELECT id FROM users
-          WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
-             OR email = ANY(${EXTRA_EXCLUDED_EMAILS})
         )
-        -- Post-epoch: invocation facts. Includes solution steps, which is the
-        -- whole point — a capability invoked only inside bundles produced no
-        -- row the old query could see and could never be quarantined.
-        SELECT s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
-               'fact'::text AS source,
-               NULL::text AS status, NULL::text AS error,
-               f.success, f.counts_against_capability AS counts,
-               date_trunc('day', f.created_at)::date::text AS day,
-               (f.created_at > NOW() - INTERVAL '7 days') AS recent,
-               COUNT(*)::int AS n
-        FROM scope s
-        JOIN capability_invocations f ON f.capability_slug = s.slug
-        WHERE f.created_at >= GREATEST(s.win_start, ${epoch}::timestamptz)
-          AND f.context_kind = 'customer_paid'
-          AND f.is_free_tier = false
-          AND (f.user_id IS NULL OR f.user_id NOT IN (SELECT id FROM internal))
-        GROUP BY s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
-                 f.success, f.counts_against_capability, day, recent
-
-        UNION ALL
-
-        -- Pre-epoch: the billing rows, exactly as the floor read them before
-        -- WP9. Bounded above by the epoch so the two sources cannot overlap.
         SELECT s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
                'transaction'::text AS source,
                t.status, t.error,
@@ -275,39 +352,128 @@ export async function runQualityFloorOnce(): Promise<{
           AND t.status IN ('completed', 'failed')
           AND t.deleted_at IS NULL
           AND COALESCE(t.is_free_tier, false) = false
-          AND (t.user_id IS NULL OR t.user_id NOT IN (SELECT id FROM internal))
+          AND (t.user_id IS NULL OR t.user_id NOT IN (
+            SELECT id FROM users
+            WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
+               OR email = ANY(${EXTRA_EXCLUDED_EMAILS})
+          ))
         GROUP BY s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
                  t.status, t.error, day, recent`;
 
-      // Revenue is a BILLING question, so it is asked of the billing table
-      // across the whole window regardless of the epoch. Facts deliberately
-      // carry no price — they answer "did this work", and asking them what a
-      // call earned would be the same category error WP9 exists to undo. Only
-      // consumer: `requiresHuman`, because deactivating a revenue earner is a
-      // Petter-only decision under the escalation contract.
+      // Post-epoch: invocation facts. Includes solution steps, which is the
+      // whole point — a capability invoked only inside bundles produced no row
+      // the old query could see and could never be quarantined.
+      const factRows = factsReady
+        ? await sql<FloorTrafficRow[]>`
+            WITH scope AS (
+              SELECT c.id, c.slug, c.lifecycle_state, c.visible, c.x402_enabled,
+                     GREATEST(
+                       NOW() - INTERVAL '30 days',
+                       COALESCE(lp.promoted_at, '-infinity'::timestamptz)
+                     ) AS win_start
+              FROM capabilities c
+              LEFT JOIN LATERAL (
+                SELECT MAX(e.created_at) AS promoted_at
+                FROM health_monitor_events e
+                WHERE e.capability_slug = c.slug
+                  AND e.event_type = 'capability_promotion'
+                  AND e.action_taken LIKE 'promoted%'
+                  AND e.details->>'mode' = 'enforce'
+              ) lp ON true
+              WHERE c.is_active = true
+            )
+            SELECT s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
+                   'fact'::text AS source,
+                   NULL::text AS status, NULL::text AS error,
+                   f.success, f.counts_against_capability AS counts,
+                   date_trunc('day', f.created_at)::date::text AS day,
+                   (f.created_at > NOW() - INTERVAL '7 days') AS recent,
+                   COUNT(*)::int AS n
+            FROM scope s
+            JOIN capability_invocations f ON f.capability_slug = s.slug
+            WHERE f.created_at >= GREATEST(s.win_start, ${epoch}::timestamptz)
+              AND f.context_kind = 'customer_paid'
+              AND f.is_free_tier = false
+              AND (f.user_id IS NULL OR f.user_id NOT IN (
+                SELECT id FROM users
+                WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
+                   OR email = ANY(${EXTRA_EXCLUDED_EMAILS})
+              ))
+            GROUP BY s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
+                     f.success, f.counts_against_capability, day, recent`
+        : [];
+
+      const rows = [...transactionRows, ...factRows];
+
+      // Revenue is a BILLING question, so it is asked of the billing table.
+      // Facts deliberately carry no price — they answer "did this work", and
+      // asking them what a call earned would be the same category error WP9
+      // exists to undo. Only consumer: `requiresHuman`, because deactivating a
+      // revenue earner is a Petter-only decision under the escalation contract.
+      //
+      // Carries the SAME filters the fold used to apply, because the fold used
+      // to sum `price_cents` over rows that had already passed them. The first
+      // version of this query dropped the internal-account exclusion, the
+      // free-tier filter and the promotion clamp, and the effect was measured
+      // rather than theoretical: 202 active capabilities went from zero
+      // external revenue to non-zero purely on `system@strale.internal` and
+      // other internal accounts, so `requiresHuman` — the flag that decides
+      // whether a deactivation proposal is a Petter-only call — stopped
+      // discriminating. lib/internal-accounts.ts names revenue explicitly as a
+      // metric internal traffic must be kept out of.
       const revenueRows = await sql<{ slug: string; cents: number }[]>`
-        SELECT c.slug, COALESCE(SUM(t.price_cents), 0)::int AS cents
-        FROM capabilities c
-        JOIN transactions t ON t.capability_id = c.id
-        WHERE c.is_active = true
-          AND t.created_at > NOW() - INTERVAL '30 days'
+        WITH scope AS (
+          SELECT c.id, c.slug,
+                 GREATEST(
+                   NOW() - INTERVAL '30 days',
+                   COALESCE(lp.promoted_at, '-infinity'::timestamptz)
+                 ) AS win_start
+          FROM capabilities c
+          LEFT JOIN LATERAL (
+            SELECT MAX(e.created_at) AS promoted_at
+            FROM health_monitor_events e
+            WHERE e.capability_slug = c.slug
+              AND e.event_type = 'capability_promotion'
+              AND e.action_taken LIKE 'promoted%'
+              AND e.details->>'mode' = 'enforce'
+          ) lp ON true
+          WHERE c.is_active = true
+        )
+        SELECT s.slug, COALESCE(SUM(t.price_cents), 0)::int AS cents
+        FROM scope s
+        JOIN transactions t ON t.capability_id = s.id
+        WHERE t.created_at > s.win_start
           AND t.status = 'completed'
           AND t.deleted_at IS NULL
-        GROUP BY c.slug`;
+          AND COALESCE(t.is_free_tier, false) = false
+          AND (t.user_id IS NULL OR t.user_id NOT IN (
+            SELECT id FROM users
+            WHERE email LIKE ANY(${INTERNAL_EMAIL_LIKE_PATTERNS})
+               OR email = ANY(${EXTRA_EXCLUDED_EMAILS})
+          ))
+        GROUP BY s.slug`;
       const revenueBySlug = new Map(revenueRows.map((r) => [r.slug, r.cents]));
 
       // ── Evidence completeness (WP9) ─────────────────────────────────────
       //
       // Fact writes are best-effort — a bookkeeping failure must never fail a
       // customer's call. But a best-effort write whose losses are invisible
-      // makes "this capability had no traffic" and "the recorder is broken"
-      // the same observation, and the floor's response to the first is to do
-      // nothing while its response to a partial sample could be to delist.
+      // makes "this capability had no traffic" and "the recorder is broken" the
+      // same observation, and the floor's response to the first is to do nothing
+      // while its response to a partial sample could be to delist.
       //
-      // Any slug with a recorded fact-write failure inside the window has holed
-      // evidence, so it is flagged but never quarantined this tick. Suppression
-      // is per-slug and per-window, so one bad night does not disarm the floor
-      // for a month.
+      // Two independent checks, because they fail for different reasons:
+      //
+      //   1. Marker events. Names the cause, but is written to the same database
+      //      that just refused the fact, so it is absent exactly when the cause
+      //      is "the database was unreachable".
+      //   2. Volume. Compares facts against billing rows for the same slug and
+      //      window. Needs no cooperation from the failing writer, so it still
+      //      fires when the database was down — but it only says something is
+      //      wrong, not what.
+      //
+      // Both suppress QUARANTINE only, per slug, for this tick. Flagging still
+      // happens, so a hole is loud rather than disarming.
       const holedRows = await sql<{ slug: string; n: number }[]>`
         SELECT capability_slug AS slug, COUNT(*)::int AS n
         FROM health_monitor_events
@@ -316,6 +482,10 @@ export async function runQualityFloorOnce(): Promise<{
           AND capability_slug IS NOT NULL
         GROUP BY capability_slug`;
       const holedEvidence = new Map(holedRows.map((r) => [r.slug, r.n]));
+
+      const volumeShortfall = factsReady
+        ? await detectFactVolumeShortfall(sql, epoch)
+        : new Map<string, string>();
 
       const stats = foldTrafficRows(rows, revenueBySlug);
       const decisions = evaluateFloor(stats, DEFAULT_FLOOR_CONFIG);
@@ -330,8 +500,10 @@ export async function runQualityFloorOnce(): Promise<{
         // withdrawing something from sale, and the losses correlate with the
         // outages that would produce failures in the first place.
         const holes = holedEvidence.get(d.slug) ?? 0;
+        const shortfall = volumeShortfall.get(d.slug) ?? null;
+        const evidenceIncomplete = holes > 0 || shortfall !== null;
         const willQuarantine =
-          d.action === "quarantine" && mode === "enforce" && holes === 0;
+          d.action === "quarantine" && mode === "enforce" && !evidenceIncomplete;
         const details = {
           mode,
           completion: Number(d.completion.toFixed(4)),
@@ -339,13 +511,17 @@ export async function runQualityFloorOnce(): Promise<{
           deactivate_proposal: d.deactivateProposal,
           requires_human: d.requiresHuman,
           reason:
-            holes > 0 && d.action === "quarantine"
-              ? `${d.reason} — SUPPRESSED: ${holes} invocation fact(s) failed to ` +
-                "write for this capability in the window, so the completion rate " +
-                "above is computed from an incomplete sample. Fix the recorder, " +
-                "then let a clean window decide."
+            evidenceIncomplete && d.action === "quarantine"
+              ? `${d.reason} — SUPPRESSED: ` +
+                (holes > 0
+                  ? `${holes} invocation fact(s) failed to write for this ` +
+                    "capability in the window"
+                  : shortfall) +
+                ", so the completion rate above is computed from an incomplete " +
+                "sample. Fix the recorder, then let a clean window decide."
               : d.reason,
           evidence_holes: holes,
+          evidence_shortfall: shortfall,
           dec: "DEC-20260812-A",
         };
         if (willQuarantine) {
@@ -372,7 +548,7 @@ export async function runQualityFloorOnce(): Promise<{
             tier: d.action === "quarantine" ? 2 : 1,
             actionTaken:
               d.action === "quarantine"
-                ? holes > 0
+                ? evidenceIncomplete
                   ? "suppressed_incomplete_evidence"
                   : "dry_run_would_quarantine"
                 : "flagged_only",
@@ -384,12 +560,32 @@ export async function runQualityFloorOnce(): Promise<{
 
       // Heartbeat: proves the tick ran even with zero decisions (M-3 /
       // DEC-20260504-C — a log line is not verification).
+      //
+      // Carries the WP9 fact-source state, because the package's own
+      // post-deploy verification asks whether the floor is reading complete
+      // evidence — and a zero-decision tick is the expected steady state, so a
+      // field that only appears on per-decision events cannot answer it. A
+      // proof query that returns nothing is the same as skipping verification.
       await db.insert(healthMonitorEvents).values({
         eventType: "quality_floor",
         capabilitySlug: null,
         tier: 1,
         actionTaken: "tick_complete",
-        details: { mode, evaluated: stats.length, decisions: decisions.length, quarantined, proposals },
+        details: {
+          mode,
+          evaluated: stats.length,
+          decisions: decisions.length,
+          quarantined,
+          proposals,
+          // false => block 0100 has not run; the floor is on the transactions
+          // branch for the whole window, i.e. its pre-WP9 behaviour.
+          facts_table_present: factsReady,
+          fact_epoch: epoch.toISOString(),
+          // Slugs whose evidence is known to be incomplete this tick. Zero is
+          // the healthy reading, and it is a reading rather than an absence.
+          evidence_holes: holedEvidence.size,
+          evidence_shortfalls: volumeShortfall.size,
+        },
       });
 
       logWarn("quality-floor-tick", "floor evaluation complete", {

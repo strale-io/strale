@@ -350,7 +350,8 @@ interface InvocationActor {
  * Execute with retry for non-deterministic capabilities.
  *
  * WP9: this is also where the `/v1/do` rail records its invocation fact. The
- * route has FOUR call sites (sync, async, reserved-wallet and dry-run paths)
+ * route has FOUR call sites (anonymous free-tier, authenticated free-tier, sync
+ * and async)
  * and WP4 was accepted with one of five rails silently unwired — recording at
  * the wrapper instead of at each caller makes that failure unavailable. A new
  * execution path added to this route inherits the fact by construction, because
