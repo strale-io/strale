@@ -10,6 +10,7 @@ import { rateLimitByIpDb } from "../lib/db-rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
 import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
 import { DISPOSABLE_DOMAINS } from "../lib/disposable-domains.js";
+import { getFreeTierSlugs } from "../lib/free-tier.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import type { AppEnv } from "../types.js";
 import type { Context } from "hono";
@@ -413,10 +414,27 @@ export async function agentSignupHandler(c: Context) {
       ));
 
     if ((usage?.cnt ?? 0) === 0) {
+      // Read from the shared authority, never a literal. This list used to be
+      // five hardcoded slugs; it named `url-to-markdown` for the whole of the
+      // 2026-08-22 quarantine, telling an agent to unblock its signup with a
+      // call the platform would refuse. A gate whose instructions cannot be
+      // followed is worse than no gate.
+      const freeSlugs = await getFreeTierSlugs(db);
+      // Preference, not an assertion: if the friendliest example is not
+      // servable right now we name whatever is, and if nothing is we say
+      // nothing rather than naming a capability that would refuse.
+      const suggested =
+        ["email-validate", "dns-lookup"].find((s) => freeSlugs.includes(s)) ??
+        freeSlugs[0] ??
+        null;
       return c.json(
-        apiError("unauthorized", "Make at least one free-tier API call before signing up. Try: POST /v1/do with capability_slug 'email-validate'.", {
-          free_capabilities: ["email-validate", "dns-lookup", "iban-validate", "url-to-markdown", "json-repair"],
-        }),
+        apiError(
+          "unauthorized",
+          suggested
+            ? `Make at least one free-tier API call before signing up. Try: POST /v1/do with capability_slug '${suggested}'.`
+            : "Make at least one free-tier API call before signing up.",
+          { free_capabilities: freeSlugs },
+        ),
         403,
       );
     }
