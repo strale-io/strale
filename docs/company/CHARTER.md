@@ -192,7 +192,12 @@ produces**, not a parallel vocabulary:
 - **`Authority`** is the type that represents permission. It has exactly two
   forms: `AUTONOMOUS_POLICY` (a delegated action, carrying the decision that
   delegated it) and `FOUNDER_GATED` (a grant id, the purpose it was issued for,
-  and an expiry). Writes made through the operator write path record one.
+  and an expiry). It is checked when the write credential is released, and — as
+  of today — **not stored anywhere.** `describeAuthority()` exists to shape it
+  for storage and has no caller outside tests; there is no `authority_kind`
+  column. So "who permitted this" is enforced at the gate and is not yet
+  answerable from the data afterwards. That is a real gap, not a subtlety, and
+  it is the module owner's to close.
 - **`SYSTEM_ACTING` is `AUTONOMOUS_POLICY`.** It requires a purpose on
   **`AUTONOMOUS_PURPOSES`**, a closed constant; **`autonomousAuthority()`** refuses
   to build an authority for anything absent from it. Absence means

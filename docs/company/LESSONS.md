@@ -180,7 +180,7 @@ footnote. If a fourth lands, open the investigation.
 > A test, gate or check that passes whether or not the thing it guards is
 > working.
 
-**Count: 5 — threshold reached, investigation OPENED 2026-08-22.** Integration
+**Count: 6 — threshold reached, investigation OPENED 2026-08-22.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -202,8 +202,12 @@ gate scripts: 12 by direct `node` path, 1 by `npx tsx`, 3 through
 the repo root.
 
 **The finding, and it is the only claim here worth trusting: none of the 17
-fails when its input set is empty.** Every one of them treats "found no
-violations" and "examined nothing" as the same outcome — exit 0.
+fails when its input set is empty-but-present.** Every one treats "found no
+violations" and "examined nothing" as the same outcome — exit 0. Four
+(`check-framework-packages`, `check-manifest-guaranteed-consistency`,
+`check-tier-coverage`, `check-identity-fixture-shape`) do exit 2 when their input
+**directory is missing**, which is a partial mitigation worth carrying into step
+3: the distinction they already draw is the one the other thirteen need.
 `check-ceo-brief.ts` is explicit about it ("no briefs found, nothing to check"),
 `check-shape-contracts.mjs` skips entirely when the frontend checkout is absent,
 which it always is in this lane, and `guard-production-write-access.mjs` prints
@@ -359,7 +363,13 @@ binding test written to hold the charter to this model keyed on
 `lib/production-access.ts` — the module name on the pre-review branch. Review
 reconciled two competing models and kept `production-authority.ts`, so the file
 the test guarded never landed, its "dependency absent" branch stayed selected,
-and it went on passing while the charter named four symbols that do not exist. A
+and it went on passing while the charter named four symbols that do not exist.
+**And a sixth, in the repair for the fifth:** the rewritten test held its
+type-only assertion with a compile-time reference, in a file no tsconfig project
+typechecks — deleting `export type Authority` would have left every gate green.
+Two hollow guards in two consecutive attempts to fix hollow guards, which is the
+most direct evidence available that this family needs a mechanism rather than
+more care. A
 guard keyed to a path that never arrives reports success for work it never
 looked at: **family F5, shipped inside the change that documents F5.** The test
 now imports the module statically and checks that every symbol the charter names

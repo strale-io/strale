@@ -401,6 +401,9 @@ function splitByStatus(text: string): Array<{ status: StatusTag; text: string }>
   const lines = text.split(/\r?\n/);
   const blocks: Array<{ status: StatusTag; text: string }> = [];
   let current: { status: StatusTag; text: string } | null = null;
+  // Text before the first tag is an untagged block, NOT discarded. Dropping it
+  // let an escalation placed above the first tag escape every field check.
+  let preamble = "";
   for (const line of lines) {
     const m = tag.exec(line);
     if (m) {
@@ -408,9 +411,18 @@ function splitByStatus(text: string): Array<{ status: StatusTag; text: string }>
       current = { status: m[1] as StatusTag, text: line };
     } else if (current) {
       current.text += `\n${line}`;
+    } else {
+      preamble += `${line}\n`;
     }
   }
   if (current) blocks.push(current);
+  // An untagged preamble carrying content is checked as a founder decision —
+  // the same treatment an entirely untagged section gets.
+  const preambleHasContent = preamble
+    .split(/\r?\n/)
+    .map((l) => l.replace(/[*_`#]/g, "").trim())
+    .some((l) => l.length > 0 && !NOTHING_TO_DECIDE.test(l));
+  if (preambleHasContent) blocks.unshift({ status: "FOUNDER_DECISION", text: preamble });
   return blocks.length > 0 ? blocks : [{ status: "FOUNDER_DECISION", text }];
 }
 
@@ -436,15 +448,25 @@ function countEscalations(text: string): number {
  * and the escalation check reports missing fields that are present.
  */
 function sectionBody(lines: string[], heading: string): string {
-  const isHeading = (l: string) => /^#{1,4}\s*\S/.test(l);
+  const depthOf = (l: string) => /^(#{1,6})\s*\S/.exec(l)?.[1]?.length ?? 0;
   const start = lines.findIndex((l) =>
     new RegExp(`^#{1,4}\\s*(?:\\d+\\.\\s*)?[*_\`]*${escapeRe(heading)}`, "i").test(l));
   if (start === -1) return "";
+  // A section ends at the next heading of the SAME OR SHALLOWER depth — not at
+  // any heading. Terminating on the first heading of any level meant a single
+  // `###` line inside "Needs your decision" ended the section early, and
+  // everything after it went unlinted: an escalation with no fields, or an
+  // already-executed SYSTEM_ACTING item, both passed clean behind a sub-heading.
+  // Found by adversarial review after the first fix to this area, which closed
+  // the reported example and not the class.
+  const own = depthOf(lines[start]!) || 2;
   let end = lines.length;
   let fenced = false;
   for (let i = start + 1; i < lines.length; i++) {
     if (/^\s*```/.test(lines[i]!)) { fenced = !fenced; continue; }
-    if (!fenced && isHeading(lines[i]!)) { end = i; break; }
+    if (fenced) continue;
+    const d = depthOf(lines[i]!);
+    if (d > 0 && d <= own) { end = i; break; }
   }
   return lines.slice(start + 1, end).join("\n");
 }

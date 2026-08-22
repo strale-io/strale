@@ -145,10 +145,11 @@ A gap in the new production-authorization model, found by adversarial review.
 *What it is:* the function that hands out the production write credential
 checks only that it was given an object with a `kind` field. It does not check
 that the object came from one of the two constructors, so a hand-written
-literal claiming a founder grant — with an invented grant id — passes it, and
-that invented id is what gets recorded next to the change as evidence of who
-approved it. That is the shape of the 22 August incident, one object literal
-away.
+literal claiming a founder grant — with an invented grant id — passes it. That
+is the shape of the 22 August incident, one object literal away. **What it does
+not do today is reach an audit record**: the function that would store the
+approval alongside the change has no caller yet, so nothing is written down
+either way.
 *What is not affected:* this is not a live hole today. Nothing can write
 without the write credential, which is absent from the shared environment, and
 the database role is read-only underneath that. The gap is in the layer that
@@ -159,9 +160,10 @@ have not touched that module.
 *Recommended:* have the module's owner make the two constructors the only
 source of an `Authority` — a brand or a private symbol — so an unminted literal
 cannot reach the write path or the audit record.
-*If you do nothing:* the freeze and the read-only role continue to hold, and
-the audit trail keeps a field that a session could populate with a fiction if
-the credential ever became available.
+*If you do nothing:* the freeze and the read-only role continue to hold, so
+nothing can be written regardless. The exposure only becomes real on the day a
+write credential exists — which is why it is worth closing before then rather
+than after.
 
 ## DECIDED — visible so you can reverse them
 

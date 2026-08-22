@@ -96,6 +96,10 @@ describe("the charter binds to the authority model that actually landed", () => 
     "SYSTEM_ACTING", "FOUNDER_DECISION", "AUTHORIZATION_UNAVAILABLE",
     // Discriminants and fields of the exported `Authority` union, not exports.
     "AUTONOMOUS_POLICY", "FOUNDER_GATED", "kind",
+    // A column the charter says does NOT exist. Named so the absence is
+    // checkable by a reader; if it is ever created, this entry should go and
+    // the charter sentence with it.
+    "authority_kind",
     // Decision-queue classes.
     "approval_required", "preauthorized_notice", "your_call",
     // Environment and other modules.
@@ -205,9 +209,11 @@ describe("the statuses map onto shapes the module can actually produce", () => {
       .toThrow(authority.ProductionAuthorityError);
   });
 
-  it("no Authority value can be produced for a founder-gated action while frozen", () => {
-    // The strongest form of "it is never authority to act": in this state the
-    // type that represents permission cannot be constructed at all.
+  it("the legitimate route to a founder-gated authority yields nothing while frozen", () => {
+    // Deliberately NOT phrased as "no Authority can be constructed". It can —
+    // `Authority` is a structural type and an object literal satisfies it. What
+    // is closed is the sanctioned route: requireFounderGrant() returns nothing.
+    // The charter says the same, and says which barrier actually does the work.
     let built: unknown = null;
     try {
       built = authority.requireFounderGrant("close_stranded_executing_rows");

@@ -290,7 +290,10 @@ describe("escalations carry all five fields or they are not ready", () => {
               "FOUNDER_DECISION\n\nShould we double the price of everything? Tell me.",
     }));
     expect(r.ok, "a rider must not exempt the section").toBe(false);
-    expect(r.findings.filter((f) => f.rule === "escalation-incomplete").length).toBe(5);
+    // At least the five fields of the tagged escalation. The untagged rider is
+    // itself checked as a decision block, so the real count is a multiple.
+    expect(r.findings.filter((f) => f.rule === "escalation-incomplete").length)
+      .toBeGreaterThanOrEqual(5);
   });
 
   it("is not exempted when a handover follows the sentence", () => {
@@ -299,6 +302,48 @@ describe("escalations carry all five fields or they are not ready", () => {
     }));
     expect(r.ok).toBe(false);
     expect(r.findings.some((f) => f.rule === "handover-incomplete")).toBe(true);
+    // Discriminating specifically against the PREVIOUS fix, not just the
+    // original bug: the version before this one terminated the section at any
+    // heading, so the sub-heading below hid everything after it.
+    const behindSubheading = lintBrief(goodBrief({
+      decide: "Nothing needs your decision today.\n\n### One more thing\n\n" +
+              "AUTHORIZATION_UNAVAILABLE\n\n**Settled:** the records should be closed.",
+    }));
+    expect(behindSubheading.ok, "a sub-heading must not end the section").toBe(false);
+  });
+
+  it("checks content hidden behind a sub-heading", () => {
+    // Probe from adversarial review: one `###` line ended the section, so an
+    // escalation with no fields at all linted clean.
+    const r = lintBrief(goodBrief({
+      decide: "Nothing needs your decision today.\n\n### One more thing\n\n" +
+              "FOUNDER_DECISION\n\nShould we double the price of everything? Tell me.",
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.filter((f) => f.rule === "escalation-incomplete").length)
+      .toBeGreaterThanOrEqual(5);
+  });
+
+  it("catches an already-executed item hidden behind a sub-heading", () => {
+    // The worst of the probes: exactly the F10 incident-3 misreporting that
+    // `status-misplaced` exists to catch, smuggled past it by a heading.
+    const r = lintBrief(goodBrief({
+      decide: "Nothing needs your decision today.\n\n#### Note\n\n" +
+              "SYSTEM_ACTING — I closed the eleven records this morning.",
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.rule === "status-misplaced")).toBe(true);
+  });
+
+  it("checks escalation content placed above the first status tag", () => {
+    // splitByStatus() used to discard everything before the first tag.
+    const r = lintBrief(goodBrief({
+      decide: "Should we double the price of everything? Tell me.\n\n" +
+              "AUTHORIZATION_UNAVAILABLE\n\n**Settled:** x.\n**Why it is not mine:** y.\n" +
+              "**What I need:** your approval.",
+    }));
+    expect(r.ok, "untagged preamble must be checked, not dropped").toBe(false);
+    expect(r.findings.some((f) => f.rule === "escalation-incomplete")).toBe(true);
   });
 
   it("accepts the explicit nothing-to-decide line", () => {
