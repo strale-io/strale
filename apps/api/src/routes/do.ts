@@ -12,7 +12,10 @@ import {
   outcomeFromOutput,
   shouldCountAgainstCapability,
 } from "../lib/execution-outcome.js";
-import { recordAnonymousInvocation } from "../lib/invocation-facts.js";
+import {
+  computeServedFree,
+  recordAnonymousInvocation,
+} from "../lib/invocation-facts.js";
 import {
   wallets,
   walletTransactions,
@@ -1448,7 +1451,7 @@ async function executeFreeTier(
   // settlement (see the settlement update further down), and production shows
   // 5 of 5 such rows are false, so any derivation that answered "free" for them
   // would drop genuinely paid traffic out of the quality floor.
-  const servedFree = !c.get("x402_paid" as any);
+  const servedFree = computeServedFree(c.get("x402_paid" as any));
 
   // Create a persisted transaction record so the audit trail is verifiable.
   // MED-10: write client_ip_hash directly so the free-tier rate-limit query

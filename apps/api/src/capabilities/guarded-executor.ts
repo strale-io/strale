@@ -629,9 +629,10 @@ export async function guardedExecute(
   if (!executor) {
     throw new Error(`Executor not registered for ${slug}`);
   }
-  // WP9: this function RUNS an executor, so it records what happened. It had no
-  // live callers when the fact recorder was built — every rail uses
-  // `assertGuardedAllow` and drives the executor itself — but an executor-
+  // WP9: this function RUNS an executor, so it records what happened. No RAIL
+  // uses it — every rail calls `assertGuardedAllow` and drives the executor
+  // itself — but `scripts/onboard.ts` and `scripts/smoke-test.ts` do, which is
+  // why `rail` had to be threaded through them. An executor-
   // invoking helper that records nothing is a ready-made way for the next rail
   // to be invisible to the quality floor. The `rail` parameter is required
   // rather than derived, because "which entry point is this" is not something

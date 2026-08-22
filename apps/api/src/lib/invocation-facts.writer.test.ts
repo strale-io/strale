@@ -38,7 +38,7 @@ vi.mock("../db/index.js", () => ({
   },
 }));
 
-const { recordPaidInvocation, recordAnonymousInvocation, recordInvocation } =
+const { computeServedFree, recordPaidInvocation, recordAnonymousInvocation, recordInvocation } =
   await import("./invocation-facts.js");
 const { outcomeFromOutput, outcomeFromError } = await import("./execution-outcome.js");
 
@@ -163,6 +163,49 @@ describe("the row a customer invocation actually writes", () => {
     dbRefuses = false;
     // And it dropped the fact rather than writing a half-row.
     expect(inserted).toHaveLength(0);
+  });
+
+  it("decides served-free from the payment marker, in both directions", async () => {
+    // The origin of the one value round 8 collapsed nine call sites into. Every
+    // HOP it takes afterwards was pinned; the expression that produces it was
+    // unguarded in both directions, and no test file in the repo even mentioned
+    // its input.
+    //
+    // Inverted to always-true, every anonymous /v1/do fact carries
+    // is_free_tier = true, the floor filters all of them out, and the rail goes
+    // permanently invisible -- the exact failure this file's own docstring
+    // names as its reason for existing, closed at the writer and left open at
+    // the source.
+    //
+    // Inverted to always-false, two live effects: genuine anonymous free-tier
+    // traffic gets scored by the armed floor as customer experience (the
+    // cheapest failure-fabrication vector there is, drivable from any IP), and
+    // the SAME variable feeds the transaction row, whose is_free_tier = true is
+    // what the 10/day per-IP free cap counts -- so the counter returns zero
+    // forever and the cap is bounded only by the 60/min in-memory limiter.
+    //
+    // The three anonymous cases executeFreeTier actually serves:
+    expect(computeServedFree(undefined), "genuine free-tier capability").toBe(true);
+    expect(computeServedFree(undefined), "progressive unlock").toBe(true);
+    expect(computeServedFree(true), "X-Payment settled").toBe(false);
+    // And the marker is treated as a marker, not as a truthy accident.
+    expect(computeServedFree(null)).toBe(true);
+    expect(computeServedFree(false)).toBe(true);
+  });
+
+  it("does not let a fact claim free-tier by omission", async () => {
+    // The last unguarded route to a free-tier fact: `isFreeTier: fact.isFreeTier
+    // ?? false` on the raw writer. Only reachable via guardedExecute today,
+    // whose callers pass internal_test and are filtered anyway -- but a default
+    // that flipped would let a fact claim free-tier by saying nothing.
+    await recordInvocation({
+      capabilitySlug: "dns-lookup",
+      rail: "harness",
+      contextKind: "internal_test",
+      latencyMs: 1,
+      outcome: OK,
+    });
+    expect(inserted[0].isFreeTier).toBe(false);
   });
 
   it("clamps a nonsense latency rather than dropping the fact", async () => {

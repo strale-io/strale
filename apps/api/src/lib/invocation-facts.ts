@@ -8,8 +8,8 @@
  * `/v1/do` call, the billing row and the invocation happen to be the same row.
  * For a solution step they are not: a bundle writes ONE transaction with
  * `capability_id = NULL`, and the step outcomes live inside an `output.steps`
- * JSONB blob. Production carries 694 such rows and 126 sub-calls in a trailing
- * 30-day window that exist nowhere else — so a capability that fails ONLY
+ * JSONB blob. Production carries 694 such rows all-time, every one with a null
+ * capability_id, and the sub-calls buried inside them exist nowhere else — so a capability that fails ONLY
  * inside bundles is invisible to the floor and cannot be quarantined at all.
  *
  * The fix is not a better join. It is to stop asking a billing artefact a
@@ -144,6 +144,28 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
  * sides, which is what keeps the fact branch and the pre-epoch transaction
  * branch measuring the same population.
  */
+/**
+ * Was an anonymous `/v1/do` call served WITHOUT payment?
+ *
+ * `executeFreeTier` serves three anonymous cases and only one of them paid:
+ *
+ *   - a genuinely free-tier capability      -> free
+ *   - a progressive-unlock call             -> free
+ *   - an X-Payment (x402) call              -> PAID
+ *
+ * The route stashes `x402_paid` on the context only after verifying a payment,
+ * so its absence is the discriminator. Extracted as a pure function purely so
+ * it can be asserted: review found the expression unguarded in BOTH directions
+ * while every hop the value took afterwards was pinned. Inverted to always-true
+ * the anonymous rail becomes permanently invisible to the floor; inverted to
+ * always-false, genuine free traffic is scored as customer experience AND the
+ * same variable disables the 10/day per-IP free cap, since that counter reads
+ * `is_free_tier = true`.
+ */
+export function computeServedFree(x402Paid: unknown): boolean {
+  return !x402Paid;
+}
+
 /**
  * Record a fact for a PAID customer invocation.
  *
