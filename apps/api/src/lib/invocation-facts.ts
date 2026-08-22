@@ -41,6 +41,12 @@
  *
  * Defence 2 is the load-bearing one. Defence 1 exists because it names the
  * cause, and a cross-check tells you only that something is wrong.
+ *
+ * Both live in jobs/quality-floor.ts: the marker query, and
+ * `detectFactVolumeShortfall`. The first version of this file described both
+ * and shipped only the first — the one this comment calls insufficient — so the
+ * stated protection on an armed, non-self-reversing, public-surface write path
+ * reduced to the mechanism it itself called inadequate. Found by review.
  */
 
 import { getDb } from "../db/index.js";
@@ -116,19 +122,6 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
 export const FACT_WRITE_FAILED_EVENT = "invocation_fact_write_failed";
 
 /**
- * Process-local count of dropped facts, exposed for the health surface. Reset
- * only by restart. Deliberately not the primary signal — an in-process counter
- * dies with the process that observed the problem.
- */
-let droppedFacts = 0;
-export function droppedInvocationFactCount(): number {
-  return droppedFacts;
-}
-export function __resetDroppedInvocationFactsForTests(): void {
-  droppedFacts = 0;
-}
-
-/**
  * Record one invocation. Never throws — see the failure-handling note above.
  *
  * Called once per LOGICAL invocation, at the same granularity as the
@@ -159,7 +152,11 @@ export async function recordInvocation(fact: InvocationFact): Promise<void> {
       latencyMs: Number.isFinite(fact.latencyMs) ? Math.max(0, Math.round(fact.latencyMs)) : 0,
     });
   } catch (err) {
-    droppedFacts += 1;
+    // No in-process counter here. The first version kept one and described it
+    // as "exposed for the health surface"; nothing ever read it, and an
+    // in-process counter dies with the process that observed the problem
+    // anyway. The durable signals are the marker event below and the volume
+    // cross-check the floor runs.
     logError("invocation-fact-write-failed", err, {
       slug: fact.capabilitySlug,
       rail: fact.rail,
