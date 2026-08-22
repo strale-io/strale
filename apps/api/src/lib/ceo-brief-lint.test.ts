@@ -443,7 +443,7 @@ describe("a settled decision with no execution authority is its own status", () 
     "AUTHORIZATION_UNAVAILABLE",
     "",
     "**Settled:** a customer who was double-charged last week should get the second charge back.",
-    "**Why it is not mine:** issuing money back to a customer is reserved to you, and I hold read-only access.",
+    "**Why it is not mine:** I hold read-only access to the live records, so I cannot make the change.",
     "**What I need:** your approval, and I will make the change.",
   ].join("\n");
 
