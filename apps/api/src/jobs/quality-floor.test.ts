@@ -149,7 +149,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
 
   it("asks whether the fact table exists before mentioning it in a query", () => {
     // Postgres resolves relations at parse time, so a query that merely NAMES a
-    // missing table fails however it is guarded internally. Block 0100 is
+    // missing table fails however it is guarded internally. Block 0101 is
     // defer-not-throw, so the table genuinely may not be there -- and an
     // unguarded probe would throw past the decision loop, leaving the tick with
     // no decisions AND no heartbeat. The heartbeat is the DEC-20260504-C proof
@@ -261,7 +261,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // the DB handle rather than a transaction. A bound that does not bind is
     // worse than none: the next reader believes the DDL is protected.
     const block = migration.slice(
-      migration.indexOf("runMigration0100_capabilityInvocations"),
+      migration.indexOf("runMigration0101_capabilityInvocations"),
     );
     const body = block.slice(0, block.indexOf("export async function", 1) + 1 || undefined);
     expect(body).not.toContain("SET LOCAL lock_timeout");

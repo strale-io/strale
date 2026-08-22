@@ -1966,7 +1966,7 @@ export async function runMigration0099_noHalfQuarantine(
 
 
 /**
- * Block 0100 — invocation facts (WP9).
+ * Block 0101 — invocation facts (WP9).
  *
  * The quality floor decides whether to withdraw a capability from sale by
  * joining `transactions ON capability_id`. A solution execution writes one
@@ -2004,7 +2004,7 @@ export async function runMigration0099_noHalfQuarantine(
  * not cut over (DEC-20260504-C). Until the table exists the floor falls back to
  * its transactions query, which is exactly today's behaviour.
  */
-export async function runMigration0100_capabilityInvocations(
+export async function runMigration0101_capabilityInvocations(
   tx: MigrationExecutor,
 ): Promise<BlockResult> {
   const startedAt = Date.now();
@@ -2120,7 +2120,7 @@ export async function runMigration0100_capabilityInvocations(
   }
 
   return {
-    block: "0100_capability_invocations",
+    block: "0101_capability_invocations",
     outcome: `capability_invocations — ${outcome}`,
     duration_ms: Date.now() - startedAt,
   };
@@ -2171,7 +2171,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0097_chainSequence,
   runMigration0098_perCustomerIdempotency,
   runMigration0099_noHalfQuarantine,
-  runMigration0100_capabilityInvocations,
+  runMigration0101_capabilityInvocations,
 ];
 
 /**

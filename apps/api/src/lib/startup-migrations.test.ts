@@ -1286,7 +1286,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0097_chainSequence",
       "runMigration0098_perCustomerIdempotency",
       "runMigration0099_noHalfQuarantine",
-      "runMigration0100_capabilityInvocations",
+      "runMigration0101_capabilityInvocations",
     ]);
   });
 });

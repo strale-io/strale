@@ -83,7 +83,7 @@ exit_conditions:
 
 # ── Migration and retention implications, recorded explicitly ────────────────
 migration:
-  block: "0100_capability_invocations"
+  block: "0101_capability_invocations"
   creates: >
     capability_invocations, three indexes (slug+created, transaction, created),
     and an append-only trigger. Defer-not-throw: a throw aborts boot and a failed
@@ -105,7 +105,7 @@ migration:
     only when pg_trigger says it is absent. The function stays CREATE OR
     REPLACE, which takes no lock on the table.
   no_lock_timeout: >
-    Block 0100 deliberately does NOT set one. SET LOCAL lock_timeout outside a
+    Block 0101 deliberately does NOT set one. SET LOCAL lock_timeout outside a
     transaction block is discarded, and blocks are handed the DB handle, so the
     idiom two neighbouring blocks use has never done anything there either. A
     bound that does not bind is worse than none, because the next reader
@@ -202,7 +202,7 @@ out_of_scope:
 review_round_1:
   verdict: FAIL_REMEDIATION_REQUIRED
   b1_deferred_migration_killed_the_floor: >
-    The epoch probe named capability_invocations unconditionally. Block 0100 is
+    The epoch probe named capability_invocations unconditionally. Block 0101 is
     defer-not-throw, so on a deferred block the probe raises, the error escapes
     past the decision loop, and the tick writes no decisions AND no heartbeat --
     the DEC-20260504-C proof query being the very thing that stops being

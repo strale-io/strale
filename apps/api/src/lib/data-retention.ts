@@ -185,7 +185,7 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
  * verdict — so there is nothing here that the 90-day content redaction exists to
  * remove, and nothing an Art. 15 or Art. 17 request reaches.
  *
- * Must stay comfortably above INVOCATION_FACT_DELETE_GUARD_DAYS. Block 0100's
+ * Must stay comfortably above INVOCATION_FACT_DELETE_GUARD_DAYS. Block 0101's
  * trigger refuses to delete a fact inside the floor's reading window, so a
  * retention window shorter than that guard would make this purge throw on every
  * run — from inside a bulk job, which is where this platform has previously let
@@ -198,7 +198,7 @@ async function purgeCapabilityInvocations(cutoff: Date): Promise<number> {
   let deleted = 0;
   let batches = 0;
   // LIMIT-paginated, like every other rule here (DEC-20260504-B). The table is
-  // created empty by block 0100, so the first successful run has no backlog to
+  // created empty by block 0101, so the first successful run has no backlog to
   // drain — the workload-resumption hazard that protocol exists for does not
   // apply to a table that has never held a row. Batched anyway, because it will
   // hold roughly 6k rows a day once the fact writer is live.

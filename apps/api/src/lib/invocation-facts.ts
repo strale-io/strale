@@ -108,7 +108,7 @@ export interface InvocationFact {
 }
 
 /**
- * The window inside which the database refuses to DELETE a fact (block 0100).
+ * The window inside which the database refuses to DELETE a fact (block 0101).
  *
  * Mirrors the `INTERVAL '35 days'` in the trigger. Kept here as a number so the
  * retention rule can be checked against it: a retention window shorter than this

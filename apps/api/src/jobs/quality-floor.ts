@@ -267,7 +267,7 @@ export async function runQualityFloorOnce(): Promise<{
     try {
       // ── Is the fact table there at all? ─────────────────────────────────
       //
-      // Asked FIRST, in its own round trip, because block 0100 is
+      // Asked FIRST, in its own round trip, because block 0101 is
       // defer-not-throw and a deferred block leaves no table. Postgres resolves
       // relations at parse time, so a query merely MENTIONING
       // `capability_invocations` raises `relation does not exist` however it is
@@ -577,7 +577,7 @@ export async function runQualityFloorOnce(): Promise<{
           decisions: decisions.length,
           quarantined,
           proposals,
-          // false => block 0100 has not run; the floor is on the transactions
+          // false => block 0101 has not run; the floor is on the transactions
           // branch for the whole window, i.e. its pre-WP9 behaviour.
           facts_table_present: factsReady,
           fact_epoch: epoch.toISOString(),
