@@ -53,10 +53,12 @@ jobs:
           cache: npm
           registry-url: "https://registry.npmjs.org"
 
-      # Node 20 ships npm 10.x; trusted publishing needs >= 11.5.1.
+      # Node 20 ships npm 10.x; trusted publishing needs >= 11.5.1. Pinned to
+      # the 11.x line rather than @latest: this tool performs an irreversible
+      # publish, and it should not change without a change to this repo.
       - name: Upgrade npm
         run: |
-          npm install -g npm@latest
+          npm install -g npm@^11.5.1
           echo "npm $(npm --version)"
 
       - name: Resolve release target

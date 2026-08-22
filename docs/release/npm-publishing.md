@@ -39,8 +39,14 @@ For **each** of the five packages above:
    - **Environment:** leave empty
 5. Save.
 
-Then verify with a dry run (below) before cutting a real release. Once a dry run
-succeeds for a package, no npm token is needed for it again.
+Run a dry run (below) before cutting a real release to check the packaging.
+
+> **A green dry run does not prove trusted publishing is configured correctly.**
+> The dry-run path never authenticates against the registry — it packs the tarball
+> and skips the publish step — so a mistyped organization, repository, or workflow
+> filename in the npm-side config still passes. The OIDC exchange is first exercised
+> by a real publish. Expect the first release of each package to be the actual test,
+> and if it fails, delete the tag, fix the npm-side config, and re-cut it.
 
 ### Token hygiene after setup
 
