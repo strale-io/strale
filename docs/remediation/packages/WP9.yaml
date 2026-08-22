@@ -84,6 +84,16 @@ exit_conditions:
 # ── Migration and retention implications, recorded explicitly ────────────────
 migration:
   block: "0101_capability_invocations"
+  ledger_id: "0101_capability_invocations"
+  ledger_identity: >
+    Distinct from main's 0100_relistUrlToMarkdown, and that is the half of the
+    collision fix that matters. startup_migration_ledger.block is a PRIMARY KEY
+    and it is what tells a one-shot block it has already fired, so two blocks
+    sharing an id means whichever runs second reads the other's row and skips
+    its own work forever. Renaming the function alone would have left that
+    intact. Four invariants now enforce it: no two blocks share a ledger id, no
+    ONE NUMBER names two migrations, every registered block has a distinct
+    number prefix, and block numbers only ever increase.
   renumbered_from_0100: >
     origin/main landed runMigration0100_relistUrlToMarkdown (c6a3b16) while this
     branch was open. Two structurally different migrations sharing a block id
@@ -413,3 +423,80 @@ review_round_3:
       swallowed into a "deferred to next boot" outcome that nothing escalates.
       The floor degrades safely and the heartbeat carries
       facts_table_protected: false, but nothing alerts on it.
+
+# -- Independent review round 4: FAIL, four blocking findings, all remediated --
+review_round_4:
+  verdict: FAIL_REMEDIATION_REQUIRED
+  note: >
+    Two of the four were already being fixed when the reviewer ran, in response
+    to the founder blocker on migration numbering, and it saw the uncommitted
+    edits in the worktree. It reported that plainly and reviewed the committed
+    head instead, which is the right call.
+  founder_blocker_block_number_collision: >
+    Raised independently by the founder and by review round 2. The function
+    rename was done in round 2; round 4 completed it properly. WP9's block now
+    carries its own ledger id and writes its own ledger row. Three tests prove
+    the one-shot work runs exactly once: it purges on first install and never
+    again, it refuses rather than bulk-deleting past a ceiling, and it does not
+    record itself as applied when it fails partway. Verified that main's 0100 is
+    byte-identical to origin/main and that the BLOCKS array contains every block
+    main has plus 0101.
+  b1_the_eighth_hollow_assertion: >
+    Created by round 3's own remediation. Adding the purge gate introduced a
+    second `await hasImmutableTrigger(tx)` call site, which then satisfied the
+    verification's guard on its own -- so replacing the verification with a
+    constant left the block reporting "present and verified" for a table with no
+    trigger, suite green. Third time a hollow assertion has been created inside
+    the fix for the previous one; the cause each time is a file-scoped toContain
+    matching a substring that survives the break. Pinned by the whole assignment.
+  b2_unbounded_boot_delete: >
+    DELETE FROM capability_invocations with no WHERE and no LIMIT, in the boot
+    path, gated only on the trigger being absent. Reachable three ways, one of
+    which the block's own docstring predicts: drop the trigger for maintenance,
+    reboot, and the whole fact table is destroyed. Now gated on the ledger so it
+    can only fire on a genuine first install, and bounded by a ceiling above
+    which it refuses and defers. DEC-20260504-B is cited by this same PR for the
+    retention purge on this same table; the boot DELETE had neither a bound nor
+    a plan.
+  b3_the_visibility_fields_were_unguarded: >
+    Everything from outcomeFromOutput down was mutation-checked; the fields
+    deciding whether the row is READ AT ALL were not. Setting a solution step's
+    isFreeTier to a literal true makes every bundle fact fail the floor's
+    is_free_tier filter, so bundle-only capabilities go back to invisible -- the
+    single defect this package exists to close -- and the headline test stays
+    green because it hand-builds rows and never exercises the writer.
+  b4_the_harness_question_answered_from_code: >
+    Review found ~10k internal transactions a day carrying a capability_id and
+    could not identify the client, and inferred something was calling /v1/do. It
+    is lib/test-runner.ts:1875, which invokes executors in-process and INSERTs
+    its own transaction row directly. It never calls /v1/do and never calls
+    recordInvocation. So the harness is ~98% of transactions and zero facts, the
+    null client_meta and idempotency_key are explained, and the contradictory
+    comment claiming it reaches /v1/do over HTTP is corrected.
+  non_blocking_fixed:
+    - "A tautological assertion: the retention test sliced FROM the DELETE and then asserted the DELETE was in the slice."
+    - "Cutoff DIRECTION now asserted on the invocation-fact purge. Nothing in this repo asserted cutoff direction on any purge before; review demonstrated that inverting it on purgeTransactions survives the whole suite today. That one is pre-existing and out of WP9's scope, but it means nothing would have caught the same slip here."
+    - "The invocation-fact purge's cutoff parameter renamed to factCutoff so its WHERE line is uniquely addressable by a mutation, the same reasoning as the revenue query's rt alias."
+  billing_semantics_unchanged_verified: >
+    Round 3's taxonomy fix touched the money path, so review traced every
+    consumer. outcomeFromError returns billable: false in EVERY branch, before
+    and after, so no call that previously settled or charged now does not, or
+    vice versa. Its consumers are fact construction (the error is re-thrown
+    unchanged) and shouldCountAgainstCapability, which gates only the circuit
+    breaker. aggregateSolutionOutcome is fed exclusively from outcomeFromOutput
+    and never sees outcomeFromError. The taxonomy's config/timeout/upstream/
+    internal classes still reach the provider branch and still count.
+  floor_verdicts_after_the_taxonomy_fix: >
+    Modelled by review against 30 days of production traffic through the SHIPPED
+    classifier: product-reviews-extract 9.3% -> 100% (4 eligible, no verdict),
+    us-company-data 33% -> 100% (6 eligible, no verdict), url-to-markdown 52.6%
+    -> 71.4% (ok). Opposite direction checked: exactly two capabilities drop
+    below the 10-call minimum, both with ZERO counted failures, so no genuinely
+    broken capability is hidden. The pre-epoch transaction branch already applies
+    this taxonomy, so the fix restores parity rather than introducing blindness.
+  not_mutation_proven:
+    - >
+      The ledger-write ORDER assertion compares source indices, and the mutation
+      that would break it is a code MOVE, which the single-line mutation tool
+      cannot express. The related property -- that the verification throws
+      before the ledger row is written -- is mutation-proven separately.
