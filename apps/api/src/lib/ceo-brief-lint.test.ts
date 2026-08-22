@@ -219,15 +219,16 @@ describe("the brief may not open as a work log", () => {
   });
 });
 
-describe("escalations carry all five fields or they are not ready", () => {
-  const complete =
-    "One decision. **The choice:** whether to soften a claim on the website that we cannot fully " +
-    "stand behind. **What is established:** the claim holds for altering a single record and not " +
-    "for ordering or deletion across a three-and-a-half-month window; replacement wording is drafted. " +
-    "**Options:** change the wording now, or leave it and accept the exposure. " +
-    "**I recommend** changing it. **Consequence:** changing it costs an hour and narrows what we " +
-    "advertise; leaving it means a compliance buyer reads a claim we cannot fully support.";
+/** A complete five-field founder escalation. Shared by several blocks below. */
+const complete =
+  "One decision. **The choice:** whether to soften a claim on the website that we cannot fully " +
+  "stand behind. **What is established:** the claim holds for altering a single record and not " +
+  "for ordering or deletion across a three-and-a-half-month window; replacement wording is drafted. " +
+  "**Options:** change the wording now, or leave it and accept the exposure. " +
+  "**I recommend** changing it. **Consequence:** changing it costs an hour and narrows what we " +
+  "advertise; leaving it means a compliance buyer reads a claim we cannot fully support.";
 
+describe("escalations carry all five fields or they are not ready", () => {
   it("accepts an escalation with all five", () => {
     const r = lintBrief(goodBrief({ decide: complete }));
     expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
@@ -311,6 +312,81 @@ describe("escalations carry all five fields or they are not ready", () => {
     const r = lintBrief(goodBrief({ decide: templated }));
     expect(r.findings.some((f) => f.rule === "escalation-volume"), JSON.stringify(r.findings)).toBe(false);
     expect(r.findings.filter((f) => f.severity === "error")).toEqual([]);
+  });
+});
+
+describe("a settled decision with no execution authority is its own status", () => {
+  // CHARTER.md § "Three statuses". The third exists because the first two
+  // cannot express "I know what should happen and I am not permitted to do it",
+  // and without a name for it that situation has only two places to go: quietly
+  // executed anyway, or presented as though the judgement were still open.
+  const handover = [
+    "AUTHORIZATION_UNAVAILABLE",
+    "",
+    "**Settled:** the eleven unfinished records should be closed and the one euro refunded.",
+    "**Why it is not mine:** closing records and issuing refunds are reserved to you, and I hold read-only access.",
+    "**What I need:** do it yourself, or tell me and I will.",
+  ].join("\n");
+
+  it("accepts a handover without demanding the five judgement fields", () => {
+    const r = lintBrief(goodBrief({ decide: handover }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+    expect(r.findings.some((f) => f.rule === "escalation-incomplete"),
+      "a settled matter must not be forced into a decision shape").toBe(false);
+  });
+
+  for (const [field, label] of [
+    ["settled", "**Settled:**"],
+    ["why it is not mine", "**Why it is not mine:**"],
+    ["what i need", "**What I need:**"],
+  ] as const) {
+    it(`rejects a handover missing "${field}"`, () => {
+      const r = lintBrief(goodBrief({
+        decide: handover.split("\n").filter((l) => !l.startsWith(label)).join("\n"),
+      }));
+      expect(r.ok).toBe(false);
+      expect(r.findings.some((f) => f.rule === "handover-incomplete")).toBe(true);
+    });
+  }
+
+  it("warns when a handover is dressed up as an open choice", () => {
+    // Presenting a settled matter with options invites a re-decision nobody
+    // asked for — half of how the approval-boundary failure happened.
+    const r = lintBrief(goodBrief({
+      decide: `${handover}\n**Options:** close them, or leave them open.`,
+    }));
+    expect(r.findings.some((f) => f.rule === "handover-as-decision")).toBe(true);
+  });
+
+  it("still checks the handover when the section also says nothing needs deciding", () => {
+    // The two facts are independent: there may be no judgement outstanding AND
+    // something settled that I cannot execute.
+    const r = lintBrief(goodBrief({
+      decide: `Nothing needs your decision today.\n\nAUTHORIZATION_UNAVAILABLE\n\n**Settled:** the records should be closed.`,
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.rule === "handover-incomplete")).toBe(true);
+  });
+
+  it("rejects an already-executed item presented as if it were asked about", () => {
+    const r = lintBrief(goodBrief({
+      decide: "SYSTEM_ACTING\n\n**Settled:** I put the service back on the shelf.\n" +
+              "**Why it is not mine:** n/a.\n**What I need:** nothing.",
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.rule === "status-misplaced")).toBe(true);
+  });
+
+  it("treats an untagged section as a founder decision, as before", () => {
+    // The tags refine the contract; they must not retroactively fail a brief
+    // written to the earlier one.
+    const r = lintBrief(goodBrief({ decide: complete }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  });
+
+  it("checks each tagged block on its own terms when both appear", () => {
+    const r = lintBrief(goodBrief({ decide: `FOUNDER_DECISION\n${complete}\n\n${handover}` }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
   });
 });
 

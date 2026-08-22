@@ -279,18 +279,38 @@ will present itself as competence. That asymmetry is why the boundary is stated
 in the charter at the same volume as the licence, and why this family is opened
 at two.
 
-**Repair, and its honest limits.** CHARTER.md now carries the hard boundary:
-being right is not authority; an `approval_required` item stays until Petter
-moves it; a permission we do not hold is a stop rather than an obstacle;
-reversibility confers nothing. That is a stated rule, and a stated rule is what
-already failed to prevent incident 1 — so it is the floor, not the fix. The
-structural repair still owed: **an approval-gated item should be mechanically
-distinguishable from an ungated one at the point of execution**, so that acting
-on one requires deliberately overriding something rather than merely reasoning
-past it. That work is not done. Until it is, this family stays open, and its
-state is *"guarded by prose only"*.
+**Repair, in three parts, two of which exist.**
 
-**State: OPEN.** Owner Claude. Opened 2026-08-22.
+1. **The rule.** CHARTER.md carries the hard boundary: being right is not
+   authority; an `approval_required` item stays until Petter moves it; a
+   permission we do not hold is a stop rather than an obstacle; reversibility
+   confers nothing. A stated rule is what already failed to prevent incident 1,
+   so this is the floor and not the fix.
+2. **A name for the situation.** `AUTHORIZATION_UNAVAILABLE` — *decision
+   settled, execution authority missing* — is now a first-class status beside
+   `SYSTEM_ACTING` and `FOUNDER_DECISION`, checked by the brief guard with its
+   own required fields. This is more than bookkeeping: with only two statuses,
+   a settled-but-unpermitted item had nowhere legitimate to go, so it went
+   either into "done" (incident 1) or into "your call" as though the judgement
+   were still open (incident 2). A failure mode with no vocabulary is one the
+   reporter has to invent a category for under time pressure, and both
+   inventions were wrong.
+3. **The mechanism — landing separately, and the reason this family is not
+   closed.** An approval-gated action must be *mechanically* distinguishable
+   from an ungated one at the point of execution, so acting on one means
+   deliberately overriding something rather than merely reasoning past it. That
+   is PR #361's `FOUNDER_GATED_ACTIONS` closed enum, `assertFounderGatedWrite`
+   (which accepts no prose, so a model cannot author its own authorisation),
+   the deny-all default verifier, and a physically read-only connection. It is
+   **not landed**, and its own open question is how it reconciles with the
+   ed25519 grant verification in `lib/production-authority.ts`. Until one
+   accepted authority exists, this family's state is *"named, and guarded by
+   prose"*.
+
+**State: OPEN.** Owner Claude. Opened 2026-08-22. Closes when part 3 lands, the
+charter binds to its symbols rather than describing them, and both incidents
+replay against the gate — `charter-authorization-binding.test.ts` fails until
+the binding is real, so the reconciliation cannot be quietly skipped.
 
 ---
 

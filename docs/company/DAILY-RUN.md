@@ -189,18 +189,47 @@ tasks: "find a second paying customer", not "attribute the enumerator".
 short list. Prefer **"Nothing needs your decision today."** — write that exact
 sentence, and mean it.
 
-Each entry that does appear carries the five fields the charter requires, under
+Everything in this section is tagged with one of the three statuses CHARTER.md
+defines, and the tag decides the shape of the entry:
+
+- **`SYSTEM_ACTING`** — never appears here. It is already done; it belongs in
+  section 3.
+- **`FOUNDER_DECISION`** — judgement is his. Carries the five fields below.
+- **`AUTHORIZATION_UNAVAILABLE`** — **the decision is settled and I lack the
+  authority to execute it.** This is a handover, not a question, and it is
+  written as one: what will happen, why it is not mine to do, and what I need
+  from him. It deliberately does **not** carry the five judgement fields —
+  forcing a settled matter into a decision shape invites him to re-open
+  something that is not open, and that framing is half of how family F10
+  happened.
+
+A run may reach a firm conclusion about what should happen and, in the same
+breath, report that it is not permitted to act on it. That is a complete and
+correct outcome, not an unfinished one. What it may never do is let the firmness
+of the conclusion migrate the item into `SYSTEM_ACTING`.
+
+Each `FOUNDER_DECISION` carries the five fields the charter requires, under
 these five labels, in this order. The labels are not decoration: they are what
 the guard checks, and they exist because the first version of that check tried
 to recognise the fields from prose and could be satisfied by a fluent paragraph
 that decided nothing while rejecting a terse one that decided everything.
 
 ```
+FOUNDER_DECISION
 **The choice: <one sentence — what is actually being decided>**
 **What is established:** <the facts I went and got>
 **Options:** <the real ones>
 **I recommend** <the recommendation — always present>
 **The consequence:** <what happens to money, customers, risk or time under each>
+```
+
+An `AUTHORIZATION_UNAVAILABLE` entry uses this shape instead:
+
+```
+AUTHORIZATION_UNAVAILABLE
+**Settled:** <what should happen, and what already determined it>
+**Why it is not mine:** <the gate — a founder-reserved action, or no write access>
+**What I need:** <execute it yourself, or grant the authority>
 ```
 
 Nothing in this section may be an unresolved technical question, and nothing may

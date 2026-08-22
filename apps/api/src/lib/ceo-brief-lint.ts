@@ -108,6 +108,33 @@ export const ESCALATION_FIELDS = ["choice", "established", "options", "recommend
 
 const NOTHING_TO_DECIDE = /nothing needs your decision/i;
 
+/**
+ * Statuses, per CHARTER.md § "Three statuses".
+ *
+ * `AUTHORIZATION_UNAVAILABLE` is the one that changes this file's behaviour: it
+ * marks an item whose decision is settled and whose execution authority is
+ * missing. Such an entry is a handover, not a question, so it is NOT held to
+ * the five judgement fields — holding it to them would force a settled matter
+ * into a decision shape and invite the founder to re-open something that is not
+ * open. Its own three fields are required instead.
+ *
+ * `SYSTEM_ACTING` is rejected in this section outright: an action already taken
+ * belongs in "Fixed automatically". Letting it appear under "Needs your
+ * decision" is how a completed act acquires the appearance of having been
+ * asked about.
+ */
+export const STATUS_TAGS = ["SYSTEM_ACTING", "FOUNDER_DECISION", "AUTHORIZATION_UNAVAILABLE"] as const;
+export type StatusTag = (typeof STATUS_TAGS)[number];
+
+/** Fields required on an `AUTHORIZATION_UNAVAILABLE` entry. */
+export const HANDOVER_FIELDS = ["settled", "why_not_mine", "what_i_need"] as const;
+
+const HANDOVER_LABELS: Record<(typeof HANDOVER_FIELDS)[number], RegExp> = {
+  settled: /\*\*\s*settled\b/i,
+  why_not_mine: /\*\*\s*why (?:it |this )?is not mine\b/i,
+  what_i_need: /\*\*\s*what I need\b/i,
+};
+
 export interface BriefLintResult {
   findings: Finding[];
   words: number;
@@ -221,15 +248,57 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
       severity: "error", rule: "empty-decision-section",
       message: 'the "Needs your decision" section is empty — say "Nothing needs your decision today." explicitly',
     });
-  } else if (!NOTHING_TO_DECIDE.test(decide)) {
-    for (const field of ESCALATION_FIELDS) {
-      if (!fieldPresent(decide, field)) {
-        findings.push({
-          severity: "error", rule: "escalation-incomplete",
-          message: `an escalation is present but the "${field}" field is missing — the charter requires all five`,
-        });
+  } else if (!NOTHING_TO_DECIDE.test(decide) || /\bAUTHORIZATION_UNAVAILABLE\b/.test(decide)) {
+    // A section may carry both: nothing to DECIDE, and something settled that I
+    // am not permitted to execute. Those are different facts, so the
+    // nothing-to-decide sentence does not exempt a handover from its fields.
+    const blocks = splitByStatus(decide);
+
+    if (blocks.some((b) => b.status === "SYSTEM_ACTING")) {
+      findings.push({
+        severity: "error", rule: "status-misplaced",
+        message:
+          'a SYSTEM_ACTING item appears under "Needs your decision" — it is already done ' +
+          'and belongs in "Fixed automatically". Nothing already executed may be presented as if it were asked about.',
+      });
+    }
+
+    for (const b of blocks) {
+      if (b.status === "AUTHORIZATION_UNAVAILABLE") {
+        // A handover, not a question. Held to its own three fields, and
+        // deliberately NOT to the five judgement fields.
+        for (const field of HANDOVER_FIELDS) {
+          if (!HANDOVER_LABELS[field].test(b.text)) {
+            findings.push({
+              severity: "error", rule: "handover-incomplete",
+              message:
+                `an AUTHORIZATION_UNAVAILABLE item is missing its "${field.replace(/_/g, " ")}" field — ` +
+                "a handover states what is settled, why it is not mine, and what is needed",
+            });
+          }
+        }
+        for (const field of ESCALATION_FIELDS) {
+          if (fieldPresent(b.text, field) && field !== "recommendation") {
+            findings.push({
+              severity: "warning", rule: "handover-as-decision",
+              message:
+                `an AUTHORIZATION_UNAVAILABLE item carries the "${field}" field. Its decision is ` +
+                "settled — presenting it as an open choice invites a re-decision that is not being asked for.",
+            });
+          }
+        }
+      } else {
+        for (const field of ESCALATION_FIELDS) {
+          if (!fieldPresent(b.text, field)) {
+            findings.push({
+              severity: "error", rule: "escalation-incomplete",
+              message: `an escalation is present but the "${field}" field is missing — the charter requires all five`,
+            });
+          }
+        }
       }
     }
+
     const items = countEscalations(decide);
     if (items > 3) {
       findings.push({
@@ -275,6 +344,31 @@ const FIELD_LABELS: Record<(typeof ESCALATION_FIELDS)[number], RegExp> = {
 
 function fieldPresent(text: string, field: (typeof ESCALATION_FIELDS)[number]): boolean {
   return FIELD_LABELS[field].test(text);
+}
+
+/**
+ * Split the decision section into per-item blocks by their status tag.
+ *
+ * An untagged section is one implicit `FOUNDER_DECISION` block — the tags are a
+ * refinement of the existing contract, not a new requirement that would
+ * retroactively fail every brief written before them.
+ */
+function splitByStatus(text: string): Array<{ status: StatusTag; text: string }> {
+  const tag = new RegExp(`\\b(${STATUS_TAGS.join("|")})\\b`);
+  const lines = text.split(/\r?\n/);
+  const blocks: Array<{ status: StatusTag; text: string }> = [];
+  let current: { status: StatusTag; text: string } | null = null;
+  for (const line of lines) {
+    const m = tag.exec(line);
+    if (m) {
+      if (current) blocks.push(current);
+      current = { status: m[1] as StatusTag, text: line };
+    } else if (current) {
+      current.text += `\n${line}`;
+    }
+  }
+  if (current) blocks.push(current);
+  return blocks.length > 0 ? blocks : [{ status: "FOUNDER_DECISION", text }];
 }
 
 /**
