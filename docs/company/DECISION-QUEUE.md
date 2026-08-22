@@ -100,8 +100,9 @@ item 3 leaves one automated check inert; items 1 and 4 are tidying.
 
 **DQ-18** · `answered` · owner Petter · raised 2026-08-22T07:00Z — **both items are settled; nothing here needs you**
 Both were decided by Petter, not by me: item 1 accepted with the
-production-authorization incident closeout, item 2 approved as a removal. The
-token was `your_call`, which the dashboard renders as "Needs your yes" — so it
+production-authorization incident closeout, item 2 approved as a removal.
+
+The token was `your_call`, which the dashboard renders as "Needs your yes" — so it
 kept asking for two answers he had already given. `answered` renders as settled
 *and* keeps his name on it, which `decided` would not: that token means "I made
 the call", and using it here would have recorded his approval as mine. The entry

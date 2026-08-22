@@ -222,10 +222,15 @@ describe("the brief may not open as a work log", () => {
 /**
  * A complete five-field founder escalation. Shared by several blocks below.
  *
- * Deliberately a GENUINELY OPEN decision. This fixture used to be the website
- * integrity-claim item, which the settled-matter guard now correctly rejects —
- * using a decided matter as the canonical example of a good escalation was the
- * same confusion the guard exists to catch, sitting in the test file.
+ * Deliberately a decision that is GENUINELY OPEN and GENUINELY HIS. It has been
+ * wrong twice: first the website integrity claim, which the settled-matter guard
+ * now correctly rejects — a decided matter used as the canonical example of a
+ * good escalation, the very confusion the guard exists to catch, sitting in the
+ * test file. Then a 20c-to-35c price change, which is open but not his: pricing
+ * inside the existing band is Claude's own call under CHARTER.md, so the
+ * canonical escalation was something the charter says never to send him. A
+ * vendor contract is founder-gated on two independent grounds — a new recurring
+ * cost, and an agreement that binds the company.
  */
 const complete =
   "One decision. **The choice:** whether to take a paid contract with the Greek registry. " +
@@ -430,11 +435,15 @@ describe("a settled decision with no execution authority is its own status", () 
   // cannot express "I know what should happen and I am not permitted to do it",
   // and without a name for it that situation has only two places to go: quietly
   // executed anyway, or presented as though the judgement were still open.
+  // Subject deliberately NOT the eleven-row reconciliation: that matter is
+  // settled, so using it here made the canonical example of a valid handover
+  // something the settled-matter guard correctly rejects. Same trap as the
+  // `complete` fixture, one describe block down.
   const handover = [
     "AUTHORIZATION_UNAVAILABLE",
     "",
-    "**Settled:** the eleven unfinished records should be closed and the one euro refunded.",
-    "**Why it is not mine:** closing records and issuing refunds are reserved to you, and I hold read-only access.",
+    "**Settled:** a customer who was double-charged last week should get the second charge back.",
+    "**Why it is not mine:** issuing money back to a customer is reserved to you, and I hold read-only access.",
     "**What I need:** your approval, and I will make the change.",
   ].join("\n");
 
@@ -591,10 +600,23 @@ describe("a settled matter must never come back as a decision", () => {
   });
 
   it("is not evaded by dropping the count or changing the noun", () => {
+    // Every phrasing here got past some earlier version of the pattern, and
+    // each was supplied by adversarial review rather than imagined. LESSONS.md
+    // claims these are recognised; this is what makes the claim checkable.
     for (const phrasing of [
       "**The choice: whether this morning's change stands or is reversed.**",
       "**The choice: whether to reverse the change made this morning.**",
       "**The choice: what to do about the stranded executing rows.**",
+      "**The choice: whether to revert the eleven rows closed this morning.**",
+      "**The choice: whether to reopen the eleven transactions closed at 07:50.**",
+      "**The choice: whether to put the eleven records back to executing.**",
+      "**The choice: whether to re-run the eleven-row reconciliation.**",
+      "**The choice: Eleven unfinished transactions — approve as proposed?**",
+      "**The choice: do you want me to un-close the 11 rows?**",
+      "**The choice: should the rows we closed at 07:50 be re-opened?**",
+      "**The choice: restore the prior status of those eleven records?**",
+      "**The choice: confirm the eleven closures should stand.**",
+      "**The choice: should the credit be withdrawn from those eleven records?**",
     ]) {
       const r = lintBrief(goodBrief({
         decide: `FOUNDER_DECISION\n\n${phrasing}\n**What is established:** x.\n` +
@@ -604,18 +626,31 @@ describe("a settled matter must never come back as a decision", () => {
     }
   });
 
-  it("does not fire on an unrelated count that merely mentions transactions", () => {
-    // The first pattern keyed on "eleven" near a noun and flagged "11
-    // transactions in the last month at 20 cents" — ordinary business English
-    // inside a genuinely open pricing decision.
-    const r = lintBrief(goodBrief({
-      decide:
-        "FOUNDER_DECISION\n\n**The choice: what to charge for the Greek registry lookup.**\n" +
-        "**What is established:** 11 transactions in the last month at 20 cents, and the " +
-        "eleven free capabilities drove 400 transactions beside them.\n" +
-        "**Options:** hold, or move to 35.\n**I recommend** 35.\n**The consequence:** 15 euros a month.",
-    }));
-    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  it("does not fire on ordinary business English", () => {
+    // Every line here was a false positive against some version of the pattern.
+    // A guard that rejects correct prose gets worked around, and this one sits
+    // on the founder-facing surface, so the cost of a wrong rejection is high.
+    for (const line of [
+      "11 transactions in the last month at 20 cents, and the eleven free capabilities drove 400 beside them",
+      "if the deploy regresses I revert the change within a minute",
+      "we reverted the change on Thursday and the errors stopped",
+      "backing out the change would cost a day",
+      "we should reinstate the credit we withdrew from that customer in error",
+      "the backfill put 11 rows into the audit table",
+      "an eleven-row CSV export from the dashboard",
+      "roll back the Tuesday deploy",
+      "put the price up to 35 cents",
+      "reverse the vendor decision we took in April",
+      "the eleven free-tier services are unchanged",
+    ]) {
+      const r = lintBrief(goodBrief({
+        decide:
+          "FOUNDER_DECISION\n\n**The choice: what to charge for the Greek registry lookup.**\n" +
+          `**What is established:** ${line}.\n` +
+          "**Options:** hold, or move to 35.\n**I recommend** 35.\n**The consequence:** 15 euros a month.",
+      }));
+      expect(r.findings.filter((f) => f.severity === "error"), line).toEqual([]);
+    }
   });
 
   it("does not fire on a genuinely open decision", () => {
