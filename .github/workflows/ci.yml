@@ -185,6 +185,15 @@ jobs:
       # with. Blocks the "hollow package" class of incident that surfaced
       # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
+      # DEC-20260822-A: the CEO morning brief must stay a business synthesis.
+      # Prose drifts back toward its author's frame, and the daily report had
+      # already become an engineering activity log once. This lints every brief
+      # in docs/company/briefs/ for structure, length, technical vocabulary and
+      # the five fields the charter requires on any founder escalation. Rules
+      # live in src/lib/ceo-brief-lint.ts and are unit-tested there; this step
+      # is the reachability half — a gate nobody runs is a gate that does
+      # nothing, which this repo has shipped three times.
+      - run: npx tsx apps/api/scripts/check-ceo-brief.ts
       # Phase A0b CI lint (wired 2026-08-17, Phase 2 T2.2 — written
       # 2026-08-12 but never wired in): apps/api/scripts/*.{ts,mts,mjs} must route
       # executor invocation through guardedExecute/assertGuardedAllow, not

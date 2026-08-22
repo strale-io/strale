@@ -125,6 +125,32 @@ one I would not leave indefinitely.
 
 ## DECIDED — visible so you can reverse them
 
+**DQ-19** · `decided` · owner Claude · 2026-08-22
+Changed how I report to you, widened what I decide without asking, and started
+treating repeated mistakes as one problem instead of many.
+*What this is:* your review this morning, implemented. Three parts. **You now
+get one page a morning** — plain English, what the business did, what needs you
+— and the technical record lives separately for whoever audits the work. **I
+decide more without asking:** obvious reversible faults, false alarms from our
+own monitoring, wording on our own site that measurement contradicts, and the
+routine housekeeping where our existing rules already give the answer.
+Correcting a claim downward is mine; making a stronger claim is still yours, as
+is anything that binds the company, spends beyond the weekly limit, or cannot be
+undone. **And when the same kind of mistake happens three times, it stops being
+a bug and becomes an investigation** into what we got wrong underneath.
+*What it changes for you today:* one of the two items I put to you yesterday
+comes off your list. The eleven unfinished records and the one-euro correction
+on our own internal account involve no customer money and our existing rule
+already answers them, so I have taken that back. The website wording stays
+yours — it is a claim a regulator would read.
+*Why it is mine:* you asked for it. Everything inside it is either how I work or
+already in my column.
+*What I will watch:* whether the number of things reaching you falls without
+anything important going unsaid. If this page ever starts reading like an
+engineering report again, that is the failure, and there is now an automatic
+check that fails our release process when it does.
+*How you'd reverse it:* tell me, and the old format comes back the next morning.
+
 **DQ-17** · `decided` · owner Claude · 2026-08-22
 Put a free service back on the shelf that our own quality check had taken off
 by mistake this morning, and stopped us advertising things we will not serve.

@@ -34,6 +34,24 @@ In USD ≈ **$50/week**. The goal is therefore **~40×**, and M1 is **~5×**, no
 > numbers together: **we are selling more to the same buyer.** A session aimed
 > at where a *second* payer comes from is worth more than any capability work
 > until that changes.
+>
+> **Correction to the comparison, 2026-08-22 (the level stands, the movement
+> does not).** The "94.7% a week ago → 99.3% now" reading is not sound, and the
+> first production run of `metrics/commercial.ts` is what caught it. Payer
+> identity only began recording on 2026-08-15, so any window reaching back
+> before that divides one visible payer by revenue nothing was attributing:
+> measured over discrete ISO weeks, the week of 08-10 reads **19.0% top share
+> with only 19.0% of its revenue traceable at all**. Presenting 19% → 99.3% as a
+> movement would have been a pure coverage artefact, and the 94.7% figure is the
+> same artefact in a milder form. **What survives:** this week is 100%
+> attributable and its top share really is 99.3% (€56.49 against €0.40 from
+> everyone else across 4 payers, 3 of them new). That level is the finding, and
+> it is enough — the conclusion above is unchanged. What we cannot yet say is
+> whether concentration is *rising*; the first honest week-on-week comparison is
+> available once two full weeks sit entirely after 2026-08-15. `Concentration
+> .comparable` now enforces this, so the same comparison cannot be made by hand
+> again. Logged as a new instance of failure family F2 in
+> [LESSONS.md](LESSONS.md).
 
 > **Read revenue week-over-week, not as a rolling 7d figure.** On 2026-08-17 the
 > rolling 7d read €36.64 against the €45.58 baseline and looked like a 20% fall.
