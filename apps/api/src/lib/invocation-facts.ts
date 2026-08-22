@@ -101,6 +101,17 @@ export interface InvocationFact {
   outcome: ExecutionOutcome;
 }
 
+/**
+ * The window inside which the database refuses to DELETE a fact (block 0100).
+ *
+ * Mirrors the `INTERVAL '35 days'` in the trigger. Kept here as a number so the
+ * retention rule can be checked against it: a retention window shorter than this
+ * guard would make the nightly purge throw every time it ran, and it would throw
+ * from inside a bulk job whose failures this platform has previously swallowed
+ * for days at a time.
+ */
+export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
+
 /** Marker event type. The floor reads this; nothing else writes it. */
 export const FACT_WRITE_FAILED_EVENT = "invocation_fact_write_failed";
 
