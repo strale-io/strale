@@ -185,6 +185,15 @@ jobs:
       # with. Blocks the "hollow package" class of incident that surfaced
       # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
       - run: node apps/api/scripts/check-framework-packages.mjs
+      # DEC-20260822-A: the CEO morning brief must stay a business synthesis.
+      # Prose drifts back toward its author's frame, and the daily report had
+      # already become an engineering activity log once. This lints every brief
+      # in docs/company/briefs/ for structure, length, technical vocabulary and
+      # the five fields the charter requires on any founder escalation. Rules
+      # live in src/lib/ceo-brief-lint.ts and are unit-tested there; this step
+      # is the reachability half — a gate nobody runs is a gate that does
+      # nothing, which this repo has shipped three times.
+      - run: npx tsx apps/api/scripts/check-ceo-brief.ts
       # No credential in a recognised vendor token format may reach a tracked
       # file. Scans tracked files only — the public history is what matters,
       # and history is not retractable. Added 2026-08-22.
@@ -264,4 +273,13 @@ jobs:
       # throttled-upstream audit that produced Block 0082 is exactly the
       # class of drift this catches, so it goes live here.
       - run: node apps/api/scripts/check-cost-class-coherence.mjs
+
+      # 2026-08-22 production-authorization incident. The whole authority model
+      # rests on one property: the production write credential is readable in
+      # exactly ONE module, which demands an Authority before releasing it. If
+      # any other file can read it, a writable connection can be opened with no
+      # authority attached and the model is decorative. That property is a grep,
+      # so it is checked by one, on every change, rather than trusted.
+      - run: node scripts/guard-production-write-access.mjs
+
       - run: npm test

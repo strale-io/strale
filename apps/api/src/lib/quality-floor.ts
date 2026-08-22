@@ -33,11 +33,13 @@
  * platform-doctor flow re-verifies via the prod sweep and restores the flags
  * with the fix that made it pass. Deliberate, documented gap.
  *
- * Known scope boundary (review M-6): solution-step executions do not write
- * per-capability transaction rows, so bundle traffic is invisible here, and
- * quarantine does not block the solution executor's in-process dispatch.
- * The floor governs the direct-call surface only; solutions integrity is a
- * separate P3.5 item.
+ * Scope (WP9, 2026-08-22): the floor reads INVOCATION FACTS, not billing rows.
+ * Solution-step executions now write a fact each, so bundle traffic counts —
+ * before WP9 a capability invoked only inside solutions produced no row
+ * carrying its id and was invisible here entirely, which meant it could fail
+ * every bundle call it served and never become quarantinable. Quarantine also
+ * blocks the solution executor's dispatch as of WP8, so the two halves of that
+ * gap are closed together.
  */
 
 export interface FloorStats {
@@ -79,6 +81,18 @@ export interface FloorDecision {
   action: "quarantine" | "none";
   /** Set when 30d completion < deactivateBelow — surfaced to the doctor report; never auto-applied. */
   deactivateProposal: boolean;
+  /**
+   * True when the action was withheld because this capability's invocation
+   * evidence is incomplete, rather than because the floor judged it healthy.
+   *
+   * The two are opposite operator situations and the event vocabulary has to
+   * tell them apart: "we looked and it is fine" versus "we could not look".
+   * Round 12 moved suppression into this core and, in doing so, made the job's
+   * `suppressed_incomplete_evidence` event unreachable -- every suppressed slug
+   * arrived as `action: "none"` and was logged `flagged_only` at tier 1, so an
+   * operator querying for suppression found nothing, ever.
+   */
+  suppressedForIncompleteEvidence?: boolean;
   /** Deactivation of a revenue earner is a Petter-only decision (escalation contract). */
   requiresHuman: boolean;
   completion: number;
@@ -91,6 +105,17 @@ const FLOOR_LIFECYCLES = new Set(["active", "degraded"]);
 export function evaluateFloor(
   rows: FloorStats[],
   config: FloorConfig = DEFAULT_FLOOR_CONFIG,
+  /**
+   * Slugs whose evidence is known to be incomplete this tick.
+   *
+   * Passed IN rather than filtered afterwards, because the throttle below spends
+   * a budget of `maxQuarantinesPerRun`. Suppressing a decision after the budget
+   * was already decremented meant one night of fact-write failures on three
+   * capabilities could hold the entire quarantine budget for the thirty days
+   * the marker query looks back over, while genuinely broken capabilities with
+   * clean evidence were told "budget exhausted — next tick" every tick.
+   */
+  evidenceIncomplete: ReadonlySet<string> = new Set(),
 ): FloorDecision[] {
   const decisions: FloorDecision[] = [];
   let quarantinesLeft = config.maxQuarantinesPerRun;
@@ -110,6 +135,24 @@ export function evaluateFloor(
 
     const belowDeactivate = r.completion < config.deactivateBelow;
     const requiresHuman = belowDeactivate && r.revenueCents > 0;
+
+    // Holed evidence defers BEFORE the throttle spends anything. The
+    // deactivation proposal is still emitted — it is advisory and a human reads
+    // it — but no quarantine budget is consumed by a capability the job is
+    // going to suppress anyway.
+    if (evidenceIncomplete.has(r.slug)) {
+      decisions.push({
+        slug: r.slug,
+        action: "none",
+        deactivateProposal: belowDeactivate,
+        requiresHuman,
+        completion: r.completion,
+        eligibleCalls: r.eligibleCalls,
+        suppressedForIncompleteEvidence: true,
+        reason: `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d, but this capability's invocation evidence is incomplete for the window — deferred without spending quarantine budget`,
+      });
+      continue;
+    }
 
     // Burst guard (H-1): failures concentrated in fewer calendar days than
     // the minimum never quarantine on their own — could be one incident or

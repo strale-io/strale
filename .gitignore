@@ -36,4 +36,20 @@ apps/spike/
 
 # Raw sweep evidence (may embed production output values) stays local
 audit-output/*.jsonl
+# Scratch produced by review/audit sessions. CLAUDE.md routes anything worth
+# keeping to archive/sessions/; the root stays clean. Ignored rather than
+# committed so the mutation-test guard's clean-tree check (which counts
+# untracked files, deliberately) is not permanently red.
+audit-output/
+review-bundle/
+.codex-shell-marker
+# Throwaway prod-query scripts. Review sessions write these into the shared
+# checkout while other sessions work in it, so they show up as untracked files
+# in someone else's tree and block the mutation-test guard's clean-tree check
+# for reasons that have nothing to do with the change under test.
+apps/api/scripts/_tmp*
 docs/company/ceo-dashboard.html
+
+# Guarded production write credential - never committed, never auto-loaded.
+# The .template beside it is committed; the real file is not.
+.env.operator-write

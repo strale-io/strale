@@ -1136,3 +1136,113 @@ export const walletReservations = pgTable(
       .where(sql`transaction_id IS NOT NULL`),
   ],
 );
+
+// ─── capability_invocations ──────────────────────────────────────────────────
+// WP9 — what a capability invocation actually DID, recorded once, as a fact.
+//
+// Distinct from `transactions` on purpose. A transaction is a BILLING artefact:
+// it records a call the platform charged (or declined to charge) a customer for.
+// An invocation is a QUALITY artefact: it records that a specific capability ran
+// and how it went. For a direct /v1/do call the two coincide, which is why the
+// quality floor got away with joining `transactions ON capability_id` for so
+// long. For a solution step they do not coincide at all — a bundle writes ONE
+// transaction with `capability_id = NULL` and buries its step results in an
+// `output.steps` JSONB blob, so every capability invoked inside a bundle was
+// invisible to the floor. 694 such rows exist in production; 126 sub-calls in a
+// 30-day window had no per-capability record anywhere.
+//
+// Deliberately carries NO customer content — no inputs, no outputs, no error
+// strings. Only the canonical ExecutionOutcome verdict (lib/execution-outcome.ts,
+// WP4) plus enough context to know which rail produced it. That is what lets
+// this table outlive the 90-day content redaction without holding anything the
+// redaction exists to remove.
+export const capabilityInvocations = pgTable(
+  "capability_invocations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    capabilitySlug: text("capability_slug").notNull(),
+    // Which serving path produced this: wallet | x402 | solution_step |
+    // harness | onboarding. Not derivable from the other columns — a solution
+    // step and a direct call can share every other field.
+    rail: text("rail").notNull(),
+    // The guarded-executor InvocationContext kind that authorised the call:
+    // customer_paid | internal_test | health_probe | ci. The floor counts only
+    // customer_paid.
+    //
+    // Note what this does NOT currently buy. Every live write site hardcodes
+    // customer_paid, because the internal test harness invokes executors
+    // in-process rather than over /v1/do and so writes no facts at all. The
+    // harness exclusion therefore still rests on the email-pattern list, as it
+    // did before WP9. The column earns its place the moment any non-customer
+    // path starts recording — but it is not what keeps the harness out today,
+    // and an earlier version of this comment said it was.
+    contextKind: text("context_kind").notNull(),
+    // Set when rail = 'solution_step'. The bundle this invocation served.
+    // The id, not the slug: it is the durable key (slugs get renamed), it needs
+    // no lookup on the execution path, and `solutions` is one join away for
+    // anyone who wants the name.
+    solutionId: uuid("solution_id"),
+    // The billing row this invocation belongs to, when one exists. Nullable by
+    // design: solution steps share their parent's transaction, and some rails
+    // (dry-run, gate refusals) produce a fact with no transaction at all.
+    transactionId: uuid("transaction_id"),
+    // Who called. Nullable: x402 callers have no account, and neither do
+    // anonymous free-tier callers. Recorded so the floor can apply the SAME
+    // internal-account exclusion it already applies to transactions, from the
+    // same canonical email-pattern list, rather than this table inventing a
+    // second notion of "internal".
+    //
+    // Precisely what the harness does, because two comments in this PR
+    // previously contradicted each other about it and review was right to call
+    // that out. `lib/test-runner.ts` invokes executors IN-PROCESS via
+    // getExecutor and then INSERTs its own transaction row directly
+    // (test-runner.ts:1875), carrying a capability_id and the system account.
+    // It never calls /v1/do and never calls recordInvocation. So it accounts
+    // for ~98% of `transactions` — about 10k rows a day — and for zero facts.
+    //
+    // The consequence for this column: it is not what keeps harness traffic out
+    // of the floor today, because none of it arrives here. It is what keeps the
+    // NEXT non-customer writer out, and it is what makes the fact-versus-billing
+    // volume cross-check compare like with like, since the transaction side has
+    // to exclude those 10k rows explicitly.
+    userId: uuid("user_id"),
+    // Whether this call was served under the free tier. Anonymous zero-cost
+    // traffic is the cheapest way to fabricate failures against a capability,
+    // so the floor excludes it (review H-1). Recorded per call rather than read
+    // from `capabilities.is_free_tier`, because an AUTHENTICATED caller of a
+    // free-tier capability gets normal treatment and is not free-tier traffic.
+    isFreeTier: boolean("is_free_tier").notNull().default(false),
+    // ── The canonical WP4 verdict, persisted rather than recomputed ──────────
+    success: boolean("success").notNull(),
+    failureClass: text("failure_class"),
+    fault: text("fault"),
+    billable: boolean("billable").notNull(),
+    countsAgainstCapability: boolean("counts_against_capability").notNull(),
+    latencyMs: integer("latency_ms").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    // The floor's read: one capability, one window, newest first.
+    bySlugTime: index("capability_invocations_slug_created_idx").on(
+      table.capabilitySlug,
+      table.createdAt,
+    ),
+    // Reserved. NO rail populates transaction_id today -- every live call site
+    // omits it, so the column is null for 100% of writes and this index is
+    // currently dead. It is kept rather than dropped because the linkage is the
+    // natural way to answer "what did this bundle actually run?", and adding
+    // the index later costs a migration; but the honest statement is that the
+    // question is not answerable yet. Review found the previous wording
+    // asserting the linkage as delivered.
+    byTransaction: index("capability_invocations_transaction_idx").on(
+      table.transactionId,
+    ),
+    // Serves the floor's epoch probe (MIN(created_at)) and retention pruning.
+    // Declared because block 0101 creates it: the migration owns this table's
+    // DDL, but a schema that lists two of three indexes is a declaration that
+    // is already wrong, and drizzle-kit would propose dropping the third.
+    byCreated: index("capability_invocations_created_idx").on(table.createdAt),
+  }),
+);

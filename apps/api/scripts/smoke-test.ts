@@ -17,7 +17,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { autoRegisterCapabilities } from "../src/capabilities/auto-register.js";
 
 import { eq } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
+import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 import {
   capabilities,
   testSuites,
@@ -46,7 +46,7 @@ async function smokeTest(
   slug: string,
   dryRun: boolean,
 ): Promise<{ slug: string; steps: StepResult[]; passed: boolean }> {
-  const db = getDb();
+  const db = openOperatorDrizzle();
   const steps: StepResult[] = [];
 
   // Step 1: Structural validation (Gate 1 checks)
@@ -120,7 +120,7 @@ async function smokeTest(
           kind: "internal_test",
           suiteId: knownAnswerSuite.id,
           reason: "manual",
-        }),
+        }, "harness"),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Timeout after 30s")), 30_000),
         ),
@@ -201,7 +201,7 @@ async function smokeTest(
           kind: "internal_test",
           suiteId: negativeSuite.id,
           reason: "manual",
-        }),
+        }, "harness"),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Timeout after 15s")), 15_000),
         ),
@@ -430,7 +430,7 @@ async function main() {
     process.exit(1);
   }
 
-  const db = getDb();
+  const db = openOperatorDrizzle();
 
   if (allMode) {
     const rows = await db

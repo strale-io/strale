@@ -1,3 +1,4 @@
+import { openOperatorDb } from "../src/lib/operator-db.js";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,7 +48,7 @@ async function main() {
   console.log(`  to:   ${fmtCET(now)}  (${now.toISOString()})\n`);
 
   const postgres = (await import("postgres")).default;
-  const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
+  const sql = openOperatorDb();
 
   const overview = await sql`
     SELECT COUNT(*)::int AS total,

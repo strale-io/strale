@@ -75,9 +75,16 @@ if (!overrideLocalCheck) {
   }
 }
 
-const { getDb } = await import("../src/db/index.js");
+const { openOperatorWriteDrizzle } = await import("../src/lib/operator-db.js");
+  const { requireFounderGrant } = await import("../src/lib/production-authority.js");
 
-const db = getDb();
+// Wallet balances are money. Founder-gated, and refused outright until the
+
+// founder installs a grant key — the 2026-08-22 incident was a session
+
+// deciding for itself that a money-path write fell inside its delegation.
+
+const db = openOperatorWriteDrizzle(requireFounderGrant("wallet_topup"));
 
 const balance = await db.transaction(async (tx) => {
   // WP2: goes through the wallet service like every other balance change. An

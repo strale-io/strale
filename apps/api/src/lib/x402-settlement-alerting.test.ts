@@ -59,6 +59,10 @@ beforeEach(() => {
   process.env.RESEND_API_KEY = "re_test_key";
   process.env.ALERT_RECIPIENTS = "ops@example.com";
   delete process.env.ALERT_INFO_EMAIL;
+  // These cases assert on delivery and on the INFO-suppression rule, both of
+  // which live PAST the 2026-08-22 test-runner gate. Opting in is the intended
+  // use of the escape hatch — see lib/alerting.ts.
+  process.env.ALERT_ALLOW_IN_TEST = "true";
   vi.resetModules();
 });
 
@@ -66,6 +70,7 @@ afterEach(() => {
   delete process.env.RESEND_API_KEY;
   delete process.env.ALERT_RECIPIENTS;
   delete process.env.ALERT_INFO_EMAIL;
+  delete process.env.ALERT_ALLOW_IN_TEST;
 });
 
 describe("defect 1 — settle failures must page immediately, not via 24h volume", () => {

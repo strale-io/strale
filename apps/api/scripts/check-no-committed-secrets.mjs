@@ -54,6 +54,39 @@ const isPlaceholder = (v) => v.endsWith("EXAMPLE");
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
+const BACKSLASH = String.fromCharCode(92);
+const LF = String.fromCharCode(10);
+const SEP = String.fromCharCode(0); // key separator, cannot occur in a path
+const ALLOWLIST_PATH = "apps/api/scripts/committed-secrets-allowlist.txt";
+
+/**
+ * Known-safe matches, keyed on path + the exact matched text.
+ *
+ * Requiring the literal is the safety property: an entry can only exempt a
+ * value you are willing to write down in plaintext here. A real credential
+ * therefore cannot be allowlisted -- writing it would leak it -- so the only
+ * way past this gate for a real secret is to rotate it and take it out.
+ */
+function loadAllowlist() {
+  let raw;
+  try {
+    raw = readFileSync(ALLOWLIST_PATH, "utf8");
+  } catch {
+    return new Map();
+  }
+  const entries = new Map();
+  for (const line of raw.split(LF)) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const at = t.indexOf(" :: ");
+    if (at === -1) continue;
+    entries.set(t.slice(0, at).trim() + SEP + t.slice(at + 4), false);
+  }
+  return entries;
+}
+
+const allowlist = loadAllowlist();
+
 function trackedFiles() {
   const out = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   return out.split(NUL).filter(Boolean);
@@ -65,6 +98,9 @@ const files = trackedFiles();
 const findings = [];
 
 for (const file of files) {
+  // The allowlist holds matched literals by design; scanning it would flag
+  // every entry it exempts.
+  if (file.split(BACKSLASH).join("/") === ALLOWLIST_PATH) continue;
   let text;
   try {
     if (statSync(file).size > MAX_BYTES) continue;
@@ -80,6 +116,8 @@ for (const file of files) {
     while ((m = re.exec(text)) !== null) {
       const line = text.slice(0, m.index).split("\n").length;
       if (isPlaceholder(m[0])) continue;
+      const allowKey = file.split(BACKSLASH).join("/") + SEP + m[0];
+      if (allowlist.has(allowKey)) { allowlist.set(allowKey, true); continue; }
       findings.push({ file, line, name, value: m[0] });
     }
   }
@@ -95,6 +133,13 @@ if (findings.length > 0) {
   console.error("Do not just delete the line and commit: once pushed, the value is public");
   console.error("and stays in history. Rotate the credential first, then remove it.");
   process.exit(1);
+}
+
+const stale = [...allowlist.entries()].filter(([, used]) => !used).map(([k]) => k.split(SEP)[0]);
+if (stale.length > 0) {
+  console.log("check-no-committed-secrets: NOTICE - stale allowlist entries, no longer matching anything:");
+  for (const f of stale) console.log("  " + f);
+  console.log("  Remove them from " + ALLOWLIST_PATH);
 }
 
 console.log("check-no-committed-secrets: clean (" + files.length + " tracked files scanned)");

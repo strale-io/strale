@@ -12,7 +12,7 @@
  * returned void and never inspected `error`).
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMock = vi.fn();
 
@@ -32,6 +32,15 @@ describe("sendAlert", () => {
   beforeEach(() => {
     sendMock.mockReset();
     process.env.RESEND_API_KEY = "re_test_key";
+    // This file's whole subject is what sendAlert does when it DOES reach the
+    // backend, against a mocked Resend. The 2026-08-22 test-runner gate would
+    // otherwise short-circuit every case before that logic runs. Opting in is
+    // the intended use of the escape hatch — see lib/alerting.ts.
+    process.env.ALERT_ALLOW_IN_TEST = "true";
+  });
+
+  afterEach(() => {
+    delete process.env.ALERT_ALLOW_IN_TEST;
   });
 
   it("returns true when Resend accepts the email", async () => {
