@@ -1234,5 +1234,10 @@ export const capabilityInvocations = pgTable(
     byTransaction: index("capability_invocations_transaction_idx").on(
       table.transactionId,
     ),
+    // Serves the floor's epoch probe (MIN(created_at)) and retention pruning.
+    // Declared because block 0101 creates it: the migration owns this table's
+    // DDL, but a schema that lists two of three indexes is a declaration that
+    // is already wrong, and drizzle-kit would propose dropping the third.
+    byCreated: index("capability_invocations_created_idx").on(table.createdAt),
   }),
 );

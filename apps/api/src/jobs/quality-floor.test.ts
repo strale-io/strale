@@ -233,6 +233,46 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     expect(factQuery).toContain("GREATEST(s.win_start,");
   });
 
+  it("selects the values the filters exist to deliver", () => {
+    // Every predicate in this query was pinned individually; the four VALUES
+    // they exist to produce were not, and all four one-token mutations survived.
+    //
+    // Relabelling 'fact' as 'transaction' is the worst of them: those rows then
+    // take the pre-epoch fold branch, where status and error are NULL,
+    // classifyTransactionFailure(null) returns "internal", and every healthy
+    // call becomes a counted failure. Measured through the fold: a perfectly
+    // healthy capability reads 0/60 and is quarantined with a deactivation
+    // proposal, every tick, across the whole post-epoch catalog, suite green.
+    //
+    // Inverting f.success is the mirror image -- healthy traffic vanishes from
+    // the fold and broken traffic reads as completed. That is the pin-everything
+    // -at-100% shape the writer test exists to prevent, closed where the column
+    // is written and left open where it is read back out.
+    //
+    // Rewriting the JOIN key matches nothing and blinds the floor entirely.
+    const factQuery = src.slice(
+      src.indexOf("const factRows"),
+      src.indexOf("const rows = ["),
+    );
+    expect(factQuery).toContain("'fact'::text AS source,");
+    expect(factQuery).toContain("f.success, f.counts_against_capability AS counts,");
+    expect(factQuery).toContain(
+      "JOIN capability_invocations f ON f.capability_slug = s.slug",
+    );
+
+    const txnQuery = src.slice(
+      src.indexOf("const transactionRows"),
+      src.indexOf("const factRows"),
+    );
+    expect(txnQuery.length).toBeGreaterThan(200);
+    expect(txnQuery).toContain("'transaction'::text AS source,");
+    // The fold branches on `source`, and a transaction row carrying fact-shaped
+    // NULLs would be read with the wrong rules -- so the discriminator and the
+    // deliberately-null fact columns are pinned together.
+    expect(txnQuery).toContain("NULL::boolean AS success, NULL::boolean AS counts,");
+    expect(txnQuery).toContain("t.status, t.error,");
+  });
+
   it("excludes harness and free-tier traffic from the fact source", () => {
     // The fact branch has no `is_free_tier` column on transactions to lean on,
     // so the equivalent exclusions have to be spelled out or ~98% of platform

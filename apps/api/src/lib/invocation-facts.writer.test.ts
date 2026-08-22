@@ -208,6 +208,40 @@ describe("the row a customer invocation actually writes", () => {
     expect(inserted[0].isFreeTier).toBe(false);
   });
 
+  it("carries the linkage the manifest promises, not just the verdict", async () => {
+    // billable, solutionId and transactionId were all written and none asserted.
+    // No armed consumer reads them today -- the floor reads only success and
+    // counts_against_capability -- but WP9.yaml claims a fact carries "the
+    // parent transaction if there is one", and the transaction_id index is
+    // justified in the schema as answering "what did this bundle actually
+    // run?". A claim nothing enforces is the shape this package keeps finding.
+    await recordPaidInvocation({
+      capabilitySlug: "danish-company-data",
+      rail: "solution_step",
+      solutionId: "sol-1",
+      transactionId: "txn-1",
+      userId: "u1",
+      latencyMs: 5,
+      outcome: OK,
+    });
+    expect(inserted[0].solutionId).toBe("sol-1");
+    expect(inserted[0].transactionId).toBe("txn-1");
+    expect(inserted[0].billable).toBe(OK.billable);
+
+    // And absent linkage is null, not undefined -- the column is nullable and a
+    // stray undefined would be a dropped insert on a NOT NULL neighbour.
+    inserted.length = 0;
+    await recordPaidInvocation({
+      capabilitySlug: "dns-lookup",
+      rail: "v1_do",
+      userId: "u1",
+      latencyMs: 1,
+      outcome: OK,
+    });
+    expect(inserted[0].solutionId).toBeNull();
+    expect(inserted[0].transactionId).toBeNull();
+  });
+
   it("clamps a nonsense latency rather than dropping the fact", async () => {
     // latency_ms is NOT NULL; a NaN from a mis-ordered clock read would turn a
     // bookkeeping slip into a lost fact.
