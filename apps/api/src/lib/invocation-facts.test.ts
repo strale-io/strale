@@ -17,6 +17,7 @@ import { evaluateFloor, DEFAULT_FLOOR_CONFIG } from "./quality-floor.js";
 import { outcomeFromError } from "./execution-outcome.js";
 import { CapabilityRefusalError } from "./capability-refusal.js";
 import { TOS_REFUSAL_MARKER } from "./tos-blocklist.js";
+import { classifyTransactionFailure } from "./transaction-failure-taxonomy.js";
 import {
   INVOCATION_RAILS,
   INVOCATION_FACT_DELETE_GUARD_DAYS,
@@ -163,6 +164,19 @@ describe("the floor can see a capability that only runs inside solutions", () =>
     );
     expect(refusal.counts_against_capability).toBe(false);
     expect(refusal.failure_class).toBe("capability_refused");
+
+    // The STRUCTURAL check, not the string one. The assertion above passed even
+    // with the isCapabilityRefusal branch deleted, because that message also
+    // carries the ToS marker the taxonomy matches on -- so it proved nothing
+    // about the branch it was meant to cover. A refusal whose wording the
+    // taxonomy does not recognise is the case the class exists for: the
+    // taxonomy is a curated list of strings and will always trail the refusals
+    // actually thrown, which is why the error type carries a discriminator.
+    const unrecognised = new CapabilityRefusalError(
+      "This source is out of scope for automated retrieval.",
+    );
+    expect(classifyTransactionFailure(unrecognised.message)).toBe("internal");
+    expect(outcomeFromError(unrecognised).counts_against_capability).toBe(false);
   });
 
   it("still counts what is genuinely the capability's problem", () => {
