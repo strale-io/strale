@@ -25,6 +25,17 @@
  * path except the authority module can obtain the WRITE credential, so every
  * write that uses it has an Authority attached at the point of release.
  *
+ * **It also does not cover writes performed by libraries a script imports.**
+ * `smoke-test.ts` holds a read-only handle, but the `guardedExecute` it calls
+ * writes breaker state, health rows and invocation facts through `getDb()`
+ * inside `src/lib` — three call sites, all legitimate, none of them visible to
+ * a rule that reads the script's own file. So "an autonomous session cannot
+ * write production" is true of the WRITE CREDENTIAL and of scripts' own
+ * handles; it is not yet true of everything a script can reach. Closing that
+ * needs `DATABASE_URL` to actually be a read-only role in infrastructure, which
+ * is step 1 of docs/security/2026-08-22-operator-script-migration.md and cannot
+ * be done from here.
+ *
  * Usage:  node scripts/guard-production-write-access.mjs [--report]
  */
 
@@ -86,7 +97,7 @@ const ROOT = execFileSync("git", ["rev-parse", "--show-toplevel"], {
  * `-n` gives line numbers, `-F` fixed-string, `--` limits to the file types the
  * old filter covered. Exit status 1 means "no matches", which is success here.
  */
-function grepHits(needle) {
+function grepHits(needle, { wholeWord = false } = {}) {
   try {
     const out = execFileSync(
       "git",
@@ -94,6 +105,11 @@ function grepHits(needle) {
         "grep",
         "-n",
         "-F",
+        // Word boundary where the needle is an identifier. The Node version
+        // this replaced used /\bgetDb\b/; a plain substring grep would fail CI
+        // on `myGetDbHelper` or a comment mentioning it, and a guard with false
+        // positives gets disabled rather than fixed.
+        ...(wholeWord ? ["-w"] : []),
         needle,
         "--",
         "*.ts",
@@ -144,7 +160,7 @@ for (const hit of grepHits(NEEDLE)) {
  */
 const scriptOffenders = [
   ...new Set(
-    grepHits("getDb")
+    grepHits("getDb", { wholeWord: true })
       .map((h) => h.slice(0, h.indexOf(":")))
       .filter(
         (p) =>
