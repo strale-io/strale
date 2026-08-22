@@ -10,7 +10,11 @@ Format per entry: `### name · when` then `**Does:**` / `**Reports:**` lines.
 **Does:** Reads the business first thing: money, problems overnight, anything
 waiting. Fixes what broke, picks the most valuable thing available, and gets on
 with it. Acts on decisions that have come due.
-**Reports:** A short written note each morning, and refreshes this dashboard.
+**Reports:** Two things, and they are different on purpose. A morning brief for
+you — a page of plain English about what the business did, what changed and
+what, if anything, needs you — and a full technical record kept for the next
+session and for anyone auditing the work. You read the first. Nobody expects you
+to read the second.
 **Status:** running
 
 ### Evening check-in · every day, 19:00

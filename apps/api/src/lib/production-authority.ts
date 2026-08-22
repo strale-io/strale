@@ -52,8 +52,18 @@
 import { createPublicKey, verify as edVerify } from "node:crypto";
 
 /**
- * How a production mutation was permitted. Recorded on every write, so
- * "who allowed this" is answerable from the data rather than from a comment.
+ * How a production mutation was permitted.
+ *
+ * Checked when the write credential is released, and **not yet stored**.
+ * `describeAuthority()` exists to shape it for storage and currently has no
+ * caller outside tests; there is no `authority_kind` column. So "who allowed
+ * this" is enforced at the gate and is not answerable from the data
+ * afterwards. An earlier version of this comment said it was recorded on every
+ * write, which was never true — corrected 2026-08-22 rather than left to read
+ * as a property the system has.
+ *
+ * Only `autonomousAuthority()` and `requireFounderGrant()` produce a value this
+ * module will accept — see `MINTED` below.
  */
 export type Authority =
   | {
@@ -111,6 +121,35 @@ export type AutonomousPurpose = (typeof AUTONOMOUS_PURPOSES)[number];
  * and out of every `.env`, and paste the printed public key here in a commit.
  */
 export const FOUNDER_GRANT_PUBLIC_KEY_PEM = "";
+
+/**
+ * Every `Authority` this module minted.
+ *
+ * `Authority` is a structural type, so `{ kind: "FOUNDER_GATED", grantId: "x",
+ * purpose: "…", expiresAt: "…" }` satisfies it — and adversarial review of the
+ * daily-run charter showed such a literal passing `productionWriteUrl()`. The
+ * module's premise is that *a model must not be able to grant itself the
+ * permission it is supposed to prove*, and a hand-written object is exactly
+ * that grant. Checking the SHAPE could never establish provenance; checking
+ * identity can.
+ *
+ * A `WeakSet` rather than a type brand, deliberately: a brand is erased at
+ * runtime and would leave untyped callers — every operator script runs through
+ * `tsx` — unprotected. Nothing serialises an `Authority` across a boundary
+ * (`describeAuthority()` returns a separate plain record), so identity survives
+ * every path a real caller takes.
+ */
+const MINTED = new WeakSet<object>();
+
+function mint(authority: Authority): Authority {
+  // Frozen as well as recorded. Without this, `Object.assign(minted, {kind:
+  // "FOUNDER_GATED", grantId: "forged"})` keeps its minted identity while
+  // acquiring fabricated contents — harmless for credential release, which
+  // reads no fields, but it reconstitutes the incident's exact shape the moment
+  // `describeAuthority()` is wired to store what it is handed.
+  MINTED.add(authority);
+  return Object.freeze(authority);
+}
 
 /** Thrown when a production write is attempted without valid authority. */
 export class ProductionAuthorityError extends Error {
@@ -173,7 +212,7 @@ export function autonomousAuthority(
         "commit — the delegation boundary moves by merge, not by argument.",
     );
   }
-  return { kind: "AUTONOMOUS_POLICY", policy, purpose };
+  return mint({ kind: "AUTONOMOUS_POLICY", policy, purpose });
 }
 
 interface ParsedGrant {
@@ -299,12 +338,12 @@ export function requireFounderGrant(
     );
   }
 
-  return {
+  return mint({
     kind: "FOUNDER_GATED",
     grantId: grant.grantId,
     purpose: grant.purpose,
     expiresAt: new Date(grant.expiresAtEpochSeconds * 1000).toISOString(),
-  };
+  });
 }
 
 /**
@@ -327,6 +366,16 @@ export function productionWriteUrl(authority: Authority): string {
         "for anything else.",
     );
   }
+  // Provenance, not shape. A structurally valid literal is not an authority —
+  // it is a session writing down the permission it was supposed to obtain.
+  if (!MINTED.has(authority)) {
+    throw new ProductionAuthorityError(
+      "This Authority was not issued by autonomousAuthority() or " +
+        "requireFounderGrant(). An object that merely has the right fields is " +
+        "not a grant: it is this process asserting its own permission, which is " +
+        "the move the 2026-08-22 incident was made of.",
+    );
+  }
   const url = process.env.DATABASE_URL_WRITE;
   if (!url || url.trim().length === 0) {
     throw new ProductionAuthorityError(
@@ -342,7 +391,12 @@ export function productionWriteUrl(authority: Authority): string {
 /**
  * The authority, shaped for storage next to the change it permitted.
  *
- * Every production mutation records this. `authority_kind` answers the question
+ * **Not yet wired.** This function has no caller outside tests and there is no
+ * `authority_kind` column, so nothing is recorded today — the gate is enforced
+ * at credential release only. The claim that every mutation records this was in
+ * this docblock from the start and was never true; corrected 2026-08-22 rather
+ * than left to read as a property the system has. Wiring it is the remaining
+ * work. When it is wired: `authority_kind` answers the question
  * the 2026-08-22 incident could not answer from the data — whether a write was
  * a delegated platform action or a founder decision — and it answers it in a
  * field with a closed vocabulary rather than in free prose that a session can
