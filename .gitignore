@@ -49,3 +49,7 @@ review-bundle/
 # for reasons that have nothing to do with the change under test.
 apps/api/scripts/_tmp*
 docs/company/ceo-dashboard.html
+
+# Guarded production write credential - never committed, never auto-loaded.
+# The .template beside it is committed; the real file is not.
+.env.operator-write

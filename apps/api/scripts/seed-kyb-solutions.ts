@@ -5,6 +5,8 @@
  * Usage: npx tsx scripts/seed-kyb-solutions.ts
  */
 
+import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
+import { requireFounderGrant } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
@@ -24,7 +26,6 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
-import { getDb } from "../src/db/index.js";
 import { capabilities, solutions, solutionSteps } from "../src/db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 import { validateSolution, enforceGates } from "../src/lib/onboarding-gates.js";
@@ -602,7 +603,7 @@ const DEPRECATE_SLUGS = [
 // ─── Seed logic ────────────────────────────────────────────────────────────
 
 async function seed() {
-  const db = getDb();
+  const db = openOperatorWriteDrizzle(requireFounderGrant("seed_sellable_solutions"));
 
   // 1. Deprecate old solutions
   console.log("=== Deprecating old solutions ===");

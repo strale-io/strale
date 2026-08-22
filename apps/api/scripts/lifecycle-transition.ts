@@ -18,7 +18,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import "../src/app.js";
 
 import { eq } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
+import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 import { capabilities } from "../src/db/schema.js";
 import {
   transitionCapability,
@@ -59,7 +59,7 @@ async function main() {
   }
 
   // Verify capability exists
-  const db = getDb();
+  const db = openOperatorDrizzle();
   const [cap] = await db
     .select({ slug: capabilities.slug, lifecycleState: capabilities.lifecycleState })
     .from(capabilities)

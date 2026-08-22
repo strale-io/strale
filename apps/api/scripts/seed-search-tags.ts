@@ -6,6 +6,8 @@
  * Usage: cd apps/api && npx tsx scripts/seed-search-tags.ts
  */
 
+import { openOperatorWriteDb } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
@@ -23,8 +25,7 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
-import postgres from "postgres";
-const sql = postgres(process.env.DATABASE_URL!);
+const sql = openOperatorWriteDb(autonomousAuthority("catalogue_metadata_sync", "DEC-20260812-A"));
 
 // ─── Category → tags mapping ───────────────────────────────────────────────
 

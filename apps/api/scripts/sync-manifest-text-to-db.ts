@@ -16,12 +16,13 @@
  *   npx tsx scripts/sync-manifest-text-to-db.ts <slug> [--dry-run]
  */
 
+import { openOperatorWriteDb } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
-import postgres from "postgres";
 import * as yaml from "js-yaml";
 
 const args = process.argv.slice(2);
@@ -47,7 +48,7 @@ if (manifest.slug !== slug) {
   process.exit(1);
 }
 
-const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
+const sql = openOperatorWriteDb(autonomousAuthority("catalogue_metadata_sync", "DEC-20260812-A"));
 const dbHost = process.env.DATABASE_URL?.match(/@([^/:]+)/)?.[1];
 console.log(`DB host: ${dbHost}`);
 console.log(`Slug: ${slug}`);

@@ -1,9 +1,10 @@
-import { getDb } from "../src/db/index.js";
+import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { capabilityHealth } from "../src/db/schema.js";
 import { eq } from "drizzle-orm";
 
 const slug = process.argv[2] || "vat-validate";
-const db = getDb();
+const db = openOperatorWriteDrizzle(autonomousAuthority("capability_health_breaker", "DEC-20260812-A"));
 
 const result = await db
   .update(capabilityHealth)

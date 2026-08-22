@@ -25,6 +25,9 @@
  * Fixture refresh is platform-authority work under the DEC-20260812-A
  * escalation contract. Nothing here touches executors or pricing.
  */
+
+import { openOperatorWriteDb } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
@@ -50,7 +53,7 @@ async function main() {
   }
 
   const postgres = (await import("postgres")).default;
-  const sql = postgres(process.env.DATABASE_URL!, { max: 1, ssl: "require" });
+  const sql = openOperatorWriteDb(autonomousAuthority("fixture_refresh", "DEC-20260812-A"));
 
   // Say which database is about to be rewritten — the operator may have
   // .env pointed at prod (the normal case for this repo).

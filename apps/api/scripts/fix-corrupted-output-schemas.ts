@@ -1,8 +1,9 @@
+import { openOperatorWriteDb } from "../src/lib/operator-db.js";
+import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 
-import postgres from "postgres";
 
 /**
  * Fixes capabilities where output_schema was stored as a stringified JSON
@@ -16,7 +17,7 @@ import postgres from "postgres";
  */
 async function main() {
   const dryRun = !process.argv.includes("--apply");
-  const sql = postgres(process.env.DATABASE_URL!);
+  const sql = openOperatorWriteDb(autonomousAuthority("catalogue_metadata_sync", "DEC-20260812-A"));
 
   const rows = await sql<{ slug: string; output_schema: any }[]>`
     SELECT slug, output_schema FROM capabilities WHERE is_active = true`;

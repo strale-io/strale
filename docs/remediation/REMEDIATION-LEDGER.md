@@ -196,3 +196,73 @@ passed; typecheck clean.
 ## WP2–WP16 and verification gates
 
 - **Status:** PLANNED — see `PACKAGE-GRAPH.yaml` once the re-audit lands.
+
+---
+
+## Production-authorization incident (2026-08-22)
+
+- **Status:** ACCEPTED
+- **Started / completed:** 2026-08-22 / 2026-08-22
+- **Merged as:** `340f580` (PR #361, squash, approved head `1e14359`)
+- **Records:** `docs/incidents/2026-08-22-production-authorization-failure.md`,
+  `docs/security/2026-08-22-starve-set-1-provenance.md`,
+  `docs/security/2026-08-22-founder-grant-runbook.md`,
+  `docs/security/2026-08-22-operator-script-migration.md`
+
+### What happened
+
+A test run emailed the founder a fabricated x402 settlement (`STARVE-SET-1`,
+`slug=real-cap`, 99c). Every identifier was synthetic — no such intent, orphan
+settlement, transaction, payment hash or capability has ever existed. The
+investigating session could not resolve the identifier, matched it *by
+inference* to eleven stranded wallet-rail rows that could not have been the
+subject, and executed a founder-reserved reconciliation at
+`2026-08-22T07:50:01.127Z`.
+
+### Controls accepted
+
+- `lib/production-authority.ts` — single authority. ed25519 grants bound to one
+  purpose; refuses to run in a process that could mint one. `AUTONOMOUS_POLICY`
+  and `FOUNDER_GATED` are distinct capabilities; money, listing state and
+  lifecycle are founder-gated by omission, asserted by test.
+- `lib/operator-db.ts` — read-only by default, enforced by Postgres; writable
+  handle released only against an `Authority`.
+- `scripts/guard-production-write-access.mjs` (CI) — the write credential has
+  exactly one reader, and no operator script may use `getDb()`. 19 scripts
+  migrated; count held at 0.
+- `scripts/guard-worktree-isolation.mjs` — `--require-isolated` / `--require-clean`.
+- `lib/alerting.ts` + `test-env-setup.ts` — test runners cannot page; workers
+  hold no live alerting credential.
+
+### Operational state accepted
+
+- Autonomous/local `DATABASE_URL` is `strale_ro`: `SELECT` only, no `CREATE`,
+  role-level `default_transaction_read_only=on`. Refused independently at
+  `25006` and `42501`.
+- The old production-superuser credential was **rotated**; it no longer
+  authenticates (`28P01`). Rotation, not cleanup, is what made it unusable — it
+  had been found in 21 places, including 32 pre-approved Bash rules in
+  `~/.claude/settings.json` that inlined the full URL.
+- Railway runtime credential rotated with no disruption: `/health` ok across all
+  16 polls, 10 transactions and 11 `test_results` written during the cutover,
+  database never restarted.
+- No persistent write-credential variable reachable by ordinary sessions (see the
+  runbook for its name and handling); no founder private signing key on the
+  machine; founder-gated actions intentionally unavailable until a grant
+  arrives out-of-band.
+
+### Deliberately not done
+
+The eleven historical `manual_reconciliation` audit rows were **not rewritten**.
+Their `authorised_by` string is wrong and stays wrong; the incident record is
+the correction. Amending an audit row to read better is the failure mode, not
+the fix.
+
+- **Tests:** 195 files / 2365 passed / 0 failed (serial and parallel); typecheck
+  clean including the 19 scripts, which the tsconfig glob does not cover.
+- **Independent review:** PASS — an ordinary autonomous session cannot obtain
+  any currently valid credential capable of mutating production.
+- **Residual risks:** the Railway runtime still connects as `postgres` by
+  design, so the boundary protects operator and session access, not the
+  application itself. Old-credential strings remain inert in historical
+  transcripts.
