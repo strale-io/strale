@@ -382,7 +382,7 @@ describe("retention and the database guard must not contradict each other", () =
     // night and take `retention-cleanup-done` down with it for every rule that
     // had already succeeded. Nothing in this repo asserted cutoff direction on
     // any purge before this line.
-    expect(source).toContain("WHERE created_at < ${cutoff.toISOString()}");
+    expect(source).toContain("WHERE created_at < ${factCutoff.toISOString()}");
     // And it must not name the table before checking the table is there. Block
     // 0101 is defer-not-throw, so it genuinely may be absent -- and this purge
     // is the LAST step of the retention sweep, so throwing here loses the

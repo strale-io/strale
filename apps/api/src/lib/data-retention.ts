@@ -193,7 +193,7 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
  */
 export const INVOCATION_FACT_RETENTION_DAYS = 180;
 
-async function purgeCapabilityInvocations(cutoff: Date): Promise<number> {
+async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
   const db = getDb();
   // Block 0101 is defer-not-throw, so the table genuinely may not exist -- that
   // is the whole premise of the floor's to_regclass probe. Naming it
@@ -221,7 +221,7 @@ async function purgeCapabilityInvocations(cutoff: Date): Promise<number> {
       DELETE FROM capability_invocations
       WHERE id IN (
         SELECT id FROM capability_invocations
-        WHERE created_at < ${cutoff.toISOString()}::timestamptz
+        WHERE created_at < ${factCutoff.toISOString()}::timestamptz
         LIMIT ${BATCH_SIZE}
       )
     `);

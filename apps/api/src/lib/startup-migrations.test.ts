@@ -2226,4 +2226,24 @@ describe("startup-migrations — block 0101 runs its one-shot work exactly once"
       "insert into startup_migration_ledger",
     );
   });
+
+  it("writes its ledger row after the verification, not before it", async () => {
+    // Order is the whole property. The stub test above only proves the INSERT is
+    // absent on the failure path it exercises; if the INSERT moved above the
+    // verification it would be absent there too, for the wrong reason, and every
+    // future boot would skip the purge gate with the unprotected era intact.
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const src = readFileSync(resolve(import.meta.dirname, "startup-migrations.ts"), "utf8");
+    const block = src.slice(
+      src.indexOf("export async function runMigration0101_capabilityInvocations"),
+      src.indexOf("export const BLOCKS"),
+    );
+    const verify = block.indexOf("if (triggerCount !== 1)");
+    const ledger = block.indexOf("INSERT INTO startup_migration_ledger");
+    expect(verify).toBeGreaterThan(-1);
+    expect(ledger).toBeGreaterThan(-1);
+    expect(ledger, "the ledger row must be written after the trigger is verified")
+      .toBeGreaterThan(verify);
+  });
 });
