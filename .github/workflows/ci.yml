@@ -194,6 +194,10 @@ jobs:
       # is the reachability half — a gate nobody runs is a gate that does
       # nothing, which this repo has shipped three times.
       - run: npx tsx apps/api/scripts/check-ceo-brief.ts
+      # No credential in a recognised vendor token format may reach a tracked
+      # file. Scans tracked files only — the public history is what matters,
+      # and history is not retractable. Added 2026-08-22.
+      - run: node apps/api/scripts/check-no-committed-secrets.mjs
       # Phase A0b CI lint (wired 2026-08-17, Phase 2 T2.2 — written
       # 2026-08-12 but never wired in): apps/api/scripts/*.{ts,mts,mjs} must route
       # executor invocation through guardedExecute/assertGuardedAllow, not

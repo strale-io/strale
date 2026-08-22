@@ -40,5 +40,14 @@
   },
   "devDependencies": {
     "@langchain/core": "^0.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/strale-io/strale.git",
+    "directory": "packages/langchain"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

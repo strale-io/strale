@@ -1,0 +1,163 @@
+name: Release (npm)
+
+# Publishing uses npm **trusted publishing** (OIDC). There is deliberately no
+# NPM_TOKEN secret: the job exchanges a short-lived GitHub OIDC identity for a
+# publish credential, and npm attaches a provenance attestation automatically.
+#
+# The PATH AND FILENAME of this workflow are part of the trust configuration
+# registered on npmjs.com for each package. Renaming or moving this file breaks
+# publishing until the npm-side config is updated to match. See
+# docs/release/npm-publishing.md.
+
+on:
+  push:
+    # Monorepo tag convention: <package-name>@<version>, e.g. strale-mcp@0.2.7
+    tags:
+      - "*@*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Workspace directory to publish
+        required: true
+        type: choice
+        options:
+          - packages/mcp-server
+          - packages/sdk-typescript
+          - packages/langchain
+          - packages/semantic-kernel-strale
+          - packages/strale-capabilities
+      dry_run:
+        description: Build and pack only — do not publish
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # Publishing is irreversible, and a tag can point at any commit on any
+    # branch. Protect this environment with a required reviewer so a tag push
+    # cannot publish unattended. See docs/release/npm-publishing.md.
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write # required: this is what trusted publishing exchanges
+    steps:
+      - uses: actions/checkout@v4
+
+      # No registry-url on purpose. actions/setup-node would write
+      # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN} into an .npmrc and
+      # point NPM_CONFIG_USERCONFIG at it. With no token set that line is empty,
+      # npm concludes auth is already configured, and it never performs the OIDC
+      # exchange -- the publish then fails ENEEDAUTH/E404 with trusted publishing
+      # correctly set up. registry.npmjs.org is npms default, so omitting this
+      # loses nothing. See actions/setup-node#1551, npm/documentation#1960 --
+      # npms own documented example carries the defect.
+      #
+      # Node 22: npm documents trusted publishing as requiring npm >= 11.5.1 AND
+      # Node >= 22.14.0. npm 11 installs happily on Node 20, so the mismatch
+      # would only surface at publish time.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      # Node 20 ships npm 10.x; trusted publishing needs >= 11.5.1. Pinned to
+      # the 11.x line rather than @latest: this tool performs an irreversible
+      # publish, and it should not change without a change to this repo.
+      - name: Upgrade npm
+        run: |
+          npm install -g npm@^11.5.1
+          echo "npm $(npm --version)"
+
+      - name: Resolve release target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            node apps/api/scripts/npm-release-resolve.mjs --tag "$GITHUB_REF_NAME"
+          else
+            node apps/api/scripts/npm-release-resolve.mjs --dir "${{ inputs.package }}"
+          fi
+
+      - run: npm ci
+
+      # packages/langchain imports `straleio` via its built dist/index.d.ts, so
+      # sdk-typescript has to exist on disk first. Same reasoning as the build
+      # ordering in ci.yml's `check` job.
+      - name: Build sdk-typescript (dependency of langchain)
+        if: steps.target.outputs.dir == 'packages/langchain'
+        run: npm --workspace=packages/sdk-typescript run build
+
+      - name: Build target workspace
+        env:
+          DIR: ${{ steps.target.outputs.dir }}
+        run: |
+          if node -e "const s=require('./'+process.env.DIR+'/package.json').scripts||{}; process.exit(s.build?0:1)"; then
+            npm --workspace="$DIR" run build
+          else
+            echo "$DIR has no build script — publishing checked-in sources"
+          fi
+
+      # DEC-20260422-A: a framework-named *-strale package must actually import
+      # the framework it claims to integrate with. Enforced at PR time too; this
+      # is the last gate before the artefact becomes public and immutable.
+      - name: Framework-package integrity (DEC-20260422-A)
+        run: node apps/api/scripts/check-framework-packages.mjs
+
+      - name: Refuse to republish an existing version
+        env:
+          NAME: ${{ steps.target.outputs.name }}
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          set +e
+          existing=$(npm view "$NAME@$VERSION" version 2>/tmp/npmview.err)
+          rc=$?
+          set -e
+          # rc!=0 is expected only when the package/version does not exist (E404).
+          # Any other failure means we verified nothing; do not call that a pass.
+          if [ $rc -ne 0 ] && ! grep -q "E404" /tmp/npmview.err; then
+            echo "::error::npm view failed for $NAME@$VERSION; cannot confirm the version is unpublished"
+            cat /tmp/npmview.err
+            exit 1
+          fi
+          if [ -n "$existing" ]; then
+            echo "::error::$NAME@$VERSION is already on npm. Versions are immutable — bump and re-tag."
+            exit 1
+          fi
+          echo "$NAME@$VERSION is unpublished; proceeding"
+
+      - name: Pack and show tarball contents
+        working-directory: ${{ steps.target.outputs.dir }}
+        run: npm pack --dry-run
+
+      - name: Publish
+        id: publish
+        # Two guards, not one. `inputs` is empty on non-dispatch events and
+        # GitHub Actions coerces null == false to TRUE, so the dry-run test is
+        # bound to its own event. And `github.event_name == 'push'` is not by
+        # itself a tag: under workflow_call it reflects the CALLER's event, and
+        # a branch push trigger added later would satisfy it too -- in both
+        # cases the `on: push: tags:` filter does not apply. Require the ref.
+        if: ${{ (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+        working-directory: ${{ steps.target.outputs.dir }}
+        run: npm publish
+
+      - name: Summary
+        env:
+          NAME: ${{ steps.target.outputs.name }}
+          VERSION: ${{ steps.target.outputs.version }}
+        run: |
+          {
+            echo "### ${NAME}@${VERSION}"
+            if [ "${{ steps.publish.outcome }}" = "success" ]; then
+              echo "Published with provenance via trusted publishing."
+            else
+              echo "Not published (dry run or skipped) — packed and validated only."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

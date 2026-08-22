@@ -33,7 +33,7 @@
   "homepage": "https://strale.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/strale-io/strale.git",
+    "url": "git+https://github.com/strale-io/strale.git",
     "directory": "packages/sdk-typescript"
   },
   "bugs": {
@@ -42,5 +42,9 @@
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

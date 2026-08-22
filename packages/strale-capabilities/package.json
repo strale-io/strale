@@ -32,6 +32,18 @@
   "homepage": "https://strale.dev",
   "repository": {
     "type": "git",
-    "url": "https://github.com/petterlindstrom79/strale"
-  }
+    "url": "git+https://github.com/strale-io/strale.git",
+    "directory": "packages/strale-capabilities"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "capabilities.json",
+    "README.md",
+    "LICENSE"
+  ]
 }
