@@ -42,6 +42,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
  * does, and the fix's own docstring names the bug pattern it replaces. */
 const readCode = (rel: string) =>
   readFileSync(join(HERE, rel), "utf8")
+    // Line endings normalised FIRST. Git checks these files out with CRLF on
+    // Windows and LF elsewhere, so a multi-line assertion would pass on one
+    // machine and fail on the other, and one that fails only in CI is
+    // indistinguishable from one that is simply wrong.
+    .replace(/\r\n/g, "\n")
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/(^|[^:])\/\/.*$/gm, "$1");
 
@@ -189,6 +194,27 @@ describe("WP9 — the volume cross-check thresholds", () => {
   });
 });
 
+/**
+ * The two projections, verbatim. Held as constants so the assertion is the
+ * whole SELECT list rather than a sample of it -- every previous round pinned a
+ * subset and the next round found the defect in the columns left out.
+ */
+const FACT_PROJECTION = `            SELECT s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
+                   'fact'::text AS source,
+                   NULL::text AS status, NULL::text AS error,
+                   f.success, f.counts_against_capability AS counts,
+                   date_trunc('day', f.created_at)::date::text AS day,
+                   (f.created_at > NOW() - INTERVAL '7 days') AS recent,
+                   COUNT(*)::int AS n`;
+
+const TXN_PROJECTION = `        SELECT s.slug, s.lifecycle_state, s.visible, s.x402_enabled,
+               'transaction'::text AS source,
+               t.status, t.error,
+               NULL::boolean AS success, NULL::boolean AS counts,
+               date_trunc('day', t.created_at)::date::text AS day,
+               (t.created_at > NOW() - INTERVAL '7 days') AS recent,
+               COUNT(*)::int AS n`;
+
 describe("WP9 — the floor's fact/transaction sources", () => {
   const src = readCode("quality-floor.ts");
   const migration = readCode("../lib/startup-migrations.ts");
@@ -272,8 +298,31 @@ describe("WP9 — the floor's fact/transaction sources", () => {
       src.indexOf("const factRows"),
       src.indexOf("const rows = ["),
     );
-    expect(factQuery).toContain("'fact'::text AS source,");
-    expect(factQuery).toContain("f.success, f.counts_against_capability AS counts,");
+    // The WHOLE projection, both branches, verbatim.
+    //
+    // Pinning columns one at a time is what produced this finding twice. Round
+    // 10 pinned four of the fact query's seven projected values; the remaining
+    // three -- `day`, `recent` and `n` -- were each a total silent disarm, and
+    // all four mutations against them survived the full suite:
+    //
+    //   date_trunc('day') -> 'year'  collapses every failure into one calendar
+    //     bucket, so distinctFailureDays is always 1, the burst guard fires on
+    //     every candidate forever, and NOTHING is ever quarantined -- while the
+    //     heartbeat still reports evaluated: N, decisions: N.
+    //   COUNT(*) -> 1  makes eligibleCalls count distinct GROUP BY buckets
+    //     rather than calls, so minCalls: 10 is never reached and every tick
+    //     reports decisions: 0.
+    //   recent inverted  swaps the trailing 7 days for the 8-to-30-day window,
+    //     so a capability that broke this week is deferred indefinitely by last
+    //     month's healthy traffic, and one that recovered this week is
+    //     quarantined on old failures -- the screenshot-url bounce the
+    //     promotion clamp exists to prevent.
+    //
+    // Every one of those inputs was pinned AT THE FOLD and none at the query
+    // that produces them. So the assertion is now the projection itself: there
+    // is no longer a column "one over" to be missed, and a deliberate change
+    // has to update this literal, which is the point.
+    expect(factQuery).toContain(FACT_PROJECTION);
     expect(factQuery).toContain(
       "JOIN capability_invocations f ON f.capability_slug = s.slug",
     );
@@ -283,12 +332,7 @@ describe("WP9 — the floor's fact/transaction sources", () => {
       src.indexOf("const factRows"),
     );
     expect(txnQuery.length).toBeGreaterThan(200);
-    expect(txnQuery).toContain("'transaction'::text AS source,");
-    // The fold branches on `source`, and a transaction row carrying fact-shaped
-    // NULLs would be read with the wrong rules -- so the discriminator and the
-    // deliberately-null fact columns are pinned together.
-    expect(txnQuery).toContain("NULL::boolean AS success, NULL::boolean AS counts,");
-    expect(txnQuery).toContain("t.status, t.error,");
+    expect(txnQuery).toContain(TXN_PROJECTION);
   });
 
   it("excludes harness and free-tier traffic from the fact source", () => {
