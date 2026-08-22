@@ -22,8 +22,11 @@
  * success for work it never looked at: the hollow-gate family (F5), shipped
  * inside the change that documents F5. The structural fix is below — this file
  * now keys on the CONCEPTS (does the charter name symbols the module actually
- * exports?) rather than on one path, and it imports the module statically so a
- * rename breaks compilation rather than silently disarming the check.
+ * exports?) rather than on one path. It imports the module statically, so a
+ * renamed or deleted module fails at import and the whole file errors rather
+ * than quietly selecting an "absent" branch. Note "fails at import", not "fails
+ * to compile": nothing typechecks this file, which is the trap the docblock on
+ * REQUIRED_TYPES below records as F5 incident 6.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
