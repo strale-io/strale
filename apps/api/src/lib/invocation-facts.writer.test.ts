@@ -226,7 +226,24 @@ describe("the row a customer invocation actually writes", () => {
     });
     expect(inserted[0].solutionId).toBe("sol-1");
     expect(inserted[0].transactionId).toBe("txn-1");
-    expect(inserted[0].billable).toBe(OK.billable);
+    // Asserted against a DIFFERENT value, not against itself. The first
+    // version compared the row to `OK.billable` -- and OK was the only outcome
+    // in the test, so `billable: true` hardcoded in the writer satisfied it.
+    // An assertion whose expected value comes from the same constant it is
+    // meant to exclude cannot fail.
+    expect(inserted[0].billable).toBe(true);
+
+    inserted.length = 0;
+    const unbillable = outcomeFromError(new Error("Zefix API error: HTTP 503"));
+    expect(unbillable.billable).toBe(false);
+    await recordPaidInvocation({
+      capabilitySlug: "swiss-company-data",
+      rail: "v1_do",
+      userId: "u1",
+      latencyMs: 1,
+      outcome: unbillable,
+    });
+    expect(inserted[0].billable).toBe(false);
 
     // And absent linkage is null, not undefined -- the column is nullable and a
     // stray undefined would be a dropped insert on a NOT NULL neighbour.

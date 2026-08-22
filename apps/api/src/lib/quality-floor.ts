@@ -93,6 +93,17 @@ const FLOOR_LIFECYCLES = new Set(["active", "degraded"]);
 export function evaluateFloor(
   rows: FloorStats[],
   config: FloorConfig = DEFAULT_FLOOR_CONFIG,
+  /**
+   * Slugs whose evidence is known to be incomplete this tick.
+   *
+   * Passed IN rather than filtered afterwards, because the throttle below spends
+   * a budget of `maxQuarantinesPerRun`. Suppressing a decision after the budget
+   * was already decremented meant one night of fact-write failures on three
+   * capabilities could hold the entire quarantine budget for the thirty days
+   * the marker query looks back over, while genuinely broken capabilities with
+   * clean evidence were told "budget exhausted — next tick" every tick.
+   */
+  evidenceIncomplete: ReadonlySet<string> = new Set(),
 ): FloorDecision[] {
   const decisions: FloorDecision[] = [];
   let quarantinesLeft = config.maxQuarantinesPerRun;
@@ -112,6 +123,23 @@ export function evaluateFloor(
 
     const belowDeactivate = r.completion < config.deactivateBelow;
     const requiresHuman = belowDeactivate && r.revenueCents > 0;
+
+    // Holed evidence defers BEFORE the throttle spends anything. The
+    // deactivation proposal is still emitted — it is advisory and a human reads
+    // it — but no quarantine budget is consumed by a capability the job is
+    // going to suppress anyway.
+    if (evidenceIncomplete.has(r.slug)) {
+      decisions.push({
+        slug: r.slug,
+        action: "none",
+        deactivateProposal: belowDeactivate,
+        requiresHuman,
+        completion: r.completion,
+        eligibleCalls: r.eligibleCalls,
+        reason: `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d, but this capability's invocation evidence is incomplete for the window — deferred without spending quarantine budget`,
+      });
+      continue;
+    }
 
     // Burst guard (H-1): failures concentrated in fewer calendar days than
     // the minimum never quarantine on their own — could be one incident or

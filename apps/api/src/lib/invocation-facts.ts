@@ -138,11 +138,11 @@ export const INVOCATION_FACT_DELETE_GUARD_DAYS = 35;
  * mutation at a call site cannot make a paid call look like harness traffic,
  * because call sites no longer say.
  *
- * `is_free_tier` is derived here too, from the same two facts the transaction
- * row derives it from: the capability is free-tier AND there is no account. An
- * authenticated caller of a free-tier capability is ordinary traffic on both
- * sides, which is what keeps the fact branch and the pre-epoch transaction
- * branch measuring the same population.
+ * `is_free_tier` is NOT derived here. Two derivations were falsified in
+ * opposite directions, so the value comes from the route that knows it --
+ * computeServedFree below -- and the writers pass it through unchanged. What
+ * keeps the fact branch and the pre-epoch transaction branch measuring the same
+ * population is that the route hands the SAME variable to both writes.
  */
 /**
  * Was an anonymous `/v1/do` call served WITHOUT payment?

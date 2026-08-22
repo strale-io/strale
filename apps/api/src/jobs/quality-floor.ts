@@ -561,7 +561,10 @@ export async function runQualityFloorOnce(): Promise<{
         : new Map<string, string>();
 
       const stats = foldTrafficRows(rows, revenueBySlug);
-      const decisions = evaluateFloor(stats, DEFAULT_FLOOR_CONFIG);
+      // Suppression is applied INSIDE evaluateFloor so a holed capability never
+      // spends a slot of the per-run quarantine budget.
+      const incomplete = new Set<string>([...holedEvidence.keys(), ...volumeShortfall.keys()]);
+      const decisions = evaluateFloor(stats, DEFAULT_FLOOR_CONFIG, incomplete);
       const quarantined: string[] = [];
       const proposals: string[] = [];
       const db = getDb();

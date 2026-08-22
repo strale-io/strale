@@ -273,10 +273,10 @@ type CapabilityInfo = {
   dataSource: string | null;
   dataClassification: string | null;
   freshnessCategory: string | null;
-  // Read from the DB already; declared here because the invocation-fact writer
-  // derives `is_free_tier` from it rather than taking that decision from a call
-  // site. Every source-text guard on that field was found hollow one file at a
-  // time; removing the field from call sites ends the category.
+  // Routing only. An earlier comment here said the invocation-fact writer
+  // derives is_free_tier from this field; it does not, and has not since the
+  // derivation was replaced by computeServedFree(). The field was already
+  // selected before WP9 and is used to choose an execution path.
   isFreeTier: boolean;
   dataUpdateCycleDays: number | null;
   datasetLastUpdated: Date | null;

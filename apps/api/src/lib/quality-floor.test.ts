@@ -102,6 +102,44 @@ describe("evaluateFloor", () => {
   });
 });
 
+describe("holed evidence must not spend the quarantine budget", () => {
+  function broken(slug: string) {
+    return {
+      slug, lifecycleState: "active", visible: true, x402Enabled: true,
+      eligibleCalls: 100, completedCalls: 0, revenueCents: 0,
+      distinctFailureDays: 5, recentEligibleCalls: 0, recentCompletedCalls: 0,
+    };
+  }
+
+  it("defers a holed capability without consuming a slot", () => {
+    // maxQuarantinesPerRun is 3. Three holed capabilities used to consume the
+    // whole budget before the job ever looked at suppression, so a genuinely
+    // broken capability with clean evidence was told "budget exhausted — next
+    // tick" every tick, for as long as the 30-day marker window kept the holes
+    // visible.
+    const stats = [broken("holed-1"), broken("holed-2"), broken("holed-3"), broken("clean")];
+    const decisions = evaluateFloor(
+      stats,
+      DEFAULT_FLOOR_CONFIG,
+      new Set(["holed-1", "holed-2", "holed-3"]),
+    );
+    const byslug = Object.fromEntries(decisions.map((d) => [d.slug, d]));
+    for (const s of ["holed-1", "holed-2", "holed-3"]) {
+      expect(byslug[s].action, s).toBe("none");
+      expect(byslug[s].reason, s).toContain("evidence is incomplete");
+    }
+    expect(byslug["clean"].action).toBe("quarantine");
+  });
+
+  it("still emits the deactivation proposal for a holed capability", () => {
+    // The proposal is advisory and a human reads it. Suppressing the automatic
+    // action must not also hide the fact that something is badly wrong.
+    const [d] = evaluateFloor([broken("holed")], DEFAULT_FLOOR_CONFIG, new Set(["holed"]));
+    expect(d.action).toBe("none");
+    expect(d.deactivateProposal).toBe(true);
+  });
+});
+
 describe("classifyTransactionFailure", () => {
   it("caller-attributable classes never count against completion", () => {
     expect(CALLER_ATTRIBUTABLE.has(classifyTransactionFailure("Missing required input fields: url"))).toBe(true);

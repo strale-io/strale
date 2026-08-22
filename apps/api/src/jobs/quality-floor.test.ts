@@ -475,9 +475,20 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // UPDATE from the trigger definition, and inverting the 35-day comparison
     // so fresh evidence inside the floor's window becomes deletable while the
     // nightly purge raises on every run.
-    expect(migration).toContain("IF TG_OP = 'UPDATE' THEN");
-    expect(migration).toContain("BEFORE UPDATE OR DELETE ON");
-    expect(migration).toContain(
+    // Scoped to block 0101, not to the whole 3,400-line file. These pass today
+    // only because the strings happen to be unique in it; a second append-only
+    // trigger added anywhere would make all three hollow. The neighbouring
+    // assertions in this describe already slice, and these did not.
+    const trigger = migration.slice(
+      migration.indexOf("export async function runMigration0101_capabilityInvocations"),
+      migration.indexOf("export const BLOCKS"),
+    );
+    expect(trigger.length).toBeGreaterThan(500);
+    expect(trigger).toContain("IF TG_OP = 'UPDATE' THEN");
+    // Table-qualified: truncated before the table name, the same clause on a
+    // different table would satisfy it.
+    expect(trigger).toContain('BEFORE UPDATE OR DELETE ON "capability_invocations"');
+    expect(trigger).toContain(
       "IF TG_OP = 'DELETE' AND OLD.created_at > now() - INTERVAL '35 days' THEN",
     );
   });
