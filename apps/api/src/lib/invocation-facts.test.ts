@@ -383,6 +383,15 @@ describe("no serving path may skip the fact", () => {
       (doRoute.match(/servedFree: actor\.kind === "anonymous" \? actor\.servedFree : false,/g) ?? [])
         .length,
     ).toBe(2);
+    // ONE value, two writes: the transaction row and the fact receive the same
+    // variable, and that variable comes from the tested derivation rather than
+    // from a literal. An earlier version of this assertion was deleted during a
+    // cleanup and its replacement silently matched nothing, so the route could
+    // hardcode `const servedFree = true` with the suite green.
+    expect(doRoute).toContain(
+      'const servedFree = computeServedFree(c.get("x402_paid" as any));',
+    );
+    expect(doRoute).toContain("isFreeTier: servedFree,");
   });
 
 
