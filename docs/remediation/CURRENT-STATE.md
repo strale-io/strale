@@ -10,6 +10,29 @@ _Last updated: 2026-08-21 (session 1)_
 - **Human approvals granted:** program-level autonomy (run continuously; escalate only per CHECK-IN A/B/C)
 - **Awaiting founder:** nothing. One item is logged for *visibility only*, not decision — see "Codex disposition" below.
 
+## The `danish-company-data` chronology — recorded so it cannot be re-litigated
+
+Written out in full because a later reader could easily reconstruct the wrong
+story from the code alone, and one review round already did.
+
+| When | What |
+|---|---|
+| **2026-08-12** | Legitimately quarantined by the quality floor — the first action under DEC-20260812-A's escalation contract. 0% completion on 11 external calls over 90 days; cvrapi.dk's free tier was exhausted and failing even identifier lookups. Intended DB state recorded in `manifests/danish-company-data.yaml`: **`visible=false, x402_enabled=false`**. Recovery condition documented: quota top-up (Petter's action), then re-verify via a prod sweep. |
+| **2026-08-21 00:08:18Z** | An **unexplained out-of-band write** set `x402_enabled` back to `true`, leaving `visible=false`. No job can produce this: the quality floor and the promotion job each write both flags together in one statement. No commit corresponds, no `health_monitor_events` row records it, and exactly one capability row changed in that minute. The platform has **no audit trail for capability flag changes**, which is why the writer is unidentifiable. |
+| **2026-08-21 (WP8)** | WP8 shipped and **correctly** treated the capability as non-servable — it was withdrawn from the catalogue, and that is what `visible=false` means. |
+| **2026-08-21 (PR #356)** | I inferred from the drifted row that `visible=false` should stop meaning "withdrawn", and opened a hotfix to redefine the servability authority around it. **Wrong on two counts**: the premise contradicted repository history, and the change coupled the global "fit to execute" authority to `x402Enabled`, a rail-specific flag — the exact coupling WP8 exists to remove. **Closed unmerged.** |
+| **2026-08-21 21:06Z** | Production restored to the intended `visible=false, x402_enabled=false` by one conditional update. No other capability was in that shape. |
+| **2026-08-21 (this package)** | A DB `CHECK` constraint now **prevents** the state, and a scheduled invariant check **detects** it if the constraint ever fails to apply. |
+
+**The capability is still not healthy and the quarantine still stands**: 14 real
+customer calls over 90 days, all 14 failed, zero successes. Promotion requires
+the manifest's documented recovery condition, not a flag flip.
+
+**The lesson worth keeping**: a production row is evidence of *state*, never of
+*policy*. Policy lives in the manifest, the decision record and the code that
+writes the state. I read a row and inferred a rule from it, which is the same
+error class as reading two columns without checking what writes them.
+
 ## Where WP6 landed
 
 Idempotency keys are bound to a fingerprint of the request they were issued
