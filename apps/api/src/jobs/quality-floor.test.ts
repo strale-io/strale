@@ -199,9 +199,9 @@ describe("WP9 — the floor's fact/transaction sources", () => {
       src.indexOf("const revenueRows"),
       src.indexOf("const revenueBySlug"),
     );
-    expect(revenueQuery).toContain("SUM(t.price_cents)");
+    expect(revenueQuery).toContain("SUM(rt.price_cents)");
     expect(revenueQuery).toContain("email LIKE ANY(");
-    expect(revenueQuery).toContain("COALESCE(t.is_free_tier, false) = false");
+    expect(revenueQuery).toContain("COALESCE(rt.is_free_tier, false) = false");
     expect(revenueQuery).toContain("COALESCE(lp.promoted_at, '-infinity'::timestamptz)");
   });
 
