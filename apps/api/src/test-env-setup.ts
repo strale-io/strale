@@ -20,3 +20,27 @@ process.env.ADMIN_SECRET ??=
 // is unset. Use the production frontend URL because audit-token.test
 // asserts the shareable URL starts with https://strale.dev/audit/...
 process.env.FRONTEND_URL ??= "https://strale.dev";
+
+// ── Credential scrub (incident 2026-08-22: STARVE-SET-1) ────────────────────
+//
+// A test run emailed the production alert inbox a fabricated x402 settlement
+// ("STARVE-SET-1", slug=real-cap, 99 cents) that read as a real customer losing
+// real money. See lib/alerting.ts for the full account.
+//
+// The gate in sendAlert is the primary control. This is the second layer, and
+// it is here because the two fail in different ways: the gate depends on
+// correctly detecting a test runner, this depends on nothing at all. A worker
+// with no key cannot email anyone even if the detection is wrong or a future
+// caller reaches Resend by another path.
+//
+// `delete`, not `??=`. The whole failure mode is that the variable is ALREADY
+// set — inherited from the shell, or loaded from the repo-root .env by any of
+// the ~30 modules that run dotenv.config() at import time. A default-if-unset
+// would leave the live key exactly where it did the damage.
+//
+// NODE_ENV is asserted rather than defaulted for the same reason: a shell that
+// exported NODE_ENV=production would otherwise carry that into the suite and
+// switch on production-only behaviour underneath every test.
+delete process.env.RESEND_API_KEY;
+delete process.env.BETTER_STACK_SOURCE_TOKEN;
+process.env.NODE_ENV = "test";
