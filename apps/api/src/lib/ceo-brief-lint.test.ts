@@ -523,6 +523,65 @@ describe("a settled decision with no execution authority is its own status", () 
   });
 });
 
+describe("a settled matter must never come back as a decision", () => {
+  // The acceptance criterion: "Needs your decision" contains only choices where
+  // the founder's judgement is genuinely still open. The brief broke this twice
+  // — asking whether an already-accepted incident outcome should stand, and
+  // asking which replacement wording to publish when the approved correction
+  // was removal with no replacement at all.
+
+  it("rejects re-asking whether the eleven-row reconciliation stands", () => {
+    const r = lintBrief(goodBrief({
+      decide:
+        "FOUNDER_DECISION\n\n**The choice: whether this morning's change stands, or is reversed.**\n" +
+        "**What is established:** it closed eleven unfinished records and credited one euro.\n" +
+        "**Options:** let it stand, or reverse it.\n**I recommend** letting it stand.\n" +
+        "**The consequence:** reversing costs a second unapproved change.",
+    }));
+    expect(r.ok).toBe(false);
+    const f = r.findings.find((x) => x.rule === "settled-matter-reopened");
+    expect(f, JSON.stringify(r.findings)).toBeDefined();
+    expect(f!.message).toMatch(/eleven-row-reconciliation/);
+    expect(f!.message, "the message must say where it was settled").toMatch(/#361|#364/);
+  });
+
+  it("rejects re-asking which integrity wording to publish", () => {
+    const r = lintBrief(goodBrief({
+      decide:
+        "FOUNDER_DECISION\n\n**The choice: whether to soften a claim on our website.**\n" +
+        "**What is established:** six pages say our records are tamper-evident.\n" +
+        "**Options:** publish the narrower wording, or leave it.\n" +
+        "**I recommend** publishing it.\n**The consequence:** an hour's work.",
+    }));
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((x) => x.rule === "settled-matter-reopened")).toBe(true);
+  });
+
+  it("allows the same subjects to be REPORTED rather than asked about", () => {
+    // The settled matters may still appear in the brief — as progress, or as
+    // history. What is forbidden is putting them back in front of him as a
+    // choice. A rule that banned the words would push the reporting out too.
+    const r = lintBrief(goodBrief({
+      changed:
+        "The eleven unfinished records were closed this morning without the approval " +
+        "you had reserved. The controls are built and the incident is closed out.",
+      now: "Taking the unsupported tamper-evident claims off the website, as you decided.",
+    }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  });
+
+  it("does not fire on a genuinely open decision", () => {
+    const r = lintBrief(goodBrief({
+      decide:
+        "FOUNDER_DECISION\n\n**The choice: what to charge for the Greek registry lookup.**\n" +
+        "**What is established:** 11 paid calls in 30 days at 20 cents.\n" +
+        "**Options:** hold at 20, or move to 35.\n**I recommend** 35.\n" +
+        "**The consequence:** about 15 euros a month forgone if we leave it.",
+    }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  });
+});
+
 describe("length", () => {
   it("fails a brief that has grown back into a report", () => {
     const filler = "The business continued to serve customers in the usual way and nothing else changed. ";

@@ -230,4 +230,53 @@ describe("the statuses map onto shapes the module can actually produce", () => {
     expect(() => (authority.productionWriteUrl as (a: unknown) => string)(undefined))
       .toThrow(authority.ProductionAuthorityError);
   });
+
+  it("refuses a structurally valid Authority this module did not issue", () => {
+    // The defect adversarial review found: `Authority` is a structural type, so
+    // a hand-written literal satisfied it and passed the write gate. That is a
+    // session writing down the permission it was supposed to obtain — the exact
+    // move the module exists to prevent. Provenance is now checked by identity.
+    const forged = {
+      kind: "FOUNDER_GATED",
+      grantId: "made-up",
+      purpose: "close_stranded_executing_rows",
+      expiresAt: "2099-01-01T00:00:00.000Z",
+    };
+    // Assert on WHICH refusal, not merely that it threw. With no write
+    // credential in the environment every path throws ProductionAuthorityError,
+    // so `toThrow(ProductionAuthorityError)` passes whether or not the
+    // provenance check exists — a hollow assertion, and this file has shipped
+    // two of those already.
+    const refusalFor = (a: unknown): string => {
+      try {
+        (authority.productionWriteUrl as (x: unknown) => string)(a);
+        return "";
+      } catch (e) {
+        return (e as Error).message;
+      }
+    };
+    expect(refusalFor(forged)).toMatch(/was not issued by/);
+
+    // And the autonomous side, which is the easier one to fake.
+    const forgedAutonomous = {
+      kind: "AUTONOMOUS_POLICY", policy: "DEC-20260815-A", purpose: "quality_floor_quarantine",
+    };
+    expect(refusalFor(forgedAutonomous)).toMatch(/was not issued by/);
+  });
+
+  it("accepts an Authority the sanctioned constructor issued", () => {
+    // The other direction: the fix must not close the legitimate path. With no
+    // write credential present this still throws, so assert on WHICH refusal —
+    // a provenance rejection here would mean the gate had shut on everyone.
+    const real = authority.autonomousAuthority(
+      authority.AUTONOMOUS_PURPOSES[0]!, "DEC-20260815-A");
+    let message = "";
+    try {
+      authority.productionWriteUrl(real);
+    } catch (e) {
+      message = (e as Error).message;
+    }
+    expect(message, "a minted Authority must not be refused for provenance")
+      .not.toMatch(/was not issued by/);
+  });
 });

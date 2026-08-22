@@ -215,11 +215,14 @@ produces**, not a parallel vocabulary:
 
 **What actually stops a write, stated precisely, because the flattering version
 is wrong.** An earlier draft of this section claimed no `Authority` value could
-be constructed at all. That is false and adversarial review demonstrated it:
-`Authority` is a structural type, `productionWriteUrl()` checks only that it
-received an object with a `kind`, and an object literal claiming
-`FOUNDER_GATED` with an invented grant id passes. **Constructing the permission object is not the barrier.** The barriers
-are, in order of what does the work:
+be constructed at all. That was false when written — `Authority` is a structural
+type, and adversarial review demonstrated a hand-written literal passing
+`productionWriteUrl()`. **That specific hole is now closed:** the module records
+every value its two constructors issue and refuses any other, so a literal is
+rejected on *provenance* rather than on shape. The general point stands and this
+section keeps it — constructing a permission object was never the barrier, and
+treating any single check as the barrier is how this passage went wrong the
+first time. The barriers are, in order of what does the work:
 
 1. **No write credential.** `DATABASE_URL` is a read-only role and the writable
    connection string is absent from the shared environment. A session has
@@ -233,9 +236,7 @@ are, in order of what does the work:
 Provenance is not the primary barrier and this charter must not imply it is.
 Verification is not authorization: being able to check a signature has never
 implied being able to make one, and being able to *construct the object* has
-never implied being able to *write*. That `productionWriteUrl()` accepts an
-unminted literal is a real gap in the authority module, logged for its owner
-rather than papered over here.
+never implied being able to *write*.
 - **I cannot mint what I am asked to prove.** A grant is an ed25519 signature
   made with a private key the platform never holds;
   **`assertCannotMintGrants()`** refuses to run at all in an environment that

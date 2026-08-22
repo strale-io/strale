@@ -149,6 +149,44 @@ function claimsNothingToDecide(section: string): boolean {
 export const STATUS_TAGS = ["SYSTEM_ACTING", "FOUNDER_DECISION", "AUTHORIZATION_UNAVAILABLE"] as const;
 export type StatusTag = (typeof STATUS_TAGS)[number];
 
+/**
+ * Matters that are already decided, and must never reappear as a decision.
+ *
+ * The brief kept re-escalating things the record had settled: whether the
+ * eleven-row reconciliation should stand (the incident was closed and accepted
+ * the same day, and the ledger is explicit that the rows were deliberately not
+ * rewritten), and whether to publish narrower integrity wording (the approved
+ * correction is removal with **no** replacement claim, so the narrower-wording
+ * question was never the one on the table).
+ *
+ * Re-asking a settled question is not a harmless extra: it spends the founder's
+ * attention on work he has already done, and it invites him to reverse himself
+ * without the context that produced the original decision. It is the mirror of
+ * F10's other failures — this time treating a closed matter as open.
+ *
+ * A new entry belongs here when a decision is recorded somewhere durable. Each
+ * carries where, so a reader can check the claim rather than trust the list.
+ */
+export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string }> = [
+  {
+    id: "eleven-row-reconciliation",
+    re: /\b(?:eleven|11)\b[^.]{0,80}\b(?:records?|rows?|transactions?|reconciliation)\b/i,
+    settledBy:
+      "the production-authorization incident was closed and ACCEPTED on 2026-08-22 " +
+      "(PR #361, accepted in #364); the remediation ledger records that the rows were " +
+      "deliberately not rewritten and that the incident record is the correction",
+  },
+  {
+    id: "integrity-claim-wording",
+    re: /\btamper[- ]evident\b|\breplacement (?:integrity )?claim\b|\bnarrower wording\b/i,
+    settledBy:
+      "the founder approved the correction itself — unsupported tamper-evidence and " +
+      "downstream-regulatory-verification claims are removed, with no replacement " +
+      "integrity claim until independently substantiated (docs/remediation/" +
+      "PUBLIC-COPY-CORRECTION.md, which supersedes the withdrawn hedged rewording)",
+  },
+];
+
 /** Fields required on an `AUTHORIZATION_UNAVAILABLE` entry. */
 export const HANDOVER_FIELDS = ["settled", "why_not_mine", "what_i_need"] as const;
 
@@ -336,6 +374,28 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
             });
           }
         }
+      } else if (b.status === "FOUNDER_DECISION") {
+        // A settled matter is not a decision, however carefully it is written
+        // up. Checked before the field rules so the message names the real
+        // problem: the entry does not belong here at all.
+        const settled = SETTLED_MATTERS.find((m) => m.re.test(b.text));
+        if (settled) {
+          findings.push({
+            severity: "error", rule: "settled-matter-reopened",
+            message:
+              `this asks for a decision on "${settled.id}", which is already settled — ` +
+              `${settled.settledBy}. Report it as done, or as work in progress, but ` +
+              "never as a question: re-asking spends his attention on a decision he has made.",
+          });
+        }
+        for (const field of ESCALATION_FIELDS) {
+          if (!fieldPresent(b.text, field)) {
+            findings.push({
+              severity: "error", rule: "escalation-incomplete",
+              message: `an escalation is present but the "${field}" field is missing — the charter requires all five`,
+            });
+          }
+        }
       } else if (b.status === "UNTAGGED") {
         findings.push({
           severity: "error", rule: "untagged-item",
@@ -345,16 +405,11 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
             "cannot be checked against either contract, and cannot tell the reader " +
             "whether it wants a judgement or an authority.",
         });
-      } else {
-        for (const field of ESCALATION_FIELDS) {
-          if (!fieldPresent(b.text, field)) {
-            findings.push({
-              severity: "error", rule: "escalation-incomplete",
-              message: `an escalation is present but the "${field}" field is missing — the charter requires all five`,
-            });
-          }
-        }
       }
+      // SYSTEM_ACTING needs nothing further: `status-misplaced` above already
+      // says it does not belong in this section at all. Running the five field
+      // checks over it too would bury one true finding under five misleading
+      // ones — the diagnostic problem the UNTAGGED rule was added to fix.
     }
 
     const items = countEscalations(decide);

@@ -132,40 +132,64 @@ one I would not leave indefinitely.
 > something already done, and "if you do nothing, eleven rows stay in a status
 > they should not be in" is false — they are not in that status.
 >
-> What is genuinely open is narrower: whether that change **stands or is
-> reversed**. It is on today's brief as a decision, with a recommendation to let
-> it stand. Item 2 is unaffected and remains exactly as written.
+> **And nothing about it is open now either.** The production-authorization
+> incident was closed and accepted on 2026-08-22 (PR #361, accepted in #364).
+> The remediation ledger is explicit that the eleven `manual_reconciliation`
+> rows were deliberately **not** rewritten — "their `authorised_by` string is
+> wrong and stays wrong; the incident record is the correction" — so the
+> resulting state is the accepted outcome, not a pending stand-or-reverse
+> choice. A brief that asked you to re-decide it would be putting a settled
+> incident back in front of you.
+>
+> **Item 2 is settled too, and in the direction the entry recommended.** You
+> approved the correction itself: unsupported tamper-evidence and
+> downstream-regulatory-verification claims come off, with **no replacement
+> integrity claim** until one is independently substantiated. The operative plan
+> is `docs/remediation/PUBLIC-COPY-CORRECTION.md` — pure subtraction, no new
+> assertion — and it supersedes the hedged replacement paragraph the original
+> brief proposed, which was itself withdrawn for containing a sentence that was
+> false. So the question "should we publish narrower wording?" is not open:
+> narrower wording is not what was approved, removal is.
+>
+> What remains is execution, and it is mine: the surface list has grown from 6
+> to 32 locations across four deploy units under two rounds of independent
+> review, and it is not finished. Two of those rounds each found surfaces the
+> previous round missed, so the count is a lower bound and the review continues
+> until a round finds nothing new. That work is `SYSTEM_ACTING`. If applying it
+> turns out to need an authority I do not hold, that becomes an
+> `AUTHORIZATION_UNAVAILABLE` item on the day it is ready — a request for
+> authority, not a re-run of a decision you have already made.
 >
 > Recorded because a completed production mutation left standing in a queue as
 > "recommended: approve as proposed" is the same misreporting as executing
 > without authority, pointing the other way — LESSONS.md family F10, incident 3.
 
-**DQ-20** · `your_call` · owner Petter · raised 2026-08-22 · no deadline
-A gap in the new production-authorization model, found by adversarial review.
-*What it is:* the function that hands out the production write credential
-checks only that it was given an object with a `kind` field. It does not check
-that the object came from one of the two constructors, so a hand-written
-literal claiming a founder grant — with an invented grant id — passes it. That
-is the shape of the 22 August incident, one object literal away. **What it does
-not do today is reach an audit record**: the function that would store the
-approval alongside the change has no caller yet, so nothing is written down
-either way.
-*What is not affected:* this is not a live hole today. Nothing can write
-without the write credential, which is absent from the shared environment, and
-the database role is read-only underneath that. The gap is in the layer that
-proves *provenance*, not in the layer that stops writes.
-*Why it is yours:* it is a change to the authorization model you have just
-accepted as canonical, and tightening it narrows what the platform may do. I
-have not touched that module.
-*Recommended:* have the module's owner make the two constructors the only
-source of an `Authority` — a brand or a private symbol — so an unminted literal
-cannot reach the write path or the audit record.
-*If you do nothing:* the freeze and the read-only role continue to hold, so
-nothing can be written regardless. The exposure only becomes real on the day a
-write credential exists — which is why it is worth closing before then rather
-than after.
-
 ## DECIDED — visible so you can reverse them
+
+**DQ-20** · `decided` · owner Claude · 2026-08-22 — **reclassified, then fixed**
+Two defects in the new production-authorization model, closed without asking you.
+*Why this is not your call, on reflection:* I first raised it as one. You pushed
+back, correctly. Neither item was a question about what powers the system should
+have — the model's own stated rule is that a session must not be able to grant
+itself the permission it is supposed to prove, and both defects were simply
+places where the code did not do that. There was no choice with two defensible
+answers, so there was nothing to decide.
+*What was wrong:* the function that releases the production write credential
+checked only that it had been handed an object of roughly the right shape, so a
+hand-written one passed — a session writing down its own permission. And two
+comments claimed that every production change records who authorised it, which
+nothing does.
+*What I did:* the model now remembers every permission it issues and refuses any
+other, so a fabricated one is rejected because it was never issued rather than
+because it looks wrong. The false comments are corrected to say what is true —
+authority is checked when the credential is handed over and is not yet written
+down anywhere. Wiring that recording is the remaining work and it is mine.
+*How it was checked:* the new refusal is verified in both directions — a
+fabricated permission is refused for the right reason, and a genuine one is not
+refused for that reason. Removing the check fails the test.
+*What did not change:* nothing about what the system is allowed to do. No
+permission was added, removed or widened.
+*How you'd reverse it:* tell me, and the check comes out.
 
 **DQ-19** · `decided` · owner Claude · 2026-08-22
 Changed how I report to you, widened what I decide without asking, and started
