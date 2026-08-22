@@ -175,6 +175,50 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
   return redacted;
 }
 
+/**
+ * Invocation facts (WP9). Six times the quality floor's 30-day window, so a
+ * question about a capability's recent history can be answered without keeping
+ * a fact forever.
+ *
+ * Not a compliance artefact and not on the 1095-day tier: a fact carries no
+ * customer content by design — no inputs, no outputs, no error strings, only the
+ * verdict — so there is nothing here that the 90-day content redaction exists to
+ * remove, and nothing an Art. 15 or Art. 17 request reaches.
+ *
+ * Must stay comfortably above INVOCATION_FACT_DELETE_GUARD_DAYS. Block 0100's
+ * trigger refuses to delete a fact inside the floor's reading window, so a
+ * retention window shorter than that guard would make this purge throw on every
+ * run — from inside a bulk job, which is where this platform has previously let
+ * failures go unnoticed for days.
+ */
+export const INVOCATION_FACT_RETENTION_DAYS = 180;
+
+async function purgeCapabilityInvocations(cutoff: Date): Promise<number> {
+  const db = getDb();
+  let deleted = 0;
+  let batches = 0;
+  // LIMIT-paginated, like every other rule here (DEC-20260504-B). The table is
+  // created empty by block 0100, so the first successful run has no backlog to
+  // drain — the workload-resumption hazard that protocol exists for does not
+  // apply to a table that has never held a row. Batched anyway, because it will
+  // hold roughly 6k rows a day once the fact writer is live.
+  while (true) {
+    const result = await db.execute(sql`
+      DELETE FROM capability_invocations
+      WHERE id IN (
+        SELECT id FROM capability_invocations
+        WHERE created_at < ${cutoff.toISOString()}::timestamptz
+        LIMIT ${BATCH_SIZE}
+      )
+    `);
+    const count = affected(result);
+    deleted += count;
+    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
+    await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+  }
+  return deleted;
+}
+
 async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
   const db = getDb();
   let deleted = 0;
@@ -365,6 +409,10 @@ export async function cleanupOldTestData(): Promise<void> {
 
   const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
 
+  const invocationCutoff = new Date(now);
+  invocationCutoff.setDate(invocationCutoff.getDate() - INVOCATION_FACT_RETENTION_DAYS);
+  const invocationFactsDeleted = await purgeCapabilityInvocations(invocationCutoff);
+
   log.info(
     {
       label: "retention-cleanup-done",
@@ -373,6 +421,7 @@ export async function cleanupOldTestData(): Promise<void> {
       transactions_redacted: txRedacted,
       pii_transactions_redacted: piiRedacted,
       health_monitor_events_deleted: eventsDeleted,
+      invocation_facts_deleted: invocationFactsDeleted,
     },
     "retention-cleanup-done",
   );

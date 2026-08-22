@@ -14,7 +14,11 @@ import { join } from "node:path";
 
 import { foldTrafficRows, type FloorTrafficRow } from "../jobs/quality-floor.js";
 import { evaluateFloor, DEFAULT_FLOOR_CONFIG } from "./quality-floor.js";
-import { INVOCATION_RAILS } from "./invocation-facts.js";
+import {
+  INVOCATION_RAILS,
+  INVOCATION_FACT_DELETE_GUARD_DAYS,
+} from "./invocation-facts.js";
+import { INVOCATION_FACT_RETENTION_DAYS } from "./data-retention.js";
 
 const SRC = join(import.meta.dirname, "..");
 
@@ -230,6 +234,48 @@ describe("no serving path may skip the fact", () => {
     // about the same call — two answers to one question, again.
     const body = readFileSync(join(SRC, "lib/solution-executor.ts"), "utf8");
     expect(body).toContain("outcome: outcomeFromOutput(step.capabilitySlug, output)");
+  });
+});
+
+describe("retention and the database guard must not contradict each other", () => {
+  it("prunes facts well outside the window the database refuses to delete in", () => {
+    // Block 0100 refuses to DELETE a fact inside the floor's reading window, so
+    // a retention window shorter than that guard would make the nightly purge
+    // throw on every run -- inside a bulk job, which is exactly where this
+    // platform has previously let failures go unnoticed for days at a time.
+    expect(INVOCATION_FACT_RETENTION_DAYS).toBeGreaterThan(
+      INVOCATION_FACT_DELETE_GUARD_DAYS,
+    );
+    // And comfortably outside, not by a day. The floor reads 30 days; six times
+    // that answers a question about recent history without keeping a fact
+    // forever.
+    expect(INVOCATION_FACT_RETENTION_DAYS).toBeGreaterThanOrEqual(90);
+  });
+
+  it("the guard constant still matches the interval the migration installs", () => {
+    // Two places state the same number -- the trigger SQL and the TypeScript
+    // constant the retention rule is checked against. They are checked against
+    // each other here, because the failure mode of them drifting is a purge
+    // that throws nightly and a test that keeps passing.
+    const migration = readFileSync(join(SRC, "lib/startup-migrations.ts"), "utf8");
+    expect(migration).toContain(
+      `INTERVAL '${INVOCATION_FACT_DELETE_GUARD_DAYS} days'`,
+    );
+  });
+
+  it("the purge is LIMIT-paginated rather than one unbounded DELETE", () => {
+    // DEC-20260504-B. The table is created empty so there is no backlog to
+    // drain on first run, but it accrues roughly 6k rows a day once the writer
+    // is live, and an unbounded DELETE on that is a future incident.
+    const body = readFileSync(join(SRC, "lib/data-retention.ts"), "utf8");
+    // Substring-scoped rather than regex-extracted: the LIMIT has to be in the
+    // same statement as the DELETE, not merely somewhere else in a file that
+    // has five other batched purges in it.
+    const at = body.indexOf("DELETE FROM capability_invocations");
+    expect(at, "the invocation-fact purge must exist").toBeGreaterThan(-1);
+    const source = body.slice(at, at + 400);
+    expect(source).toContain("LIMIT ${BATCH_SIZE}");
+    expect(source).toContain("DELETE FROM capability_invocations");
   });
 });
 

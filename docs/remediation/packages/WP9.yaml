@@ -1,6 +1,6 @@
 package: WP9
 title: Capability Invocation Facts
-status: IN_PROGRESS
+status: IMPLEMENTED_AWAITING_REVIEW
 depends_on: [WP4, WP8]
 risks: [CR-06]
 
@@ -75,3 +75,91 @@ exit_conditions:
   - the fact carries the WP4 canonical outcome rather than re-deriving one
   - a guard prevents a new invocation path skipping the fact
   - independent adversarial review passes
+
+# ── Migration and retention implications, recorded explicitly ────────────────
+migration:
+  block: "0100_capability_invocations"
+  creates: >
+    capability_invocations, three indexes (slug+created, transaction, created),
+    and an append-only trigger. Defer-not-throw: a throw aborts boot and a failed
+    Railway deploy does not cut over (DEC-20260504-C). Until the table exists the
+    floor falls back to its transactions query, which is today's behaviour.
+  append_only_rule: >
+    UPDATE is refused outright. DELETE is refused only inside 35 days — the
+    floor's 30-day window plus margin. Blocking DELETE outright would make the
+    table unprunable and guarantee a future incident whose only fix is dropping
+    the trigger, i.e. the protection disappearing exactly when someone is under
+    pressure. Bounding it targets the real threat: erasing evidence the floor is
+    about to read.
+  no_backfill: >
+    Deliberately none. Backfilling ~180k rows from historical transactions inside
+    a startup migration is a bulk write under DEC-20260504-B, and the epoch
+    bridge removes the need for it — facts from the first one written,
+    transactions before that instant. Nothing is double-counted and the
+    transactions branch contributes nothing once the table outlives the window.
+  deploy_verification: >
+    DEC-20260504-C requires querying prod for the effect, not reading a log line.
+    After deploy: SELECT to_regclass('public.capability_invocations') must be
+    non-null; SELECT count(*) FROM capability_invocations WHERE created_at >
+    NOW() - INTERVAL '1 hour' must be non-zero once traffic has flowed; and the
+    next quality-floor tick's heartbeat event must carry evidence_holes = 0.
+
+retention:
+  window_days: 180
+  guard_days: 35
+  rationale: >
+    Six times the floor's 30-day window. Not a compliance artefact and not on the
+    1095-day tier: a fact carries no customer content by design — no inputs, no
+    outputs, no error strings, only the verdict — so nothing here is what the
+    90-day content redaction exists to remove, and nothing an Art. 15 or Art. 17
+    request reaches. The purge is LIMIT-paginated per DEC-20260504-B; the table
+    is created empty so the first run has no backlog, but it accrues roughly 6k
+    rows a day once the writer is live.
+  invariant_tested: >
+    Retention must stay strictly above the trigger's delete guard, and the
+    TypeScript constant must match the interval the migration installs. Both are
+    asserted, because the failure mode of them drifting is a purge that throws
+    nightly inside a bulk job — the class of failure this platform has let run
+    unnoticed for days before.
+
+mutation_results:
+  tool: apps/api/scripts/mutation-test.mjs
+  protocol: "green -> red -> green, clean tree at both ends"
+  caught:
+    - "fold ignores fact rows entirely"
+    - "fact failures always count, ignoring the WP4 verdict"
+    - "solution steps stop recording on the FAILURE path"
+    - "guardedExecute stops deriving a failure outcome"
+    - "revenue taken from the fact instead of the billing table"
+    - "epoch bridge dropped so the floor reads only billing rows"
+    - "x402 gateway stops deriving a failure outcome"
+    - "/v1/do stops recording entirely"
+  survived_then_fixed:
+    - >
+      Removing ONE of guardedExecute's two recordInvocation calls survived. The
+      guard asked whether a file records at all, and a file that records only its
+      successes passes that question while handing the floor a completion rate
+      that can never fall below 100% no matter how broken the capability is —
+      worse than no signal, because it reads as health. The rail-completeness
+      invariant now requires two record sites and at least one error-outcome
+      derivation PER FILE, so wiring one rail twice cannot cover for another
+      wired once. The mutation now reddens.
+
+exit_condition_status:
+  immutable_invocation_facts_incl_solution_subcalls: MET
+  floor_consumes_facts_not_billing_rows: MET
+  bundle_only_capability_is_quarantinable: MET      # proved by test, mutation-checked
+  fact_carries_wp4_outcome_not_a_rederivation: MET
+  guard_prevents_a_new_path_skipping_the_fact: MET  # found a real hole in guardedExecute
+  rail_completeness_invariant: MET                  # added after a mutation survived
+  migration_and_retention_recorded: MET
+  independent_adversarial_review: PENDING
+
+# Not part of this package. Recorded so the boundary is explicit rather than
+# assumed: the public-copy correction, the production-authorization controls
+# (branch controls/production-authorization) and the stranded-transaction
+# reconciliation are separate artefacts and must not enter this PR.
+out_of_scope:
+  - public-copy correction (docs/remediation/PUBLIC-COPY-CORRECTION.md)
+  - production authorization controls (controls/production-authorization)
+  - stranded-transaction reconciliation (Brief A)
