@@ -1965,6 +1965,135 @@ export async function runMigration0099_noHalfQuarantine(
 }
 
 
+/**
+ * Block 0100 — invocation facts (WP9).
+ *
+ * The quality floor decides whether to withdraw a capability from sale by
+ * joining `transactions ON capability_id`. A solution execution writes one
+ * transaction with `capability_id = NULL` and its step outcomes inside an
+ * `output.steps` JSONB blob, so a capability invoked only inside bundles has
+ * no row carrying its id and the floor's join cannot see it — it cannot be
+ * quarantined, because as far as the query is concerned it has no traffic.
+ * Verified against production: 694 solution rows, all with a null capability_id,
+ * and 126 sub-calls in the trailing 30 days recorded nowhere else.
+ *
+ * This table records the invocation itself. `transactions` continues to record
+ * the billing event; the two stop being asked to be the same thing.
+ *
+ * ── Immutability, and why it is not absolute ────────────────────────────────
+ *
+ * A fact that can be edited after the floor reads it is not evidence. The
+ * trigger below refuses every UPDATE outright.
+ *
+ * DELETE is refused only for rows inside the floor's own 35-day reading window
+ * (30d window plus margin). Blanket-blocking DELETE would make the table
+ * unprunable and guarantee a future incident where the only way to reclaim
+ * space is to drop the trigger — at which point the protection is gone
+ * precisely when someone is under pressure. Bounding the block to the window
+ * that matters targets the actual threat (erasing evidence the floor is about
+ * to read) and leaves ordinary retention working.
+ *
+ * ── No customer content ─────────────────────────────────────────────────────
+ *
+ * No inputs, no outputs, no error strings — only the canonical verdict. So the
+ * 90-day content redaction has nothing here to remove, and this table can be
+ * retained on a schedule set by what the floor needs rather than by what
+ * privacy requires.
+ *
+ * Defer-not-throw: a throw here aborts boot, and a failed Railway deploy does
+ * not cut over (DEC-20260504-C). Until the table exists the floor falls back to
+ * its transactions query, which is exactly today's behaviour.
+ */
+export async function runMigration0100_capabilityInvocations(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  let outcome: string;
+
+  try {
+    await tx.execute(sql`SET LOCAL lock_timeout = '3s'`);
+    await tx.execute(sql`
+      CREATE TABLE IF NOT EXISTS "capability_invocations" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "capability_slug" text NOT NULL,
+        "rail" text NOT NULL,
+        "context_kind" text NOT NULL,
+        "solution_id" uuid,
+        "transaction_id" uuid,
+        "user_id" uuid,
+        "is_free_tier" boolean NOT NULL DEFAULT false,
+        "success" boolean NOT NULL,
+        "failure_class" text,
+        "fault" text,
+        "billable" boolean NOT NULL,
+        "counts_against_capability" boolean NOT NULL,
+        "latency_ms" integer NOT NULL,
+        "created_at" timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await tx.execute(sql`
+      CREATE INDEX IF NOT EXISTS "capability_invocations_slug_created_idx"
+        ON "capability_invocations" ("capability_slug", "created_at")
+    `);
+    await tx.execute(sql`
+      CREATE INDEX IF NOT EXISTS "capability_invocations_transaction_idx"
+        ON "capability_invocations" ("transaction_id")
+    `);
+    // Serves the floor's epoch probe (MIN(created_at)) and retention pruning.
+    // Without it the epoch query degrades to a sequential scan that grows with
+    // the table — the sort of thing that is free on the day it ships and is a
+    // daily-job timeout six months later.
+    await tx.execute(sql`
+      CREATE INDEX IF NOT EXISTS "capability_invocations_created_idx"
+        ON "capability_invocations" ("created_at")
+    `);
+
+    // A closed enum on `rail` and `context_kind` would drift from the
+    // TypeScript unions the moment either gained a member, and a boot-blocking
+    // CHECK that rejects a value the code already emits is the asymmetric
+    // failure this codebase has shipped before. The values are asserted in
+    // TypeScript at the single write site instead.
+    await tx.execute(sql`
+      CREATE OR REPLACE FUNCTION "capability_invocations_immutable"()
+      RETURNS trigger AS $fn$
+      BEGIN
+        IF TG_OP = 'UPDATE' THEN
+          RAISE EXCEPTION
+            'capability_invocations is append-only: row % may not be updated', OLD.id;
+        END IF;
+        IF TG_OP = 'DELETE' AND OLD.created_at > now() - INTERVAL '35 days' THEN
+          RAISE EXCEPTION
+            'capability_invocations row % is inside the quality-floor reading window and may not be deleted', OLD.id;
+        END IF;
+        RETURN OLD;
+      END;
+      $fn$ LANGUAGE plpgsql
+    `);
+    await tx.execute(sql`
+      DROP TRIGGER IF EXISTS "capability_invocations_immutable_trg"
+        ON "capability_invocations"
+    `);
+    await tx.execute(sql`
+      CREATE TRIGGER "capability_invocations_immutable_trg"
+        BEFORE UPDATE OR DELETE ON "capability_invocations"
+        FOR EACH ROW EXECUTE FUNCTION "capability_invocations_immutable"()
+    `);
+
+    outcome = "table, indexes and append-only trigger present";
+  } catch (err) {
+    outcome =
+      "deferred to next boot: " +
+      (err instanceof Error ? err.message.slice(0, 140) : String(err).slice(0, 140));
+  }
+
+  return {
+    block: "0100_capability_invocations",
+    outcome: `capability_invocations — ${outcome}`,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
@@ -2009,6 +2138,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0097_chainSequence,
   runMigration0098_perCustomerIdempotency,
   runMigration0099_noHalfQuarantine,
+  runMigration0100_capabilityInvocations,
 ];
 
 /**

@@ -1136,3 +1136,85 @@ export const walletReservations = pgTable(
       .where(sql`transaction_id IS NOT NULL`),
   ],
 );
+
+// ─── capability_invocations ──────────────────────────────────────────────────
+// WP9 — what a capability invocation actually DID, recorded once, as a fact.
+//
+// Distinct from `transactions` on purpose. A transaction is a BILLING artefact:
+// it records a call the platform charged (or declined to charge) a customer for.
+// An invocation is a QUALITY artefact: it records that a specific capability ran
+// and how it went. For a direct /v1/do call the two coincide, which is why the
+// quality floor got away with joining `transactions ON capability_id` for so
+// long. For a solution step they do not coincide at all — a bundle writes ONE
+// transaction with `capability_id = NULL` and buries its step results in an
+// `output.steps` JSONB blob, so every capability invoked inside a bundle was
+// invisible to the floor. 694 such rows exist in production; 126 sub-calls in a
+// 30-day window had no per-capability record anywhere.
+//
+// Deliberately carries NO customer content — no inputs, no outputs, no error
+// strings. Only the canonical ExecutionOutcome verdict (lib/execution-outcome.ts,
+// WP4) plus enough context to know which rail produced it. That is what lets
+// this table outlive the 90-day content redaction without holding anything the
+// redaction exists to remove.
+export const capabilityInvocations = pgTable(
+  "capability_invocations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    capabilitySlug: text("capability_slug").notNull(),
+    // Which serving path produced this: wallet | x402 | solution_step |
+    // harness | onboarding. Not derivable from the other columns — a solution
+    // step and a direct call can share every other field.
+    rail: text("rail").notNull(),
+    // The guarded-executor InvocationContext kind that authorised the call:
+    // customer_paid | internal_test | health_probe | ci. The floor counts only
+    // customer_paid, which is what makes the harness's ~98% traffic share
+    // filterable by a column rather than by an email-pattern allowlist.
+    contextKind: text("context_kind").notNull(),
+    // Set when rail = 'solution_step'. The bundle this invocation served.
+    // The id, not the slug: it is the durable key (slugs get renamed), it needs
+    // no lookup on the execution path, and `solutions` is one join away for
+    // anyone who wants the name.
+    solutionId: uuid("solution_id"),
+    // The billing row this invocation belongs to, when one exists. Nullable by
+    // design: solution steps share their parent's transaction, and some rails
+    // (dry-run, gate refusals) produce a fact with no transaction at all.
+    transactionId: uuid("transaction_id"),
+    // Who called. Nullable: x402 callers have no account, and neither do
+    // anonymous free-tier callers. Recorded so the floor can apply the SAME
+    // internal-account exclusion it already applies to transactions, from the
+    // same canonical email-pattern list, rather than this table inventing a
+    // second notion of "internal". Roughly 98% of platform traffic is the
+    // internal test harness calling /v1/do over HTTP, and without this the
+    // floor would read harness results as customer experience — which the
+    // platform already knows is wrong in both directions.
+    userId: uuid("user_id"),
+    // Whether this call was served under the free tier. Anonymous zero-cost
+    // traffic is the cheapest way to fabricate failures against a capability,
+    // so the floor excludes it (review H-1). Recorded per call rather than read
+    // from `capabilities.is_free_tier`, because an AUTHENTICATED caller of a
+    // free-tier capability gets normal treatment and is not free-tier traffic.
+    isFreeTier: boolean("is_free_tier").notNull().default(false),
+    // ── The canonical WP4 verdict, persisted rather than recomputed ──────────
+    success: boolean("success").notNull(),
+    failureClass: text("failure_class"),
+    fault: text("fault"),
+    billable: boolean("billable").notNull(),
+    countsAgainstCapability: boolean("counts_against_capability").notNull(),
+    latencyMs: integer("latency_ms").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    // The floor's read: one capability, one window, newest first.
+    bySlugTime: index("capability_invocations_slug_created_idx").on(
+      table.capabilitySlug,
+      table.createdAt,
+    ),
+    // "What did this bundle actually run?" — the query that was impossible
+    // before this table existed.
+    byTransaction: index("capability_invocations_transaction_idx").on(
+      table.transactionId,
+    ),
+  }),
+);

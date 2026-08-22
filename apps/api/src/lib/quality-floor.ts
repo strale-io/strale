@@ -33,11 +33,13 @@
  * platform-doctor flow re-verifies via the prod sweep and restores the flags
  * with the fix that made it pass. Deliberate, documented gap.
  *
- * Known scope boundary (review M-6): solution-step executions do not write
- * per-capability transaction rows, so bundle traffic is invisible here, and
- * quarantine does not block the solution executor's in-process dispatch.
- * The floor governs the direct-call surface only; solutions integrity is a
- * separate P3.5 item.
+ * Scope (WP9, 2026-08-22): the floor reads INVOCATION FACTS, not billing rows.
+ * Solution-step executions now write a fact each, so bundle traffic counts —
+ * before WP9 a capability invoked only inside solutions produced no row
+ * carrying its id and was invisible here entirely, which meant it could fail
+ * every bundle call it served and never become quarantinable. Quarantine also
+ * blocks the solution executor's dispatch as of WP8, so the two halves of that
+ * gap are closed together.
  */
 
 export interface FloorStats {

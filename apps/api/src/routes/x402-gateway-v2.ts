@@ -49,8 +49,10 @@ import { isX402RailEligible } from "../lib/x402-eligibility.js";
 import {
   aggregateSolutionOutcome,
   assertBillableOutput,
+  outcomeFromError,
   outcomeFromOutput,
 } from "../lib/execution-outcome.js";
+import { recordInvocation } from "../lib/invocation-facts.js";
 import { logError } from "../lib/log.js";
 import { getProcessingJurisdictions } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
@@ -1136,7 +1138,13 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   }
 
   // Execute solution steps via shared orchestration module
-  const result = await executeSolution(sol.id, inputs);
+  const result = await executeSolution(sol.id, inputs, {
+    // x402 callers have no account — payment IS the auth. Null here is the
+    // honest value, and it matches how x402 transaction rows already record
+    // the payer (2,592 paid rows in a 30-day window carry a NULL user_id).
+    userId: null,
+    isFreeTier: false,
+  });
 
   if (!result) {
     return c.json({ error: "Solution has no steps configured." }, 503);
@@ -1529,8 +1537,22 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
 
   const startMs = Date.now();
   let result: Awaited<ReturnType<typeof executor>>;
+  // WP9: the fact is written from the OUTPUT assessment as soon as the executor
+  // returns, before `assertBillableOutput` can throw on it. Letting that throw
+  // fall through to the catch would record the invocation as an executor error,
+  // which is the wrong verdict — the executor answered, its answer was unusable,
+  // and those are different failures for a capability's quality record.
+  let factRecorded = false;
   try {
     result = await executor(inputs);
+    await recordInvocation({
+      capabilitySlug: cap.slug,
+      rail: "x402_gateway",
+      contextKind: "customer_paid",
+      latencyMs: Date.now() - startMs,
+      outcome: outcomeFromOutput(cap.slug, result.output),
+    });
+    factRecorded = true;
     // WP4 remediation: the capability rail was missed in the first pass while
     // the package's exit condition claimed every rail was covered. Without
     // this, `POST /x402/:slug` settles on any resolution while the same
@@ -1551,6 +1573,15 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
     const message = err instanceof Error ? err.message : String(err);
     const latencyMs = Date.now() - startMs;
     const sanitized = sanitizeFailureReason(message);
+    if (!factRecorded) {
+      await recordInvocation({
+        capabilitySlug: cap.slug,
+        rail: "x402_gateway",
+        contextKind: "customer_paid",
+        latencyMs,
+        outcome: outcomeFromError(err),
+      });
+    }
     try {
       await recordX402Transaction({
     clientMeta: extractClientMeta(c.req, {
