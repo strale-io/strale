@@ -381,6 +381,10 @@ describe("WP9 — the floor's fact/transaction sources", () => {
     // which inflated facts and biased the check toward SILENCE -- the unsafe
     // direction, since silence means the floor acts on possibly-holed evidence.
     expect((fn.match(/email LIKE ANY\(/g) ?? []).length).toBe(2);
+    // Counting occurrences survives inverting the predicate -- that mutation
+    // got through. Assert the sense on BOTH sides.
+    expect(fn).toContain("AND (user_id IS NULL OR user_id NOT IN (");
+    expect(fn).toContain("AND (t.user_id IS NULL OR t.user_id NOT IN (");
   });
 
   it("bounds the cross-check to the decision window, not the whole fact table", () => {
