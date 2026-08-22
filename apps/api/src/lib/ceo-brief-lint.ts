@@ -175,7 +175,7 @@ export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string 
     // "this morning's reconciliation stands or is reversed" — and which fired
     // on the unrelated "11 transactions at 20 cents". Keying on the decision
     // being re-asked is both wider and narrower in the right directions.
-    re: /\b(?:stands?|standing) (?:or|and) (?:it |be |being |is |get |gets )?revers|revers(?:e|ing|ed) (?:it|the (?:change|reconciliation|write))|(?:un(?:do|done)|roll(?:ing)? back) (?:it|the (?:change|reconciliation|write))|\bmanual_reconciliation\b|stranded (?:executing )?(?:rows?|records?|transactions?|charges?)/i,
+    re: /\b(?:stands?|standing) (?:or|and) (?:it |be |being |is |get |gets )?rever(?:s|t)|rever(?:s(?:e|ing|ed)|t(?:ing|ed)?) (?:it|the (?:change|reconciliation|write))|(?:un(?:do|done)|roll(?:ing)? back|back(?:ing)? out|reinstat(?:e|ing)) (?:it|the (?:change|reconciliation|write|credit))|(?:revert|reopen|re-open|re-run|rerun|back out|reinstate|undo|put)[^.]{0,40}\b(?:eleven|11)\b[^.]{0,20}(?:rows?|records?|transactions?|charges?)|\b(?:eleven|11)-row|\bmanual_reconciliation\b|stranded (?:executing )?(?:rows?|records?|transactions?|charges?)/i,
     settledBy:
       "the production-authorization incident was closed and ACCEPTED on 2026-08-22 " +
       "(PR #361, accepted in #364); the remediation ledger records that the rows were " +

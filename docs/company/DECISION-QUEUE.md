@@ -98,13 +98,15 @@ until they are done or you tell me to drop them.
 *If you do nothing:* nothing breaks. Item 2 keeps one service visibly broken;
 item 3 leaves one automated check inert; items 1 and 4 are tidying.
 
-**DQ-18** · `decided` · owner Claude · raised 2026-08-22T07:00Z — **both items are settled; nothing here needs you**
-*Status token flipped from `your_call` the same day.* The dashboard reads this
-token and renders `your_call` as "Needs your yes", so leaving it would have kept
-asking him for two answers he had already given — item 1 accepted with the
-incident closeout, item 2 approved as a removal. The entry stays in OPEN for
-visibility, per the precedent DQ-3 and DQ-10 set. The original text and both
-corrections are below, unedited.
+**DQ-18** · `answered` · owner Petter · raised 2026-08-22T07:00Z — **both items are settled; nothing here needs you**
+Both were decided by Petter, not by me: item 1 accepted with the
+production-authorization incident closeout, item 2 approved as a removal. The
+token was `your_call`, which the dashboard renders as "Needs your yes" — so it
+kept asking for two answers he had already given. `answered` renders as settled
+*and* keeps his name on it, which `decided` would not: that token means "I made
+the call", and using it here would have recorded his approval as mine. The entry
+stays under OPEN for visibility, per the precedent DQ-3, DQ-9 and DQ-10 set. The
+original text and both corrections are below, unedited.
 Two decisions the remediation programme wrote up this morning and I am putting
 where you will see them. Full text: `docs/remediation/DECISION-BRIEFS.md`.
 *Why they are here:* they were committed to a branch at 07:54 today and would

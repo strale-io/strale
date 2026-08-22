@@ -228,12 +228,12 @@ describe("the brief may not open as a work log", () => {
  * same confusion the guard exists to catch, sitting in the test file.
  */
 const complete =
-  "One decision. **The choice:** what to charge for the Greek registry lookup. " +
-  "**What is established:** 11 paid calls in 30 days at 20 cents, and the supplier charges " +
-  "us 12 cents each, so the margin is 8 cents and the volume is not growing. " +
-  "**Options:** hold at 20 cents, or move to 35. " +
-  "**I recommend** moving to 35. **Consequence:** at 35 we earn about 15 euros a month more " +
-  "if volume holds; leaving it means the line barely covers what we pay for it.";
+  "One decision. **The choice:** whether to take a paid contract with the Greek registry. " +
+  "**What is established:** their free tier caps us at 50 lookups a day, we hit it twice " +
+  "last week, and the paid tier is 40 euros a month on an annual commitment. " +
+  "**Options:** sign the annual contract, or stay on the free tier and refuse the overflow. " +
+  "**I recommend** signing. **Consequence:** signing commits the company to 480 euros over a " +
+  "year; staying free means turning away calls we are already being asked for.";
 
 describe("escalations carry all five fields or they are not ready", () => {
   it("accepts an escalation with all five", () => {
@@ -243,7 +243,7 @@ describe("escalations carry all five fields or they are not ready", () => {
 
   it("rejects an escalation with no recommendation — the commonest omission", () => {
     const r = lintBrief(goodBrief({
-      decide: complete.replace("**I recommend** moving to 35.", "Your call."),
+      decide: complete.replace("**I recommend** signing.", "Your call."),
     }));
     expect(r.ok).toBe(false);
     expect(r.findings.some((f) => f.rule === "escalation-incomplete" && /recommendation/.test(f.message))).toBe(true);
