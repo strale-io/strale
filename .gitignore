@@ -36,4 +36,11 @@ apps/spike/
 
 # Raw sweep evidence (may embed production output values) stays local
 audit-output/*.jsonl
+# Scratch produced by review/audit sessions. CLAUDE.md routes anything worth
+# keeping to archive/sessions/; the root stays clean. Ignored rather than
+# committed so the mutation-test guard's clean-tree check (which counts
+# untracked files, deliberately) is not permanently red.
+audit-output/
+review-bundle/
+.codex-shell-marker
 docs/company/ceo-dashboard.html
