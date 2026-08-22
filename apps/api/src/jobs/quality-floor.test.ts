@@ -200,9 +200,17 @@ describe("WP9 — the floor's fact/transaction sources", () => {
       src.indexOf("const revenueBySlug"),
     );
     expect(revenueQuery).toContain("SUM(rt.price_cents)");
+    // The SENSE of each predicate, not a fragment of it. Two mutations survived
+    // the first version of this test: inverting NOT IN to IN left
+    // "email LIKE ANY(" untouched, and dropping the clamp from the WHERE clause
+    // left the CTE that computes it sitting there unused. A guard that matches
+    // a substring present in both the correct and the broken form is not a
+    // guard -- the same class of hollow assertion WP8 shipped and this program
+    // keeps re-finding.
+    expect(revenueQuery).toContain("rt.user_id NOT IN (");
     expect(revenueQuery).toContain("email LIKE ANY(");
     expect(revenueQuery).toContain("COALESCE(rt.is_free_tier, false) = false");
-    expect(revenueQuery).toContain("COALESCE(lp.promoted_at, '-infinity'::timestamptz)");
+    expect(revenueQuery).toContain("WHERE rt.created_at > s.win_start");
   });
 
   it("cross-checks fact volume against billed volume, not only marker events", () => {
