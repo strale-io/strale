@@ -36,7 +36,9 @@ import {
   disputeRequests,
   failedRequests,
   transactions,
+  users,
 } from "../db/schema.js";
+import { generateApiKey, hashApiKey } from "./auth.js";
 import { anonymiseTrialGrantOnClosure } from "./trial-eligibility.js";
 import { purgeRecoveryTokensOnClosure } from "./key-recovery.js";
 
@@ -122,12 +124,22 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
   },
   {
     table: "transactions",
-    columns: ["rows", "user_id", "input", "output", "audit_trail"],
+    columns: [
+      "rows",
+      "user_id",
+      "input",
+      "output",
+      "error",
+      "idempotency_key",
+      "audit_trail",
+    ],
     disposition: "retained",
     reason:
       "Processing records under Art. 30, and the hashed chain that gives the audit trail its tamper-evidence. " +
       "The row still carries your user id, pointing at the anonymised users row — the id itself is not a name, " +
-      "and severing it would break the chain for every transaction recorded after yours.",
+      "and severing it would break the chain for every transaction recorded after yours. " +
+      "`error` is part of the hashed payload too and often echoes what you sent (\"Country 'TH' is not covered by …\"); " +
+      "`idempotency_key` is free text you chose, so it can carry whatever you put in it.",
   },
   {
     table: "transactions.audit_trail.request_context",
@@ -141,11 +153,38 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
   },
   {
     table: "wallet_transactions",
-    columns: ["rows"],
+    columns: ["rows", "stripe_session_id"],
     disposition: "retained",
     reason:
       "The ledger for your wallet, including the closure forfeit this request writes. " +
-      "It carries no identifier of its own; it links to the wallet, which links to the anonymised users row.",
+      "A top-up row carries the Stripe Checkout Session id, which resolves through Stripe's own API to the billing name, " +
+      "email and card you paid with — so it is an identifier, even though it is not one we hold. " +
+      "It is retained because it is what makes a credit idempotent and reconcilable against Stripe. " +
+      "No production row carries one yet.",
+  },
+  {
+    table: "wallets",
+    columns: ["rows", "user_id", "balance_cents"],
+    disposition: "retained",
+    reason:
+      "Your wallet row survives with a zero balance, carrying no identifier beyond the user id that points at the anonymised users row. " +
+      "It is what the retained ledger rows link to.",
+  },
+  {
+    table: "suggest_log",
+    columns: ["ip_hash", "query"],
+    disposition: "retained",
+    reason:
+      "Search queries typed into the catalogue, with a truncated hash of the IP they came from and no account link at all — " +
+      "so closure cannot find yours among them. The hash of your signup IP is cleared from your users row by this request, " +
+      "which removes the key that would have connected the two. Pruned at 90 days.",
+  },
+  {
+    table: "discovery_hits",
+    columns: ["ip_hash"],
+    disposition: "retained",
+    reason:
+      "Which catalogue entries were viewed, with a truncated IP hash and no account link. Same shape as suggest_log above; pruned at 90 days.",
   },
   {
     table: "wallet_reservations",
@@ -212,8 +251,29 @@ export function buildClosureSummary(): ClosureSummary {
  */
 export async function applyClosurePlan(
   tx: any,
-  params: { userId: string },
+  params: { userId: string; anonymisedAt: Date; deletionReason: string },
 ): Promise<void> {
+  // The `users` rule used to be written in routes/auth.ts, outside the function
+  // whose docstring says it performs every clearing step the plan declares. A
+  // second caller — an admin-initiated closure, a bulk Art. 17 job — would have
+  // cleared everything else while the customer's API key kept working, and
+  // `buildClosureSummary()` would have reported it anonymised.
+  const sentinel = `redacted-${params.userId}@deleted.local`;
+  await tx
+    .update(users)
+    .set({
+      email: sentinel,
+      name: null,
+      // A random hash, so the current key fails immediately on next use.
+      apiKeyHash: hashApiKey(generateApiKey()),
+      keyPrefix: "REDACTED",
+      signupIpHash: null,
+      deletedAt: params.anonymisedAt,
+      deletionReason: params.deletionReason,
+      updatedAt: params.anonymisedAt,
+    })
+    .where(eq(users.id, params.userId));
+
   await anonymiseTrialGrantOnClosure(tx, { userId: params.userId });
   await purgeRecoveryTokensOnClosure(tx, { userId: params.userId });
 
@@ -245,11 +305,7 @@ export async function applyClosurePlan(
  * Read by the completeness test so an unhandled table is a failure rather than
  * an omission nobody notices.
  */
-export const CLOSURE_PLAN_EXCLUSIONS: Readonly<Record<string, string>> = {
-  wallets:
-    "Carries `user_id` but no independent identifier; the balance is forfeited " +
-    "through the wallet service and the row links to the anonymised users row.",
-};
+export const CLOSURE_PLAN_EXCLUSIONS: Readonly<Record<string, string>> = {};
 
 /** Every table name the plan accounts for, for the completeness check. */
 export function tablesCovered(): Set<string> {
@@ -259,21 +315,144 @@ export function tablesCovered(): Set<string> {
   return covered;
 }
 
-/** Present so a caller can assert the plan ran against a real database. */
+/**
+ * The audit-trail keys this account's own rows actually hold.
+ *
+ * The receipt used to enumerate what `audit_trail` contains from a list
+ * somebody maintained by hand, and four consecutive review rounds each found
+ * another writer putting another shape in there: `client_meta` and
+ * `request_context` (round 2), `fingerprintHash` and `mcpClient` inside
+ * `request_context` (round 3), and a second `requestContext` object — camelCase,
+ * different fields — written by the solution executor (round 4). Three
+ * production rows carry it today.
+ *
+ * A hand-written list cannot enumerate a JSONB blob. So this reads the blob.
+ * The receipt reports the keys THIS account's rows actually carry, which is
+ * exhaustive by construction and cannot drift, because there is nothing left
+ * to keep in sync.
+ *
+ * Keys only, never values: the point is to tell the customer what categories of
+ * data survive, and echoing the contents back would be a fresh disclosure of
+ * the very data they are asking us to stop holding.
+ *
+ * Nested one level, because that is where the identifier-bearing objects sit
+ * (`request_context`, `requestContext`) and deeper recursion would surface
+ * per-capability output field names, which are not about them.
+ */
+export async function describeRetainedAuditKeys(
+  db: any,
+  userId: string,
+): Promise<string[]> {
+  const rows = await db.execute(sql`
+    SELECT DISTINCT k AS key
+      FROM transactions t,
+           LATERAL jsonb_object_keys(t.audit_trail) AS k
+     WHERE t.user_id = ${userId}::uuid
+       AND jsonb_typeof(t.audit_trail) = 'object'
+    UNION
+    SELECT DISTINCT outer_k || '.' || inner_k AS key
+      FROM transactions t,
+           LATERAL jsonb_object_keys(t.audit_trail) AS outer_k,
+           LATERAL jsonb_object_keys(t.audit_trail -> outer_k) AS inner_k
+     WHERE t.user_id = ${userId}::uuid
+       AND jsonb_typeof(t.audit_trail) = 'object'
+       AND jsonb_typeof(t.audit_trail -> outer_k) = 'object'
+     ORDER BY 1
+  `);
+  const list = (Array.isArray(rows) ? rows : (rows as { rows?: unknown[] })?.rows ?? []) as Array<{
+    key: string;
+  }>;
+  return list.map((r) => r.key);
+}
+
+
+/**
+ * Tables the plan says it clears a `user_id` on, and the columns it clears
+ * alongside it. Derived, so a rule added above is checked without anyone
+ * remembering to add it here.
+ */
+export function clearedColumnsByTable(): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const rule of CLOSURE_PLAN) {
+    if (rule.disposition === "retained") continue;
+    if (rule.table.includes(".")) continue; // JSONB paths are reported live
+    const cols = rule.columns.filter((c) => c !== "rows");
+    if (cols.length === 0) continue;
+    out.set(rule.table, [...(out.get(rule.table) ?? []), ...cols]);
+  }
+  return out;
+}
+
+/**
+ * How many rows in each cleared table still point at this account.
+ *
+ * The `user_id` half of the check. Zero everywhere means the linkage is gone —
+ * which also means the rows can no longer be found by account, so the columns
+ * cleared alongside it are checked separately by row id (see
+ * `countUnclearedColumns`).
+ */
 export async function countRemainingLinkage(
   db: any,
   userId: string,
 ): Promise<Record<string, number>> {
-  const rows = await db.execute(sql`
-    SELECT
-      (SELECT COUNT(*) FROM trial_grants WHERE user_id = ${userId}::uuid)::int AS trial_grants,
-      (SELECT COUNT(*) FROM api_key_recovery_tokens WHERE user_id = ${userId}::uuid)::int AS api_key_recovery_tokens,
-      (SELECT COUNT(*) FROM transactions WHERE user_id = ${userId}::uuid AND client_meta IS NOT NULL)::int AS transactions_client_meta,
-      (SELECT COUNT(*) FROM failed_requests WHERE user_id = ${userId}::uuid)::int AS failed_requests,
-      (SELECT COUNT(*) FROM dispute_requests WHERE user_id = ${userId}::uuid)::int AS dispute_requests
-  `);
-  const first = (Array.isArray(rows) ? rows[0] : (rows as { rows?: unknown[] })?.rows?.[0]) as
-    | Record<string, number>
-    | undefined;
-  return first ?? {};
+  const out: Record<string, number> = {};
+  for (const [table, columns] of clearedColumnsByTable()) {
+    // Only tables whose rule actually clears `user_id`. `transactions` has a
+    // rule clearing `client_meta` and deliberately KEEPS its user id — the
+    // hashed chain depends on the row, and the id points at an anonymised
+    // users row rather than at a name. Counting it as leftover linkage would
+    // report the design as a defect.
+    if (!columns.includes("user_id")) continue;
+    if (table === "users") continue; // anonymised in place, keeps its own id
+    const r = await db.execute(
+      sql`SELECT COUNT(*)::int AS n
+            FROM ${sql.raw(`"${table}"`)}
+           WHERE "user_id" = ${userId}::uuid`,
+    );
+    out[table] = readCount(r);
+  }
+  return out;
+}
+
+/**
+ * How many of `columns` are still non-null on the given rows.
+ *
+ * Takes explicit ids because closure severs the only way to find them by
+ * account — the check has to hold onto them from before.
+ *
+ * Round 4: the previous version of this check was a hand-written list of five
+ * subqueries covering 5 of the 11 columns the plan declared, so narrowing
+ * `applyClosurePlan` to `set({ userId: null })` would have left three IP hashes
+ * and a plaintext contact address in place with the test still green. Derived
+ * from the plan now, so a rule and its verification cannot disagree.
+ */
+export async function countUnclearedColumns(
+  db: any,
+  table: string,
+  ids: string[],
+): Promise<Record<string, number>> {
+  const columns = clearedColumnsByTable().get(table) ?? [];
+  const out: Record<string, number> = {};
+  if (ids.length === 0) return out;
+  const idList = sql.join(
+    ids.map((id) => sql`${id}::uuid`),
+    sql`, `,
+  );
+  for (const column of columns) {
+    const r = await db.execute(sql`
+      SELECT COUNT(*)::int AS n
+        FROM ${sql.raw(`"${table}"`)}
+       WHERE "id" IN (${idList})
+         AND ${sql.raw(`"${column}"`)} IS NOT NULL
+    `);
+    out[`${table}.${column}`] = readCount(r);
+  }
+  return out;
+}
+
+function readCount(r: unknown): number {
+  const rows = (Array.isArray(r) ? r : (r as { rows?: unknown[] })?.rows ?? []) as Array<{
+    n: number;
+  }>;
+  return Number(rows[0]?.n ?? 0);
 }

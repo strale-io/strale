@@ -115,7 +115,13 @@ export const MAX_NAME_LENGTH = 255;
 export function trialRateBucket(ip: string): string | null {
   if (!ip || ip === "unknown") return null;
   const [head] = ip.split("%"); // strip any zone id
-  if (!head.includes(":")) return head; // IPv4 — count the address itself
+
+  // IPv4 — count the address itself, but PARSE it first. Returning the string
+  // verbatim made `"abcd"`, `"999.999.999.999"` and three spellings of one
+  // address (`1.2.3.4`, `01.2.3.4`, `001.002.003.004`) into four distinct
+  // buckets, all of which `getClientIp` admits, and contradicted this
+  // function's own promise to return null for anything unparseable.
+  if (!head.includes(":")) return normaliseIpv4(head);
 
   // An IPv4-mapped or IPv4-compatible address is an IPv4 client wearing a v6
   // hat, and must count as that address. Expanding it instead puts every such
@@ -148,7 +154,12 @@ export function trialRateBucket(ip: string): string | null {
   const left = parts[0] ? parts[0].split(":").filter(Boolean) : [];
   const right = parts.length === 2 && parts[1] ? parts[1].split(":").filter(Boolean) : [];
   const fill = parts.length === 2 ? 8 - left.length - right.length : 0;
-  if (fill < 0) return null;
+  // `::` must stand for AT LEAST one zero hextet. `1:2:3:4::5:6:7:8` already
+  // has all eight, so it is not an address — it was returning a bucket.
+  if (parts.length === 2 ? fill < 1 : fill !== 0) return null;
+  // A trailing empty component means the text ended in a single `:`
+  // (`2001:db8::1:`), which is also not an address.
+  if (/(^:[^:])|([^:]:$)/.test(expanded)) return null;
   const hextets = [...left, ...Array<string>(fill).fill("0"), ...right];
   if (hextets.length !== 8) return null;
   // Validate ALL eight, not only the four that form the bucket. Checking the
@@ -166,17 +177,45 @@ export function trialRateBucket(ip: string): string | null {
   // The all-zero prefix below also covers `::` and `::1`, which are the
   // unspecified and loopback addresses and are not a client's public address
   // in any case — no bucket is the right answer for both.
-  const allZeroPrefix = normalised.slice(0, 5).every((h) => h === "0000");
-  if (allZeroPrefix) {
-    if (normalised[5] === "ffff") {
-      const a = Number.parseInt(normalised[6]!, 16);
-      const b = Number.parseInt(normalised[7]!, 16);
-      return `${a >> 8}.${a & 0xff}.${b >> 8}.${b & 0xff}`;
+  // The `ffff` marker sits at hextet 5 in the RFC 4291 mapped form
+  // (`::ffff:a.b.c.d`) and at hextet 4 in the RFC 2765 translated form
+  // (`::ffff:0:a.b.c.d`) — and BOTH pass `IPV6_RE`. Checking only the first
+  // five hextets caught the first spelling and let the second fall through to
+  // the all-zero /64, so five unrelated clients arriving as `::ffff:0:102:304`
+  // shared one bucket and the sixth was refused its grant. That is the harm
+  // the mapped-address branch exists to prevent, one spelling over.
+  const firstFourZero = normalised.slice(0, 4).every((h) => h === "0000");
+  if (firstFourZero) {
+    const marker = normalised.indexOf("ffff", 4);
+    if (marker === 4 && normalised[5] === "0000") {
+      return embeddedIpv4(normalised[6]!, normalised[7]!);
     }
+    if (marker === 5) {
+      return embeddedIpv4(normalised[6]!, normalised[7]!);
+    }
+    // `::`, `::1` and anything else with an all-zero prefix: the unspecified
+    // and loopback addresses are not a client's public address, and no bucket
+    // is the right answer.
     return null;
   }
 
   return `${normalised.slice(0, 4).join(":")}::/64`;
+}
+
+/** Canonical dotted-quad, or null if it is not one. */
+function normaliseIpv4(candidate: string): string | null {
+  const parts = candidate.split(".");
+  if (parts.length !== 4) return null;
+  const octets = parts.map((p) => (/^\d{1,3}$/.test(p) ? Number.parseInt(p, 10) : NaN));
+  if (octets.some((o) => !Number.isInteger(o) || o < 0 || o > 255)) return null;
+  return octets.join(".");
+}
+
+/** The IPv4 address embedded in the last two hextets of a mapped v6 address. */
+function embeddedIpv4(hi: string, lo: string): string {
+  const a = Number.parseInt(hi, 16);
+  const b = Number.parseInt(lo, 16);
+  return `${a >> 8}.${a & 0xff}.${b >> 8}.${b & 0xff}`;
 }
 
 /** Where the signup came from. Recorded so the channels stay auditable apart. */

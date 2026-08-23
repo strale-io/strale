@@ -314,6 +314,35 @@ describe("trialRateBucket — IPv6 counts by /64", () => {
     expect(trialRateBucket("2001:db8::1.2.3.4")).toBe("2001:0db8:0000:0000::/64");
   });
 
+  it("separates the RFC 2765 translated form, which IPV6_RE also admits", () => {
+    // `::ffff:0:a.b.c.d` puts the ffff marker at hextet 4, not 5. Checking only
+    // the first five hextets caught `::ffff:1.2.3.4` and let this spelling fall
+    // through to the all-zero /64 — five unrelated clients arriving this way
+    // shared one bucket and the sixth was refused its grant.
+    expect(trialRateBucket("::ffff:0:102:304")).toBe("1.2.3.4");
+    expect(trialRateBucket("::ffff:0:506:708")).toBe("5.6.7.8");
+    expect(trialRateBucket("0:0:0:0:ffff:0:102:304")).toBe("1.2.3.4");
+    expect(trialRateBucket("::ffff:0:102:304")).not.toBe(trialRateBucket("::ffff:0:506:708"));
+  });
+
+  it("parses an IPv4 address rather than trusting the string", () => {
+    // The v4 branch returned its input verbatim, so junk became a bucket and
+    // one address had three spellings — all of which getClientIp admits.
+    expect(trialRateBucket("abcd")).toBeNull();
+    expect(trialRateBucket("999.999.999.999")).toBeNull();
+    expect(trialRateBucket("1.2.3")).toBeNull();
+    expect(trialRateBucket("1.2.3.4.5")).toBeNull();
+    expect(trialRateBucket("01.2.3.4")).toBe("1.2.3.4");
+    expect(trialRateBucket("001.002.003.004")).toBe("1.2.3.4");
+  });
+
+  it("refuses malformed IPv6 rather than inventing a bucket for it", () => {
+    // `::` must stand for at least one zero hextet, and an address does not
+    // end in a bare colon. Both used to return a plausible-looking /64.
+    expect(trialRateBucket("1:2:3:4::5:6:7:8")).toBeNull();
+    expect(trialRateBucket("2001:db8::1:")).toBeNull();
+  });
+
   it("gives the unspecified and loopback addresses no bucket at all", () => {
     // They are not a client's public address, and the all-zero prefix they
     // expand to would otherwise be a bucket shared with everything else that

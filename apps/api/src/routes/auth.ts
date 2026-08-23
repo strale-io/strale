@@ -19,6 +19,7 @@ import {
 import {
   applyClosurePlan,
   buildClosureSummary,
+  describeRetainedAuditKeys,
 } from "../lib/account-closure.js";
 import {
   assessTrialGrant,
@@ -394,27 +395,8 @@ authRoute.delete("/me", authMiddleware, async (c) => {
   const reason = (body.reason ?? "").toString().slice(0, 500) || "user_request";
 
   const now = new Date();
-  // Replace identifiers with sentinels. Email keeps the unique-index
-  // happy by tagging a UUID; apiKeyHash gets a random sha256 so the
-  // current key fails immediately on next use.
-  const sentinel = `redacted-${user.id}@deleted.local`;
-  const burnedKeyHash = hashApiKey(generateApiKey());
 
   await db.transaction(async (tx) => {
-    await tx
-      .update(users)
-      .set({
-        email: sentinel,
-        name: null,
-        apiKeyHash: burnedKeyHash,
-        keyPrefix: "REDACTED",
-        signupIpHash: null,
-        deletedAt: now,
-        deletionReason: reason,
-        updatedAt: now,
-      })
-      .where(eq(users.id, user.id));
-
     // Forfeit whatever remains — refund-on-delete is out of scope (it would
     // need a Stripe payout flow) and is documented in the response.
     //
@@ -423,19 +405,29 @@ authRoute.delete("/me", authMiddleware, async (c) => {
     // ledger permanently out of step with the balance for that wallet. It now
     // goes through the wallet service, which writes a paired closure_forfeit
     // entry, and takes the row lock the previous version skipped.
+    //
+    // Runs BEFORE the anonymisation so the forfeit is computed against a live
+    // account, and inside the same transaction so a failure closes nothing.
     await walletService.forfeitOnClosure(tx, {
       userId: user.id,
       description: "Balance forfeited on account closure (Art. 17 erasure)",
     });
 
-    // WP11: everything closure clears, and everything it deliberately does
-    // not, is declared once in `lib/account-closure.ts` — which also builds
-    // the summary returned below. They were two hand-maintained artifacts and
-    // drifted apart in three consecutive review rounds; they are one artifact
-    // now, and a completeness test fails if a user-linked table is missing
-    // from the plan.
-    await applyClosurePlan(tx, { userId: user.id });
+    // WP11: every clearing step, including the users row itself, is declared
+    // once in `lib/account-closure.ts` — which also builds the summary
+    // returned below. They were two hand-maintained artifacts and drifted
+    // apart in four consecutive review rounds; they are one artifact now.
+    await applyClosurePlan(tx, {
+      userId: user.id,
+      anonymisedAt: now,
+      deletionReason: reason,
+    });
   });
+
+  // Read AFTER the transaction commits: this reports the audit-trail keys the
+  // account's rows actually still hold, so it has to see the post-closure
+  // state. Keys only, never values.
+  const retainedAuditKeys = await describeRetainedAuditKeys(db, user.id);
 
   const closureSummary = buildClosureSummary();
 
@@ -458,6 +450,14 @@ authRoute.delete("/me", authMiddleware, async (c) => {
       // list was wrong in three consecutive review rounds — each time in a
       // place the previous round had not pointed at.
       ...closureSummary,
+      // Read from your own rows, not from a list somebody maintains. Four
+      // review rounds each found another writer putting another shape into
+      // `audit_trail` — `client_meta` and `request_context`, then
+      // `fingerprintHash` and `mcpClient` inside it, then a second
+      // `requestContext` object written by the solution executor with
+      // different fields under a camelCase key. A hand-written list cannot
+      // enumerate a JSONB blob, so this reports what is actually there.
+      retained_audit_trail_keys: retainedAuditKeys,
       retained_legal_basis:
         "GDPR Art. 30 (records of processing) + DEC-20260428-B (audit-chain integrity). " +
         "Your row's identifiers are anonymised; transaction rows still carry your user id, which points at that anonymised row — a bare id is not a name, and severing it would break the hashed chain every later transaction references. " +

@@ -391,6 +391,43 @@ review:
       - "Three docstrings described redemption as a conditional UPDATE; it is SELECT … FOR UPDATE, deliberately."
       - "The growth bound cited the per-IP limiter, which places no bound on a single account. Retention is what actually holds."
       - "This manifest claimed the token cap still existed."
+  round_4:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    the_fourth_instance: >
+      A SECOND request-context object, written by the solution executor under
+      the camelCase key `requestContext` with a different field set, on
+      user-linked transaction rows — 3 in production, and every completed
+      solution execution now takes that path. Undisclosed. Round 3's guard
+      could not see it by construction: it cross-checked the field list against
+      `routes/do.ts` only, and `tablesCovered()` collapsed
+      `transactions.audit_trail.request_context` to `transactions`, so it
+      verified table-level coverage while all four rounds' defects were
+      sub-table.
+    the_structural_answer: >
+      A hand-written list cannot enumerate a JSONB blob. So the receipt stopped
+      trying. `describeRetainedAuditKeys` reads the account's own rows and
+      reports the keys they actually hold, one level nested, keys never values.
+      That is exhaustive by construction and cannot drift, because there is
+      nothing left to keep in sync. The static plan still covers columns, where
+      a schema does define the shape.
+    also_fixed:
+      - "`applyClosurePlan` did not perform the `users` rule its own docstring said it performed — that write lived in the route. A second caller (an admin closure, a bulk Art. 17 job) would have cleared everything else while the customer's API key kept working, and the summary would have reported it anonymised."
+      - "`countRemainingLinkage` was a hand-written list covering 5 of the 11 columns the plan declared, so narrowing the clearing to `set({ userId: null })` left three IP hashes and a plaintext contact address in place with the test green. Derived from CLOSURE_PLAN now, and verified by that exact mutation — it fails with `failed_requests.ip_hash survived closure`."
+      - "The schema parser saw only `uuid(\"user_id\")` on one line with a double-quoted table name. It was blind to `text(\"user_id\")` — already the house style elsewhere in this schema — plus varchar, multi-line declarations and single quotes. A guard that cannot see the shape it guards against reports success."
+      - "The `do.ts` cross-check skipped spreads, quoted keys, computed keys and snake_case names. It now REFUSES shapes it cannot account for rather than passing over them."
+      - "`trialRateBucket` collapsed the RFC 2765 translated form `::ffff:0:a.b.c.d` (ffff at hextet 4, not 5) into the all-zero bucket, and the IPv4 branch returned its input unparsed — `abcd` and `999.999.999.999` were buckets, and one address had three spellings. Malformed IPv6 (`1:2:3:4::5:6:7:8`, `2001:db8::1:`) also produced plausible-looking buckets."
+      - "`transactions.error` (76 user-linked production rows, echoing customer input) and `idempotency_key` (421 rows, customer-chosen free text) are inside the hashed payload and were undisclosed. `wallet_transactions.stripe_session_id` resolves through Stripe's API to a billing name, email and card — an identifier, described as 'no identifier of its own'. `wallets` sat in an exclusions map the summary never read, so the one table the plan admitted saying nothing about appeared in none of the lists."
+    found_by_the_new_guard_not_by_review: >
+      Widening the completeness test to identifier-bearing columns without a
+      `user_id` immediately surfaced `suggest_log.ip_hash` and
+      `discovery_hits.ip_hash`. Neither links to an account, so closure cannot
+      reach them — but `suggest_log` had NO retention rule at all: 1,000 rows
+      carrying a truncated IP hash alongside the query text, going back to
+      2026-04-17, four months and counting. Given a 90-day rule matching
+      `discovery_hits`, which is the same data class and sets the duration, so
+      this is parity rather than a new policy call. Flagged to WP14, which owns
+      retention duration by data class.
+
     accepted_consequence: >
       Closing an account releases its slot in the per-IP trial window, because
       closure clears `trial_grants.ip_hash`. Deliberate: retaining a hashed IP

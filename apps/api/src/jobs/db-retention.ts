@@ -78,6 +78,19 @@ export const RULES: readonly RetentionRule[] = [
   { table: "test_run_log",          column: "started_at",   days: 180, idCols: "id",                       orderClause: "started_at, id" },
   { table: "rate_limit_counters",   column: "window_start", days: 7,   idCols: "bucket_key, window_start", orderClause: "window_start, bucket_key" },
   { table: "discovery_hits",        column: "created_at",   days: 90,  idCols: "id",                       orderClause: "created_at, id" },
+  // Found by WP11's closure-completeness guard, not by anyone reading this
+  // list: `suggest_log` carries a truncated IP hash alongside the query text
+  // and had NO rule at all — 1,000 such rows in production going back to
+  // 2026-04-17, four months and counting. `discovery_hits` directly above is
+  // the same data class and sets the duration, so this is parity rather than a
+  // new policy call (a novel duration would be WP14's).
+  //
+  // DEC-20260504-B: this table has never been pruned, so the first successful
+  // run is a workload-resumption event. Audited — 1,000 rows total against a
+  // 10,000-row batch size and a 60-second per-rule budget, so it drains in one
+  // batch of one tick. No drain plan needed; the rule is self-throttling
+  // regardless.
+  { table: "suggest_log",           column: "created_at",   days: 90,  idCols: "id",                       orderClause: "created_at, id" },
   // WP11. Tokens live 30 minutes; anything a week old is long spent. Rows are
   // a user id plus an IP hash, so retaining them indefinitely would quietly
   // grow the set that survives an account closure.

@@ -969,19 +969,27 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       .returning({ id: transactions.id });
     createdTransactionIds.add(txn!.id);
 
-    await db.insert(failedRequests).values({
-      userId: user_id,
-      ipHash: hashIp("203.0.113.9"),
-      task: `${RUN_TAG} something no capability serves`,
-      userAgent: "wp11-test/1.0",
-    });
+    const [failedRow] = await db
+      .insert(failedRequests)
+      .values({
+        userId: user_id,
+        ipHash: hashIp("203.0.113.9"),
+        task: `${RUN_TAG} something no capability serves`,
+        userAgent: "wp11-test/1.0",
+      })
+      .returning({ id: failedRequests.id });
+    const failedId = failedRow!.id;
 
-    await db.insert(disputeRequests).values({
-      transactionId: txn!.id,
-      userId: user_id,
-      reason: `${RUN_TAG} dispute`,
-      contactEmail: email,
-    });
+    const [disputeRow] = await db
+      .insert(disputeRequests)
+      .values({
+        transactionId: txn!.id,
+        userId: user_id,
+        reason: `${RUN_TAG} dispute`,
+        contactEmail: email,
+      })
+      .returning({ id: disputeRequests.id });
+    const disputeId = disputeRow!.id;
 
     const closed = await app.request("http://localhost/v1/auth/me", {
       method: "DELETE",
@@ -990,15 +998,40 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     });
     expect(closed.status).toBe(200);
 
-    const { countRemainingLinkage } = await import("../lib/account-closure.js");
+    const { countRemainingLinkage, countUnclearedColumns, clearedColumnsByTable } =
+      await import("../lib/account-closure.js");
+
+    // Nothing still points at the account, in any table the plan says it
+    // clears. Derived from CLOSURE_PLAN, so a rule added there is checked
+    // without anyone remembering to extend this list.
     const remaining = await countRemainingLinkage(db, user_id);
-    expect(remaining).toMatchObject({
-      trial_grants: 0,
-      api_key_recovery_tokens: 0,
-      transactions_client_meta: 0,
-      failed_requests: 0,
-      dispute_requests: 0,
-    });
+    expect(Object.keys(remaining).length).toBeGreaterThanOrEqual(4);
+    for (const [table, count] of Object.entries(remaining)) {
+      expect(count, `${table} still links to the closed account`).toBe(0);
+    }
+
+    // And every column the plan claims to clear alongside the linkage is
+    // actually null on the rows we seeded. Round 4: the previous version
+    // checked 5 of the 11 declared columns, so narrowing applyClosurePlan to
+    // `set({ userId: null })` would have left three IP hashes and a plaintext
+    // contact address in place with this test still green.
+    for (const [table, ids] of [
+      ["failed_requests", [failedId!]],
+      ["dispute_requests", [disputeId!]],
+      ["transactions", [txn!.id]],
+    ] as const) {
+      const uncleared = await countUnclearedColumns(db, table, [...ids]);
+      expect(
+        Object.keys(uncleared).length,
+        `${table} has no cleared columns declared`,
+      ).toBeGreaterThan(0);
+      for (const [column, count] of Object.entries(uncleared)) {
+        expect(count, `${column} survived closure`).toBe(0);
+      }
+    }
+    expect(clearedColumnsByTable().get("failed_requests")).toEqual(
+      expect.arrayContaining(["user_id", "ip_hash", "user_agent"]),
+    );
 
     // And the entitlement itself survives — clearing the linkage must not
     // clear the rule, or closing an account hands back the trial grant.
@@ -1012,13 +1045,25 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     // The receipt has to agree with what just happened, rather than being
     // checked instead of it.
     const receipt = (await closed.json()) as {
-      summary: { anonymized: string[]; deleted: string[]; retained: string[] };
+      summary: {
+        anonymized: string[];
+        deleted: string[];
+        retained: string[];
+        retained_audit_trail_keys: string[];
+      };
     };
     expect(receipt.summary.anonymized.join(" ")).toContain("client_meta");
     expect(receipt.summary.anonymized.join(" ")).toContain("failed_requests");
     expect(receipt.summary.anonymized.join(" ")).toContain("dispute_requests");
     expect(receipt.summary.deleted.join(" ")).toContain("api_key_recovery_tokens");
     expect(receipt.summary.retained.join(" ")).toContain("fingerprintHash");
+
+    // Read from the account's own rows rather than from a list. Four review
+    // rounds each found another writer putting another shape into audit_trail;
+    // this reports what is actually there, so it cannot drift.
+    expect(receipt.summary.retained_audit_trail_keys).toEqual(
+      expect.arrayContaining(["request_context", "request_context.ipHash"]),
+    );
 
     // No inline cleanup. `afterEach` owns it, and owns the ORDER — this test
     // seeds a transaction row, and deleting the user before that row exists no

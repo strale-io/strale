@@ -33,21 +33,41 @@ const DO_ROUTE = readFileSync(resolve(process.cwd(), "src/routes/do.ts"), "utf8"
  * Every physical table in schema.ts that declares a `user_id` column.
  *
  * Parsed from the source rather than listed here, because a list would be the
- * same hand-maintained artifact that failed three times.
+ * same hand-maintained artifact that failed four times.
+ *
+ * The first version only saw `uuid("user_id")` on a single line, with a
+ * double-quoted table name on the `pgTable(` line. Round 4 demonstrated it was
+ * blind to `text("user_id")` (which this schema already uses elsewhere),
+ * `varchar("user_id", …)`, a declaration split across lines, single quotes, and
+ * a multi-line `pgTable(` whose name string occurs earlier in the file. A
+ * guard that cannot see the shape it is guarding against reports success.
+ *
+ * So it now looks for the COLUMN NAME in any type helper, and tracks the table
+ * name by scanning forward from each `pgTable(` rather than by line position.
  */
 function tablesWithUserId(): string[] {
   const found: string[] = [];
-  let current: string | null = null;
-  for (const line of SCHEMA.split("\n")) {
-    const decl = /pgTable\(\s*$|pgTable\(\s*"([^"]+)"/.exec(line);
-    if (decl) current = decl[1] ?? null;
-    else if (current === null) {
-      const named = /^\s*"([a-z_]+)",\s*$/.exec(line);
-      if (named && /pgTable\($/.test(SCHEMA.split("\n")[SCHEMA.split("\n").indexOf(line) - 1] ?? "")) {
-        current = named[1]!;
-      }
-    }
-    if (/uuid\("user_id"\)/.test(line) && current) found.push(current);
+  // Split on the declaration keyword so each chunk belongs to exactly one table.
+  const chunks = SCHEMA.split(/export const \w+ = pgTable\(/).slice(1);
+  for (const chunk of chunks) {
+    const name = /^\s*["']([a-zA-Z_][a-zA-Z0-9_]*)["']/.exec(chunk);
+    if (!name) continue;
+    // Stop at the next declaration so a column cannot be attributed to the
+    // wrong table.
+    const body = chunk;
+    if (/["']user_id["']/.test(body)) found.push(name[1]!);
+  }
+  return [...new Set(found)];
+}
+
+/** The same scan, for any column name — used to spot identifier-bearing columns. */
+function tablesWithColumn(column: string): string[] {
+  const found: string[] = [];
+  const chunks = SCHEMA.split(/export const \w+ = pgTable\(/).slice(1);
+  for (const chunk of chunks) {
+    const name = /^\s*["']([a-zA-Z_][a-zA-Z0-9_]*)["']/.exec(chunk);
+    if (!name) continue;
+    if (new RegExp(`["']${column}["']`).test(chunk)) found.push(name[1]!);
   }
   return [...new Set(found)];
 }
@@ -76,6 +96,21 @@ describe("the closure plan accounts for every table that links to an account", (
   it("names every one of them, either as handled or as explicitly excluded", () => {
     const covered = tablesCovered();
     const missing = tablesWithUserId().filter((t) => !covered.has(t));
+    expect(missing).toEqual([]);
+  });
+
+  it("also accounts for every table carrying a bare identifier column", () => {
+    // `user_id` is not the only way a row points at a person. Round 4 found
+    // `dispute_requests.contact_email` — a plaintext address — reachable only
+    // because someone happened to notice it.
+    const identifierColumns = ["contact_email", "email", "ip_hash", "signup_ip_hash"];
+    const covered = tablesCovered();
+    const missing: string[] = [];
+    for (const column of identifierColumns) {
+      for (const table of tablesWithColumn(column)) {
+        if (!covered.has(table)) missing.push(`${table}.${column}`);
+      }
+    }
     expect(missing).toEqual([]);
   });
 
@@ -119,9 +154,26 @@ describe("the receipt names every field it retains", () => {
     // `userAgent,` is property shorthand, so match either spelling — an
     // assertion that only understood `field:` would have reported a missing
     // field that is right there.
-    const topLevel = [...block.matchAll(/^\s{4}([a-zA-Z][a-zA-Z0-9]*)\s*[:,]/gm)].map(
-      (m) => m[1]!,
-    );
+    //
+    // Round 4 got past the first version with a spread, a snake_case name, a
+    // quoted key, a computed key and a five-space indent. A regex that silently
+    // skips what it cannot read is a guard that reports success; this one
+    // refuses shapes it cannot account for instead.
+    const forbidden = [
+      [/^\s*\.\.\./m, "a spread — its fields cannot be enumerated from source"],
+      [/^\s*["'][^"']+["']\s*:/m, "a quoted key"],
+      [/^\s*\[[^\]]+\]\s*:/m, "a computed key"],
+    ] as const;
+    for (const [pattern, why] of forbidden) {
+      expect(
+        pattern.test(block),
+        `requestContext contains ${why}; REQUEST_CONTEXT_FIELDS cannot be verified against it`,
+      ).toBe(false);
+    }
+
+    const topLevel = [
+      ...block.matchAll(/^\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[:,]/gm),
+    ].map((m) => m[1]!);
     expect(topLevel.length, "no properties parsed out of the block").toBeGreaterThan(4);
 
     for (const field of REQUEST_CONTEXT_FIELDS) {
