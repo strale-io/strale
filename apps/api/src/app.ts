@@ -36,6 +36,7 @@ import { internalHealthMonitorRoute } from "./routes/internal-health-monitor.js"
 import { replyWebhookRoute } from "./routes/reply-webhook.js";
 import { auditRoute } from "./routes/audit.js";
 import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
+import { publicTrustRoute } from "./routes/public-trust.js";
 import { x402GatewayV2, getX402Manifest, getX402WellKnownResources, getX402OpenApiPaths } from "./routes/x402-gateway-v2.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
@@ -486,6 +487,11 @@ const PUBLIC_OPS_ALLOWLIST: RegExp[] = [
   /^\/v1\/public\/ops\/tests\/solutions\/[^/]+\/runs$/,
   /^\/v1\/public\/ops\/tests\/dependency-health\/(?:summary|history)$/,
   /^\/v1\/public\/ops\/tests\/situations$/,
+  // trust/ — public trust projection consumed by the published strale-mcp
+  // package. GET only, badge + already-public test facts, no admin fields.
+  // See routes/public-trust.ts for what may and may not be projected here.
+  /^\/v1\/public\/ops\/trust\/capabilities\/batch$/,
+  /^\/v1\/public\/ops\/trust\/solutions\/batch$/,
   // limitations/ — public GETs (quality/ and trust/ retired with SQS engine)
   /^\/v1\/public\/ops\/limitations\/[^/]+$/,
   /^\/v1\/public\/ops\/limitations\/[^/]+\/[^/]+$/,
@@ -508,6 +514,13 @@ app.route("/v1/public/ops/tests", internalTestsRoute);
 app.route("/v1/public/ops/limitations", internalLimitationsRoute);
 app.route("/v1/public/ops", internalHealthMonitorRoute);
 app.route("/v1/public/ops/onboarding", internalOnboardingRoute);
+// Public trust projection. Mounted under /v1/public/ops/* deliberately: the
+// /v1/internal/trust routes it replaces were deleted with the SQS engine, and
+// the adminOnly wall on /v1/internal/* turned requests for them into 401s, so
+// every public strale-mcp install has started with zero trust data since
+// 2026-05-05. The admin wall is unchanged; this carries only fields already
+// public through /v1/public/ops/tests/*. See routes/public-trust.ts.
+app.route("/v1/public/ops/trust", publicTrustRoute);
 
 // F-0-003: admin-only wall. Any handler under /v1/internal/* now requires
 // `Authorization: Bearer $ADMIN_SECRET` — enforced at the mount, not by

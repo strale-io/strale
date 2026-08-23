@@ -12,6 +12,7 @@
  * within days.
  */
 
+import { readFileSync } from "node:fs";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -111,7 +112,22 @@ function emitFunnelEvent(opts: StraleClientOptions, event: McpFunnelEvent): void
 
 // Attribution client identifier — package name/version, sent as
 // X-Strale-Client on every API call this package makes.
-const STRALE_CLIENT_ID = "strale-mcp/0.2.6";
+function readPackageVersion(): string {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(new URL("../package.json", import.meta.url), "utf-8"),
+    ) as { version?: unknown };
+    return typeof pkg.version === "string" ? pkg.version : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+// Derived from package.json rather than hand-maintained: the literal here was
+// left at version 0.2.6 while 0.2.7 was on the registry, so every attribution
+// datapoint was mislabelled by a release. A string a human must remember to
+// bump is a string that will be stale.
+export const STRALE_CLIENT_ID = `strale-mcp/${readPackageVersion()}`;
 
 // ─── HTTP helpers ───────────────────────────────────────────────────────────
 
@@ -444,7 +460,7 @@ export async function fetchTrustBatch(
     const param = chunk.join(",");
     try {
       const resp = await straleGet<Record<string, TrustBatchEntry>>(
-        `/v1/internal/trust/capabilities/batch?slugs=${encodeURIComponent(param)}`,
+        `/v1/public/ops/trust/capabilities/batch?slugs=${encodeURIComponent(param)}`,
         { baseUrl, apiKey: "" },
       );
       for (const [slug, entry] of Object.entries(resp)) {
@@ -464,29 +480,25 @@ export async function fetchSolutionTrust(
   solutionSlugs: string[],
 ): Promise<Map<string, SolutionTrustEntry>> {
   const map = new Map<string, SolutionTrustEntry>();
-  const results = await Promise.allSettled(
-    solutionSlugs.map(async (slug) => {
-      const resp = await fetch(
-        `${baseUrl}/v1/internal/trust/solutions/${encodeURIComponent(slug)}`,
-        {
-          headers: { Accept: "application/json" },
-          signal: AbortSignal.timeout(10000),
-        },
+  // Batched, like the capability path. This previously issued one request per
+  // solution -- 104 on a cold start -- against a route that no longer exists.
+  for (let i = 0; i < solutionSlugs.length; i += 50) {
+    const chunk = solutionSlugs.slice(i, i + 50);
+    try {
+      const resp = await straleGet<Record<string, { badge?: string | null; badge_label?: string | null }>>(
+        `/v1/public/ops/trust/solutions/batch?slugs=${encodeURIComponent(chunk.join(","))}`,
+        { baseUrl, apiKey: "" },
       );
-      if (!resp.ok) return null;
-      const data = await resp.json() as any;
-      return {
-        slug,
-        entry: {
-          badge: data.badge ?? null,
-          badge_label: data.badge_label ?? null,
-        } as SolutionTrustEntry,
-      };
-    }),
-  );
-  for (const r of results) {
-    if (r.status === "fulfilled" && r.value) {
-      map.set(r.value.slug, r.value.entry);
+      for (const [slug, entry] of Object.entries(resp)) {
+        map.set(slug, {
+          badge: entry.badge ?? null,
+          badge_label: entry.badge_label ?? null,
+        });
+      }
+    } catch (err) {
+      console.error(
+        `[strale-mcp] Failed to fetch solution trust batch: ${err instanceof Error ? err.message : err}`,
+      );
     }
   }
   if (map.size < solutionSlugs.length) {
@@ -992,10 +1004,12 @@ REFERENCES
       }),
     },
     async ({ slug, type }) => {
+      // Single-slug read of the batch projection -- one public surface rather
+      // than a second per-slug route to keep in step with it.
       const endpoint =
         type === "solution"
-          ? `/v1/internal/trust/solutions/${encodeURIComponent(slug)}`
-          : `/v1/internal/trust/capabilities/${encodeURIComponent(slug)}`;
+          ? `/v1/public/ops/trust/solutions/batch?slugs=${encodeURIComponent(slug)}`
+          : `/v1/public/ops/trust/capabilities/batch?slugs=${encodeURIComponent(slug)}`;
 
       try {
         const resp = await fetch(`${opts.baseUrl}${endpoint}`, {
@@ -1026,12 +1040,25 @@ REFERENCES
           };
         }
 
-        const data = await resp.json();
+        // The batch projection is keyed by slug; unwrap so this tool keeps
+        // returning a single profile rather than a one-entry map.
+        const data = (await resp.json()) as Record<string, unknown>;
+        const entry = data?.[slug];
+        if (!entry) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `No trust profile found for ${type} '${slug}'. Use strale_search to find valid slugs.`,
+              },
+            ],
+          };
+        }
         return {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify(data, null, 2),
+              text: JSON.stringify(entry, null, 2),
             },
           ],
         };
