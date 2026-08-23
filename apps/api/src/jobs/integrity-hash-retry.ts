@@ -170,6 +170,38 @@ async function runOnce(): Promise<void> {
           ),
         );
 
+      // ROWS THE ADMISSION PREDICATE CANNOT SEE.
+      //
+      // `staleCount` counts rows the batch SELECTED. A row excluded because its
+      // receipt is still pending is never selected, so it would age out of the
+      // chain in complete silence — and the retry sweeper that would settle its
+      // receipt is deferred to the rail PR. Counted separately rather than
+      // folded into staleCount, because the two mean different things: one says
+      // the worker is behind, this says rows are waiting on something the
+      // worker does not control.
+      const [receiptBlocked] = (await tx.execute(sql`
+        SELECT count(*)::int AS n
+          FROM transactions
+         WHERE compliance_hash_state = 'pending'
+           AND receipt_status = 'pending'
+           AND created_at < ${new Date(Date.now() - STALE_WARN_MS).toISOString()}::timestamptz
+      `)) as unknown as Array<{ n: number }>;
+      const receiptBlockedCount = Number(receiptBlocked?.n ?? 0);
+      if (receiptBlockedCount > 0) {
+        logWarn(
+          "integrity-hash-receipt-blocked",
+          `${receiptBlockedCount} transactions excluded from the chain for > 5 min because ` +
+            "their receipt is still pending; they will never chain until it settles",
+          { receiptBlockedCount },
+        );
+        await logHealthEvent({
+          eventType: "integrity_hash_receipt_blocked",
+          tier: 1,
+          actionTaken: "alert",
+          details: { count: receiptBlockedCount, stale_warn_ms: STALE_WARN_MS },
+        }).catch(() => undefined);
+      }
+
       if (pending.length === 0) return;
 
       let staleCount = 0;

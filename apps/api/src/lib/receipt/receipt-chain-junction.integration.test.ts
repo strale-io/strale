@@ -211,6 +211,42 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     expect(Number(r.integrity_payload_version)).toBe(CHAIN_PAYLOAD_V2);
   });
 
+  it("a receipt-blocked row is COUNTED, not silently excluded forever", async () => {
+    // The failure mode this closes is silence. A pending-receipt row is never
+    // SELECTED by the admission predicate, so the stale-row warning — which
+    // counts only selected rows — cannot see it. With the retry sweeper
+    // deferred to the rail PR, such a row would sit outside the chain forever
+    // with nothing saying so.
+    const id = randomUUID();
+    txns.add(id);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at, completed_at)
+      VALUES (${id}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU', '{}'::jsonb,
+              now() - interval '20 minutes', now() - interval '20 minutes')
+    `);
+    await markReceiptPending(db, id);
+
+    const warnings: string[] = [];
+    const { log } = await import("../log.js");
+    const original = log.warn.bind(log);
+    (log as unknown as { warn: typeof log.warn }).warn = ((obj: unknown, msg?: string) => {
+      const label = (obj as { label?: string })?.label;
+      if (label) warnings.push(label);
+      return original(obj as never, msg as never);
+    }) as typeof log.warn;
+
+    try {
+      await runOnce();
+    } finally {
+      (log as unknown as { warn: typeof log.warn }).warn = original;
+    }
+
+    expect(warnings).toContain("integrity-hash-receipt-blocked");
+    // And it is still, correctly, not chained.
+    expect((await row(id)).integrity_hash).toBeNull();
+  });
+
   it("the worker chains a row exactly once", async () => {
     const id = await agedTransaction();
     await completeReceipt(id);
