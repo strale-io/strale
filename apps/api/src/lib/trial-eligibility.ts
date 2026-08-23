@@ -87,6 +87,17 @@ export const TRIAL_IP_WINDOW_DAYS = 7;
 export const MAX_EMAIL_LENGTH = 254;
 
 /**
+ * `users.name` is `varchar(255)`.
+ *
+ * Round-1 review closed the same defect for `email` and stopped there, so a
+ * 300-character `name` still reached the INSERT, raised Postgres 22001, failed
+ * `isUniqueViolation`, and surfaced as a 500 on what is a 400. Both columns on
+ * one INSERT need both caps; fixing one field of a two-field problem is how it
+ * comes back.
+ */
+export const MAX_NAME_LENGTH = 255;
+
+/**
  * Reduce a client address to the unit the trial cap counts.
  *
  * IPv4 addresses count individually. IPv6 addresses count by /64, because a
@@ -103,10 +114,20 @@ export const MAX_EMAIL_LENGTH = 254;
  */
 export function trialRateBucket(ip: string): string | null {
   if (!ip || ip === "unknown") return null;
-  if (!ip.includes(":")) return ip; // IPv4 — count the address itself
+  const [head] = ip.split("%"); // strip any zone id
+  if (!head.includes(":")) return head; // IPv4 — count the address itself
+
+  // An IPv4-mapped or IPv4-compatible address is an IPv4 client wearing a v6
+  // hat, and must count as that address. Expanding it instead puts every such
+  // client into one bucket, because the leading four hextets are all zero —
+  // so `::ffff:1.2.3.4` and `::ffff:5.6.7.8` would share a /64 and the sixth
+  // unrelated registrant behind it would be refused a grant. Node reports this
+  // form for every IPv4 peer on a dual-stack listener.
+  const mapped = /^::(?:ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(head);
+  if (mapped) return mapped[1]!;
+
   // Expand to full hextets so a compressed and an uncompressed form of the
   // same prefix produce the same bucket.
-  const [head] = ip.split("%"); // strip any zone id
   const parts = head.split("::");
   if (parts.length > 2) return null;
   const left = parts[0] ? parts[0].split(":").filter(Boolean) : [];
@@ -115,9 +136,12 @@ export function trialRateBucket(ip: string): string | null {
   if (fill < 0) return null;
   const hextets = [...left, ...Array<string>(fill).fill("0"), ...right];
   if (hextets.length !== 8) return null;
-  const prefix = hextets.slice(0, 4).map((h) => h.padStart(4, "0").toLowerCase());
-  if (prefix.some((h) => !/^[0-9a-f]{4}$/.test(h))) return null;
-  return `${prefix.join(":")}::/64`;
+  // Validate ALL eight, not only the four that form the bucket. Checking the
+  // prefix alone accepts junk in the trailing hextets and returns a bucket for
+  // something that is not an address.
+  const normalised = hextets.map((h) => h.padStart(4, "0").toLowerCase());
+  if (normalised.some((h) => !/^[0-9a-f]{4}$/.test(h))) return null;
+  return `${normalised.slice(0, 4).join(":")}::/64`;
 }
 
 /** Where the signup came from. Recorded so the channels stay auditable apart. */

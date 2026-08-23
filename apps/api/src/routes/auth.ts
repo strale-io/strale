@@ -19,6 +19,7 @@ import {
 import {
   anonymiseTrialGrantOnClosure,
   assessTrialGrant,
+  MAX_NAME_LENGTH,
   trialRateBucket,
   PUBLIC_WITHHELD_MESSAGE,
   PUBLIC_WITHHELD_REASON,
@@ -64,6 +65,19 @@ authRoute.post(
   const email = body.email.trim().toLowerCase();
   const name =
     typeof body.name === "string" ? body.name.trim() || null : null;
+
+  // `users.name` is varchar(255). Unchecked, an over-long value reaches the
+  // INSERT and raises 22001, which is not a unique violation, so it propagates
+  // as a 500 on what is plainly a 400. The email cap lives in the trial
+  // authority; `name` never reaches it, so it is checked here.
+  if (name !== null && name.length > MAX_NAME_LENGTH) {
+    return c.json(
+      apiError("invalid_request", `'name' must be at most ${MAX_NAME_LENGTH} characters.`, {
+        field: "name",
+      }),
+      400,
+    );
+  }
 
   const db = getDb();
 
@@ -425,6 +439,25 @@ authRoute.delete("/me", authMiddleware, async (c) => {
     // access — it is what stops the user id and IP hash outliving the account.
     await anonymiseTrialGrantOnClosure(tx, { userId: user.id });
     await purgeRecoveryTokensOnClosure(tx, { userId: user.id });
+
+    // `client_meta` is the one identifier-bearing field on `transactions` that
+    // is NOT inside the hashed payload (`lib/integrity-hash.ts` hashes input,
+    // output, error, price, auditTrail, markers and createdAt — not this
+    // column), so it can be cleared without breaking the chain for every
+    // subsequent transaction. It carries `ip_day_hash`, a day-salted HMAC of
+    // the client address, plus referer and user-agent.
+    //
+    // `audit_trail.request_context` carries the same class of data — ipHash,
+    // userAgent, acceptLanguage, referer, fingerprintHash — and CANNOT be
+    // cleared for exactly the reason the response has always given about
+    // executionInput: it is inside the hash. Production holds 476 user-linked
+    // rows across 6 users carrying it. So it is disclosed below instead of
+    // being quietly retained, which is the whole lesson of the first round of
+    // review on this endpoint.
+    await tx
+      .update(transactions)
+      .set({ clientMeta: null })
+      .where(eq(transactions.userId, user.id));
   });
 
   // Cert-audit Y-7: be explicit about what survives erasure. The
@@ -450,12 +483,14 @@ authRoute.delete("/me", authMiddleware, async (c) => {
         "users.signup_ip_hash",
         "trial_grants.user_id",
         "trial_grants.ip_hash",
+        "transactions.client_meta (referer, user-agent, day-salted IP HMAC)",
       ],
       deleted: ["api_key_recovery_tokens (rows)"],
       retained: [
         "transactions (rows)",
         "wallet_transactions (rows)",
         "audit_trail JSONB on each transaction (includes executionInput for capabilities flagged processes_personal_data — see retained_pii_disclosure)",
+        "audit_trail.request_context on each transaction (hashed IP, user-agent, accept-language, referer, origin — see request_context_disclosure)",
         "trial_grants.email_hash (a SHA-256 of your address — see trial_grant_disclosure)",
       ],
       retained_legal_basis:
@@ -463,6 +498,10 @@ authRoute.delete("/me", authMiddleware, async (c) => {
         "The user_id linkage is severed (your row's identifiers are anonymised); the transaction-level audit body is retained because it is part of a hashed chain that other transactions reference. " +
         "This is the same legal basis many regulated-industry providers (banks, KYC vendors) use for retention-on-deletion. " +
         "The trial-grant hash is retained on a separate basis — Art. 6(1)(f), preventing repeat claims of the same one-off credit — see trial_grant_disclosure.",
+      request_context_disclosure:
+        "Every call you made recorded the request it arrived on: a truncated SHA-256 of your IP address, your user-agent string, your Accept-Language, and the referer and origin headers if your client sent them. This sits inside audit_trail, which is part of the hashed payload, so clearing it would break the integrity chain for every transaction recorded after yours — the same constraint that applies to executionInput. " +
+        "The separately-stored client_meta column, which held the same class of data outside the hash, IS cleared by this request. " +
+        "If the retained request context matters to your situation, email petter@strale.io with the affected transaction IDs; we will redact in place and accept the chain reset that requires.",
       trial_grant_disclosure:
         "One row survives that is keyed to your email address: a SHA-256 hash of it, the date the trial credit was issued, and the amount. Its user_id and IP hash are cleared by this request, so nothing links it to your account. " +
         "We keep the hash because it is the only way to enforce one trial credit per address without storing the address, and because deleting it would let the same address claim the credit again by closing and re-registering. " +
@@ -606,10 +645,11 @@ export async function agentSignupHandler(c: Context) {
     );
   }
 
-  // Flag for review if 3+ signups from same IP this week. Kept as a signal on
-  // the signup webhook; the gate that actually withholds money is the
-  // trial-eligibility authority's per-IP cap below. Before WP11 this counter
-  // was the ONLY same-IP check on either path and it denied nothing.
+  // Flag for review if 3+ signups from same IP this week. A signal on the
+  // signup webhook, and on THIS channel that is all it is: the trial
+  // authority's per-IP cap deliberately does not apply to agent signups (see
+  // IP_CAPPED_CHANNELS — this path already requires same-IP clustering by
+  // design). What withholds money here is the one-grant-per-address rule.
   let flaggedForReview = false;
   if (ipHash) {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);

@@ -268,4 +268,29 @@ describe("trialRateBucket — IPv6 counts by /64", () => {
     expect(trialRateBucket("2001:db8::1::2")).toBeNull();
     expect(trialRateBucket("not:an:address")).toBeNull();
   });
+
+  it("rejects junk in a TRAILING hextet, not only in the prefix", () => {
+    // Validating the first four alone accepts something that is not an address
+    // and hands back a bucket for it.
+    expect(trialRateBucket("2001:0db8:0000:0000:0000:0000:0000:zzzz")).toBeNull();
+  });
+
+  it("treats an IPv4-mapped address as the IPv4 client it is", () => {
+    // Every leading hextet of `::ffff:a.b.c.d` is zero, so expanding it puts
+    // EVERY IPv4-mapped client into one /64 bucket — the sixth unrelated
+    // registrant behind it would be refused a grant. Node reports exactly this
+    // form for every IPv4 peer on a dual-stack listener.
+    expect(trialRateBucket("::ffff:1.2.3.4")).toBe("1.2.3.4");
+    expect(trialRateBucket("::ffff:5.6.7.8")).toBe("5.6.7.8");
+    expect(trialRateBucket("::ffff:1.2.3.4")).not.toBe(trialRateBucket("::ffff:5.6.7.8"));
+  });
+
+  it("gives an IPv4-mapped address the same bucket as its plain form", () => {
+    expect(trialRateBucket("::ffff:203.0.113.7")).toBe(trialRateBucket("203.0.113.7"));
+    expect(trialRateBucket("::FFFF:203.0.113.7")).toBe(trialRateBucket("203.0.113.7"));
+  });
+
+  it("handles the deprecated IPv4-compatible form too", () => {
+    expect(trialRateBucket("::1.2.3.4")).toBe("1.2.3.4");
+  });
 });

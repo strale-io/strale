@@ -30,9 +30,14 @@ production_evidence:
     reading "(agent self-signup)".
   the_disposable_list_would_not_have_caught_it: >
     Neither `abhoward.site` nor `kiacc.ink` appears in the 5,361-domain
-    disposable list. The gate that would have stopped this is a per-IP cap, and
-    NEITHER path had one — `/v1/signup` counted same-IP signups but only ever
-    set `flagged_for_review: true`.
+    disposable list, so that gate would not have stopped this either. A per-IP
+    cap would have, and NEITHER path had one — `/v1/signup` counted same-IP
+    signups but only ever set `flagged_for_review: true`. Note the limit of
+    that claim, corrected in review: a per-IP cap stops THIS pattern (eight
+    sequential registrations from one real address, no spoofing) and not a
+    determined one, because `getClientIp` reads the client-supplied leftmost
+    X-Forwarded-For. The rule that holds under a hostile client is the UNIQUE
+    index on `trial_grants.email_hash`.
   stripe_has_never_credited_a_wallet: >
     `SELECT COUNT(*) FROM wallet_transactions WHERE stripe_session_id IS NOT NULL`
     returns 0. The metadata-vs-amount_total defect is therefore latent, not
@@ -109,11 +114,19 @@ authorities:
 
 design:
   validity_versus_entitlement: >
-    A validity failure REFUSES the account (disposable domain, no mail
-    exchanger). An entitlement failure CREATES the account and WITHHOLDS the
-    grant (address already granted, per-IP cap). Refusing to create an account
-    because a shared office NAT already took three trials would lock out a
-    paying customer to save EUR 2.00.
+    A validity failure REFUSES the account (malformed or oversized address,
+    disposable domain, a domain that cannot receive mail). An entitlement
+    failure CREATES the account and WITHHOLDS the grant (address already
+    granted, per-IP cap). Refusing to create an account because a shared office
+    NAT already took its trials would lock out a paying customer to save
+    EUR 2.00.
+  the_channels_still_differ_but_visibly: >
+    The per-IP cap applies to `register` and NOT to `agent_signup`, declared as
+    one named constant with a reason rather than as two handlers that happened
+    to be written differently. The agent channel already REQUIRES a prior
+    free-tier call from the same IP, so same-IP clustering is designed into it,
+    and autonomous agents run behind shared cloud NAT — capping it would
+    silence the grant for exactly the ICP the platform is for.
   why_a_table_and_not_a_users_column: >
     The erasure endpoint anonymises the users row. An entitlement stored there
     is destroyed by the delete → re-register loop it exists to close. A one-way
@@ -130,8 +143,14 @@ design:
     ENOTFOUND; a domain with no MX throws ENODATA. Catching every error
     permissively disables the gate for the exact case it exists to catch;
     catching every error as a refusal turns a resolver blip into a signup
-    outage. ENOTFOUND/ENODATA/NXDOMAIN refuse, everything else is permissive.
-    RFC 7505 null MX (empty exchange) refuses too — a length check accepts it.
+    outage. Both of those were shipped here in turn before the rule settled.
+    ENOTFOUND/NXDOMAIN refuse. ENODATA does NOT — it means the domain exists
+    and publishes no MX, which RFC 5321 §5.1 calls an implicit MX at the
+    address record, and `strale.dev` is exactly that shape — so it falls back
+    to A/AAAA and refuses only if neither answers. RFC 7505 null MX (an empty
+    exchange) refuses regardless, because that is the domain declaring it takes
+    no mail. Every other resolver failure is permissive, under a 3-second
+    deadline the resolver does not otherwise impose.
   retry_only_where_retry_can_help: >
     A paid Stripe session with no wallet answers 503, because a wallet can
     appear between deliveries and Stripe's retry schedule is the durable queue.
@@ -244,6 +263,69 @@ api_surface_changes:
   - No SDK consumes the register or recover response — checked
     packages/sdk-typescript, sdk-python, mcp-server, semantic-kernel-strale.
 
+review:
+  method: >
+    Two independent adversarial agents given the same brief and different
+    lenses — money/concurrency/SQL, and security/abuse/privacy/contract — then
+    a third verification round against a frozen SHA. Codex credits are
+    exhausted until 27 Aug; the single Codex pass is reserved for the end of
+    the program (founder decision, 2026-08-21).
+  round_1:
+    verdict: FAIL_REMEDIATION_REQUIRED (both reviewers, independently)
+    convergence: >
+      Both landed on the same three blockers without seeing each other's work.
+      That overlap is the useful signal — it is what a single reviewer would
+      most likely have left in.
+    blocking_findings_fixed:
+      erasure_receipt_was_false: >
+        `DELETE /v1/auth/me` returns an itemised anonymized/retained pair that
+        reads as exhaustive. It listed `users.signup_ip_hash` as anonymised —
+        and block 0102 copies exactly that column into `trial_grants.ip_hash`,
+        alongside the user id and a hash of the address, in a table with no
+        retention rule. `api_key_recovery_tokens` kept a user id and an IP hash
+        too. A closing customer was being handed a written statement a later
+        subject-access request would contradict. Closure now clears both
+        identifying columns and deletes the token rows; only `email_hash`
+        survives, disclosed with its own Art. 6(1)(f) basis and an explicit
+        statement that a hash of an address is pseudonymous, not anonymous.
+      mx_gate_refused_implicit_mx_domains: >
+        `ENODATA` means the domain exists and publishes no MX, which RFC 5321
+        §5.1 says is a domain with an IMPLICIT MX at its address record.
+        `strale.dev` is one — A records, no MX. The first correction (itself a
+        fix for the opposite error) would have refused registration to anyone
+        at our own domain and to every operator running an MTA on their web
+        host. ENODATA now falls back to A/AAAA; only ENOTFOUND/NXDOMAIN is
+        authoritative; RFC 7505 null MX still refuses because that is the
+        domain saying so itself.
+      per_ip_cap_was_overstated: >
+        The module called it "the gate that was missing". It counted IPv6
+        addresses individually — every mainstream VPS gets a whole /64, so
+        2^64 free buckets, no spoofing needed — and it keys on the leftmost
+        X-Forwarded-For, which the client supplies. Now counted by /64, raised
+        to 5, scoped to the register channel (the agent channel REQUIRES
+        same-IP clustering by design), and described accurately: a speed bump
+        that stops the observed abuse and nothing more sophisticated. Recording
+        a control as stronger than it is, is how a package reports an exit
+        condition met when it is not.
+    non_blocking_findings_fixed:
+      - "Both validity gates read `email.split('@')[1]` — the wrong domain for a two-@ address. Verified before the fix: `a@gmail.com@mailinator.com` returned a 200-cent grant."
+      - "`trial_credits.reason` returned `email_already_granted`, so anyone could register victim@corp.com and learn the address had once been a customer. One undifferentiated public reason now; the specific one is logged."
+      - "Each recovery request expired all outstanding codes, so an attacker could loop the unauthenticated endpoint and kill a victim's code indefinitely — with /v1/auth/api-key needing the key they had already lost. Codes stand until used or expired, capped at 5."
+      - "Redemption burned the code before the ownership check, so a mistyped address spent it. SELECT … FOR UPDATE, then claim."
+      - "`pruneRecoveryTokens` was exported and never called, on a table its own docstring said should not be retained indefinitely — the WP5 defect class. Deleted; the table is a db-retention rule. `trial_grants` deliberately is not: pruning the rule hands every aged-out account a second grant."
+      - "The welcome email promised EUR 2.00 to zero-credit signups, whose first paid call would then fail on insufficient funds. `welcome.ts`'s eight unconditional claims corrected too."
+      - "`wallet_transactions_stripe_session_id_unique` — what actually prevents a double credit under concurrent delivery — was created by no migration block, surviving only from the original `drizzle-kit push`. Block 0102 adopts it."
+      - "`stripe-settlement.ts` claimed to own \"is it settled\", which reads as covering reversals; it does not. Scope narrowed, gap recorded as a residual."
+      - "A 300-character local part reached a varchar(255) INSERT and raised 22001 — not a unique violation, so a 500. Refused at the gate."
+      - "The backfill test re-ran the block's deliberately-unscoped INSERT … SELECT against the shared lane database, writing entitlements for other suites' users. Now bounded and rolled back."
+      - "A block-0102 test asserted SQL text under a behavioural name and would have passed with hashEmail switched to SHA-512. Renamed; the agreement is proved against a real Postgres elsewhere."
+      - "The block-0102 stub counted statements, so adding one shifted the ledger result onto a CREATE INDEX. It matches on the query now."
+      - "The outstanding-token cap was intermittently off by one because the read used the application clock and `now()` used the database's. One SQL statement, one clock."
+    process_note: >
+      Both reviewers objected that the tree moved under them mid-review. Fair,
+      and it cost each of them a finding written against code that no longer
+      existed. Round 2 runs against a frozen SHA.
+
 out_of_scope:
   - Repairing the 22 pre-WP2 drifted internal wallets (writes production
     wallets; CHECK-IN B, same class as WP3's 11 stranded rows).
@@ -253,6 +335,12 @@ out_of_scope:
     production wallets; all eight spent zero, so the exposure is already
     contained).
   - Spoofable X-Forwarded-For, which bounds how strong the per-IP cap can be.
-    Owned by WP12 + VERIFY-IP.
+    Owned by WP12 + VERIFY-IP. Guessing Railway's proxy hop count and reading
+    the wrong entry would break every IP-keyed rate limit in production at
+    once, which is why it is a verification gate and not a passing fix.
+  - Stripe settlement REVERSALS. `charge.dispute.created` and
+    `charge.refunded` are unhandled platform-wide, so a charged-back top-up
+    leaves the credits spendable. Clawing back a balance the customer may have
+    spent is a refund-policy decision, not a bug fix.
   - The frontend docs page describing the old recovery behaviour
     (strale-frontend src/pages/docs-content.ts:1172). Separate repository.

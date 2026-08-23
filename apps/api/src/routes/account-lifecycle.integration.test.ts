@@ -289,6 +289,27 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     }
   });
 
+  it("answers 400, not 500, for an over-long name", async () => {
+    // Measured by review at 300 characters: HTTP 500, `internal_error`. Both
+    // `email` and `name` land on one INSERT against varchar columns, and an
+    // over-long value raises Postgres 22001 — which is not a unique violation,
+    // so `createAccount` rethrows it and the route reports a server fault for
+    // what is plainly bad input. The email half of this was closed one review
+    // round earlier; fixing one field of a two-field problem is how it comes
+    // back.
+    const res = await register({ email: emailFor("long-name"), name: "N".repeat(300) });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error_code: string; details?: { field?: string } };
+    expect(body.error_code).toBe("invalid_request");
+    expect(body.details?.field).toBe("name");
+  });
+
+  it("answers 400, not 500, for an over-long email", async () => {
+    const long = `${"a".repeat(260)}@lifecycle.test`;
+    const res = await register({ email: long });
+    expect(res.status).toBe(400);
+  });
+
   it("answers 409 for a duplicate email even when the pre-check races", async () => {
     // Both handlers used to SELECT-then-INSERT. Under concurrency the loser
     // hit the unique index and surfaced as a raw 500.
@@ -349,12 +370,23 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
 
     // Clean up the redacted first account, which no longer matches the
     // afterEach email prefix.
+    //
+    // The entitlement row is deleted BY EMAIL HASH, not by user id: closure has
+    // already NULLed `user_id` and `ip_hash`, so every id-keyed and ip-keyed
+    // cleanup clause in this file misses it. Left in place it accumulates one
+    // orphan row per run in the shared lane database — the same leak class this
+    // suite has now caused twice.
+    const { hashEmail: hashEmailForCleanup } = await import(
+      "../lib/trial-eligibility.js"
+    );
     const w = await walletOf(firstUserId);
     if (w) {
       await db.delete(walletTransactions).where(eq(walletTransactions.walletId, w.id));
       await db.delete(wallets).where(eq(wallets.id, w.id));
     }
-    await db.delete(trialGrants).where(eq(trialGrants.userId, firstUserId));
+    await db
+      .delete(trialGrants)
+      .where(eq(trialGrants.emailHash, hashEmailForCleanup(email)));
     await db.delete(users).where(eq(users.id, firstUserId));
   });
 
@@ -773,39 +805,31 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     expect((await redeemRecoveryToken(db, { token: first.token, email })).ok).toBe(true);
   });
 
-  it("bounds how many codes one account can hold at once", async () => {
-    // Not letting a flood grow the table without bound. The oldest go first,
-    // so a legitimate code is only displaced after MAX_OUTSTANDING_TOKENS
-    // newer ones exist — by which point the victim has been mailed those too.
-    const email = emailFor("token-cap");
+  it("a flood of requests cannot displace a code the holder is already using", async () => {
+    // The property that actually matters, and the one the previous version of
+    // this test got backwards. Requesting a code is unauthenticated and needs
+    // only the address, so an attacker can loop it. The first implementation
+    // expired every outstanding code on each request; the second kept only the
+    // newest five, which evicts the OLDEST — so five requests still killed the
+    // code the victim was holding, while its docstring claimed the opposite.
+    //
+    // There is no eviction policy an attacker who controls the request rate
+    // cannot turn against the account, so there is no per-user cap at all now.
+    // Table growth is bounded by the 30-minute TTL, the rate limiter and the
+    // 7-day retention rule instead.
+    const email = emailFor("no-displacement");
     const created = await register({ email });
     const { user_id } = (await created.json()) as { user_id: string };
 
-    const { issueRecoveryToken, redeemRecoveryToken, MAX_OUTSTANDING_TOKENS } =
-      await import("../lib/key-recovery.js");
-
-    const issued = [];
-    for (let i = 0; i < MAX_OUTSTANDING_TOKENS + 1; i++) {
-      issued.push(await issueRecoveryToken(db, { userId: user_id, ipHash: null }));
+    const { issueRecoveryToken, redeemRecoveryToken } = await import(
+      "../lib/key-recovery.js"
+    );
+    const victim = await issueRecoveryToken(db, { userId: user_id, ipHash: null });
+    for (let i = 0; i < 10; i++) {
+      await issueRecoveryToken(db, { userId: user_id, ipHash: null });
     }
 
-    const live = await db
-      .select({ id: apiKeyRecoveryTokens.id })
-      .from(apiKeyRecoveryTokens)
-      .where(
-        and(
-          eq(apiKeyRecoveryTokens.userId, user_id),
-          sql`${apiKeyRecoveryTokens.usedAt} IS NULL`,
-          sql`${apiKeyRecoveryTokens.expiresAt} > now()`,
-        ),
-      );
-    expect(live).toHaveLength(MAX_OUTSTANDING_TOKENS);
-
-    // The oldest was displaced; the newest still works.
-    expect((await redeemRecoveryToken(db, { token: issued[0]!.token, email })).ok).toBe(false);
-    expect((await redeemRecoveryToken(db, { token: issued.at(-1)!.token, email })).ok).toBe(
-      true,
-    );
+    expect((await redeemRecoveryToken(db, { token: victim.token, email })).ok).toBe(true);
   });
 
   it("a wrong email does not burn the code", async () => {
@@ -861,7 +885,9 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     await db
       .delete(apiKeyRecoveryTokens)
       .where(eq(apiKeyRecoveryTokens.userId, user_id));
-    await db.delete(trialGrants).where(eq(trialGrants.userId, user_id));
+    // By hash — closure has already cleared this row's user_id.
+    const { hashEmail: hashForCleanup } = await import("../lib/trial-eligibility.js");
+    await db.delete(trialGrants).where(eq(trialGrants.emailHash, hashForCleanup(email)));
     await db.delete(users).where(eq(users.id, user_id));
   });
 
@@ -876,11 +902,12 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     };
     const wallet = await walletOf(user_id);
 
-    await app.request("http://localhost/v1/auth/me", {
+    const closureResponse = await app.request("http://localhost/v1/auth/me", {
       method: "DELETE",
       headers: { Authorization: `Bearer ${api_key}`, "Content-Type": "application/json" },
       body: JSON.stringify({ reason: "wp11 test" }),
     });
+    expect(closureResponse.status).toBe(200);
 
     const after = await db
       .select({ balanceCents: wallets.balanceCents })
@@ -897,6 +924,19 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     // disagreed permanently.
     expect(Number(sum!.total)).toBe(0);
 
+    // The receipt is a written representation to the data subject, so it has to
+    // be checked like one. Round-1 review found it listed `signup_ip_hash` as
+    // anonymised while a new table kept a copy; round-2 found the same class
+    // one table over, in `transactions.audit_trail.request_context`.
+    const receipt = (await closureResponse.json()) as {
+      summary: { anonymized: string[]; retained: string[]; deleted?: string[] };
+    };
+    expect(receipt.summary.retained.join(" ")).toContain("request_context");
+    expect(receipt.summary.retained.join(" ")).toContain("trial_grants.email_hash");
+    expect(receipt.summary.anonymized.join(" ")).toContain("trial_grants.ip_hash");
+    expect(receipt.summary.anonymized.join(" ")).toContain("client_meta");
+    expect(receipt.summary.deleted?.join(" ")).toContain("api_key_recovery_tokens");
+
     const forfeits = await db
       .select({ id: walletTransactions.id })
       .from(walletTransactions)
@@ -910,7 +950,9 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
 
     await db.delete(walletTransactions).where(eq(walletTransactions.walletId, wallet!.id));
     await db.delete(wallets).where(eq(wallets.id, wallet!.id));
-    await db.delete(trialGrants).where(eq(trialGrants.userId, user_id));
+    // By hash — closure has already cleared this row's user_id.
+    const { hashEmail: hashForCleanup } = await import("../lib/trial-eligibility.js");
+    await db.delete(trialGrants).where(eq(trialGrants.emailHash, hashForCleanup(email)));
     await db.delete(users).where(eq(users.id, user_id));
   });
 });

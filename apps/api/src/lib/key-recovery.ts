@@ -66,30 +66,30 @@ export interface IssuedRecoveryToken {
 }
 
 /**
- * How many simultaneously-valid tokens one account may hold.
- *
- * The first version expired every outstanding token on each new request, on
- * the reasoning that the most recent email should be the only one that works.
- * That reasoning has an attacker in it: requesting a code is unauthenticated
- * and needs only the address, so anyone can loop the endpoint and kill the
- * victim's code before they can paste it — indefinitely. And `/v1/auth/api-key`
- * needs the key the victim has already lost, so there is no other path. The
- * flow this replaces revoked the key outright, so that would still have been
- * an improvement; it would also have been the same *class* of defect shipped
- * again, which is worse than being no better.
- *
- * Several concurrent codes cost nothing — each is single-use, 256-bit and
- * expires on its own — and the cap only stops the table growing without bound.
- * Oldest are expired first, so a flood cannot push a legitimate code out
- * faster than the flood's own codes leave.
- */
-export const MAX_OUTSTANDING_TOKENS = 5;
-
-/**
  * Issue a recovery token for a user.
  *
- * Previously-issued codes stay valid until they expire or are used. See
- * MAX_OUTSTANDING_TOKENS for why.
+ * Previously-issued codes stay valid until they expire or are used, and there
+ * is deliberately no per-user cap.
+ *
+ * Two earlier versions of this function both had a displacement primitive in
+ * them, and the second one is the more interesting mistake. The first expired
+ * every outstanding code on each request, so an attacker looping this
+ * unauthenticated endpoint could kill a victim's code before they could paste
+ * it, indefinitely. The replacement kept only the newest five — which evicts
+ * the OLDEST, so five requests still displace the code the victim is holding,
+ * and its own docstring claimed the opposite.
+ *
+ * The general shape: **any per-user cap on an unauthenticated write is a
+ * displacement primitive.** Evict the oldest and a flood pushes the victim's
+ * code out; evict the newest and a flood that arrives first blocks the victim
+ * from getting one; refuse at the limit and the flood locks the account out
+ * entirely. There is no eviction policy that an attacker who controls the
+ * request rate cannot turn against the account.
+ *
+ * So the cap is gone. Table growth is bounded by the things that bound it
+ * without touching a specific account's codes: a 30-minute TTL, the
+ * 2-per-5-minutes-per-IP limiter, and the 7-day `db-retention` rule. Codes are
+ * 256-bit and single-use, so several being live at once costs nothing.
  */
 export async function issueRecoveryToken(
   db: any,
@@ -99,37 +99,11 @@ export async function issueRecoveryToken(
   const expiresAt = new Date(now.getTime() + RECOVERY_TOKEN_TTL_MINUTES * 60 * 1000);
   const token = generateRecoveryToken();
 
-  await db.transaction(async (tx: any) => {
-    // Keep the newest MAX-1, expire everything older, in ONE statement.
-    //
-    // The first version read the outstanding rows, computed the surplus in
-    // JavaScript and wrote it back. That was intermittently off by one, and
-    // the reason is worth keeping: the read and the write use the application
-    // clock while `now()` inside the database uses the database's, and the two
-    // are not the same clock — the database runs in its own container. A row
-    // stamped "expires at `new Date()`" can still read as future to `now()`
-    // milliseconds later. Doing the whole thing in SQL means one clock decides
-    // both which rows are live and when they stop being live.
-    await tx.execute(sql`
-      UPDATE api_key_recovery_tokens
-         SET expires_at = now() - interval '1 second'
-       WHERE id IN (
-         SELECT id
-           FROM api_key_recovery_tokens
-          WHERE user_id = ${params.userId}::uuid
-            AND used_at IS NULL
-            AND expires_at > now()
-          ORDER BY created_at DESC
-         OFFSET ${MAX_OUTSTANDING_TOKENS - 1}
-       )
-    `);
-
-    await tx.insert(apiKeyRecoveryTokens).values({
-      userId: params.userId,
-      tokenHash: hashRecoveryToken(token),
-      expiresAt,
-      requestedIpHash: params.ipHash,
-    });
+  await db.insert(apiKeyRecoveryTokens).values({
+    userId: params.userId,
+    tokenHash: hashRecoveryToken(token),
+    expiresAt,
+    requestedIpHash: params.ipHash,
   });
 
   return { token, expiresAt };
@@ -172,14 +146,24 @@ export async function redeemRecoveryToken(
       .select({
         id: apiKeyRecoveryTokens.id,
         userId: apiKeyRecoveryTokens.userId,
-        usedAt: apiKeyRecoveryTokens.usedAt,
-        expiresAt: apiKeyRecoveryTokens.expiresAt,
       })
       .from(apiKeyRecoveryTokens)
-      .where(eq(apiKeyRecoveryTokens.tokenHash, tokenHash))
+      .where(
+        and(
+          eq(apiKeyRecoveryTokens.tokenHash, tokenHash),
+          isNull(apiKeyRecoveryTokens.usedAt),
+          // Expiry is decided by the DATABASE clock, not the caller's.
+          // Comparing a stored timestamp against `new Date()` straddles two
+          // clocks that are not the same clock — the database runs in its own
+          // container — and measured skew here drifted about a second and a
+          // half over fifteen seconds. Whichever way the skew points, a token
+          // is then live or dead depending on which process asks.
+          sql`${apiKeyRecoveryTokens.expiresAt} > now()`,
+        ),
+      )
       .for("update");
 
-    if (!row || row.usedAt !== null || row.expiresAt <= now) {
+    if (!row) {
       return { ok: false as const, reason: "invalid_or_expired" as const };
     }
 

@@ -461,7 +461,7 @@ export const openApiSpec = {
         tags: ["auth"],
         summary: "Redeem a recovery code and rotate the API key",
         description:
-          "Redeems the single-use code sent by /v1/auth/recover. The previous API key stops working the moment this returns 200. Codes expire 30 minutes after issue, and requesting a new code invalidates any outstanding one.",
+          "Redeems the single-use code sent by /v1/auth/recover. The previous API key stops working the moment this returns 200. Codes expire 30 minutes after issue. Requesting another does NOT invalidate an outstanding one — several can be live at once, each single-use — because an unauthenticated endpoint that invalidates a code on request lets anyone who knows the address keep cancelling a recovery in progress.",
         "x-ratelimit": { limit: 10, window: "5m", scope: "per IP" },
         requestBody: {
           required: true,
