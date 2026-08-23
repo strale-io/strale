@@ -159,6 +159,31 @@ property of the current code rather than something the type system enforces.
   Those are interpretations, they change, and a receipt that moves when an
   interpretation moves is worthless.
 
+### 3.1 Limits inherited from RFC 8785 itself (found in Phase 3)
+
+None of these forced a schema change, but each is a real limit on what "the same
+request" means, and a verifier deserves to know them:
+
+- **`-0` and `0` are the same JSON number.** RFC 8785 §3.2.2.3 collapses negative
+  zero. If a customer sends `-0` in `inputs`, the receipt is identical to one for
+  `0`. The receipt cannot distinguish them, and no amount of care at our end
+  changes that.
+- **Unicode is NOT normalized.** `"é"` precomposed (U+00E9) and decomposed
+  (`e` + U+0301) are visually identical and produce **different digests**. Two
+  requests a human would call the same are, to the receipt, different. Applying
+  NFC would be a deviation from the RFC and would silently fold inputs the
+  customer distinguished, so the honest choice is to leave it and say so.
+- **Integers beyond 2^53 do not round-trip.** They are already lossy at
+  `JSON.parse`, before the canonicalizer sees them. A large numeric identifier
+  sent as a JSON number is committed to at its double precision, not its literal
+  spelling. Send such identifiers as strings.
+- **The canonicalizer ENFORCES the closed schema**, which is stronger than §1
+  claimed. `undefined` is refused rather than dropped, so a call site cannot omit
+  a hashed field by leaving it undefined; `Date` is refused rather than silently
+  becoming a string through `toJSON`, so an object cannot choose its own
+  canonical form. The closed-schema rule is now a property of the primitive, not
+  a convention the builder has to remember.
+
 ---
 
 ## 4. Manifest / implementation identity
