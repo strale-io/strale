@@ -26,6 +26,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { log, logError } from "../lib/log.js";
 import { alertOnce } from "../lib/alert-once.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 // This is now the BACKSTOP, not the primary signal. Settle failures page
 // immediately from reportSettlementFailure() in lib/x402-gateway.ts; this job
@@ -90,15 +91,13 @@ export async function checkX402SettlementVolume(): Promise<void> {
 }
 
 export function startX402SettlementWatch(): void {
-  const run = () => {
-    checkX402SettlementVolume().catch((err) => {
-      logError("x402-settlement-watch-failed", err);
-    });
-  };
-  setTimeout(() => {
-    run();
-    setInterval(run, TICK_MS).unref();
-  }, STARTUP_DELAY_MS).unref();
+  // WP10 (CR-08): cadence moved into `job_schedule`.
+  registerJobSync({
+    name: "x402-settlement-watch",
+    intervalMs: TICK_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    handler: checkX402SettlementVolume,
+  });
   log.info(
     { label: "x402-settlement-watch", tick_ms: TICK_MS },
     "x402-settlement-watch: started",

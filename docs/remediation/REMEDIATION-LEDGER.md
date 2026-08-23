@@ -342,3 +342,36 @@ was added, removed or widened; `AUTONOMOUS_PURPOSES` is unchanged.
   is unguarded. `describeAuthority()` still has no caller, so who authorised a
   production mutation is enforced at the gate and not yet answerable from the
   data; wiring it is open work.
+
+---
+
+## WP10 — Durable Job Coordinator
+
+- **Status:** REVIEW (PR open, not merged)
+- **Risks:** CR-08
+- **Depends on:** WP1 (the real-Postgres proof lane this package's evidence rests on)
+- **Branch:** `remediation/wp10-job-coordinator`
+- **Defect:** every recurring job held its cadence in a `setInterval` closure, so a
+  process restart re-founded the schedule on the boot instant. Median production
+  restart gap is 1.0h, which makes the interval arm unreachable for every job
+  declared at 6h/24h/7d — the declared period had been replaced by the deploy
+  interval platform-wide.
+- **Measured:** quality-floor 51 ticks in 7 days against an expected 7;
+  capability-promotion 45; the weekly health sweep 141 runs in 17.6 days (56x).
+  45 of 47 promotion ticks sit 4.8 min after a floor tick — exactly the difference
+  between their startup delays, which is what proves both fire off boot.
+- **Authority:** `job_schedule` owns `next_run_at`. Code owns recurrence; the table
+  owns when. `registerJob`'s ON CONFLICT deliberately does not write `next_run_at`.
+- **Also built:** the `hook_failed` onboarding-retry sweeper promised three times in
+  `capability-persistence.ts` since DEC-20260421-B and never written (zero readers of
+  the marker existed). Production holds 0 such rows — a latent gap, not a backlog.
+- **Self-found defect:** this package's own sweeper first counted retry attempts in
+  `health_monitor_events`, which retention prunes at 30 days — the escalation marker
+  would have aged out and an escalated capability would have rejoined the retry set
+  every month. Moved to a durable column. A pruned telemetry table is not state.
+- **Migrations:** startup blocks `0104_job_schedule` (idempotent DDL + a NOT NULL
+  verification that refuses to report success on a shape `claimJob` could never match)
+  and `0105_onboarding_hook_failures` (defaulted column, metadata-only).
+- **Proof:** 76 new tests (44 against real Postgres); fail-before demonstrated for the cadence
+  property, the crash-recovery flag, and the per-job registration guard.
+- **Not touched:** WP12 and its VERIFY-IP gate; no Railway hop count inferred.

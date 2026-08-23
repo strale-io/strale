@@ -45,6 +45,7 @@ import { fireAndForget } from "../lib/fire-and-forget.js";
 import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
+import { consumeDueSlot } from "../lib/job-coordinator.js";
 
 // ─── Solution quality gate (auto-activate when all steps are scored) ────────
 
@@ -130,16 +131,31 @@ let _isRunning = false;
 let _started = false;
 let _pollTimer: ReturnType<typeof setInterval> | null = null;
 
-// Track last-run timestamps for auxiliary tasks (in-memory — reset on deploy is fine)
-const _lastRun: Record<string, number> = {};
-
-function shouldRun(taskName: string, intervalMs: number): boolean {
-  const last = _lastRun[taskName] ?? 0;
-  if (Date.now() - last >= intervalMs) {
-    _lastRun[taskName] = Date.now();
+/**
+ * WP10 (CR-08): auxiliary-task cadence is durable.
+ *
+ * This used to be `const _lastRun: Record<string, number> = {}` with the
+ * comment "in-memory — reset on deploy is fine". It was not fine. Two of the
+ * tasks below are declared WEEKLY, and `weekly-sweep` probes external URLs and
+ * applies auto-remediation to test suites. Because the map reset on every
+ * process start, and the median production process lifetime over the 17.6 days
+ * to 2026-08-23 was about an hour, the weekly sweep ran **141 times in that
+ * window — 56x its declared cadence.**
+ *
+ * The semantics are otherwise unchanged: the slot is consumed BEFORE the task
+ * body runs (exactly as the old map was written before the body), and every
+ * caller is already inside the scheduler's advisory lock.
+ */
+async function shouldRun(taskName: string, intervalMs: number): Promise<boolean> {
+  try {
+    return await consumeDueSlot(taskName, intervalMs);
+  } catch (err) {
+    // A due-check that cannot reach the database must not silently cancel the
+    // task forever; fall back to running it. Over-running is the failure mode
+    // this whole change exists to reduce, but never-running is worse.
+    logError("test-scheduler-due-check-failed", err, { task: taskName });
     return true;
   }
-  return false;
 }
 
 // ─── Advisory lock helper ───────────────────────────────────────────────────
@@ -517,7 +533,7 @@ export function suitesTestedFromResults(totalPassed: number, totalFailed: number
 
 async function runAuxiliaryTasks(): Promise<void> {
   // Chromium health probe (30min)
-  if (shouldRun("chromium-probe", CHROMIUM_PROBE_INTERVAL_MS)) {
+  if (await shouldRun("chromium-probe", CHROMIUM_PROBE_INTERVAL_MS)) {
     try {
       await probeChromiumHealth();
     } catch (err) {
@@ -526,7 +542,7 @@ async function runAuxiliaryTasks(): Promise<void> {
   }
 
   // Dependency health checks (6h)
-  if (shouldRun("health-check", HEALTH_CHECK_INTERVAL_MS)) {
+  if (await shouldRun("health-check", HEALTH_CHECK_INTERVAL_MS)) {
     try {
       const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
       const results = await runDependencyHealthChecks();
@@ -553,7 +569,7 @@ async function runAuxiliaryTasks(): Promise<void> {
   // These watch the scheduler itself; if it stops or starts dropping caps,
   // the heartbeat won't fire here either, so the scripts/meta-monitoring-run.ts
   // CLI invocation remains a backstop for the truly-stopped case.
-  if (shouldRun("meta-hourly", META_HOURLY_INTERVAL_MS)) {
+  if (await shouldRun("meta-hourly", META_HOURLY_INTERVAL_MS)) {
     try {
       const { runHourlyChecks } = await import("../lib/meta-monitoring.js");
       await runHourlyChecks();
@@ -563,7 +579,7 @@ async function runAuxiliaryTasks(): Promise<void> {
   }
 
   // Daily meta-monitoring (pipeline + free-tier checks).
-  if (shouldRun("meta-daily", META_DAILY_INTERVAL_MS)) {
+  if (await shouldRun("meta-daily", META_DAILY_INTERVAL_MS)) {
     try {
       const { runDailyChecks } = await import("../lib/meta-monitoring.js");
       await runDailyChecks();
@@ -576,7 +592,7 @@ async function runAuxiliaryTasks(): Promise<void> {
   // refresh-stale-scores.ts re-decayed matrix_sqs and is no longer present.
 
   // Daily diagnostics (24h)
-  if (shouldRun("diagnostics", DIAGNOSTIC_INTERVAL_MS)) {
+  if (await shouldRun("diagnostics", DIAGNOSTIC_INTERVAL_MS)) {
     try {
       const { runDiagnostic } = await import("../diagnostics/self-heal-check.js");
       const report = await runDiagnostic();
@@ -600,7 +616,7 @@ async function runAuxiliaryTasks(): Promise<void> {
   // Daily SQS snapshot retired with the SQS engine (DEC-20260503-B).
 
   // Weekly health sweep (7d)
-  if (shouldRun("weekly-sweep", WEEKLY_SWEEP_INTERVAL_MS)) {
+  if (await shouldRun("weekly-sweep", WEEKLY_SWEEP_INTERVAL_MS)) {
     try {
       const { runWeeklyHealthSweep } = await import("../lib/health-sweep.js");
       await runWeeklyHealthSweep();
@@ -610,7 +626,7 @@ async function runAuxiliaryTasks(): Promise<void> {
   }
 
   // Weekly data retention cleanup (7d)
-  if (shouldRun("retention", RETENTION_INTERVAL_MS)) {
+  if (await shouldRun("retention", RETENTION_INTERVAL_MS)) {
     try {
       const { cleanupOldTestData } = await import("../lib/data-retention.js");
       await cleanupOldTestData();

@@ -236,6 +236,22 @@ export const capabilities = pgTable("capabilities", {
   // Pipeline Phase I: Lifecycle management
   lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("draft"),
   // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended' | 'deactivated'
+  // ... plus 'hook_failed', written by lib/capability-persistence.ts when the
+  // post-commit onboarding hook throws.
+  //
+  // WP10: how many times the onboarding-retry sweeper has re-run that hook and
+  // had it fail again. Bounds the retry blast radius the same way
+  // test_suites.fixture_recapture_failures does, and for the same reason: a
+  // hook that fails deterministically will not start working on the sixth
+  // attempt, and retrying forever buries the escalation an operator is meant
+  // to act on. Reset to 0 when the hook finally succeeds.
+  //
+  // This lives on the row rather than being counted from health_monitor_events
+  // because that table is pruned at 30 days (jobs/db-retention.ts). Counting
+  // attempts there would silently reset the budget every month AND age out the
+  // escalation marker, so an already-escalated capability would rejoin the
+  // retry set forever in 30-day cycles.
+  onboardingHookFailures: integer("onboarding_hook_failures").notNull().default(0),
   deactivationReason: text("deactivation_reason"),
   outputFieldReliability: jsonb("output_field_reliability"),
   // { field_name: 'guaranteed' | 'common' | 'rare' }
@@ -1319,3 +1335,43 @@ export const capabilityInvocations = pgTable(
     byCreated: index("capability_invocations_created_idx").on(table.createdAt),
   }),
 );
+
+// ─── WP10: the durable job coordinator ──────────────────────────────────────
+//
+// One row per named recurring job. This table owns a fact that used to live
+// nowhere durable: *when is this job next due*.
+//
+// Before WP10 that fact lived in a `setTimeout`/`setInterval` closure, which
+// is destroyed and rebuilt on every process start. Measured on production
+// over the seven days to 2026-08-23: the median gap between process starts
+// was 1.0 hour, so the `setInterval` arm of every job declared at 6h/24h/7d
+// was effectively unreachable — the *only* arm that ever fired was the
+// startup delay. A job's real cadence was therefore the deploy cadence.
+// quality-floor, declared daily, ran 51 times in seven days; the weekly
+// health sweep ran 141 times in 17.6 days, 56x its declared frequency.
+//
+// `next_run_at` is deliberately NOT reset at boot. Registration reconciles
+// `interval_ms` from code (code owns recurrence) and leaves `next_run_at`
+// alone (the table owns the schedule), clamping it down only when a shorter
+// interval makes the stored value unreachable.
+export const jobSchedule = pgTable("job_schedule", {
+  /** Stable job name, chosen by the caller. Primary key: one row per job. */
+  jobName: varchar("job_name", { length: 64 }).primaryKey(),
+  /** Recurrence, reconciled from code at every registration. */
+  intervalMs: bigint("interval_ms", { mode: "number" }).notNull(),
+  /** THE fact. A job is due when this is <= now(). Survives restarts. */
+  nextRunAt: timestamp("next_run_at", { withTimezone: true }).notNull(),
+  /** Non-null while a runner holds the job. Cleared on release. */
+  leaseOwner: varchar("lease_owner", { length: 64 }),
+  /** Deadline. A crashed holder's lease expires and the job becomes claimable. */
+  leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+  lastStartedAt: timestamp("last_started_at", { withTimezone: true }),
+  lastFinishedAt: timestamp("last_finished_at", { withTimezone: true }),
+  /** 'ok' | 'error' | 'recovered' — the last terminal outcome. */
+  lastOutcome: varchar("last_outcome", { length: 16 }),
+  /** Truncated failure message from the last errored run. */
+  lastError: text("last_error"),
+  /** Drives retry backoff. Reset to 0 on success. */
+  consecutiveFailures: integer("consecutive_failures").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

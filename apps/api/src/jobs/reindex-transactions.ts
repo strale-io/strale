@@ -50,7 +50,7 @@ import { getDb } from "../db/index.js";
 import { healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { log, logError, logWarn } from "../lib/log.js";
-import { isShuttingDown } from "../lib/shutdown.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const INTERVAL_MS = 24 * 60 * 60 * 1000;       // check every 24h
 const STARTUP_DELAY_MS = 15 * 60 * 1000;       // don't fire right after boot
@@ -226,17 +226,16 @@ export function startReindexTransactions(): void {
     `reindex-transactions: started (${INTERVAL_MS / 3600_000}h check interval, ${STARTUP_DELAY_MS / 60_000}min initial delay, min gap ${MIN_GAP_MS / 86_400_000}d)`,
   );
 
-  setTimeout(() => {
-    if (isShuttingDown()) return;
-    runOnce().catch((err) =>
-      logError("reindex-transactions-startup-run-failed", err),
-    );
-  }, STARTUP_DELAY_MS);
-
-  setInterval(() => {
-    if (isShuttingDown()) return;
-    runOnce().catch((err) =>
-      logError("reindex-transactions-run-failed", err),
-    );
-  }, INTERVAL_MS);
+  // WP10 (CR-08): cadence moved into `job_schedule`. This job was already
+  // durable in the sense that MIN_GAP_MS gates the actual REINDEX on a stored
+  // last-run timestamp — but that made it a second, private authority for the
+  // same fact. The coordinator now owns when it wakes; MIN_GAP_MS still owns
+  // whether the reindex is warranted.
+  registerJobSync({
+    name: "reindex-transactions",
+    intervalMs: INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    leaseMs: 2 * 60 * 60 * 1000,
+    handler: runOnce,
+  });
 }

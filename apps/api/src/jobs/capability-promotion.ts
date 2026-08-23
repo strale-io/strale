@@ -63,6 +63,7 @@ import {
   type PromotionStats,
 } from "../lib/capability-promotion.js";
 import { logError, logWarn } from "../lib/log.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const STARTUP_DELAY_MS = 20 * 60 * 1000; // after the floor's 15min, so the two never race a boot
 const INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -509,10 +510,17 @@ class PromotionRaced extends Error {
 }
 
 export function startCapabilityPromotion(): void {
-  setTimeout(() => {
-    void runCapabilityPromotionOnce();
-    setInterval(() => void runCapabilityPromotionOnce(), INTERVAL_MS);
-  }, STARTUP_DELAY_MS);
+  // WP10 (CR-08): cadence moved into `job_schedule`. Declared 24h; measured
+  // 45 completed ticks in the seven days to 2026-08-23, because the interval
+  // arm never survived to fire and every deploy re-ran the startup arm. This
+  // job PUBLISHES capabilities onto the paid catalog, so its real cadence
+  // being deploy frequency was a policy fact nobody could read off the code.
+  registerJobSync({
+    name: "capability-promotion",
+    intervalMs: INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    handler: runCapabilityPromotionOnce,
+  });
   logWarn("capability-promotion-scheduled", "daily capability-promotion tick scheduled", {
     mode: isEnforceMode() ? "enforce" : "dry_run",
     startup_delay_ms: STARTUP_DELAY_MS,

@@ -137,9 +137,28 @@ async function main() {
 
   // Import app after executors are registered
   const { app, warmCatalog } = await import("./app.js");
+
+  // WP10 (CR-08): the durable job coordinator. Started BEFORE the jobs that
+  // register with it, because its poll cycle reads the registry at each tick
+  // rather than capturing it here — and because a job registering against a
+  // stopped coordinator would look scheduled and never run.
+  //
+  // This is the single remaining boot-relative timer on the platform, and it
+  // deliberately holds no business fact: it only asks `job_schedule` what is
+  // due. Every cadence it acts on survives the restart that resets it.
+  const { startJobCoordinator } = await import("./lib/job-coordinator.js");
+  startJobCoordinator();
+
   const { startTestScheduler } = await import("./jobs/test-scheduler.js");
 
   startTestScheduler();
+
+  // WP10 (CR-08): re-runs the post-commit onboarding hook for capabilities
+  // left in lifecycle_state='hook_failed'. capability-persistence.ts has
+  // promised this sweeper since DEC-20260421-B; until now nothing read the
+  // marker, so a capability whose hook failed kept zero test suites forever.
+  const { startOnboardingRetry } = await import("./jobs/onboarding-retry.js");
+  startOnboardingRetry();
 
   const { startInvariantChecker } = await import("./jobs/invariant-checker.js");
   startInvariantChecker();

@@ -43,7 +43,7 @@ import { sql, type SQL } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { log, logError, logWarn } from "../lib/log.js";
-import { isShuttingDown } from "../lib/shutdown.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STARTUP_DELAY_MS = 5 * 60 * 1000;
@@ -368,13 +368,14 @@ export function startDbRetention(): void {
   // cheap; runs concurrently with the rest of startup.
   runStartupAnalyzeRecovery();
 
-  setTimeout(() => {
-    if (isShuttingDown()) return;
-    runRetention().catch((err) => logError("db-retention-startup-run-failed", err));
-  }, STARTUP_DELAY_MS);
-
-  setInterval(() => {
-    if (isShuttingDown()) return;
-    runRetention().catch((err) => logError("db-retention-scheduled-run-failed", err));
-  }, RETENTION_INTERVAL_MS);
+  // WP10 (CR-08): cadence moved into `job_schedule`. DEC-20260504-B calls a
+  // long-silent bulk operation's first run a workload-resumption event; the
+  // mirror image is a bulk DELETE running once per deploy instead of once per
+  // day, which is what a boot-relative 24h interval actually produced.
+  registerJobSync({
+    name: "db-retention",
+    intervalMs: RETENTION_INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    handler: runRetention,
+  });
 }

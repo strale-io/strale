@@ -1,22 +1,53 @@
 # Remediation Program — Current State
 
-_Last updated: 2026-08-23 (WP11 session)_
+_Last updated: 2026-08-23 (WP10 session)_
 
-- **Current package:** WP11 — **ACCEPTED**. Merged `0d253ef` (PR #371),
-  deployed and verified live on `0d253efdc380`. Post-deploy reconciliation
-  complete: `docs/remediation/packages/WP11-ACCEPTANCE.md`.
+- **Current package:** WP10 — REVIEW PASSED, PR open, **not merged**.
+  Durable Job Coordinator (CR-08). Branch `remediation/wp10-job-coordinator`.
+- **WP11:** ACCEPTED. Merged `0d253ef` (PR #371), deployed and verified on
+  `0d253efdc380`. Record: `docs/remediation/packages/WP11-ACCEPTANCE.md`.
 - **WP9:** merged and deployed, under its observation period. Untouched by
-  WP11 — no watch condition fired.
-- **Next package:** WP12 — **BLOCKED on VERIFY-IP, which remains OPEN.**
-  WP11 sharpened why: `getClientIp` reads the client-supplied leftmost
-  X-Forwarded-For, which is the reason WP11's per-IP trial cap is documented
-  as a speed bump rather than a gate. Railway's proxy hop-count behaviour is
-  not guessed and must not be — reading the wrong entry breaks every IP-keyed
-  rate limit in production at once. Confirm the hop count first.
+  WP10 and WP11 — no watch condition fired.
+- **WP12:** still **BLOCKED on VERIFY-IP, which remains OPEN.** WP10 did not
+  touch it and inferred no Railway proxy hop count. Reading the wrong
+  X-Forwarded-For entry breaks every IP-keyed rate limit at once; confirm the
+  hop count first.
 - **Founder decisions, 2026-08-23:** the 22 pre-WP2 drifted internal wallets
   and the 1,600 cents of farmed trial credit are both left as historical
-  state. Verified present at acceptance and deliberately not mutated.
+  state, verified present and deliberately not mutated.
 
+## What WP10 found, and why the number is the argument
+
+The audit said "most jobs boot-relative". That is true and it undersells it.
+Every recurring job used `setTimeout(startupDelay)` then
+`setInterval(period)`, and the median gap between production process starts
+is **1.0 hour**. So for any job declared at 6h, 24h or 7d, the `setInterval`
+arm is not merely unreliable — it is **unreachable**. The only arm that ever
+fires is the startup delay, which means the declared period had been
+silently replaced by the deploy interval everywhere.
+
+Measured, not inferred: quality-floor ran **51** times in seven days against
+a declared 24h period; the **weekly** health sweep ran **141 times in 17.6
+days**, 56x its declared cadence, while probing external URLs and applying
+auto-remediation. The mechanism is provable rather than merely plausible —
+45 of 47 capability-promotion ticks land 4.8 minutes after a quality-floor
+tick, exactly the gap between their 20- and 15-minute startup delays. Two
+jobs on independent 24h timers cannot produce that correlation; two jobs
+reading the same boot instant must.
+
+**The generalisable lesson: a declared constant is not a measurement.**
+`INTERVAL_MS = 24h` reads like a fact about the system and was a fact about
+nothing. Nobody had checked it against the platform's own event history, and
+the check took one query.
+
+Second, from the same package: **a marker with no reader is not a feature.**
+`lifecycle_state = 'hook_failed'` had been written for months, with three
+comments promising the sweeper that would read it. A grep found the writer,
+its test, and nothing else. The consequence was invisible by construction —
+the hook is what generates test suites, so an affected capability had none
+and was skipped by the scheduler forever, silently.
+
+## What WP11 cost, and why it is worth writing down
 ## What WP11 cost, and why it is worth writing down
 
 Eight review rounds, seven of them FAIL. The account-closure receipt was

@@ -18,7 +18,7 @@ import { users } from "../db/schema.js";
 import { randomUUID } from "node:crypto";
 import { sendDay2NudgeEmail, sendDay5ReminderEmail } from "../lib/activation-emails.js";
 import { log, logError, logWarn } from "../lib/log.js";
-import { isShuttingDown } from "../lib/shutdown.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const DRIP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const STARTUP_DELAY_MS = 90_000; // 90 seconds
@@ -119,13 +119,13 @@ export function startActivationDrip(): void {
     "activation-drip-started",
   );
 
-  setTimeout(() => {
-    if (isShuttingDown()) return;
-    runActivationDrip().catch((err) => logError("activation-drip-startup-run-failed", err));
-  }, STARTUP_DELAY_MS);
-
-  setInterval(() => {
-    if (isShuttingDown()) return;
-    runActivationDrip().catch((err) => logError("activation-drip-scheduled-run-failed", err));
-  }, DRIP_INTERVAL_MS);
+  // WP10 (CR-08): cadence moved into `job_schedule`. The per-user
+  // `activation_email_stage` column already made extra ticks harmless — this
+  // is about the declared 6h period being real rather than aspirational.
+  registerJobSync({
+    name: "activation-drip",
+    intervalMs: DRIP_INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    handler: runActivationDrip,
+  });
 }
