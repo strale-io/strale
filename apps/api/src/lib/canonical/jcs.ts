@@ -40,6 +40,8 @@
  * bytes, so anything that digests must go through `canonicalBytes`.
  */
 
+import { types as nodeTypes } from "node:util";
+
 export class CanonicalizationError extends Error {
   readonly code: JcsErrorCode;
   /** JSON Pointer-ish path to the offending value, for a usable message. */
@@ -230,6 +232,34 @@ function serialize(value: unknown, path: string, seen: Set<object>): string {
       }
       const parts = value.map((v, i) => serialize(v, `${path}[${i}]`, seen));
       return `[${parts.join(",")}]`;
+    }
+
+    // A Proxy can vary what it returns on every read, exactly like a getter —
+    // and it defeats the accessor check below, because its
+    // getOwnPropertyDescriptor trap reports a plain DATA descriptor while the
+    // `get` trap does the varying. Found by probing: the same Proxy
+    // canonicalized to {"a":1,"k":1} then {"a":1,"k":2}. Unreachable from
+    // JSON.parse, but a commitment primitive must not rest on that.
+    if (nodeTypes.isProxy(obj)) {
+      throw new CanonicalizationError(
+        "unsupported_type",
+        path,
+        "a Proxy can return a different value on each read, so it has no stable canonical form",
+      );
+    }
+
+    // Boxed primitives serialize into MISLEADING JSON rather than failing:
+    // `new Number(1)` and `new Boolean(true)` both become `{}` — the value
+    // disappears entirely — and `new String("x")` becomes `{"0":"x"}`, an
+    // index map. This is the one place we deliberately diverge from
+    // JSON.stringify, which unwraps them; unwrapping silently would let two
+    // different JS values share a commitment.
+    if (obj instanceof String || obj instanceof Number || obj instanceof Boolean) {
+      throw new CanonicalizationError(
+        "unsupported_type",
+        path,
+        `${obj.constructor.name} object: pass the primitive, not its wrapper`,
+      );
     }
 
     // Reject the exotic objects JSON.stringify would happily mangle. Map and

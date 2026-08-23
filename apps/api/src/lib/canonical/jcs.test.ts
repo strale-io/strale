@@ -265,6 +265,55 @@ describe("properties JavaScript treats specially", () => {
     expect((err as CanonicalizationError).code).toBe("accessor_property");
   });
 
+  it("a Proxy is refused — it defeats the accessor check and can vary per read", () => {
+    // The getOwnPropertyDescriptor trap reports a plain data descriptor while
+    // the get trap does the varying, so the getter guard never fires.
+    let n = 0;
+    const proxy = new Proxy(
+      { a: 1, k: 0 },
+      { get: (t, p) => (p === "k" ? ++n : (t as Record<string, unknown>)[p as string]) },
+    );
+    let err: unknown;
+    try {
+      canonicalize(proxy);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("unsupported_type");
+  });
+
+  it("boxed primitives are refused rather than becoming misleading JSON", () => {
+    // Without this they do not throw — they produce something plausible and
+    // wrong. new Number(1) and new Boolean(true) lose their value entirely.
+    expect(JSON.stringify({ k: new Number(1) })).toBe('{"k":1}');
+    for (const boxed of [new String("x"), new Number(1), new Boolean(true)]) {
+      let err: unknown;
+      try {
+        canonicalize({ k: boxed });
+      } catch (e) {
+        err = e;
+      }
+      expect(err, `${boxed.constructor.name} was not refused`).toBeInstanceOf(
+        CanonicalizationError,
+      );
+    }
+  });
+
+  it("inherited properties are excluded; only own members are canonicalized", () => {
+    const proto = { inherited: "must not appear" };
+    const child = Object.create(proto) as Record<string, unknown>;
+    child.own = 1;
+    expect(canonicalize(child)).toBe('{"own":1}');
+  });
+
+  it("a null-prototype object canonicalizes like any other", () => {
+    const np = Object.create(null) as Record<string, unknown>;
+    np.b = 1;
+    np.a = 2;
+    expect(canonicalize(np)).toBe('{"a":2,"b":1}');
+  });
+
   it("integer-like keys sort by code unit, not by JS integer-key order", () => {
     // Object.keys returns integer-like keys first, ascending numerically:
     // ["1","2","10","b"]. RFC 8785 wants "1","10","2","b".
