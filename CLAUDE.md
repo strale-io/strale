@@ -317,8 +317,21 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 
 5. **Polishing is not a substitute for verification.** A cleaner-looking PR containing a fabricated import is worse than the original. If a bot finding points at prose but the code example has an import problem underneath, fix the import first and the prose second, or stop and flag.
 
+6. **Run the production contract smoke test after every publish.** Install the
+   published artefact the way a stranger would (`npx -y <pkg>@<version>`), run it
+   against production, and record the observed startup values -- not "looks fine".
+   Look specifically for errors the program logs and then continues from: a caught,
+   logged, non-fatal degradation is what CI cannot see and users never report.
+   CI tests source against doubles; it never runs the published artefact against
+   production, and that gap is where this class of defect lives. On 2026-08-22 this
+   check found `strale-mcp` had shipped `0 cap trust, 0 sol trust` for ~3.5 months
+   (routes deleted in May; the admin wall on their prefix answered 401 instead of
+   404; the client logged to invisible stderr and carried on). Procedure and the
+   per-package contract: `docs/release/npm-publishing.md`.
+
 **At session end, report:**
 - Every distribution PR touched, with the verification result for each.
+- Every package published, with the observed production smoke-test values.
 - Every `*-strale` package modified, with the check-framework-packages output.
 - Anything that couldn't be verified and why.
 
