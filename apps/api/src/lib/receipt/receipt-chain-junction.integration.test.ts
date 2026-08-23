@@ -358,6 +358,81 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     expect(r.receipt_failure_reason).toBe("not_yet_built");
   });
 
+  it("A ROW THE WORKER CANNOT UPDATE COSTS THAT ROW, NOT THE CHAIN", async () => {
+    // Reviewer-found, and it is Phase 4's round-three defect in a new shape.
+    //
+    // `transactions_post_epoch_has_receipt` is NOT VALID, which in Postgres
+    // skips the initial table scan but STILL ENFORCES ON UPDATE. So a
+    // post-epoch row with a NULL receipt_status cannot be updated by anyone -
+    // including this worker, which admits it (`receiptStatus IS NULL` is on
+    // the admission allowlist, because that is what a legacy row looks like).
+    //
+    // The tick is one transaction. Before the per-row SAVEPOINT, the first
+    // failing UPDATE poisoned it, every later statement raised 25P02, the
+    // per-row catch swallowed the cascade, and the tick rolled back - so
+    // NOTHING chained, permanently, retrying every 30 seconds.
+    //
+    // Such a row is hard to create by accident and trivial to create by
+    // operation: `drizzle-kit push` drops the constraint, and re-adding it
+    // NOT VALID does not scan for rows that already violate it. That is
+    // exactly what this test does, restoring the original definition
+    // afterwards so the epoch instant is not disturbed.
+    const [{ def }] = (await db.execute(sql`
+      SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+       WHERE conname = 'transactions_post_epoch_has_receipt'
+    `)) as unknown as Array<{ def: string }>;
+    expect(def, "the epoch constraint is missing; this test would prove nothing").toContain(
+      "receipt_status IS NOT NULL",
+    );
+
+    const poison = randomUUID();
+    const healthy = await agedTransaction();
+
+    await db.execute(sql`
+      ALTER TABLE transactions DROP CONSTRAINT transactions_post_epoch_has_receipt
+    `);
+    try {
+      await db.execute(sql`
+        INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                  data_jurisdiction, input, created_at, completed_at,
+                                  receipt_status, receipt_failure_reason)
+        VALUES (${poison}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU',
+                '{}'::jsonb, now() - interval '2 minutes', now() - interval '2 minutes',
+                NULL, NULL)
+      `);
+    } finally {
+      // Same definition, so the epoch is unchanged.
+      await db.execute(
+        sql.raw(
+          `ALTER TABLE transactions ADD CONSTRAINT transactions_post_epoch_has_receipt ${def}`,
+        ),
+      );
+    }
+
+    // Sanity: the row really is un-updatable, or the test proves nothing.
+    await expect(
+      db.execute(sql`
+        UPDATE transactions SET latency_ms = 1 WHERE id = ${poison}::uuid
+      `),
+    ).rejects.toThrow(/transactions_post_epoch_has_receipt/);
+
+    await runOnce();
+
+    // The property: the innocent neighbour still chained.
+    const h = await row(healthy);
+    expect(
+      h.integrity_hash,
+      "one un-updatable row stopped the whole chain - the savepoint is not working",
+    ).not.toBeNull();
+
+    // And the poison row did not chain, which is correct and expected.
+    const p = await row(poison);
+    expect(p.integrity_hash).toBeNull();
+
+    // DELETE is still permitted - the CHECK constrains INSERT and UPDATE.
+    await db.execute(sql`DELETE FROM transactions WHERE id = ${poison}::uuid`);
+  });
+
   it("the worker chains a row exactly once", async () => {
     const id = await agedTransaction();
     await completeReceipt(id);

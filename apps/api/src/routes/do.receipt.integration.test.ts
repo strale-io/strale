@@ -50,6 +50,7 @@ describeMaybe("execution receipts bind what the caller received", () => {
   let okSlug: string;
   let freeSlug: string;
   let boomSlug: string;
+  let mixedSlug: string;
   const seeded: { userId: string; walletId: string }[] = [];
   const seededCaps: string[] = [];
 
@@ -61,6 +62,7 @@ describeMaybe("execution receipts bind what the caller received", () => {
     okSlug = `p5-receipt-ok-${randomUUID().slice(0, 8)}`;
     freeSlug = `p5-receipt-free-${randomUUID().slice(0, 8)}`;
     boomSlug = `p5-receipt-boom-${randomUUID().slice(0, 8)}`;
+    mixedSlug = `p5-receipt-mixed-${randomUUID().slice(0, 8)}`;
 
     registerCapability(okSlug, async (input: any) => ({
       // Deliberately nested and mixed-type: a shape where a lossy
@@ -72,12 +74,26 @@ describeMaybe("execution receipts bind what the caller received", () => {
       },
       provenance: { source: "p5-test", fetched_at: new Date().toISOString() },
     }));
+    registerCapability(mixedSlug, async (input: any) => ({
+      output: { echo: input?.probe ?? null },
+      provenance: { source: "p5-test", fetched_at: new Date().toISOString() },
+    }));
     registerCapability(freeSlug, async (input: any) => ({
       output: { free: true, echo: input?.probe ?? null },
       provenance: { source: "p5-test", fetched_at: new Date().toISOString() },
     }));
     registerCapability(boomSlug, async () => {
-      throw new Error("p5 deliberate executor failure");
+      // The message MUST be one the sanitiser rewrites, or this test proves
+      // nothing. The first version threw "p5 deliberate executor failure" - no
+      // URL, no hostname, no provider name, no network code - so
+      // sanitizeFailureReason was the identity function on it, and the test
+      // passed while settle.ts was binding the raw string on a rail that
+      // stores raw. A reviewer measured the real gap at 14.8% of production
+      // failures.
+      //
+      // This one contains a hostname and a provider-shaped token, so raw and
+      // sanitised differ and the assertion has something to catch.
+      throw new Error("VAT service at ec.europa.eu returned MS_UNAVAILABLE");
     });
 
     ({ app } = await import("../app.js"));
@@ -164,7 +180,7 @@ describeMaybe("execution receipts bind what the caller received", () => {
   function digestFromResponse(
     row: Record<string, unknown>,
     body: any,
-    opts: { status: "completed" | "failed" },
+    opts: { status: "completed" | "failed"; method?: "algorithmic" | "ai_generated" | "mixed" },
   ): string {
     const built = buildExecutionReceipt(
       {
@@ -181,9 +197,19 @@ describeMaybe("execution receipts bind what the caller received", () => {
         result: opts.status === "completed" ? body.result.output : null,
         error:
           opts.status === "failed"
-            ? { code: "execution_failed", message: String(body?.details?.error ?? "") }
+            ? {
+                code: "execution_failed",
+                // What the caller was handed, not what we stored.
+                message: String(body?.details?.error ?? ""),
+              }
             : null,
-        method: row.transparency_marker as "algorithmic",
+        // `hybrid` is the marker spelling of `mixed`; the receipt records the
+        // method, not the marker.
+        method:
+          opts.method ??
+          ((row.transparency_marker === "hybrid"
+            ? "mixed"
+            : row.transparency_marker) as "algorithmic"),
         sourceObservation: deriveSourceObservation(row.provenance, "live-fetch"),
       },
       { NODE_ENV: "test" } as NodeJS.ProcessEnv,
@@ -270,11 +296,75 @@ describeMaybe("execution receipts bind what the caller received", () => {
     expect(row.receipt_status, "a failed execution still gets a receipt").toBe("complete");
     expect(row.receipt_rail).toBe("v1_do");
 
+    // The fixture has to be one the sanitiser changes, or the assertion below
+    // is vacuous. Asserted rather than assumed, because that is exactly how
+    // this test passed while the code was wrong.
+    const rawStored = row.error as string;
+    const servedToCaller = String(body?.details?.error ?? "");
+    expect(
+      servedToCaller,
+      "fixture is too weak: the raw and sanitised messages are identical, so " +
+        "this test cannot tell whether the receipt bound the right one",
+    ).not.toBe(rawStored);
+    expect(rawStored).toContain("ec.europa.eu");
+    expect(servedToCaller).toContain("[service]");
+
     // `/v1/do` puts the real message under details.error, not a top-level
     // `error` key. The receipt must bind THAT string.
     expect(digestFromResponse({ ...row, c_slug: boomSlug }, body, { status: "failed" })).toBe(
       row.receipt_digest,
     );
+  });
+
+  it("a MIXED capability is not committed as `algorithmic`", async () => {
+    // routes/do.ts maps transparency_tag 'mixed' to the marker 'hybrid', which
+    // is not one of the receipt's three methods, and settle used to fall back
+    // to 'algorithmic' for anything it did not recognise - so the receipt
+    // asserted "no model was involved" about an execution that declares one.
+    // A reviewer measured 8,010 of ~193,600 production rows over 30 days.
+    const capId = randomUUID();
+    seededCaps.push(capId);
+    await db.insert(capabilities).values({
+      id: capId,
+      slug: mixedSlug,
+      name: `P5 mixed probe ${mixedSlug}`,
+      description: "Seeded by the Phase 5 receipt binding test.",
+      category: "developer-tools",
+      inputSchema: { type: "object", properties: { probe: { type: "string" } } },
+      outputSchema: { type: "object", properties: { echo: { type: "string" } } },
+      priceCents: PRICE_CENTS,
+      isActive: true,
+      transparencyTag: "mixed",
+      avgLatencyMs: 50,
+      lifecycleState: "active",
+      visible: true,
+    });
+    const apiKey = await seedUser();
+
+    const res = await callDo(apiKey, {
+      capability_slug: mixedSlug,
+      inputs: { probe: "mixed" },
+      max_price_cents: PRICE_CENTS,
+    });
+    expect(res.status, JSON.stringify(await res.clone().json())).toBe(200);
+    const body: any = await res.json();
+    const row = await receiptRow(body.result.transaction_id);
+
+    // The row really does carry the non-member marker, so this is the live case.
+    expect(row.transparency_marker).toBe("hybrid");
+    expect(row.receipt_status).toBe("complete");
+
+    // Rebuilt as `mixed` matches; rebuilt as `algorithmic` does not.
+    const asMixed = digestFromResponse({ ...row, c_slug: mixedSlug }, body, {
+      status: "completed",
+      method: "mixed",
+    });
+    const asAlgorithmic = digestFromResponse({ ...row, c_slug: mixedSlug }, body, {
+      status: "completed",
+      method: "algorithmic",
+    });
+    expect(asMixed).toBe(row.receipt_digest);
+    expect(asAlgorithmic).not.toBe(row.receipt_digest);
   });
 
   it("the receipt records the serving commit, and outside production that is the sentinel", async () => {

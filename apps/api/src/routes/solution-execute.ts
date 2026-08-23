@@ -28,7 +28,7 @@ import { solutions, wallets, walletTransactions, transactions } from "../db/sche
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
-import { executeSolution } from "../lib/solution-executor.js";
+import { stepsThatRan, executeSolution } from "../lib/solution-executor.js";
 import {
   aggregateSolutionOutcome,
   assessOutput,
@@ -344,9 +344,13 @@ solutionExecuteRoute.post(
             complianceHashState: "pending",
           })
           .where(eq(transactions.id, transactionId));
-        // No step produced output, so every declared step is `skipped`.
+        // executeSolution THREW. Steps may well have run before it did, and
+        // we have no result map to tell which - so the honest answer is
+        // `stepsUnknown`, which marks every declared step `unresolved`.
+        // Passing an empty ranStepSlugs would mark them all `skipped`, and
+        // `skipped` is a positive claim that a step never executed.
         await settleExecutionReceipt(db, {
-          transactionId, rail: "v1_do", solutionSlug: slug, ranStepSlugs: [],
+          transactionId, rail: "v1_do", solutionSlug: slug, stepsUnknown: true,
         });
       } catch (e) {
         c.get("log").error(
@@ -590,7 +594,7 @@ solutionExecuteRoute.post(
       transactionId,
       rail: "v1_do",
       solutionSlug: sol.slug,
-      ranStepSlugs: Object.keys(execResult.steps ?? {}),
+      ranStepSlugs: stepsThatRan(execResult.steps ?? {}),
     });
 
     // ── 8. Build response ─────────────────────────────────────────────

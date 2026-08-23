@@ -3305,45 +3305,50 @@ export async function runMigration0109_receiptEpoch(
 ): Promise<BlockResult> {
   const startedAt = Date.now();
 
-  // The DEFAULTS are set unconditionally, the EPOCH is chosen once.
+  // ONE statement, so the whole thing is atomic.
   //
-  // Both were inside the same guard at first, and that made the block unable to
-  // repair itself: drop either default by hand and every later run skips the
-  // whole thing, because the constraint it was guarded on still exists. The
-  // block would then report success forever while production could not write.
-  // Proven by dropping the reason default and re-running.
+  // These used to be four separate `tx.execute` calls, and blocks are
+  // autocommitted per statement - `runStartupMigrations` hands each block the
+  // pooled `db`, not a transaction. So when the probe at the end refused, the
+  // two SET DEFAULTs and the epoch CHECK had ALREADY COMMITTED. Boot then
+  // aborted, Railway kept the previous deployment serving, and that previous
+  // deployment had the new defaults and no sweeper: every new row would sit
+  // `pending`, nothing would chain, and /v1/audit/:id would answer 202 forever
+  // until someone rolled forward. The refusal was supposed to be the safe
+  // outcome and it was the dangerous one. Reviewer-found.
   //
-  // SET DEFAULT is idempotent and catalog-only, so there is no cost to doing it
-  // on every boot, and it is now self-healing.
-  await tx.execute(sql`
-    ALTER TABLE transactions ALTER COLUMN receipt_status SET DEFAULT 'pending'
-  `);
-
-  // BOTH columns, and the second is not optional.
+  // A plpgsql DO block is a single statement, so a RAISE anywhere inside it
+  // unwinds every DDL it performed. Refusing now genuinely changes nothing.
   //
-  // Block 0107 added transactions_receipt_reason_required: a row whose status
-  // is 'pending' or 'failed' must SAY why. Defaulting the status alone
-  // therefore makes EVERY INSERT into transactions violate that CHECK -- every
-  // /v1/do call, every x402 call, every internal harness tick, 500 on the
-  // insert. The migration still applies cleanly, because the CHECK is NOT VALID
-  // and existing rows are never scanned; the platform simply stops being able
-  // to write.
+  // The three things it does, in order that matters:
   //
-  // Found by the integration lane, and worth recording plainly: the entire unit
-  // suite was green while it was true.
+  //  1. Both DEFAULTS, unconditionally. `receipt_status` alone is not enough:
+  //     block 0107's transactions_receipt_reason_required means a row that is
+  //     `pending` must SAY why, so defaulting the status without the reason
+  //     makes EVERY INSERT into transactions fail - every /v1/do call, every
+  //     x402 call, every harness tick. The migration would still apply
+  //     cleanly, because that CHECK is NOT VALID and existing rows are never
+  //     scanned; the platform would simply stop being able to write.
+  //     Unconditional, so a hand-dropped default is repaired rather than
+  //     skipped forever by a guard on something else.
   //
-  // 'not_yet_built' is the reason markReceiptPending already writes. It is in
-  // the closed set from 0108 and is explicitly NOT a failure -- it is the
-  // ordinary transient state of a row whose receipt is coming.
-  await tx.execute(sql`
-    ALTER TABLE transactions ALTER COLUMN receipt_failure_reason SET DEFAULT 'not_yet_built'
-  `);
-
-  // The epoch instant is chosen exactly once in the lifetime of the database,
-  // so this one IS guarded -- re-running must not move it.
+  //  2. The epoch CHECK, guarded, because the epoch instant must be chosen
+  //     exactly once in the lifetime of the database and re-running must not
+  //     move it.
+  //
+  //  3. A behavioural self-check, because reading the catalog is not proof.
+  //     The defect above was invisible to every catalog query: the default was
+  //     present and correct, the CHECK was present and correct, and together
+  //     they made every INSERT fail. The only thing that can tell the
+  //     difference is doing what production does - so this inserts an ordinary
+  //     row (the same shape /health/deep has used 507 times in production) and
+  //     unwinds it via a deliberate RAISE inside a nested subtransaction.
   await tx.execute(sql`
     DO $$
     BEGIN
+      ALTER TABLE transactions ALTER COLUMN receipt_status SET DEFAULT 'pending';
+      ALTER TABLE transactions ALTER COLUMN receipt_failure_reason SET DEFAULT 'not_yet_built';
+
       IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'transactions_post_epoch_has_receipt'
       ) THEN
@@ -3353,6 +3358,22 @@ export async function runMigration0109_receiptEpoch(
           now()
         );
       END IF;
+
+      BEGIN
+        INSERT INTO transactions
+          (solution_slug, status, input, price_cents, transparency_marker,
+           data_jurisdiction, is_free_tier)
+        VALUES ('_receipt_epoch_probe', 'health_probe', '{}', 0, 'algorithmic', 'EU', true);
+        RAISE EXCEPTION 'receipt_epoch_probe_rollback';
+      EXCEPTION
+        WHEN OTHERS THEN
+          IF SQLERRM <> 'receipt_epoch_probe_rollback' THEN
+            RAISE EXCEPTION
+              '0109: with the receipt defaults in place an ordinary INSERT into '
+              'transactions is refused, so production would be unable to write: %',
+              SQLERRM;
+          END IF;
+      END;
     END $$
   `);
 
@@ -3403,35 +3424,6 @@ export async function runMigration0109_receiptEpoch(
   // which is the right outcome -- Railway does not cut over a failed deploy,
   // so the previous commit keeps serving instead of the new one refusing every
   // write.
-  // A plpgsql block with an EXCEPTION handler, not SAVEPOINT: blocks do not
-  // necessarily run inside an explicit transaction (SAVEPOINT raised 25P01
-  // here), while BEGIN ... EXCEPTION establishes an implicit subtransaction
-  // that unwinds the INSERT either way.
-  //
-  // The deliberate RAISE is how the probe row is discarded. If the INSERT
-  // itself is refused, SQLERRM is something else and that is re-raised with a
-  // message saying what it really means.
-  await tx.execute(sql`
-    DO $$
-    BEGIN
-      BEGIN
-        INSERT INTO transactions
-          (solution_slug, status, input, price_cents, transparency_marker,
-           data_jurisdiction, is_free_tier)
-        VALUES ('_receipt_epoch_probe', 'health_probe', '{}', 0, 'algorithmic', 'EU', true);
-        RAISE EXCEPTION 'receipt_epoch_probe_rollback';
-      EXCEPTION
-        WHEN OTHERS THEN
-          IF SQLERRM <> 'receipt_epoch_probe_rollback' THEN
-            RAISE EXCEPTION
-              '0109: with the receipt defaults in place an ordinary INSERT into '
-              'transactions is refused, so production would be unable to write: %',
-              SQLERRM;
-          END IF;
-      END;
-    END $$
-  `);
-
   const row = verify[0];
   if (!row?.default_expr || !row.default_expr.includes("pending")) {
     throw new Error(

@@ -1866,7 +1866,12 @@ async function recordTestQuality(
   const db = getDb();
 
   const [cap] = await db
-    .select({ outputSchema: capabilities.outputSchema, id: capabilities.id })
+    .select({
+      outputSchema: capabilities.outputSchema,
+      id: capabilities.id,
+      // Needed for the Art. 50 marker below, which used to be a constant.
+      transparencyTag: capabilities.transparencyTag,
+    })
     .from(capabilities)
     .where(eq(capabilities.slug, capabilitySlug))
     .limit(1);
@@ -1886,7 +1891,19 @@ async function recordTestQuality(
       status: executionError ? "failed" : "completed",
       input: {},
       priceCents: 0,
-      transparencyMarker: "algorithmic",
+      // The capability's own declaration, not a constant.
+      //
+      // This hardcoded 'algorithmic' for every harness row - 99.3% of platform
+      // traffic - including capabilities that declare ai_generated or mixed.
+      // transparency_marker is the EU AI Act Art. 50 marker, so that was a
+      // fabricated disclosure independently of receipts; it also fed a
+      // receipt asserting no model was involved. Reviewer-found.
+      transparencyMarker:
+        cap.transparencyTag === "algorithmic"
+          ? "algorithmic"
+          : cap.transparencyTag === "mixed"
+            ? "hybrid"
+            : "ai_generated",
       dataJurisdiction: "EU",
       error: executionError,
       latencyMs: responseTimeMs,

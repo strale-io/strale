@@ -45,7 +45,7 @@ import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { executeSolution } from "../lib/solution-executor.js";
+import { executeSolution, stepsThatRan } from "../lib/solution-executor.js";
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import { isX402RailEligible } from "../lib/x402-eligibility.js";
 import {
@@ -881,7 +881,7 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
         transactionId: insertedId,
         rail: "x402",
         solutionSlug: args.solutionSlug,
-        ranStepSlugs: args.solutionSlug && stepMap ? Object.keys(stepMap) : [],
+        ranStepSlugs: args.solutionSlug && stepMap ? stepsThatRan(stepMap) : [],
       });
     }
 

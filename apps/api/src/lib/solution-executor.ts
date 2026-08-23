@@ -305,6 +305,35 @@ export function evaluateGates(
 }
 
 /**
+ * The steps that actually executed, out of a step-result map.
+ *
+ * `stepResults` is keyed by EVERY declared step, not only the ones that ran.
+ * Four branches put a placeholder in for a step that never executed:
+ * `markSkippedByGate` below, the executor-unavailable branch, the
+ * platform-withheld branch, and the all-inputs-null branch. Three of them are
+ * there deliberately, because a solution advertising 14 steps that audits 13
+ * with no gap marker was itself a money-integrity finding.
+ *
+ * So `Object.keys(stepResults)` is the RECIPE, not the run. Receipt callers
+ * used it as the run, which marked gate-skipped steps `ran` and gave them a
+ * manifest digest - the exact under-specification PHASE-2-SPEC section 5
+ * exists to prevent, and it made `disposition` a constant on every production
+ * solution path. Reviewer-found.
+ *
+ * The rule lives here, next to the code that authors the shape, so a fifth
+ * placeholder branch cannot be added without this being in view.
+ */
+export function stepsThatRan(stepResults: Record<string, unknown>): string[] {
+  return Object.entries(stepResults)
+    .filter(([, v]) => {
+      if (!v || typeof v !== "object") return true;
+      const o = v as Record<string, unknown>;
+      return o.skipped !== true && o.unavailable !== true;
+    })
+    .map(([slug]) => slug);
+}
+
+/**
  * Fill in the steps a tripped gate prevented. Never overwrites a step that
  * already ran — a gate stops what is left, it does not rewrite history.
  */

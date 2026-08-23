@@ -57,6 +57,7 @@ import {
 import { markReceiptComplete, markReceiptFailed } from "./receipt-lifecycle.js";
 import { resolveDeployCommit } from "./deploy-identity.js";
 import { log } from "../log.js";
+import { sanitizeFailureReason } from "../sanitize.js";
 
 type Db = ReturnType<typeof getDb>;
 
@@ -111,13 +112,56 @@ interface TxnRow {
   solution_slug: string | null;
   receipt_rail: string | null;
   receipt_deploy_commit: string | null;
+  redacted_at: unknown;
+  deleted_at: unknown;
   [k: string]: unknown;
 }
 
-function asMethod(marker: string | null): ExecutionMethod {
-  return (EXECUTION_METHODS as readonly string[]).includes(marker ?? "")
-    ? (marker as ExecutionMethod)
-    : "algorithmic";
+/**
+ * The EU AI Act transparency marker, as one of the receipt's three methods.
+ *
+ * ## Why a fallback to `algorithmic` was the wrong shape
+ *
+ * The previous version returned `algorithmic` for anything outside the closed
+ * set, and three production sources land outside it - so the receipt asserted
+ * "no model was involved" for executions that declare one:
+ *
+ *  1. `routes/do.ts` maps a `mixed` capability to the marker `hybrid`, which
+ *     is not a member. `lib/audit-helpers.ts` has always treated `hybrid` and
+ *     `mixed` as the same thing; only this enum disagreed.
+ *  2. `lib/test-runner.ts` hardcoded `algorithmic` for every internal-harness
+ *     row - 99.3% of platform traffic - including AI capabilities. Fixed at
+ *     the source in that file; the declaration fallback below also covers it.
+ *  3. `jobs/settlement-reconciler.ts` writes `unknown`, with a comment
+ *     explaining that inheriting a marker would be "a fabricated EU AI Act
+ *     Art. 50 marker on a call we cannot describe" - and the fallback then
+ *     fabricated one anyway, one file over.
+ *
+ * Measured by the reviewer against 30 days of production: 8,010 of ~193,600
+ * rows (4.1%) would have carried a receipt claiming no model was involved.
+ *
+ * Note the asymmetry that made this easy to miss: an unmapped RAIL is a
+ * refusal, because "a permissive fallback is how the wrong rail gets
+ * asserted". An unmapped METHOD had a permissive fallback to the least
+ * disclosive value. Both are now refusals.
+ *
+ * Returns null when the method cannot be established, and the caller records
+ * an invariant failure rather than guessing.
+ */
+export function asMethod(
+  marker: string | null,
+  declaredTag: string | null,
+): ExecutionMethod | null {
+  for (const candidate of [marker, declaredTag]) {
+    if (!candidate) continue;
+    // `hybrid` is the marker spelling of `mixed`. Not a fallback: the same
+    // fact under the name routes/do.ts writes.
+    const normalized = candidate === "hybrid" ? "mixed" : candidate;
+    if ((EXECUTION_METHODS as readonly string[]).includes(normalized)) {
+      return normalized as ExecutionMethod;
+    }
+  }
+  return null;
 }
 
 /**
@@ -148,13 +192,38 @@ export function deriveSourceObservation(
 /**
  * The caller-visible error, as a closed shape.
  *
- * `transactions.error` is the sanitised message the caller already received -
- * the production sanitiser has already redacted URLs by the time it is stored
- * - so this binds what was served rather than an internal string.
+ * ## Why this sanitises rather than trusting the column
+ *
+ * The previous version of this function bound `row.error` directly, and its
+ * comment asserted as fact that "the production sanitiser has already redacted
+ * URLs by the time it is stored". That is true on two rails and false on a
+ * third, which is the worst possible distribution for an assumption.
+ *
+ * `solution-execute.ts` and `x402-gateway-v2.ts` store
+ * `sanitizeFailureReason(...)`. The `/v1/do` capability rails store the RAW
+ * `err.message` and sanitise only on the way out, at `routes/do.ts` :1778,
+ * :1968 and :2344. So on those rails the receipt committed to a string the
+ * caller never saw - and a party holding the request and the response could
+ * not recompute the digest, which is the single thing this system exists to
+ * make possible.
+ *
+ * Reviewer-found, and measured against production rather than argued: over
+ * seven days, 5,016 of 33,952 failed rows (14.8%) have a raw message that
+ * differs from its sanitised form. `fetch failed` becomes "External service
+ * temporarily unavailable"; anything carrying a URL or hostname becomes
+ * `[service]`; every ENOTFOUND/ETIMEDOUT becomes "Service temporarily
+ * unreachable".
+ *
+ * Sanitising HERE rather than changing what the rails store keeps raw
+ * diagnostics in the column where operators expect them, and makes the
+ * receipt's own contract - `ReceiptInput.error` says "the sanitised,
+ * caller-visible error" - true for every rail rather than for two of three.
+ * `sanitizeFailureReason` is idempotent (verified over the real production
+ * failure corpus), so applying it to an already-sanitised message is a no-op.
  */
 function toReceiptError(row: TxnRow): { code: string; message: string } | null {
   if (row.status !== "failed") return null;
-  return { code: "execution_failed", message: row.error ?? "" };
+  return { code: "execution_failed", message: sanitizeFailureReason(row.error) };
 }
 
 /**
@@ -186,7 +255,7 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
   const rows = (await db.execute(sql`
     SELECT t.id, t.status, t.input, t.output, t.error, t.provenance,
            t.transparency_marker, t.receipt_status, t.capability_id, t.solution_slug,
-           t.receipt_rail, t.receipt_deploy_commit,
+           t.receipt_rail, t.receipt_deploy_commit, t.redacted_at, t.deleted_at,
            c.slug              AS c_slug,
            c.name              AS c_name,
            c.input_schema      AS c_input_schema,
@@ -214,6 +283,22 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
   // Only a settled row can be committed to. An `executing` or `deferred` row
   // has no final result yet, and the async path settles later.
   if (row.status !== "completed" && row.status !== "failed") return;
+
+  // Content already erased. Narrow - retention runs at 90 days and settle runs
+  // in milliseconds - but account closure can redact inside the async window,
+  // and migration 0103's trigger nulls `output` when it does.
+  //
+  // Hashing then would produce a receipt that VERIFIES against a false claim:
+  // "this completed execution returned null". A receipt that verifies against
+  // something untrue is worse than no receipt, so this refuses instead.
+  if (row.redacted_at != null || row.deleted_at != null) {
+    log.warn(
+      { label: "receipt-content-already-redacted", transaction_id: row.id },
+      "content was erased before the receipt was built; refusing to commit to it",
+    );
+    await markReceiptFailed(db, row.id, "internal_error");
+    return;
+  }
 
   // Someone already terminalised this receipt. markReceiptComplete is guarded
   // on `pending` anyway, but returning early keeps a duplicate call from
@@ -329,6 +414,27 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
     return;
   }
 
+  const method = asMethod(
+    row.transparency_marker,
+    (row.c_transparency_tag as string | null) ?? null,
+  );
+  if (!method) {
+    // Neither the row's marker nor the capability's declaration names a method
+    // we can commit to. Guessing here is how "no model was involved" gets
+    // asserted about an execution that used one.
+    log.warn(
+      {
+        label: "receipt-unresolvable-method",
+        transaction_id: row.id,
+        marker: row.transparency_marker,
+        declared_tag: row.c_transparency_tag,
+      },
+      "execution method could not be established; receipt refused",
+    );
+    await markReceiptFailed(db, row.id, "internal_error");
+    return;
+  }
+
   const input: ReceiptInput = {
     transactionId: row.id,
     subjectKind: isSolution ? "solution" : "capability",
@@ -343,7 +449,7 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
     // `result.output`, and `/v1/transactions/:id` serves the same value.
     result: row.status === "completed" ? (row.output ?? null) : null,
     error: toReceiptError(row),
-    method: asMethod(row.transparency_marker),
+    method,
     sourceObservation: deriveSourceObservation(
       row.provenance,
       (row.c_freshness_category as string | null) ?? null,

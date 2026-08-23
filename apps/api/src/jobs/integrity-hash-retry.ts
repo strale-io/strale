@@ -242,6 +242,24 @@ async function runOnce(): Promise<void> {
           staleCount++;
         }
 
+        // A SAVEPOINT per row, and it is the difference between "one row is
+        // stuck" and "the chain has stopped".
+        //
+        // The per-row try/catch below has been here since WP7 and reads like
+        // it isolates a failing row. It does not: the whole tick is ONE
+        // transaction, so a raised error poisons it, every later statement
+        // fails with 25P02, the catch swallows the cascade, and the tick rolls
+        // back. Nothing is chained, ever again, retrying every 30 seconds.
+        //
+        // Phase 4 hit exactly this blast radius through the 0108 trigger and
+        // fixed the trigger. A reviewer then reproduced it in Phase 5 through
+        // a different mechanism: `transactions_post_epoch_has_receipt` is NOT
+        // VALID, which still enforces on UPDATE, so a post-epoch row with a
+        // NULL receipt_status cannot be updated by anyone - including this
+        // worker, which admits it. Two independent causes, one shape.
+        //
+        // So the fix belongs here rather than at either cause. Any future
+        // reason a row cannot be updated now costs that row, not the chain.
         try {
           // WHICH RULE HASHES THIS ROW, decided here and recorded here.
           //
@@ -281,7 +299,17 @@ async function runOnce(): Promise<void> {
             chainVersion,
           );
 
-          await tx
+          // Drizzle's NESTED TRANSACTION, not a hand-written SAVEPOINT.
+          //
+          // Both emit SAVEPOINT/ROLLBACK TO, and the hand-written version
+          // looked like it worked - the rollback executed, later statements
+          // succeeded - but the transaction still failed AT COMMIT with the
+          // original error. postgres-js pipelines inside `begin()` and tracks
+          // the query error on the connection, so catching it in JS is not
+          // enough; the driver still aborts. Proven both ways with a minimal
+          // probe before choosing this.
+          await tx.transaction(async (sp) =>
+            sp
             .update(transactions)
             .set({
               integrityHash: hash,
@@ -299,7 +327,8 @@ async function runOnce(): Promise<void> {
               integrityPayloadVersion:
                 chainVersion === CHAIN_PAYLOAD_V2 ? CHAIN_PAYLOAD_V2 : null,
             })
-            .where(eq(transactions.id, txn.id));
+            .where(eq(transactions.id, txn.id)),
+          );
           currentPrevious = hash;
           completed++;
         } catch (err) {
@@ -309,11 +338,18 @@ async function runOnce(): Promise<void> {
 
           // If this row has been pending for well past STALE_WARN_MS, flip to
           // 'failed' so it stops clogging the queue and operators get a ping.
+          //
+          // In its own savepoint too: on a row that cannot be updated at all,
+          // THIS is a second statement that fails, and un-nested it would
+          // poison the tick exactly like the one that got us here.
           if (Date.now() - txn.createdAt.getTime() > STALE_WARN_MS * MAX_HASH_ATTEMPTS) {
             await tx
-              .update(transactions)
-              .set({ complianceHashState: "failed" })
-              .where(eq(transactions.id, txn.id))
+              .transaction(async (sp) =>
+                sp
+                  .update(transactions)
+                  .set({ complianceHashState: "failed" })
+                  .where(eq(transactions.id, txn.id)),
+              )
               .catch((err2) =>
                 logError("integrity-hash-mark-failed-failed", err2, { transactionId: txn.id }),
               );
