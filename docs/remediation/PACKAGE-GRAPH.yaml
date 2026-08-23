@@ -130,7 +130,7 @@ packages:
 
   WP10:
     title: Durable Job Coordinator
-    status: REVIEW
+    status: MERGED_DEPLOYED_UNDER_OBSERVATION
     depends_on: [WP1]
     risks: [CR-08]
     review: {codex: required, fable: optional}
