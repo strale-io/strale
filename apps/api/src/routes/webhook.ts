@@ -4,7 +4,7 @@ import { getDb } from "../db/index.js";
 import { wallets, walletTransactions } from "../db/schema.js";
 import { getStripe } from "../lib/stripe.js";
 import { log, logError } from "../lib/log.js";
-import { sendAlert } from "../lib/alerting.js";
+import { alertOnce } from "../lib/alert-once.js";
 import { assessTopUpSession } from "../lib/stripe-settlement.js";
 import * as walletService from "../lib/wallet-service.js";
 
@@ -24,6 +24,16 @@ const TOP_UP_EVENTS = new Set([
   "checkout.session.completed",
   "checkout.session.async_payment_succeeded",
 ]);
+
+/**
+ * One page per uncredited session per day.
+ *
+ * The missing-wallet branch answers 503, so Stripe redelivers on its own
+ * backoff schedule; without a cooldown that one incident becomes an email per
+ * retry. Incident 2026-08-14 is the case study — five identical CRITICALs in
+ * ninety minutes trained the reader to filter the alert that mattered.
+ */
+const UNCREDITED_ALERT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 // POST /webhooks/stripe — Stripe webhook for payment confirmation
 webhookRoute.post("/stripe", async (c) => {
@@ -70,25 +80,35 @@ webhookRoute.post("/stripe", async (c) => {
     if (assessment.kind === "escalate") {
       // The customer has paid and we cannot safely credit them. This is the
       // one branch that must never be quiet: the pre-WP11 handler logged and
-      // returned 200 for the equivalent cases, so a missing wallet or absent
-      // metadata consumed the event and the money simply never arrived in a
-      // balance.
+      // returned 200 for the equivalent cases, so absent metadata consumed the
+      // event and the money simply never arrived in a balance.
+      //
+      // 200 rather than a retryable 5xx, deliberately. Every condition that
+      // lands here is a property of the session object itself — no user_id, a
+      // currency the wallet cannot hold, an absent amount — and redelivering
+      // the same object cannot change any of them. Retrying would page four
+      // more times over three days and end in the same place. What was missing
+      // was never a retry; it was anyone finding out.
       logError(
         "stripe-webhook-uncredited-payment",
         new Error(`Paid Stripe session could not be credited: ${assessment.reason}`),
         { session_id: assessment.sessionId, event_type: event.type },
       );
-      await sendAlert({
-        subject: "Stripe payment received but not credited",
-        severity: "critical",
-        body:
-          `A paid Checkout Session could not be credited to a wallet.\n\n` +
-          `session: ${assessment.sessionId ?? "unknown"}\n` +
-          `event:   ${event.type}\n` +
-          `reason:  ${assessment.reason}\n\n` +
-          `The money is in Stripe. Reconcile from the Stripe dashboard and credit ` +
-          `the wallet manually through the wallet service.`,
-      }).catch((err) => logError("stripe-webhook-alert-failed", err));
+      await alertOnce(
+        `stripe-uncredited:${assessment.sessionId ?? "unknown"}`,
+        UNCREDITED_ALERT_COOLDOWN_MS,
+        {
+          subject: "Stripe payment received but not credited",
+          severity: "critical",
+          body:
+            `A paid Checkout Session could not be credited to a wallet.\n\n` +
+            `session: ${assessment.sessionId ?? "unknown"}\n` +
+            `event:   ${event.type}\n` +
+            `reason:  ${assessment.reason}\n\n` +
+            `The money is in Stripe. Reconcile from the Stripe dashboard and credit ` +
+            `the wallet manually through the wallet service.`,
+        },
+      ).catch((err) => logError("stripe-webhook-alert-failed", err));
       return c.json({ received: true });
     }
 
@@ -156,25 +176,39 @@ webhookRoute.post("/stripe", async (c) => {
     });
 
     if (walletMissing) {
-      // After WP11's atomic signup a user without a wallet is unreachable —
-      // which is exactly why reaching it means something is wrong that a log
-      // line will not fix.
+      // Unlike the escalate branch above, this one IS retryable, and that is
+      // the difference WP1 pinned when it recorded this case as a known
+      // money-loss path. A wallet can appear between deliveries — an operator
+      // opens one, or an account repair runs — so a 503 buys the payment
+      // Stripe's own retry schedule instead of consuming the event with a 200.
+      //
+      // After WP11's atomic signup a user without a wallet is unreachable
+      // through the signup paths, which is exactly why reaching it means
+      // something is wrong that a log line will not fix. The page is
+      // deduplicated per session so the retry schedule cannot turn one
+      // incident into five identical emails.
       logError(
         "stripe-webhook-uncredited-payment",
         new Error("Paid Stripe session has no wallet to credit"),
         { session_id: assessment.sessionId, user_id: assessment.userId },
       );
-      await sendAlert({
-        subject: "Stripe payment received but not credited",
-        severity: "critical",
-        body:
-          `A paid Checkout Session has no wallet to credit.\n\n` +
-          `session: ${assessment.sessionId}\n` +
-          `user:    ${assessment.userId}\n` +
-          `amount:  ${assessment.amountCents} cents\n\n` +
-          `The money is in Stripe. Open the account's wallet and credit it ` +
-          `through the wallet service.`,
-      }).catch((err) => logError("stripe-webhook-alert-failed", err));
+      await alertOnce(
+        `stripe-uncredited:${assessment.sessionId}`,
+        UNCREDITED_ALERT_COOLDOWN_MS,
+        {
+          subject: "Stripe payment received but not credited",
+          severity: "critical",
+          body:
+            `A paid Checkout Session has no wallet to credit.\n\n` +
+            `session: ${assessment.sessionId}\n` +
+            `user:    ${assessment.userId}\n` +
+            `amount:  ${assessment.amountCents} cents\n\n` +
+            `The money is in Stripe and the webhook is being retried. Open the ` +
+            `account's wallet so the next delivery lands, or credit it manually ` +
+            `through the wallet service.`,
+        },
+      ).catch((err) => logError("stripe-webhook-alert-failed", err));
+      return c.json({ error: "wallet_missing", received: false }, 503);
     } else if (credited) {
       log.info(
         {

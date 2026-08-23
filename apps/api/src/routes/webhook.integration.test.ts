@@ -59,19 +59,40 @@ function stripeSignature(payload: string, secret = WEBHOOK_SECRET): string {
   return `t=${timestamp},v1=${signature}`;
 }
 
+/**
+ * WP11: the fixture now carries the fields Stripe actually settles on.
+ *
+ * It did not before, and it did not need to — the pre-WP11 handler read only
+ * `metadata`, so a session object with no `payment_status`, no `amount_total`
+ * and no `currency` credited a wallet exactly as a real one would. That is the
+ * defect stated as a fixture: a test double this incomplete was
+ * indistinguishable from a paid session, because the code could not tell the
+ * difference either.
+ */
 function checkoutCompleted(opts: {
   sessionId: string;
   userId?: string;
   amountCents?: string;
+  /** Defaults to the metadata amount, so the two agree unless a test varies them. */
+  amountTotal?: number | null;
+  paymentStatus?: string | null;
+  currency?: string | null;
+  eventType?: string;
 }): string {
+  const declared = opts.amountCents ? Number.parseInt(opts.amountCents, 10) : undefined;
   return JSON.stringify({
     id: `evt_${randomUUID()}`,
     object: "event",
-    type: "checkout.session.completed",
+    type: opts.eventType ?? "checkout.session.completed",
     data: {
       object: {
         id: opts.sessionId,
         object: "checkout.session",
+        payment_status:
+          opts.paymentStatus === undefined ? "paid" : opts.paymentStatus,
+        currency: opts.currency === undefined ? "eur" : opts.currency,
+        amount_total:
+          opts.amountTotal === undefined ? (declared ?? null) : opts.amountTotal,
         metadata: {
           ...(opts.userId ? { user_id: opts.userId } : {}),
           ...(opts.amountCents ? { amount_cents: opts.amountCents } : {}),
@@ -276,19 +297,22 @@ describeMaybe("POST /webhooks/stripe — crediting against a real database", () 
     expect(await balanceOf(walletId)).toBe(12_346);
   });
 
-  // -- Known money-loss paths (CR-01 / CR-09), pinned deliberately -----------
+  // -- The two money-loss paths WP1 pinned, now inverted (WP11) --------------
   //
-  // Both return 200, so Stripe stops retrying and the payment is never
-  // credited. These tests assert CURRENT behaviour so the loss is visible and
-  // measurable; WP11 changes it to a retryable failure, at which point these
-  // expectations must be inverted. They exist to make the bug impossible to
-  // forget, not to bless it.
+  // WP1 wrote these as PINS BUG tests asserting that both returned 200, so
+  // Stripe stopped retrying and the payment was never credited. Its note said
+  // "WP11 changes it to a retryable failure, at which point these expectations
+  // must be inverted." They are inverted here — but not identically, because
+  // the two cases are not the same kind of failure and treating them alike
+  // would be cargo-culting the instruction rather than following it.
 
-  it("PINS BUG: a paid session for a user with no wallet is silently dropped", async () => {
+  it("a paid session for a user with no wallet is retried, not consumed", async () => {
+    // Retryable: a wallet can appear between deliveries. A 200 here is what
+    // made the money vanish — it told Stripe the event was handled.
     const orphanUserId = randomUUID();
     await db.insert(users).values({
       id: orphanUserId,
-      email: `wp1-orphan-${orphanUserId}@example.test`,
+      email: `wp11-orphan-${orphanUserId}@example.test`,
       apiKeyHash: `hash-${orphanUserId}`,
       keyPrefix: "sk_test_wp1",
     });
@@ -302,8 +326,7 @@ describeMaybe("POST /webhooks/stripe — crediting against a real database", () 
         }),
       );
 
-      // 200 tells Stripe "handled" — it will not retry. The money is gone.
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(503);
       const ledger = await db
         .select()
         .from(walletTransactions)
@@ -314,10 +337,93 @@ describeMaybe("POST /webhooks/stripe — crediting against a real database", () 
     }
   });
 
-  it("PINS BUG: a paid session with missing metadata is silently dropped", async () => {
+  it("a paid session with missing metadata is not credited, and not retried either", async () => {
+    // NOT retryable, deliberately. A session with no user_id will never
+    // acquire one; redelivering the same object four more times over three
+    // days ends in the same place. What was missing was never the retry — it
+    // was that nobody found out, which the critical page now covers.
     await seedUserWithWallet(0);
     const sessionId = `cs_test_${randomUUID()}`;
     const res = await postWebhook(checkoutCompleted({ sessionId }));
+
+    expect(res.status).toBe(200);
+    expect(await balanceOf(walletId)).toBe(0);
+  });
+
+  // -- WP11: crediting is decided by Stripe's record, not by our metadata ----
+
+  it("does not credit an unpaid completed session", async () => {
+    // The delayed-notification case. Before WP11 this credited the wallet:
+    // the handler read only metadata, which is fully populated whether or not
+    // any money moved.
+    await seedUserWithWallet(0);
+    const sessionId = `cs_test_${randomUUID()}`;
+    const res = await postWebhook(
+      checkoutCompleted({
+        sessionId,
+        userId,
+        amountCents: "5000",
+        paymentStatus: "unpaid",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await balanceOf(walletId)).toBe(0);
+  });
+
+  it("credits the same session when it later settles via async_payment_succeeded", async () => {
+    await seedUserWithWallet(0);
+    const sessionId = `cs_test_${randomUUID()}`;
+
+    await postWebhook(
+      checkoutCompleted({ sessionId, userId, amountCents: "5000", paymentStatus: "unpaid" }),
+    );
+    expect(await balanceOf(walletId)).toBe(0);
+
+    await postWebhook(
+      checkoutCompleted({
+        sessionId,
+        userId,
+        amountCents: "5000",
+        eventType: "checkout.session.async_payment_succeeded",
+      }),
+    );
+    expect(await balanceOf(walletId)).toBe(5000);
+  });
+
+  it("credits amount_total, not the metadata the session was created with", async () => {
+    // A value assertion, not a shape one: metadata claims 9999 and Stripe
+    // collected 2500. The pre-WP11 handler credited 9999 — a 74.96 EUR gift
+    // per session to anyone who could influence metadata.
+    await seedUserWithWallet(0);
+    const sessionId = `cs_test_${randomUUID()}`;
+    const res = await postWebhook(
+      checkoutCompleted({
+        sessionId,
+        userId,
+        amountCents: "9999",
+        amountTotal: 2500,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await balanceOf(walletId)).toBe(2500);
+
+    const [ledger] = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.stripeSessionId, sessionId));
+    expect(ledger!.amountCents).toBe(2500);
+  });
+
+  it("does not credit a non-EUR session at 1:1", async () => {
+    // The wallet holds EUR cents and the ledger description hardcodes EUR.
+    // 5000 USD cents is not 5000 EUR cents.
+    await seedUserWithWallet(0);
+    const sessionId = `cs_test_${randomUUID()}`;
+    const res = await postWebhook(
+      checkoutCompleted({ sessionId, userId, amountCents: "5000", currency: "usd" }),
+    );
 
     expect(res.status).toBe(200);
     expect(await balanceOf(walletId)).toBe(0);

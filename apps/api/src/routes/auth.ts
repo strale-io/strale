@@ -479,6 +479,27 @@ export async function agentSignupHandler(c: Context) {
   const clientIp = getClientIp(c);
   const ipHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
 
+  // WP11: same authority as /v1/auth/register. Both channels ask the same
+  // question and get an answer computed by the same rules.
+  //
+  // Runs BEFORE the prior-free-call gate, matching the order the inline
+  // disposable/MX checks used to run in. Telling an agent with a disposable
+  // address to go make a free-tier call first, and only refusing the address
+  // afterwards, wastes a round trip and reads as a different problem than the
+  // one it has.
+  const assessment: TrialAssessment = await assessTrialGrant(db, {
+    email,
+    ipHash,
+    channel: "agent_signup",
+  });
+
+  if (assessment.decision === "refuse") {
+    return c.json(
+      apiError("invalid_request", assessment.message, { reason: assessment.reason }),
+      400,
+    );
+  }
+
   // Require at least 1 successful free-tier call from this IP
   if (ipHash) {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -551,21 +572,6 @@ export async function agentSignupHandler(c: Context) {
     if ((ipSignups?.cnt ?? 0) >= 2) {
       flaggedForReview = true;
     }
-  }
-
-  // WP11: same authority as /v1/auth/register. Both channels ask the same
-  // question and get an answer computed by the same rules.
-  const assessment: TrialAssessment = await assessTrialGrant(db, {
-    email,
-    ipHash,
-    channel: "agent_signup",
-  });
-
-  if (assessment.decision === "refuse") {
-    return c.json(
-      apiError("invalid_request", assessment.message, { reason: assessment.reason }),
-      400,
-    );
   }
 
   let account;
