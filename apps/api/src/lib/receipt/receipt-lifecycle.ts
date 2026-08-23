@@ -145,6 +145,10 @@ export async function markReceiptPending(
      WHERE id = ${transactionId}::uuid
        AND receipt_status IS DISTINCT FROM 'complete'
        AND receipt_status IS DISTINCT FROM 'failed'
+       -- A chained row cannot acquire receipt state: its hash was computed
+       -- without one, so the digest would never be anchored. Mirrors the
+       -- database trigger; the trigger is the enforcement.
+       AND integrity_hash IS NULL
     RETURNING id
   `);
   assertTouchedOne(rows, transactionId, "markReceiptPending");

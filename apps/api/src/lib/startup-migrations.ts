@@ -3054,13 +3054,43 @@ export async function runMigration0108_receiptStateInvariants(
     CREATE OR REPLACE FUNCTION "transactions_receipt_state_transitions"()
     RETURNS trigger AS $$
     BEGIN
+      -- EVERY receipt-shaped column, not just the five that were obvious.
+      --
+      -- receipt_manifest_digest was missing, and it is how a verifier finds the
+      -- snapshot to recompute implementation.manifest_digest — and it is NOT
+      -- inside the chain payload, so swapping it was neither refused here nor
+      -- detectable there. receipt_failure_reason was missing, so a reason could
+      -- be stamped onto a complete row. integrity_payload_version was missing,
+      -- so it could be flipped 2 -> NULL, which verification then reports as
+      -- corruption rather than refusing outright. All reviewer-found, all via
+      -- this early return.
       IF OLD.receipt_status IS NOT DISTINCT FROM NEW.receipt_status
          AND OLD.receipt_digest IS NOT DISTINCT FROM NEW.receipt_digest
          AND OLD.receipt_version IS NOT DISTINCT FROM NEW.receipt_version
          AND OLD.receipt_canonicalization IS NOT DISTINCT FROM NEW.receipt_canonicalization
          AND OLD.receipt_digest_alg IS NOT DISTINCT FROM NEW.receipt_digest_alg
+         AND OLD.receipt_manifest_digest IS NOT DISTINCT FROM NEW.receipt_manifest_digest
+         AND OLD.receipt_failure_reason IS NOT DISTINCT FROM NEW.receipt_failure_reason
+         AND OLD.integrity_payload_version IS NOT DISTINCT FROM NEW.integrity_payload_version
       THEN
         RETURN NEW;  -- nothing receipt-shaped changed
+      END IF;
+
+      -- A CHAINED row cannot acquire receipt state afterwards.
+      --
+      -- The dual of the admission rule, and it was missing. Barring a row from
+      -- the chain until its receipt settles is only half the property: a row
+      -- chained under v1 — which is every row today — could receive a complete
+      -- receipt afterwards and keep its v1 hash, so the digest was never
+      -- anchored. The row verifies, under a rule that does not cover the
+      -- receipt, and "a receipt digest cannot be swapped without invalidating
+      -- the chain" is silently false for it. Reviewer-found.
+      IF OLD.integrity_hash IS NOT NULL
+         AND OLD.receipt_status IS NULL
+         AND NEW.receipt_status IS NOT NULL THEN
+        RAISE EXCEPTION
+          'transaction % is already chained under v1; introducing receipt state '
+          'now would leave its digest permanently unanchored.', OLD.id;
       END IF;
 
       -- complete and failed are absorbing.
@@ -3104,8 +3134,15 @@ export async function runMigration0108_receiptStateInvariants(
   await tx.execute(sql`
     ALTER TABLE execution_manifest_snapshots
       ADD CONSTRAINT execution_manifest_snapshots_subject_matches_content
+      -- The key-presence tests are load-bearing. A comparison against a
+      -- missing key yields NULL, and a CHECK passes on NULL, so without them a
+      -- snapshot carrying no subject keys at all was accepted under any slug.
+      -- jsonb_exists is the function spelling of the ? operator, used because a
+      -- bare ? in a driver template is asking for trouble.
       CHECK (
-        subject_kind = snapshot->>'subject_kind'
+        jsonb_exists(snapshot, 'subject_kind')
+        AND jsonb_exists(snapshot, 'slug')
+        AND subject_kind = snapshot->>'subject_kind'
         AND subject_slug = snapshot->>'slug'
       )
       NOT VALID

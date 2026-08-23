@@ -224,10 +224,15 @@ export async function getPreviousHash(): Promise<string> {
  * Verify a single transaction's integrity hash.
  */
 export function verifyIntegrityHash(
-  record: Parameters<typeof computeIntegrityHash>[0],
+  record: IntegrityHashRecord,
   storedHash: string,
   previousHash: string,
+  storedVersion: number | null | undefined,
 ): { verified: boolean } {
-  const computed = computeIntegrityHash(record, previousHash);
+  const computed = computeIntegrityHashVersioned(
+    record,
+    previousHash,
+    chainVersionOf(storedVersion),
+  );
   return { verified: computed === storedHash };
 }

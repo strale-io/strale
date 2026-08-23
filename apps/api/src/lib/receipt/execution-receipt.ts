@@ -29,7 +29,11 @@
 
 import { canonicalBytes } from "../canonical/jcs.js";
 import { DOMAIN_TAGS, domainDigest } from "../canonical/domain-digest.js";
-import type { SolutionStepIdentity } from "./manifest-snapshot.js";
+import {
+  assertWellFormedSteps,
+  ManifestSnapshotError,
+  type SolutionStepIdentity,
+} from "./manifest-snapshot.js";
 
 export const RECEIPT_VERSION = "strale.execution.v1";
 export const RECEIPT_CANONICALIZATION = "RFC8785";
@@ -214,6 +218,25 @@ export function buildExecutionReceipt(
     };
   }
 
+  // The step rules live in the snapshot authority, and the FIRST fix applied
+  // them only there — so the receipt, which is the artifact the customer holds
+  // and the thing the chain anchors, still accepted duplicate step_order,
+  // negative and fractional orders, and an empty step list, and still dropped
+  // `disposition` from the hashed payload. Reviewer-found: the snapshot is a
+  // side table; the receipt is the claim.
+  if (input.steps !== null) {
+    try {
+      assertWellFormedSteps(input.subjectSlug, input.steps);
+    } catch (err) {
+      return {
+        outcome: "failed",
+        reason: "unresolvable_manifest",
+        detail:
+          err instanceof ManifestSnapshotError ? err.message : String(err),
+      };
+    }
+  }
+
   if (input.status === "failed" && input.error === null) {
     return {
       outcome: "failed",
@@ -249,6 +272,10 @@ export function buildExecutionReceipt(
               .map((s) => ({
                 step_order: s.step_order,
                 slug: s.slug,
+                // Without this, `skipped` and `unresolved` produce an IDENTICAL
+                // receipt digest — the spec's "the absence recorded" left
+                // unimplemented in the one place it is read.
+                disposition: s.disposition,
                 manifest_digest: s.manifest_digest,
               })),
     },

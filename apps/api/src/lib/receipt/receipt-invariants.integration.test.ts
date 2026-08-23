@@ -263,6 +263,127 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     expect((r as unknown as Array<{ reason: string }>)[0].reason).toBe("not_yet_built");
   });
 
+  // ── R2-B1: the dual of the admission rule ────────────────────────────────
+
+  it("a row already chained cannot acquire receipt state afterwards", async () => {
+    // Barring a row from the chain until its receipt settles is only half the
+    // property. A row chained under v1 — which is EVERY row today — could
+    // receive a complete receipt afterwards and keep its v1 hash, so the digest
+    // was never anchored. It verifies, under a rule that does not cover the
+    // receipt, and "a receipt digest cannot be swapped without invalidating the
+    // chain" is silently false for it.
+    const id = await txn();
+    await db.execute(sql`
+      UPDATE transactions
+         SET integrity_hash = ${"9".repeat(64)}, previous_hash = ${"8".repeat(64)},
+             compliance_hash_state = 'complete'
+       WHERE id = ${id}::uuid
+    `);
+
+    await expect(markReceiptPending(db, id)).rejects.toThrow(ReceiptLifecycleError);
+    await expect(
+      db.execute(sql`
+        UPDATE transactions SET receipt_status = 'pending', receipt_failure_reason = 'not_yet_built'
+         WHERE id = ${id}::uuid
+      `),
+    ).rejects.toThrow(/already chained/);
+  });
+
+  it("an unchained row still accepts receipt state normally", async () => {
+    const id = await txn();
+    await markReceiptPending(db, id);
+    const r = await db.execute(
+      sql`SELECT receipt_status AS s FROM transactions WHERE id = ${id}::uuid`,
+    );
+    expect((r as unknown as Array<{ s: string }>)[0].s).toBe("pending");
+  });
+
+  // ── R2-B1 continued: every receipt-shaped column is compared ─────────────
+
+  it("receipt_manifest_digest cannot be swapped on a complete row", async () => {
+    // It is how a verifier finds the snapshot to recompute the implementation
+    // identity, and it is NOT inside the chain payload — so a swap was neither
+    // refused here nor detectable there.
+    const id = await txn();
+    await completed(id);
+    await expect(
+      db.execute(sql`
+        UPDATE transactions SET receipt_manifest_digest = ${`sha256:${"c".repeat(64)}`}
+         WHERE id = ${id}::uuid
+      `),
+    ).rejects.toThrow(/terminal/i);
+  });
+
+  it("a failure reason cannot be stamped onto a complete row", async () => {
+    const id = await txn();
+    await completed(id);
+    await expect(
+      db.execute(sql`
+        UPDATE transactions SET receipt_failure_reason = 'unmapped_rail' WHERE id = ${id}::uuid
+      `),
+    ).rejects.toThrow(/terminal/i);
+  });
+
+  it("the chain version cannot be flipped on a terminal row", async () => {
+    const id = await txn();
+    await completed(id);
+    await db.execute(
+      sql`UPDATE transactions SET integrity_payload_version = NULL WHERE id = ${id}::uuid`,
+    ).catch(() => undefined);
+    // Setting it to 2 then clearing it must be refused, not merely detected.
+    await expect(
+      db.execute(sql`
+        UPDATE transactions SET integrity_payload_version = 2 WHERE id = ${id}::uuid
+      `),
+    ).rejects.toThrow(/terminal/i);
+  });
+
+  // ── R2-B3: the BUILDER enforces step rules, not only the snapshot ────────
+
+  it("the receipt builder refuses malformed steps, not just the normalizer", () => {
+    const bad: Array<[string, SolutionStepIdentity[]]> = [
+      ["duplicate order", [ran(1, "a", "1"), { ...ran(1, "b", "2") }]],
+      ["zero order", [{ ...ran(0, "a", "1") }]],
+      ["negative order", [{ ...ran(-3, "a", "1") }]],
+      ["fractional order", [{ ...ran(2.5, "a", "1") }]],
+      ["empty", []],
+    ];
+    for (const [label, steps] of bad) {
+      const r = buildExecutionReceipt(
+        {
+          transactionId: "t", subjectKind: "solution", subjectSlug: "kyb",
+          deployCommit: "c".repeat(40), manifestDigest: `sha256:${"a".repeat(64)}`,
+          steps, rail: "v1_do", inputs: {}, status: "completed",
+          result: {}, error: null, method: "algorithmic",
+          sourceObservation: { kind: "computed" },
+        },
+        { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+      );
+      expect(r.outcome, `${label} should refuse`).toBe("failed");
+      if (r.outcome === "failed") expect(r.reason).toBe("unresolvable_manifest");
+    }
+  });
+
+  it("skipped and unresolved produce DIFFERENT receipt digests", () => {
+    // The snapshot distinguished them; the receipt did not, and the receipt is
+    // the artifact the customer holds and the chain anchors.
+    function digestFor(disposition: "skipped" | "unresolved"): string {
+      const r = buildExecutionReceipt(
+        {
+          transactionId: "t", subjectKind: "solution", subjectSlug: "kyb",
+          deployCommit: "c".repeat(40), manifestDigest: `sha256:${"a".repeat(64)}`,
+          steps: [ran(1, "a", "1"), { step_order: 2, slug: "b", disposition, manifest_digest: null }],
+          rail: "v1_do", inputs: {}, status: "completed", result: {}, error: null,
+          method: "algorithmic", sourceObservation: { kind: "computed" },
+        },
+        { NODE_ENV: "test" } as NodeJS.ProcessEnv,
+      );
+      if (r.outcome !== "complete") throw new Error(`expected complete, got ${r.reason}`);
+      return r.digest;
+    }
+    expect(digestFor("unresolved")).not.toBe(digestFor("skipped"));
+  });
+
   // ── B5: content addressing ───────────────────────────────────────────────
 
   it("a mis-addressed snapshot is refused on read, not returned", async () => {
@@ -287,6 +408,19 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
         INSERT INTO execution_manifest_snapshots (digest, subject_kind, subject_slug, snapshot)
         VALUES (${`sha256:${"2".repeat(64)}`}, 'solution', 'a-different-slug',
                 ${JSON.stringify(decl)}::jsonb)
+      `),
+    ).rejects.toThrow(/subject_matches_content/);
+  });
+
+  it("a snapshot with no subject keys at all is refused", async () => {
+    // `col = snapshot->>'k'` is NULL when the key is absent, and a CHECK passes
+    // on NULL — so this was accepted under any slug until the key-presence
+    // tests were added.
+    await expect(
+      db.execute(sql`
+        INSERT INTO execution_manifest_snapshots (digest, subject_kind, subject_slug, snapshot)
+        VALUES (${`sha256:${"7".repeat(64)}`}, 'capability', 'anything-i-like',
+                '{"no_subject_keys":1}'::jsonb)
       `),
     ).rejects.toThrow(/subject_matches_content/);
   });
