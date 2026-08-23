@@ -304,6 +304,17 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 
 ### F7 · State drift
 
+> *Adjacent, recorded here 2026-08-23 rather than counted:* a deploy can fail
+> its readiness check while the build succeeds, leaving `main` and the served
+> artifact apart with no outage and no error anywhere a session would look. It
+> happened to the 2026-08-23 check-in's own merge; the identical commit went
+> green on retry. Not a new family — it is the same "recorded state and real
+> state disagree" shape — but the *detection* is different: only
+> `railway deployment list` distinguishes "not deployed yet" from "deploy
+> failed", and `GET /health` alone cannot. Any session that reads a stale
+> deployed SHA should check the deployment list before concluding anything.
+
+
 > The recorded state and the real state disagree: a decision written down but
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
