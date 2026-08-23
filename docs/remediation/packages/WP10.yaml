@@ -214,6 +214,17 @@ concurrency_audit:
     and reported as crash recovery. Each step calls claimJob rather than reading
     a column. Reverting watchdogFor to `return leaseMs` turns this red, along
     with seven arithmetic properties in the unit suite.
+  round_3_found_the_invariant_2_test_was_vacuous: >
+    The first version of that test released B BEFORE A returned, which set
+    lease_owner to NULL — so A matched nothing under ANY guard, including the
+    per-process one the test existed to rule out. All six "cannot touch"
+    assertions were comparing NULL to NULL. Proven by an isolated reviewer that
+    swapped the guard back to split_part(lease_owner, ':', 1) and watched the
+    test stay green. The test now has A return while B's lease is still LIVE,
+    compares against a snapshot taken while B held it, and goes red under that
+    same mutation. The implementation was correct throughout; the coverage was
+    not, which is the third time in this program a guard has been green while
+    asserting nothing.
   invariant_2_stale_handler_cannot_touch_a_successor: >
     PROVEN, and it required a fix. `releaseJob` guarded on `lease_owner`, which
     held RUNNER_ID — a constant for the life of the PROCESS. That cannot

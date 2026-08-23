@@ -63,7 +63,7 @@ const INTERVAL_MS = 60 * 60 * 1000; // hourly
 const STARTUP_DELAY_MS = 8 * 60 * 1000;
 
 /** Self-throttle per DEC-20260504-B: a backlog drains over ticks, not at once. */
-const MAX_PER_TICK = 10;
+const MAX_PER_TICK = 8;
 
 /** Attempts before the slug becomes a human decision. */
 export const MAX_ATTEMPTS = 5;
@@ -74,12 +74,17 @@ export const MAX_ATTEMPTS = 5;
  * `onCapabilityCreated` executes the capability live and can fire paid upstream
  * APIs, and it carries no timeout of its own. Ten slugs behind one unbounded
  * call is the shape that would push this job past the coordinator's 15-minute
- * handler ceiling — at which point the cycle abandons a HEALTHY run and its
- * lease strands until expiry. Bounding each slug keeps the whole tick under ten
- * minutes in the worst case, and a hook that hangs is what it looks like: a
- * failed attempt, charged to that slug's budget, not a stalled job.
+ * handler ceiling — at which point the cycle abandons a HEALTHY run and strands
+ * its lease until expiry. A hook that hangs is now recorded as what it is: a
+ * failed attempt charged to that slug's budget, not a stalled job.
+ *
+ * The arithmetic has to leave room. MAX_PER_TICK x PER_SLUG_TIMEOUT_MS was 10 x
+ * 60s = exactly the ceiling BEFORE counting the two or three DB writes each
+ * failure makes, so the stated worst case did not fit inside it — reviewer's
+ * finding, and it was optimistic rather than wrong by much. 8 x 45s = 6 minutes
+ * leaves the writes somewhere to go.
  */
-const PER_SLUG_TIMEOUT_MS = 60_000;
+const PER_SLUG_TIMEOUT_MS = 45_000;
 
 export const RETRY_EVENT = "onboarding_retry";
 export const ESCALATION_ACTION = "retries_exhausted";

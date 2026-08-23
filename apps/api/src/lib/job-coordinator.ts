@@ -508,6 +508,11 @@ export async function consumeDueSlot(name: string, intervalMs: number): Promise<
  * Jobs are attempted SEQUENTIALLY, so MAX_HANDLER_WAIT_MS bounds one handler,
  * not one cycle: eleven simultaneous hangs would stall the last job for eleven
  * times that. Do not read the ceiling as a cycle bound.
+ *
+ * Nor is it the whole per-job bound. `claimJob` and `releaseJob` run OUTSIDE
+ * the watchdog; both go through the shared pool, so each is capped by its
+ * `statement_timeout` (30s, db/index.ts). The honest per-job worst case is
+ * therefore the watchdog plus roughly two statement timeouts.
  */
 export async function runDueJobs(): Promise<{
   ran: string[];

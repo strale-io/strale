@@ -125,6 +125,30 @@ describe("migrated jobs keep no timer of their own", () => {
     ).toEqual([]);
   });
 
+  it("no coordinator job name collides with a test-scheduler auxiliary slot", () => {
+    // `consumeDueSlot` and `registerJob` write into the SAME job_schedule
+    // keyspace, and `registerJob` only detects duplicates within its in-memory
+    // registry. A collision would let the poll cycle claim and lease a row the
+    // test scheduler manages without one — two owners for one schedule, which
+    // is the defect class this package exists to remove. Reviewer-found; no
+    // collision exists today, and this is what keeps it that way.
+    //
+    // Kept in step with test-scheduler.ts by the assertion below, which reads
+    // the shouldRun() call sites out of that file rather than trusting a copy.
+    const schedulerSrc = readFileSync(join(JOBS_DIR, "test-scheduler.ts"), "utf8");
+    const auxNames = [...schedulerSrc.matchAll(/shouldRun\(\s*"([^"]+)"/g)].map((m) => m[1]);
+
+    expect(auxNames.length).toBeGreaterThanOrEqual(7);
+
+    const jobNames = new Set(MIGRATED_JOBS.map((j) => j.job));
+    const collisions = auxNames.filter((n) => jobNames.has(n));
+    expect(
+      collisions,
+      "an auxiliary slot shares a name with a registered job, so two authorities " +
+        "would write the same job_schedule row.",
+    ).toEqual([]);
+  });
+
   it("every exemption names a file that still exists", () => {
     // An exemption for a deleted file is a stale licence that could silently
     // cover a future file of the same name.
