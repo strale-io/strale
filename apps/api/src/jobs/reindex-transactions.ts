@@ -50,7 +50,6 @@ import { getDb } from "../db/index.js";
 import { healthMonitorEvents } from "../db/schema.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { log, logError, logWarn } from "../lib/log.js";
-import { isShuttingDown } from "../lib/shutdown.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
 
 const INTERVAL_MS = 24 * 60 * 60 * 1000;       // check every 24h

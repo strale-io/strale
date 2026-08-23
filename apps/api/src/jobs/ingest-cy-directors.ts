@@ -55,7 +55,6 @@ import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import postgres from "postgres";
-import { fireAndForget } from "../lib/fire-and-forget.js";
 import { log, logError } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
 import { registerJobSync } from "../lib/job-coordinator.js";

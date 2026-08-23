@@ -43,7 +43,6 @@ import { sql, type SQL } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { log, logError, logWarn } from "../lib/log.js";
-import { isShuttingDown } from "../lib/shutdown.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
 
 const RETENTION_INTERVAL_MS = 24 * 60 * 60 * 1000;

@@ -132,9 +132,10 @@ scope:
 proof:
   lane: real Postgres, --no-file-parallelism, startup migrations applied as boot applies them
   new_suites:
-    - src/lib/job-coordinator.integration.test.ts (22 tests)
+    - src/lib/job-coordinator.integration.test.ts (23 tests)
     - src/jobs/onboarding-retry.integration.test.ts (9 tests)
     - src/jobs/job-migration.integration.test.ts (11 tests)
+    - src/jobs/no-boot-relative-timers.test.ts (13 tests, no DB)
   fail_before_proven:
     cadence_property: >
       Reverting registerJob's ON CONFLICT to `next_run_at = now() +
@@ -204,6 +205,17 @@ residual_risks:
     reindex-transactions carry a 2h lease for this reason; the rest are
     self-throttled to a few items per tick. Not observed, and the consequence is
     a mis-recorded outcome rather than duplicated work.
+  a_stranded_lease_after_a_mid_run_kill_is_deliberate: >
+    Nothing releases a lease on shutdown, so a job killed mid-run stays held
+    until its deadline (30 min, or 2h for the three long-lease jobs). The
+    review proposed an onShutdown hook that clears it. That fix is wrong here
+    and was not taken: during the shutdown grace period the handler may still
+    be draining, and the incoming process starts polling immediately — clearing
+    the lease is exactly how a second copy starts on top of live work, which is
+    the blocking defect fixed above in a different guise. A lease stranded by a
+    kill is indistinguishable from one stranded by a crash, and waiting out the
+    deadline IS the recovery path. The cost is a bounded one-time delay, not
+    starvation: next_run_at was never advanced, so the job runs once, late.
   one_poll_cycle_runs_jobs_sequentially: >
     Jobs share one poll cycle and run one after another, where previously each
     had an independent timer. A slow job therefore delays the ones behind it

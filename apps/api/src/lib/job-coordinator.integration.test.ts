@@ -428,15 +428,20 @@ describeMaybe("job coordinator against a real database", () => {
     const hung = jobName("hung");
     const after = jobName("after");
     let afterRan = 0;
+    let hungStarts = 0;
     let releaseHung: (() => void) | undefined;
 
     await registerJob({
       name: hung,
       intervalMs: 3600_000,
-      // A 1-second lease, so the watchdog fires inside the test rather than in
-      // half an hour. The watchdog IS the lease, by construction.
-      leaseMs: 1_000,
-      handler: () => new Promise<void>((resolve) => { releaseHung = resolve; }),
+      // A 4-second lease so the whole thing fits in a test. watchdogFor()
+      // halves it for short leases, so the cycle gives up at ~2s and the run
+      // keeps its exclusion until ~4s.
+      leaseMs: 4_000,
+      handler: () => {
+        hungStarts++;
+        return new Promise<void>((resolve) => { releaseHung = resolve; });
+      },
     });
     await registerJob({
       name: after,
@@ -452,15 +457,54 @@ describeMaybe("job coordinator against a real database", () => {
     expect(result.timedOut).toContain(hung);
     expect(result.ran).toContain(after);
     expect(afterRan).toBe(1);
+    expect(hungStarts).toBe(1);
 
-    // Its lease was NOT cleared. Releasing it would let the next poll start a
-    // second copy of a job that is still running.
-    const r = await row(hung);
-    expect(r!.lease_owner).not.toBeNull();
-    expect(r!.last_finished_at).toBeNull();
+    // And the abandoned run still holds the job. This is the assertion that
+    // matters, and an earlier version of this test got it wrong: it checked
+    // `lease_owner IS NOT NULL`, which only says `releaseJob` was not called
+    // and is true even when the lease has expired and the row is claimable.
+    // The property is about CLAIMABILITY, so ask the thing that claims.
+    await shiftDue(hung, "- interval '1 second'");
+    const second = await runDueJobs();
+    expect(second.ran).not.toContain(hung);
+    expect(hungStarts).toBe(1);
 
     releaseHung?.();
-  });
+  }, 20_000);
+
+  it("once the abandoned run's lease finally expires, the job is recoverable", async () => {
+    // The flip side of the test above: exclusion is held for the remainder of
+    // the lease, not forever. A run we have stopped waiting for must eventually
+    // be reclaimable, or a single hang would retire the job permanently.
+    const name = jobName("expires");
+    let starts = 0;
+
+    await registerJob({
+      name,
+      intervalMs: 3600_000,
+      leaseMs: 2_000,
+      handler: () => {
+        starts++;
+        return starts === 1 ? new Promise<void>(() => {}) : Promise.resolve();
+      },
+    });
+    await shiftDue(name, "- interval '1 second'");
+
+    const first = await runDueJobs();
+    expect(first.timedOut).toContain(name);
+    expect(starts).toBe(1);
+
+    // Force the deadline past, exactly as the passage of time would.
+    await db.execute(
+      sql`UPDATE job_schedule SET lease_expires_at = now() - interval '1 second',
+                                  next_run_at = now() - interval '1 second'
+           WHERE job_name = ${name}`,
+    );
+
+    const second = await runDueJobs();
+    expect(second.ran).toContain(name);
+    expect(starts).toBe(2);
+  }, 20_000);
 
   // ── consumeDueSlot: the 56x regression ───────────────────────────────────
 

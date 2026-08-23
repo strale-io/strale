@@ -139,11 +139,15 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
 
       // Increment and read back in one statement, so two runners cannot both
       // read the same prior count and each conclude they were the fourth.
+      // The lifecycle guard mirrors the success path: if the row left
+      // 'hook_failed' between the SELECT and here — an operator fixing it by
+      // hand, a concurrent onboarding — the attempt belongs to a state that no
+      // longer exists and must not be charged against a now-healthy row.
       const attemptRows = await db.execute(sql`
         UPDATE capabilities
            SET onboarding_hook_failures = onboarding_hook_failures + 1,
                updated_at = now()
-         WHERE slug = ${slug}
+         WHERE slug = ${slug} AND lifecycle_state = 'hook_failed'
         RETURNING onboarding_hook_failures AS attempts
       `);
       const attempts = Number(

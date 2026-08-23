@@ -18,7 +18,6 @@ import { users } from "../db/schema.js";
 import { randomUUID } from "node:crypto";
 import { sendDay2NudgeEmail, sendDay5ReminderEmail } from "../lib/activation-emails.js";
 import { log, logError, logWarn } from "../lib/log.js";
-import { isShuttingDown } from "../lib/shutdown.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
 
 const DRIP_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours

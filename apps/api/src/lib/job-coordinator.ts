@@ -103,6 +103,26 @@ class HandlerTimeout extends Error {
   }
 }
 
+/**
+ * How long to wait for a handler, given its lease.
+ *
+ * This MUST be strictly less than the lease. The first version set the two
+ * equal, which made the "no second copy" guarantee below false: the watchdog
+ * fired at the same instant `lease_expires_at` passed, so the abandoned run
+ * was immediately claimable and the next poll — at most 60s later, in the same
+ * process — started a second copy on top of the still-running first. Five of
+ * the migrated jobs hold no advisory lock, so nothing else would have stopped
+ * it. Reviewer-found, and reproduced before fixing.
+ *
+ * The margin is what the abandoned run keeps: the cycle stops waiting at
+ * `watchdogFor(lease)`, and the run holds its exclusion until the full lease
+ * elapses. After that it is treated as crashed, which is the honest reading —
+ * we stopped waiting precisely because we no longer know whether it is alive.
+ */
+function watchdogFor(leaseMs: number): number {
+  return Math.max(leaseMs - 2 * POLL_INTERVAL_MS, Math.floor(leaseMs / 2));
+}
+
 function withWatchdog<T>(job: string, ms: number, p: Promise<T>): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new HandlerTimeout(job, ms)), ms);
@@ -240,11 +260,20 @@ async function persistRegistration(def: JobDefinition): Promise<void> {
     )
     ON CONFLICT (job_name) DO UPDATE SET
       interval_ms = EXCLUDED.interval_ms,
-      next_run_at = LEAST(
-        job_schedule.next_run_at,
-        COALESCE(job_schedule.last_finished_at, now())
-          + make_interval(secs => ${intervalSecs})
-      ),
+      -- Clamp only a job that has actually run. For one that has not,
+      -- COALESCE(last_finished_at, now()) collapsed to now(), so re-registering
+      -- a job whose startup delay exceeds its interval silently PULLED its
+      -- first run in and discarded the stagger. No current job trips that
+      -- (largest delay 20min against a 24h interval) but it was a trap for the
+      -- next one, and the doc above promises only that a boot cannot push a
+      -- run out — not that it may drag one forward.
+      next_run_at = CASE
+        WHEN job_schedule.last_finished_at IS NULL THEN job_schedule.next_run_at
+        ELSE LEAST(
+          job_schedule.next_run_at,
+          job_schedule.last_finished_at + make_interval(secs => ${intervalSecs})
+        )
+      END,
       updated_at = now()
   `);
   _unpersisted.delete(def.name);
@@ -265,8 +294,8 @@ export async function claimJob(name: string): Promise<ClaimedJob | null> {
 }
 
 /**
- * The claim statement itself, shared by `claimJob` and `runIfDue` so there is
- * exactly one definition of "due and unheld" in the codebase.
+ * The claim statement itself. `claimJob` is its only caller; it is factored
+ * out so there is exactly one definition of "due and unheld" in the codebase.
  */
 async function claimRow(name: string, leaseSecs: number): Promise<ClaimedJob | null> {
   const db = getDb();
@@ -387,23 +416,37 @@ export async function consumeDueSlot(name: string, intervalMs: number): Promise<
     VALUES (${name}, ${intervalMs}, now())
     ON CONFLICT (job_name) DO UPDATE SET
       interval_ms = EXCLUDED.interval_ms,
-      next_run_at = LEAST(
-        job_schedule.next_run_at,
-        COALESCE(job_schedule.last_finished_at, now())
-          + make_interval(secs => ${intervalSecs})
-      ),
+      -- Clamp only a job that has actually run. For one that has not,
+      -- COALESCE(last_finished_at, now()) collapsed to now(), so re-registering
+      -- a job whose startup delay exceeds its interval silently PULLED its
+      -- first run in and discarded the stagger. No current job trips that
+      -- (largest delay 20min against a 24h interval) but it was a trap for the
+      -- next one, and the doc above promises only that a boot cannot push a
+      -- run out — not that it may drag one forward.
+      next_run_at = CASE
+        WHEN job_schedule.last_finished_at IS NULL THEN job_schedule.next_run_at
+        ELSE LEAST(
+          job_schedule.next_run_at,
+          job_schedule.last_finished_at + make_interval(secs => ${intervalSecs})
+        )
+      END,
       updated_at = now()
   `);
 
   // No lease: every caller of this helper already runs inside the test
   // scheduler's advisory lock (LOCK_ID 314159), so cross-process exclusion is
   // established. The single conditional UPDATE is still atomic on its own.
+  //
+  // Only the START is recorded. The first version also wrote
+  // `last_finished_at = now(), last_outcome = 'ok'` here — before the task had
+  // run — so a sweep that then threw was recorded as a success. These rows are
+  // never claimed through `claimJob` (the poll cycle iterates the registry, and
+  // these tasks are not in it), so a null finish mark misleads no one, whereas
+  // a fabricated 'ok' would.
   const rows = await db.execute(sql`
     UPDATE job_schedule
        SET next_run_at = now() + make_interval(secs => job_schedule.interval_ms / 1000.0),
            last_started_at = now(),
-           last_finished_at = now(),
-           last_outcome = 'ok',
            updated_at = now()
      WHERE job_name = ${name}
        AND next_run_at <= now()
@@ -473,10 +516,8 @@ export async function runDueJobs(): Promise<{
     }
 
     const startedAt = Date.now();
-    // The watchdog is the job's own lease: a lease is precisely the claim that
-    // a legitimate run fits inside that window, so once it is exceeded the run
-    // is already in the state another runner is entitled to take over.
-    const watchdogMs = def.leaseMs ?? DEFAULT_LEASE_MS;
+    const leaseMs = def.leaseMs ?? DEFAULT_LEASE_MS;
+    const watchdogMs = watchdogFor(leaseMs);
     try {
       await withWatchdog(def.name, watchdogMs, Promise.resolve(def.handler()));
       await releaseJob(def.name, "ok");
@@ -501,7 +542,10 @@ export async function runDueJobs(): Promise<{
         logError("job-coordinator-job-timed-out", err, {
           job: def.name,
           waited_ms: watchdogMs,
-          consequence: "lease left to expire; not rescheduled by this runner",
+          lease_ms: leaseMs,
+          consequence:
+            "still holds its lease for another " +
+            `${Math.round((leaseMs - watchdogMs) / 1000)}s; not rescheduled by this runner`,
         });
         timedOut.push(def.name);
         continue;

@@ -20,7 +20,6 @@ import { sendAlert } from "../lib/alerting.js";
 import { alertOnce } from "../lib/alert-once.js";
 import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
-import { isShuttingDown } from "../lib/shutdown.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
 import {
   classifyTransactionFailure,
