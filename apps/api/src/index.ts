@@ -59,10 +59,17 @@ async function main() {
   const { assertDeployIdentity } = await import("./lib/receipt/deploy-identity.js");
   try {
     const identity = assertDeployIdentity();
-    console.log(
-      "[startup] Deploy identity: " +
-        identity.deployCommit +
-        (identity.enforced ? "" : " (sentinel; not enforced outside production)"),
+    // The structured logger, not console: `lint:no-new-console` is a ratchet on
+    // this file and it is right to be. The eight console.log lines already here
+    // predate it.
+    const { log } = await import("./lib/log.js");
+    log.info(
+      {
+        label: "startup-deploy-identity",
+        deploy_commit: identity.deployCommit,
+        enforced: identity.enforced,
+      },
+      "startup-deploy-identity",
     );
   } catch (err) {
     const { StartupFatalError } = await import("./lib/startup-fatal.js");
