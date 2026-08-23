@@ -88,7 +88,10 @@ export async function createAccount(
   params: {
     email: string;
     name?: string | null;
+    /** Exact-address hash, stored on the users row for abuse investigation. */
     ipHash: string | null;
+    /** Bucketed hash (IPv6 counted by /64) the trial cap measures against. */
+    trialIpHash: string | null;
     grantCents: number;
     grantDescription: string;
     channel: TrialChannel;
@@ -130,7 +133,7 @@ export async function createAccount(
         // conflict.
         trialRecorded = await recordTrialGrant(tx, {
           email,
-          ipHash: params.ipHash,
+          ipHash: params.trialIpHash,
           userId: user.id,
           grantCents: params.grantCents,
           channel: params.channel,

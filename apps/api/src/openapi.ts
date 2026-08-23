@@ -366,7 +366,7 @@ export const openApiSpec = {
                 type: "object" as const,
                 required: ["email"],
                 properties: {
-                  email: { type: "string" as const, format: "email", example: "dev@example.com" },
+                  email: { type: "string" as const, format: "email", example: "dev@yourcompany.com" },
                   name: { type: "string" as const, example: "Jane Developer" },
                 },
               },
@@ -396,7 +396,9 @@ export const openApiSpec = {
                         granted: { type: "boolean" as const, example: false },
                         reason: {
                           type: "string" as const,
-                          enum: ["email_already_granted", "ip_trial_cap"],
+                          enum: ["trial_not_available"],
+                          description:
+                            "Deliberately undifferentiated. Registration does not verify the mailbox, so a more specific reason would tell anyone who registers an address whether it had previously held an account.",
                         },
                         message: { type: "string" as const },
                       },
@@ -419,7 +421,7 @@ export const openApiSpec = {
         tags: ["auth"],
         summary: "Request an API key recovery code",
         description:
-          "Sends a single-use recovery code to the account's email address. Your current API key keeps working — nothing is rotated until the code is redeemed at /v1/auth/recover/confirm. The response is identical whether or not an account exists, so it cannot be used to discover registered addresses.",
+          "Sends a single-use recovery code to the account's email address. Your current API key keeps working — nothing is rotated until the code is redeemed at /v1/auth/recover/confirm. The response body and status are identical whether or not an account exists. Response TIMING is not equalised, so this is not a constant-time oracle.",
         "x-ratelimit": { limit: 2, window: "5m", scope: "per IP" },
         requestBody: {
           required: true,

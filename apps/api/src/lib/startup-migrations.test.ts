@@ -1238,9 +1238,44 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
   });
 });
 
+/**
+ * A stub for block 0102 that answers the ledger probe by matching the SQL,
+ * not by counting statements.
+ *
+ * The positional `makeStub` queue meant every test in this describe carried a
+ * row of seven `undefined`s whose only job was to reach the eighth call. Adding
+ * one statement to the block silently shifted the ledger result onto a CREATE
+ * INDEX and the "already applied" test started failing for a reason that had
+ * nothing to do with what it asserts. Matching on the query removes the
+ * coupling between a test's fixture and the block's statement count.
+ */
+function makeBlock0102Stub(priorRun: Array<{ block: string }> = []) {
+  const captured: SQL[] = [];
+  const renderedSql: string[] = [];
+  const exec: MigrationExecutor & { captured: SQL[]; renderedSql: string[] } = {
+    captured,
+    renderedSql,
+    async execute(query: SQL) {
+      captured.push(query);
+      let rendered = "<unrendered>";
+      try {
+        rendered = dialect.sqlToQuery(query).sql;
+      } catch {
+        /* keep the placeholder */
+      }
+      renderedSql.push(rendered);
+      if (/SELECT block FROM startup_migration_ledger/i.test(rendered)) {
+        return priorRun;
+      }
+      return { count: 0 };
+    },
+  };
+  return exec;
+}
+
 describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
   it("creates both tables and their indexes idempotently", async () => {
-    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    const stub = makeBlock0102Stub();
     const result = await runMigration0102_accountLifecycleTables(stub);
 
     const ddl = stub.renderedSql.join(" ").toLowerCase();
@@ -1256,19 +1291,28 @@ describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
   it("the backfill cannot duplicate an entitlement", async () => {
     // The UNIQUE index is the rule this block installs, so a backfill that
     // could violate it would abort boot rather than silently skipping.
-    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    const stub = makeBlock0102Stub();
     await runMigration0102_accountLifecycleTables(stub);
     const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s));
     expect(insert).toBeDefined();
     expect(insert!.toLowerCase()).toMatch(/on conflict \(email_hash\) do nothing/);
   });
 
-  it("computes the email hash the same way hashEmail does", async () => {
+  it("pins the SQL hash expression that has to agree with hashEmail", async () => {
     // The two halves of one rule live in different languages. If they diverge,
     // every backfilled row is keyed on a hash the application will never
     // produce, and the entitlement silently stops applying to exactly the
     // accounts it was created to cover.
-    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    //
+    // This asserts the SQL TEXT and nothing more — it would pass unchanged if
+    // hashEmail() were switched to SHA-512 tomorrow. The agreement itself is
+    // proved where it can be: routes/account-lifecycle.integration.test.ts
+    // ("the migration backfills entitlements…") runs this block against a real
+    // Postgres and looks the row up BY hashEmail(), and
+    // lib/trial-eligibility.test.ts pins hashEmail to plain SHA-256 of the
+    // normalised address. Named for what it does, so the next reader does not
+    // count it as coverage twice.
+    const stub = makeBlock0102Stub();
     await runMigration0102_accountLifecycleTables(stub);
     const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s))!;
     expect(insert.toLowerCase()).toContain(
@@ -1280,17 +1324,36 @@ describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
     // A redacted row has no recoverable address, so no hash can be computed
     // for it. Stated in the query rather than left implicit, because a future
     // reader could easily read the omission as an oversight.
-    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    const stub = makeBlock0102Stub();
     await runMigration0102_accountLifecycleTables(stub);
     const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s))!;
     expect(insert.toLowerCase()).toMatch(/u\.deleted_at is null/);
     expect(insert.toLowerCase()).toMatch(/redacted-%@deleted\.local/);
   });
 
+  it("creates the Stripe replay index, which no migration block owned before", async () => {
+    // `wallet_transactions_stripe_session_id_unique` lives in schema.ts and in
+    // production, and was created by NO block — it survives only from the
+    // original `drizzle-kit push`, which never runs against production. A
+    // database rebuilt from startup-migrations.ts alone would come up without
+    // the one constraint standing between a duplicated Stripe delivery and a
+    // double credit, and nothing would say so. WP11 owns the Stripe crediting
+    // decision, so it adopts the guard that decision rests on.
+    const stub = makeBlock0102Stub();
+    await runMigration0102_accountLifecycleTables(stub);
+    const ddl = stub.renderedSql.join(" ").toLowerCase();
+    expect(ddl).toMatch(
+      /create unique index if not exists "wallet_transactions_stripe_session_id_unique"/,
+    );
+    // Partial, matching the schema: a NULL session id is the ordinary case for
+    // every non-Stripe ledger row, and a total index would reject the second one.
+    expect(ddl).toMatch(/where "stripe_session_id" is not null/);
+  });
+
   it("does not re-run the backfill once the ledger records it", async () => {
     // A second boot must not re-scan the users table. ON CONFLICT would make
     // a re-run harmless, but the ledger gate is what keeps a boot cheap.
-    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, [{ block: "0102_account_lifecycle_tables" }]] });
+    const stub = makeBlock0102Stub([{ block: "0102_account_lifecycle_tables" }]);
     const result = await runMigration0102_accountLifecycleTables(stub);
     expect(stub.renderedSql.some((s) => /insert into "trial_grants"/i.test(s))).toBe(false);
     expect(result.outcome).toMatch(/already applied/i);

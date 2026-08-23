@@ -100,7 +100,20 @@ Founder, Strale
   }
 }
 
-export async function sendWelcomeEmail(email: string, apiKey: string): Promise<void> {
+/**
+ * WP11: `grantedCents` is passed in rather than assumed.
+ *
+ * The trial grant is no longer unconditional — a withheld grant produces a
+ * live account with a zero balance — so a mail that says "a few cents from
+ * your EUR 2.00 trial credits" would be telling those customers something the
+ * API response beside it correctly denies, and their first paid call would
+ * fail on insufficient funds with no warning they had been given.
+ */
+export async function sendWelcomeEmail(
+  email: string,
+  apiKey: string,
+  grantedCents: number,
+): Promise<void> {
   if (INTERNAL_DOMAINS.some((d) => email.endsWith(d))) {
     log.info({ label: "welcome-email-skip", reason: "internal-email" }, "welcome-email-skip");
     return;
@@ -111,6 +124,16 @@ export async function sendWelcomeEmail(email: string, apiKey: string): Promise<v
     log.info({ label: "welcome-email-skip", reason: "no-api-key" }, "welcome-email-skip");
     return;
   }
+
+  const creditsEur = (grantedCents / 100).toFixed(2);
+  const creditLine =
+    grantedCents > 0
+      ? ` (each uses a few cents from your €${creditsEur} trial credits)`
+      : " (your account has no trial credits — top up first with POST /v1/wallet/topup)";
+  const creditHtml =
+    grantedCents > 0
+      ? `Each uses a few cents from your €${creditsEur} trial credits.`
+      : "Your account has no trial credits — top up first with POST /v1/wallet/topup.";
 
   const text = `Hey,
 
@@ -129,7 +152,7 @@ curl -X POST https://api.strale.io/v1/do \\
 
 That validates a German IBAN — free, no credits used.
 
-THREE MORE THINGS TO TRY (each uses a few cents from your €2.00 trial credits):
+THREE MORE THINGS TO TRY${creditLine}:
 
 1. Screen a name against sanctions lists (€0.02):
 curl -X POST https://api.strale.io/v1/do -H "Authorization: Bearer ${apiKey}" -H "Content-Type: application/json" -d '{"capability_slug": "sanctions-check", "inputs": {"name": "John Smith"}, "max_price_cents": 100}'
@@ -200,7 +223,7 @@ https://strale.dev
 
     // ── Three more things to try ──
     '<p style="' + sectionStyle + '">Three more things to try</p>',
-    '<p style="font-size: 14px; color: #666; margin-bottom: 12px;">Each uses a few cents from your €2.00 trial credits.</p>',
+    '<p style="font-size: 14px; color: #666; margin-bottom: 12px;">' + creditHtml + "</p>",
     ...tryCmds.map((cmd) => [
       '<div style="' + cardStyle + '">',
       `<p style="margin: 0 0 8px 0; font-weight: 600;">${cmd.label} <span style="color: #666; font-weight: 400; font-size: 13px;">${cmd.price}</span></p>`,

@@ -2417,6 +2417,14 @@ export async function runMigration0101_capabilityInvocations(
 // costs nothing now and is stated so a later reader does not mistake it for an
 // oversight.
 //
+// `ip_hash` is seeded from `users.signup_ip_hash`, which hashes the EXACT
+// address. The live path hashes a bucket instead (IPv6 counted by /64, see
+// `trialRateBucket`), so for an IPv6 signup the backfilled hash will not match
+// the bucket a new signup from the same prefix produces. The two agree for
+// IPv4 by construction, and the consequence for IPv6 is only that a historical
+// grant does not count toward a new bucket's cap. Every backfilled row is
+// already outside the 7-day window, so nothing counts today either way.
+//
 // Idempotent three ways: `IF NOT EXISTS` DDL, `ON CONFLICT (email_hash) DO
 // NOTHING` on the backfill, and the block ledger gating the backfill to its
 // first successful run.
@@ -2467,6 +2475,25 @@ export async function runMigration0102_accountLifecycleTables(
   await tx.execute(sql`
     CREATE INDEX IF NOT EXISTS "api_key_recovery_tokens_user_created_idx"
       ON "api_key_recovery_tokens" ("user_id", "created_at")
+  `);
+
+  // ── The Stripe replay guard, adopted into the migration path ─────────────
+  //
+  // `wallet_transactions_stripe_session_id_unique` exists in production and in
+  // schema.ts, and is created by NO migration block — it survives only from the
+  // original `drizzle-kit push`, which does not run against production. So a
+  // database rebuilt from `startup-migrations.ts` alone would come up without
+  // the one constraint standing between a duplicated Stripe delivery and a
+  // double credit, and nothing would say so.
+  //
+  // WP11 owns the Stripe crediting decision, so it adopts the guard that
+  // decision depends on. Idempotent, and a no-op wherever the index already
+  // exists (verified against a database materialised by drizzle-kit push,
+  // where the identically-named index is already present).
+  await tx.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "wallet_transactions_stripe_session_id_unique"
+      ON "wallet_transactions" ("stripe_session_id")
+      WHERE "stripe_session_id" IS NOT NULL
   `);
 
   await tx.execute(sql`

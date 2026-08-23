@@ -17,12 +17,17 @@ import {
   EmailAlreadyRegisteredError,
 } from "../lib/account-service.js";
 import {
+  anonymiseTrialGrantOnClosure,
   assessTrialGrant,
+  trialRateBucket,
+  PUBLIC_WITHHELD_MESSAGE,
+  PUBLIC_WITHHELD_REASON,
   TRIAL_CREDITS_CENTS,
   type TrialAssessment,
 } from "../lib/trial-eligibility.js";
 import {
   issueRecoveryToken,
+  purgeRecoveryTokensOnClosure,
   redeemRecoveryToken,
   RECOVERY_TOKEN_TTL_MINUTES,
 } from "../lib/key-recovery.js";
@@ -74,6 +79,12 @@ authRoute.post(
 
   const clientIp = getClientIp(c);
   const signupIpHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
+  // WP11: the trial cap counts by /64 for IPv6, so it needs its own bucketed
+  // hash. `users.signup_ip_hash` keeps hashing the exact address — it is an
+  // existing abuse-investigation column and narrowing it would lose detail.
+  // For IPv4 the two are identical by construction.
+  const trialBucket = trialRateBucket(clientIp);
+  const trialIpHash = trialBucket ? hashIp(trialBucket) : null;
 
   // WP11: one authority decides the trial, for both signup channels. This
   // path used to decide it by not asking — every registration got EUR 2.00
@@ -81,7 +92,7 @@ authRoute.post(
   // IP each took the grant in May.
   const assessment = await assessTrialGrant(db, {
     email,
-    ipHash: signupIpHash,
+    ipHash: trialIpHash,
     channel: "register",
   });
 
@@ -102,6 +113,7 @@ authRoute.post(
       email,
       name,
       ipHash: signupIpHash,
+      trialIpHash,
       grantCents: assessment.decision === "grant" ? assessment.grantCents : 0,
       grantDescription: "Welcome trial credits",
       channel: "register",
@@ -141,7 +153,7 @@ authRoute.post(
 
   // Fire-and-forget welcome email with API key
   fireAndForget(
-    () => sendWelcomeEmail(user.email, apiKey),
+    () => sendWelcomeEmail(user.email, apiKey, account.grantedCents),
     { label: "welcome-email-send", context: { userId: user.id } },
   );
 
@@ -164,15 +176,13 @@ authRoute.post(
         ? {
             trial_credits: {
               granted: false,
-              reason:
-                assessment.decision === "withhold"
-                  ? assessment.reason
-                  : "email_already_granted",
-              message:
-                assessment.decision === "withhold"
-                  ? assessment.message
-                  : "Trial credits have already been issued to this email address. " +
-                    "The account is active — top up with POST /v1/wallet/topup to make paid calls.",
+              // One undifferentiated reason. Registration does not verify the
+              // mailbox, so anyone can register victim@corp.com and read this
+              // field; `email_already_granted` would tell an unauthenticated
+              // stranger that the address was once a Strale customer. The
+              // specific reason is logged, not returned.
+              reason: PUBLIC_WITHHELD_REASON,
+              message: PUBLIC_WITHHELD_MESSAGE,
             },
           }
         : {}),
@@ -399,6 +409,22 @@ authRoute.delete("/me", authMiddleware, async (c) => {
       userId: user.id,
       description: "Balance forfeited on account closure (Art. 17 erasure)",
     });
+
+    // WP11: the two tables this package added also survive closure, and one of
+    // them carried the very column this response claims was anonymised —
+    // migration 0102 copies `users.signup_ip_hash` into `trial_grants.ip_hash`.
+    // Leaving it there would make the receipt below false about itself.
+    //
+    // The entitlement row itself has to stay: an entitlement stored on the
+    // users row is destroyed by exactly the delete → re-register loop it exists
+    // to close. Only `email_hash` is load-bearing, so `user_id` and `ip_hash`
+    // go and the hash remains, disclosed rather than quietly kept.
+    //
+    // Recovery tokens are deleted outright. `redeemRecoveryToken` already
+    // refuses a redacted user, so this is not what stops a token resurrecting
+    // access — it is what stops the user id and IP hash outliving the account.
+    await anonymiseTrialGrantOnClosure(tx, { userId: user.id });
+    await purgeRecoveryTokensOnClosure(tx, { userId: user.id });
   });
 
   // Cert-audit Y-7: be explicit about what survives erasure. The
@@ -422,16 +448,26 @@ authRoute.delete("/me", authMiddleware, async (c) => {
         "users.api_key_hash",
         "users.key_prefix",
         "users.signup_ip_hash",
+        "trial_grants.user_id",
+        "trial_grants.ip_hash",
       ],
+      deleted: ["api_key_recovery_tokens (rows)"],
       retained: [
         "transactions (rows)",
         "wallet_transactions (rows)",
         "audit_trail JSONB on each transaction (includes executionInput for capabilities flagged processes_personal_data — see retained_pii_disclosure)",
+        "trial_grants.email_hash (a SHA-256 of your address — see trial_grant_disclosure)",
       ],
       retained_legal_basis:
         "GDPR Art. 30 (records of processing) + DEC-20260428-B (audit-chain integrity). " +
         "The user_id linkage is severed (your row's identifiers are anonymised); the transaction-level audit body is retained because it is part of a hashed chain that other transactions reference. " +
-        "This is the same legal basis many regulated-industry providers (banks, KYC vendors) use for retention-on-deletion.",
+        "This is the same legal basis many regulated-industry providers (banks, KYC vendors) use for retention-on-deletion. " +
+        "The trial-grant hash is retained on a separate basis — Art. 6(1)(f), preventing repeat claims of the same one-off credit — see trial_grant_disclosure.",
+      trial_grant_disclosure:
+        "One row survives that is keyed to your email address: a SHA-256 hash of it, the date the trial credit was issued, and the amount. Its user_id and IP hash are cleared by this request, so nothing links it to your account. " +
+        "We keep the hash because it is the only way to enforce one trial credit per address without storing the address, and because deleting it would let the same address claim the credit again by closing and re-registering. " +
+        "Be aware that a hash of an email address is pseudonymous, not anonymous: someone who already guesses your address can confirm it by hashing it. We are not treating it as anonymised data. " +
+        "If you want it removed and accept that the address can then claim trial credits again, email petter@strale.io.",
       retained_pii_disclosure:
         "If you used capabilities that take personal data as input — e.g. pii-redact, invoice-extract, company-enrich, sanctions-check on a real person — the input you supplied is retained inside audit_trail.executionInput on the transactions row. The row no longer links to your account, but the input itself is still readable to a Strale operator who could correlate by content. " +
         "If this matters to your situation (e.g. data subject was a third party who has now exercised Art. 17), email petter@strale.io with the affected transaction IDs; we'll redact in place and accept the audit-chain reset that requires.",
@@ -491,6 +527,8 @@ export async function agentSignupHandler(c: Context) {
   const db = getDb();
   const clientIp = getClientIp(c);
   const ipHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
+  const trialBucket = trialRateBucket(clientIp);
+  const trialIpHash = trialBucket ? hashIp(trialBucket) : null;
 
   // WP11: same authority as /v1/auth/register. Both channels ask the same
   // question and get an answer computed by the same rules.
@@ -502,7 +540,7 @@ export async function agentSignupHandler(c: Context) {
   // one it has.
   const assessment: TrialAssessment = await assessTrialGrant(db, {
     email,
-    ipHash,
+    ipHash: trialIpHash,
     channel: "agent_signup",
   });
 
@@ -592,6 +630,7 @@ export async function agentSignupHandler(c: Context) {
     account = await createAccount(db, {
       email,
       ipHash,
+      trialIpHash,
       grantCents: assessment.decision === "grant" ? assessment.grantCents : 0,
       grantDescription: "Welcome trial credits (agent self-signup)",
       channel: "agent_signup",
@@ -625,7 +664,7 @@ export async function agentSignupHandler(c: Context) {
 
   // Fire-and-forget welcome email
   fireAndForget(
-    () => sendWelcomeEmail(user.email, apiKey),
+    () => sendWelcomeEmail(user.email, apiKey, account.grantedCents),
     { label: "welcome-email-send", context: { userId: user.id } },
   );
 
@@ -656,15 +695,9 @@ export async function agentSignupHandler(c: Context) {
       ? {
           trial_credits: {
             granted: false,
-            reason:
-              assessment.decision === "withhold"
-                ? assessment.reason
-                : "email_already_granted",
-            message:
-              assessment.decision === "withhold"
-                ? assessment.message
-                : "Trial credits have already been issued to this email address. " +
-                  "The account is active — top up with POST /v1/wallet/topup to make paid calls.",
+            // Same reasoning as the register handler above.
+            reason: PUBLIC_WITHHELD_REASON,
+            message: PUBLIC_WITHHELD_MESSAGE,
           },
         }
       : {}),

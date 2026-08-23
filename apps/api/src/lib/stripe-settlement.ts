@@ -1,6 +1,15 @@
 /**
- * The one authority for "how much money did this customer actually pay, in
- * what currency, and is it settled" (WP11, risk CR-09).
+ * The one authority for "how much money is this Checkout Session settling, in
+ * what currency, and has it been paid" (WP11, risk CR-09).
+ *
+ * Scope, stated narrowly on purpose: this decides CREDITING, and crediting
+ * only. Money leaving again — `charge.dispute.created`, `charge.refunded` — is
+ * not handled anywhere on the platform, so a charged-back top-up leaves the
+ * credits spendable. That is pre-existing and it is not fixed here, because
+ * clawing back a balance a customer may already have spent is a refund-policy
+ * decision rather than a bug fix. Recorded as a WP11 residual so the gap is not
+ * mistaken for coverage; an earlier version of this docstring claimed to own
+ * "is it settled" outright, which read as covering the reversal half.
  *
  * `webhook.ts` credited `session.metadata.amount_cents`. That value is a
  * string *we* wrote when we created the Checkout Session — it is our own

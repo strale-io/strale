@@ -79,7 +79,7 @@ const WELCOME_TEMPLATE = {
     signup: "https://strale.dev/signup",
     credit_card_required: false,
     description:
-      "Register via POST /v1/auth/register with email. Returns API key and \u20ac2.00 trial credits instantly. No credit card required. No payment method needed to start.",
+      "Register via POST /v1/auth/register with email. Returns an API key immediately, plus \u20ac2.00 trial credits for a first-time address — read wallet_balance_cents from the response rather than assuming it. No credit card required.",
   },
 
   sandbox: {
@@ -87,7 +87,7 @@ const WELCOME_TEMPLATE = {
     trial_credits_eur: 2.0,
     credit_card_required: false,
     description:
-      "New accounts receive \u20ac2.00 in trial credits automatically. No credit card required. No payment method needed. The free-tier iban-validate capability can be used to test the integration.",
+      "A first-time email address receives \u20ac2.00 in trial credits automatically; the credit is issued once per address, and the signup response reports what was actually granted. No credit card required. The free-tier iban-validate capability can be used to test the integration.",
     test_example: {
       endpoint: "POST /v1/do",
       body: {
@@ -109,7 +109,7 @@ const WELCOME_TEMPLATE = {
     pricing_page: "https://strale.dev/pricing",
     capabilities_with_prices: "https://api.strale.io/v1/capabilities",
     description:
-      "Pay only for what you use. New accounts receive \u20ac2.00 in trial credits instantly \u2014 no credit card required.",
+      "Pay only for what you use. A first-time email address receives \u20ac2.00 in trial credits instantly \u2014 no credit card required.",
   },
 
   sdks: {
@@ -236,7 +236,7 @@ ${capCount}+ independently tested and scored data capabilities across ${countryC
 2. Get your API key (starts with \`sk_live_\`)
 3. Execute: \`POST /v1/do\` with \`capability_slug\` and \`inputs\`
 
-Free trial: €2.00 credits, no credit card required.
+Free trial: €2.00 credits for a first-time email address, no credit card required.
 
 ## Endpoints
 
@@ -264,7 +264,7 @@ Free trial: €2.00 credits, no credit card required.
 
 Bearer token: \`Authorization: Bearer sk_live_...\`
 
-Register via \`POST /v1/auth/register\` with email. Returns API key and €2.00 trial credits instantly. No credit card required.
+Register via \`POST /v1/auth/register\` with email. Returns an API key immediately, plus €2.00 trial credits for a first-time address. No credit card required.
 
 ## SDKs
 
@@ -319,7 +319,7 @@ const PRICING = {
       price: "0",
       priceCurrency: "EUR",
       description:
-        "\u20ac2.00 trial credits on signup. No credit card required.",
+        "\u20ac2.00 trial credits on a first-time email address. No credit card required.",
       eligibleCustomerType: "NewCustomer",
       availability: "https://schema.org/InStock",
     },
@@ -339,7 +339,7 @@ const PRICING = {
   trial_credits_eur: 2.0,
   credit_card_required: false,
   description:
-    "Pay only for what you use. New accounts receive \u20ac2.00 in trial credits instantly \u2014 no credit card required. No payment method needed to start.",
+    "Pay only for what you use. A first-time email address receives \u20ac2.00 in trial credits instantly \u2014 no credit card required. No payment method needed to start.",
   price_range: {
     min_cents: 2,
     max_cents: 50,

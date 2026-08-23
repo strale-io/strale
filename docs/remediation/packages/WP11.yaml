@@ -1,0 +1,258 @@
+package: WP11
+title: Account / trial / Stripe lifecycle
+status: IN_REVIEW
+depends_on: [WP2]
+risks: [CR-09, CR-10]
+
+objective: >
+  Make account creation, trial entitlement, Stripe crediting and key rotation
+  ledger-consistent, each owned by one authority instead of decided
+  independently by whichever handler the request happened to reach.
+
+# Measured against PRODUCTION read-only on 2026-08-23, not read off the audit.
+production_evidence:
+  population: >
+    60 users, 59 wallets, 61 trial_credit ledger rows totalling 15,725 cents.
+    21 signups in the last 90 days.
+  the_one_user_without_a_wallet: >
+    `system@strale.internal`, the test-harness principal, created 2026-03-03
+    deliberately without one. So the non-atomic-signup window has NOT yet been
+    hit by a real registration. That is luck plus low volume, not a property of
+    the code — the users INSERT commits on its own and the wallet follows in a
+    second transaction.
+  trial_farming_is_live_not_hypothetical: >
+    Eight accounts share signup IP hash `d5ab85828d59fa6f`, created between
+    2026-05-25T21:40Z and 2026-05-27T17:07Z — seven at `abhoward.site`
+    (burg2, charls, aas, gjsad7, jkasdfgggg, zalupa2, zaebsaid) and one at
+    `kiacc.ink`. Each was granted 200 cents; total 1,600 cents. All eight spent
+    zero. Every one of them came through `/v1/auth/register`: their ledger rows
+    read "Welcome trial credits", and the whole database holds exactly ONE row
+    reading "(agent self-signup)".
+  the_disposable_list_would_not_have_caught_it: >
+    Neither `abhoward.site` nor `kiacc.ink` appears in the 5,361-domain
+    disposable list. The gate that would have stopped this is a per-IP cap, and
+    NEITHER path had one — `/v1/signup` counted same-IP signups but only ever
+    set `flagged_for_review: true`.
+  stripe_has_never_credited_a_wallet: >
+    `SELECT COUNT(*) FROM wallet_transactions WHERE stripe_session_id IS NOT NULL`
+    returns 0. The metadata-vs-amount_total defect is therefore latent, not
+    realised, and there is nothing to reconcile.
+  three_authorities_write_trial_credit: >
+    Beyond the two signup handlers, two rows carry manual admin grants typed
+    `trial_credit` — "SpendLatch evaluation credits" (2,300 cents) and
+    "SpendLatch evaluation top-up — restore to EUR 25.00" (1,625 cents), both
+    on 2026-04-09 for one user. 3,925 cents of the 15,725 total came from
+    neither signup path.
+  closure_has_never_run_in_production: >
+    `SELECT COUNT(*) FROM users WHERE deleted_at IS NOT NULL` returns 0. The
+    delete → re-register trial loop is reachable but unexercised.
+  ledger_drift_predating_wp2: >
+    22 wallets have `balance_cents <> SUM(ledger)`, net +108,575 cents. Every
+    one is an internal account (@strale.io, test@example.com, sdktest@test.com,
+    test-*), seeded by manual `UPDATE wallets` before WP2 made mutation
+    single-authority. No customer wallet is affected. NOT repaired here — see
+    residuals.
+
+defects:
+  non_atomic_signup: >
+    `routes/auth.ts` register and agentSignupHandler each ran
+    `db.insert(users)` as its own commit, then `db.transaction(openWallet)` as a
+    second. WP2 fixed the second half and said so in a comment: "The three
+    signup writes are still not one transaction — that is CR-09 and belongs to
+    WP11." A failure in the gap leaves an account that owns its email address
+    (409 forever on re-registration), has no wallet to debit, and that nothing
+    sweeps.
+  toctou_on_duplicate_email: >
+    Both handlers SELECT-then-INSERT on the email. Two concurrent registrations
+    for one address make the loser hit the unique index and surface as a raw
+    500 rather than 409.
+  two_trial_authorities: >
+    `/v1/auth/register` applied no gate of any kind. `/v1/signup` applied four,
+    one of which denied nothing. Same EUR 2.00, two different rulebooks.
+  entitlement_cannot_survive_erasure: >
+    `DELETE /v1/auth/me` anonymises the users row, so any entitlement recorded
+    against the account is destroyed by exactly the action the rule needs to
+    outlive. Close, re-register, take the grant again.
+  signup_response_asserted_an_unread_balance: >
+    Both handlers returned the `TRIAL_CREDITS_CENTS` constant as
+    `wallet_balance_cents` / `balance_cents`. Correct only for as long as the
+    grant was unconditional; an agent planning spend against it would overspend
+    the moment any gate withheld.
+  stripe_credited_our_own_echo: >
+    `webhook.ts` credited `session.metadata.amount_cents` — a string we wrote
+    when creating the session — and read none of `payment_status`,
+    `amount_total`, `currency`. `checkout.session.completed` does not mean paid:
+    for delayed-notification methods Stripe fires it with
+    `payment_status: unpaid` and settles later via
+    `checkout.session.async_payment_succeeded`, which the handler ignored. So
+    enabling any such method (a Dashboard toggle, not a deploy) converts an
+    unpaid checkout into spendable balance, and the eventual settlement credits
+    nothing.
+  paid_but_uncredited_was_silent: >
+    A paid session with no wallet, or with absent metadata, was logged and
+    answered 200 — which consumes the Stripe event. The money is collected and
+    never reaches a balance, with no retry and nothing paged.
+  unauthenticated_key_rotation: >
+    `/v1/auth/recover` rotated the account's key and mailed the replacement on
+    an unauthenticated request whose only input was an email address. A
+    revocation denial-of-service against any address an attacker knows; the
+    2-per-5-minutes-per-IP limit bounds the rate, not the outcome, and one
+    request is already the whole attack. The mailed key is also a reusable
+    bearer secret, permanently valid for anyone who later reads that mailbox.
+
+authorities:
+  account_exists_with_wallet_and_grant: lib/account-service.ts::createAccount
+  trial_entitlement: lib/trial-eligibility.ts + trial_grants.email_hash UNIQUE
+  amount_currency_and_settlement: lib/stripe-settlement.ts (reads Stripe's session)
+  key_rotation_authorization: lib/key-recovery.ts (single-use, 30-minute token)
+  balance_mutation: lib/wallet-service.ts (WP2, unchanged — re-proved here)
+
+design:
+  validity_versus_entitlement: >
+    A validity failure REFUSES the account (disposable domain, no mail
+    exchanger). An entitlement failure CREATES the account and WITHHOLDS the
+    grant (address already granted, per-IP cap). Refusing to create an account
+    because a shared office NAT already took three trials would lock out a
+    paying customer to save EUR 2.00.
+  why_a_table_and_not_a_users_column: >
+    The erasure endpoint anonymises the users row. An entitlement stored there
+    is destroyed by the delete → re-register loop it exists to close. A one-way
+    SHA-256 of the address survives Art. 17 anonymisation precisely because it
+    is not the address; `trial_grants.user_id` is nullable and carries no
+    foreign key for the same reason.
+  the_unique_index_is_the_rule: >
+    `assessTrialGrant` is advisory — two concurrent signups can both pass it.
+    The authoritative claim is `trial_grants_email_hash_unique`, taken inside
+    the account transaction BEFORE the credit, so the loser gets an account
+    with no grant rather than a second credit.
+  mx_gate_reads_the_error_code: >
+    `dns.resolveMx` almost never returns `[]`. A nonexistent domain throws
+    ENOTFOUND; a domain with no MX throws ENODATA. Catching every error
+    permissively disables the gate for the exact case it exists to catch;
+    catching every error as a refusal turns a resolver blip into a signup
+    outage. ENOTFOUND/ENODATA/NXDOMAIN refuse, everything else is permissive.
+    RFC 7505 null MX (empty exchange) refuses too — a length check accepts it.
+  retry_only_where_retry_can_help: >
+    A paid Stripe session with no wallet answers 503, because a wallet can
+    appear between deliveries and Stripe's retry schedule is the durable queue.
+    A paid session with no user_id, a non-EUR currency or an absent amount
+    answers 200 and pages: redelivering the same object cannot change any of
+    those, and four more retries over three days end in the same place. What
+    was missing was never the retry, it was anyone finding out.
+  no_second_queue: >
+    Deliberately did NOT build a `stripe_uncredited_payments` table. Stripe
+    already holds every session, and production has never credited one. A
+    durable local queue is deferred until there is a real top-up to reconcile.
+
+exit_conditions:
+  atomic_signup:
+    status: MET
+    proof: >
+      routes/account-lifecycle.integration.test.ts "leaves no user row behind
+      when the wallet write fails" — a Postgres trigger makes the wallet INSERT
+      throw, and the users row and entitlement roll back with it. Fails against
+      pre-fix code with "expected [ Array(1) ] to have a length of +0 but got 1".
+  one_trial_authority:
+    status: MET
+    proof: >
+      Both channels call `assessTrialGrant`. Proved on both:
+      "grants up to the per-IP cap and withholds beyond it" and "applies the
+      same entitlement authority to the agent self-signup channel". Both fail
+      pre-fix with "expected 200 to be +0".
+  stripe_amount_currency_verified:
+    status: MET
+    proof: >
+      webhook.integration.test.ts "credits amount_total, not the metadata the
+      session was created with" fails pre-fix with "expected 9999 to be 2500" —
+      the pre-fix handler credited the metadata amount, measured. Plus unpaid,
+      async-settlement and non-EUR cases.
+  closure_ledger_consistent:
+    status: MET (WP2's invariant, re-proved end to end)
+    proof: >
+      "closure forfeits the balance through the ledger, not by zeroing it" —
+      balance 0, ledger sums to 0, exactly one closure_forfeit row. Passes
+      against pre-fix code too: WP2 closed this and WP11 only re-proves it
+      through the HTTP path.
+  proof_before_key_rotation:
+    status: MET
+    proof: >
+      "requesting recovery does not rotate the key" fails pre-fix with
+      "expected 401 to be 200" — the pre-fix request invalidated the working
+      key, which is the revocation DoS measured directly.
+
+migration:
+  block: 0102_account_lifecycle_tables
+  creates: [trial_grants, api_key_recovery_tokens]
+  indexes:
+    - trial_grants_email_hash_unique (UNIQUE) — the rule itself
+    - trial_grants_ip_granted_idx (ip_hash, granted_at)
+    - api_key_recovery_tokens_token_hash_unique (UNIQUE)
+    - api_key_recovery_tokens_user_created_idx (user_id, created_at)
+  backfill:
+    rows: 59
+    what: one entitlement per wallet holding a trial_credit ledger entry
+    why: >
+      Without it the rule grandfathers in every account that predates it —
+      each of the 59 could close and re-register for a second grant on the day
+      this ships.
+    hash_expression: "encode(sha256(convert_to(lower(btrim(email)), 'UTF8')), 'hex')"
+    hash_verified: >
+      Byte-for-byte against hashEmail() on five production rows. Postgres
+      built-in `sha256(bytea)`, no extension. Production is 17.11.
+    excluded: >
+      Already-redacted accounts (deleted_at IS NOT NULL, or the
+      redacted-%@deleted.local sentinel). Their address is gone so no hash can
+      be computed. Production holds ZERO such rows, so this costs nothing today
+      and is stated so a later reader does not read it as an oversight.
+  bulk_operation_audit: >
+    DEC-20260504-B: one INSERT … SELECT over 60 users joined to 61 ledger rows,
+    grouped to at most one row per wallet. Bounded, not a resumed bulk
+    operation, no drain plan required.
+  ip_window_effect_at_deploy: >
+    `granted_at` is backfilled to the ORIGINAL grant time, and the per-IP cap
+    measures a rolling 7 days. Zero of the 59 land inside that window (most
+    recent grant is 2026-08-05), so no existing signup IP is capped by the
+    backfill.
+  idempotency: >
+    IF NOT EXISTS DDL, ON CONFLICT (email_hash) DO NOTHING on the backfill, and
+    the startup_migration_ledger gating the backfill to its first successful
+    run. Verified by re-running against the test database.
+  deploy_mechanism_verified: >
+    DEC-20260504-C: the block is registered in BLOCKS (startup-migrations.ts),
+    which `index.ts:112` invokes via runStartupMigrations() before the API
+    listens. Applied successfully to a real Postgres materialised the same way
+    CI does (drizzle-kit push, then apply-startup-migrations.ts): 45 blocks,
+    0102 reported "tables and indexes ensured". Objects confirmed present with
+    `\d` — both UNIQUE indexes and the FK exist.
+  prod_precheck: >
+    `to_regclass('public.trial_grants')` and
+    `to_regclass('public.api_key_recovery_tokens')` are both NULL in
+    production, so this is a clean first install.
+
+api_surface_changes:
+  - POST /v1/auth/register now refuses (400) disposable-mail domains and
+    domains with no mail exchanger. Previously only /v1/signup did.
+  - Both signup responses report the amount actually granted and carry a
+    `trial_credits` object when it was withheld.
+  - POST /v1/auth/recover no longer rotates anything or returns a key; it
+    issues a code. POST /v1/auth/recover/confirm is new and is now the only
+    way to complete recovery.
+  - The recovery email carries a single-use code and a ready-to-run curl,
+    not an API key.
+  - OpenAPI spec updated for all of the above; /v1/auth/recover was previously
+    undocumented and /v1/auth/recover/confirm would otherwise be undiscoverable.
+  - No SDK consumes the register or recover response — checked
+    packages/sdk-typescript, sdk-python, mcp-server, semantic-kernel-strale.
+
+out_of_scope:
+  - Repairing the 22 pre-WP2 drifted internal wallets (writes production
+    wallets; CHECK-IN B, same class as WP3's 11 stranded rows).
+  - A durable stripe_uncredited_payments table (no production top-up has ever
+    happened; Stripe holds the record).
+  - Reclaiming the 1,600 cents granted to the eight farmed accounts (writes
+    production wallets; all eight spent zero, so the exposure is already
+    contained).
+  - Spoofable X-Forwarded-For, which bounds how strong the per-IP cap can be.
+    Owned by WP12 + VERIFY-IP.
+  - The frontend docs page describing the old recovery behaviour
+    (strale-frontend src/pages/docs-content.ts:1172). Separate repository.

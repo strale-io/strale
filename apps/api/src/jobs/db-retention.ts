@@ -78,6 +78,15 @@ export const RULES: readonly RetentionRule[] = [
   { table: "test_run_log",          column: "started_at",   days: 180, idCols: "id",                       orderClause: "started_at, id" },
   { table: "rate_limit_counters",   column: "window_start", days: 7,   idCols: "bucket_key, window_start", orderClause: "window_start, bucket_key" },
   { table: "discovery_hits",        column: "created_at",   days: 90,  idCols: "id",                       orderClause: "created_at, id" },
+  // WP11. Tokens live 30 minutes; anything a week old is long spent. Rows are
+  // a user id plus an IP hash, so retaining them indefinitely would quietly
+  // grow the set that survives an account closure.
+  //
+  // `trial_grants` is deliberately NOT here. Its email hash IS the "one trial
+  // per address" rule, and pruning it hands every account that ages out a
+  // second grant — the exact loop the table exists to close. Its identifying
+  // columns are cleared on erasure instead (anonymiseTrialGrantOnClosure).
+  { table: "api_key_recovery_tokens", column: "created_at", days: 7,   idCols: "id",                       orderClause: "created_at, id" },
 ] as const;
 
 let _running = false;

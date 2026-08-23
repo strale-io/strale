@@ -12,8 +12,11 @@ import { createHash } from "node:crypto";
 
 import {
   assessTrialGrant,
+  emailDomain,
   hashEmail,
+  MAX_EMAIL_LENGTH,
   normaliseEmail,
+  trialRateBucket,
   TRIAL_CREDITS_CENTS,
 } from "./trial-eligibility.js";
 
@@ -74,31 +77,60 @@ describe("assessTrialGrant — the MX rule reads the error code, not just the fa
     // exact case it exists to catch.
     const result = await assessTrialGrant(emptyDb(), params, {
       resolveMx: throwingResolver("ENOTFOUND"),
+      resolveAddresses: async () => ["93.184.216.34"],
     });
     expect(result).toMatchObject({ decision: "refuse", reason: "no_mail_exchanger" });
   });
 
-  it("refuses when the domain exists but has no MX (ENODATA)", async () => {
+  it("grants when the domain has no MX but does have address records (RFC 5321 implicit MX)", async () => {
+    // The correction that matters most in practice. `ENODATA` means the domain
+    // exists and publishes no MX, which RFC 5321 5.1 says is a domain with an
+    // IMPLICIT MX at its address record — such domains do receive mail.
+    // `strale.dev` is one of them: A records, no MX. Treating ENODATA as
+    // authoritative refused registration to anyone at our own domain, and to
+    // every small operator running an MTA on their web host.
     const result = await assessTrialGrant(emptyDb(), params, {
       resolveMx: throwingResolver("ENODATA"),
+      resolveAddresses: async () => ["93.184.216.34"],
+    });
+    expect(result).toMatchObject({ decision: "grant" });
+  });
+
+  it("refuses when the domain has neither an MX nor an address record", async () => {
+    const result = await assessTrialGrant(emptyDb(), params, {
+      resolveMx: throwingResolver("ENODATA"),
+      resolveAddresses: async () => [],
     });
     expect(result).toMatchObject({ decision: "refuse", reason: "no_mail_exchanger" });
   });
 
-  it("refuses an RFC 7505 null MX", async () => {
+  it("refuses an RFC 7505 null MX even when address records exist", async () => {
     // A single MX with an empty exchange is the domain explicitly declaring it
-    // accepts no mail. A `length === 0` check accepts it happily.
+    // accepts no mail, which overrides the implicit-MX fallback. A
+    // `length === 0` check accepts it happily.
     const result = await assessTrialGrant(emptyDb(), params, {
       resolveMx: async () => [{ exchange: "" }],
+      resolveAddresses: async () => ["93.184.216.34"],
     });
     expect(result).toMatchObject({ decision: "refuse", reason: "no_mail_exchanger" });
   });
 
-  it("refuses an empty answer", async () => {
+  it("falls back to address records on an empty MX answer", async () => {
     const result = await assessTrialGrant(emptyDb(), params, {
       resolveMx: async () => [],
+      resolveAddresses: async () => [],
     });
     expect(result).toMatchObject({ decision: "refuse", reason: "no_mail_exchanger" });
+  });
+
+  it("does not refuse when the address lookup itself fails", async () => {
+    // An unanswered question is not an answer. The fallback failing is a
+    // resolver problem, not evidence about the domain.
+    const result = await assessTrialGrant(emptyDb(), params, {
+      resolveMx: async () => [],
+      resolveAddresses: throwingResolver("ESERVFAIL"),
+    });
+    expect(result.decision).toBe("grant");
   });
 
   it("grants through a resolver timeout — an outage must not stop signups", async () => {
@@ -107,6 +139,7 @@ describe("assessTrialGrant — the MX rule reads the error code, not just the fa
     // resolver blip refused every registration.
     const result = await assessTrialGrant(emptyDb(), params, {
       resolveMx: throwingResolver("ETIMEOUT"),
+      resolveAddresses: async () => [],
     });
     expect(result).toMatchObject({ decision: "grant", grantCents: TRIAL_CREDITS_CENTS });
   });
@@ -114,6 +147,7 @@ describe("assessTrialGrant — the MX rule reads the error code, not just the fa
   it("grants through a SERVFAIL", async () => {
     const result = await assessTrialGrant(emptyDb(), params, {
       resolveMx: throwingResolver("ESERVFAIL"),
+      resolveAddresses: async () => [],
     });
     expect(result.decision).toBe("grant");
   });
@@ -121,6 +155,7 @@ describe("assessTrialGrant — the MX rule reads the error code, not just the fa
   it("grants for a domain with a real mail exchanger", async () => {
     const result = await assessTrialGrant(emptyDb(), params, {
       resolveMx: async () => [{ exchange: "mx.example.org" }],
+      resolveAddresses: async () => [],
     });
     expect(result).toMatchObject({ decision: "grant", grantCents: 200 });
   });
@@ -141,5 +176,96 @@ describe("assessTrialGrant — disposable domains refuse before any lookup", () 
     );
     expect(result).toMatchObject({ decision: "refuse", reason: "disposable_domain" });
     expect(called).toBe(false);
+  });
+});
+
+describe("emailDomain — the delivery domain is after the LAST @", () => {
+  it("reads the real delivery domain of a two-at address", () => {
+    // `split("@")[1]`, which both handlers used, hands the gates `gmail.com`
+    // for an address delivered to `mailinator.com`. Measured against this
+    // module before the fix: that address returned a 200-cent grant.
+    expect(emailDomain("a@gmail.com@mailinator.com")).toBe("mailinator.com");
+  });
+
+  it("reads an ordinary address normally", () => {
+    expect(emailDomain("person@example.org")).toBe("example.org");
+  });
+
+  it("returns empty for an address with no usable domain", () => {
+    expect(emailDomain("no-at-sign")).toBe("");
+    expect(emailDomain("@example.org")).toBe("");
+    expect(emailDomain("person@")).toBe("");
+  });
+});
+
+describe("assessTrialGrant — malformed and oversized addresses", () => {
+  const deps = {
+    resolveMx: async () => [{ exchange: "mx.example.org" }],
+    resolveAddresses: async () => [],
+  };
+
+  it("refuses a two-at address whose real domain is disposable", () => {
+    return expect(
+      assessTrialGrant(
+        emptyDb(),
+        { email: "a@gmail.com@mailinator.com", ipHash: null, channel: "register" },
+        deps,
+      ),
+    ).resolves.toMatchObject({ decision: "refuse", reason: "disposable_domain" });
+  });
+
+  it("refuses an address longer than the column can hold", () => {
+    // `users.email` is varchar(255). A longer address reaches the INSERT and
+    // raises Postgres 22001, which is not a unique violation, so it propagates
+    // as a 500 rather than a 400.
+    const long = `${"a".repeat(MAX_EMAIL_LENGTH)}@example.org`;
+    return expect(
+      assessTrialGrant(emptyDb(), { email: long, ipHash: null, channel: "register" }, deps),
+    ).resolves.toMatchObject({ decision: "refuse", reason: "malformed_address" });
+  });
+
+  it("refuses an address with no domain part", () => {
+    return expect(
+      assessTrialGrant(emptyDb(), { email: "person@", ipHash: null, channel: "register" }, deps),
+    ).resolves.toMatchObject({ decision: "refuse", reason: "malformed_address" });
+  });
+});
+
+describe("trialRateBucket — IPv6 counts by /64", () => {
+  it("counts an IPv4 address as itself", () => {
+    expect(trialRateBucket("203.0.113.7")).toBe("203.0.113.7");
+  });
+
+  it("collapses an IPv6 /64 to one bucket", () => {
+    // Every mainstream VPS and most home connections get a whole /64, so
+    // counting v6 addresses individually hands a farmer 2^64 free buckets and
+    // the cap never fires at all.
+    const a = trialRateBucket("2001:db8:1234:5678:1::1");
+    const b = trialRateBucket("2001:db8:1234:5678:ffff:ffff:ffff:ffff");
+    expect(a).toBe(b);
+    expect(a).toBe("2001:0db8:1234:5678::/64");
+  });
+
+  it("does not collapse different /64s", () => {
+    expect(trialRateBucket("2001:db8:1234:5678::1")).not.toBe(
+      trialRateBucket("2001:db8:1234:9999::1"),
+    );
+  });
+
+  it("gives the compressed and expanded forms of one prefix the same bucket", () => {
+    expect(trialRateBucket("2001:db8::1")).toBe(
+      trialRateBucket("2001:0db8:0000:0000:0000:0000:0000:0001"),
+    );
+  });
+
+  it("ignores a zone id", () => {
+    expect(trialRateBucket("fe80::1%eth0")).toBe(trialRateBucket("fe80::1"));
+  });
+
+  it("returns null for an unusable address rather than inventing a bucket", () => {
+    expect(trialRateBucket("unknown")).toBeNull();
+    expect(trialRateBucket("")).toBeNull();
+    expect(trialRateBucket("2001:db8::1::2")).toBeNull();
+    expect(trialRateBucket("not:an:address")).toBeNull();
   });
 });

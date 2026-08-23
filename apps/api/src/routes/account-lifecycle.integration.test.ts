@@ -67,6 +67,21 @@ vi.mock("node:dns/promises", async (importOriginal) => {
       }
       return [{ exchange: `mx.${domain}`, priority: 10 }];
     },
+    // The implicit-MX fallback must be stubbed too, or a test whose MX lookup
+    // fails silently reaches the real network and its outcome depends on DNS.
+    resolve4: async (domain: string) => {
+      if (domain === "no-mx.test") {
+        const err = new Error("queryA ENOTFOUND no-mx.test") as Error & { code: string };
+        err.code = "ENOTFOUND";
+        throw err;
+      }
+      return ["203.0.113.10"];
+    },
+    resolve6: async () => {
+      const err = new Error("queryAaaa ENODATA") as Error & { code: string };
+      err.code = "ENODATA";
+      throw err;
+    },
   };
 });
 
@@ -321,9 +336,11 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
 
     // Account: yes. Second EUR 2.00: no.
     expect(body.wallet_balance_cents).toBe(0);
+    // One undifferentiated public reason: a specific one would tell anyone who
+    // registers an address whether it had previously held an account.
     expect(body.trial_credits).toMatchObject({
       granted: false,
-      reason: "email_already_granted",
+      reason: "trial_not_available",
     });
 
     const wallet = await walletOf(body.user_id);
@@ -383,7 +400,7 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       trial_credits?: { granted: boolean; reason: string };
     };
     expect(body.wallet_balance_cents).toBe(0);
-    expect(body.trial_credits).toMatchObject({ granted: false, reason: "ip_trial_cap" });
+    expect(body.trial_credits).toMatchObject({ granted: false, reason: "trial_not_available" });
 
     // Withholding money is not refusing service: a shared office NAT must not
     // lock a paying customer out of signing up at all.
@@ -449,9 +466,11 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       trial_credits?: { granted: boolean; reason: string };
     };
     expect(body.balance_cents).toBe(0);
+    // One undifferentiated public reason: a specific one would tell anyone who
+    // registers an address whether it had previously held an account.
     expect(body.trial_credits).toMatchObject({
       granted: false,
-      reason: "email_already_granted",
+      reason: "trial_not_available",
     });
 
     await db
@@ -520,10 +539,37 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     ).toHaveLength(0);
 
     // Re-arm the one-shot gate so the block's backfill runs again here.
+    //
+    // The block's INSERT … SELECT is deliberately UNSCOPED — it has to be, it
+    // seeds every pre-existing account — so re-running it in a shared lane
+    // database writes entitlement rows for other suites' users too, and those
+    // rows would then silently withhold trial credits from any later suite
+    // registering those addresses. This suite has already been bitten once by
+    // exactly that class of leak (the closure_forfeit rows that broke
+    // wallet-service.integration).
+    //
+    // So the rows that existed before are recorded, and everything the re-run
+    // added beyond this test's own account is removed afterwards.
+    const before = new Set(
+      (await db.select({ id: trialGrants.id }).from(trialGrants)).map((r) => r.id),
+    );
+
     await db.execute(
       sql`DELETE FROM startup_migration_ledger WHERE block = '0102_account_lifecycle_tables'`,
     );
-    await runMigration0102_accountLifecycleTables(db as never);
+    try {
+      await runMigration0102_accountLifecycleTables(db as never);
+    } finally {
+      const after = await db
+        .select({ id: trialGrants.id, emailHash: trialGrants.emailHash })
+        .from(trialGrants);
+      const collateral = after
+        .filter((r) => !before.has(r.id) && r.emailHash !== hashEmail(email))
+        .map((r) => r.id);
+      if (collateral.length > 0) {
+        await db.delete(trialGrants).where(inArray(trialGrants.id, collateral));
+      }
+    }
 
     const backfilled = await db
       .select()
@@ -547,7 +593,7 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       trial_credits?: { reason: string };
     };
     expect(body.wallet_balance_cents).toBe(0);
-    expect(body.trial_credits).toMatchObject({ reason: "email_already_granted" });
+    expect(body.trial_credits).toMatchObject({ reason: "trial_not_available" });
 
     await db.delete(trialGrants).where(eq(trialGrants.emailHash, hashEmail(email)));
   });
@@ -707,7 +753,13 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     expect(stillWorks.status).toBe(200);
   });
 
-  it("a new request invalidates the previous outstanding token", async () => {
+  it("a second request does not kill the first code — that would be a denial of service", async () => {
+    // The first version expired every outstanding token on each new request,
+    // and this test asserted that. Requesting a code is unauthenticated and
+    // needs only the address, so an attacker could loop the endpoint and kill
+    // the victim's code before they could paste it, indefinitely — and
+    // /v1/auth/api-key needs the key they have already lost. Codes now stand
+    // until they expire or are used.
     const email = emailFor("supersede");
     const created = await register({ email });
     const { user_id } = (await created.json()) as { user_id: string };
@@ -716,10 +768,65 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       "../lib/key-recovery.js"
     );
     const first = await issueRecoveryToken(db, { userId: user_id, ipHash: null });
-    const second = await issueRecoveryToken(db, { userId: user_id, ipHash: null });
+    await issueRecoveryToken(db, { userId: user_id, ipHash: null });
 
-    expect((await redeemRecoveryToken(db, { token: first.token, email })).ok).toBe(false);
-    expect((await redeemRecoveryToken(db, { token: second.token, email })).ok).toBe(true);
+    expect((await redeemRecoveryToken(db, { token: first.token, email })).ok).toBe(true);
+  });
+
+  it("bounds how many codes one account can hold at once", async () => {
+    // Not letting a flood grow the table without bound. The oldest go first,
+    // so a legitimate code is only displaced after MAX_OUTSTANDING_TOKENS
+    // newer ones exist — by which point the victim has been mailed those too.
+    const email = emailFor("token-cap");
+    const created = await register({ email });
+    const { user_id } = (await created.json()) as { user_id: string };
+
+    const { issueRecoveryToken, redeemRecoveryToken, MAX_OUTSTANDING_TOKENS } =
+      await import("../lib/key-recovery.js");
+
+    const issued = [];
+    for (let i = 0; i < MAX_OUTSTANDING_TOKENS + 1; i++) {
+      issued.push(await issueRecoveryToken(db, { userId: user_id, ipHash: null }));
+    }
+
+    const live = await db
+      .select({ id: apiKeyRecoveryTokens.id })
+      .from(apiKeyRecoveryTokens)
+      .where(
+        and(
+          eq(apiKeyRecoveryTokens.userId, user_id),
+          sql`${apiKeyRecoveryTokens.usedAt} IS NULL`,
+          sql`${apiKeyRecoveryTokens.expiresAt} > now()`,
+        ),
+      );
+    expect(live).toHaveLength(MAX_OUTSTANDING_TOKENS);
+
+    // The oldest was displaced; the newest still works.
+    expect((await redeemRecoveryToken(db, { token: issued[0]!.token, email })).ok).toBe(false);
+    expect((await redeemRecoveryToken(db, { token: issued.at(-1)!.token, email })).ok).toBe(
+      true,
+    );
+  });
+
+  it("a wrong email does not burn the code", async () => {
+    // The claim used to be an unconditional UPDATE that committed before the
+    // ownership check, so a holder who typed a different address than the one
+    // the code was issued to spent it and had to start over — behind a
+    // 2-per-5-minutes limiter.
+    const email = emailFor("wrong-email");
+    const created = await register({ email });
+    const { user_id } = (await created.json()) as { user_id: string };
+
+    const { issueRecoveryToken, redeemRecoveryToken } = await import(
+      "../lib/key-recovery.js"
+    );
+    const { token } = await issueRecoveryToken(db, { userId: user_id, ipHash: null });
+
+    expect(
+      (await redeemRecoveryToken(db, { token, email: emailFor("someone-else") })).ok,
+    ).toBe(false);
+    // Still spendable by its rightful holder.
+    expect((await redeemRecoveryToken(db, { token, email })).ok).toBe(true);
   });
 
   it("a closed account cannot be recovered into", async () => {
