@@ -384,6 +384,25 @@ describeMaybe("execution receipts against a real database", () => {
     ).not.toBe(base);
   });
 
+  it("the same steps in a different ARRAY order produce the SAME digest", () => {
+    // This is what isolates the sort. The reordering test above changes
+    // step_order values, so the digest moves whether or not the builder sorts
+    // — it passed for the wrong reason and the mutation battery caught it.
+    //
+    // Here step_order is IDENTICAL and only the array order differs. Sorted,
+    // the two are the same computation and must agree. Unsorted, they do not.
+    const s1 = { step_order: 1, slug: "a", manifest_digest: `sha256:${"1".repeat(64)}` };
+    const s2 = { step_order: 2, slug: "b", manifest_digest: `sha256:${"2".repeat(64)}` };
+
+    const inOrder = digestOf(
+      baseReceipt({ subjectKind: "solution", subjectSlug: "kyb", steps: [s1, s2] }),
+    );
+    const shuffled = digestOf(
+      baseReceipt({ subjectKind: "solution", subjectSlug: "kyb", steps: [s2, s1] }),
+    );
+    expect(shuffled).toBe(inOrder);
+  });
+
   it("call-site key insertion order cannot change the receipt digest", () => {
     const forward = baseReceipt({ inputs: { a: 1, b: 2 } });
     const backward = baseReceipt({ inputs: JSON.parse('{"b":2,"a":1}') });
@@ -455,6 +474,42 @@ describeMaybe("execution receipts against a real database", () => {
     expect(row.receipt_status).toBe("failed");
     expect(row.receipt_failure_reason).toBe("unmapped_rail");
     expect(row.receipt_digest).toBeNull();
+  });
+
+  it("a receipt that later FAILS has its success metadata cleared, not left stale", async () => {
+    // The previous test asserts receipt_digest is null after a failure — but
+    // that row never had a digest, so it was null either way. The mutation
+    // battery caught it. This one sets a real complete receipt FIRST, so the
+    // clearing has something to clear.
+    const id = await newTransaction();
+    const built = buildExecutionReceipt(baseReceipt({ transactionId: id }), {
+      NODE_ENV: "test",
+    } as NodeJS.ProcessEnv);
+    if (built.outcome !== "complete") throw new Error("fixture must build");
+    await markReceiptComplete(db, id, built);
+
+    const before = await db.execute(
+      sql`SELECT receipt_digest FROM transactions WHERE id = ${id}::uuid`,
+    );
+    expect((before as unknown as Array<Record<string, unknown>>)[0].receipt_digest).toBe(
+      built.digest,
+    );
+
+    await markReceiptFailed(db, id, "unresolvable_manifest");
+
+    const after = await db.execute(sql`
+      SELECT receipt_status, receipt_digest, receipt_version, receipt_canonicalization,
+             receipt_digest_alg
+        FROM transactions WHERE id = ${id}::uuid
+    `);
+    const row = (after as unknown as Array<Record<string, unknown>>)[0];
+    expect(row.receipt_status).toBe("failed");
+    // A stale digest on a failed row would be a commitment to a receipt that
+    // was withdrawn — worse than no digest at all.
+    expect(row.receipt_digest).toBeNull();
+    expect(row.receipt_version).toBeNull();
+    expect(row.receipt_canonicalization).toBeNull();
+    expect(row.receipt_digest_alg).toBeNull();
   });
 
   it("the database refuses a 'complete' receipt with no digest", async () => {
