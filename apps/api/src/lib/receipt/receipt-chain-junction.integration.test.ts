@@ -328,6 +328,36 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     expect((await row(id)).integrity_hash).toBeNull();
   });
 
+  it("the sweeper leaves a transaction that has NOT settled completely alone", async () => {
+    // Found by the mutation battery, not by review: removing the sweeper's
+    // `status IN ('completed','failed')` filter left every test green.
+    //
+    // The filter matters because settle returns early for a non-terminal row -
+    // there is no final result to commit to - so the sweeper would see "still
+    // pending, attempts unchanged" and burn an attempt on it every tick. After
+    // five ticks a transaction that is still EXECUTING would carry a terminally
+    // failed receipt, claiming we could not commit to a result that had not
+    // been produced yet.
+    const id = randomUUID();
+    txns.add(id);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at)
+      VALUES (${id}::uuid, ${userId}::uuid, 'executing', 5, 'algorithmic', 'EU', '{}'::jsonb,
+              now() - interval '20 minutes')
+    `);
+
+    // Several ticks, so an off-by-one budget would still show up.
+    await runOnce();
+    await runOnce();
+    await runOnce();
+
+    const r = await row(id);
+    expect(r.receipt_status, "an unsettled transaction must stay pending").toBe("pending");
+    expect(Number(r.receipt_attempts), "no attempt may be spent on it").toBe(0);
+    expect(r.receipt_failure_reason).toBe("not_yet_built");
+  });
+
   it("the worker chains a row exactly once", async () => {
     const id = await agedTransaction();
     await completeReceipt(id);
