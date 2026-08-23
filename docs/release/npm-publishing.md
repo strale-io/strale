@@ -141,6 +141,44 @@ node apps/api/scripts/npm-release-resolve.mjs --tag strale-mcp@0.2.7
 It prints the resolved directory, name, and version, or exits non-zero with the
 reason. Use it before cutting a tag.
 
+## Required post-release check: the production contract smoke test
+
+**Mandatory for every externally distributed package.** A release is not done
+when CI is green, when the tarball looks right, or even when the publish
+succeeds with provenance. It is done when the *published artefact* has been run
+against *production* and observed to work.
+
+Immediately after publishing, install the published version the way a stranger
+would -- not from the repo, not from a local build -- and check the startup
+output and one real call path:
+
+```bash
+npx -y <package>@<version>
+```
+
+Read the output. Specifically look for errors the program logged and then
+carried on from. A dependency that fails into a caught, logged, non-fatal
+degradation is exactly what CI cannot see and what a user will never report,
+because it does not look like a crash.
+
+Record the observed values, not "looks fine". For `strale-mcp` the contract is
+the startup line: capability count, solution count, capability trust count,
+solution trust count -- all four non-zero and consistent with the catalog.
+
+### Why this is a required step
+
+On 2026-08-22 this check, run once by hand after a release, found that
+`strale-mcp` had been starting with `0 cap trust, 0 sol trust` for roughly three
+and a half months. The trust routes it called had been deleted in May; the admin
+wall on their URL prefix answered 401 instead of 404; the client caught the
+error, logged it to stderr and continued. Inside an MCP client stderr is
+invisible, so no user could have reported it.
+
+Nothing in CI would ever have caught this, for a structural reason worth stating
+plainly: **CI tests the source against test doubles; it never runs the published
+artefact against production.** Those are different systems. The gap between them
+is exactly where this class of defect lives.
+
 ## Troubleshooting
 
 **`npm error need auth` / OIDC exchange fails.** The trusted-publisher entry on
