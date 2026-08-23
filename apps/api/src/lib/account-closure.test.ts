@@ -164,8 +164,32 @@ describe("the plan derives its column lists rather than retyping them", () => {
     // Zero of 5,599 production rows with an audit trail carry that key. An
     // operator following the old instruction would have redacted nothing and
     // reported the erasure complete.
-    const all = JSON.stringify(CLOSURE_PLAN);
-    expect(all).not.toContain("executionInput");
+    //
+    // Checked against the ROUTE, because that is where the defective text
+    // lived. The first version of this test asserted on CLOSURE_PLAN, which
+    // never contained the string — so re-adding a fabricated field name to
+    // the response body passed every test in the package. A regression guard
+    // aimed at the wrong artifact is not a guard.
+    const route = readFileSync(resolve(process.cwd(), "src/routes/auth.ts"), "utf8");
+    const handler = route.slice(route.indexOf('authRoute.delete("/me"'));
+    expect(handler).not.toContain("executionInput");
+    expect(JSON.stringify(CLOSURE_PLAN)).not.toContain("executionInput");
+  });
+
+  it("names only audit-trail paths that some writer actually produces", () => {
+    // Every JSONB path the plan names must be one the codebase writes. Five
+    // rounds of this package were spent on the inverse (writers whose shapes
+    // the plan did not name); this is the direction that produced a receipt
+    // pointing at a field with no writer at all.
+    const sources = ["src/routes/do.ts", "src/routes/solution-execute.ts"]
+      .map((f) => readFileSync(resolve(process.cwd(), f), "utf8"))
+      .join("\n");
+    const jsonbPaths = CLOSURE_PLAN.filter((r) => r.table.includes("audit_trail"))
+      .flatMap((r) => r.columns)
+      .filter((c) => !c.startsWith("see "));
+    for (const path of jsonbPaths) {
+      expect(sources, `no writer produces ${path}`).toContain(path);
+    }
   });
 });
 

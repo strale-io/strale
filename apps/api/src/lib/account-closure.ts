@@ -102,7 +102,7 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
   },
   {
     table: "failed_requests",
-    columns: ["user_id", "ip_hash", "user_agent"],
+    columns: ["user_id", "ip_hash", "user_agent", "error_detail"],
     disposition: "anonymized",
     reason:
       "Rows recording a request no capability could serve. The linkage and the request metadata are cleared; " +
@@ -148,8 +148,10 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
     reason:
       "The processing record itself under Art. 30: that a call happened, when, what it cost, and its place in the hash chain. " +
       "The row keeps your user id, which points at the anonymised users row — a bare id is not a name. " +
-      "The hashes are what make the chain tamper-evident and are not derived from the content just cleared, " +
-      "so clearing it leaves every later transaction verifiable. " +
+      "The hashes ARE computed over the content just cleared, so this row\'s own content hash no longer recomputes — " +
+      "which is why the row is stamped `redacted_at`, and why chain verification skips the recomputation for a redacted row " +
+      "and reports it as redacted rather than broken. Every later transaction still verifies. " +
+      "(An earlier version of this text claimed the hashes were not derived from the content. They are; the conclusion was right for the wrong reason.) " +
       "`x402_payer_hash` identifies a crypto wallet that paid on the x402 rail, which needs no account and is never linked to one; " +
       "`client_ip_hash` is only ever written on unauthenticated free-tier calls, so no row of yours carries it.",
   },
@@ -245,7 +247,7 @@ function label(rule: ClosureRule): string {
  * Derived, never written out a second time — that duplication is the whole
  * reason this module exists.
  */
-export function buildClosureSummary(): ClosureSummary {
+export function buildClosureSummary(outcome?: ClosureOutcome): ClosureSummary {
   const summary: ClosureSummary = {
     anonymized: [],
     deleted: [],
@@ -255,6 +257,24 @@ export function buildClosureSummary(): ClosureSummary {
 
   for (const rule of CLOSURE_PLAN) {
     const text = label(rule);
+    // A transaction under a legal hold is not cleared, so on an account whose
+    // rows are all held, listing its content as "anonymized" would hand the
+    // subject a confirmation indistinguishable from a complete erasure.
+    const heldBack =
+      rule.table === "transactions" &&
+      rule.disposition === "anonymized" &&
+      outcome !== undefined &&
+      outcome.contentRedacted === 0 &&
+      outcome.legalHoldSkipped > 0;
+
+    if (heldBack) {
+      summary.retained.push(`${text} — withheld under legal hold`);
+      summary.disclosures[text] =
+        "Not cleared: every one of your transactions is under a legal hold, which we are required to preserve intact. " +
+        "Contact petter@strale.io about the hold; the content is cleared as soon as it lifts.";
+      continue;
+    }
+
     if (rule.disposition === "anonymized") summary.anonymized.push(text);
     else if (rule.disposition === "deleted") summary.deleted.push(text);
     else summary.retained.push(text);
@@ -270,10 +290,24 @@ export function buildClosureSummary(): ClosureSummary {
  * MUST run inside the erasure transaction. Nothing here is fire-and-forget:
  * either the account closes completely or it does not close at all.
  */
+export interface ClosureOutcome {
+  /** Transaction rows whose customer content this request cleared. */
+  contentRedacted: number;
+  /**
+   * Transaction rows left intact because they are under a legal hold.
+   *
+   * Returned because the receipt claimed the response reported it and the
+   * response did not — and because the summary is otherwise a pure function of
+   * the plan, so a subject every one of whose rows is held would have been
+   * handed a confirmation identical to a complete erasure.
+   */
+  legalHoldSkipped: number;
+}
+
 export async function applyClosurePlan(
   tx: any,
   params: { userId: string; anonymisedAt: Date; deletionReason: string },
-): Promise<void> {
+): Promise<ClosureOutcome> {
   // The `users` rule used to be written in routes/auth.ts, outside the function
   // whose docstring says it performs every clearing step the plan declares. A
   // second caller — an admin-initiated closure, a bulk Art. 17 job — would have
@@ -311,7 +345,10 @@ export async function applyClosurePlan(
   // task text stays as an unlinked demand signal and is pruned at 90 days.
   await tx
     .update(failedRequests)
-    .set({ userId: null, ipHash: null, userAgent: null })
+    // `error_detail` carries caller-supplied JSON key names and validator text,
+    // so it is request metadata like the rest of this set rather than the
+    // aggregate demand signal `task` is kept for.
+    .set({ userId: null, ipHash: null, userAgent: null, errorDetail: null })
     .where(eq(failedRequests.userId, params.userId));
 
   await tx
@@ -339,15 +376,32 @@ export async function applyClosurePlan(
   // `legal_hold` is respected, exactly as the retention purge does: a row we
   // are legally required to preserve is the one thing erasure cannot reach,
   // and the receipt says so.
-  await tx.execute(sql`
+  // ISO string, never a Date. postgres-js's bind encoder cannot serialise a
+  // Date through the sql-template path — it falls through to
+  // Buffer.byteLength(date) and throws — which is the PR-43 defect class this
+  // repo has a protocol about, and which I reintroduced here while fixing the
+  // receipt/row clock split. The integration lane caught it as a 500.
+  const cleared = await tx.execute(sql`
     UPDATE transactions
        SET ${CUSTOMER_CONTENT_CLEAR_SQL},
-           redacted_at = NOW(),
+           redacted_at = ${params.anonymisedAt.toISOString()}::timestamptz,
            deletion_reason = 'account_closure_erasure'
      WHERE user_id = ${params.userId}::uuid
        AND legal_hold = false
        AND redacted_at IS NULL
   `);
+
+  const held = await tx.execute(sql`
+    SELECT COUNT(*)::int AS n
+      FROM transactions
+     WHERE user_id = ${params.userId}::uuid
+       AND legal_hold = true
+  `);
+
+  return {
+    contentRedacted: (cleared as { count?: number }).count ?? 0,
+    legalHoldSkipped: readCount(held),
+  };
 }
 
 /**

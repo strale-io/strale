@@ -20,7 +20,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { and, eq, inArray, like, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, like, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { randomUUID } from "node:crypto";
@@ -1164,34 +1164,202 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
 
     expect(rows.length, "no identifier columns found — the query is broken").toBeGreaterThan(5);
 
-    // Tables the plan does not cover, and why each is acceptable, stated
-    // rather than silently skipped.
+    // Exemptions are per COLUMN, not per table. A table-granular map exempts
+    // every future identifier column on that table too — and it exempted
+    // `users` wholesale, the single most identifier-dense table and exactly
+    // the one whose next added column this guard exists to catch.
     const outOfScope = new Map<string, string>([
-      ["users", "the account row itself, anonymised by the plan"],
-      ["capabilities", "catalogue metadata — provider contact, not customer"],
-      ["solutions", "catalogue metadata"],
-      ["email_events", "delivery log for mail we sent; keyed to the address, pruned by retention"],
-      ["waitlist", "sign-ups that never became accounts"],
-      ["demand_signals", "admin-gated aggregate; WP0 removed the public surface"],
+      [
+        "users.email",
+        "the account row's own address, replaced with a sentinel by the plan's users rule",
+      ],
+      [
+        "users.signup_ip_hash",
+        "nulled by the plan's users rule",
+      ],
+      [
+        "users.activation_email_stage",
+        "an integer counter that matches %email% by accident",
+      ],
     ]);
 
-    // `activation_email_stage` is an integer counter that matches `%email%`.
-    const falsePositives = new Set(["users.activation_email_stage"]);
+    const present = new Set(rows.map((r) => `${r.table_name}.${r.column_name}`));
+
+    // An exemption for a column that does not exist documents an intention
+    // rather than exempting anything, and quietly rots. Five of the six
+    // entries the first version carried matched no table in either database.
+    const stale = [...outOfScope.keys()].filter((k) => !present.has(k));
+    expect(stale, "exemptions for columns that do not exist").toEqual([]);
 
     const unaccounted = [
       ...new Set(
-        rows
-          .map((r) => `${r.table_name}.${r.column_name}`)
-          .filter((key) => {
-            const table = key.split(".")[0]!;
-            if (falsePositives.has(key)) return false;
-            if (outOfScope.has(table)) return false;
-            if (!covered.has(table)) return true;
-            return !namedColumns.has(key);
-          }),
+        [...present].filter((key) => {
+          const table = key.split(".")[0]!;
+          if (outOfScope.has(key)) return false;
+          if (!covered.has(table)) return true;
+          return !namedColumns.has(key);
+        }),
       ),
     ];
     expect(unaccounted).toEqual([]);
+  });
+
+  it("leaves a legal-hold transaction intact and says so, rather than claiming it cleared it", async () => {
+    // The receipt is a pure function of the plan, so an account whose rows are
+    // all under a legal hold used to receive a confirmation identical to a
+    // complete erasure — listing the content as anonymised and pointing at a
+    // skipped-count the response did not contain. No test covered the branch
+    // at all, and `legal_hold` has no writer in the codebase, so "it never
+    // fires" was not a property anything enforced.
+    const email = emailFor("legal-hold");
+    const created = await register({ email });
+    const { api_key, user_id } = (await created.json()) as {
+      api_key: string;
+      user_id: string;
+    };
+
+    const [held] = await db
+      .insert(transactions)
+      .values({
+        userId: user_id,
+        status: "completed",
+        priceCents: 0,
+        pricePaidCents: 0,
+        isFreeTier: true,
+        input: { email: "someone@example.com" },
+        output: { verdict: "keep me" },
+        legalHold: true,
+      })
+      .returning({ id: transactions.id });
+    createdTransactionIds.add(held!.id);
+
+    const closed = await app.request("http://localhost/v1/auth/me", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${api_key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "wp11 test" }),
+    });
+    expect(closed.status).toBe(200);
+    const body = (await closed.json()) as {
+      transactions_content_redacted: number;
+      transactions_withheld_under_legal_hold: number;
+      summary: { anonymized: string[]; retained: string[] };
+    };
+
+    // The counts the disclosure promises are actually there.
+    expect(body.transactions_withheld_under_legal_hold).toBe(1);
+    expect(body.transactions_content_redacted).toBe(0);
+
+    // And the summary does not claim the content was cleared.
+    expect(body.summary.anonymized.join(" ")).not.toContain("transactions (input");
+    expect(body.summary.retained.join(" ")).toContain("withheld under legal hold");
+
+    // The row really is intact.
+    const [after] = await db
+      .select({ output: transactions.output, redactedAt: transactions.redactedAt })
+      .from(transactions)
+      .where(eq(transactions.id, held!.id));
+    expect(after!.output).toEqual({ verdict: "keep me" });
+    expect(after!.redactedAt).toBeNull();
+  });
+
+  it("stamps redacted_at without binding a Date into the SQL template", async () => {
+    // The receipt's timestamp and the rows' timestamp used to come from two
+    // different clocks, so the written confirmation carried a time that was on
+    // no row. Fixing it by binding `params.anonymisedAt` directly reintroduced
+    // the PR-43 defect class — postgres-js cannot serialise a Date through the
+    // sql-template path, it falls through to Buffer.byteLength(date) and
+    // throws — and DELETE /v1/auth/me 500'd. This pins both halves: one clock,
+    // and an ISO string on the wire.
+    const email = emailFor("clock");
+    const created = await register({ email });
+    const { api_key, user_id } = (await created.json()) as {
+      api_key: string;
+      user_id: string;
+    };
+    const [row] = await db
+      .insert(transactions)
+      .values({
+        userId: user_id,
+        status: "completed",
+        priceCents: 0,
+        pricePaidCents: 0,
+        isFreeTier: true,
+        input: { a: 1 },
+      })
+      .returning({ id: transactions.id });
+    createdTransactionIds.add(row!.id);
+
+    const closed = await app.request("http://localhost/v1/auth/me", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${api_key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "wp11 test" }),
+    });
+    expect(closed.status).toBe(200);
+    const body = (await closed.json()) as { redacted_at: string };
+
+    const [after] = await db
+      .select({ redactedAt: transactions.redactedAt })
+      .from(transactions)
+      .where(eq(transactions.id, row!.id));
+    expect(after!.redactedAt).not.toBeNull();
+    // The receipt's timestamp is the one on the rows.
+    expect(after!.redactedAt!.toISOString()).toBe(body.redacted_at);
+  });
+
+  it("does not let an async execution repopulate content the receipt says was cleared", async () => {
+    // An async capability completes in its own transaction seconds to minutes
+    // after the 202, and account closure can land in that window — four
+    // production capabilities exceed the threshold. Without a guard the
+    // background write puts output, provenance and auditTrail back onto a row
+    // the customer was told in writing was cleared, and it stays until the
+    // 90-day purge while /v1/verify reports a completed erasure.
+    const email = emailFor("async-race");
+    const created = await register({ email });
+    const { api_key, user_id } = (await created.json()) as {
+      api_key: string;
+      user_id: string;
+    };
+    const [row] = await db
+      .insert(transactions)
+      .values({
+        userId: user_id,
+        status: "pending",
+        priceCents: 0,
+        pricePaidCents: 0,
+        isFreeTier: true,
+        input: { a: 1 },
+      })
+      .returning({ id: transactions.id });
+    createdTransactionIds.add(row!.id);
+
+    await app.request("http://localhost/v1/auth/me", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${api_key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "wp11 test" }),
+    });
+
+    // The completion write, with the guard the executor now carries.
+    await db
+      .update(transactions)
+      .set({
+        status: "completed",
+        output: { leaked: "customer content" },
+        provenance: { source: "upstream" },
+        auditTrail: { request_context: { ipHash: "deadbeef" } },
+      })
+      .where(and(eq(transactions.id, row!.id), isNull(transactions.redactedAt)));
+
+    const [after] = await db
+      .select({
+        output: transactions.output,
+        provenance: transactions.provenance,
+        auditTrail: transactions.auditTrail,
+      })
+      .from(transactions)
+      .where(eq(transactions.id, row!.id));
+    expect(after!.output).toBeNull();
+    expect(after!.provenance).toBeNull();
+    expect(after!.auditTrail).toBeNull();
   });
 
   it("closure forfeits the balance through the ledger, not by zeroing it", async () => {

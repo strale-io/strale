@@ -147,9 +147,11 @@ verifyRoute.get("/:transactionId", async (c) => {
         "because the row's input/output/audit_trail were zeroed by design. This is routine and not tampering."
       );
     }
-    if (reason === "user_request") {
+    if (isErasureReason(reason)) {
       return (
-        "Row redacted at the customer's request under GDPR Art. 17 right-to-erasure. " +
+        (reason === "account_closure_erasure"
+          ? "Row content redacted when the customer closed their account, under GDPR Art. 17 right-to-erasure. "
+          : "Row redacted at the customer's request under GDPR Art. 17 right-to-erasure. ") +
         "Original chain hash is preserved for chain continuity; per-row content hash no longer matches " +
         "because input/output/audit_trail were zeroed by design. This is a legitimate customer action and not tampering."
       );
@@ -373,6 +375,23 @@ export type ChainLinkClassification = "verified" | "redacted" | "broken";
  */
 export function isRetentionReason(reason: string | null): boolean {
   return reason === "retention_purge" || reason === "content_retention_purge";
+}
+
+/**
+ * Customer-initiated erasure, whichever route wrote it.
+ *
+ * Two paths produce it: a single-transaction erasure writes `user_request`,
+ * and closing the whole account writes `account_closure_erasure` (WP11). The
+ * second was added without teaching this classifier about it, so every Art. 17
+ * account closure rendered as "deletion_reason unknown — flagged for operator
+ * review" while the same response body carried the reason verbatim. That is
+ * the exact self-contradiction the note above `redactionReasonText` exists to
+ * prevent, reintroduced from the other side — and it put every erased row in
+ * the `other` bucket, so a regulator walking the chain would count N
+ * unexplained redactions instead of N GDPR erasures.
+ */
+export function isErasureReason(reason: string | null): boolean {
+  return reason === "user_request" || reason === "account_closure_erasure";
 }
 
 export function classifyChainLink(prev: {

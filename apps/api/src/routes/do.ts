@@ -2599,7 +2599,21 @@ async function executeInBackground(
           // with the final values — no race possible.
           complianceHashState: "pending",
         })
-        .where(eq(transactions.id, transactionId));
+        // Not onto a redacted row. An async execution completes in its own
+        // transaction seconds to minutes after the request returned 202, and
+        // account closure can land in that window — four production
+        // capabilities exceed the 10s async threshold. Without this the
+        // background write puts `output`, `provenance` and `auditTrail` back
+        // onto a row the customer has just been told, in writing, was cleared,
+        // and it stays there until the 90-day purge while `/v1/verify` reports
+        // a completed erasure.
+        //
+        // The customer keeps their result: the response is returned from the
+        // executor, not read back from the row. What is dropped is the copy we
+        // would otherwise retain after being asked not to.
+        .where(
+          and(eq(transactions.id, transactionId), isNull(transactions.redactedAt)),
+        );
 
       // False means the reconciler already released it — the execution
       // outran its deadline. The customer has been refunded; leave it that

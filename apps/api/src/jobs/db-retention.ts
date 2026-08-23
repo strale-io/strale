@@ -120,11 +120,14 @@ let _running = false;
  */
 export interface RuleResult {
   table: string;
+  /** Rows actually gone once the tick commits. Zero for a rolled-back rule. */
   deleted: number;
   batches: number;
   duration_ms: number;
   budget_hit: boolean;
   error?: string;
+  /** Rows deleted and then undone by the savepoint rollback. */
+  rolled_back?: number;
 }
 
 /**
@@ -253,6 +256,13 @@ async function runRetention(): Promise<void> {
       const result = await runOneRulePaginated(rule, cutoffIso, tx);
       if (result.error !== undefined) {
         await tx.execute(sql`ROLLBACK TO SAVEPOINT retention_rule`);
+        // The rollback undoes every batch this rule completed, so reporting
+        // them as deleted is the same lie the savepoint was added to stop —
+        // one tick would log `total_deleted: 10000` for a table it left
+        // unchanged. Moved into a field whose name says what happened.
+        result.rolled_back = result.deleted;
+        result.deleted = 0;
+        result.batches = 0;
       } else {
         await tx.execute(sql`RELEASE SAVEPOINT retention_rule`);
       }
@@ -260,7 +270,7 @@ async function runRetention(): Promise<void> {
 
       if (result.error !== undefined) {
         jobLog.error(
-          { label: "db-retention-delete-failed", table: rule.table, batches_completed: result.batches, deleted_before_failure: result.deleted, err: { message: result.error } },
+          { label: "db-retention-delete-failed", table: rule.table, rows_rolled_back: result.rolled_back ?? 0, err: { message: result.error } },
           "db-retention-delete-failed",
         );
       }

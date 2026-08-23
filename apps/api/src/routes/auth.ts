@@ -21,6 +21,7 @@ import {
   applyClosurePlan,
   buildClosureSummary,
   describeAuditKeysHeld,
+  type ClosureOutcome,
 } from "../lib/account-closure.js";
 import {
   assessTrialGrant,
@@ -370,21 +371,33 @@ authRoute.post(
 
 // DELETE /v1/auth/me — GDPR Art. 17 right to erasure (cert-audit G1).
 //
-// Anonymises the user row in place rather than physically deleting it.
-// Transactions are NOT deleted — they participate in the audit hash chain
-// (DEC-20260428-B) and represent processing records under Art. 30, which
-// the controller is obliged to retain. Anonymising the user link satisfies
-// Art. 17 because no re-identification of the user is possible from the
-// remaining data.
+// Anonymises the user row in place rather than physically deleting it, and
+// clears the customer content from the transaction rows. The rows themselves
+// are NOT deleted — they are processing records under Art. 30 and carry the
+// audit hash chain (DEC-20260428-B).
 //
-// What this endpoint does:
-//   1. Overwrites email + name + apiKeyHash on the users row
-//   2. Burns the wallet balance (cannot be reactivated)
-//   3. Sets deleted_at + deletion_reason
+// Note what is deliberately NOT claimed here any more: that re-identification
+// is impossible. `transactions.user_id` is retained, and `trial_grants` keeps
+// a SHA-256 of the address, which is pseudonymous rather than anonymous — an
+// enumerable input space is not anonymisation. The response says so in terms
+// rather than asserting a property the schema does not have.
 //
-// What this endpoint deliberately does NOT do:
-//   - Touch transactions / wallet_transactions / audit chain
-//   - Cascade-delete to anything that affects another customer's data
+// What this endpoint does — declared once, in `lib/account-closure.ts`.
+//
+// This comment used to enumerate three steps and assert that the endpoint
+// "deliberately does NOT touch transactions / wallet_transactions / audit
+// chain". Both halves became false: closure clears six content columns on
+// every one of the caller's transaction rows, writes a `closure_forfeit`
+// ledger entry, and clears `trial_grants`, `api_key_recovery_tokens`,
+// `failed_requests` and `dispute_requests`. The handler was rewritten a
+// hundred lines below and the header was left standing — which is the same
+// failure this package has now had six rounds of, in a comment rather than a
+// response body. An operator answering a subject-access question from it
+// would have said "no, by design" and been wrong.
+//
+// So it does not enumerate any more. `CLOSURE_PLAN` is the list, it performs
+// the closure and builds the customer-facing summary from the same
+// declaration, and a test fails if a user-linked table is missing from it.
 //
 // The response itemises both lists so the user has explicit confirmation
 // of what survived erasure and the legal basis. This is a one-way action;
@@ -397,23 +410,31 @@ authRoute.delete("/me", authMiddleware, async (c) => {
 
   const now = new Date();
 
-  let auditKeysHeld: string[] = [];
+  // Read BEFORE the transaction opens, not inside it.
+  //
+  // The previous version put this read inside the closure transaction wrapped
+  // in a try/catch, on the reasoning that a reporting nicety must not fail the
+  // closure. The catch could not do that job: a SQL error inside a Postgres
+  // transaction aborts the WHOLE transaction, so every later statement fails
+  // with 25P02 and the COMMIT becomes a ROLLBACK. Catching the error in
+  // JavaScript let execution carry on into `forfeitOnClosure`, which then
+  // failed on an already-aborted transaction and threw — a 500 with nothing
+  // closed, deterministically, on every retry. That is the same Postgres
+  // semantic the retention job needed a SAVEPOINT for, in a commit that added
+  // the SAVEPOINT there and this catch here.
+  //
+  // Outside the transaction the catch works as intended, and the read still
+  // precedes the clearing, which is all it needed.
+  let outcome: ClosureOutcome | undefined;
+  let auditKeysHeld: string[];
+  try {
+    auditKeysHeld = await describeAuditKeysHeld(db, user.id);
+  } catch (err) {
+    logError("closure-audit-key-read-failed", err, { user_id: user.id });
+    auditKeysHeld = ["<unavailable — contact petter@strale.io for the full list>"];
+  }
 
   await db.transaction(async (tx) => {
-    // Read BEFORE the content is cleared, inside the same transaction — after
-    // it, `audit_trail` is null and this would report nothing.
-    //
-    // Caught, because this is a reporting nicety and the closure is not. A
-    // throw here would abort a transaction the customer has already been
-    // charged nothing for and cannot retry: the erasure is irreversible, and
-    // once it commits `authMiddleware` rejects the key, so a 500 afterwards
-    // loses the Art. 17 written confirmation permanently.
-    try {
-      auditKeysHeld = await describeAuditKeysHeld(tx, user.id);
-    } catch (err) {
-      logError("closure-audit-key-read-failed", err, { user_id: user.id });
-      auditKeysHeld = ["<unavailable — contact petter@strale.io for the full list>"];
-    }
 
     // Forfeit whatever remains — refund-on-delete is out of scope (it would
     // need a Stripe payout flow) and is documented in the response.
@@ -435,14 +456,14 @@ authRoute.delete("/me", authMiddleware, async (c) => {
     // once in `lib/account-closure.ts` — which also builds the summary
     // returned below. They were two hand-maintained artifacts and drifted
     // apart in four consecutive review rounds; they are one artifact now.
-    await applyClosurePlan(tx, {
+    outcome = await applyClosurePlan(tx, {
       userId: user.id,
       anonymisedAt: now,
       deletionReason: reason,
     });
   });
 
-  const closureSummary = buildClosureSummary();
+  const closureSummary = buildClosureSummary(outcome);
 
   // Cert-audit Y-7: be explicit about what survives erasure.
   //
@@ -486,10 +507,14 @@ authRoute.delete("/me", authMiddleware, async (c) => {
       erased_content_disclosure:
         "Everything you sent and everything derived from it is cleared from your transaction rows by this request — the request payload, the response, failure messages, the audit body, upstream source records and your idempotency keys. " +
         "This is the same in-place redaction the platform already applies to every transaction at 90 days, so it is proven not to break the hash chain: the integrity and previous-block hashes are untouched and every later transaction still verifies, with yours reported as redacted rather than broken. " +
-        "Earlier versions of this response told you the opposite — that clearing it would break the chain — and pointed at a field called audit_trail.executionInput, which has never existed on any row. Both statements were wrong and both are gone.",
+        "Earlier versions of this response told you the opposite — that clearing this content would break the chain, and that you had to write in to have it removed. Both were wrong, and neither is how it works now.",
       legal_hold_disclosure:
-        "The one exception is a transaction under a legal hold, which we are required to preserve intact and which this request therefore does not clear. Your response above reports how many, if any, were skipped.",
+        "The one exception is a transaction under a legal hold, which we are required to preserve intact and which this request therefore does not clear. " +
+        "`transactions_content_redacted` and `transactions_withheld_under_legal_hold` below are the counts for your account. " +
+        "An earlier version of this text told you the response reported them and it did not.",
     },
+    transactions_content_redacted: outcome?.contentRedacted ?? 0,
+    transactions_withheld_under_legal_hold: outcome?.legalHoldSkipped ?? 0,
     api_key_status: "burned — current key will fail on next use",
     wallet_status: "balance_zeroed",
     contact: "petter@strale.io",
