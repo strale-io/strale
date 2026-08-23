@@ -473,7 +473,7 @@ authRoute.delete("/me", authMiddleware, async (c) => {
   // `purgeCustomerContent` clears exactly those columns on EVERY transaction
   // at 90 days, `integrity_hash` and `previous_hash` are not on its clear
   // list, and `verify.ts` reports a redacted predecessor as redacted rather
-  // than broken. 308,347 of 909,107 user-linked production rows already carry
+  // than broken. 312,677 of 919,304 user-linked production rows already carry
   // `redacted_at`. So the refusal ground was false, and a subject asking on
   // day 10 was told it was impossible while the platform did it anyway on day
   // 90. Closure clears the content immediately now.

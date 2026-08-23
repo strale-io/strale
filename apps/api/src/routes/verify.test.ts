@@ -366,6 +366,10 @@ describe("isErasureReason — the tally and the prose must agree", () => {
       "src/routes/transactions.ts",
       "src/lib/data-retention.ts",
       "src/lib/account-closure.ts",
+      // A migration writes one too, and the first version of this scan did not
+      // look here — so the literal it rewrites away was invisible to the guard
+      // meant to catch exactly that.
+      "src/lib/startup-migrations.ts",
     ]
       .map((f) => readFileSync(resolve(process.cwd(), f), "utf8"))
       .join("\n");

@@ -2599,21 +2599,22 @@ async function executeInBackground(
           // with the final values — no race possible.
           complianceHashState: "pending",
         })
-        // Not onto a redacted row. An async execution completes in its own
-        // transaction seconds to minutes after the request returned 202, and
-        // account closure can land in that window — four production
-        // capabilities exceed the 10s async threshold. Without this the
-        // background write puts `output`, `provenance` and `auditTrail` back
-        // onto a row the customer has just been told, in writing, was cleared,
-        // and it stays there until the 90-day purge while `/v1/verify` reports
-        // a completed erasure.
+        // No `redacted_at` predicate here, deliberately.
         //
-        // The customer keeps their result: the response is returned from the
-        // executor, not read back from the row. What is dropped is the copy we
-        // would otherwise retain after being asked not to.
-        .where(
-          and(eq(transactions.id, transactionId), isNull(transactions.redactedAt)),
-        );
+        // An async execution completes in its own transaction seconds to
+        // minutes after the request returned 202, and account closure can land
+        // in that window — four production capabilities exceed the 10s async
+        // threshold — so the content must not come back. That is enforced by
+        // the BEFORE UPDATE trigger from migration 0103, for this site and the
+        // seven others that write content, rather than by a predicate each one
+        // has to remember.
+        //
+        // Gating the whole statement instead was the first attempt, and it
+        // costs something: the row keeps a non-terminal status forever while
+        // the reservation settles around it. Letting the write land and the
+        // trigger scrub the content is the better half of the trade — the
+        // status, latency and hash state are not the customer's data.
+        .where(eq(transactions.id, transactionId));
 
       // False means the reconciler already released it — the execution
       // outran its deadline. The customer has been refunded; leave it that

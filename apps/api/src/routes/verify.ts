@@ -381,7 +381,15 @@ export type ChainLinkClassification = "verified" | "redacted" | "broken";
  * retention count, not a mystery bucket.
  */
 export function isRetentionReason(reason: string | null): boolean {
-  return reason === "retention_purge" || reason === "content_retention_purge";
+  return (
+    reason === "retention_purge" ||
+    reason === "content_retention_purge" ||
+    // Written by an older sweep and rewritten away by migration 0087, so no
+    // production row carries it — but the classifier costs nothing and an
+    // unknown reason is the one thing that lands in the "flagged for review"
+    // bucket.
+    reason === "pii_retention_purge"
+  );
 }
 
 /**

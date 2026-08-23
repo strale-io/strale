@@ -388,7 +388,7 @@ export async function applyClosurePlan(
   // `integrity_hash` and `previous_hash` are not on the clear list, so link
   // N→N+1 survives untouched and `verify.ts` classifies a redacted predecessor
   // as "redacted" rather than broken. Production already carries `redacted_at`
-  // on 308,347 of 909,107 user-linked rows.
+  // on 312,677 of 919,304 user-linked rows.
   //
   // So a subject asking on day 10 was told it was technically impossible, and
   // on day 90 we did it anyway, to everyone. Closure now does it immediately,
@@ -476,33 +476,42 @@ export async function describeAuditKeysHeld(
   db: any,
   userId: string,
 ): Promise<string[]> {
+  // Bounded. This is a reporting nicety over three LATERAL scans, and the
+  // internal harness principal holds 908,222 transaction rows — not
+  // customer-reachable, since closure is authenticated, but an unbounded scan
+  // on a path that has already committed nothing is a bad shape to leave
+  // lying around. The largest real customer holds 482 unredacted rows, so the
+  // sample below sees every distinct shape any real account has many times
+  // over.
+  const SAMPLE_ROWS = 5000;
   const rows = await db.execute(sql`
+    WITH sampled AS (
+      SELECT audit_trail
+        FROM transactions
+       WHERE user_id = ${userId}::uuid
+         AND jsonb_typeof(audit_trail) = 'object'
+       LIMIT ${SAMPLE_ROWS}
+    )
     SELECT DISTINCT k AS key
-      FROM transactions t,
+      FROM sampled t,
            LATERAL jsonb_object_keys(t.audit_trail) AS k
-     WHERE t.user_id = ${userId}::uuid
-       AND jsonb_typeof(t.audit_trail) = 'object'
     UNION
     SELECT DISTINCT outer_k || '.' || inner_k AS key
-      FROM transactions t,
+      FROM sampled t,
            LATERAL jsonb_object_keys(t.audit_trail) AS outer_k,
            LATERAL jsonb_object_keys(t.audit_trail -> outer_k) AS inner_k
-     WHERE t.user_id = ${userId}::uuid
-       AND jsonb_typeof(t.audit_trail) = 'object'
-       AND jsonb_typeof(t.audit_trail -> outer_k) = 'object'
+     WHERE jsonb_typeof(t.audit_trail -> outer_k) = 'object'
     UNION
     -- Arrays too. audit_trail.steps on a solution run is an array of
     -- per-step objects, one field of which is error — the same
     -- input-echoing text the column-level rule discloses. An object-only
     -- walk reported "steps" and stopped there.
     SELECT DISTINCT outer_k || '[].' || elem_k AS key
-      FROM transactions t,
+      FROM sampled t,
            LATERAL jsonb_object_keys(t.audit_trail) AS outer_k,
            LATERAL jsonb_array_elements(t.audit_trail -> outer_k) AS elem,
            LATERAL jsonb_object_keys(elem) AS elem_k
-     WHERE t.user_id = ${userId}::uuid
-       AND jsonb_typeof(t.audit_trail) = 'object'
-       AND jsonb_typeof(t.audit_trail -> outer_k) = 'array'
+     WHERE jsonb_typeof(t.audit_trail -> outer_k) = 'array'
        AND jsonb_typeof(elem) = 'object'
      ORDER BY 1
   `);
