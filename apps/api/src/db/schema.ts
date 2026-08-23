@@ -391,12 +391,18 @@ export const transactions = pgTable(
     // masquerade as legacy by leaving the column null.
     /** 'complete' | 'pending' | 'failed'; NULL only for pre-epoch rows. */
     /**
-     * Defaulted here as well as in block 0109, so `drizzle-kit push` does not
-     * drop it. Push materialises schema.ts and would otherwise remove both
-     * defaults, and 0109 would then re-add them -- with a NEW epoch instant,
-     * which the design calls the single immutable record of when enforcement
-     * began. The migration remains the authority; this keeps push from
-     * fighting it.
+     * Defaulted here as well as in block 0109, so `drizzle-kit push` stops
+     * dropping it.
+     *
+     * This comment previously claimed that also protected the epoch instant.
+     * It does not, and a reviewer measured it: push additionally drops
+     * `transactions_post_epoch_has_receipt`, `transactions_receipt_reason_required`
+     * and the manifest-digest FK, and the next boot mints a FRESH epoch
+     * (observed moving by 13 minutes across one push). Nothing in production
+     * runs push -- `drizzle.config.ts` refuses without DATABASE_URL_TEST, the
+     * Dockerfile runs startup migrations only, and CI's order re-adds
+     * everything -- so this is a limit worth stating rather than a live risk.
+     * The migration remains the authority.
      */
     receiptStatus: varchar("receipt_status", { length: 16 }).default("pending"),
     /** Closed reason code, set when status is 'pending' or 'failed'. */

@@ -402,10 +402,19 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     // definition is restored at the end, so the real epoch instant - which the
     // design calls the single immutable record of when enforcement began - is
     // unchanged.
-    await db.execute(sql`
-      ALTER TABLE transactions DROP CONSTRAINT transactions_post_epoch_has_receipt
-    `);
+    // The DROP is INSIDE the try, and the restore is IF NOT EXISTS-shaped.
+    //
+    // Reviewer-found: with the DROP outside, anything throwing between it and
+    // the ADD - the poison INSERT is the candidate - left the `finally`'s own
+    // DROP failing with "constraint does not exist". The finally then threw,
+    // the original error was lost, and the epoch constraint was never
+    // restored, so every later suite in the lane ran without the post-epoch
+    // invariant. It only fires when this test is already red, which is
+    // precisely when the diagnostic matters.
     try {
+      await db.execute(sql`
+        ALTER TABLE transactions DROP CONSTRAINT transactions_post_epoch_has_receipt
+      `);
       await db.execute(sql`
         INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
                                   data_jurisdiction, input, created_at, completed_at,
@@ -445,7 +454,7 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
       // real epoch definition goes back regardless of how the assertions went.
       await db.execute(sql`DELETE FROM transactions WHERE id = ${poison}::uuid`);
       await db.execute(sql`
-        ALTER TABLE transactions DROP CONSTRAINT transactions_post_epoch_has_receipt
+        ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_post_epoch_has_receipt
       `);
       await db.execute(
         sql.raw(

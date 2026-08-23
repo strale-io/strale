@@ -223,6 +223,70 @@ and *without* the sweeper, so nothing would ever chain. Verified end to end:
 with a hostile CHECK armed the block refuses and applies nothing; disarming it
 restores the defaults with the epoch instant unchanged.
 
+## 6b. Independent adversarial review — round 2: PASS
+
+Narrow, on the round-1 fixes and their blast radius. **No blocking findings.**
+All four fixes were confirmed correct by independent mutation (each green → red
+→ green), and the reviewer measured rather than argued the two claims that
+mattered most:
+
+- **F1 idempotency.** All **541 distinct production failure messages** run
+  through `sanitize(sanitize(x)) === sanitize(x)`: **zero non-idempotent**. Raw
+  differs from sanitised on 73 distinct strings / 40,408 rows (14.3% of
+  283,394), corroborating the 14.8% figure from round 1. No clock, locale or
+  environment dependence — so a receipt stays recomputable years later.
+- **F3 corpus.** Every value that reaches `transactions.transparency_marker` in
+  production — `algorithmic` 923,676, `ai_generated` 1,910, `mixed` 239,
+  `hybrid` 220, no NULLs, no `unknown` — maps or refuses correctly, and
+  `test-runner.ts`'s new mapping is character-for-character `getTransparencyMarker`.
+- **F4a beyond one error class.** The reviewer additionally proved isolation
+  holds for a `lock_timeout` (55P03) inside the nested transaction, not just a
+  CHECK violation — which directly falsifies the failure mode the hand-written
+  SAVEPOINT hit.
+- **F4b atomicity** independently reproduced with a hostile probe: neither
+  `SET DEFAULT` survived the refusal, and the epoch was unchanged after
+  recovery.
+
+### Fixed from round 2's non-blocking set
+
+| # | finding | fix |
+|---|---|---|
+| **N1** | The chain-halt test's `DROP CONSTRAINT` sat outside its `try`, so a throw before the re-`ADD` left the `finally`'s own DROP failing, swallowed the real error, and **stranded the shared test database with no post-epoch invariant** for every later suite. Reproduced. | DROP moved inside the `try`; the restore uses `IF EXISTS`. |
+| **N3** | Both new refusals used `internal_error`, which is **retryable** — so a deterministic condition burned five sweeper attempts, held the row out of the chain for ~30 minutes, and put five entries in a counter `receipt-lifecycle.ts` reserves for real signals. | The unresolvable-method refusal is now `unresolvable_manifest`, which is terminal and honest: the declaration was read and does not establish a required member. |
+| **N8** | The refusal test asserted `not.toBe("complete")`, which `pending` also satisfies — and pending was what actually happened. The assertion agreed with the test's name while the behaviour did not. | Asserts `failed` and the reason. |
+| **N7** | "A full run and a gate-tripped run do not share a digest" hand-builds both arrays and calls `declarationDigest` directly — it **passed under the mutation that broke the rail**. | Renamed to say what it is, and its teardown no longer depends on a sibling test having run. |
+| **N2** | The `schema.ts` comment claimed the `.default()` additions protected the epoch instant from `drizzle-kit push`. They do not: push also drops the epoch CHECK, the reason-required CHECK and the FK, and the next boot mints a fresh epoch (**observed moving 13 minutes across one push**). | Comment corrected to state the real limit. No production path runs push. |
+| **N4** | The `toReceiptError` docblock claimed the contract now holds "for every rail". Three failure branches still store one string and serve another shape — an x402 settlement failure serves a different error *code*, an x402 solution failure serves the message *wrapped*, and the no-steps solution path serves no `details.error` at all. **All three have zero occurrences in production history.** | Claim narrowed to what the evidence supports, with the three paths named. Each needs a route-level change, not a change to this function. |
+
+### Carried as residual risk, not fixed
+
+- **N5 — `sanitizeFailureReason` is idempotent in practice, not in principle,
+  and leaks a hostname.** The network-error and `fetch failed` branches return
+  early with a prefix captured *before* URL stripping, so a message like
+  `GET https://internal.example.com/x — getaddrinfo ENOTFOUND ...` keeps the
+  hostname on pass 1 and loses it on pass 2. Unreachable across all 541
+  production strings, so F1's idempotency holds for the corpus it was measured
+  against — but **the hostname leak is a real, pre-existing defect in the
+  customer-facing sanitiser, independent of this branch**, and is filed
+  separately.
+- **N6 — settle-time sanitisation is temporally coupled to `sanitize.ts`.** The
+  sweeper can settle up to ~30 minutes after the response; if `sanitize.ts`
+  changes in between, the receipt binds a string the caller never saw. The
+  effect is a receipt that cannot be recomputed, never one that is wrong.
+- **N9 — the 5s settle deadline is a timeout without cancellation.** The timer
+  is cleared correctly and nothing escapes the catch, but an abandoned
+  `settleOrThrow` keeps its pooled connection. Under sustained database
+  slowness these accumulate. No corruption is possible: every lifecycle write
+  is guarded on `receipt_status = 'pending'` with `assertTouchedOne`, and the
+  snapshot writer is `ON CONFLICT DO NOTHING`.
+
+### One thing the reviewer verified that is worth stating positively
+
+The redaction guard is well-targeted rather than speculative. Of 149,616 failed
+rows with a NULL `error`, **149,615 are redacted** and exactly **one** is a live
+non-redacted row in 30 days. Without the guard those rows would have produced a
+receipt that verifies against *"this completed execution returned null"*.
+
 ## 7. Production reconciliation plan
 
 Read-only, after deploy, by database object rather than by log line

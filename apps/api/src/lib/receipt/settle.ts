@@ -217,9 +217,29 @@ export function deriveSourceObservation(
  * Sanitising HERE rather than changing what the rails store keeps raw
  * diagnostics in the column where operators expect them, and makes the
  * receipt's own contract - `ReceiptInput.error` says "the sanitised,
- * caller-visible error" - true for every rail rather than for two of three.
- * `sanitizeFailureReason` is idempotent (verified over the real production
- * failure corpus), so applying it to an already-sanitised message is a no-op.
+ * caller-visible error" - hold on every rail that has ever produced a failure
+ * in production. `sanitizeFailureReason` is idempotent over the real corpus
+ * (541 distinct production messages, zero non-idempotent), so applying it to
+ * an already-sanitised message is a no-op.
+ *
+ * ## Three paths where it still does not hold, and why they are not fixed here
+ *
+ * A second reviewer found three failure branches that store one string and
+ * serve another shape entirely, so the receipt cannot match what the caller
+ * saw:
+ *
+ *  - `do.ts` x402 settlement-failed: stores "Payment settlement failed: ...",
+ *    serves `{error_code: "payment_failed"}` - a different CODE, not just a
+ *    different message.
+ *  - `x402-gateway-v2.ts` solution-unbillable: serves the stored message
+ *    WRAPPED in additional prose.
+ *  - `solution-execute.ts` no-steps-configured: the response carries no
+ *    `details.error` at all.
+ *
+ * All three have **zero occurrences in production history**, and each needs a
+ * different structural change to the route rather than to this function, so
+ * they are recorded as residual risk rather than papered over with a broader
+ * claim here.
  */
 function toReceiptError(row: TxnRow): { code: string; message: string } | null {
   if (row.status !== "failed") return null;
@@ -456,7 +476,20 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
       },
       "execution method could not be established; receipt refused",
     );
-    await markReceiptFailed(db, row.id, "internal_error");
+    // TERMINAL, not `internal_error`.
+    //
+    // `internal_error` is in RETRYABLE_REASONS, and this condition is
+    // deterministic - the row's marker and the capability's declared tag do
+    // not change between attempts. Using it would burn five sweeper attempts,
+    // hold the row out of the chain for half an hour, and put five entries in
+    // a counter that receipt-lifecycle.ts deliberately reserves for real
+    // signals ("retrying it would bury the escalation an operator is supposed
+    // to act on"). Reviewer-found.
+    //
+    // `unresolvable_manifest` is the closest member of the closed set and it
+    // is honest here: the declaration was read and does not establish a
+    // required fixed-point member of the receipt.
+    await markReceiptFailed(db, row.id, "unresolvable_manifest");
     return;
   }
 

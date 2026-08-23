@@ -406,9 +406,14 @@ describeMaybe("execution receipts bind what the caller received", () => {
     await settleExecutionReceipt(db, { transactionId: id });
 
     const row = await receiptRow(id);
-    expect(row.receipt_status, "a guessed method must not produce a complete receipt").not.toBe(
-      "complete",
+    // `failed`, not merely "not complete". The first version asserted
+    // not.toBe("complete"), which `pending` also satisfies - and pending was
+    // in fact what happened, because the refusal used a RETRYABLE reason. The
+    // assertion agreed with the name while the behaviour did not.
+    expect(row.receipt_status, "an unestablished method must be terminal, not retried").toBe(
+      "failed",
     );
+    expect(row.receipt_failure_reason).toBe("unresolvable_manifest");
     expect(row.receipt_digest).toBeNull();
 
     await db.execute(sql`DELETE FROM transactions WHERE id = ${id}::uuid`);

@@ -58,7 +58,7 @@ describeMaybe("solution receipts record which steps actually ran", () => {
   let gateSlug: string;
   let afterSlug: string;
   let solutionSlug: string;
-  let solutionId: string;
+  let solutionId = "";
   const capIds: string[] = [];
   const seeded: { userId: string; walletId: string }[] = [];
 
@@ -86,8 +86,12 @@ describeMaybe("solution receipts record which steps actually ran", () => {
   }, 120_000);
 
   afterAll(async () => {
-    await db.delete(solutionSteps).where(eq(solutionSteps.solutionId, solutionId));
-    await db.delete(solutions).where(eq(solutions.id, solutionId));
+    // Guarded: solutionId is assigned by the first test, so running this file
+    // with -t on any other test would otherwise throw in teardown.
+    if (solutionId) {
+      await db.delete(solutionSteps).where(eq(solutionSteps.solutionId, solutionId));
+      await db.delete(solutions).where(eq(solutions.id, solutionId));
+    }
     for (const id of capIds) await db.delete(capabilities).where(eq(capabilities.id, id));
     await client.end();
   });
@@ -218,10 +222,13 @@ describeMaybe("solution receipts record which steps actually ran", () => {
     ).toBeNull();
   });
 
-  it("a full run and a gate-tripped run do not share an implementation digest", async () => {
-    // The property the disposition exists for. With every step marked `ran`,
-    // these two were byte-identical: `implementation.steps` could not tell a
-    // bundle that completed from one that stopped at step 1.
+  it("DIGEST SENSITIVITY (not a rail test): skipped and ran do not collide", async () => {
+    // Deliberately named for what it is. It hand-builds both step arrays and
+    // calls declarationDigest directly, so it is a property of the digest
+    // function, not of the rail - and it PASSED under the mutation that broke
+    // the rail, which is how a reviewer caught the overstated name. Its
+    // sibling above covers the rail; this covers the thing that would make
+    // the sibling meaningless if it regressed.
     const { normalizeSolutionDeclaration } = await import("../lib/receipt/manifest-snapshot.js");
     const { declarationDigest } = await import("../lib/receipt/manifest-snapshot.js");
 
