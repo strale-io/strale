@@ -3054,52 +3054,81 @@ export async function runMigration0108_receiptStateInvariants(
     CREATE OR REPLACE FUNCTION "transactions_receipt_state_transitions"()
     RETURNS trigger AS $$
     BEGIN
-      -- EVERY receipt-shaped column, not just the five that were obvious.
+      -- THREE SEPARATE QUESTIONS, ASKED SEPARATELY.
       --
-      -- receipt_manifest_digest was missing, and it is how a verifier finds the
-      -- snapshot to recompute implementation.manifest_digest — and it is NOT
-      -- inside the chain payload, so swapping it was neither refused here nor
-      -- detectable there. receipt_failure_reason was missing, so a reason could
-      -- be stamped onto a complete row. integrity_payload_version was missing,
-      -- so it could be flipped 2 -> NULL, which verification then reports as
-      -- corruption rather than refusing outright. All reviewer-found, all via
-      -- this early return.
-      IF OLD.receipt_status IS NOT DISTINCT FROM NEW.receipt_status
-         AND OLD.receipt_digest IS NOT DISTINCT FROM NEW.receipt_digest
-         AND OLD.receipt_version IS NOT DISTINCT FROM NEW.receipt_version
-         AND OLD.receipt_canonicalization IS NOT DISTINCT FROM NEW.receipt_canonicalization
-         AND OLD.receipt_digest_alg IS NOT DISTINCT FROM NEW.receipt_digest_alg
-         AND OLD.receipt_manifest_digest IS NOT DISTINCT FROM NEW.receipt_manifest_digest
-         AND OLD.receipt_failure_reason IS NOT DISTINCT FROM NEW.receipt_failure_reason
-         AND OLD.integrity_payload_version IS NOT DISTINCT FROM NEW.integrity_payload_version
+      -- The first version collapsed them into one early-return plus one
+      -- terminal check, and that combination BLOCKED THE ONE LEGITIMATE
+      -- WRITER. Adding integrity_payload_version to the compared columns
+      -- (so it could not be flipped) collided with the chain worker writing
+      -- exactly that column: the worker's UPDATE stopped taking the early
+      -- return, fell through to the terminal check, and was refused — because
+      -- that check tested OLD.receipt_status IN (...) rather than whether the
+      -- status was CHANGING. The worker is not moving a terminal row; it is
+      -- leaving it terminal while writing a different column.
+      --
+      -- The blast radius made it the worst defect of the review: the whole tick
+      -- runs in one transaction, so the RAISE aborted it, every later statement
+      -- failed, the per-row catch swallowed them, and the tick rolled back —
+      -- so ONE receipt-bearing row would have halted the tamper-evident chain
+      -- for every transaction in the system, permanently, retrying every 30s.
+      -- /v1/verify would answer "no integrity hash" and /v1/audit would answer
+      -- "still being computed" forever. Reviewer-found, and the entire repo
+      -- suite was green while it was true.
+
+      -- 1. Is the STATUS moving out of a terminal state?
+      IF OLD.receipt_status IS DISTINCT FROM NEW.receipt_status
+         AND OLD.receipt_status IN ('complete', 'failed') THEN
+        RAISE EXCEPTION
+          'receipt state % is terminal: transaction % cannot move to %. Once a row '
+          'is chained its receipt digest is anchored in the integrity hash, so '
+          'changing it would rewrite an already-chained fact.',
+          OLD.receipt_status, OLD.id, COALESCE(NEW.receipt_status, 'NULL');
+      END IF;
+
+      -- 2. Are a terminal row's receipt FIELDS being rewritten?
+      --
+      -- receipt_manifest_digest is in this list because it is how a verifier
+      -- finds the snapshot to recompute the implementation identity, and it is
+      -- NOT inside the chain payload — so a swap would be neither refused here
+      -- nor detectable there.
+      IF OLD.receipt_status IN ('complete', 'failed')
+         AND (OLD.receipt_digest           IS DISTINCT FROM NEW.receipt_digest
+           OR OLD.receipt_version          IS DISTINCT FROM NEW.receipt_version
+           OR OLD.receipt_canonicalization IS DISTINCT FROM NEW.receipt_canonicalization
+           OR OLD.receipt_digest_alg       IS DISTINCT FROM NEW.receipt_digest_alg
+           OR OLD.receipt_manifest_digest  IS DISTINCT FROM NEW.receipt_manifest_digest
+           OR OLD.receipt_failure_reason   IS DISTINCT FROM NEW.receipt_failure_reason)
       THEN
-        RETURN NEW;  -- nothing receipt-shaped changed
+        RAISE EXCEPTION
+          'transaction % has a terminal receipt; its receipt fields are frozen.', OLD.id;
+      END IF;
+
+      -- 3. Is the chain version being CHANGED after it was set?
+      --
+      -- Write-once, not frozen-on-terminal: the worker sets it exactly once, in
+      -- the same UPDATE as the hash. Setting it from NULL is that write; any
+      -- later change is a rewrite of which rule hashed the row.
+      IF OLD.integrity_payload_version IS NOT NULL
+         AND NEW.integrity_payload_version IS DISTINCT FROM OLD.integrity_payload_version
+      THEN
+        RAISE EXCEPTION
+          'transaction % already records integrity_payload_version %; the rule that '
+          'hashed a row cannot be rewritten.', OLD.id, OLD.integrity_payload_version;
       END IF;
 
       -- A CHAINED row cannot acquire receipt state afterwards.
       --
-      -- The dual of the admission rule, and it was missing. Barring a row from
-      -- the chain until its receipt settles is only half the property: a row
-      -- chained under v1 — which is every row today — could receive a complete
-      -- receipt afterwards and keep its v1 hash, so the digest was never
-      -- anchored. The row verifies, under a rule that does not cover the
-      -- receipt, and "a receipt digest cannot be swapped without invalidating
-      -- the chain" is silently false for it. Reviewer-found.
+      -- The dual of the admission rule. Barring a row from the chain until its
+      -- receipt settles is only half the property: a row chained under v1 —
+      -- which is every row today — could receive a complete receipt afterwards
+      -- and keep its v1 hash, so the digest was never anchored. The row
+      -- verifies, under a rule that does not cover the receipt.
       IF OLD.integrity_hash IS NOT NULL
          AND OLD.receipt_status IS NULL
          AND NEW.receipt_status IS NOT NULL THEN
         RAISE EXCEPTION
           'transaction % is already chained under v1; introducing receipt state '
           'now would leave its digest permanently unanchored.', OLD.id;
-      END IF;
-
-      -- complete and failed are absorbing.
-      IF OLD.receipt_status IN ('complete', 'failed') THEN
-        RAISE EXCEPTION
-          'receipt state % is terminal: transaction % cannot move to %. Once a row '
-          'is chained its receipt digest is anchored in the integrity hash, so '
-          'changing it would rewrite an already-chained fact.',
-          OLD.receipt_status, OLD.id, COALESCE(NEW.receipt_status, 'NULL');
       END IF;
 
       -- Post-epoch state cannot be cleared back to looking pre-epoch.
