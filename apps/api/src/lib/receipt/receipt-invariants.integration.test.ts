@@ -439,6 +439,25 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     ).rejects.toThrow(/subject_matches_content/);
   });
 
+  it("each subject key is checked independently", async () => {
+    // The first version of this test used a snapshot missing BOTH keys, so
+    // either half of the CHECK caught it and neither half was load-bearing —
+    // a mutation removing one stayed green. One key present, one absent.
+    for (const [label, body] of [
+      ["slug present, kind absent", '{"slug":"vat-validate"}'],
+      ["kind present, slug absent", '{"subject_kind":"capability"}'],
+    ] as const) {
+      await expect(
+        db.execute(sql`
+          INSERT INTO execution_manifest_snapshots (digest, subject_kind, subject_slug, snapshot)
+          VALUES (${`sha256:${Math.random().toString(16).slice(2).padEnd(64, "0").slice(0, 64)}`},
+                  'capability', 'vat-validate', ${body}::jsonb)
+        `),
+        label,
+      ).rejects.toThrow(/subject_matches_content/);
+    }
+  });
+
   it("a correctly addressed snapshot still round-trips", async () => {
     const decl = normalizeCapabilityDeclaration(DECL);
     const digest = await recordManifestSnapshot(db, decl);
