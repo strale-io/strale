@@ -38,6 +38,7 @@ import {
   CHAIN_PAYLOAD_V1,
   CHAIN_PAYLOAD_V2,
 } from "../integrity-hash.js";
+import { runMigration0108_receiptStateInvariants } from "../startup-migrations.js";
 
 const DATABASE_URL_TEST = useTestDatabase();
 const describeMaybe = DATABASE_URL_TEST ? describe : describe.skip;
@@ -72,6 +73,19 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
   beforeAll(async () => {
     client = postgres(DATABASE_URL_TEST!, { max: 4 });
     db = drizzle(client);
+
+    // RE-APPLY THE BLOCK THIS SUITE IS ABOUT.
+    //
+    // Without this, the triggers and constraints under test come from whatever
+    // ran against the database earlier, and the migration SOURCE is not
+    // load-bearing for the suite. Two mutation probes proved it: deleting the
+    // already-chained guard and removing a column from the trigger's comparison
+    // list both left the suite green, because the old trigger was still
+    // installed. The block is idempotent (CREATE OR REPLACE, DROP/ADD
+    // CONSTRAINT), so re-applying it here makes its text the thing being
+    // tested.
+    await runMigration0108_receiptStateInvariants(db as never);
+
     userId = randomUUID();
     await db.execute(sql`
       INSERT INTO users (id, email, api_key_hash, key_prefix)
