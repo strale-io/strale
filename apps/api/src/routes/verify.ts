@@ -7,7 +7,11 @@ import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions, capabilities } from "../db/schema.js";
-import { computeIntegrityHash, GENESIS_HASH } from "../lib/integrity-hash.js";
+import {
+  computeIntegrityHashVersioned,
+  chainVersionOf,
+  GENESIS_HASH,
+} from "../lib/integrity-hash.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
@@ -76,7 +80,13 @@ verifyRoute.get("/:transactionId", async (c) => {
   }
 
   // Recompute hash for this transaction
-  const recomputed = computeIntegrityHash(
+  // SELECT THE RULE FROM THE ROW, not from what this file assumes.
+  //
+  // This called the v1-only entry point unconditionally. Once the chain worker
+  // began writing genuine v2 hashes, that would have reported hash_valid:false
+  // on a perfectly intact receipt — a public endpoint calling real records
+  // tampered. Reviewer-found, after the fix that armed it.
+  const recomputed = computeIntegrityHashVersioned(
     {
       id: txn.id,
       userId: txn.userId,
@@ -92,8 +102,10 @@ verifyRoute.get("/:transactionId", async (c) => {
       dataJurisdiction: txn.dataJurisdiction,
       createdAt: txn.createdAt,
       completedAt: txn.completedAt,
+      receiptDigest: txn.receiptDigest ?? null,
     },
     txn.previousHash ?? GENESIS_HASH,
+    chainVersionOf(txn.integrityPayloadVersion),
   );
 
   const hashValid = recomputed === txn.integrityHash;
@@ -306,7 +318,7 @@ export async function walkChain(
     }
 
     // Same field mapping as storeIntegrityHash() in do.ts
-    const recomputed = computeIntegrityHash(
+    const recomputed = computeIntegrityHashVersioned(
       {
         id: prev.id,
         userId: prev.userId,
@@ -322,8 +334,10 @@ export async function walkChain(
         dataJurisdiction: prev.dataJurisdiction,
         createdAt: prev.createdAt,
         completedAt: prev.completedAt,
+        receiptDigest: prev.receiptDigest ?? null,
       },
       prev.previousHash ?? GENESIS_HASH,
+      chainVersionOf(prev.integrityPayloadVersion),
     );
 
     if (recomputed === prev.integrityHash) {

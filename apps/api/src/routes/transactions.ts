@@ -5,7 +5,11 @@ import { transactions, capabilities, transactionQuality } from "../db/schema.js"
 import { authMiddleware, optionalAuthMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey, rateLimitByIp } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
-import { computeIntegrityHash, GENESIS_HASH } from "../lib/integrity-hash.js";
+import {
+  computeIntegrityHashVersioned,
+  chainVersionOf,
+  GENESIS_HASH,
+} from "../lib/integrity-hash.js";
 import { walkChain } from "./verify.js";
 import { generateAuditToken } from "../lib/audit-token.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
@@ -248,7 +252,12 @@ transactionsRoute.get(
 
     // F-AUDIT-11: previousHash defaults to GENESIS_HASH, matching the worker
     // in jobs/integrity-hash-retry.ts and the public /v1/verify/:id endpoint.
-    const recomputed = computeIntegrityHash(txn, txn.previousHash ?? GENESIS_HASH);
+    // Same rule-selection as /v1/verify: the row says which payload hashed it.
+    const recomputed = computeIntegrityHashVersioned(
+      { ...txn, receiptDigest: txn.receiptDigest ?? null },
+      txn.previousHash ?? GENESIS_HASH,
+      chainVersionOf(txn.integrityPayloadVersion),
+    );
     const storedHash = txn.integrityHash;
     const hashValid = recomputed === storedHash;
 
