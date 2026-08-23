@@ -2746,6 +2746,242 @@ export async function runMigration0105_onboardingHookFailures(
   };
 }
 
+/**
+ * Phase 4 (execution receipts) — immutable manifest snapshots.
+ *
+ * The table is content-addressed: `digest` is a function of `snapshot`, so a
+ * snapshot cannot change without changing its own primary key. That makes
+ * mutation *pointless*, not impossible — these triggers make it impossible.
+ *
+ * Both refusals are deliberate and neither is defensive decoration:
+ *
+ *  - UPDATE would let the bytes behind a digest change while receipts keep
+ *    pointing at it, so every receipt referencing it would silently start
+ *    meaning something else.
+ *  - DELETE would make every receipt referencing it unverifiable, with no
+ *    error anywhere. Generic retention gets a loud error instead of a row
+ *    count. `db-retention.ts` is separately asserted never to list this table
+ *    (see execution-receipt.integration.test.ts) — belt and braces, because
+ *    the failure is silent and permanent.
+ */
+export async function runMigration0106_executionManifestSnapshots(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS execution_manifest_snapshots (
+      digest        varchar(71) PRIMARY KEY,
+      subject_kind  varchar(16) NOT NULL,
+      subject_slug  text        NOT NULL,
+      snapshot      jsonb       NOT NULL,
+      first_seen_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT execution_manifest_snapshots_digest_shape
+        CHECK (digest ~ '^sha256:[0-9a-f]{64}$'),
+      CONSTRAINT execution_manifest_snapshots_subject_kind
+        CHECK (subject_kind IN ('capability', 'solution'))
+    )
+  `);
+
+  await tx.execute(sql`
+    CREATE OR REPLACE FUNCTION "execution_manifest_snapshots_are_immutable"()
+    RETURNS trigger AS $$
+    BEGIN
+      RAISE EXCEPTION
+        'execution_manifest_snapshots is insert-only: % on digest % refused. '
+        'Snapshots are the only record of what a capability declared when a '
+        'receipt was issued; changing or removing one makes every receipt that '
+        'references it silently wrong or unverifiable.',
+        TG_OP, COALESCE(OLD.digest, '(unknown)');
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+
+  await tx.execute(sql`
+    DROP TRIGGER IF EXISTS execution_manifest_snapshots_no_update
+      ON execution_manifest_snapshots
+  `);
+  await tx.execute(sql`
+    CREATE TRIGGER execution_manifest_snapshots_no_update
+      BEFORE UPDATE ON execution_manifest_snapshots
+      FOR EACH ROW EXECUTE FUNCTION "execution_manifest_snapshots_are_immutable"()
+  `);
+
+  await tx.execute(sql`
+    DROP TRIGGER IF EXISTS execution_manifest_snapshots_no_delete
+      ON execution_manifest_snapshots
+  `);
+  await tx.execute(sql`
+    CREATE TRIGGER execution_manifest_snapshots_no_delete
+      BEFORE DELETE ON execution_manifest_snapshots
+      FOR EACH ROW EXECUTE FUNCTION "execution_manifest_snapshots_are_immutable"()
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS execution_manifest_snapshots_subject_idx
+      ON execution_manifest_snapshots (subject_kind, subject_slug)
+  `);
+
+  // Verify the triggers exist and are ENABLED. A trigger that is present but
+  // disabled ('D') is the nameable failure here — the table would accept
+  // mutation while every reader assumed it could not.
+  const trg = await tx.execute(sql`
+    SELECT tgname, tgenabled FROM pg_trigger
+     WHERE tgrelid = 'execution_manifest_snapshots'::regclass
+       AND NOT tgisinternal
+     ORDER BY tgname
+  `);
+  const rows = trg as unknown as Array<{ tgname: string; tgenabled: string }>;
+  const enabled = rows.filter((r) => r.tgenabled === 'O').map((r) => r.tgname);
+  if (!enabled.includes("execution_manifest_snapshots_no_update") ||
+      !enabled.includes("execution_manifest_snapshots_no_delete")) {
+    throw new Error(
+      "execution_manifest_snapshots immutability triggers are missing or disabled " +
+        `(found: ${JSON.stringify(rows)}). Refusing to report success: without both, ` +
+        "a snapshot can be changed or pruned and every receipt referencing it becomes " +
+        "silently wrong or permanently unverifiable.",
+    );
+  }
+
+  return {
+    block: "0106_execution_manifest_snapshots",
+    outcome: "table + UPDATE/DELETE refusal triggers present and verified enabled",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+/**
+ * Phase 4 — receipt lifecycle columns and the chain-version marker.
+ *
+ * The CHECK constraints encode the state invariants the spec states in prose,
+ * because prose does not stop a write:
+ *
+ *  - a receipt digest is a FULL 256-bit value or absent; a truncated one is a
+ *    different claim wearing the same name;
+ *  - 'complete' requires the digest and its metadata, so a failed receipt
+ *    build can never be recorded as complete;
+ *  - 'pending' and 'failed' require a reason code from the closed set, so a
+ *    post-epoch row can never be quietly receipt-less;
+ *  - `integrity_payload_version` is 2 or NULL, and NULL means v1 by
+ *    definition — the verifier reads this to pick the algorithm.
+ *
+ * The epoch itself is NOT a column: it is `receipt_status IS NULL` meaning
+ * pre-epoch. See the receipt-epoch block below for why that is enough.
+ */
+export async function runMigration0107_executionReceiptColumns(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    ALTER TABLE transactions
+      ADD COLUMN IF NOT EXISTS receipt_status varchar(16),
+      ADD COLUMN IF NOT EXISTS receipt_failure_reason varchar(40),
+      ADD COLUMN IF NOT EXISTS receipt_version varchar(32),
+      ADD COLUMN IF NOT EXISTS receipt_canonicalization varchar(16),
+      ADD COLUMN IF NOT EXISTS receipt_digest_alg varchar(16),
+      ADD COLUMN IF NOT EXISTS receipt_digest varchar(71),
+      ADD COLUMN IF NOT EXISTS receipt_manifest_digest varchar(71),
+      ADD COLUMN IF NOT EXISTS receipt_attempts integer NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS integrity_payload_version integer
+  `);
+
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_receipt_status_valid
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_receipt_status_valid
+      CHECK (receipt_status IS NULL OR receipt_status IN ('complete', 'pending', 'failed'))
+      NOT VALID
+  `);
+
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_receipt_digest_shape
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_receipt_digest_shape
+      CHECK (receipt_digest IS NULL OR receipt_digest ~ '^sha256:[0-9a-f]{64}$')
+      NOT VALID
+  `);
+
+  // 'complete' is a claim that a digest exists and can be recomputed. Without
+  // the metadata a verifier cannot reproduce it, so the claim would be empty.
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_receipt_complete_is_complete
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_receipt_complete_is_complete
+      CHECK (
+        receipt_status IS DISTINCT FROM 'complete'
+        OR (receipt_digest IS NOT NULL
+            AND receipt_version IS NOT NULL
+            AND receipt_canonicalization IS NOT NULL
+            AND receipt_digest_alg IS NOT NULL)
+      )
+      NOT VALID
+  `);
+
+  // A non-complete post-epoch row must SAY why. Silence is the failure mode
+  // the whole lifecycle exists to remove.
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_receipt_reason_required
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_receipt_reason_required
+      CHECK (
+        receipt_status NOT IN ('pending', 'failed')
+        OR receipt_failure_reason IS NOT NULL
+      )
+      NOT VALID
+  `);
+
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_integrity_payload_version_valid
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_integrity_payload_version_valid
+      CHECK (integrity_payload_version IS NULL OR integrity_payload_version = 2)
+      NOT VALID
+  `);
+
+  // Chain v2 anchors the receipt digest, so a v2 row without one would anchor
+  // nothing while claiming to.
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_chain_v2_has_receipt_state
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_chain_v2_has_receipt_state
+      CHECK (integrity_payload_version IS DISTINCT FROM 2 OR receipt_status IS NOT NULL)
+      NOT VALID
+  `);
+
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS transactions_receipt_status_idx
+      ON transactions (receipt_status)
+      WHERE receipt_status IN ('pending', 'failed')
+  `);
+
+  // NOT VALID everywhere above is deliberate: 921k existing rows all have NULL
+  // receipt columns and satisfy every constraint, but VALIDATE would take a
+  // full-table scan inside the boot path. New writes are checked from this
+  // moment; the backfill scan is not this block's job and there is nothing to
+  // find. Verified below rather than assumed.
+  const bad = await tx.execute(sql`
+    SELECT count(*)::int AS n FROM transactions
+     WHERE receipt_status IS NOT NULL OR integrity_payload_version IS NOT NULL
+  `);
+  const preexisting = Number((bad as unknown as Array<{ n: number }>)[0]?.n ?? 0);
+
+  return {
+    block: "0107_execution_receipt_columns",
+    outcome:
+      "receipt lifecycle columns + 6 CHECK constraints + pending/failed index; " +
+      `${preexisting} pre-existing rows carry receipt state (expected 0)`,
+    rows_affected: preexisting,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
@@ -2798,6 +3034,9 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0103_redactedContentStaysRedacted,
   runMigration0104_jobSchedule,
   runMigration0105_onboardingHookFailures,
+  // Phase 4: execution receipts.
+  runMigration0106_executionManifestSnapshots,
+  runMigration0107_executionReceiptColumns,
 ];
 
 /**

@@ -383,6 +383,35 @@ export const transactions = pgTable(
     // NOT called integrity_hash_status — that column exists on prod and is
     // owned by a separate, untracked workflow that tags 'customer' / 'test'.
     // See PHASE_C_COLUMN_INVESTIGATION.md.
+    // ── Execution receipt (strale.execution.v1), Phase 4 ──────────────────
+    //
+    // NULL receipt_status means PRE-EPOCH: the row predates receipts and is
+    // reported as legacy_unavailable. Post-epoch rows always carry a status,
+    // enforced by a CHECK in migration 0107 — a post-epoch row cannot
+    // masquerade as legacy by leaving the column null.
+    /** 'complete' | 'pending' | 'failed'; NULL only for pre-epoch rows. */
+    receiptStatus: varchar("receipt_status", { length: 16 }),
+    /** Closed reason code, set when status is 'pending' or 'failed'. */
+    receiptFailureReason: varchar("receipt_failure_reason", { length: 40 }),
+    /** 'strale.execution.v1' */
+    receiptVersion: varchar("receipt_version", { length: 32 }),
+    /** 'RFC8785' — named so a verifier need not infer it. */
+    receiptCanonicalization: varchar("receipt_canonicalization", { length: 16 }),
+    /** 'sha256' */
+    receiptDigestAlg: varchar("receipt_digest_alg", { length: 16 }),
+    /** , the full 256-bit digest. Never truncated. */
+    receiptDigest: varchar("receipt_digest", { length: 71 }),
+    /** The snapshot this receipt's implementation identity resolved to. */
+    receiptManifestDigest: varchar("receipt_manifest_digest", { length: 71 }),
+    /** Retry bookkeeping for the pending -> complete path. */
+    receiptAttempts: integer("receipt_attempts").notNull().default(0),
+    /**
+     * Which integrity-chain payload rule hashed this row.
+     * NULL = v1 (pre-epoch, by definition). 2 = v2, which anchors
+     * receipt_digest. The verifier selects the algorithm from THIS column, so
+     * historical rows keep verifying under the rule that produced them.
+     */
+    integrityPayloadVersion: integer("integrity_payload_version"),
     complianceHashState: varchar("compliance_hash_state", { length: 16 })
       .notNull()
       .default("pending"),
@@ -1374,4 +1403,42 @@ export const jobSchedule = pgTable("job_schedule", {
   /** Drives retry backoff. Reset to 0 on success. */
   consecutiveFailures: integer("consecutive_failures").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ─── Execution receipts (strale.execution.v1) ───────────────────────────────
+//
+// Phase 4 of the execution-receipt design. Spec:
+// docs/design/execution-receipt/PHASE-2-SPEC.md.
+
+/**
+ * Content-addressed, INSERT-ONLY snapshots of the declaration in force at
+ * execution time.
+ *
+ * The problem this exists for: the executor reads `capabilities`, which is a
+ * MUTABLE row that four scripts write to (`sync-manifest-canonical-to-db.ts`,
+ * `sync-manifest-text-to-db.ts`, `sweep-manifest-drift.ts`, `onboard.ts`).
+ * Hashing that row later would prove what the declaration says TODAY, not what
+ * it said when the call ran — so a receipt derived from it would assert
+ * something nobody measured.
+ *
+ * Immutability is structural, not conventional:
+ *   - the digest IS the primary key, and it is a function of `snapshot`, so a
+ *     snapshot cannot change without changing its own identity;
+ *   - a BEFORE UPDATE trigger refuses every update (migration 0106);
+ *   - a BEFORE DELETE trigger refuses every delete, so generic retention gets
+ *     a loud error rather than a row count;
+ *   - `db-retention.ts` is asserted never to list this table.
+ *
+ * Deleting a snapshot makes every receipt that references it unverifiable, with
+ * no error anywhere. That is why the refusal is in the database.
+ */
+export const executionManifestSnapshots = pgTable("execution_manifest_snapshots", {
+  /** `sha256:<64 hex>` over the domain-tagged RFC 8785 bytes of `snapshot`. */
+  digest: varchar("digest", { length: 71 }).primaryKey(),
+  /** 'capability' | 'solution' */
+  subjectKind: varchar("subject_kind", { length: 16 }).notNull(),
+  subjectSlug: text("subject_slug").notNull(),
+  /** The exact normalized declaration these bytes were taken over. */
+  snapshot: jsonb("snapshot").notNull(),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
 });
