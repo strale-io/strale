@@ -90,7 +90,16 @@ export type ChainPayloadVersion = typeof CHAIN_PAYLOAD_V1 | typeof CHAIN_PAYLOAD
 
 /** A stored `integrity_payload_version` to the rule that produced the hash. */
 export function chainVersionOf(stored: number | null | undefined): ChainPayloadVersion {
-  return stored === CHAIN_PAYLOAD_V2 ? CHAIN_PAYLOAD_V2 : CHAIN_PAYLOAD_V1;
+  if (stored === null || stored === undefined) return CHAIN_PAYLOAD_V1;
+  if (stored === CHAIN_PAYLOAD_V2) return CHAIN_PAYLOAD_V2;
+  // FAIL CLOSED. The first version returned v1 for anything unrecognised, so a
+  // stored 3 or 0 would be verified under the wrong rule and reported as
+  // corruption rather than as a version we do not understand. The CHECK on the
+  // column bounds this today; the function should not depend on that.
+  throw new Error(
+    `unknown integrity_payload_version ${stored}: refusing to guess which rule ` +
+      `hashed this row. A version this code does not know is not a v1 row.`,
+  );
 }
 
 /**

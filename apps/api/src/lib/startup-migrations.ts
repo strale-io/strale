@@ -2966,18 +2966,200 @@ export async function runMigration0107_executionReceiptColumns(
   // full-table scan inside the boot path. New writes are checked from this
   // moment; the backfill scan is not this block's job and there is nothing to
   // find. Verified below rather than assumed.
+  // EXISTS with LIMIT 1, not count(*) over an OR.
+  //
+  // The first version counted `receipt_status IS NOT NULL OR
+  // integrity_payload_version IS NOT NULL`, which no index can serve — a full
+  // sequential scan of the largest table (~921k rows) on EVERY boot, inside the
+  // migration transaction. Reviewer-found. This answers the same question
+  // (is any row already carrying receipt state?) and stops at the first hit.
   const bad = await tx.execute(sql`
-    SELECT count(*)::int AS n FROM transactions
-     WHERE receipt_status IS NOT NULL OR integrity_payload_version IS NOT NULL
+    SELECT EXISTS (
+      SELECT 1 FROM transactions WHERE receipt_status IS NOT NULL LIMIT 1
+    ) AS any_state
   `);
-  const preexisting = Number((bad as unknown as Array<{ n: number }>)[0]?.n ?? 0);
+  const preexisting =
+    (bad as unknown as Array<{ any_state: boolean }>)[0]?.any_state === true ? 1 : 0;
 
   return {
     block: "0107_execution_receipt_columns",
     outcome:
       "receipt lifecycle columns + 6 CHECK constraints + pending/failed index; " +
-      `${preexisting} pre-existing rows carry receipt state (expected 0)`,
+      `pre-existing receipt state present: ${preexisting === 1} (expected false)`,
     rows_affected: preexisting,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+/**
+ * Phase 4 review round 1 — the invariants the design called structural but
+ * enforced only in application code.
+ *
+ * An adversarial review drove every one of these transitions through the
+ * database and they were all accepted. A rule that holds only when one module
+ * is used is not a rule, so each is now a trigger or a constraint:
+ *
+ *  - `complete` and `failed` are ABSORBING. Once a row is chained, its receipt
+ *    digest is anchored in the integrity hash — changing the state afterwards
+ *    would rewrite an already-chained historical fact.
+ *  - A `complete` row's receipt fields are frozen. The reviewer swapped a
+ *    digest on a complete row, and rewrote version/canonicalization/algorithm
+ *    to `fake.v9`/`NOPE`/`md5`; the existing CHECK only tested NOT NULL, so
+ *    garbage passed.
+ *  - Reason codes are a closed set. `'banana'` was accepted.
+ *  - A snapshot's `subject_kind`/`subject_slug` duplicate values inside
+ *    `snapshot` and could disagree with them.
+ *  - TRUNCATE does not fire row-level DELETE triggers, so the "permanent"
+ *    snapshot table could be emptied without error.
+ */
+export async function runMigration0108_receiptStateInvariants(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  // ── Closed reason-code set ────────────────────────────────────────────────
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_receipt_reason_closed
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_receipt_reason_closed
+      CHECK (
+        receipt_failure_reason IS NULL
+        OR receipt_failure_reason IN (
+          'not_yet_built', 'unmapped_rail', 'missing_deploy_identity',
+          'unresolvable_manifest', 'missing_subject', 'snapshot_write_failed',
+          'canonicalization_error', 'internal_error'
+        )
+      )
+      NOT VALID
+  `);
+
+  // A digest without its metadata cannot be recomputed; metadata that is not
+  // the metadata we produce is worse than none, because it looks recomputable.
+  await tx.execute(sql`
+    ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_receipt_metadata_known
+  `);
+  await tx.execute(sql`
+    ALTER TABLE transactions ADD CONSTRAINT transactions_receipt_metadata_known
+      CHECK (
+        (receipt_version IS NULL OR receipt_version = 'strale.execution.v1')
+        AND (receipt_canonicalization IS NULL OR receipt_canonicalization = 'RFC8785')
+        AND (receipt_digest_alg IS NULL OR receipt_digest_alg = 'sha256')
+      )
+      NOT VALID
+  `);
+
+  // ── Legal transitions, enforced ───────────────────────────────────────────
+  await tx.execute(sql`
+    CREATE OR REPLACE FUNCTION "transactions_receipt_state_transitions"()
+    RETURNS trigger AS $$
+    BEGIN
+      IF OLD.receipt_status IS NOT DISTINCT FROM NEW.receipt_status
+         AND OLD.receipt_digest IS NOT DISTINCT FROM NEW.receipt_digest
+         AND OLD.receipt_version IS NOT DISTINCT FROM NEW.receipt_version
+         AND OLD.receipt_canonicalization IS NOT DISTINCT FROM NEW.receipt_canonicalization
+         AND OLD.receipt_digest_alg IS NOT DISTINCT FROM NEW.receipt_digest_alg
+      THEN
+        RETURN NEW;  -- nothing receipt-shaped changed
+      END IF;
+
+      -- complete and failed are absorbing.
+      IF OLD.receipt_status IN ('complete', 'failed') THEN
+        RAISE EXCEPTION
+          'receipt state % is terminal: transaction % cannot move to %. Once a row '
+          'is chained its receipt digest is anchored in the integrity hash, so '
+          'changing it would rewrite an already-chained fact.',
+          OLD.receipt_status, OLD.id, COALESCE(NEW.receipt_status, 'NULL');
+      END IF;
+
+      -- Post-epoch state cannot be cleared back to looking pre-epoch.
+      IF OLD.receipt_status IS NOT NULL AND NEW.receipt_status IS NULL THEN
+        RAISE EXCEPTION
+          'transaction % cannot clear its receipt status: a post-epoch row must '
+          'not become indistinguishable from a pre-epoch one.', OLD.id;
+      END IF;
+
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+  await tx.execute(sql`
+    DROP TRIGGER IF EXISTS transactions_receipt_state_transitions_trg ON transactions
+  `);
+  await tx.execute(sql`
+    CREATE TRIGGER transactions_receipt_state_transitions_trg
+      BEFORE UPDATE ON transactions
+      FOR EACH ROW EXECUTE FUNCTION "transactions_receipt_state_transitions"()
+  `);
+
+  // ── Snapshot subject metadata must agree with the hashed content ──────────
+  //
+  // The digest-to-content relation itself cannot be a CHECK — Postgres has no
+  // RFC 8785 — so `readManifestSnapshot` recomputes before returning. What CAN
+  // be enforced here is that the denormalized columns match the bytes.
+  await tx.execute(sql`
+    ALTER TABLE execution_manifest_snapshots
+      DROP CONSTRAINT IF EXISTS execution_manifest_snapshots_subject_matches_content
+  `);
+  await tx.execute(sql`
+    ALTER TABLE execution_manifest_snapshots
+      ADD CONSTRAINT execution_manifest_snapshots_subject_matches_content
+      CHECK (
+        subject_kind = snapshot->>'subject_kind'
+        AND subject_slug = snapshot->>'slug'
+      )
+      NOT VALID
+  `);
+
+  // ── TRUNCATE does not fire row-level DELETE triggers ──────────────────────
+  await tx.execute(sql`
+    CREATE OR REPLACE FUNCTION "execution_manifest_snapshots_no_truncate"()
+    RETURNS trigger AS $$
+    BEGIN
+      RAISE EXCEPTION
+        'execution_manifest_snapshots cannot be truncated: it is the only record '
+        'of what a capability declared when a receipt was issued, and emptying it '
+        'makes every receipt permanently unverifiable.';
+    END;
+    $$ LANGUAGE plpgsql
+  `);
+  await tx.execute(sql`
+    DROP TRIGGER IF EXISTS execution_manifest_snapshots_no_truncate_trg
+      ON execution_manifest_snapshots
+  `);
+  await tx.execute(sql`
+    CREATE TRIGGER execution_manifest_snapshots_no_truncate_trg
+      BEFORE TRUNCATE ON execution_manifest_snapshots
+      FOR EACH STATEMENT EXECUTE FUNCTION "execution_manifest_snapshots_no_truncate"()
+  `);
+
+  // Verify every trigger this block depends on is present AND enabled.
+  const trg = await tx.execute(sql`
+    SELECT c.relname AS tbl, t.tgname, t.tgenabled
+      FROM pg_trigger t JOIN pg_class c ON c.oid = t.tgrelid
+     WHERE NOT t.tgisinternal
+       AND t.tgname IN ('transactions_receipt_state_transitions_trg',
+                        'execution_manifest_snapshots_no_truncate_trg')
+  `);
+  const rows = trg as unknown as Array<{ tgname: string; tgenabled: string }>;
+  const enabled = rows.filter((r) => r.tgenabled === 'O').map((r) => r.tgname);
+  const missing = [
+    "transactions_receipt_state_transitions_trg",
+    "execution_manifest_snapshots_no_truncate_trg",
+  ].filter((n) => !enabled.includes(n));
+  if (missing.length > 0) {
+    throw new Error(
+      `receipt-state invariant triggers missing or disabled: ${missing.join(", ")} ` +
+        `(found ${JSON.stringify(rows)}). Refusing to report success: without them, ` +
+        "a completed receipt can be rewritten and the snapshot table can be emptied.",
+    );
+  }
+
+  return {
+    block: "0108_receipt_state_invariants",
+    outcome:
+      "transition trigger + TRUNCATE refusal + closed reason set + known receipt " +
+      "metadata + snapshot subject/content agreement, all present and verified",
     duration_ms: Date.now() - startedAt,
   };
 }
@@ -3037,6 +3219,7 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   // Phase 4: execution receipts.
   runMigration0106_executionManifestSnapshots,
   runMigration0107_executionReceiptColumns,
+  runMigration0108_receiptStateInvariants,
 ];
 
 /**

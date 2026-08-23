@@ -80,16 +80,29 @@ export interface CapabilityDeclarationSource {
   gdprArt22Classification: string | null;
 }
 
+/**
+ * What happened to a step.
+ *
+ * A null `manifest_digest` used to mean BOTH "a gate skipped it" and "we could
+ * not read its declaration" — two materially different facts producing an
+ * identical digest, so a receipt had two readings. PHASE-2-SPEC §5 requires the
+ * absence to be *recorded*, not merely implied. Reviewer-found.
+ */
+export const STEP_DISPOSITIONS = ["ran", "skipped", "unresolved"] as const;
+export type StepDisposition = (typeof STEP_DISPOSITIONS)[number];
+
 /** One step of a solution, in execution order. */
 export interface SolutionStepIdentity {
+  /** 1-based, strictly increasing across the array. Enforced, not assumed. */
   step_order: number;
   slug: string;
   /**
-   * The step's own snapshot digest, or null when the step did not resolve —
-   * a gate skipped it, or its capability could not be read. Null is a DEFINED
-   * representation: omitting the step entirely would let two different
-   * executions share a receipt shape.
+   * `ran` — executed, and `manifest_digest` is its declaration.
+   * `skipped` — a gate short-circuited it; it never ran, deliberately.
+   * `unresolved` — it should have run but its declaration could not be read.
    */
+  disposition: StepDisposition;
+  /** The step's declaration digest. Non-null exactly when disposition is `ran`. */
   manifest_digest: string | null;
 }
 
@@ -135,6 +148,7 @@ export function normalizeCapabilityDeclaration(
 export function normalizeSolutionDeclaration(
   source: SolutionDeclarationSource,
 ): Record<string, unknown> {
+  assertWellFormedSteps(source.slug, source.steps);
   return {
     subject_kind: "solution",
     slug: source.slug,
@@ -143,9 +157,70 @@ export function normalizeSolutionDeclaration(
       .map((step) => ({
         step_order: step.step_order,
         slug: step.slug,
+        disposition: step.disposition,
         manifest_digest: step.manifest_digest,
       })),
   };
+}
+
+/**
+ * A solution's step list must have exactly one reading.
+ *
+ * `Array.prototype.sort` is stable, so with duplicate `step_order` values the
+ * CALLER'S array order silently becomes load-bearing: `[{1,x},{1,y}]` and
+ * `[{1,y},{1,x}]` declare the same ordering and produce different digests.
+ * Reviewer-found, along with `-3`, `0` and `2.5` all being accepted as orders,
+ * and an empty step list being accepted for a solution.
+ *
+ * Strictly increasing positive integers is the only shape with one reading.
+ */
+export function assertWellFormedSteps(
+  solutionSlug: string,
+  steps: readonly SolutionStepIdentity[],
+): void {
+  if (steps.length === 0) {
+    throw new ManifestSnapshotError(
+      "unresolvable_manifest",
+      `solution ${solutionSlug} has no steps; a solution is its steps`,
+    );
+  }
+
+  const orders = steps.map((s) => s.step_order);
+  for (const o of orders) {
+    if (!Number.isInteger(o) || o < 1) {
+      throw new ManifestSnapshotError(
+        "unresolvable_manifest",
+        `solution ${solutionSlug} has step_order ${o}; must be a positive integer`,
+      );
+    }
+  }
+  const sorted = [...orders].sort((a, b) => a - b);
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === sorted[i - 1]) {
+      throw new ManifestSnapshotError(
+        "unresolvable_manifest",
+        `solution ${solutionSlug} repeats step_order ${sorted[i]}; ordering would be ` +
+          "decided by array position, which is not part of the declared identity",
+      );
+    }
+  }
+
+  for (const step of steps) {
+    const wantsDigest = step.disposition === "ran";
+    if (wantsDigest && !step.manifest_digest) {
+      throw new ManifestSnapshotError(
+        "unresolvable_manifest",
+        `solution ${solutionSlug} step ${step.slug} ran but carries no manifest digest`,
+      );
+    }
+    if (!wantsDigest && step.manifest_digest) {
+      throw new ManifestSnapshotError(
+        "unresolvable_manifest",
+        `solution ${solutionSlug} step ${step.slug} is ${step.disposition} but carries ` +
+          "a manifest digest; only a step that ran has one",
+      );
+    }
+  }
 }
 
 /** The digest of a normalized declaration. Pure — no database. */
@@ -198,12 +273,30 @@ export async function recordManifestSnapshot(
   }
 
   try {
-    await db.execute(sql`
+    const inserted = await db.execute(sql`
       INSERT INTO execution_manifest_snapshots (digest, subject_kind, subject_slug, snapshot)
       VALUES (${digest}, ${kind}, ${slug}, ${JSON.stringify(normalized)}::jsonb)
       ON CONFLICT (digest) DO NOTHING
+      RETURNING digest
     `);
+
+    // ON CONFLICT DO NOTHING is silent by design, which is what makes dedup
+    // work — and what would also silently discard a DIFFERENT snapshot that
+    // happened to arrive under the same digest. That should be impossible
+    // (the digest is a function of the content) but "should be impossible" is
+    // exactly what a content-addressed table has to check rather than assume.
+    if ((inserted as unknown as Array<unknown>).length === 0) {
+      const stored = await readManifestSnapshot(db, digest); // recomputes
+      if (stored === null || canonicalize(stored) !== canonicalize(normalized)) {
+        throw new ManifestSnapshotError(
+          "snapshot_write_failed",
+          `digest ${digest} already stores different content; refusing to report ` +
+            "success for a snapshot that was not written",
+        );
+      }
+    }
   } catch (err) {
+    if (err instanceof ManifestSnapshotError) throw err;
     throw new ManifestSnapshotError(
       "snapshot_write_failed",
       err instanceof Error ? err.message : String(err),
@@ -225,5 +318,25 @@ export async function readManifestSnapshot(
     SELECT snapshot FROM execution_manifest_snapshots WHERE digest = ${digest}
   `);
   const row = (rows as unknown as Array<{ snapshot: Record<string, unknown> }>)[0];
-  return row?.snapshot ?? null;
+  if (!row) return null;
+
+  // RECOMPUTE BEFORE TRUSTING.
+  //
+  // "Content-addressed" was an assertion, not an enforcement: a direct INSERT
+  // bypassing this module could pair digest A with snapshot B, and it was
+  // accepted. The reviewer did exactly that. The digest-to-content relation
+  // cannot be a database CHECK — Postgres has no RFC 8785 — so the one reader a
+  // verifier depends on is where it has to be checked.
+  //
+  // A mismatch is not a data-quality nit. It means the table's addressing is
+  // broken, and every receipt naming this digest is unverifiable.
+  const actual = declarationDigest(row.snapshot);
+  if (actual !== digest) {
+    throw new ManifestSnapshotError(
+      "unresolvable_manifest",
+      `snapshot stored under ${digest} actually hashes to ${actual}; the table is ` +
+        "mis-addressed and every receipt naming this digest is unverifiable",
+    );
+  }
+  return row.snapshot;
 }

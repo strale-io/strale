@@ -266,8 +266,8 @@ describeMaybe("execution receipts against a real database", () => {
   // ── Solutions ────────────────────────────────────────────────────────────
 
   it("solution identity binds ordered step identities, so swapping a step moves the digest", async () => {
-    const stepA = { step_order: 1, slug: "vat-validate", manifest_digest: `sha256:${"1".repeat(64)}` };
-    const stepB = { step_order: 2, slug: "sanctions-check", manifest_digest: `sha256:${"2".repeat(64)}` };
+    const stepA = { step_order: 1, slug: "vat-validate", disposition: "ran" as const, manifest_digest: `sha256:${"1".repeat(64)}` };
+    const stepB = { step_order: 2, slug: "sanctions-check", disposition: "ran" as const, manifest_digest: `sha256:${"2".repeat(64)}` };
 
     const base = declarationDigest(
       normalizeSolutionDeclaration({ slug: "kyb-essentials-se", steps: [stepA, stepB] }),
@@ -299,13 +299,13 @@ describeMaybe("execution receipts against a real database", () => {
     const withSkip = normalizeSolutionDeclaration({
       slug: "kyb-essentials-se",
       steps: [
-        { step_order: 1, slug: "vat-validate", manifest_digest: `sha256:${"1".repeat(64)}` },
-        { step_order: 2, slug: "sanctions-check", manifest_digest: null },
+        { step_order: 1, slug: "vat-validate", disposition: "ran" as const, manifest_digest: `sha256:${"1".repeat(64)}` },
+        { step_order: 2, slug: "sanctions-check", disposition: "skipped" as const, manifest_digest: null },
       ],
     });
     const omitted = normalizeSolutionDeclaration({
       slug: "kyb-essentials-se",
-      steps: [{ step_order: 1, slug: "vat-validate", manifest_digest: `sha256:${"1".repeat(64)}` }],
+      steps: [{ step_order: 1, slug: "vat-validate", disposition: "ran" as const, manifest_digest: `sha256:${"1".repeat(64)}` }],
     });
     // Omitting the step would let two different executions share a shape.
     expect(declarationDigest(withSkip)).not.toBe(declarationDigest(omitted));
@@ -364,8 +364,8 @@ describeMaybe("execution receipts against a real database", () => {
   });
 
   it("changing solution step order or identity changes the receipt digest", () => {
-    const s1 = { step_order: 1, slug: "a", manifest_digest: `sha256:${"1".repeat(64)}` };
-    const s2 = { step_order: 2, slug: "b", manifest_digest: `sha256:${"2".repeat(64)}` };
+    const s1 = { step_order: 1, slug: "a", disposition: "ran" as const, manifest_digest: `sha256:${"1".repeat(64)}` };
+    const s2 = { step_order: 2, slug: "b", disposition: "ran" as const, manifest_digest: `sha256:${"2".repeat(64)}` };
     const sol = baseReceipt({ subjectKind: "solution", subjectSlug: "kyb-essentials-se", steps: [s1, s2] });
     const base = digestOf(sol);
 
@@ -391,8 +391,8 @@ describeMaybe("execution receipts against a real database", () => {
     //
     // Here step_order is IDENTICAL and only the array order differs. Sorted,
     // the two are the same computation and must agree. Unsorted, they do not.
-    const s1 = { step_order: 1, slug: "a", manifest_digest: `sha256:${"1".repeat(64)}` };
-    const s2 = { step_order: 2, slug: "b", manifest_digest: `sha256:${"2".repeat(64)}` };
+    const s1 = { step_order: 1, slug: "a", disposition: "ran" as const, manifest_digest: `sha256:${"1".repeat(64)}` };
+    const s2 = { step_order: 2, slug: "b", disposition: "ran" as const, manifest_digest: `sha256:${"2".repeat(64)}` };
 
     const inOrder = digestOf(
       baseReceipt({ subjectKind: "solution", subjectSlug: "kyb", steps: [s1, s2] }),
@@ -476,7 +476,7 @@ describeMaybe("execution receipts against a real database", () => {
     expect(row.receipt_digest).toBeNull();
   });
 
-  it("a receipt that later FAILS has its success metadata cleared, not left stale", async () => {
+  it("a COMPLETE receipt cannot be withdrawn — complete is absorbing", async () => {
     // The previous test asserts receipt_digest is null after a failure — but
     // that row never had a digest, so it was null either way. The mutation
     // battery caught it. This one sets a real complete receipt FIRST, so the
@@ -486,6 +486,7 @@ describeMaybe("execution receipts against a real database", () => {
       NODE_ENV: "test",
     } as NodeJS.ProcessEnv);
     if (built.outcome !== "complete") throw new Error("fixture must build");
+    await markReceiptPending(db, id);
     await markReceiptComplete(db, id, built);
 
     const before = await db.execute(
@@ -495,7 +496,10 @@ describeMaybe("execution receipts against a real database", () => {
       built.digest,
     );
 
-    await markReceiptFailed(db, id, "unresolvable_manifest");
+    // complete is absorbing now, so a late failure is REFUSED rather than
+    // clearing the digest. That is the stronger guarantee: an anchored receipt
+    // cannot be withdrawn.
+    await expect(markReceiptFailed(db, id, "unresolvable_manifest")).rejects.toThrow();
 
     const after = await db.execute(sql`
       SELECT receipt_status, receipt_digest, receipt_version, receipt_canonicalization,
@@ -503,13 +507,8 @@ describeMaybe("execution receipts against a real database", () => {
         FROM transactions WHERE id = ${id}::uuid
     `);
     const row = (after as unknown as Array<Record<string, unknown>>)[0];
-    expect(row.receipt_status).toBe("failed");
-    // A stale digest on a failed row would be a commitment to a receipt that
-    // was withdrawn — worse than no digest at all.
-    expect(row.receipt_digest).toBeNull();
-    expect(row.receipt_version).toBeNull();
-    expect(row.receipt_canonicalization).toBeNull();
-    expect(row.receipt_digest_alg).toBeNull();
+    expect(row.receipt_status).toBe("complete");
+    expect(row.receipt_digest).toBe(built.digest);
   });
 
   it("the database refuses a 'complete' receipt with no digest", async () => {
@@ -592,6 +591,7 @@ describeMaybe("execution receipts against a real database", () => {
     } as NodeJS.ProcessEnv);
     expect(built.outcome).toBe("complete");
     if (built.outcome !== "complete") return;
+    await markReceiptPending(db, id);
     await markReceiptComplete(db, id, built);
 
     const rows = await db.execute(sql`
@@ -605,7 +605,12 @@ describeMaybe("execution receipts against a real database", () => {
     expect(row.receipt_canonicalization).toBe("RFC8785");
     expect(row.receipt_digest_alg).toBe("sha256");
     expect(row.receipt_digest).toBe(built.digest);
-    expect(Number(row.integrity_payload_version)).toBe(2);
+
+    // The lifecycle must NOT set the chain version. That column records which
+    // rule produced the integrity hash, so only the site that computes the hash
+    // may write it — writing it here produced rows hashed under v1 while
+    // declaring v2, which is the defect this round fixes.
+    expect(row.integrity_payload_version).toBeNull();
   });
 
   // ── F. Epoch ─────────────────────────────────────────────────────────────

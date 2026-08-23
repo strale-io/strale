@@ -36,7 +36,13 @@
 import { sql, eq, and, lt, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { transactions } from "../db/schema.js";
-import { computeIntegrityHash, getPreviousHash } from "../lib/integrity-hash.js";
+import {
+  computeIntegrityHashVersioned,
+  getPreviousHash,
+  CHAIN_PAYLOAD_V1,
+  CHAIN_PAYLOAD_V2,
+  type ChainPayloadVersion,
+} from "../lib/integrity-hash.js";
 import { log, logError, logWarn } from "../lib/log.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { isShuttingDown } from "../lib/shutdown.js";
@@ -117,6 +123,28 @@ async function runOnce(): Promise<void> {
             lt(transactions.createdAt, pendingCutoff),
             sql`${transactions.completedAt} IS NOT NULL`,
             sql`${transactions.status} IN ('completed', 'failed')`,
+            // A row whose RECEIPT is still pending must not be chained.
+            //
+            // Chain v2 anchors the receipt digest. Hashing a row while its
+            // receipt is unbuilt would anchor `null` and the real digest would
+            // arrive afterwards — the stored hash would then describe a receipt
+            // state the row no longer has, and completing the receipt would
+            // require rewriting an already-chained fact. Reviewer-found; the
+            // hazard is guaranteed rather than theoretical, because retries are
+            // owned by THIS worker, so any row needing one would be chained
+            // while pending and completed after.
+            //
+            // 'complete' and 'failed' are both admissible and both terminal.
+            // A failed receipt enters the chain with a null digest, and the
+            // chain then commits to "at chain time this row had no
+            // recomputable receipt" — permanently true, because failed never
+            // recovers. Excluding failures instead would leave a real, billed
+            // transaction outside the tamper-evident record, which is worse.
+            //
+            // NULL is admissible too: that is a pre-epoch row, or a row from a
+            // rail not yet wired. Those chain under v1, exactly as before.
+            sql`(${transactions.receiptStatus} IS NULL
+                 OR ${transactions.receiptStatus} IN ('complete', 'failed'))`,
           ),
         )
         .orderBy(asc(transactions.completedAt), asc(transactions.id))
@@ -168,7 +196,21 @@ async function runOnce(): Promise<void> {
         }
 
         try {
-          const hash = computeIntegrityHash(
+          // WHICH RULE HASHES THIS ROW, decided here and recorded here.
+          //
+          // The version column says which payload rule produced the hash, so
+          // only this site may write it. The lifecycle module used to stamp
+          // v2 independently, which produced rows hashed under v1 while
+          // declaring v2 — they verified only because nothing had yet
+          // implemented the documented rule.
+          //
+          // A row with receipt state is v2; a row without is v1. There is no
+          // third case, because the admission predicate above already excluded
+          // 'pending'.
+          const chainVersion: ChainPayloadVersion =
+            txn.receiptStatus === null ? CHAIN_PAYLOAD_V1 : CHAIN_PAYLOAD_V2;
+
+          const hash = computeIntegrityHashVersioned(
             {
               id: txn.id,
               userId: txn.userId,
@@ -184,8 +226,12 @@ async function runOnce(): Promise<void> {
               dataJurisdiction: txn.dataJurisdiction,
               createdAt: txn.createdAt,
               completedAt: txn.completedAt,
+              // v1 ignores this member entirely, so passing it is harmless
+              // there and load-bearing here.
+              receiptDigest: txn.receiptDigest ?? null,
             },
             currentPrevious,
+            chainVersion,
           );
 
           await tx
@@ -200,6 +246,11 @@ async function runOnce(): Promise<void> {
               // hashed without taking a position or take one without being
               // hashed.
               chainSeq: sql`nextval('transactions_chain_seq')`,
+              // Same UPDATE as the hash, for the same reason chain_seq is:
+              // a row cannot be hashed without recording which rule hashed it,
+              // and cannot record a rule without being hashed.
+              integrityPayloadVersion:
+                chainVersion === CHAIN_PAYLOAD_V2 ? CHAIN_PAYLOAD_V2 : null,
             })
             .where(eq(transactions.id, txn.id));
           currentPrevious = hash;
