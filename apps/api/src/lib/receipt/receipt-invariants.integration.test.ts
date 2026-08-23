@@ -121,11 +121,47 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     return id;
   }
 
+  /**
+   * A row as it existed BEFORE the epoch: no receipt state at all.
+   *
+   * Since block 0109 an ordinary insert is `pending` from birth, so "a row with
+   * no receipt state" is no longer something you get by not asking - it is a
+   * historical shape, and the post-epoch CHECK forbids creating it with a
+   * present-day `created_at`. Constructing it explicitly is the honest way to
+   * test the legacy guards, and it makes the pre/post distinction visible in
+   * the test rather than implicit in a default.
+   */
+  async function legacyTxn(): Promise<string> {
+    const id = randomUUID();
+    txns.add(id);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at, completed_at,
+                                receipt_status, receipt_failure_reason)
+      VALUES (${id}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU',
+              '{}'::jsonb, now() - interval '400 days', now() - interval '400 days',
+              NULL, NULL)
+    `);
+    return id;
+  }
+
+  /**
+   * A digest that actually names a stored snapshot.
+   *
+   * `transactions.receipt_manifest_digest` is a foreign key as of block 0109,
+   * so a made-up `sha256:aaa...` is refused - which is the constraint working.
+   * Tests that need a digest record the real declaration and use what comes
+   * back.
+   */
+  async function realManifestDigest(): Promise<string> {
+    return recordManifestSnapshot(db, normalizeCapabilityDeclaration(DECL));
+  }
+
   async function completed(id: string): Promise<string> {
     const built = buildExecutionReceipt(
       {
         transactionId: id, subjectKind: "capability", subjectSlug: "vat-validate",
-        deployCommit: "c".repeat(40), manifestDigest: `sha256:${"a".repeat(64)}`,
+        deployCommit: "c".repeat(40), manifestDigest: await realManifestDigest(),
         steps: null, rail: "v1_do", inputs: {}, status: "completed",
         result: { ok: true }, error: null, method: "algorithmic",
         sourceObservation: { kind: "computed" },
@@ -291,7 +327,11 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     // was never anchored. It verifies, under a rule that does not cover the
     // receipt, and "a receipt digest cannot be swapped without invalidating the
     // chain" is silently false for it.
-    const id = await txn();
+    // A LEGACY row specifically. Post-epoch this scenario cannot arise at all -
+    // a row is `pending` from birth, and the worker refuses to chain a pending
+    // receipt - so the guard's remaining job is the 887k rows that predate the
+    // epoch, and that is what this now exercises.
+    const id = await legacyTxn();
     await db.execute(sql`
       UPDATE transactions
          SET integrity_hash = ${"9".repeat(64)}, previous_hash = ${"8".repeat(64)},
@@ -548,9 +588,27 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     await recordManifestSnapshot(db, normalizeCapabilityDeclaration(DECL));
     // Row-level DELETE triggers do not fire for TRUNCATE; a statement-level
     // BEFORE TRUNCATE trigger is what closes it.
+    const before = await db.execute(
+      sql`SELECT count(*)::int AS n FROM execution_manifest_snapshots`,
+    );
+
+    // TWO independent refusals now, and the FK gets there first: since block
+    // 0109, transactions.receipt_manifest_digest references this table, and
+    // Postgres refuses to truncate a referenced table before any trigger runs.
+    // The statement-level BEFORE TRUNCATE trigger from 0108 is still the
+    // guarantee that survives the FK being dropped, so both messages are
+    // accepted rather than pinning the test to whichever fires today.
     await expect(
       db.execute(sql`TRUNCATE execution_manifest_snapshots`),
-    ).rejects.toThrow(/cannot be truncated/);
+    ).rejects.toThrow(/cannot be truncated|cannot truncate a table referenced/i);
+
+    // And the property itself, not just the message.
+    const after = await db.execute(
+      sql`SELECT count(*)::int AS n FROM execution_manifest_snapshots`,
+    );
+    expect((after as unknown as Array<{ n: number }>)[0].n).toBe(
+      (before as unknown as Array<{ n: number }>)[0].n,
+    );
 
     const rows = await db.execute(
       sql`SELECT count(*)::int AS n FROM execution_manifest_snapshots`,

@@ -31,6 +31,10 @@ import { randomUUID } from "node:crypto";
 
 import { useTestDatabase } from "../../test-support/integration-db.js";
 import { buildExecutionReceipt } from "./execution-receipt.js";
+import {
+  normalizeCapabilityDeclaration,
+  recordManifestSnapshot,
+} from "./manifest-snapshot.js";
 import { markReceiptComplete, markReceiptFailed, markReceiptPending } from "./receipt-lifecycle.js";
 import {
   computeIntegrityHashVersioned,
@@ -77,6 +81,59 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     txns.clear();
   });
 
+  /**
+   * A digest that names a real stored snapshot.
+   *
+   * `transactions.receipt_manifest_digest` is a foreign key as of block 0109,
+   * so the old `sha256:aaa...` fixture is refused.
+   */
+  async function realManifestDigest(): Promise<string> {
+    return recordManifestSnapshot(
+      db,
+      normalizeCapabilityDeclaration({
+        slug: "vat-validate",
+        name: "VAT Validate",
+        inputSchema: { type: "object" },
+        outputSchema: { type: "object" },
+        transparencyTag: "algorithmic",
+        dataSource: "VIES",
+        capabilityType: "stable_api",
+        freshnessCategory: "live-fetch",
+        outputFieldReliability: { valid: "guaranteed" },
+        processesPersonalData: false,
+        personalDataCategories: [],
+        gdprArt22Classification: "data_lookup",
+        dataUpdateCycleDays: null,
+        datasetLastUpdated: null,
+        dataClassification: "public",
+        x402Method: "POST",
+      }),
+    );
+  }
+
+  /**
+   * Past the CHAIN worker's grace window (10s) but inside the RECEIPT
+   * sweeper's (60s).
+   *
+   * Phase 5 gave the same tick a sweeper that finishes pending receipts, and
+   * that changes what these tests can assume: an aged row with a pending
+   * receipt no longer STAYS pending across a tick - the sweeper terminalises
+   * it, and then the chain quite correctly admits it. So a test about "a
+   * pending receipt blocks chaining" has to use a row the sweeper will not
+   * touch yet, or it is really testing the sweeper.
+   */
+  async function youngTransaction(): Promise<string> {
+    const id = randomUUID();
+    txns.add(id);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at, completed_at)
+      VALUES (${id}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU', '{}'::jsonb,
+              now() - interval '30 seconds', now() - interval '30 seconds')
+    `);
+    return id;
+  }
+
   /** Old enough to clear the worker's grace window. */
   async function agedTransaction(): Promise<string> {
     const id = randomUUID();
@@ -99,7 +156,7 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     const built = buildExecutionReceipt(
       {
         transactionId: id, subjectKind: "capability", subjectSlug: "vat-validate",
-        deployCommit: "c".repeat(40), manifestDigest: `sha256:${"a".repeat(64)}`,
+        deployCommit: "c".repeat(40), manifestDigest: await realManifestDigest(),
         steps: null, rail: "v1_do", inputs: { vat: "SE1" }, status: "completed",
         result: { valid: true }, error: null, method: "algorithmic",
         sourceObservation: { kind: "computed" },
@@ -149,15 +206,37 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     // receipt at all.
     const withReceipt = await agedTransaction();
     await completeReceipt(withReceipt);
-    const plainV1 = await agedTransaction();
+    const neighbour = await agedTransaction();
+
+    // A genuine v1 row has to be PRE-epoch now. Since block 0109 every new
+    // transaction carries receipt state from birth, so "a row with no receipt"
+    // is no longer something a present-day insert can produce - v1 is exactly
+    // the 887k rows that predate the epoch, and this is the coexistence the
+    // chain-versioning design exists to support.
+    const legacy = randomUUID();
+    txns.add(legacy);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at, completed_at,
+                                receipt_status, receipt_failure_reason)
+      VALUES (${legacy}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU',
+              '{}'::jsonb, now() - interval '400 days', now() - interval '400 days',
+              NULL, NULL)
+    `);
 
     await runOnce();
 
     const a = await row(withReceipt);
-    const b = await row(plainV1);
+    const b = await row(neighbour);
+    const c = await row(legacy);
     expect(a.integrity_hash, "receipt row not chained").not.toBeNull();
     expect(b.integrity_hash, "innocent neighbour not chained").not.toBeNull();
-    expect(b.integrity_payload_version, "a row with no receipt is v1").toBeNull();
+    expect(c.integrity_hash, "legacy row not chained").not.toBeNull();
+    expect(c.integrity_payload_version, "a PRE-epoch row is v1").toBeNull();
+    expect(
+      Number(b.integrity_payload_version),
+      "a post-epoch row is v2, because it cannot exist without receipt state",
+    ).toBe(CHAIN_PAYLOAD_V2);
   });
 
   it("a receipt-FAILED row is chained as v2 with a null digest", async () => {
@@ -176,8 +255,7 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
   });
 
   it("a receipt-PENDING row is not chained, and does not block the batch", async () => {
-    const pending = await agedTransaction();
-    await markReceiptPending(db, pending);
+    const pending = await youngTransaction();
     const neighbour = await agedTransaction();
 
     await runOnce();
@@ -187,15 +265,14 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
   });
 
   it("a pending row chains once its receipt settles, on a later tick", async () => {
-    const id = await agedTransaction();
-    await markReceiptPending(db, id);
+    const id = await youngTransaction();
     await runOnce();
     expect((await row(id)).integrity_hash).toBeNull();
 
     const built = buildExecutionReceipt(
       {
         transactionId: id, subjectKind: "capability", subjectSlug: "vat-validate",
-        deployCommit: "c".repeat(40), manifestDigest: `sha256:${"a".repeat(64)}`,
+        deployCommit: "c".repeat(40), manifestDigest: await realManifestDigest(),
         steps: null, rail: "v1_do", inputs: {}, status: "completed",
         result: {}, error: null, method: "algorithmic",
         sourceObservation: { kind: "computed" },
@@ -217,15 +294,19 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     // counts only selected rows — cannot see it. With the retry sweeper
     // deferred to the rail PR, such a row would sit outside the chain forever
     // with nothing saying so.
+    // status='executing', deliberately. Phase 5's sweeper resolves a pending
+    // receipt on any SETTLED row within a minute or so, so the population this
+    // counter still exists for is the row whose transaction never reached a
+    // terminal status at all - wedged, and invisible to both the sweeper (no
+    // final result to commit to) and the chain (nothing to hash).
     const id = randomUUID();
     txns.add(id);
     await db.execute(sql`
       INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
-                                data_jurisdiction, input, created_at, completed_at)
-      VALUES (${id}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU', '{}'::jsonb,
-              now() - interval '20 minutes', now() - interval '20 minutes')
+                                data_jurisdiction, input, created_at)
+      VALUES (${id}::uuid, ${userId}::uuid, 'executing', 5, 'algorithmic', 'EU', '{}'::jsonb,
+              now() - interval '20 minutes')
     `);
-    await markReceiptPending(db, id);
 
     const warnings: string[] = [];
     const { log } = await import("../log.js");
