@@ -3230,6 +3230,170 @@ export async function runMigration0108_receiptStateInvariants(
   };
 }
 
+/**
+ * Block 0109 - the receipt epoch, made structural.
+ *
+ * Phase 4 shipped every receipt artifact and then said, in its own
+ * reconciliation, that the epoch was NOT structurally real: a transaction
+ * inserted afterwards was byte-identical to one from April, because
+ * `chain_v2_has_receipt_state` only constrains rows that DECLARE v2 and no row
+ * declared anything. This block closes that, and it is the reason Phase 5 can
+ * wire every rail at once instead of one at a time.
+ *
+ * Two statements do the work:
+ *
+ *  1. `receipt_status` gets a DEFAULT of `pending`. Every insert into
+ *     `transactions` - from the four executors in `routes/do.ts`, from
+ *     `solution-execute.ts`, from `x402-gateway-v2.ts`, from the internal
+ *     harness, from the settlement reconciler, and from any site written after
+ *     this one - now starts with receipt state whether or not its author
+ *     thought about receipts. This is the property no amount of call-site
+ *     wiring can give you: a rail nobody wired produces a VISIBLE `pending`
+ *     row that the sweeper picks up and the backlog counter reports, instead
+ *     of a silent NULL that looks exactly like a pre-epoch row.
+ *
+ *  2. A CHECK that a post-epoch row cannot have a NULL status. `NOT VALID`, so
+ *     the 921k existing rows are not scanned at boot; they are all pre-epoch
+ *     and exempt by the `created_at` test regardless.
+ *
+ * ## Where the epoch instant comes from
+ *
+ * `now()` at the moment this block first runs, baked into the constraint text
+ * as a literal. The constraint is therefore the single, immutable record of
+ * when enforcement began - there is no second copy in a table to drift from
+ * it, and re-running this block is a no-op because the constraint already
+ * exists.
+ *
+ * The race that looks like a problem is not one. `ALTER TABLE` takes ACCESS
+ * EXCLUSIVE, so a concurrent insert either committed before the lock was
+ * granted - giving it a `created_at` earlier than `now()`, hence exempt - or
+ * blocks until this transaction commits and then picks up the DEFAULT. There
+ * is no interleaving that produces a post-epoch row with a NULL status.
+ *
+ * ## The foreign key
+ *
+ * `transactions.receipt_manifest_digest` now references
+ * `execution_manifest_snapshots(digest)`. Phase 4 listed its absence as
+ * residual risk 6 and left the decision open; the decision is to add it, on
+ * these grounds:
+ *
+ *  - The referent is guaranteed to exist by construction: `settle.ts` records
+ *    the snapshot BEFORE `markReceiptComplete` writes the digest.
+ *  - It can never break later, because DELETE and TRUNCATE on the snapshot
+ *    table are refused by triggers from blocks 0106 and 0108. A FK is normally
+ *    a liability when the parent can be deleted; here it structurally cannot.
+ *  - Without it, "the digest points at a snapshot that exists" is a
+ *    convention. `readManifestSnapshot` recomputes before trusting, so a
+ *    MIS-ADDRESSED row is caught - but a digest pointing at NOTHING is a
+ *    different failure, and nothing caught that.
+ *  - NULL is permitted, which is what a `failed` receipt writes, so the
+ *    failure path is unaffected.
+ *
+ * Its cost is one unique-index probe per receipt completion, off the money
+ * path. `NOT VALID` for the same reason as the CHECK.
+ *
+ * ## Backlog (DEC-20260504-B)
+ *
+ * Not a bulk-operation resumption. Both ALTERs are catalog-only in PG11+, the
+ * CHECK and FK are `NOT VALID` so neither scans, and there is no accumulated
+ * workload to drain: production carries zero rows with receipt state, so the
+ * sweeper starts from an empty backlog and only ever sees rows created after
+ * this block ran.
+ */
+export async function runMigration0109_receiptEpoch(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  // DEFAULT + CHECK together, and only once. Guarding on the constraint means
+  // the epoch instant is chosen exactly once in the lifetime of the database.
+  await tx.execute(sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'transactions_post_epoch_has_receipt'
+      ) THEN
+        ALTER TABLE transactions ALTER COLUMN receipt_status SET DEFAULT 'pending';
+
+        EXECUTE format(
+          'ALTER TABLE transactions ADD CONSTRAINT transactions_post_epoch_has_receipt '
+          'CHECK (created_at < %L OR receipt_status IS NOT NULL) NOT VALID',
+          now()
+        );
+      END IF;
+    END $$
+  `);
+
+  await tx.execute(sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'transactions_receipt_manifest_digest_fk'
+      ) THEN
+        ALTER TABLE transactions
+          ADD CONSTRAINT transactions_receipt_manifest_digest_fk
+          FOREIGN KEY (receipt_manifest_digest)
+          REFERENCES execution_manifest_snapshots (digest)
+          NOT VALID;
+      END IF;
+    END $$
+  `);
+
+  // Self-verify by object, not by "no error was raised". A block that reports
+  // success without checking is the hollow-gate pattern this repo has been
+  // bitten by more than once.
+  const verify = (await tx.execute(sql`
+    SELECT
+      (SELECT column_default FROM information_schema.columns
+        WHERE table_name = 'transactions' AND column_name = 'receipt_status') AS default_expr,
+      (SELECT pg_get_constraintdef(oid) FROM pg_constraint
+        WHERE conname = 'transactions_post_epoch_has_receipt') AS epoch_check,
+      (SELECT 1 FROM pg_constraint
+        WHERE conname = 'transactions_receipt_manifest_digest_fk') AS fk_present
+  `)) as unknown as Array<{
+    default_expr: string | null;
+    epoch_check: string | null;
+    fk_present: number | null;
+  }>;
+
+  const row = verify[0];
+  if (!row?.default_expr || !row.default_expr.includes("pending")) {
+    throw new Error(
+      "0109: receipt_status has no 'pending' default, so a transaction could " +
+        "still be inserted with no receipt state. Got: " +
+        String(row?.default_expr),
+    );
+  }
+  if (!row?.epoch_check) {
+    throw new Error("0109: the post-epoch CHECK constraint is absent after the block ran");
+  }
+  if (!row?.fk_present) {
+    throw new Error("0109: the receipt_manifest_digest foreign key is absent after the block ran");
+  }
+
+  return {
+    block: "0109_receipt_epoch",
+    outcome:
+      "receipt_status DEFAULT 'pending' + post-epoch CHECK + manifest-digest FK, " +
+      "all present and verified; epoch: " +
+      (parseEpochFromCheck(row.epoch_check) ?? "unparsed"),
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+/**
+ * The epoch instant, read back out of the constraint that enforces it.
+ *
+ * Deliberately no second copy in a table: two records of one fact is how they
+ * drift. Returns null rather than guessing if the shape is unfamiliar, because
+ * a wrong epoch reported confidently is worse than an absent one.
+ */
+export function parseEpochFromCheck(constraintDef: string | null): string | null {
+  if (!constraintDef) return null;
+  const m = constraintDef.match(/'([^']+)'::timestamp with time zone/);
+  return m ? m[1] : null;
+}
+
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
@@ -3286,6 +3450,8 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0106_executionManifestSnapshots,
   runMigration0107_executionReceiptColumns,
   runMigration0108_receiptStateInvariants,
+  // Phase 5: the epoch becomes structural -- every insert gets receipt state.
+  runMigration0109_receiptEpoch,
 ];
 
 /**

@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import {
   computeIdempotencyFingerprint,
   isReplayable,
@@ -573,6 +574,29 @@ function executeWithHardTimeout<T>(
       },
     );
   });
+}
+
+/**
+ * Build the execution receipt for a transaction this route settled.
+ *
+ * Called once per executor, always AFTER the settlement write has committed,
+ * and never inside the wallet transaction: a receipt must not be able to roll
+ * back a payment. `settleExecutionReceipt` swallows its own failures, so this
+ * cannot fail a request that has already executed and charged - a row it could
+ * not finish simply stays `pending` (the column default since block 0109) and
+ * the sweeper owns it.
+ *
+ * The rail is `v1_do` for every path through this file, and it is decided HERE
+ * rather than read from the request. `/v1/do` is also where an A2A call lands
+ * (routes/a2a.ts proxies to it over loopback HTTP) and where an MCP client's
+ * traffic arrives, so it is tempting to let the caller name its own rail with a
+ * header. That would make the rail forgeable, and a forgeable field has no
+ * business inside a commitment - so `mcp` and `a2a` stay in the enum, currently
+ * unreachable, rather than being populated from something a caller controls.
+ */
+async function settleReceiptFor(transactionId: string | null | undefined): Promise<void> {
+  if (!transactionId) return;
+  await settleExecutionReceipt(getDb(), { transactionId, rail: "v1_do" });
 }
 
 export const doRoute = new Hono<AppEnv>();
@@ -1595,6 +1619,7 @@ async function executeFreeTier(
             completedAt: new Date(),
           })
           .where(eq(transactions.id, txnRecord.id));
+        await settleReceiptFor(txnRecord.id);
         return c.json(
           {
             error_code: "payment_failed",
@@ -1621,6 +1646,7 @@ async function executeFreeTier(
           : {}),
       })
       .where(eq(transactions.id, txnRecord.id));
+    await settleReceiptFor(txnRecord.id);
 
     // WP5: the row exists, so the intent is discharged. Review finding — this
     // rail opened intents and never closed them, because markRecordedBySettlement
@@ -1720,6 +1746,7 @@ async function executeFreeTier(
         auditTrail: failAudit, provenance: failProvenance,
       })
       .where(eq(transactions.id, txnRecord.id));
+    await settleReceiptFor(txnRecord.id);
 
     // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
@@ -1821,6 +1848,7 @@ async function executeFreeTierAuthenticated(
         completedAt: new Date(),
       })
       .where(eq(transactions.id, txnRecord.id));
+    await settleReceiptFor(txnRecord.id);
 
     // Record circuit breaker + quality (fire-and-forget)
     fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
@@ -1895,6 +1923,7 @@ async function executeFreeTierAuthenticated(
         provenance: failProvenance,
       })
       .where(eq(transactions.id, txnRecord.id));
+    await settleReceiptFor(txnRecord.id);
 
     // F-0-009 Stage 2: the row lands with compliance_hash_state = 'pending'
     // by column default; jobs/integrity-hash-retry.ts will fill it in.
@@ -2201,6 +2230,11 @@ async function executeSync(
     }
     throw err; // anything else propagates as a real 500
   }
+
+  // The wallet transaction has committed. Both its branches - the success
+  // UPDATE and the failure UPDATE - reach here, so one call covers the whole
+  // executor, and it is outside the transaction by construction.
+  await settleReceiptFor((result as { transactionId?: string }).transactionId);
 
   // ── Record circuit breaker + quality + piggyback (fire-and-forget) ───
   if (result.ok) {
@@ -2690,6 +2724,8 @@ async function executeInBackground(
       }
     });
 
+    await settleReceiptFor(transactionId);
+
     // Record success for circuit breaker + quality + piggyback
     fireAndForget(() => recordSuccess(capability.slug), { label: "circuit-breaker-record-success", context: { slug: capability.slug } });
     recordQuality({
@@ -2784,6 +2820,8 @@ async function executeInBackground(
           ),
         );
     });
+
+    await settleReceiptFor(transactionId);
 
     // CCO P0 #6: row was 'deferred' until the UPDATE above flipped it
     // to 'pending'. Retry worker picks it up on its next tick.

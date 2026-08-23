@@ -1,4 +1,5 @@
 import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
+import { settleExecutionReceipt } from "./receipt/settle.js";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
@@ -1886,6 +1887,15 @@ async function recordTestQuality(
       completedAt: new Date(),
     })
     .returning({ id: transactions.id });
+
+  // The internal harness is roughly 98% of all platform traffic, so leaving it
+  // unwired would have meant the overwhelming majority of post-epoch rows
+  // sitting `pending` forever and the chain backlog growing without bound. It
+  // is a real execution of a real capability; it gets a real receipt, on its
+  // own rail so it can be told apart from customer traffic.
+  if (txn?.id) {
+    await settleExecutionReceipt(db, { transactionId: txn.id, rail: "internal" });
+  }
 
   const outputSchema = (cap.outputSchema ?? {}) as Record<string, unknown>;
   const properties =

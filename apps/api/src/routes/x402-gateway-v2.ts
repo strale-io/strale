@@ -10,6 +10,7 @@
  */
 
 import { Hono } from "hono";
+import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import { cors } from "hono/cors";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
@@ -864,6 +865,20 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
         });
       }
     }
+    // The row is inserted already terminal on this rail, so there is no
+    // separate settlement write to wait for. For a solution, the step outputs
+    // travel inside `args.output` as `{ steps, errors }` - the same shape
+    // solution-execute.ts stores - so the step slugs are recoverable here.
+    if (insertedId) {
+      const stepMap = (args.output as { steps?: Record<string, unknown> } | null)?.steps;
+      await settleExecutionReceipt(db, {
+        transactionId: insertedId,
+        rail: "x402",
+        solutionSlug: args.solutionSlug,
+        ranStepSlugs: args.solutionSlug && stepMap ? Object.keys(stepMap) : [],
+      });
+    }
+
     return insertedId;
   } catch (err) {
     logError("x402-transaction-recording-failed", err);

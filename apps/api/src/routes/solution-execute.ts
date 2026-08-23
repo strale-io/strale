@@ -15,6 +15,7 @@
  */
 
 import { Hono } from "hono";
+import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
@@ -337,6 +338,10 @@ solutionExecuteRoute.post(
             complianceHashState: "pending",
           })
           .where(eq(transactions.id, transactionId));
+        // No step produced output, so every declared step is `skipped`.
+        await settleExecutionReceipt(db, {
+          transactionId, rail: "v1_do", solutionSlug: slug, ranStepSlugs: [],
+        });
       } catch (e) {
         c.get("log").error(
           { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
@@ -376,6 +381,11 @@ solutionExecuteRoute.post(
             complianceHashState: "pending",
           })
           .where(eq(transactions.id, transactionId));
+        // A solution with no declared steps has no recipe to bind. settle
+        // records `unresolvable_manifest` rather than hashing an empty list.
+        await settleExecutionReceipt(db, {
+          transactionId, rail: "v1_do", solutionSlug: slug, ranStepSlugs: [],
+        });
       } catch (e) {
         c.get("log").error(
           { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
@@ -566,6 +576,16 @@ solutionExecuteRoute.post(
       },
       "solutions-execute-done",
     );
+
+    // The two-phase write has committed. execResult.steps is keyed by the
+    // capability slug of every step that produced output, which is exactly the
+    // fact settle cannot recover for itself.
+    await settleExecutionReceipt(db, {
+      transactionId,
+      rail: "v1_do",
+      solutionSlug: sol.slug,
+      ranStepSlugs: Object.keys(execResult.steps ?? {}),
+    });
 
     // ── 8. Build response ─────────────────────────────────────────────
     // result.status uses the richer vocabulary for the caller:
