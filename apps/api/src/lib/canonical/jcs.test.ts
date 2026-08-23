@@ -498,6 +498,39 @@ describe("the array branch enforces the same invariant as the object branch", ()
     delete (Sneaky.prototype as unknown as Record<string, unknown>)["0"];
   });
 
+  it("an Array subclass that overrides map() is refused — only the prototype check catches this", () => {
+    // The prototype check has to be load-bearing on its own, and the
+    // prototype-getter case above does NOT isolate it: that value has no own
+    // descriptor at index 0, so the hole check refuses it either way. The
+    // mutation battery caught exactly that — removing the prototype check left
+    // the suite green.
+    //
+    // This value passes the stray check (own key "0") and the hole check (a
+    // real data descriptor), and still serializes misleadingly, because the
+    // serializer reaches the elements through `value.map(...)`.
+    class Evil extends Array {
+      override map(): never[] {
+        return ["hijacked"] as unknown as never[];
+      }
+    }
+    const evil = new Evil();
+    evil.push(1);
+
+    expect(Object.keys(evil)).toEqual(["0"]);
+    expect(Object.getOwnPropertyDescriptor(evil, 0)?.value).toBe(1);
+    expect(JSON.stringify(evil)).toBe("[1]");
+    expect(JSON.stringify(evil.map(() => "x"))).toBe('["hijacked"]');
+
+    let err: unknown;
+    try {
+      canonicalize(evil);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("sparse_or_exotic_array");
+  });
+
   it("ordinary arrays are unaffected", () => {
     expect(canonicalize([1, "a", null, true, [], {}])).toBe('[1,"a",null,true,[],{}]');
     expect(canonicalize([])).toBe("[]");
