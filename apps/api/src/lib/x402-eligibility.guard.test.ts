@@ -69,6 +69,12 @@ const REVIEWED_NOT_DECIDING = new Set([
   "lib/quality-floor.ts",
   "jobs/capability-promotion.ts",
   "jobs/fix-lifecycle-anomalies.ts",
+  // WP10: selects rows in 'hook_failed' to re-run the onboarding hook, and on
+  // success moves them to 'draft'. A WRITE of a lifecycle transition, like the
+  // floor and the promoter above. It decides whether to RETRY ONBOARDING, never
+  // whether a capability may be served — and 'draft' is deliberately the least
+  // permissive destination, so it cannot widen serving eligibility.
+  "jobs/onboarding-retry.ts",
   "lib/startup-migrations.ts",
   "lib/capability-persistence.ts",
   "lib/capability-onboarding.ts",

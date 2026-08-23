@@ -235,24 +235,35 @@ export async function claimJob(name: string): Promise<ClaimedJob | null> {
 async function claimRow(name: string, leaseSecs: number): Promise<ClaimedJob | null> {
   const db = getDb();
 
+  // The CTE snapshots the row BEFORE the update, because "did the previous run
+  // finish?" is a question about the old values and `RETURNING` sees the new
+  // ones. Without it, `last_started_at = now()` makes every claim look like a
+  // started-and-never-finished run, and a job's FIRST EVER execution would be
+  // reported as crash recovery on every fresh deploy — noise that would bury
+  // the real thing it exists to surface.
   const rows = await db.execute(sql`
-    UPDATE job_schedule
+    WITH prev AS (
+      SELECT job_name, last_started_at, last_finished_at
+        FROM job_schedule
+       WHERE job_name = ${name}
+    )
+    UPDATE job_schedule js
        SET lease_owner = ${RUNNER_ID},
            lease_expires_at = now() + make_interval(secs => ${leaseSecs}),
            last_started_at = now(),
            updated_at = now()
-     WHERE job_name = ${name}
-       AND next_run_at <= now()
-       AND (lease_owner IS NULL OR lease_expires_at IS NULL OR lease_expires_at < now())
-    RETURNING job_name, interval_ms, consecutive_failures, last_finished_at
+      FROM prev
+     WHERE js.job_name = prev.job_name
+       AND js.next_run_at <= now()
+       AND (js.lease_owner IS NULL OR js.lease_expires_at IS NULL OR js.lease_expires_at < now())
+    RETURNING js.job_name, js.interval_ms, js.consecutive_failures,
+              (prev.last_started_at IS NOT NULL AND prev.last_finished_at IS NULL) AS recovered
   `);
 
   const row = (rows as unknown as Array<Record<string, unknown>>)[0];
   if (!row) return null;
 
-  // A row that has never recorded a finish, yet is being claimed again, was
-  // abandoned by a previous run that started and died before releasing.
-  const recoveredFromCrash = row.last_finished_at === null;
+  const recoveredFromCrash = row.recovered === true;
 
   return {
     jobName: String(row.job_name),
