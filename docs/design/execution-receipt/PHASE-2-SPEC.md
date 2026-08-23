@@ -1,6 +1,8 @@
 # `strale.execution.v1` — specification
 
-**Status:** SPEC, not implemented. Phase 3 does not begin until this is agreed.
+**Status:** APPROVED WITH AMENDMENTS (2026-08-23). Amendments 1-6 are folded in
+below and marked. Phase 3 (canonicalisation primitive) proceeds; receipt
+integration does not.
 **Depends on:** `PHASE-1-CURRENT-TRUTH.md` (accepted).
 **Owner:** Strale. No external provenance package is a runtime dependency or an
 authority for any part of this.
@@ -196,9 +198,20 @@ execution_manifest_snapshots
 - One row per distinct declaration, not per transaction. The catalogue is ~330
   capabilities and ~100 solutions; snapshots accumulate only when a declaration
   actually changes.
-- **Retention must never prune it.** A snapshot outlives the transactions that
-  reference it, because a receipt is unverifiable without it. This is an explicit
-  exception to the retention policy and must be recorded there, not assumed.
+- **Permanence is structural, not a convention** (amendment 6). A snapshot
+  outlives every transaction that references it, because a receipt is
+  unverifiable without it. Three mechanisms, because the risk is that a future
+  author prunes it without ever learning why they should not:
+  1. **A `BEFORE DELETE` trigger** that raises. Generic retention cannot silently
+     destroy verification material; it gets a loud error instead of a row count.
+  2. **An explicit denylist entry** in `db-retention.ts`, asserted by a test:
+     the table must never appear in `RETENTION_RULES`, and adding it turns that
+     test red.
+  3. **A comment at the table definition** naming the consequence — every receipt
+     older than the pruning window becomes unverifiable, with no error anywhere.
+
+  Mechanisms 1 and 2 are load-bearing; 3 exists so the next reader understands 1
+  and 2 rather than working around them.
 
 **What is in the normalized declaration** — the execution-semantic contract:
 
@@ -312,7 +325,26 @@ receipt asserting the wrong rail is worse than no receipt, and a permissive
 The receipt does not create a parallel integrity system. It becomes an input to
 the one that exists.
 
-1. Build the receipt payload → RFC 8785 → SHA-256 → full 64-hex digest.
+0. **Domain separation** (amendment 5). Every digest in this system is taken
+   over a domain-tagged, versioned preimage, never over bare canonical bytes:
+
+   ```
+   digest = SHA-256( DOMAIN_TAG || 0x00 || RFC8785(payload) )
+   ```
+
+   | material | `DOMAIN_TAG` |
+   |---|---|
+   | execution receipt | `strale.execution.v1` |
+   | manifest snapshot | `strale.manifest-snapshot.v1` |
+
+   The tag is US-ASCII and contains no NUL, so the `0x00` separator is
+   unambiguous. Two different kinds of material can therefore never collide, and
+   a payload that is valid under one schema cannot be replayed as the other. The
+   version lives in the tag as well as inside the receipt body, so the preimage
+   itself changes when the schema does.
+
+1. Build the receipt payload → RFC 8785 → domain-tagged preimage → SHA-256 →
+   full 64-hex digest.
 2. Persist on the transaction: `receipt_version`, `receipt_canonicalization`
    (`"RFC8785"`), `receipt_digest_alg` (`"sha256"`), `receipt_digest`.
 3. `computeIntegrityHash`'s payload gains `receiptDigest`, so the chain covers
@@ -323,6 +355,28 @@ the one that exists.
 4. The chain payload itself becomes versioned (`integrity_payload_version`),
    closing the Phase 1 finding that payload changes are currently
    indistinguishable from corruption.
+
+### 8.1 Chain version transition (amendment 4)
+
+Two payload versions coexist permanently. This is a transition, not a migration:
+no historical hash is ever recomputed.
+
+| | chain v1 | chain v2 |
+|---|---|---|
+| rows | pre-epoch | post-epoch |
+| payload | today's 15 members, unchanged | the same members **plus `receiptDigest`** |
+| `integrity_payload_version` | `NULL` (absent = v1, by definition) | `2` |
+| verification | must remain verifiable forever, under the v1 rule | verified under the v2 rule |
+
+The verifier selects the rule from the row's own
+`integrity_payload_version`, so a v1 row verifies with the v1 payload and a v2
+row with the v2 payload. **Linkage crosses the boundary unchanged**: a v2 row's
+`previous_hash` points at the last v1 hash exactly as any other link, so the
+chain is continuous across the epoch and `reaches_genesis` still holds.
+
+The one-way property this buys: because `receiptDigest` is inside the v2 payload,
+swapping a receipt digest on a post-epoch row invalidates that row's chain hash
+and therefore every row after it.
 
 **Ordering constraint.** Hashing is two-phase today: the row commits, then
 `jobs/integrity-hash-retry.ts` chains it. The receipt must be built and persisted
@@ -339,21 +393,72 @@ than silently wrong.
 
 - Receipts begin at a **defined deployment epoch**: the merge commit that ships
   Phase 4. Recorded in the package record and in a `platform_facts` entry.
-- **No backfill, ever.** Phase 1 measured 278,247 production rows whose hashed
-  `input`/`output` have been irreversibly cleared by retention or account
-  closure; their original material provably no longer exists. Reconstructing a
-  receipt for them would fabricate a commitment. The other pre-epoch rows are not
-  backfilled either, because their `manifest_digest` and `deploy_commit` are not
-  recoverable — a receipt is only honest when *every* required field comes from
-  execution-time material.
+- **No backfill, ever — including rows whose `input`/`output` still exist**
+  (amendment 1). The temptation is real: 605,215 rows still carry their content.
+  But content is not the whole receipt. Their `manifest_digest` and
+  `deploy_commit` are not recoverable at any price, because nothing recorded the
+  declaration or the build in force at the time. A "receipt" assembled from
+  surviving content plus reconstructed implementation identity would assert
+  something nobody measured. One epoch, one rule, no exceptions to argue about
+  later. Phase 1 separately measured 278,247 rows whose content is irreversibly
+  gone; they are the same answer for a stronger reason.
 - Pre-epoch rows report `receipt: { "status": "legacy_unavailable", "reason": … }`
   on the verify/audit surfaces. Not an error, not an empty object, not a null
   that reads like a bug.
-- **Refusal beats fabrication.** Receipt construction refuses — recording no
-  receipt rather than a wrong one — when: `rail` cannot be mapped to the enum; a
-  production `deploy_commit` is null; a `manifest_digest` cannot be resolved; or
-  `subject.slug` is absent. Refusals are counted and surfaced, so a systematic
-  refusal is visible rather than quietly degrading coverage.
+### 9.1 Post-epoch receipt lifecycle (amendment 2)
+
+A post-epoch transaction may not silently lack a receipt. `legacy_unavailable`
+is **forbidden** post-epoch — it is a statement about history, and using it for a
+present-day failure would disguise a defect as a policy.
+
+`transactions.receipt_status`, a closed enum, NOT NULL for post-epoch rows:
+
+| status | meaning |
+|---|---|
+| `complete` | digest computed and persisted |
+| `pending` | row committed, receipt not yet built — the expected transient state, since the money path must never wait on receipt construction |
+| `failed` | construction was attempted and could not honestly complete; `receipt_failure_reason` says why |
+
+Closed reason codes on `failed` / `pending`:
+`unmapped_rail`, `missing_deploy_identity`, `unresolvable_manifest`,
+`missing_subject`, `snapshot_write_failed`, `canonicalization_error`,
+`internal_error`.
+
+**Retry.** A `pending` row is retried by the same worker that chains it
+(`jobs/integrity-hash-retry.ts`) — one place already owns "finish what the
+request path could not". Retries are bounded and back off; on exhaustion the row
+moves to `failed` with the last reason. A `failed` row is terminal and is never
+silently retried into `complete`, because the material that made it fail is not
+expected to reappear.
+
+**Monitoring.** `pending` older than one chain cycle, and any `failed`, are
+surfaced as counts by reason code. A non-zero `failed` count is an alert, not a
+dashboard curiosity: it means executions are happening that cannot be committed
+to.
+
+### 9.2 Invariant failures, not ordinary absence (amendment 3)
+
+Three conditions are **invariant failures**, not missing-data cases:
+
+1. `rail` not in the closed enum;
+2. `deploy_commit` absent in production;
+3. `manifest_digest` unresolvable.
+
+Each records `receipt_status = 'failed'` with its reason code AND raises an
+error-level signal. They are bugs — a rail nobody mapped, a deploy that lost its
+identity, a declaration that vanished — and none of them is a thing that
+legitimately happens.
+
+**Deploy identity is required at production boot.** `RAILWAY_GIT_COMMIT_SHA`
+becomes a startup assertion: in production, a missing or non-40-hex value aborts
+boot, in the same position as the existing schema-validation and cost-class
+gates. Every receipt from a booted process then has a real commit by
+construction, so `missing_deploy_identity` should be unreachable in production
+and its appearance is itself the alarm.
+
+Local and test environments are exempt and record the literal
+`"unknown-local-build"`, which is a *defined* representation and can never be
+mistaken for a real 40-hex SHA.
 
 ---
 
