@@ -418,3 +418,37 @@ No `preauthorized_notice` item had a matured window; nothing executed automatica
   guard (family F5). It was a stale local build of `packages/mcp-server`; after
   `npm --workspace=packages/mcp-server run build` it is 6/6. Checked before writing it
   down.
+
+## Addendum — a deploy failed its health check and the identical commit passed on retry
+
+Written after the check-in landed, because it happened to the check-in's own
+merge and the next session needs it.
+
+`main` reached `f2e3fb8` and production stayed on `b8f4d32` for five minutes.
+The deployment record says **FAILED at 09:01:20 CET**, and the build logs say the
+build itself was fine — the image pushed. What failed was the readiness gate:
+
+```
+Path: /health/deep
+Retry window: 20s
+Attempt #1 failed with service unavailable. Continuing to retry for 9s
+1/1 replicas never became healthy!
+```
+
+`/health/deep` answered `200 {"status":"ok","write_path":"ok","latency_ms":14}`
+when queried directly a few minutes later, so nothing was wrong with the
+endpoint. **`railway redeploy` on the same commit, with no code change, went
+green.** Production now serves `f2e3fb8`, verified: the anonymous task-based
+paid request returns 402, the free-tier call returns 200, deep health is 12ms.
+
+**What this means, stated at its actual strength.** One transient failure is not
+a pattern — the deployment list shows this is the only FAILED entry in the
+visible history. But the mechanism is worth knowing: our boot does startup
+migrations and wires every scheduled job before it can answer a deep health
+probe, and the window is 20 seconds. If this recurs, the window is too tight
+for our boot rather than something being broken, and the fix is the window.
+
+**Why it matters even though the commit was docs-only.** A failed deploy left
+sitting on the tip is a trap for whoever ships next: their change is the one
+that appears "not to cut over", and they will debug their own diff. Retrying is
+cheap; leaving it is not. Added to the next-session list.
