@@ -101,15 +101,38 @@ export function hashEmail(email: string): string {
 
 export interface TrialGateDeps {
   /** Resolve MX records for a domain. Injected so tests do not touch DNS. */
-  resolveMx?: (domain: string) => Promise<unknown[]>;
+  resolveMx?: (domain: string) => Promise<MxRecordLike[]>;
   /** Overridable clock for the rolling IP window. */
   now?: () => Date;
 }
 
-async function defaultResolveMx(domain: string): Promise<unknown[]> {
+async function defaultResolveMx(domain: string): Promise<MxRecordLike[]> {
   const dns = await import("node:dns/promises");
   return dns.resolveMx(domain);
 }
+
+export interface MxRecordLike {
+  exchange?: string;
+}
+
+/**
+ * Resolver error codes that are an authoritative answer rather than a failure.
+ *
+ * This distinction is the whole gate. `dns.resolveMx` almost never returns an
+ * empty array in practice — a domain that does not exist THROWS `ENOTFOUND`,
+ * and a domain that exists with no MX record throws `ENODATA`. Measured
+ * against the real resolver: `no-mx-here-definitely-not-real-12345.test`
+ * throws ENOTFOUND, it does not resolve to `[]`.
+ *
+ * So a handler that catches every resolver error and treats it as permissive
+ * has disabled the check entirely for the exact case it exists to catch, and a
+ * handler that catches every error and treats it as a refusal turns a resolver
+ * blip into a signup outage. The pre-WP11 code did the second
+ * (`.catch(() => [])` feeding a `length === 0` refusal); the first version of
+ * this module over-corrected into the first. Both are wrong, and neither is
+ * visible without asking the resolver what it actually returns.
+ */
+const AUTHORITATIVE_NO_MAIL = new Set(["ENOTFOUND", "ENODATA", "NXDOMAIN", "NOTFOUND"]);
 
 /**
  * Decide the trial outcome for one signup attempt.
@@ -141,19 +164,26 @@ export async function assessTrialGrant(
     };
   }
 
-  // A resolver outage must not refuse signups, so only an authoritative empty
-  // answer counts as "this domain cannot receive mail". The pre-WP11 handler
-  // swallowed resolver errors into an empty array and then treated that array
-  // as proof of absence, which turns a DNS blip into a signup outage — so the
-  // throw path here is the permissive one and only a genuine empty answer
-  // refuses.
-  let mx: unknown[];
+  // See AUTHORITATIVE_NO_MAIL above for why the error code has to be read
+  // rather than the failure merely caught. An authoritative "no mail here"
+  // refuses; any other resolver failure is permissive, so an outage cannot
+  // stop signups.
+  let cannotReceiveMail = false;
   try {
-    mx = await resolveMx(domain);
-  } catch {
-    mx = [{ unresolved: true }];
+    const mx = await resolveMx(domain);
+    // RFC 7505: a single MX with an empty (root) exchange is the domain
+    // explicitly declaring that it accepts no mail. Node reports it as an
+    // empty `exchange` string, which a length check happily accepts.
+    const usable = (mx as MxRecordLike[]).filter(
+      (r) => typeof r?.exchange === "string" && r.exchange !== "" && r.exchange !== ".",
+    );
+    cannotReceiveMail = mx.length === 0 || usable.length === 0;
+  } catch (err) {
+    const code = (err as { code?: string })?.code ?? "";
+    cannotReceiveMail = AUTHORITATIVE_NO_MAIL.has(code);
   }
-  if (mx.length === 0) {
+
+  if (cannotReceiveMail) {
     return {
       decision: "refuse",
       reason: "no_mail_exchanger",

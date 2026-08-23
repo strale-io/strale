@@ -56,7 +56,15 @@ vi.mock("node:dns/promises", async (importOriginal) => {
     ...actual,
     default: actual,
     resolveMx: async (domain: string) => {
-      if (domain === "no-mx.test") return [];
+      if (domain === "no-mx.test") {
+        // What a real resolver does for a domain that does not exist: it
+        // THROWS ENOTFOUND. Returning `[]` would be a friendlier stub and a
+        // less faithful one, and the difference is exactly where the gate can
+        // silently stop working.
+        const err = new Error("queryMx ENOTFOUND no-mx.test") as Error & { code: string };
+        err.code = "ENOTFOUND";
+        throw err;
+      }
       return [{ exchange: `mx.${domain}`, priority: 10 }];
     },
   };
