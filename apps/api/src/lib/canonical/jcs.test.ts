@@ -347,6 +347,38 @@ describe("properties JavaScript treats specially", () => {
   });
 });
 
+describe("nesting depth is bounded by us, not by the stack", () => {
+  function nest(depth: number): unknown {
+    return JSON.parse("[".repeat(depth) + "1" + "]".repeat(depth));
+  }
+
+  it("ordinary nesting is unaffected", () => {
+    expect(canonicalize(nest(100))).toContain("[[");
+    expect(() => canonicalize(nest(500))).not.toThrow();
+  });
+
+  it("pathological nesting refuses with OUR error, not a RangeError", () => {
+    // Measured before this bound: depth 5000 parses fine and then throws a bare
+    // `RangeError: Maximum call stack size exceeded` from inside the
+    // serializer. Attacker-reachable on any endpoint taking JSON, and outside
+    // this module's closed error codes.
+    let err: unknown;
+    try {
+      canonicalize(nest(5000));
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("max_depth_exceeded");
+    expect(err).not.toBeInstanceOf(RangeError);
+  });
+
+  it("the input that overflows the stack still parses, so the bound is load-bearing", () => {
+    // If JSON.parse refused first, the bound would be unreachable decoration.
+    expect(() => nest(5000)).not.toThrow();
+  });
+});
+
 describe("domain separation", () => {
   it("the same payload digests differently under different domains", () => {
     const payload = { a: 1 };

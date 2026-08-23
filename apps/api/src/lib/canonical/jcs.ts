@@ -61,7 +61,8 @@ export type JcsErrorCode =
   | "cyclic_structure"
   | "lone_surrogate"
   | "sparse_or_exotic_array"
-  | "accessor_property";
+  | "accessor_property"
+  | "max_depth_exceeded";
 
 /**
  * The RFC 8785 §3.2.3 ordering rule, defined once.
@@ -110,6 +111,22 @@ export function sortKeysDeep(value: unknown): unknown {
   for (const key of sortJsonKeys(Object.keys(record))) out[key] = sortKeysDeep(record[key]);
   return out;
 }
+
+/**
+ * Deepest nesting we will canonicalize.
+ *
+ * `canonicalize` recurses, and V8's stack gives out somewhere between 1,000 and
+ * 5,000 levels — while `JSON.parse` happily accepts far more. Measured: a
+ * 5,000-deep array parses fine and then throws a bare `RangeError: Maximum call
+ * stack size exceeded` from inside the serializer. That is attacker-reachable
+ * on any endpoint taking JSON, and a `RangeError` is not one of this module's
+ * closed error codes — on the receipt path it would surface as an unexpected
+ * crash rather than a clean, reason-coded refusal.
+ *
+ * 512 is far beyond any real payload (a receipt is five levels deep) and far
+ * below where the stack fails, so the refusal is always ours and never V8's.
+ */
+const MAX_DEPTH = 512;
 
 const CONTROL_ESCAPES: Record<number, string> = {
   0x08: "\\b",
@@ -184,7 +201,14 @@ function serializeNumber(value: number, path: string): string {
   return String(value);
 }
 
-function serialize(value: unknown, path: string, seen: Set<object>): string {
+function serialize(value: unknown, path: string, seen: Set<object>, depth = 0): string {
+  if (depth > MAX_DEPTH) {
+    throw new CanonicalizationError(
+      "max_depth_exceeded",
+      path,
+      `nesting deeper than ${MAX_DEPTH} levels`,
+    );
+  }
   if (value === null) return "null";
 
   const t = typeof value;
@@ -230,7 +254,7 @@ function serialize(value: unknown, path: string, seen: Set<object>): string {
           );
         }
       }
-      const parts = value.map((v, i) => serialize(v, `${path}[${i}]`, seen));
+      const parts = value.map((v, i) => serialize(v, `${path}[${i}]`, seen, depth + 1));
       return `[${parts.join(",")}]`;
     }
 
@@ -305,7 +329,7 @@ function serialize(value: unknown, path: string, seen: Set<object>): string {
       // the whole property. It must be an error, or a call site could remove a
       // hashed field just by leaving it undefined.
       members.push(
-        `${serializeString(key, path)}:${serialize(child, `${path}/${key}`, seen)}`,
+        `${serializeString(key, path)}:${serialize(child, `${path}/${key}`, seen, depth + 1)}`,
       );
     }
     return `{${members.join(",")}}`;
