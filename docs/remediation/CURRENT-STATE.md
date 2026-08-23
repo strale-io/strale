@@ -2,8 +2,14 @@
 
 _Last updated: 2026-08-23 (WP10 session)_
 
-- **Current package:** WP10 — REVIEW PASSED, PR open, **not merged**.
-  Durable Job Coordinator (CR-08). Branch `remediation/wp10-job-coordinator`.
+- **Current package:** WP10 — **MERGED, DEPLOYED, UNDER OBSERVATION**.
+  Squash `ce5e63f` (PR #376), verified live on `ce5e63f09186`. Immediate
+  reconciliation clean: `docs/remediation/packages/WP10-RECONCILIATION.md`.
+  **Acceptance gate: the seven-day cadence measurement, due 2026-08-30.**
+  Immediate readings show cadence advancing from the run (drift 0.000s on all
+  ten completed jobs) and the weekly sweep scheduled a week out instead of 56x
+  — but nothing yet shows cadence surviving a DEPLOY, because no restart has
+  happened since the merge. Do not force one.
 - **WP11:** ACCEPTED. Merged `0d253ef` (PR #371), deployed and verified on
   `0d253efdc380`. Record: `docs/remediation/packages/WP11-ACCEPTANCE.md`.
 - **WP9:** merged and deployed, under its observation period. Untouched by
