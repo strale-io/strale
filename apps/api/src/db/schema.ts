@@ -390,9 +390,20 @@ export const transactions = pgTable(
     // enforced by a CHECK in migration 0107 — a post-epoch row cannot
     // masquerade as legacy by leaving the column null.
     /** 'complete' | 'pending' | 'failed'; NULL only for pre-epoch rows. */
-    receiptStatus: varchar("receipt_status", { length: 16 }),
+    /**
+     * Defaulted here as well as in block 0109, so `drizzle-kit push` does not
+     * drop it. Push materialises schema.ts and would otherwise remove both
+     * defaults, and 0109 would then re-add them -- with a NEW epoch instant,
+     * which the design calls the single immutable record of when enforcement
+     * began. The migration remains the authority; this keeps push from
+     * fighting it.
+     */
+    receiptStatus: varchar("receipt_status", { length: 16 }).default("pending"),
     /** Closed reason code, set when status is 'pending' or 'failed'. */
-    receiptFailureReason: varchar("receipt_failure_reason", { length: 40 }),
+    /** Defaulted for the same reason as receiptStatus, and it is not optional:
+     *  transactions_receipt_reason_required means a `pending` row must say why,
+     *  so a status default without this one makes every INSERT fail. */
+    receiptFailureReason: varchar("receipt_failure_reason", { length: 40 }).default("not_yet_built"),
     /** 'strale.execution.v1' */
     receiptVersion: varchar("receipt_version", { length: 32 }),
     /** 'RFC8785' — named so a verifier need not infer it. */

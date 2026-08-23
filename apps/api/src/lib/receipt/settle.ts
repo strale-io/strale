@@ -233,9 +233,32 @@ function toReceiptError(row: TxnRow): { code: string; message: string } | null {
  * lives in `transactions.receipt_status`, which is the only place a verifier
  * will ever look.
  */
+/**
+ * How long the request path will wait for a receipt before handing it to the
+ * sweeper.
+ *
+ * PHASE-2-SPEC section 9.1 says the money path must never wait on receipt
+ * construction. Awaiting it after the transaction commits cannot endanger a
+ * payment - that property is structural - but a hung database WOULD hold open
+ * the response to a call that has already executed and been charged. A bound
+ * makes the spec's sentence true in the way that matters: the wait is short
+ * and finite, and exceeding it costs a few minutes of receipt latency rather
+ * than a customer's request.
+ */
+export const SETTLE_DEADLINE_MS = 5_000;
+
 export async function settleExecutionReceipt(db: Db, params: SettleParams): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await settleOrThrow(db, params);
+    await Promise.race([
+      settleOrThrow(db, params),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`receipt settle exceeded ${SETTLE_DEADLINE_MS}ms`)),
+          SETTLE_DEADLINE_MS,
+        );
+      }),
+    ]);
   } catch (err) {
     // Last resort. The row stays `pending` and the sweeper owns it from here,
     // so the failure is visible in the backlog counters rather than lost.
@@ -248,6 +271,8 @@ export async function settleExecutionReceipt(db: Db, params: SettleParams): Prom
       },
       "execution receipt could not be settled; left pending for the sweeper",
     );
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

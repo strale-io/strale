@@ -101,9 +101,9 @@ This makes the request path more correct too, not just the sweeper.
 |---|---|---|
 | 1 | `RAILWAY_GIT_COMMIT_SHA` on every deploy path | **Verified, and it found something.** See `PHASE-5-DEPLOY-IDENTITY-EVIDENCE.md`: 994/1000 deployments carry a full 40-hex commit; redeploy is 25 for 25, and Railway expresses rollback as redeploy. The six that carry nothing are `repo: null` CLI upload deploys from 2026-04-05/06, four of which **served production**. |
 | 2 | `assertDeployIdentity()` wired pre-listen | Done, before any database work. Refusal unweakened: a refused boot costs a deploy, not an outage. |
-| 3 | Receipt lifecycle in every rail | All eight production write sites, enforced by a fail-closed source lint with a positive control. |
+| 3 | Receipt lifecycle in every rail | All eight production write sites. The source lint is **file-granular** - it passes a file if `settleExecutionReceipt` appears anywhere in it - so it catches a new unwired FILE, not a new unwired branch inside `do.ts`. The epoch default is the real backstop for that, and it works. |
 | 4 | Every post-integration transaction gets receipt state | Structural, via the default + CHECK. Not a convention. |
-| 5 | `redacted` receipt-state presentation | Added. A digest whose content was erased is no longer reported as `complete`. |
+| 5 | `redacted` receipt-state presentation | Arm added to `describeReceiptState`. **Not yet reachable**: nothing serves receipt state on any endpoint, so this is the presentation being correct when a surface exists, not a surface. Surfacing is Phase 6/7. Separately, `settle` now refuses to hash content that was already erased. |
 | 6 | Retry sweeper, bounded, visible | In the worker that already owns "finish what the request path could not", outside its transaction. |
 | 7 | `CapabilityDeclarationSource` parity guard | Added — and it found **31 of 45 columns had never been classified**. |
 | 8 | `data_update_cycle_days`, `dataset_last_updated`, `name` | All three admitted, derived from execution semantics. Plus `data_classification` and `x402_method`. |
@@ -142,7 +142,7 @@ and `data_classification` into the audit body: for a capability with a null
 
 ## 6. Evidence
 
-- **287 integration tests** against real Postgres, all passing, with the
+- **292 integration tests** against real Postgres, all passing, with the
   startup migrations applied exactly as boot applies them.
 - **Unit lane: 2,871 passing** on a fully green run. The lane is
   nondeterministic on this machine — repeated runs fail different files
@@ -173,6 +173,55 @@ and `data_classification` into the audit body: for a capability with a null
 A third mutation was mis-reported twice before the cause was found: `do.ts` is
 stored CRLF, so a multi-line `--find` never matches and the guard refuses. Only
 single-line finds are reliable against that file.
+
+## 6a. Independent adversarial review — round 1: FAIL
+
+Four blocking findings, every one reproduced. They are recorded here rather
+than edited away, because three of them were invisible to a green suite and the
+fourth was invisible to a green suite *and* to a fix that looked correct.
+
+| # | finding | how it was caught |
+|---|---|---|
+| **B1** | The receipt bound the **internal** error, not the one the caller received. `settle` read `transactions.error`, and its comment asserted the sanitiser had already run. True on two rails; false on the `/v1/do` capability rails, which store the raw `err.message` and sanitise on the way out. A party holding the request and the response could not recompute the digest. | Measured against production: **5,016 of 33,952 failed rows over seven days (14.8%)** differ. |
+| **B2** | Solution receipts marked steps that **never ran** as `ran`, with a manifest digest. `execResult.steps` is keyed by every *declared* step — `markSkippedByGate` and three siblings insert a placeholder deliberately, so a bundle advertising 14 steps does not audit 13 with no gap marker. | Reproduced with a real gated 2-step solution: both steps came back `ran`. |
+| **B3** | `execution.method` was falsified toward "no model involved". `do.ts` maps a `mixed` capability to the marker `hybrid`, which is not one of the three methods, so the fallback recorded `algorithmic`. | **8,010 of ~193,600 production rows over 30 days (4.1%).** |
+| **B4** | One un-updatable row halted the tamper-evident chain **permanently** — Phase 4's round-3 blast radius in a new shape. The post-epoch CHECK is `NOT VALID`, which still enforces on UPDATE, so the worker cannot update a row it admits; the tick is one transaction. | Reproduced: two healthy rows stopped chaining the moment a third existed. |
+
+### The two things worth carrying forward
+
+**My own test is why B1 survived.** The criterion-10 failure test was written
+correctly — it rebuilds from `body.details.error` — but its fixture threw
+`"p5 deliberate executor failure"`: no URL, no hostname, no provider name, no
+network code, so `sanitizeFailureReason` was the identity function on it. The
+test's own comment said "the sanitised message the caller sees and the raw
+message we logged are different strings" while the fixture guaranteed they were
+the same. It now throws a message the sanitiser rewrites, and **asserts the two
+differ** before asserting which was bound.
+
+**My first fix for B4 was wrong in an instructive way.** A hand-written
+`SAVEPOINT` / `ROLLBACK TO` rolled back correctly and later statements
+succeeded — and the transaction still failed *at commit* with the original
+error, because postgres-js tracks the query error on the connection and catching
+it in JS is not enough. Only the new test caught that; the code read as correct.
+Drizzle's nested transaction does it properly, and both behaviours were proven
+with a minimal probe before choosing.
+
+### Fixes, each with fail-before proof through the repo guard
+
+| mutation | result |
+|---|---|
+| the receipt binds the raw stored error again | **caught** |
+| the solution rail treats every declared step as having run | **caught** |
+| `hybrid` maps to `algorithmic` again | **caught** |
+| an unestablished method falls back instead of refusing | **caught** |
+| the chain tick stops isolating a failing row | **caught** |
+
+Block 0109 is additionally now **one atomic statement**. Blocks autocommit per
+statement, so a probe refusal previously left the defaults committed while boot
+aborted — and the previous deployment would then serve *with* the new defaults
+and *without* the sweeper, so nothing would ever chain. Verified end to end:
+with a hostile CHECK armed the block refuses and applies nothing; disarming it
+restores the defaults with the epoch instant unchanged.
 
 ## 7. Production reconciliation plan
 
@@ -231,3 +280,23 @@ state is ~10,000 transactions/day against a sweeper capacity of 100 rows per
    non-forgeable server-side signal, which does not exist today.
 6. **Snapshot growth is unbounded and permanent** by design.
 7. **`NOT VALID` constraints** are enforced for new writes only.
+8. **Receipt state is not served anywhere yet.** `describeReceiptState`,
+   `receiptHealthCounts` and `selectPendingReceipts` have no production callers;
+   the monitoring in §7 item 10 is a query an operator runs, not an alert that
+   fires. Both are Phase 6/7.
+9. **The rail-coverage lint is file-granular** (see criterion 3 above).
+10. **`canonicalization_error` is caller-reachable.** `MAX_DEPTH = 512` in the
+    canonicaliser, so caller-supplied `inputs` nested deeper than that make a
+    paid execution permanently receipt-less. Terminal by design; the depth is
+    far beyond any real payload, but it is reachable on purpose by an adversary.
+11. **The declaration re-read window is wider on the sweeper path** than the few
+    milliseconds of the request path — up to about half an hour across five
+    attempts, which could span a `capabilities` write.
+12. **`source_observation.kind = "dataset"` is unreachable**, and solutions
+    always report `none_declared` because `freshness_category` is null on a
+    solution transaction. Phase 2 expects `none_declared` to dominate at the
+    epoch and shrink; this is the shape of that.
+13. **x402 solution receipts are not caller-recomputable**: the row stores
+    `{steps, errors}` while the response omits `errors` when empty, so a holder
+    of the response cannot unambiguously reconstruct the hashed object. The
+    capability path on that rail is unaffected.
