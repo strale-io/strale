@@ -28,6 +28,8 @@ import { randomUUID } from "node:crypto";
 import { useTestDatabase } from "../test-support/integration-db.js";
 import {
   apiKeyRecoveryTokens,
+  disputeRequests,
+  failedRequests,
   transactions,
   trialGrants,
   users,
@@ -118,6 +120,31 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
    */
   const createdUserIds = new Set<string>();
 
+  /**
+   * Every address this run created an account for.
+   *
+   * `trial_grants` deliberately outlives the account and closure NULLs its
+   * `user_id`, so neither the id set above nor the email prefix can reach a
+   * closed account's entitlement row. The hash can. Cleanup that only runs on
+   * the happy path is not cleanup — a failing assertion leaves the row behind,
+   * which is how this suite has now leaked into the shared lane database
+   * twice.
+   */
+  const createdEmails = new Set<string>();
+
+  /** Rows this suite seeds by hand into tables the afterEach cannot key on. */
+  const RUN_TAG = `wp11-${RUN}`;
+
+  /**
+   * Transaction rows this suite inserts directly.
+   *
+   * Tracked by id rather than by a tagged column: `transactions` has no
+   * `capability_slug` in the drizzle schema — it carries `capability_id` — so
+   * tagging one silently did nothing on insert and rendered
+   * `like(undefined, $1)` on delete, which Postgres rejects outright.
+   */
+  const createdTransactionIds = new Set<string>();
+
   afterEach(async () => {
     const created = await db
       .select({ id: users.id })
@@ -125,6 +152,21 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       .where(like(users.email, `wp11-${RUN}-%`));
     for (const r of created) createdUserIds.add(r.id);
     const ids = [...createdUserIds];
+
+    // Order is foreign keys, innermost first. `transactions` references
+    // `users`, and `dispute_requests` references `transactions`, so deleting
+    // users first raises `transactions_user_id_users_id_fk` and the whole hook
+    // aborts — taking every later cleanup step with it.
+    const txnIds = [...createdTransactionIds];
+    if (txnIds.length > 0) {
+      await db
+        .delete(disputeRequests)
+        .where(inArray(disputeRequests.transactionId, txnIds));
+      await db.delete(transactions).where(inArray(transactions.id, txnIds));
+    }
+    await db.delete(disputeRequests).where(like(disputeRequests.reason, `${RUN_TAG}%`));
+    await db.delete(failedRequests).where(like(failedRequests.task, `${RUN_TAG}%`));
+
     if (ids.length > 0) {
       const ws = await db
         .select({ id: wallets.id })
@@ -143,9 +185,21 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       await db.delete(trialGrants).where(inArray(trialGrants.userId, ids));
       await db.delete(users).where(inArray(users.id, ids));
     }
+
     // Grants whose user row is already gone (closure tests) plus any seeded by
     // hand — matched on the ip_hash namespace this suite owns.
     await db.delete(trialGrants).where(like(trialGrants.ipHash, `wp11-${RUN}%`));
+
+    // Entitlements survive closure by design and lose their user_id to it, so
+    // they are removed by hash. Runs unconditionally, including after a failed
+    // assertion — cleanup that only runs on the happy path is not cleanup, and
+    // this suite has leaked into the shared lane database twice by assuming
+    // otherwise.
+    const { hashEmail } = await import("../lib/trial-eligibility.js");
+    const hashes = [...createdEmails].map(hashEmail);
+    if (hashes.length > 0) {
+      await db.delete(trialGrants).where(inArray(trialGrants.emailHash, hashes));
+    }
   });
 
   /**
@@ -193,8 +247,9 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       body: JSON.stringify(body),
     });
     if (res.status === 201) {
-      const peek = (await res.clone().json()) as { user_id?: string };
+      const peek = (await res.clone().json()) as { user_id?: string; email?: string };
       if (peek.user_id) createdUserIds.add(peek.user_id);
+      if (peek.email) createdEmails.add(peek.email);
     }
     return res;
   }
@@ -368,26 +423,11 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     expect(wallet).not.toBeNull();
     expect(wallet!.balanceCents).toBe(0);
 
-    // Clean up the redacted first account, which no longer matches the
-    // afterEach email prefix.
-    //
-    // The entitlement row is deleted BY EMAIL HASH, not by user id: closure has
-    // already NULLed `user_id` and `ip_hash`, so every id-keyed and ip-keyed
-    // cleanup clause in this file misses it. Left in place it accumulates one
-    // orphan row per run in the shared lane database — the same leak class this
-    // suite has now caused twice.
-    const { hashEmail: hashEmailForCleanup } = await import(
-      "../lib/trial-eligibility.js"
-    );
-    const w = await walletOf(firstUserId);
-    if (w) {
-      await db.delete(walletTransactions).where(eq(walletTransactions.walletId, w.id));
-      await db.delete(wallets).where(eq(wallets.id, w.id));
-    }
-    await db
-      .delete(trialGrants)
-      .where(eq(trialGrants.emailHash, hashEmailForCleanup(email)));
-    await db.delete(users).where(eq(users.id, firstUserId));
+    // The redacted first account no longer matches the afterEach email prefix,
+    // so its id is registered explicitly; the entitlement row is removed by
+    // hash there, because closure has already NULLed its user_id and ip_hash.
+    createdUserIds.add(firstUserId);
+    createdEmails.add(email);
   });
 
   it("grants up to the per-IP cap and withholds beyond it", async () => {
@@ -476,15 +516,18 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     // this IP — is a channel rule, not a trial rule, and stays where it is.
     // Satisfied here rather than bypassed, so the assertion below is about the
     // entitlement and not about which gate happened to answer first.
-    await db.insert(transactions).values({
-      capabilitySlug: "email-validate",
+    const [freeTierSeed] = await db
+      .insert(transactions)
+      .values({
       status: "completed",
       isFreeTier: true,
       priceCents: 0,
       pricePaidCents: 0,
       input: { email: "someone@example.com" },
       auditTrail: { request_context: { ipHash: hashIp(ip) } },
-    });
+      })
+      .returning({ id: transactions.id });
+    createdTransactionIds.add(freeTierSeed!.id);
 
     const res = await app.request("http://localhost/v1/signup", {
       method: "POST",
@@ -505,11 +548,7 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       reason: "trial_not_available",
     });
 
-    await db
-      .delete(transactions)
-      .where(
-        sql`${transactions.auditTrail}->'request_context'->>'ipHash' = ${hashIp(ip)}`,
-      );
+    // Cleanup is handled by afterEach, keyed on the recorded id.
   });
 
   it("the unique index, not the handler, is what makes one-trial-per-email true", async () => {
@@ -550,6 +589,7 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     // entry, and no entitlement row anywhere.
     const legacyId = randomUUID();
     createdUserIds.add(legacyId);
+    createdEmails.add(email);
     await db.insert(users).values({
       id: legacyId,
       email,
@@ -771,10 +811,20 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       "../lib/key-recovery.js"
     );
     const { token } = await issueRecoveryToken(db, { userId: user_id, ipHash: null });
-    await db
-      .update(apiKeyRecoveryTokens)
-      .set({ expiresAt: new Date(Date.now() - 1000) })
-      .where(eq(apiKeyRecoveryTokens.userId, user_id));
+
+    // Expired with the DATABASE clock, because that is the clock the rule
+    // uses. Writing `new Date(Date.now() - 1000)` here made this test flake
+    // 2 in 8 runs even after the production code was fixed: measured skew
+    // between this process and the database container swung by more than a
+    // second, so a timestamp "one second ago" by the app clock is still in the
+    // future to `now()`. A test that asserts an expiry has to agree with the
+    // implementation about which clock decides it — the same mistake as the
+    // one it is testing, one layer out.
+    await db.execute(
+      sql`UPDATE api_key_recovery_tokens
+             SET expires_at = now() - interval '1 second'
+           WHERE user_id = ${user_id}::uuid`,
+    );
 
     const result = await redeemRecoveryToken(db, { token, email });
     expect(result.ok).toBe(false);
@@ -877,21 +927,106 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     const result = await redeemRecoveryToken(db, { token, email });
     expect(result.ok).toBe(false);
 
-    const w = await walletOf(user_id);
-    if (w) {
-      await db.delete(walletTransactions).where(eq(walletTransactions.walletId, w.id));
-      await db.delete(wallets).where(eq(wallets.id, w.id));
-    }
-    await db
-      .delete(apiKeyRecoveryTokens)
-      .where(eq(apiKeyRecoveryTokens.userId, user_id));
-    // By hash — closure has already cleared this row's user_id.
-    const { hashEmail: hashForCleanup } = await import("../lib/trial-eligibility.js");
-    await db.delete(trialGrants).where(eq(trialGrants.emailHash, hashForCleanup(email)));
-    await db.delete(users).where(eq(users.id, user_id));
+    // Cleanup is afterEach's, which knows the foreign-key order and runs even
+    // when an assertion above fails.
   });
 
   // ── Closure stays ledger-consistent (WP2's invariant, re-proved here) ─────
+
+  it("closure actually clears every identifier its receipt says it clears", async () => {
+    // Round 3: the four assertions that used to stand here string-matched the
+    // response body, which is built from literals in the handler. Deleting the
+    // UPDATE that nulls `client_meta`, or either of the two clearing helpers,
+    // left all of them green. They proved the CLAIM, not the BEHAVIOUR — which
+    // is the mechanism by which the same defect survived three review rounds.
+    //
+    // This one reads the database.
+    const email = emailFor("closure-clears");
+    const created = await register({ email });
+    const { api_key, user_id } = (await created.json()) as {
+      api_key: string;
+      user_id: string;
+    };
+
+    // Seed one row in each table the plan says it touches, so a clearing step
+    // that silently matched nothing would show up as a row still linked.
+    const { hashIp } = await import("../lib/middleware.js");
+    const { issueRecoveryToken } = await import("../lib/key-recovery.js");
+    await issueRecoveryToken(db, { userId: user_id, ipHash: hashIp("203.0.113.9") });
+
+    const [txn] = await db
+      .insert(transactions)
+      .values({
+        userId: user_id,
+        status: "completed",
+        priceCents: 0,
+        pricePaidCents: 0,
+        isFreeTier: true,
+        input: { email: "someone@example.com" },
+        clientMeta: { src: "test", ip_day_hash: "deadbeef", client_header: "x" },
+        auditTrail: { request_context: { ipHash: hashIp("203.0.113.9") } },
+      })
+      .returning({ id: transactions.id });
+    createdTransactionIds.add(txn!.id);
+
+    await db.insert(failedRequests).values({
+      userId: user_id,
+      ipHash: hashIp("203.0.113.9"),
+      task: `${RUN_TAG} something no capability serves`,
+      userAgent: "wp11-test/1.0",
+    });
+
+    await db.insert(disputeRequests).values({
+      transactionId: txn!.id,
+      userId: user_id,
+      reason: `${RUN_TAG} dispute`,
+      contactEmail: email,
+    });
+
+    const closed = await app.request("http://localhost/v1/auth/me", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${api_key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "wp11 test" }),
+    });
+    expect(closed.status).toBe(200);
+
+    const { countRemainingLinkage } = await import("../lib/account-closure.js");
+    const remaining = await countRemainingLinkage(db, user_id);
+    expect(remaining).toMatchObject({
+      trial_grants: 0,
+      api_key_recovery_tokens: 0,
+      transactions_client_meta: 0,
+      failed_requests: 0,
+      dispute_requests: 0,
+    });
+
+    // And the entitlement itself survives — clearing the linkage must not
+    // clear the rule, or closing an account hands back the trial grant.
+    const { hashEmail } = await import("../lib/trial-eligibility.js");
+    const surviving = await db
+      .select({ id: trialGrants.id })
+      .from(trialGrants)
+      .where(eq(trialGrants.emailHash, hashEmail(email)));
+    expect(surviving).toHaveLength(1);
+
+    // The receipt has to agree with what just happened, rather than being
+    // checked instead of it.
+    const receipt = (await closed.json()) as {
+      summary: { anonymized: string[]; deleted: string[]; retained: string[] };
+    };
+    expect(receipt.summary.anonymized.join(" ")).toContain("client_meta");
+    expect(receipt.summary.anonymized.join(" ")).toContain("failed_requests");
+    expect(receipt.summary.anonymized.join(" ")).toContain("dispute_requests");
+    expect(receipt.summary.deleted.join(" ")).toContain("api_key_recovery_tokens");
+    expect(receipt.summary.retained.join(" ")).toContain("fingerprintHash");
+
+    // No inline cleanup. `afterEach` owns it, and owns the ORDER — this test
+    // seeds a transaction row, and deleting the user before that row exists no
+    // longer raises `transactions_user_id_users_id_fk` only because the hook
+    // does foreign keys innermost-first. Duplicating a subset of that here
+    // reintroduces the ordering bug and, being inline, skips entirely when an
+    // assertion above fails.
+  });
 
   it("closure forfeits the balance through the ledger, not by zeroing it", async () => {
     const email = emailFor("closure-ledger");
@@ -924,19 +1059,6 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     // disagreed permanently.
     expect(Number(sum!.total)).toBe(0);
 
-    // The receipt is a written representation to the data subject, so it has to
-    // be checked like one. Round-1 review found it listed `signup_ip_hash` as
-    // anonymised while a new table kept a copy; round-2 found the same class
-    // one table over, in `transactions.audit_trail.request_context`.
-    const receipt = (await closureResponse.json()) as {
-      summary: { anonymized: string[]; retained: string[]; deleted?: string[] };
-    };
-    expect(receipt.summary.retained.join(" ")).toContain("request_context");
-    expect(receipt.summary.retained.join(" ")).toContain("trial_grants.email_hash");
-    expect(receipt.summary.anonymized.join(" ")).toContain("trial_grants.ip_hash");
-    expect(receipt.summary.anonymized.join(" ")).toContain("client_meta");
-    expect(receipt.summary.deleted?.join(" ")).toContain("api_key_recovery_tokens");
-
     const forfeits = await db
       .select({ id: walletTransactions.id })
       .from(walletTransactions)
@@ -948,11 +1070,6 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       );
     expect(forfeits).toHaveLength(1);
 
-    await db.delete(walletTransactions).where(eq(walletTransactions.walletId, wallet!.id));
-    await db.delete(wallets).where(eq(wallets.id, wallet!.id));
-    // By hash — closure has already cleared this row's user_id.
-    const { hashEmail: hashForCleanup } = await import("../lib/trial-eligibility.js");
-    await db.delete(trialGrants).where(eq(trialGrants.emailHash, hashForCleanup(email)));
-    await db.delete(users).where(eq(users.id, user_id));
+    // Cleanup is afterEach's.
   });
 });

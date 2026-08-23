@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { wallets, walletTransactions } from "../db/schema.js";
+import { users, wallets, walletTransactions } from "../db/schema.js";
 import { getStripe } from "../lib/stripe.js";
 import { log, logError } from "../lib/log.js";
 import { alertOnce } from "../lib/alert-once.js";
@@ -130,6 +130,7 @@ webhookRoute.post("/stripe", async (c) => {
     const db = getDb();
     let credited = false;
     let walletMissing = false;
+    let accountClosed = false;
 
     // All wallet operations in a single transaction for atomicity. A throw
     // from here propagates to a 500, which is deliberate: Stripe's own retry
@@ -150,17 +151,32 @@ webhookRoute.post("/stripe", async (c) => {
         return;
       }
 
-      // Look up the wallet
-      const [wallet] = await tx
-        .select({ id: wallets.id })
+      // A closed account's wallet must not be credited. Erasure zeroes the
+      // balance and the response tells the customer `balance_zeroed`, so
+      // crediting afterwards puts real money somewhere it can never be spent
+      // and contradicts what we told them — on the happy path, where nothing
+      // alerts. Reachable when a delayed-notification payment settles after
+      // the account closes: `/v1/wallet/topup` pins card-only today, so this
+      // is latent, and it is precisely the shape `payment_status` taught us
+      // not to assume away.
+      const [account] = await tx
+        .select({ walletId: wallets.id, deletedAt: users.deletedAt })
         .from(wallets)
+        .innerJoin(users, eq(users.id, wallets.userId))
         .where(eq(wallets.userId, assessment.userId))
         .limit(1);
 
-      if (!wallet) {
+      if (!account) {
         walletMissing = true;
         return;
       }
+
+      if (account.deletedAt !== null) {
+        accountClosed = true;
+        return;
+      }
+
+      const wallet = { id: account.walletId };
 
       // Credit through the wallet service (WP2). The balance change and the
       // ledger row are written by one call, and the stripe_session_id that
@@ -174,6 +190,38 @@ webhookRoute.post("/stripe", async (c) => {
       });
       credited = true;
     });
+
+    if (accountClosed) {
+      // Not retryable — the account will not reopen — and not silent either.
+      // The money is real and needs a refund decision, which is a human's.
+      logError(
+        "stripe-webhook-uncredited-payment",
+        new Error("Paid Stripe session belongs to a closed account"),
+        { session_id: assessment.sessionId, user_id: assessment.userId },
+      );
+      await alertOnce(
+        `stripe-uncredited:${assessment.sessionId}`,
+        UNCREDITED_ALERT_COOLDOWN_MS,
+        {
+          subject: "Stripe payment received for a closed account",
+          severity: "critical",
+          body:
+            `A paid Checkout Session settled against an account that has been closed.
+
+` +
+            `session: ${assessment.sessionId}
+` +
+            `user:    ${assessment.userId}
+` +
+            `amount:  ${assessment.amountCents} cents
+
+` +
+            `The wallet was zeroed on closure and crediting it now would put money ` +
+            `somewhere it can never be spent. Refund the customer in Stripe.`,
+        },
+      ).catch((err) => logError("stripe-webhook-alert-failed", err));
+      return c.json({ received: true });
+    }
 
     if (walletMissing) {
       // Unlike the escalate branch above, this one IS retryable, and that is

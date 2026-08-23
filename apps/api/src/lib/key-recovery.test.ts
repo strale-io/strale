@@ -2,8 +2,8 @@
  * WP11 / CR-10 — the parts of proof-before-rotation that are decidable without
  * a database.
  *
- * The behaviour that matters (issue, redeem once, rotate) depends on
- * conditional UPDATEs and transaction isolation, so it is proved against a
+ * The behaviour that matters (issue, redeem once, rotate) depends on row locks,
+ * transaction isolation and the database's own clock, so it is proved against a
  * real Postgres in `account-lifecycle.integration.test.ts`. What is left here
  * is the token's own shape and the email comparison, both of which are cheap
  * to get subtly wrong.

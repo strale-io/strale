@@ -93,20 +93,34 @@ export interface IssuedRecoveryToken {
  */
 export async function issueRecoveryToken(
   db: any,
-  params: { userId: string; ipHash: string | null; now?: Date },
+  params: { userId: string; ipHash: string | null },
 ): Promise<IssuedRecoveryToken> {
-  const now = params.now ?? new Date();
-  const expiresAt = new Date(now.getTime() + RECOVERY_TOKEN_TTL_MINUTES * 60 * 1000);
   const token = generateRecoveryToken();
 
-  await db.insert(apiKeyRecoveryTokens).values({
-    userId: params.userId,
-    tokenHash: hashRecoveryToken(token),
-    expiresAt,
-    requestedIpHash: params.ipHash,
-  });
+  // `now() + interval` — the DATABASE clock writes the expiry, and the
+  // database clock reads it back in `redeemRecoveryToken`. One clock decides
+  // both, which is the only version of this that is actually true.
+  //
+  // Two earlier attempts each moved one half. The first computed the expiry
+  // from `new Date()` and compared it against `new Date()`; the eviction
+  // logic then wrote `now()` from SQL, so the comparison straddled two clocks
+  // and an evicted token stayed redeemable whenever the app clock lagged. The
+  // second moved the READ into SQL and left the WRITE on the application
+  // clock — same straddle, opposite side, and an expired token still rotated
+  // the key. Measured skew between this process and the database container
+  // swung from -1.4s to +0.9s inside eight seconds, which is more than enough
+  // to matter for a value compared against a wall clock.
+  const [row] = await db
+    .insert(apiKeyRecoveryTokens)
+    .values({
+      userId: params.userId,
+      tokenHash: hashRecoveryToken(token),
+      expiresAt: sql`now() + make_interval(mins => ${RECOVERY_TOKEN_TTL_MINUTES})`,
+      requestedIpHash: params.ipHash,
+    })
+    .returning({ expiresAt: apiKeyRecoveryTokens.expiresAt });
 
-  return { token, expiresAt };
+  return { token, expiresAt: row!.expiresAt };
 }
 
 export type RedeemResult =
@@ -152,12 +166,12 @@ export async function redeemRecoveryToken(
         and(
           eq(apiKeyRecoveryTokens.tokenHash, tokenHash),
           isNull(apiKeyRecoveryTokens.usedAt),
-          // Expiry is decided by the DATABASE clock, not the caller's.
-          // Comparing a stored timestamp against `new Date()` straddles two
-          // clocks that are not the same clock — the database runs in its own
-          // container — and measured skew here drifted about a second and a
-          // half over fifteen seconds. Whichever way the skew points, a token
-          // is then live or dead depending on which process asks.
+          // Both halves of this comparison are the database's clock: the
+          // expiry is written with `now() + interval` in issueRecoveryToken.
+          // Moving only one half — which is what the two previous attempts
+          // each did, in opposite directions — leaves the comparison
+          // straddling two clocks, and an expired token then rotates the key
+          // whenever the skew points the wrong way.
           sql`${apiKeyRecoveryTokens.expiresAt} > now()`,
         ),
       )

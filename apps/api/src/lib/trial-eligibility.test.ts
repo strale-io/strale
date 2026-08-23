@@ -293,4 +293,33 @@ describe("trialRateBucket — IPv6 counts by /64", () => {
   it("handles the deprecated IPv4-compatible form too", () => {
     expect(trialRateBucket("::1.2.3.4")).toBe("1.2.3.4");
   });
+
+  it("handles the HEX spelling of an IPv4-mapped address, which is the reachable one", () => {
+    // `IPV6_RE` in middleware.ts is /^[0-9a-fA-F:]{2,45}$/ — it REJECTS the
+    // dotted form and ACCEPTS this one, so catching only the readable spelling
+    // of the bypass was not catching it.
+    expect(trialRateBucket("::ffff:0102:0304")).toBe("1.2.3.4");
+    expect(trialRateBucket("::ffff:0506:0708")).toBe("5.6.7.8");
+    expect(trialRateBucket("::ffff:0102:0304")).not.toBe(trialRateBucket("::ffff:0506:0708"));
+  });
+
+  it("gives the hex and dotted spellings of one address the same bucket", () => {
+    expect(trialRateBucket("::ffff:0102:0304")).toBe(trialRateBucket("::ffff:1.2.3.4"));
+  });
+
+  it("counts a trailing dotted quad as the two hextets it occupies", () => {
+    // `0:0:0:0:0:ffff:1.2.3.4` used to parse as seven hextets and return null,
+    // i.e. no bucket and no cap for a perfectly valid form.
+    expect(trialRateBucket("0:0:0:0:0:ffff:1.2.3.4")).toBe("1.2.3.4");
+    expect(trialRateBucket("2001:db8::1.2.3.4")).toBe("2001:0db8:0000:0000::/64");
+  });
+
+  it("gives the unspecified and loopback addresses no bucket at all", () => {
+    // They are not a client's public address, and the all-zero prefix they
+    // expand to would otherwise be a bucket shared with everything else that
+    // expands to zeros.
+    expect(trialRateBucket("::")).toBeNull();
+    expect(trialRateBucket("::1")).toBeNull();
+    expect(trialRateBucket("0:0:0:0:0:0:0:1")).toBeNull();
+  });
 });

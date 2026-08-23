@@ -310,7 +310,7 @@ review:
     non_blocking_findings_fixed:
       - "Both validity gates read `email.split('@')[1]` — the wrong domain for a two-@ address. Verified before the fix: `a@gmail.com@mailinator.com` returned a 200-cent grant."
       - "`trial_credits.reason` returned `email_already_granted`, so anyone could register victim@corp.com and learn the address had once been a customer. One undifferentiated public reason now; the specific one is logged."
-      - "Each recovery request expired all outstanding codes, so an attacker could loop the unauthenticated endpoint and kill a victim's code indefinitely — with /v1/auth/api-key needing the key they had already lost. Codes stand until used or expired, capped at 5."
+      - "Each recovery request expired all outstanding codes, so an attacker could loop the unauthenticated endpoint and kill a victim's code indefinitely — with /v1/auth/api-key needing the key they had already lost. Replaced with a five-code cap, which round 2 showed was the same defect wearing a different hat; see round_3."
       - "Redemption burned the code before the ownership check, so a mistyped address spent it. SELECT … FOR UPDATE, then claim."
       - "`pruneRecoveryTokens` was exported and never called, on a table its own docstring said should not be retained indefinitely — the WP5 defect class. Deleted; the table is a db-retention rule. `trial_grants` deliberately is not: pruning the rule hands every aged-out account a second grant."
       - "The welcome email promised EUR 2.00 to zero-credit signups, whose first paid call would then fail on insufficient funds. `welcome.ts`'s eight unconditional claims corrected too."
@@ -320,11 +320,83 @@ review:
       - "The backfill test re-ran the block's deliberately-unscoped INSERT … SELECT against the shared lane database, writing entitlements for other suites' users. Now bounded and rolled back."
       - "A block-0102 test asserted SQL text under a behavioural name and would have passed with hashEmail switched to SHA-512. Renamed; the agreement is proved against a real Postgres elsewhere."
       - "The block-0102 stub counted statements, so adding one shifted the ledger result onto a CREATE INDEX. It matches on the query now."
-      - "The outstanding-token cap was intermittently off by one because the read used the application clock and `now()` used the database's. One SQL statement, one clock."
+      - "The outstanding-token cap was intermittently off by one because the read used the application clock and `now()` used the database's. Moved into SQL — and rounds 2 and 3 each found the OTHER half still on the wrong clock; see round_3."
     process_note: >
       Both reviewers objected that the tree moved under them mid-review. Fair,
       and it cost each of them a finding written against code that no longer
-      existed. Round 2 runs against a frozen SHA.
+      existed. Rounds 2 and 3 ran against a frozen SHA with a clean tree.
+
+  round_2:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    blocking:
+      erasure_receipt_still_incomplete: >
+        Round 1's fix cleaned up the two tables WP11 added and stopped, without
+        re-auditing the receipt against `transactions` — which the same handler
+        explicitly retains. `/v1/do` records `audit_trail.request_context` on
+        every authenticated call (hashed IP, user-agent, Accept-Language,
+        referer, origin, fingerprint) and `client_meta.ip_day_hash`, a
+        day-salted HMAC of the address. Production: 476 user-linked rows across
+        6 users. `client_meta` is outside the hashed payload so closure clears
+        it; `request_context` is inside it and was disclosed instead.
+    non_blocking_fixed:
+      - "The token cap evicted the OLDEST code, so five requests displaced the one a victim was holding — and the docstring claimed the opposite. Reproduced 5/5 by the reviewer."
+      - "Expiry straddled two clocks: eviction wrote `now()` from SQL, redemption compared against `new Date()`. Measured skew swung 1.4s in 8 seconds."
+      - "OpenAPI still documented the eviction round 1 removed."
+      - "`name` at 300 characters still 500'd — round 1 gated `email` and stopped, on the same INSERT."
+      - "`trialRateBucket` collapsed IPv4-mapped addresses into one bucket."
+      - "A comment claimed the per-IP cap withholds money on the agent path, which IP_CAPPED_CHANNELS excludes."
+      - "The closure test leaked one uncollectable trial_grants row per run — its cleanup keyed on a user_id the closure had just NULLed. 38 orphans had accumulated."
+
+  round_3:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    the_finding_that_mattered: >
+      NB-1 diagnosed why the same defect survived three rounds: the tests for
+      every claim the receipt made were HOLLOW. They string-matched the
+      response body, which is built from literals in the handler, so deleting
+      the client_meta UPDATE or either clearing helper left all 147 integration
+      tests green. They proved the CLAIM, not the BEHAVIOUR.
+    structural_fix: >
+      `lib/account-closure.ts` is now the one authority: CLOSURE_PLAN both
+      performs the closure and produces the customer-facing summary, so the two
+      cannot drift. `account-closure.test.ts` parses `schema.ts` and fails if
+      any table declaring `user_id` is absent from the plan — a new table
+      cannot be added without either handling it or writing down why it is
+      retained. `request-context.ts` declares the seven fields once, and a test
+      cross-checks them against the object `do.ts` actually builds. The
+      behavioural test now reads the database, and was verified to fail when
+      each clearing step is removed in turn.
+    blocking_fixed:
+      request_context_under_enumerated: >
+        The disclosure named five of seven fields. `fingerprintHash` is a
+        device fingerprint carried on the same 476 production rows, named in
+        the code comment beside the text and missing from the text itself.
+      four_tables_wholly_undisclosed: >
+        `failed_requests` (32 production rows across 3 users, carrying ip_hash,
+        user_agent and the caller's free-text task), `dispute_requests` (a
+        plaintext contact address, no retention rule), `wallet_reservations`
+        and `capability_invocations` appeared in none of the three lists. The
+        first two are now cleared at closure; the last two cannot be — one is
+        NOT NULL, the other is protected by an append-only trigger — so they
+        are disclosed with that reason. The receipt also claimed "the user_id
+        linkage is severed", which was never true of `transactions`.
+      expiry_write_still_on_the_app_clock: >
+        Round 2 moved the READ into SQL and left the WRITE on `new Date()` —
+        same straddle, opposite side. An expired token still rotated the key,
+        reproduced 2 in 6 runs. Both halves are `now()` now. The test itself
+        was expiring rows with the application clock too, which is the same
+        mistake one layer out; fixed and stable across 10 consecutive runs.
+    non_blocking_fixed:
+      - "`trialRateBucket` still collapsed the HEX spelling of IPv4-mapped addresses — and that is the reachable one, because IPV6_RE rejects dots and accepts hex. A trailing dotted quad also parsed as one hextet instead of two, so `0:0:0:0:0:ffff:1.2.3.4` got no bucket at all."
+      - "A Stripe session settling after closure would credit a redacted account's wallet — money placed where it can never be spent, on the happy path, with nothing alerting. Now refused and paged."
+      - "Three docstrings described redemption as a conditional UPDATE; it is SELECT … FOR UPDATE, deliberately."
+      - "The growth bound cited the per-IP limiter, which places no bound on a single account. Retention is what actually holds."
+      - "This manifest claimed the token cap still existed."
+    accepted_consequence: >
+      Closing an account releases its slot in the per-IP trial window, because
+      closure clears `trial_grants.ip_hash`. Deliberate: retaining a hashed IP
+      indefinitely against a closed account is what three rounds kept flagging,
+      and the UNIQUE index on `email_hash` still forces a fresh address for
+      every grant. Documented in the module rather than left to be rediscovered.
 
 out_of_scope:
   - Repairing the 22 pre-WP2 drifted internal wallets (writes production

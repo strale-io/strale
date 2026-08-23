@@ -126,9 +126,24 @@ export function trialRateBucket(ip: string): string | null {
   const mapped = /^::(?:ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(head);
   if (mapped) return mapped[1]!;
 
+  // A trailing dotted quad occupies the last TWO hextets, so counting it as
+  // one leaves seven and the address is rejected — `0:0:0:0:0:ffff:1.2.3.4`
+  // returned null, meaning no bucket and no cap for a perfectly valid form.
+  const tail = /^(.*:)(\d{1,3}(?:\.\d{1,3}){3})$/.exec(head);
+  const expanded = tail
+    ? (() => {
+        const octets = tail[2]!.split(".").map((o) => Number.parseInt(o, 10));
+        if (octets.some((o) => !Number.isInteger(o) || o < 0 || o > 255)) return null;
+        const hi = ((octets[0]! << 8) | octets[1]!).toString(16);
+        const lo = ((octets[2]! << 8) | octets[3]!).toString(16);
+        return `${tail[1]}${hi}:${lo}`;
+      })()
+    : head;
+  if (expanded === null) return null;
+
   // Expand to full hextets so a compressed and an uncompressed form of the
   // same prefix produce the same bucket.
-  const parts = head.split("::");
+  const parts = expanded.split("::");
   if (parts.length > 2) return null;
   const left = parts[0] ? parts[0].split(":").filter(Boolean) : [];
   const right = parts.length === 2 && parts[1] ? parts[1].split(":").filter(Boolean) : [];
@@ -141,6 +156,26 @@ export function trialRateBucket(ip: string): string | null {
   // something that is not an address.
   const normalised = hextets.map((h) => h.padStart(4, "0").toLowerCase());
   if (normalised.some((h) => !/^[0-9a-f]{4}$/.test(h))) return null;
+
+  // The same IPv4-mapped address written in hex rather than dotted quad —
+  // `::ffff:0102:0304` is `::ffff:1.2.3.4`. The dotted form is caught above,
+  // but `IPV6_RE` in middleware.ts is `/^[0-9a-fA-F:]{2,45}$/`, which REJECTS
+  // the dotted form and ACCEPTS this one: the hex spelling is the reachable
+  // one. Catching only the readable spelling of a bypass is not catching it.
+  //
+  // The all-zero prefix below also covers `::` and `::1`, which are the
+  // unspecified and loopback addresses and are not a client's public address
+  // in any case — no bucket is the right answer for both.
+  const allZeroPrefix = normalised.slice(0, 5).every((h) => h === "0000");
+  if (allZeroPrefix) {
+    if (normalised[5] === "ffff") {
+      const a = Number.parseInt(normalised[6]!, 16);
+      const b = Number.parseInt(normalised[7]!, 16);
+      return `${a >> 8}.${a & 0xff}.${b >> 8}.${b & 0xff}`;
+    }
+    return null;
+  }
+
   return `${normalised.slice(0, 4).join(":")}::/64`;
 }
 
@@ -532,6 +567,15 @@ export async function recordTrialGrant(
  * is still pseudonymised personal data — an enumerable input space is not
  * anonymisation — so it is disclosed in the erasure response under Art. 6(1)(f)
  * rather than treated as if it were not there.
+ *
+ * **Accepted consequence: closing an account releases its slot in the per-IP
+ * window.** The cap counts rows by `ip_hash`, and this clears it, so five
+ * accounts closed from one address free that address to claim five more. The
+ * trade is deliberate — retaining a hashed IP indefinitely against a closed
+ * account is the thing three review rounds kept flagging, and the cap is a
+ * speed bump rather than the rule. The attacker's actual cost is unchanged
+ * either way: the UNIQUE index on `email_hash` still forces a fresh address
+ * for every grant, closed accounts included.
  */
 export async function anonymiseTrialGrantOnClosure(
   tx: unknown,

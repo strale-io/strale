@@ -17,7 +17,10 @@ import {
   EmailAlreadyRegisteredError,
 } from "../lib/account-service.js";
 import {
-  anonymiseTrialGrantOnClosure,
+  applyClosurePlan,
+  buildClosureSummary,
+} from "../lib/account-closure.js";
+import {
   assessTrialGrant,
   MAX_NAME_LENGTH,
   trialRateBucket,
@@ -28,7 +31,6 @@ import {
 } from "../lib/trial-eligibility.js";
 import {
   issueRecoveryToken,
-  purgeRecoveryTokensOnClosure,
   redeemRecoveryToken,
   RECOVERY_TOKEN_TTL_MINUTES,
 } from "../lib/key-recovery.js";
@@ -306,8 +308,10 @@ authRoute.post(
 // POST /v1/auth/recover/confirm — redeem a recovery token and rotate the key
 //
 // The rotation half of the flow above. Single-use and time-boxed, enforced by
-// a conditional UPDATE inside the redemption transaction rather than by a
-// read-then-write, so two concurrent redemptions produce one rotation.
+// `SELECT … FOR UPDATE` on the token row inside the redemption transaction, so
+// two concurrent redemptions serialise on the lock and produce one rotation.
+// (Deliberately a lock rather than a conditional UPDATE: claiming first meant a
+// caller who typed the wrong address spent the code — see key-recovery.ts.)
 //
 // The rate limit is not a brute-force defence — a 256-bit token does not need
 // one — it bounds the cost of a flood of invalid redemptions.
@@ -424,41 +428,16 @@ authRoute.delete("/me", authMiddleware, async (c) => {
       description: "Balance forfeited on account closure (Art. 17 erasure)",
     });
 
-    // WP11: the two tables this package added also survive closure, and one of
-    // them carried the very column this response claims was anonymised —
-    // migration 0102 copies `users.signup_ip_hash` into `trial_grants.ip_hash`.
-    // Leaving it there would make the receipt below false about itself.
-    //
-    // The entitlement row itself has to stay: an entitlement stored on the
-    // users row is destroyed by exactly the delete → re-register loop it exists
-    // to close. Only `email_hash` is load-bearing, so `user_id` and `ip_hash`
-    // go and the hash remains, disclosed rather than quietly kept.
-    //
-    // Recovery tokens are deleted outright. `redeemRecoveryToken` already
-    // refuses a redacted user, so this is not what stops a token resurrecting
-    // access — it is what stops the user id and IP hash outliving the account.
-    await anonymiseTrialGrantOnClosure(tx, { userId: user.id });
-    await purgeRecoveryTokensOnClosure(tx, { userId: user.id });
-
-    // `client_meta` is the one identifier-bearing field on `transactions` that
-    // is NOT inside the hashed payload (`lib/integrity-hash.ts` hashes input,
-    // output, error, price, auditTrail, markers and createdAt — not this
-    // column), so it can be cleared without breaking the chain for every
-    // subsequent transaction. It carries `ip_day_hash`, a day-salted HMAC of
-    // the client address, plus referer and user-agent.
-    //
-    // `audit_trail.request_context` carries the same class of data — ipHash,
-    // userAgent, acceptLanguage, referer, fingerprintHash — and CANNOT be
-    // cleared for exactly the reason the response has always given about
-    // executionInput: it is inside the hash. Production holds 476 user-linked
-    // rows across 6 users carrying it. So it is disclosed below instead of
-    // being quietly retained, which is the whole lesson of the first round of
-    // review on this endpoint.
-    await tx
-      .update(transactions)
-      .set({ clientMeta: null })
-      .where(eq(transactions.userId, user.id));
+    // WP11: everything closure clears, and everything it deliberately does
+    // not, is declared once in `lib/account-closure.ts` — which also builds
+    // the summary returned below. They were two hand-maintained artifacts and
+    // drifted apart in three consecutive review rounds; they are one artifact
+    // now, and a completeness test fails if a user-linked table is missing
+    // from the plan.
+    await applyClosurePlan(tx, { userId: user.id });
   });
+
+  const closureSummary = buildClosureSummary();
 
   // Cert-audit Y-7: be explicit about what survives erasure. The
   // integrity hash includes input + auditTrail in the hashed payload
@@ -475,40 +454,17 @@ authRoute.delete("/me", authMiddleware, async (c) => {
     redacted_at: now.toISOString(),
     deletion_reason: reason,
     summary: {
-      anonymized: [
-        "users.email",
-        "users.name",
-        "users.api_key_hash",
-        "users.key_prefix",
-        "users.signup_ip_hash",
-        "trial_grants.user_id",
-        "trial_grants.ip_hash",
-        "transactions.client_meta (referer, user-agent, day-salted IP HMAC)",
-      ],
-      deleted: ["api_key_recovery_tokens (rows)"],
-      retained: [
-        "transactions (rows)",
-        "wallet_transactions (rows)",
-        "audit_trail JSONB on each transaction (includes executionInput for capabilities flagged processes_personal_data — see retained_pii_disclosure)",
-        "audit_trail.request_context on each transaction (hashed IP, user-agent, accept-language, referer, origin — see request_context_disclosure)",
-        "trial_grants.email_hash (a SHA-256 of your address — see trial_grant_disclosure)",
-      ],
+      // Derived from CLOSURE_PLAN, never restated. A hand-written copy of this
+      // list was wrong in three consecutive review rounds — each time in a
+      // place the previous round had not pointed at.
+      ...closureSummary,
       retained_legal_basis:
         "GDPR Art. 30 (records of processing) + DEC-20260428-B (audit-chain integrity). " +
-        "The user_id linkage is severed (your row's identifiers are anonymised); the transaction-level audit body is retained because it is part of a hashed chain that other transactions reference. " +
+        "Your row's identifiers are anonymised; transaction rows still carry your user id, which points at that anonymised row — a bare id is not a name, and severing it would break the hashed chain every later transaction references. " +
         "This is the same legal basis many regulated-industry providers (banks, KYC vendors) use for retention-on-deletion. " +
-        "The trial-grant hash is retained on a separate basis — Art. 6(1)(f), preventing repeat claims of the same one-off credit — see trial_grant_disclosure.",
-      request_context_disclosure:
-        "Every call you made recorded the request it arrived on: a truncated SHA-256 of your IP address, your user-agent string, your Accept-Language, and the referer and origin headers if your client sent them. This sits inside audit_trail, which is part of the hashed payload, so clearing it would break the integrity chain for every transaction recorded after yours — the same constraint that applies to executionInput. " +
-        "The separately-stored client_meta column, which held the same class of data outside the hash, IS cleared by this request. " +
-        "If the retained request context matters to your situation, email petter@strale.io with the affected transaction IDs; we will redact in place and accept the chain reset that requires.",
-      trial_grant_disclosure:
-        "One row survives that is keyed to your email address: a SHA-256 hash of it, the date the trial credit was issued, and the amount. Its user_id and IP hash are cleared by this request, so nothing links it to your account. " +
-        "We keep the hash because it is the only way to enforce one trial credit per address without storing the address, and because deleting it would let the same address claim the credit again by closing and re-registering. " +
-        "Be aware that a hash of an email address is pseudonymous, not anonymous: someone who already guesses your address can confirm it by hashing it. We are not treating it as anonymised data. " +
-        "If you want it removed and accept that the address can then claim trial credits again, email petter@strale.io.",
+        "Per-item reasons are in `disclosures` below.",
       retained_pii_disclosure:
-        "If you used capabilities that take personal data as input — e.g. pii-redact, invoice-extract, company-enrich, sanctions-check on a real person — the input you supplied is retained inside audit_trail.executionInput on the transactions row. The row no longer links to your account, but the input itself is still readable to a Strale operator who could correlate by content. " +
+        "If you used capabilities that take personal data as input — e.g. pii-redact, invoice-extract, company-enrich, sanctions-check on a real person — the input you supplied is retained inside audit_trail.executionInput on the transactions row. The row no longer links to a named account, but the input itself is still readable to a Strale operator who could correlate by content. " +
         "If this matters to your situation (e.g. data subject was a third party who has now exercised Art. 17), email petter@strale.io with the affected transaction IDs; we'll redact in place and accept the audit-chain reset that requires.",
     },
     api_key_status: "burned — current key will fail on next use",
