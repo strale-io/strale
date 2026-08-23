@@ -1238,7 +1238,7 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 44 blocks in historical order", () => {
+  it("exports the expected 45 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1290,6 +1290,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0099_noHalfQuarantine",
       "runMigration0100_relistUrlToMarkdown",
       "runMigration0101_capabilityInvocations",
+      "runMigration0102_accountLifecycleTables",
     ]);
   });
 });
@@ -2149,7 +2150,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(101);
+    expect(Math.max(...numbers)).toBe(102);
   });
 });
 

@@ -19,7 +19,19 @@ function getResend(): Resend | null {
 
 const INTERNAL_DOMAINS = ["@strale.io", "@strale.internal", "@example.com"];
 
-export async function sendRecoveryEmail(email: string, apiKey: string): Promise<void> {
+/**
+ * WP11 / CR-10: this used to carry the new API key itself — a reusable bearer
+ * secret, delivered by email, permanently valid for anyone who read that
+ * mailbox afterwards. It now carries a single-use code that expires, and the
+ * account's key is untouched until the code is redeemed. That also makes the
+ * "if you didn't request this" line true: before, the damage was already done
+ * by the time the mail arrived.
+ */
+export async function sendRecoveryEmail(
+  email: string,
+  token: string,
+  ttlMinutes: number,
+): Promise<void> {
   if (INTERNAL_DOMAINS.some((d) => email.endsWith(d))) {
     // F-0-013: skip logging email; reason is enough for diagnostics.
     log.info({ label: "key-recovery-email-skip", reason: "internal-email" }, "key-recovery-email-skip");
@@ -32,15 +44,23 @@ export async function sendRecoveryEmail(email: string, apiKey: string): Promise<
     return;
   }
 
+  const curl = `curl -X POST https://api.strale.io/v1/auth/recover/confirm \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"${email}","token":"${token}"}'`;
+
   const text = `Hey,
 
-You requested a new API key for your Strale account. Here it is:
+Someone asked for a new API key for your Strale account. Your current key is
+still working — nothing has changed yet.
 
-${apiKey}
+To replace it, confirm with this one-time code (valid for ${ttlMinutes} minutes):
 
-Your previous key has been deactivated. Save this one somewhere safe.
+${token}
 
-If you didn't request this, you can ignore this email — your old key was already replaced, so just request another one when you need it.
+${curl}
+
+If you didn't request this, ignore this email. Your key stays as it is and the
+code expires on its own.
 
 — Petter
 Founder, Strale
@@ -49,10 +69,11 @@ Founder, Strale
   const html = [
     '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', sans-serif; font-size: 15px; line-height: 1.6; color: #1a1a1a; max-width: 600px;">',
     "<p>Hey,</p>",
-    "<p>You requested a new API key for your Strale account. Here it is:</p>",
-    '<p><code style="background: #f4f4f4; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-family: monospace;">' + apiKey + "</code></p>",
-    "<p>Your previous key has been deactivated. Save this one somewhere safe.</p>",
-    "<p>If you didn't request this, you can ignore this email — your old key was already replaced, so just request another one when you need it.</p>",
+    "<p>Someone asked for a new API key for your Strale account. Your current key is still working — nothing has changed yet.</p>",
+    "<p>To replace it, confirm with this one-time code (valid for " + ttlMinutes + " minutes):</p>",
+    '<p><code style="background: #f4f4f4; padding: 4px 8px; border-radius: 4px; font-size: 14px; font-family: monospace;">' + token + "</code></p>",
+    '<pre style="background: #f4f4f4; padding: 12px; border-radius: 4px; font-size: 13px; overflow-x: auto;">' + curl + "</pre>",
+    "<p>If you didn't request this, ignore this email. Your key stays as it is and the code expires on its own.</p>",
     "<p>— Petter<br>Founder, Strale</p>",
     "</div>",
   ].join("\n");
@@ -61,7 +82,7 @@ Founder, Strale
     const { error } = await resend.emails.send({
       from: "Petter at Strale <petter@strale.io>",
       to: email,
-      subject: "Your new Strale API key",
+      subject: "Confirm your Strale API key reset",
       text,
       html,
       replyTo: "petter@strale.io",

@@ -2,20 +2,34 @@ import { Hono } from "hono";
 import * as walletService from "../lib/wallet-service.js";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { users, wallets, walletTransactions, transactions } from "../db/schema.js";
+import { users, transactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
 import { authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
 import { rateLimitByIpDb } from "../lib/db-rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
 import { sendWelcomeEmail, sendRecoveryEmail } from "../lib/welcome-email.js";
-import { DISPOSABLE_DOMAINS } from "../lib/disposable-domains.js";
 import { getFreeTierSlugs } from "../lib/free-tier.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
+import {
+  createAccount,
+  emailIsRegistered,
+  EmailAlreadyRegisteredError,
+} from "../lib/account-service.js";
+import {
+  assessTrialGrant,
+  TRIAL_CREDITS_CENTS,
+  type TrialAssessment,
+} from "../lib/trial-eligibility.js";
+import {
+  issueRecoveryToken,
+  redeemRecoveryToken,
+  RECOVERY_TOKEN_TTL_MINUTES,
+} from "../lib/key-recovery.js";
 import type { AppEnv } from "../types.js";
 import type { Context } from "hono";
 
-const TRIAL_CREDITS_CENTS = 200; // €2.00 per DEC-10
+export { TRIAL_CREDITS_CENTS };
 
 // Cert-audit G7: ToS version recorded at signup. Bump whenever the
 // public Terms page changes materially. Mirror this value in the
@@ -48,58 +62,63 @@ authRoute.post(
 
   const db = getDb();
 
-  // Check if email already registered
-  const existing = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-
-  if (existing.length > 0) {
+  // Fast path only. The authoritative duplicate check is the unique index,
+  // enforced inside createAccount — this SELECT is a TOCTOU race on its own
+  // and exists to answer the common case without attempting a write.
+  if (await emailIsRegistered(db, email)) {
     return c.json(
       apiError("invalid_request", "An account with this email already exists."),
       409,
     );
   }
 
-  // Generate API key — shown to user once, then only the hash is stored
-  const apiKey = generateApiKey();
-  const apiKeyHash = hashApiKey(apiKey);
-  const keyPrefix = getKeyPrefix(apiKey);
-
-  // Create user + wallet + trial credits
   const clientIp = getClientIp(c);
   const signupIpHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
 
-  // Cert-audit G7: record ToS acceptance at the moment the account is
-  // created. Treats account creation as acceptance of the in-force
-  // version (the public registration flow shows the Terms link adjacent
-  // to the submit button). The agentSignupHandler below does the same.
-  const [user] = await db
-    .insert(users)
-    .values({
+  // WP11: one authority decides the trial, for both signup channels. This
+  // path used to decide it by not asking — every registration got EUR 2.00
+  // with no gate of any kind, which is how eight accounts behind one signup
+  // IP each took the grant in May.
+  const assessment = await assessTrialGrant(db, {
+    email,
+    ipHash: signupIpHash,
+    channel: "register",
+  });
+
+  if (assessment.decision === "refuse") {
+    return c.json(
+      apiError("invalid_request", assessment.message, { reason: assessment.reason }),
+      400,
+    );
+  }
+
+  // WP11: user + wallet + opening grant + trial entitlement, one transaction.
+  // Previously the user row committed on its own and the wallet followed in a
+  // second transaction, so a failure between them left an account that owned
+  // its email address and could never spend.
+  let account;
+  try {
+    account = await createAccount(db, {
       email,
       name,
-      apiKeyHash,
-      keyPrefix,
-      signupIpHash,
-      tosAcceptedAt: new Date(),
+      ipHash: signupIpHash,
+      grantCents: assessment.decision === "grant" ? assessment.grantCents : 0,
+      grantDescription: "Welcome trial credits",
+      channel: "register",
       tosVersion: CURRENT_TOS_VERSION,
-    })
-    .returning({ id: users.id, email: users.email });
+    });
+  } catch (err) {
+    if (err instanceof EmailAlreadyRegisteredError) {
+      return c.json(
+        apiError("invalid_request", "An account with this email already exists."),
+        409,
+      );
+    }
+    throw err;
+  }
 
-  // WP2: opened at zero and credited through the wallet service, so a failure
-  // between the two writes can no longer leave a balance with no matching
-  // ledger entry. (The three signup writes are still not one transaction —
-  // that is CR-09 and belongs to WP11.)
-  await db.transaction((tx) =>
-    walletService.openWallet(tx, {
-      userId: user.id,
-      grantCents: TRIAL_CREDITS_CENTS,
-      type: "trial_credit",
-      description: "Welcome trial credits",
-    }),
-  );
+  const apiKey = account.apiKey;
+  const user = { id: account.userId, email: account.email };
 
   // Fire-and-forget signup webhook
   const totalUsers = await db
@@ -131,7 +150,19 @@ authRoute.post(
       user_id: user.id,
       email: user.email,
       api_key: apiKey, // Shown once — store it safely
-      wallet_balance_cents: TRIAL_CREDITS_CENTS,
+      // WP11: what the wallet was actually opened with. This field used to be
+      // the TRIAL_CREDITS_CENTS constant, so it asserted a balance it never
+      // read — correct only for as long as the grant was unconditional.
+      wallet_balance_cents: account.grantedCents,
+      ...(assessment.decision === "withhold"
+        ? {
+            trial_credits: {
+              granted: false,
+              reason: assessment.reason,
+              message: assessment.message,
+            },
+          }
+        : {}),
       getting_started: {
         message: "Try your first call now — paste any of these into a terminal.",
         try_free: {
@@ -156,7 +187,19 @@ authRoute.post(
   );
 });
 
-// POST /v1/auth/recover — Email-based API key recovery
+// POST /v1/auth/recover — request an API key recovery token
+//
+// WP11 / CR-10. This endpoint used to rotate the account's key and email the
+// replacement, on an unauthenticated request whose only input was an email
+// address. Two defects in one handler: anyone who knew a customer's address
+// could revoke their working key at will, and the replacement was a reusable
+// bearer secret delivered over email. Rate limiting bounded the rate, not the
+// outcome — one request was already the whole attack.
+//
+// It now issues a single-use, 30-minute token to the mailbox and changes
+// nothing about the account. The existing key keeps working. Rotation happens
+// only at /v1/auth/recover/confirm, on proof that the requester read the mail.
+//
 // No auth required. Strict rate limit: 2 per 5 minutes per IP.
 // F-0-002: DB-backed — the 5-minute window must persist through redeploys,
 // otherwise an attacker can time key-recovery bursts against deploys.
@@ -177,17 +220,23 @@ authRoute.post(
   const email = body.email.trim().toLowerCase();
   const genericResponse = {
     message:
-      "If an account exists with that email, a new API key has been sent.",
+      "If an account exists with that email, a recovery code has been sent. " +
+      "Confirm with POST /v1/auth/recover/confirm { email, token }. " +
+      "Your current API key keeps working until you do.",
+    expires_in_minutes: RECOVERY_TOKEN_TTL_MINUTES,
   };
 
   const db = getDb();
   const [user] = await db
-    .select({ id: users.id, email: users.email })
+    .select({ id: users.id, email: users.email, deletedAt: users.deletedAt })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
 
-  if (!user) {
+  // A redacted account must not be recoverable — its key was burned on closure
+  // and Art. 17 erasure is one-way. Same generic answer, so closure state is
+  // not an enumeration oracle either.
+  if (!user || user.deletedAt !== null) {
     // F-0-013: do not log the email. Logging `email=<addr> user_found=false`
     // is both PII and a user-enumeration oracle — anyone with Railway log
     // access can trivially see which emails are registered. Log only that a
@@ -196,19 +245,11 @@ authRoute.post(
     return c.json(genericResponse);
   }
 
-  // Generate new key, invalidate old one
-  const newApiKey = generateApiKey();
-  const newHash = hashApiKey(newApiKey);
-  const newPrefix = getKeyPrefix(newApiKey);
-
-  await db
-    .update(users)
-    .set({
-      apiKeyHash: newHash,
-      keyPrefix: newPrefix,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, user.id));
+  const clientIp = getClientIp(c);
+  const { token } = await issueRecoveryToken(db, {
+    userId: user.id,
+    ipHash: clientIp !== "unknown" ? hashIp(clientIp) : null,
+  });
 
   // F-0-013: drop email from the log. user.id is enough for operational
   // tracing and doesn't leak PII or act as an enumeration oracle.
@@ -217,13 +258,71 @@ authRoute.post(
     "key-recovery",
   );
 
-  // Fire-and-forget recovery email
   fireAndForget(
-    () => sendRecoveryEmail(user.email, newApiKey),
+    () => sendRecoveryEmail(user.email, token, RECOVERY_TOKEN_TTL_MINUTES),
     { label: "recovery-email-send", context: { userId: user.id } },
   );
 
   return c.json(genericResponse);
+});
+
+// POST /v1/auth/recover/confirm — redeem a recovery token and rotate the key
+//
+// The rotation half of the flow above. Single-use and time-boxed, enforced by
+// a conditional UPDATE inside the redemption transaction rather than by a
+// read-then-write, so two concurrent redemptions produce one rotation.
+//
+// The rate limit is not a brute-force defence — a 256-bit token does not need
+// one — it bounds the cost of a flood of invalid redemptions.
+authRoute.post(
+  "/recover/confirm",
+  rateLimitByIpDb({ windowSeconds: 300, max: 10, scope: "auth-recover-confirm" }),
+  async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (
+    !body ||
+    typeof body.email !== "string" ||
+    typeof body.token !== "string" ||
+    body.token.length === 0
+  ) {
+    return c.json(
+      apiError("invalid_request", "Both 'email' and 'token' are required.", {
+        fields: ["email", "token"],
+      }),
+      400,
+    );
+  }
+
+  const db = getDb();
+  const result = await redeemRecoveryToken(db, {
+    token: body.token,
+    email: body.email,
+  });
+
+  if (!result.ok) {
+    c.get("log").info(
+      { label: "key-recovery-confirm", ok: false },
+      "key-recovery-confirm",
+    );
+    return c.json(
+      apiError(
+        "unauthorized",
+        "That recovery code is invalid, expired, or already used. Request a new one with POST /v1/auth/recover.",
+      ),
+      401,
+    );
+  }
+
+  c.get("log").info(
+    { label: "key-recovery-confirm", ok: true, user_id: result.userId },
+    "key-recovery-confirm",
+  );
+
+  return c.json({
+    api_key: result.apiKey, // Shown once — the previous key is now invalid
+    key_prefix: result.keyPrefix,
+    message: "Your previous API key has been deactivated.",
+  });
 });
 
 // DELETE /v1/auth/me — GDPR Art. 17 right to erasure (cert-audit G1).
@@ -371,30 +470,11 @@ export async function agentSignupHandler(c: Context) {
   }
 
   const email = body.email.trim().toLowerCase();
-  const domain = email.split("@")[1] ?? "";
 
-  // Reject disposable email domains
-  if (DISPOSABLE_DOMAINS.has(domain)) {
-    return c.json(
-      apiError("invalid_request", "Disposable email addresses are not accepted. Use your operator's real email address."),
-      400,
-    );
-  }
-
-  // MX validation — ensure the email domain can receive mail
-  try {
-    const dns = await import("node:dns/promises");
-    const mx = await dns.resolveMx(domain).catch(() => []);
-    if (mx.length === 0) {
-      return c.json(
-        apiError("invalid_request", `No mail server found for ${domain}. Use an email address that can receive mail.`),
-        400,
-      );
-    }
-  } catch {
-    // DNS failure is non-fatal — allow signup to proceed
-  }
-
+  // WP11: the disposable-domain and MX checks that used to be written out
+  // here now live in the trial-eligibility authority, so the register path
+  // gets them too. They are applied below, together with the entitlement
+  // gates, on one call.
   const db = getDb();
   const clientIp = getClientIp(c);
   const ipHash = clientIp !== "unknown" ? hashIp(clientIp) : null;
@@ -454,7 +534,10 @@ export async function agentSignupHandler(c: Context) {
     );
   }
 
-  // Flag for review if 3+ signups from same IP this week
+  // Flag for review if 3+ signups from same IP this week. Kept as a signal on
+  // the signup webhook; the gate that actually withholds money is the
+  // trial-eligibility authority's per-IP cap below. Before WP11 this counter
+  // was the ONLY same-IP check on either path and it denied nothing.
   let flaggedForReview = false;
   if (ipHash) {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -470,35 +553,43 @@ export async function agentSignupHandler(c: Context) {
     }
   }
 
-  // Create account (same as register)
-  const apiKey = generateApiKey();
-  const apiKeyHash = hashApiKey(apiKey);
-  const keyPrefix = getKeyPrefix(apiKey);
+  // WP11: same authority as /v1/auth/register. Both channels ask the same
+  // question and get an answer computed by the same rules.
+  const assessment: TrialAssessment = await assessTrialGrant(db, {
+    email,
+    ipHash,
+    channel: "agent_signup",
+  });
 
-  const [user] = await db
-    .insert(users)
-    .values({
+  if (assessment.decision === "refuse") {
+    return c.json(
+      apiError("invalid_request", assessment.message, { reason: assessment.reason }),
+      400,
+    );
+  }
+
+  let account;
+  try {
+    account = await createAccount(db, {
       email,
-      apiKeyHash,
-      keyPrefix,
-      signupIpHash: ipHash,
-      // Cert-audit G7: agent self-signup also accepts ToS at the moment
-      // of API call. The signup endpoint's response includes a link to
-      // the current Terms; usage of the returned API key is acceptance.
-      tosAcceptedAt: new Date(),
+      ipHash,
+      grantCents: assessment.decision === "grant" ? assessment.grantCents : 0,
+      grantDescription: "Welcome trial credits (agent self-signup)",
+      channel: "agent_signup",
       tosVersion: CURRENT_TOS_VERSION,
-    })
-    .returning({ id: users.id, email: users.email });
+    });
+  } catch (err) {
+    if (err instanceof EmailAlreadyRegisteredError) {
+      return c.json(
+        apiError("invalid_request", "An account with this email already exists. Use POST /v1/auth/recover to get a new API key."),
+        409,
+      );
+    }
+    throw err;
+  }
 
-  // WP2: same wallet-service path as the human signup above.
-  await db.transaction((tx) =>
-    walletService.openWallet(tx, {
-      userId: user.id,
-      grantCents: TRIAL_CREDITS_CENTS,
-      type: "trial_credit",
-      description: "Welcome trial credits (agent self-signup)",
-    }),
-  );
+  const apiKey = account.apiKey;
+  const user = { id: account.userId, email: account.email };
 
   // Fire-and-forget webhook
   fireAndForget(
@@ -531,8 +622,23 @@ export async function agentSignupHandler(c: Context) {
 
   return c.json({
     api_key: apiKey,
-    balance_cents: TRIAL_CREDITS_CENTS,
-    message: `Account created. You have €${(TRIAL_CREDITS_CENTS / 100).toFixed(2)} in credits.`,
+    // WP11: the amount actually granted, read from the account transaction —
+    // not the constant. An agent that reads this and plans its spend against
+    // a hardcoded 200 would have overspent the moment a gate withheld.
+    balance_cents: account.grantedCents,
+    message:
+      account.grantedCents > 0
+        ? `Account created. You have €${(account.grantedCents / 100).toFixed(2)} in credits.`
+        : "Account created with no trial credits. Top up to make paid calls.",
+    ...(assessment.decision === "withhold"
+      ? {
+          trial_credits: {
+            granted: false,
+            reason: assessment.reason,
+            message: assessment.message,
+          },
+        }
+      : {}),
     next_step: `Add "Authorization: Bearer ${apiKey}" to your requests to access 270+ paid capabilities.`,
     top_up: "POST /v1/wallet/topup with amount_cents (min 1000) to add more credits.",
   }, 201);
