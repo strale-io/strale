@@ -58,6 +58,24 @@ function isTestFile(path: string): boolean {
 
 const WRITES_TRANSACTIONS = /insert\(transactions\)|INSERT\s+INTO\s+transactions/;
 
+/**
+ * The rule, as a pure function, so it can be tested on inputs we control.
+ *
+ * A source lint that scans a clean repository finds nothing, and "found
+ * nothing" is indistinguishable from "cannot find anything". Disabling the
+ * detection entirely left this file green -- caught by the mutation battery,
+ * which is exactly the hollow-guard shape this repo has been bitten by before.
+ * The positive controls below feed it a file that SHOULD be flagged.
+ */
+export function classify(
+  rel: string,
+  source: string,
+): "not-a-writer" | "exempt" | "offender" | "wired" {
+  if (!WRITES_TRANSACTIONS.test(source)) return "not-a-writer";
+  if (EXEMPT[rel]) return "exempt";
+  return source.includes("settleExecutionReceipt") ? "wired" : "offender";
+}
+
 describe("receipt rail coverage", () => {
   const offenders: Array<{ file: string; reason: string }> = [];
   const exemptSeen = new Set<string>();
@@ -68,11 +86,12 @@ describe("receipt rail coverage", () => {
     const source = readFileSync(abs, "utf8");
     if (!WRITES_TRANSACTIONS.test(source)) continue;
 
-    if (EXEMPT[rel]) {
+    const verdict = classify(rel, source);
+    if (verdict === "exempt") {
       exemptSeen.add(rel);
       continue;
     }
-    if (!source.includes("settleExecutionReceipt")) {
+    if (verdict === "offender") {
       offenders.push({ file: rel, reason: "writes transactions, never settles a receipt" });
     }
   }
@@ -114,5 +133,39 @@ describe("receipt rail coverage", () => {
         expected,
       );
     }
+  });
+
+  describe("the rule itself, on inputs we control", () => {
+    // Without these the lint proves only that the repository is currently
+    // clean, which it would also "prove" if the detection did nothing at all.
+    it("flags a file that writes transactions and never settles", () => {
+      expect(
+        classify("routes/new-rail.ts", "await db.insert(transactions).values({});"),
+      ).toBe("offender");
+    });
+
+    it("flags a raw-SQL writer too, not just the drizzle form", () => {
+      expect(
+        classify("routes/new-rail.ts", "await db.execute(sql`INSERT INTO transactions (id) ...`);"),
+      ).toBe("offender");
+    });
+
+    it("does not flag a file that settles", () => {
+      expect(
+        classify(
+          "routes/new-rail.ts",
+          "await db.insert(transactions).values({}); await settleExecutionReceipt(db, {});",
+        ),
+      ).toBe("wired");
+    });
+
+    it("does not flag a file that never touches transactions", () => {
+      expect(classify("lib/whatever.ts", "export const x = 1;")).toBe("not-a-writer");
+    });
+
+    it("honours an exemption, and only for the exact path", () => {
+      expect(classify("app.ts", "INSERT INTO transactions (id)")).toBe("exempt");
+      expect(classify("app2.ts", "INSERT INTO transactions (id)")).toBe("offender");
+    });
   });
 });
