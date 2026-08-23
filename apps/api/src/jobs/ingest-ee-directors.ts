@@ -51,7 +51,6 @@ import { pipeline } from "node:stream/promises";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
 import { getDb } from "../db/index.js";
-import { fireAndForget } from "../lib/fire-and-forget.js";
 import { log, logError, logWarn } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
 import { registerJobSync } from "../lib/job-coordinator.js";

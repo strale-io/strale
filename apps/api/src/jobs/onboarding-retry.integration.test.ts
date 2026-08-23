@@ -260,8 +260,12 @@ describeMaybe("onboarding retry sweeper against a real database", () => {
     expect(outcome.stillFailing).toContain(slug);
     expect(await failuresOf(slug)).toBe(1);
 
+    // The recorded error must name the slug and the deadline, so an operator
+    // reading the event can tell a hang from an ordinary hook failure.
     const failures = await eventsFor(slug, "retry_failed");
-    expect(JSON.stringify(failures[0].details)).toContain("exceeded");
+    const detail = JSON.stringify(failures[0].details);
+    expect(detail).toContain("did not settle within");
+    expect(detail).toContain(slug);
   }, 120_000);
 
   it("is a no-op when nothing is in hook_failed — the current production state", async () => {

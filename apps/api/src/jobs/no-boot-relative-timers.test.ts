@@ -32,12 +32,16 @@ const TIMER = /\b(?:setInterval|setTimeout)\s*\(|\bglobalThis\s*\.\s*set(?:Inter
  * — cannot be mistaken for a call.
  */
 function stripNonCode(src: string): string {
+  // Strings FIRST, then comments. The other order let a "/*" string literal
+  // open a phantom comment that swallowed real code up to the next "*/"
+  // literal — a genuine `setInterval` planted between them passed the lint.
+  // Reviewer-found, by planting exactly that.
   return src
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/(^|[^:"'`\\])\/\/.*$/gm, "$1")
     .replace(/`(?:[^`\\]|\\[\s\S])*`/g, "``")
     .replace(/"(?:[^"\\\n]|\\.)*"/g, '""')
-    .replace(/'(?:[^'\\\n]|\\.)*'/g, "''");
+    .replace(/'(?:[^'\\\n]|\\.)*'/g, "''")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
 }
 
 describe("migrated jobs keep no timer of their own", () => {
@@ -63,6 +67,10 @@ describe("migrated jobs keep no timer of their own", () => {
     expect(TIMER.test(stripNonCode("// we used to call setInterval(fn, 1000)"))).toBe(false);
     expect(TIMER.test(stripNonCode("/* setInterval(fn, 1) */"))).toBe(false);
     expect(TIMER.test(stripNonCode('const s = "setInterval(x, 1)";'))).toBe(false);
+    // A string literal must not be able to open a comment that hides real code.
+    expect(
+      TIMER.test(stripNonCode('const a = "/*"; setInterval(fn, 1000); const b = "*/";')),
+    ).toBe(true);
   });
 
   it("covers every job the migration guard covers", () => {

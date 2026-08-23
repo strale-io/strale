@@ -57,6 +57,13 @@ describeMaybe("job coordinator against a real database", () => {
     return (rows as unknown as Array<Record<string, unknown>>)[0];
   }
 
+  /** Claim a job that must be claimable, returning its claim identity. */
+  async function claimOrThrow(name: string) {
+    const claim = await claimJob(name);
+    if (!claim) throw new Error(`expected ${name} to be claimable`);
+    return claim;
+  }
+
   /** Move a job's due time by a SQL interval, so the DB clock is used on both sides. */
   async function shiftDue(name: string, expr: string) {
     await db.execute(
@@ -100,7 +107,7 @@ describeMaybe("job coordinator against a real database", () => {
     await shiftDue(name, "- interval '1 second'");
     const claim = await claimJob(name);
     expect(claim).not.toBeNull();
-    await releaseJob(name, "ok");
+    await releaseJob(claim!, "ok");
 
     const afterRun = await row(name);
     const scheduled = new Date(String(afterRun!.next_run_at)).getTime();
@@ -154,8 +161,7 @@ describeMaybe("job coordinator against a real database", () => {
     await registerJob({ name, intervalMs: 7 * 24 * 3600_000, handler: async () => {} });
 
     await shiftDue(name, "- interval '1 second'");
-    await claimJob(name);
-    await releaseJob(name, "ok"); // now due in 7 days
+    await releaseJob(await claimOrThrow(name), "ok"); // now due in 7 days
 
     _resetRegistryForTests();
     // Code now says hourly. Without the clamp the job would keep waiting a week.
@@ -240,35 +246,77 @@ describeMaybe("job coordinator against a real database", () => {
     await registerJob({ name, intervalMs: 3600_000, handler: async () => {} });
 
     await shiftDue(name, "- interval '1 second'");
-    await claimJob(name);
-    await releaseJob(name, "ok");
+    await releaseJob(await claimOrThrow(name), "ok");
 
     await shiftDue(name, "- interval '1 second'");
     const second = await claimJob(name);
     expect(second!.recoveredFromCrash).toBe(false);
   });
 
-  it("a runner whose lease was stolen cannot overwrite the new holder's state", async () => {
+  it("a stale handler cannot touch ANY part of its successor's claim", async () => {
+    // Invariant 2, modelled end to end: A claims, A is abandoned, A's lease
+    // expires, B claims the SAME job, then A finally returns and tries to
+    // release. Every one of B's fields must survive untouched.
+    //
+    // The guard for this is the per-claim token, not the runner id. Guarding on
+    // the runner id was insufficient and this test is what proves it: A and B
+    // are claimed by the same process here, exactly as they are in production
+    // when a job is re-claimed on a later poll, so `RUNNER_ID` is byte-identical
+    // on both sides and cannot tell them apart.
     const name = jobName("stale");
     await registerJob({ name, intervalMs: 3600_000, handler: async () => {} });
+
+    // Give A a failure history, so we can prove A cannot reset B's counter.
     await shiftDue(name, "- interval '1 second'");
-    await claimJob(name);
+    await releaseJob(await claimOrThrow(name), "error", "first failure");
+    await shiftDue(name, "- interval '1 second'");
+    const a = await claimOrThrow(name);
 
-    // Another runner takes over after the lease expires.
-    const foreign = `foreign-${randomUUID().slice(0, 8)}`;
-    await db.execute(sql`
-      UPDATE job_schedule
-         SET lease_owner = ${foreign}, lease_expires_at = now() + interval '10 minutes'
-       WHERE job_name = ${name}
-    `);
+    // A's lease expires; B takes over. Same process, same RUNNER_ID.
+    await db.execute(
+      sql`UPDATE job_schedule SET lease_expires_at = now() - interval '1 second'
+           WHERE job_name = ${name}`,
+    );
+    const b = await claimOrThrow(name);
+    expect(b.leaseOwner).not.toBe(a.leaseOwner);
+    expect(b.leaseOwner.split(":")[0]).toBe(a.leaseOwner.split(":")[0]); // same process
 
-    // The original runner finally returns and releases. It must be ignored:
-    // its WHERE clause names itself as the owner, and it no longer is.
-    await releaseJob(name, "ok");
+    await releaseJob(b, "error", "B's own error");
+    const afterB = await row(name);
 
-    const r = await row(name);
-    expect(r!.lease_owner).toBe(foreign);
-    expect(r!.last_finished_at).toBeNull();
+    // Now A returns, late, and tries every mutation in turn.
+    await releaseJob(a, "ok");
+    await releaseJob(a, "error", "A's stale error");
+
+    const afterA = await row(name);
+    expect(afterA!.lease_owner).toBe(afterB!.lease_owner); // cannot release B's lease
+    expect(afterA!.last_outcome).toBe(afterB!.last_outcome); // cannot mark B complete or failed
+    expect(afterA!.last_error).toBe(afterB!.last_error); // cannot overwrite B's error
+    expect(Number(afterA!.consecutive_failures)).toBe(
+      Number(afterB!.consecutive_failures),
+    ); // cannot reset B's attempt counter
+    expect(String(afterA!.next_run_at)).toBe(String(afterB!.next_run_at)); // cannot move B's next run
+    expect(String(afterA!.last_finished_at)).toBe(String(afterB!.last_finished_at));
+  });
+
+  it("every claim gets a distinct identity, even back-to-back in one process", async () => {
+    // The property the test above rests on, stated alone so a change that
+    // collapses the token back to the process id fails here first.
+    const name = jobName("identity");
+    await registerJob({ name, intervalMs: 3600_000, handler: async () => {} });
+
+    const tokens: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      await shiftDue(name, "- interval '1 second'");
+      const c = await claimOrThrow(name);
+      tokens.push(c.leaseOwner);
+      await releaseJob(c, "ok");
+    }
+
+    expect(new Set(tokens).size).toBe(3);
+    // …while still naming the process, which is what makes the column useful
+    // to an operator reading it.
+    for (const t of tokens) expect(t.startsWith(`${runnerId()}:`)).toBe(true);
   });
 
   // ── Retry / backoff / last result ────────────────────────────────────────
@@ -277,8 +325,7 @@ describeMaybe("job coordinator against a real database", () => {
     const name = jobName("ok");
     await registerJob({ name, intervalMs: 3600_000, handler: async () => {} });
     await shiftDue(name, "- interval '1 second'");
-    await claimJob(name);
-    await releaseJob(name, "ok");
+    await releaseJob(await claimOrThrow(name), "ok");
 
     const r = await row(name);
     expect(r!.last_outcome).toBe("ok");
@@ -296,8 +343,7 @@ describeMaybe("job coordinator against a real database", () => {
     await registerJob({ name, intervalMs: DAY, handler: async () => {} });
 
     await shiftDue(name, "- interval '1 second'");
-    await claimJob(name);
-    await releaseJob(name, "error", "upstream exploded");
+    await releaseJob(await claimOrThrow(name), "error", "upstream exploded");
 
     const r = await row(name);
     expect(r!.last_outcome).toBe("error");
@@ -322,8 +368,7 @@ describeMaybe("job coordinator against a real database", () => {
     const delays: number[] = [];
     for (let i = 0; i < 8; i++) {
       await shiftDue(name, "- interval '1 second'");
-      await claimJob(name);
-      await releaseJob(name, "error", `attempt ${i}`);
+      await releaseJob(await claimOrThrow(name), "error", `attempt ${i}`);
       const r = await row(name);
       delays.push(new Date(String(r!.next_run_at)).getTime() - Date.now());
     }
@@ -350,8 +395,7 @@ describeMaybe("job coordinator against a real database", () => {
 
     for (let i = 0; i < 8; i++) {
       await shiftDue(name, "- interval '1 second'");
-      await claimJob(name);
-      await releaseJob(name, "error", "still failing");
+      await releaseJob(await claimOrThrow(name), "error", "still failing");
     }
 
     const delay = new Date(String((await row(name))!.next_run_at)).getTime() - Date.now();
@@ -363,12 +407,10 @@ describeMaybe("job coordinator against a real database", () => {
     await registerJob({ name, intervalMs: 3600_000, handler: async () => {} });
 
     await shiftDue(name, "- interval '1 second'");
-    await claimJob(name);
-    await releaseJob(name, "error", "boom");
+    await releaseJob(await claimOrThrow(name), "error", "boom");
 
     await shiftDue(name, "- interval '1 second'");
-    await claimJob(name);
-    await releaseJob(name, "ok");
+    await releaseJob(await claimOrThrow(name), "ok");
 
     const r = await row(name);
     expect(Number(r!.consecutive_failures)).toBe(0);
@@ -505,6 +547,178 @@ describeMaybe("job coordinator against a real database", () => {
     expect(second.ran).toContain(name);
     expect(starts).toBe(2);
   }, 20_000);
+
+  it("after the watchdog fires the job stays unclaimable until the exact moment the lease expires", async () => {
+    // Invariant 1, as a timeline rather than as a single assertion:
+    //   T0            claim, lease runs to T0+lease
+    //   T0+watchdog   cycle gives up waiting        -> must STILL be unclaimable
+    //   just before   lease not yet expired          -> must STILL be unclaimable
+    //   after         lease expired                  -> must become claimable
+    //
+    // Asserting only the middle step is what the round-1 test did, and it was
+    // green while the property was false. Each step here asks the thing that
+    // actually decides — claimJob — rather than reading lease_owner.
+    const name = jobName("timeline");
+    let starts = 0;
+    await registerJob({
+      name,
+      intervalMs: 3600_000,
+      leaseMs: 4_000, // watchdogFor -> 2s, so 2s of margin
+      handler: () => {
+        starts++;
+        return starts === 1 ? new Promise<void>(() => {}) : Promise.resolve();
+      },
+    });
+    await shiftDue(name, "- interval '1 second'");
+
+    const first = await runDueJobs();
+    expect(first.timedOut).toContain(name);
+    expect(starts).toBe(1);
+
+    // The row is due again as far as next_run_at is concerned — the timeout
+    // path deliberately does not advance it — so ONLY the live lease is
+    // standing between the successor and a second entry.
+    await shiftDue(name, "- interval '1 second'");
+    expect(await claimJob(name)).toBeNull();
+    expect(starts).toBe(1);
+
+    // One millisecond before the deadline: still nobody else's.
+    await db.execute(
+      sql`UPDATE job_schedule SET lease_expires_at = now() + interval '1 second'
+           WHERE job_name = ${name}`,
+    );
+    expect(await claimJob(name)).toBeNull();
+    expect(starts).toBe(1);
+
+    // And only once it has passed.
+    await db.execute(
+      sql`UPDATE job_schedule SET lease_expires_at = now() - interval '1 millisecond'
+           WHERE job_name = ${name}`,
+    );
+    const reclaimed = await claimJob(name);
+    expect(reclaimed).not.toBeNull();
+    expect(reclaimed!.recoveredFromCrash).toBe(true);
+  }, 30_000);
+
+  it("the timeout path leaves next_run_at alone, so the successor inherits a due job", async () => {
+    // Separated from the timeline above because the companion test previously
+    // forced BOTH lease_expires_at and next_run_at into the past, overwriting
+    // the very column the timeout path is supposed to leave untouched — so it
+    // proved "a due, unleased row runs", which was already covered.
+    const name = jobName("dueafter");
+    await registerJob({
+      name,
+      intervalMs: 3600_000,
+      leaseMs: 2_000,
+      handler: () => new Promise<void>(() => {}),
+    });
+    await shiftDue(name, "- interval '2 seconds'");
+    const dueBefore = String((await row(name))!.next_run_at);
+
+    const result = await runDueJobs();
+    expect(result.timedOut).toContain(name);
+
+    // Untouched: not advanced by an interval, not rescheduled by a backoff.
+    expect(String((await row(name))!.next_run_at)).toBe(dueBefore);
+  }, 30_000);
+
+  // ── Invariant 4: the whole failure/recovery lifecycle ────────────────────
+
+  it("tracks a full lifecycle: healthy, failing, retried, recovered, then failing again", async () => {
+    const name = jobName("lifecycle");
+    const HOUR = 3600_000;
+    await registerJob({ name, intervalMs: HOUR, handler: async () => {} });
+
+    // 1. Healthy.
+    await shiftDue(name, "- interval '1 second'");
+    await releaseJob(await claimOrThrow(name), "ok");
+    let r = await row(name);
+    expect(r!.last_outcome).toBe("ok");
+    expect(r!.last_error).toBeNull();
+    expect(Number(r!.consecutive_failures)).toBe(0);
+    expect(r!.lease_owner).toBeNull();
+    const healthyDue = new Date(String(r!.next_run_at)).getTime() - Date.now();
+    expect(healthyDue).toBeGreaterThan(58 * 60_000);
+
+    // 2. First failure. Retries sooner than the interval, streak starts at 1.
+    await shiftDue(name, "- interval '1 second'");
+    await releaseJob(await claimOrThrow(name), "error", "upstream 503");
+    r = await row(name);
+    expect(r!.last_outcome).toBe("error");
+    expect(String(r!.last_error)).toBe("upstream 503");
+    expect(Number(r!.consecutive_failures)).toBe(1);
+    const firstBackoff = new Date(String(r!.next_run_at)).getTime() - Date.now();
+    expect(firstBackoff).toBeLessThan(HOUR);
+    expect(firstBackoff).toBeGreaterThan(0);
+
+    // 3. Retry fails too. Streak grows, backoff lengthens, error is replaced.
+    await shiftDue(name, "- interval '1 second'");
+    await releaseJob(await claimOrThrow(name), "error", "upstream 504");
+    r = await row(name);
+    expect(String(r!.last_error)).toBe("upstream 504");
+    expect(Number(r!.consecutive_failures)).toBe(2);
+    const secondBackoff = new Date(String(r!.next_run_at)).getTime() - Date.now();
+    expect(secondBackoff).toBeGreaterThan(firstBackoff);
+
+    // 4. Genuine recovery. The streak resets and the error is CLEARED — a
+    //    stale error surviving a success would misreport a healthy job.
+    await shiftDue(name, "- interval '1 second'");
+    await releaseJob(await claimOrThrow(name), "ok");
+    r = await row(name);
+    expect(r!.last_outcome).toBe("ok");
+    expect(r!.last_error).toBeNull();
+    expect(Number(r!.consecutive_failures)).toBe(0);
+    expect(new Date(String(r!.next_run_at)).getTime() - Date.now()).toBeGreaterThan(58 * 60_000);
+
+    // 5. A later, unrelated failure starts a NEW streak at 1 — not at 3. This
+    //    is what makes the counter mean "consecutive", and it is the property
+    //    the sweeper's retry budget depends on.
+    await shiftDue(name, "- interval '1 second'");
+    await releaseJob(await claimOrThrow(name), "error", "much later, different cause");
+    r = await row(name);
+    expect(Number(r!.consecutive_failures)).toBe(1);
+    expect(String(r!.last_error)).toBe("much later, different cause");
+    const laterBackoff = new Date(String(r!.next_run_at)).getTime() - Date.now();
+    expect(laterBackoff).toBeLessThan(secondBackoff);
+  });
+
+  // ── The clamp (DEC-20260504-A: the fix needs its own regression test) ────
+
+  it("re-registering never shortens a first-ever run's startup delay", async () => {
+    // The clamp read COALESCE(last_finished_at, now()), which collapsed to
+    // now() for a job that had never run — so re-registering a job whose
+    // startup delay exceeds its interval silently pulled its first run in and
+    // discarded the stagger. Reviewer-found, and it shipped with no test until
+    // this one; DEC-20260504-A requires the regression test, not just the fix.
+    const name = jobName("stagger");
+    const INTERVAL = 60 * 60 * 1000; // 1h
+    const DELAY = 3 * 60 * 60 * 1000; // 3h — deliberately longer
+
+    await registerJob({ name, intervalMs: INTERVAL, startupDelayMs: DELAY, handler: async () => {} });
+    const scheduled = new Date(String((await row(name))!.next_run_at)).getTime();
+
+    _resetRegistryForTests();
+    await registerJob({ name, intervalMs: INTERVAL, startupDelayMs: DELAY, handler: async () => {} });
+
+    // Unmoved. The pre-fix form landed this an hour out instead of three.
+    expect(new Date(String((await row(name))!.next_run_at)).getTime()).toBe(scheduled);
+    expect(scheduled - Date.now()).toBeGreaterThan(2.5 * 60 * 60 * 1000);
+  });
+
+  it("still clamps a job that HAS run, which is the case the clamp exists for", async () => {
+    // The other branch of the same CASE, so the guard cannot be widened into
+    // "never clamp" without something failing.
+    const name = jobName("clampruns");
+    await registerJob({ name, intervalMs: 7 * 24 * 3600_000, handler: async () => {} });
+    await shiftDue(name, "- interval '1 second'");
+    await releaseJob(await claimOrThrow(name), "ok"); // due in 7 days
+
+    _resetRegistryForTests();
+    await registerJob({ name, intervalMs: 3600_000, handler: async () => {} });
+
+    const due = new Date(String((await row(name))!.next_run_at)).getTime() - Date.now();
+    expect(due).toBeLessThan(61 * 60 * 1000);
+  });
 
   // ── consumeDueSlot: the 56x regression ───────────────────────────────────
 

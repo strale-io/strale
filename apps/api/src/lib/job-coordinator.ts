@@ -55,6 +55,7 @@ import { getDb } from "../db/index.js";
 import { log, logError, logWarn } from "./log.js";
 import { isShuttingDown } from "./shutdown.js";
 import { randomUUID } from "node:crypto";
+import { DeadlineExceeded, withDeadline } from "./with-deadline.js";
 
 // ─── Tunables ───────────────────────────────────────────────────────────────
 
@@ -85,6 +86,48 @@ const RETRY_MAX_MS = 60 * 60 * 1000;
 const MAX_ERROR_LEN = 500;
 
 /**
+ * Hard ceiling on how long ONE handler may hold up the cycle.
+ *
+ * Jobs are awaited one after another, so waiting on a hung handler is time in
+ * which no other job starts. Deriving the wait from the lease alone made that
+ * ceiling the LEASE: the three 2h-lease jobs would have blocked every other job
+ * for 118 minutes. `reindex-transactions` makes it concrete — it opens its own
+ * postgres client and runs REINDEX with neither an AbortSignal nor a
+ * statement_timeout, so it escapes the pool's 30s cap and genuinely can hang.
+ *
+ * Before WP10 each job had its own timer and could not delay any other, so an
+ * unbounded wait here would be a regression the package introduced rather than
+ * fixed.
+ */
+const MAX_HANDLER_WAIT_MS = 15 * 60 * 1000;
+
+/**
+ * How long to wait for a handler, given its lease.
+ *
+ * Two properties, and earlier versions of this package violated each in turn:
+ *
+ *  1. **Strictly shorter than the lease.** The first version set them equal, so
+ *     abandoning a hung handler made the row claimable at that same instant and
+ *     the next poll started a second copy on top of live work — in the same
+ *     process, within one poll interval, for five jobs that hold no advisory
+ *     lock. The margin is what the abandoned run keeps: exclusion until the
+ *     full lease elapses, after which it is treated as crashed, which is the
+ *     honest reading — we stopped waiting precisely because we no longer know
+ *     whether it is alive.
+ *  2. **Never above MAX_HANDLER_WAIT_MS**, so fixing (1) does not let one job
+ *     stall the others for hours.
+ *
+ * Both are pinned across every lease size in real use by
+ * `job-coordinator.watchdog.test.ts`.
+ */
+export function watchdogFor(leaseMs: number): number {
+  return Math.min(
+    MAX_HANDLER_WAIT_MS,
+    Math.max(Math.floor(leaseMs / 2), leaseMs - 2 * POLL_INTERVAL_MS),
+  );
+}
+
+/**
  * A handler that never settles must not be able to stop every other job.
  *
  * Before WP10 each job owned its own timer, so a hung handler stalled only
@@ -96,74 +139,6 @@ const MAX_ERROR_LEN = 500;
  * arbitrary in-flight work. It stops the cycle AWAITING it, so the remaining
  * jobs get their turn.
  */
-class HandlerTimeout extends Error {
-  constructor(job: string, ms: number) {
-    super(`job "${job}" did not settle within ${Math.round(ms / 1000)}s`);
-    this.name = "HandlerTimeout";
-  }
-}
-
-/**
- * Hard ceiling on how long one handler may hold up the cycle.
- *
- * Jobs are awaited one after another, so the wait for a hung handler is time
- * during which no other job starts. Deriving the watchdog from the lease alone
- * made that ceiling the LEASE: the three 2h-lease jobs would have blocked every
- * other job for 118 minutes. `reindex-transactions` is the one that makes this
- * concrete — it runs REINDEX with neither an AbortSignal nor a
- * statement_timeout, so it genuinely can hang.
- *
- * Before WP10 each job had its own timer and could not delay any other, so an
- * unbounded wait here would be a regression the package introduced rather than
- * fixed. Fifteen minutes is longer than any observed successful run and far
- * shorter than the shortest lease.
- */
-const MAX_HANDLER_WAIT_MS = 15 * 60 * 1000;
-
-/**
- * How long to wait for a handler, given its lease.
- *
- * This MUST be strictly less than the lease. The first version set the two
- * equal, which made the "no second copy" guarantee below false: the watchdog
- * fired at the same instant `lease_expires_at` passed, so the abandoned run
- * was immediately claimable and the next poll — at most 60s later, in the same
- * process — started a second copy on top of the still-running first. Five of
- * the migrated jobs hold no advisory lock, so nothing else would have stopped
- * it. Reviewer-found, and reproduced before fixing.
- *
- * The margin is what the abandoned run keeps: the cycle stops waiting at
- * `watchdogFor(lease)`, and the run holds its exclusion until the full lease
- * elapses. After that it is treated as crashed, which is the honest reading —
- * we stopped waiting precisely because we no longer know whether it is alive.
- *
- * The result is bounded on both sides: never longer than MAX_HANDLER_WAIT_MS,
- * so one hung job cannot stall the others for hours, and always strictly less
- * than the lease, so abandoning a run never makes it instantly claimable.
- */
-export function watchdogFor(leaseMs: number): number {
-  return Math.min(
-    MAX_HANDLER_WAIT_MS,
-    Math.max(Math.floor(leaseMs / 2), leaseMs - 2 * POLL_INTERVAL_MS),
-  );
-}
-
-function withWatchdog<T>(job: string, ms: number, p: Promise<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new HandlerTimeout(job, ms)), ms);
-    timer.unref?.();
-    p.then(
-      (v) => {
-        clearTimeout(timer);
-        resolve(v);
-      },
-      (err) => {
-        clearTimeout(timer);
-        reject(err);
-      },
-    );
-  });
-}
-
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface JobDefinition {
@@ -185,6 +160,10 @@ export interface JobDefinition {
 export interface ClaimedJob {
   jobName: string;
   intervalMs: number;
+  /**
+   * The per-claim token in `lease_owner`. Pass it back to `releaseJob`; it is
+   * what stops a stale handler from writing over a successor's claim.
+   */
   leaseOwner: string;
   consecutiveFailures: number;
   /** True when the previous run started and never recorded a finish. */
@@ -209,11 +188,36 @@ let _pollTimer: ReturnType<typeof setInterval> | null = null;
 let _startTimer: ReturnType<typeof setTimeout> | null = null;
 let _polling = false;
 
-/** The identity written into `lease_owner`. Unique per process. */
+/**
+ * Identifies the PROCESS. Unique per boot, shared by every claim it makes.
+ *
+ * Deliberately not the thing `releaseJob` guards on — see `mintClaimToken`.
+ */
 const RUNNER_ID = `${process.pid}-${randomUUID().slice(0, 8)}`;
 
 export function runnerId(): string {
   return RUNNER_ID;
+}
+
+/**
+ * The identity written into `lease_owner`: unique per CLAIM, not per process.
+ *
+ * `releaseJob` guards on this value, and that distinction is the whole point.
+ * Guarding on `RUNNER_ID` alone was insufficient, because the realistic
+ * takeover path is a job re-claimed by the SAME process on a later poll after
+ * its lease expired — where the runner id is identical on both sides. A stale
+ * handler returning late would then have satisfied the guard and been able to
+ * overwrite its successor's outcome, next run time, error and failure count.
+ *
+ * No current code path issues a release for an abandoned run (the watchdog
+ * rejects and the cycle moves on without awaiting the original promise), so
+ * this closes the gap before anything reaches it rather than after. The token
+ * makes the guarantee a property of the data, not of the call graph.
+ *
+ * Fits `varchar(64)`: pid + 8 hex + separator + 12 hex is well under.
+ */
+function mintClaimToken(): string {
+  return `${RUNNER_ID}:${randomUUID().replace(/-/g, "").slice(0, 12)}`;
 }
 
 /** Test seam. Does not touch the database. */
@@ -251,6 +255,14 @@ export async function registerJob(def: JobDefinition): Promise<void> {
   }
   if (!Number.isFinite(def.intervalMs) || def.intervalMs <= 0) {
     throw new Error(`job-coordinator: job "${def.name}" needs a positive intervalMs`);
+  }
+  // watchdogFor(lease) is strictly less than the lease for every lease >= 1,
+  // but only meaningfully so above the millisecond range. A degenerate lease
+  // would collapse the margin that keeps an abandoned run exclusive.
+  if (def.leaseMs !== undefined && (!Number.isFinite(def.leaseMs) || def.leaseMs < 1_000)) {
+    throw new Error(
+      `job-coordinator: job "${def.name}" needs leaseMs >= 1000 (got ${String(def.leaseMs)})`,
+    );
   }
   _registry.set(def.name, def);
   _unpersisted.add(def.name);
@@ -323,6 +335,7 @@ export async function claimJob(name: string): Promise<ClaimedJob | null> {
  */
 async function claimRow(name: string, leaseSecs: number): Promise<ClaimedJob | null> {
   const db = getDb();
+  const claimToken = mintClaimToken();
 
   // The CTE snapshots the row BEFORE the update, because "did the previous run
   // finish?" is a question about the old values and `RETURNING` sees the new
@@ -337,7 +350,7 @@ async function claimRow(name: string, leaseSecs: number): Promise<ClaimedJob | n
        WHERE job_name = ${name}
     )
     UPDATE job_schedule js
-       SET lease_owner = ${RUNNER_ID},
+       SET lease_owner = ${claimToken},
            lease_expires_at = now() + make_interval(secs => ${leaseSecs}),
            last_started_at = now(),
            updated_at = now()
@@ -357,7 +370,7 @@ async function claimRow(name: string, leaseSecs: number): Promise<ClaimedJob | n
   return {
     jobName: String(row.job_name),
     intervalMs: Number(row.interval_ms),
-    leaseOwner: RUNNER_ID,
+    leaseOwner: claimToken,
     consecutiveFailures: Number(row.consecutive_failures ?? 0),
     recoveredFromCrash,
   };
@@ -371,14 +384,20 @@ async function claimRow(name: string, leaseSecs: number): Promise<ClaimedJob | n
  * interval — a failing daily job retries within the hour rather than tomorrow,
  * which is the durable retry state CR-08 asks for.
  *
- * The `lease_owner` guard means a runner whose lease already expired (and was
- * stolen) cannot overwrite the new holder's state when it finally returns.
+ * Every write here is conditional on the CLAIM that produced it still holding
+ * the row. A run whose lease expired and was taken over — by another process
+ * or, more likely, by this same one on a later poll — matches nothing and
+ * writes nothing: it cannot release the successor's lease, mark it complete or
+ * failed, reset its attempt counter, move its next run, or overwrite its
+ * error. The guard is the per-claim token, not the process id, because those
+ * two are the same value on the re-claim path that actually happens.
  */
 export async function releaseJob(
-  name: string,
+  claim: Pick<ClaimedJob, "jobName" | "leaseOwner">,
   outcome: "ok" | "error",
   errorMessage?: string,
 ): Promise<void> {
+  const { jobName: name, leaseOwner: claimToken } = claim;
   const db = getDb();
   const failed = outcome === "error";
   const retryBaseSecs = RETRY_BASE_MS / 1000;
@@ -405,7 +424,7 @@ export async function releaseJob(
            },
            updated_at = now()
      WHERE job_name = ${name}
-       AND lease_owner = ${RUNNER_ID}
+       AND lease_owner = ${claimToken}
   `);
 }
 
@@ -485,6 +504,10 @@ export async function consumeDueSlot(name: string, intervalMs: number): Promise<
 /**
  * Try every registered job once. Exported for tests and for the admin path:
  * calling it is always safe, because the database decides what is due.
+ *
+ * Jobs are attempted SEQUENTIALLY, so MAX_HANDLER_WAIT_MS bounds one handler,
+ * not one cycle: eleven simultaneous hangs would stall the last job for eleven
+ * times that. Do not read the ceiling as a cycle bound.
  */
 export async function runDueJobs(): Promise<{
   ran: string[];
@@ -543,8 +566,8 @@ export async function runDueJobs(): Promise<{
     const leaseMs = def.leaseMs ?? DEFAULT_LEASE_MS;
     const watchdogMs = watchdogFor(leaseMs);
     try {
-      await withWatchdog(def.name, watchdogMs, Promise.resolve(def.handler()));
-      await releaseJob(def.name, "ok");
+      await withDeadline(`job "${def.name}"`, watchdogMs, Promise.resolve(def.handler()));
+      await releaseJob(claim, "ok");
       ran.push(def.name);
       log.info(
         {
@@ -556,7 +579,7 @@ export async function runDueJobs(): Promise<{
         "job-coordinator-ran",
       );
     } catch (err) {
-      if (err instanceof HandlerTimeout) {
+      if (err instanceof DeadlineExceeded) {
         // Deliberately NOT released. The handler is still running — this
         // process merely stopped waiting for it. Releasing here would clear
         // the lease out from under live work and let the next poll start a
@@ -580,7 +603,7 @@ export async function runDueJobs(): Promise<{
       // Releasing on the failure path is what arms the backoff. If this
       // itself throws the lease is left behind, and its deadline is the
       // backstop — the job becomes claimable again when the lease expires.
-      await releaseJob(def.name, "error", message).catch((relErr) =>
+      await releaseJob(claim, "error", message).catch((relErr) =>
         logError("job-coordinator-release-failed", relErr, { job: def.name }),
       );
       ran.push(def.name);

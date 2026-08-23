@@ -56,6 +56,7 @@ import { getDb } from "../db/index.js";
 import { healthMonitorEvents } from "../db/schema.js";
 import { onCapabilityCreated } from "../lib/capability-onboarding.js";
 import { registerJobSync } from "../lib/job-coordinator.js";
+import { withDeadline } from "../lib/with-deadline.js";
 import { log, logError, logWarn } from "../lib/log.js";
 
 const INTERVAL_MS = 60 * 60 * 1000; // hourly
@@ -79,20 +80,6 @@ export const MAX_ATTEMPTS = 5;
  * failed attempt, charged to that slug's budget, not a stalled job.
  */
 const PER_SLUG_TIMEOUT_MS = 60_000;
-
-function withTimeout<T>(slug: string, ms: number, p: Promise<T>): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`onboarding hook for "${slug}" exceeded ${ms / 1000}s`)),
-      ms,
-    );
-    timer.unref?.();
-    p.then(
-      (v) => { clearTimeout(timer); resolve(v); },
-      (err) => { clearTimeout(timer); reject(err); },
-    );
-  });
-}
 
 export const RETRY_EVENT = "onboarding_retry";
 export const ESCALATION_ACTION = "retries_exhausted";
@@ -134,7 +121,11 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
 
   for (const slug of slugs) {
     try {
-      await withTimeout(slug, PER_SLUG_TIMEOUT_MS, Promise.resolve(onCapabilityCreated(slug)));
+      await withDeadline(
+        `onboarding hook for "${slug}"`,
+        PER_SLUG_TIMEOUT_MS,
+        Promise.resolve(onCapabilityCreated(slug)),
+      );
 
       // The hook is idempotent and generates the missing test suites. On
       // success the row returns to 'draft' — the schema default, and the
