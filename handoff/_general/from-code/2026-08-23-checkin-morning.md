@@ -257,8 +257,18 @@ trusting the name — it matches the source exactly. **What I could not do:** th
 post-deploy plan asks for a "does the guard bite" test (a duplicate `email_hash`
 insert, an UPDATE restoring `output` on a redacted row, both in a rolled-back
 transaction). Those are writes. `DATABASE_URL` is read-only and read-only means
-read-only, so the guards are verified by *definition* and not by *behaviour*, and
-that gap is owed to whoever holds a write credential.
+read-only, so from here the guards are verified by *definition* and not by
+*behaviour*.
+
+**Closed while this session was still running.** The remediation programme
+picked the merge up and landed its own acceptance record (#373, `b8f4d32`),
+which runs exactly those probes — rolled back — against a database materialised
+the same way production is, and re-confirms the deployed commit through
+`/health` rather than assuming Railway cut over. So the behavioural half is
+done; it is done on a materialised copy rather than on production, which is the
+correct place for it given nobody here holds a production write credential.
+Recorded because "owed" and "someone else did it forty minutes later" are
+different facts, and the record should not claim the first.
 
 Smoke-checked the paths WP11 rewrote: `/v1/auth/register` and `/v1/auth/recover` both
 return 400 to a malformed body (not 500), and an anonymous free-tier call still
