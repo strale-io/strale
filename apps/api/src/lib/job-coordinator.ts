@@ -377,50 +377,6 @@ export async function consumeDueSlot(name: string, intervalMs: number): Promise<
   return (rows as unknown as Array<unknown>).length > 0;
 }
 
-/**
- * Claim-run-release for a task that is not registered at boot.
- *
- * Unlike `consumeDueSlot` this holds a lease for the duration of `fn`, so it
- * suits callers that are not already serialised by something else.
- */
-export async function runIfDue(
-  name: string,
-  intervalMs: number,
-  fn: () => Promise<unknown>,
-  opts: { leaseMs?: number } = {},
-): Promise<boolean> {
-  const db = getDb();
-  const intervalSecs = intervalMs / 1000;
-
-  await db.execute(sql`
-    INSERT INTO job_schedule (job_name, interval_ms, next_run_at)
-    VALUES (${name}, ${intervalMs}, now())
-    ON CONFLICT (job_name) DO UPDATE SET
-      interval_ms = EXCLUDED.interval_ms,
-      next_run_at = LEAST(
-        job_schedule.next_run_at,
-        COALESCE(job_schedule.last_finished_at, now())
-          + make_interval(secs => ${intervalSecs})
-      ),
-      updated_at = now()
-  `);
-
-  const claimed = await claimRow(name, (opts.leaseMs ?? DEFAULT_LEASE_MS) / 1000);
-  if (!claimed) return false;
-
-  try {
-    await fn();
-    await releaseJob(name, "ok");
-    return true;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await releaseJob(name, "error", message).catch((relErr) =>
-      logError("job-coordinator-release-failed", relErr, { job: name }),
-    );
-    throw err;
-  }
-}
-
 // ─── Poll cycle ─────────────────────────────────────────────────────────────
 
 /**

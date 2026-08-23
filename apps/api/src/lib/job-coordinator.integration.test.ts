@@ -27,7 +27,6 @@ import {
   releaseJob,
   runDueJobs,
   consumeDueSlot,
-  runIfDue,
   runnerId,
   _resetRegistryForTests,
 } from "./job-coordinator.js";
@@ -440,26 +439,6 @@ describeMaybe("job coordinator against a real database", () => {
     // Only the passage of a week re-opens it.
     await shiftDue(name, "- interval '1 second'");
     expect(await consumeDueSlot(name, WEEK)).toBe(true);
-  });
-
-  it("runIfDue holds a lease for the duration and reports failures", async () => {
-    const name = jobName("ifdue");
-    let calls = 0;
-
-    expect(await runIfDue(name, 3600_000, async () => { calls++; })).toBe(true);
-    expect(await runIfDue(name, 3600_000, async () => { calls++; })).toBe(false);
-    expect(calls).toBe(1);
-
-    await shiftDue(name, "- interval '1 second'");
-    await expect(
-      runIfDue(name, 3600_000, async () => {
-        throw new Error("sweep failed");
-      }),
-    ).rejects.toThrow("sweep failed");
-
-    const r = await row(name);
-    expect(r!.last_outcome).toBe("error");
-    expect(r!.lease_owner).toBeNull();
   });
 
   // ── Registration healing ─────────────────────────────────────────────────
