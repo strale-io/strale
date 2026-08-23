@@ -632,6 +632,14 @@ describe("differential fuzz against both references", () => {
     // `json-canonicalize` disagrees" — pointing at the wrong culprit and
     // inviting someone to "fix" correct code. This test is the note they will
     // find instead.
+    //
+    // The guard upstream is `!= null`, so every falsy-but-non-null value trips
+    // it too: 0, false, "", {} and [] all skip the sort; only null does not.
+    //
+    // This asserts THIRD-PARTY behaviour, so `json-canonicalize` is pinned to
+    // an exact version (2.0.1) in package.json rather than a caret range. If
+    // someone deliberately bumps it and upstream has fixed the bug, this test
+    // goes red on purpose — delete it and the note together.
     const value = JSON.parse('{"toJSON": 1, "-1": 2}');
 
     expect(canonicalize(value)).toBe('{"-1":2,"toJSON":1}'); // RFC 8785 §3.2.3
