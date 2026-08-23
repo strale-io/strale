@@ -300,11 +300,22 @@ describe("properties JavaScript treats specially", () => {
     }
   });
 
-  it("inherited properties are excluded; only own members are canonicalized", () => {
+  it("an object with a populated prototype is refused, not partially serialized", () => {
+    // JSON.stringify emits only the own members, silently discarding whatever
+    // the prototype carried. That is plausible output for an object whose
+    // meaning is incomplete, so the allow-list refuses it instead.
     const proto = { inherited: "must not appear" };
     const child = Object.create(proto) as Record<string, unknown>;
     child.own = 1;
-    expect(canonicalize(child)).toBe('{"own":1}');
+    expect(JSON.stringify(child)).toBe('{"own":1}');
+    let err: unknown;
+    try {
+      canonicalize(child);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("unsupported_type");
   });
 
   it("a null-prototype object canonicalizes like any other", () => {
@@ -322,7 +333,7 @@ describe("properties JavaScript treats specially", () => {
     expect(canonicalize(o)).toBe('{"1":4,"10":1,"2":2,"b":3}');
   });
 
-  it("a toJSON on the PROTOTYPE is ignored, not honoured", () => {
+  it("a class instance is refused before its prototype toJSON can be reached", () => {
     class T {
       a = 1;
       toJSON() {
@@ -330,9 +341,59 @@ describe("properties JavaScript treats specially", () => {
       }
     }
     const inst = new T();
+    // JSON.stringify would let the object choose its own canonical form.
     expect(JSON.stringify({ k: inst })).toBe('{"k":"hijacked"}');
-    // Not an own enumerable member, so it is simply not serialized.
-    expect(canonicalize({ k: inst })).toBe('{"k":{"a":1}}');
+    let err: unknown;
+    try {
+      canonicalize({ k: inst });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("unsupported_type");
+  });
+
+  it("every exotic that JSON.stringify flattens to {} is refused", () => {
+    // Found by probing, and the reason the blocklist became an allow-list:
+    // each of these loses its entire meaning in output that looks like a
+    // legitimate empty object.
+    const exotics: Array<[string, unknown]> = [
+      ["Error", new Error("boom")],
+      ["Promise", Promise.resolve(1)],
+      ["WeakMap", new WeakMap()],
+      ["WeakSet", new WeakSet()],
+      ["ArrayBuffer", new ArrayBuffer(8)],
+      ["Map", new Map([["a", 1]])],
+      ["Set", new Set([1])],
+      ["Date", new Date(0)],
+      ["RegExp", /x/],
+      ["Uint8Array", new Uint8Array([1])],
+    ];
+    for (const [label, value] of exotics) {
+      expect(JSON.stringify({ k: value }), `${label} baseline`).toMatch(/^\{"k":(\{|")/);
+      let err: unknown;
+      try {
+        canonicalize({ k: value });
+      } catch (e) {
+        err = e;
+      }
+      expect(err, `${label} was not refused`).toBeInstanceOf(CanonicalizationError);
+    }
+  });
+
+  it("an array carrying non-index own properties is refused", () => {
+    // `const a = [1]; a.extra = 2` serializes as `[1]`, losing `extra`.
+    const arr: unknown[] & { extra?: string } = [1, 2];
+    arr.extra = "dropped by JSON.stringify";
+    expect(JSON.stringify(arr)).toBe("[1,2]");
+    let err: unknown;
+    try {
+      canonicalize(arr);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("sparse_or_exotic_array");
   });
 
   it("symbol keys and non-enumerable properties are excluded, as JSON requires", () => {

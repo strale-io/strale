@@ -242,9 +242,42 @@ function serialize(value: unknown, path: string, seen: Set<object>, depth = 0): 
   }
   seen.add(obj);
   try {
+    // ── ALLOW-LIST, not a blocklist ──────────────────────────────────────
+    //
+    // The blocklist this replaced named Map, Set, Date, RegExp, typed arrays
+    // and boxed primitives, and was still incomplete: probing found Error,
+    // Promise, WeakMap, WeakSet and ArrayBuffer all serializing to `{}` — the
+    // object's entire meaning gone, silently, in output that looks like a
+    // legitimate empty object. Each was found one at a time, which is the
+    // wrong shape of defence for a commitment primitive.
+    //
+    // Only two things have a faithful JSON form: a plain object and a plain
+    // array. Everything else is refused by construction, so a value type
+    // nobody has thought of yet fails closed instead of being committed to.
+    if (nodeTypes.isProxy(obj)) {
+      // A Proxy of a plain object passes the prototype check below, because
+      // getPrototypeOf forwards to the target — and its `get` trap can return
+      // a different value on every read. Checked before, not after.
+      throw new CanonicalizationError(
+        "unsupported_type",
+        path,
+        "a Proxy can return a different value on each read, so it has no stable canonical form",
+      );
+    }
+
     if (Array.isArray(value)) {
-      // A sparse array's holes would serialize as null under JSON.stringify —
-      // another silent coercion. Refuse instead.
+      // An array's own non-index properties are dropped by JSON.stringify:
+      // `const a = [1]; a.extra = 2` serializes as `[1]`, losing `extra`
+      // without a word.
+      const stray = Object.keys(obj).filter((k) => String(Number(k)) !== k);
+      if (stray.length > 0) {
+        throw new CanonicalizationError(
+          "sparse_or_exotic_array",
+          path,
+          `array carries non-index own propert${stray.length === 1 ? "y" : "ies"} ` +
+            `(${stray.join(", ")}) that JSON.stringify would silently drop`,
+        );
+      }
       for (let i = 0; i < value.length; i++) {
         if (!(i in value)) {
           throw new CanonicalizationError(
@@ -258,48 +291,13 @@ function serialize(value: unknown, path: string, seen: Set<object>, depth = 0): 
       return `[${parts.join(",")}]`;
     }
 
-    // A Proxy can vary what it returns on every read, exactly like a getter —
-    // and it defeats the accessor check below, because its
-    // getOwnPropertyDescriptor trap reports a plain DATA descriptor while the
-    // `get` trap does the varying. Found by probing: the same Proxy
-    // canonicalized to {"a":1,"k":1} then {"a":1,"k":2}. Unreachable from
-    // JSON.parse, but a commitment primitive must not rest on that.
-    if (nodeTypes.isProxy(obj)) {
+    const proto = Object.getPrototypeOf(obj);
+    if (proto !== Object.prototype && proto !== null) {
       throw new CanonicalizationError(
         "unsupported_type",
         path,
-        "a Proxy can return a different value on each read, so it has no stable canonical form",
-      );
-    }
-
-    // Boxed primitives serialize into MISLEADING JSON rather than failing:
-    // `new Number(1)` and `new Boolean(true)` both become `{}` — the value
-    // disappears entirely — and `new String("x")` becomes `{"0":"x"}`, an
-    // index map. This is the one place we deliberately diverge from
-    // JSON.stringify, which unwraps them; unwrapping silently would let two
-    // different JS values share a commitment.
-    if (obj instanceof String || obj instanceof Number || obj instanceof Boolean) {
-      throw new CanonicalizationError(
-        "unsupported_type",
-        path,
-        `${obj.constructor.name} object: pass the primitive, not its wrapper`,
-      );
-    }
-
-    // Reject the exotic objects JSON.stringify would happily mangle. Map and
-    // Set stringify as `{}`, losing every entry without complaint.
-    if (
-      obj instanceof Map ||
-      obj instanceof Set ||
-      obj instanceof Date ||
-      obj instanceof RegExp ||
-      ArrayBuffer.isView(obj)
-    ) {
-      throw new CanonicalizationError(
-        "unsupported_type",
-        path,
-        `${obj.constructor?.name ?? "exotic object"} has no canonical JSON form; ` +
-          "convert it deliberately at the call site",
+        `${obj.constructor?.name ?? "non-plain object"} has no faithful JSON form; ` +
+          "convert it to a plain object at the call site",
       );
     }
 
