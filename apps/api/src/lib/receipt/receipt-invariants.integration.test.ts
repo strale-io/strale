@@ -55,6 +55,11 @@ const DECL: CapabilityDeclarationSource = {
   processesPersonalData: false,
   personalDataCategories: [],
   gdprArt22Classification: "data_lookup",
+  name: "VAT Validate",
+  dataClassification: "public",
+  x402Method: "POST",
+  dataUpdateCycleDays: null,
+  datasetLastUpdated: null,
 };
 
 const ran = (order: number, slug: string, fill: string): SolutionStepIdentity => ({

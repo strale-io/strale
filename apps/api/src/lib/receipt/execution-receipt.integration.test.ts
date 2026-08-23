@@ -60,6 +60,11 @@ const BASE_DECL: CapabilityDeclarationSource = {
   processesPersonalData: false,
   personalDataCategories: [],
   gdprArt22Classification: "data_lookup",
+  name: "VAT Validate",
+  dataClassification: "public",
+  x402Method: "POST",
+  dataUpdateCycleDays: null,
+  datasetLastUpdated: null,
 };
 
 function baseReceipt(overrides: Partial<ReceiptInput> = {}): ReceiptInput {
