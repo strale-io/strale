@@ -132,11 +132,13 @@ scope:
 proof:
   lane: real Postgres, --no-file-parallelism, startup migrations applied as boot applies them
   new_suites:
-    - src/lib/job-coordinator.integration.test.ts (23 tests, real Postgres)
+    - src/lib/job-coordinator.integration.test.ts (29 tests, real Postgres)
     - src/jobs/onboarding-retry.integration.test.ts (10 tests, real Postgres)
+    - src/lib/with-deadline.ts is shared by the coordinator and the sweeper, so no
+      job module holds a timer and the lint stays absolute
     - src/jobs/job-migration.integration.test.ts (11 tests, real Postgres)
     - src/lib/job-coordinator.watchdog.test.ts (19 tests, pure function)
-    - src/jobs/no-boot-relative-timers.test.ts (13 tests, source lint)
+    - src/jobs/no-boot-relative-timers.test.ts (15 tests, source lint, fail-closed)
     - src/jobs/no-boot-relative-timers.test.ts (13 tests, no DB)
     - src/lib/job-coordinator.watchdog.test.ts (19 tests, no DB)
   fail_before_proven:
@@ -197,6 +199,84 @@ deploy_notes:
     Every job's row is created due at `now() + startupDelay`, so the first boot
     after this deploys behaves exactly as today: one run per job at its startup
     delay. Cadence becomes durable from the second run onward.
+
+concurrency_audit:
+  scope: >
+    Round-2 review brief, invariants 1-6. Every property below is proven
+    behaviourally against a real Postgres, with fail-before demonstrated by
+    mutating the implementation and watching the named test go red. No property
+    here rests on inspecting lease_owner, a timeout constant, SQL text, or a
+    comment.
+  invariant_1_watchdog_never_grants_claimability: >
+    PROVEN. One test walks the timeline: claim at T0; let the watchdog fire;
+    assert NOT claimable; move the deadline to one second in the future, assert
+    still NOT claimable; move it one millisecond into the past, assert claimable
+    and reported as crash recovery. Each step calls claimJob rather than reading
+    a column. Reverting watchdogFor to `return leaseMs` turns this red, along
+    with seven arithmetic properties in the unit suite.
+  invariant_2_stale_handler_cannot_touch_a_successor: >
+    PROVEN, and it required a fix. `releaseJob` guarded on `lease_owner`, which
+    held RUNNER_ID — a constant for the life of the PROCESS. That cannot
+    distinguish claim A from claim B when both are made by the same process,
+    which is exactly the takeover path in production: a job re-claimed on a
+    later poll after its lease expired. `lease_owner` now carries a per-claim
+    token, minted at claim and required by release. The test models A claims,
+    A abandoned, A's lease expires, B claims, A returns — and asserts B's lease
+    owner, outcome, error, attempt counter, next run and finish mark are all
+    unchanged, while asserting A and B share a process. Reverting the token to
+    RUNNER_ID turns it red.
+  invariant_3_head_of_line_blocking_is_bounded: >
+    PROVEN for the coordinator, with a stated limit. The deadline is attached to
+    the handler's promise, so the coordinator regains control within
+    MAX_HANDLER_WAIT_MS regardless of what the handler is doing — no cooperation
+    from the handler is required. It cannot CANCEL the work, and does not claim
+    to. Audit of the eleven handlers: five open their own postgres client and so
+    escape the pool's 30s statement_timeout (quality-floor,
+    capability-promotion, both ingests for their advisory-lock sessions, and
+    reindex-transactions for the REINDEX itself); all five close that client in
+    a `finally`, so an abandoned run releases its connection and advisory lock
+    when it eventually settles. The only two handlers that make external calls
+    (the ingests) bound them with AbortSignal.timeout. reindex-transactions is
+    the one genuinely unbounded operation, which is why it carries a 2h lease.
+    The bound is PER HANDLER, not per cycle: jobs are attempted sequentially, so
+    eleven simultaneous hangs would stall the last by eleven times the ceiling.
+    Stated in the runDueJobs docstring so nobody reads 15 minutes as a cycle
+    bound.
+  invariant_4_recovery_semantics_are_coherent: >
+    PROVEN. One test walks healthy -> failure -> retry -> failure -> recovery ->
+    later failure, asserting at each transition the outcome, the error (set,
+    replaced, then CLEARED on success), the consecutive-failure count, the lease
+    owner, and that the next run is a backoff shorter than the interval while
+    failing and a full interval when healthy. The last step is the one that
+    matters most: a later, unrelated failure starts a NEW streak at 1, not at 3,
+    which is what makes the counter mean "consecutive" and is the property the
+    sweeper's retry budget depends on.
+  invariant_5_watchdog_and_lease_are_separate_authorities: >
+    PROVEN. watchdogFor is bounded on both sides — never above 15 minutes, and
+    strictly less than the lease at every size in real use (2s, 4s, 30s, 5min,
+    30min, 60min, 2h, 24h). The watchdog says how long THIS coordinator waits;
+    the lease says when ANOTHER may take ownership. registerJob now rejects
+    leaseMs below 1000ms so the degenerate end cannot be reached.
+  invariant_6_shutdown_does_not_manufacture_availability: >
+    HELD BY OMISSION, deliberately. No shutdown hook clears leases. Round 1
+    proposed one; it is refused because during the grace period the handler may
+    still be draining while the incoming process is already polling, so clearing
+    the lease is precisely how overlapping execution starts — invariant 1 in
+    another guise. The reviewer withdrew the suggestion. A lease stranded by a
+    kill is indistinguishable from one stranded by a crash, and waiting out the
+    deadline IS the recovery path. next_run_at is never advanced by a stranded
+    lease, so the cost is one bounded late run, not starvation.
+
+process_note_review_contaminated_a_commit: >
+  Recorded because the program's value depends on its own evidence being
+  trustworthy. The round-1 review agent was launched WITHOUT worktree isolation,
+  against the Shared-Checkout Rule in CLAUDE.md. While verifying fail-before it
+  mutated `watchdogFor` in the shared tree, and a `git add -A` swept that
+  mutation into commit 7b1185d — whose message describes the bounded form while
+  its code contains the unbounded one. The next commit (7d486dd) swept the
+  restore back in, so HEAD was never wrong, but 7b1185d is a red commit and any
+  test figures attributed to it are invalid. The branch is squash-merged, so it
+  never reaches main. Every later review round runs in an isolated worktree.
 
 residual_risks:
   lease_shorter_than_a_slow_run: >
