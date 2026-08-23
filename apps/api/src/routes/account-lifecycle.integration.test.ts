@@ -81,12 +81,27 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     await client.end();
   });
 
+  /**
+   * Every user id this run created, including ones whose email the closure
+   * endpoint has since replaced with a sentinel.
+   *
+   * Matching on the email prefix alone is not enough and the gap is not
+   * theoretical: closure rewrites the address to `redacted-<uuid>@deleted.local`,
+   * so a test that closes an account and then fails an assertion before its
+   * own cleanup leaves a wallet and a `closure_forfeit` ledger row behind
+   * forever. Three such rows accumulated during the fail-before runs here and
+   * broke an unrelated suite whose assertion selects `closure_forfeit` rows
+   * without scoping them to its own wallet.
+   */
+  const createdUserIds = new Set<string>();
+
   afterEach(async () => {
     const created = await db
       .select({ id: users.id })
       .from(users)
       .where(like(users.email, `wp11-${RUN}-%`));
-    const ids = created.map((r) => r.id);
+    for (const r of created) createdUserIds.add(r.id);
+    const ids = [...createdUserIds];
     if (ids.length > 0) {
       const ws = await db
         .select({ id: wallets.id })
@@ -120,18 +135,45 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
    * an explicit IP and seed the prior grants directly — the two limits are
    * different rules and proving one must not depend on the other.
    */
+  // The counter alone is not enough: the limiter's rows outlive the process,
+  // so a second run inside the same 60-second window re-uses run one's
+  // addresses and produces 429s that read as assertion failures. The high
+  // octets are seeded from this run's identifier so the namespace is fresh
+  // every time. Found while proving the fail-before state — two recovery
+  // tests "failed" against the pre-fix code for the wrong reason.
+  // 254 usable host octets per /24, so the mapping below is a bijection from
+  // the counter onto distinct addresses.
+  const IP_SEED = (Number.parseInt(RUN.slice(0, 6), 16) % 30000) * 64;
   let ipCounter = 0;
   function freshIp(): string {
     ipCounter += 1;
-    return `10.${(ipCounter >> 8) & 0xff}.${ipCounter & 0xff}.${(ipCounter % 7) + 1}`;
+    const n = IP_SEED + ipCounter;
+    const host = (n % 254) + 1;
+    const third = Math.floor(n / 254) % 256;
+    const second = Math.floor(n / (254 * 256)) % 128;
+    return `10.${second}.${third}.${host}`;
   }
 
-  function register(body: unknown, ip = freshIp()) {
-    return app.request("http://localhost/v1/auth/register", {
+  /**
+   * Registers, and records the created id for cleanup before the caller sees
+   * the response.
+   *
+   * Recording at creation rather than in `afterEach` is what makes cleanup
+   * survive a failing assertion: by the time the hook runs, a test that closed
+   * the account has already had its email rewritten to a sentinel, and no
+   * prefix match can find it.
+   */
+  async function register(body: unknown, ip = freshIp()): Promise<Response> {
+    const res = await app.request("http://localhost/v1/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-forwarded-for": ip },
       body: JSON.stringify(body),
     });
+    if (res.status === 201) {
+      const peek = (await res.clone().json()) as { user_id?: string };
+      if (peek.user_id) createdUserIds.add(peek.user_id);
+    }
+    return res;
   }
 
   async function walletOf(userId: string) {
@@ -304,7 +346,9 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     // the question.
     const { hashIp } = await import("../lib/middleware.js");
     const { MAX_TRIAL_GRANTS_PER_IP } = await import("../lib/trial-eligibility.js");
-    const ip = `10.199.${RUN.charCodeAt(1) % 200}.7`;
+    // Fixed for this test but still drawn from the run-unique namespace, so
+    // a rerun inside the register limiter window does not collide with itself.
+    const ip = freshIp();
     const ipHash = hashIp(ip);
 
     // One below the cap: still granted.
@@ -360,7 +404,9 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     const { hashEmail } = await import("../lib/trial-eligibility.js");
     const { hashIp } = await import("../lib/middleware.js");
     const email = emailFor("agent-spent");
-    const ip = `10.201.${RUN.charCodeAt(3) % 200}.9`;
+    // /v1/signup is limited to 1 per DAY per IP, so a repeated address is a
+    // 429 tomorrow as well as today. Drawn from the run-unique namespace.
+    const ip = freshIp();
 
     await db.insert(trialGrants).values({
       emailHash: hashEmail(email),
@@ -427,6 +473,75 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       }),
     ).rejects.toThrow();
     await db.delete(trialGrants).where(eq(trialGrants.emailHash, emailHash));
+  });
+
+  it("the migration backfills entitlements for accounts that predate the rule", async () => {
+    // Without the backfill the rule grandfathers in every existing account:
+    // each of the 59 production wallets holding a trial_credit entry could
+    // close and re-register for a second grant on the day this ships. Proved
+    // against the real block rather than the SQL text, because the hash has to
+    // agree with `hashEmail` for the entitlement to apply to anything.
+    const { hashEmail } = await import("../lib/trial-eligibility.js");
+    const { runMigration0102_accountLifecycleTables } = await import(
+      "../lib/startup-migrations.js"
+    );
+    const email = emailFor("legacy");
+
+    // An account exactly as it looked before WP11: user, wallet, trial ledger
+    // entry, and no entitlement row anywhere.
+    const legacyId = randomUUID();
+    createdUserIds.add(legacyId);
+    await db.insert(users).values({
+      id: legacyId,
+      email,
+      apiKeyHash: `hash-${legacyId}`,
+      keyPrefix: "sk_live_wp11",
+    });
+    const [legacyWallet] = await db
+      .insert(wallets)
+      .values({ userId: legacyId, balanceCents: 200 })
+      .returning({ id: wallets.id });
+    await db.insert(walletTransactions).values({
+      walletId: legacyWallet!.id,
+      amountCents: 200,
+      type: "trial_credit",
+      description: "Welcome trial credits",
+    });
+    expect(
+      await db.select().from(trialGrants).where(eq(trialGrants.emailHash, hashEmail(email))),
+    ).toHaveLength(0);
+
+    // Re-arm the one-shot gate so the block's backfill runs again here.
+    await db.execute(
+      sql`DELETE FROM startup_migration_ledger WHERE block = '0102_account_lifecycle_tables'`,
+    );
+    await runMigration0102_accountLifecycleTables(db as never);
+
+    const backfilled = await db
+      .select()
+      .from(trialGrants)
+      .where(eq(trialGrants.emailHash, hashEmail(email)));
+    expect(backfilled).toHaveLength(1);
+    expect(backfilled[0]!.channel).toBe("backfill");
+    expect(backfilled[0]!.grantedCents).toBe(200);
+    expect(backfilled[0]!.userId).toBe(legacyId);
+
+    // And the entitlement now bites: the same address cannot take a second
+    // grant, which is the whole point of seeding it.
+    await db.delete(walletTransactions).where(eq(walletTransactions.walletId, legacyWallet!.id));
+    await db.delete(wallets).where(eq(wallets.id, legacyWallet!.id));
+    await db.delete(users).where(eq(users.id, legacyId));
+
+    const res = await register({ email });
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      wallet_balance_cents: number;
+      trial_credits?: { reason: string };
+    };
+    expect(body.wallet_balance_cents).toBe(0);
+    expect(body.trial_credits).toMatchObject({ reason: "email_already_granted" });
+
+    await db.delete(trialGrants).where(eq(trialGrants.emailHash, hashEmail(email)));
   });
 
   // ── Proof before rotation ────────────────────────────────────────────────

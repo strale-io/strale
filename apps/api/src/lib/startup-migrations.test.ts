@@ -65,6 +65,7 @@ import {
   runMigration0082_reclassifyThrottledFreeUnlimited,
   runMigration0087_unhideRedactedRows,
   runMigration0093_fixtureRecaptureFailures,
+  runMigration0102_accountLifecycleTables,
   runMigration0066_ensureEligibilityColumnAndReconcile,
   runMigration0094_clearChurnInvalidatedBaselines,
   runMigration0100_relistUrlToMarkdown,
@@ -1234,6 +1235,65 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
     const result = await runMigration0087_unhideRedactedRows(stub);
     expect(result.rows_affected).toBe(0);
     expect(result.outcome).toMatch(/no change/);
+  });
+});
+
+describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
+  it("creates both tables and their indexes idempotently", async () => {
+    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    const result = await runMigration0102_accountLifecycleTables(stub);
+
+    const ddl = stub.renderedSql.join(" ").toLowerCase();
+    expect(ddl).toMatch(/create table if not exists "trial_grants"/);
+    expect(ddl).toMatch(/create unique index if not exists "trial_grants_email_hash_unique"/);
+    expect(ddl).toMatch(/create table if not exists "api_key_recovery_tokens"/);
+    expect(ddl).toMatch(
+      /create unique index if not exists "api_key_recovery_tokens_token_hash_unique"/,
+    );
+    expect(result.outcome).toMatch(/tables and indexes ensured/i);
+  });
+
+  it("the backfill cannot duplicate an entitlement", async () => {
+    // The UNIQUE index is the rule this block installs, so a backfill that
+    // could violate it would abort boot rather than silently skipping.
+    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    await runMigration0102_accountLifecycleTables(stub);
+    const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s));
+    expect(insert).toBeDefined();
+    expect(insert!.toLowerCase()).toMatch(/on conflict \(email_hash\) do nothing/);
+  });
+
+  it("computes the email hash the same way hashEmail does", async () => {
+    // The two halves of one rule live in different languages. If they diverge,
+    // every backfilled row is keyed on a hash the application will never
+    // produce, and the entitlement silently stops applying to exactly the
+    // accounts it was created to cover.
+    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    await runMigration0102_accountLifecycleTables(stub);
+    const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s))!;
+    expect(insert.toLowerCase()).toContain(
+      "encode(sha256(convert_to(lower(btrim(u.email)), 'utf8')), 'hex')",
+    );
+  });
+
+  it("skips accounts whose address has already been erased", async () => {
+    // A redacted row has no recoverable address, so no hash can be computed
+    // for it. Stated in the query rather than left implicit, because a future
+    // reader could easily read the omission as an oversight.
+    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, []] });
+    await runMigration0102_accountLifecycleTables(stub);
+    const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s))!;
+    expect(insert.toLowerCase()).toMatch(/u\.deleted_at is null/);
+    expect(insert.toLowerCase()).toMatch(/redacted-%@deleted\.local/);
+  });
+
+  it("does not re-run the backfill once the ledger records it", async () => {
+    // A second boot must not re-scan the users table. ON CONFLICT would make
+    // a re-run harmless, but the ledger gate is what keeps a boot cheap.
+    const stub = makeStub({ queue: [undefined, undefined, undefined, undefined, undefined, undefined, undefined, [{ block: "0102_account_lifecycle_tables" }]] });
+    const result = await runMigration0102_accountLifecycleTables(stub);
+    expect(stub.renderedSql.some((s) => /insert into "trial_grants"/i.test(s))).toBe(false);
+    expect(result.outcome).toMatch(/already applied/i);
   });
 });
 

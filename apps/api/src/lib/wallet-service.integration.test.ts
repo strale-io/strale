@@ -17,7 +17,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { randomUUID } from "node:crypto";
@@ -210,10 +210,21 @@ describeMaybe("wallet service against a real database", () => {
     expect(await balance()).toBe(0);
     await expectLedgerReconciled();
 
+    // Scoped to this test's own wallet. The predicate used to be `type =
+    // 'closure_forfeit'` alone, which reads whatever row happens to sort
+    // first across the whole shared lane database — so any other suite that
+    // closes an account, or fails before cleaning one up, decides this
+    // assertion. WP11 added such a suite and this test started reporting
+    // -200 for a wallet it had just seeded with 1234.
     const [entry] = await db
       .select()
       .from(walletTransactions)
-      .where(eq(walletTransactions.type, "closure_forfeit"));
+      .where(
+        and(
+          eq(walletTransactions.walletId, walletId),
+          eq(walletTransactions.type, "closure_forfeit"),
+        ),
+      );
     expect(entry).toBeTruthy();
     expect(entry!.amountCents).toBe(-1234);
   });
