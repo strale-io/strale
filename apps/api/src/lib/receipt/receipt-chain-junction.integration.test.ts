@@ -388,6 +388,20 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     const poison = randomUUID();
     const healthy = await agedTransaction();
 
+    // The epoch is REPLACED for the duration, not borrowed.
+    //
+    // The first version inserted the poison row at `now() - 2 minutes` and
+    // relied on the real epoch being older than that. True on a long-lived
+    // database and false on a freshly-migrated one, where the epoch is seconds
+    // old - so the row was PRE-epoch, perfectly updatable, and the test proved
+    // nothing. It passed locally and failed in CI, which is the right way
+    // round to find out but not a difference the test should have had.
+    //
+    // Substituting a deliberately old epoch makes the row post-epoch by
+    // construction, independent of how old the database is. The original
+    // definition is restored at the end, so the real epoch instant - which the
+    // design calls the single immutable record of when enforcement began - is
+    // unchanged.
     await db.execute(sql`
       ALTER TABLE transactions DROP CONSTRAINT transactions_post_epoch_has_receipt
     `);
@@ -400,37 +414,45 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
                 '{}'::jsonb, now() - interval '2 minutes', now() - interval '2 minutes',
                 NULL, NULL)
       `);
+      await db.execute(sql`
+        ALTER TABLE transactions
+          ADD CONSTRAINT transactions_post_epoch_has_receipt
+          CHECK (created_at < now() - interval '10 minutes' OR receipt_status IS NOT NULL)
+          NOT VALID
+      `);
+
+      // Sanity: the row really is un-updatable, or the test proves nothing.
+      await expect(
+        db.execute(sql`
+          UPDATE transactions SET latency_ms = 1 WHERE id = ${poison}::uuid
+        `),
+      ).rejects.toThrow(/transactions_post_epoch_has_receipt/);
+
+      await runOnce();
+
+      // The property: the innocent neighbour still chained.
+      const h = await row(healthy);
+      expect(
+        h.integrity_hash,
+        "one un-updatable row stopped the whole chain - the savepoint is not working",
+      ).not.toBeNull();
+
+      // And the poison row did not chain, which is correct and expected.
+      const p = await row(poison);
+      expect(p.integrity_hash).toBeNull();
     } finally {
-      // Same definition, so the epoch is unchanged.
+      // DELETE is permitted - the CHECK constrains INSERT and UPDATE - and the
+      // real epoch definition goes back regardless of how the assertions went.
+      await db.execute(sql`DELETE FROM transactions WHERE id = ${poison}::uuid`);
+      await db.execute(sql`
+        ALTER TABLE transactions DROP CONSTRAINT transactions_post_epoch_has_receipt
+      `);
       await db.execute(
         sql.raw(
           `ALTER TABLE transactions ADD CONSTRAINT transactions_post_epoch_has_receipt ${def}`,
         ),
       );
     }
-
-    // Sanity: the row really is un-updatable, or the test proves nothing.
-    await expect(
-      db.execute(sql`
-        UPDATE transactions SET latency_ms = 1 WHERE id = ${poison}::uuid
-      `),
-    ).rejects.toThrow(/transactions_post_epoch_has_receipt/);
-
-    await runOnce();
-
-    // The property: the innocent neighbour still chained.
-    const h = await row(healthy);
-    expect(
-      h.integrity_hash,
-      "one un-updatable row stopped the whole chain - the savepoint is not working",
-    ).not.toBeNull();
-
-    // And the poison row did not chain, which is correct and expected.
-    const p = await row(poison);
-    expect(p.integrity_hash).toBeNull();
-
-    // DELETE is still permitted - the CHECK constrains INSERT and UPDATE.
-    await db.execute(sql`DELETE FROM transactions WHERE id = ${poison}::uuid`);
   });
 
   it("the worker chains a row exactly once", async () => {
