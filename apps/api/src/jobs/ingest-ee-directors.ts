@@ -54,6 +54,7 @@ import { getDb } from "../db/index.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { log, logError, logWarn } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const INGEST_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STARTUP_DELAY_MS = 10 * 60 * 1000;
@@ -546,27 +547,15 @@ export async function runIngestOnce(): Promise<IngestResult> {
 
 // ─── Lifecycle wiring ────────────────────────────────────────────────────────
 
-let intervalHandle: ReturnType<typeof setInterval> | null = null;
-let startupTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export function startEeDirectorsIngest(): void {
-  if (intervalHandle || startupTimeout) return;
-  startupTimeout = setTimeout(() => {
-    fireAndForget(() => runIngestOnce(), { label: "ingest-ee-directors-tick" });
-    intervalHandle = setInterval(() => {
-      if (isShuttingDown()) return;
-      fireAndForget(() => runIngestOnce(), { label: "ingest-ee-directors-tick" });
-    }, INGEST_INTERVAL_MS);
-  }, STARTUP_DELAY_MS);
+  // WP10 (CR-08): cadence moved into `job_schedule`. See the CY sibling.
+  registerJobSync({
+    name: "ingest-ee-directors",
+    intervalMs: INGEST_INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    leaseMs: 2 * 60 * 60 * 1000,
+    handler: runIngestOnce,
+  });
 }
 
-export function stopEeDirectorsIngestForTest(): void {
-  if (startupTimeout) {
-    clearTimeout(startupTimeout);
-    startupTimeout = null;
-  }
-  if (intervalHandle) {
-    clearInterval(intervalHandle);
-    intervalHandle = null;
-  }
-}

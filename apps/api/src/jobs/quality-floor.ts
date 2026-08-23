@@ -65,6 +65,7 @@ import { evaluateFloor, DEFAULT_FLOOR_CONFIG, type FloorStats } from "../lib/qua
 import { INTERNAL_EMAIL_LIKE_PATTERNS, EXTRA_EXCLUDED_EMAILS } from "../lib/internal-accounts.js";
 import { FACT_WRITE_FAILED_EVENT } from "../lib/invocation-facts.js";
 import { logError, logWarn } from "../lib/log.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const STARTUP_DELAY_MS = 15 * 60 * 1000; // let boot rush + first traffic settle
 const INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -695,10 +696,18 @@ export async function runQualityFloorOnce(): Promise<{
 }
 
 export function startQualityFloor(): void {
-  setTimeout(() => {
-    void runQualityFloorOnce();
-    setInterval(() => void runQualityFloorOnce(), INTERVAL_MS);
-  }, STARTUP_DELAY_MS);
+  // WP10 (CR-08): the cadence lives in `job_schedule`, not in a timer. Before
+  // this, INTERVAL_MS was aspirational — with a 1.0h median process lifetime
+  // the `setInterval` arm never fired, and the floor ran once per deploy: 51
+  // ticks in the seven days to 2026-08-23 against a declared 24h period. The
+  // floor QUARANTINES capabilities, so that made deploy frequency, not policy,
+  // the enforcement window.
+  registerJobSync({
+    name: "quality-floor",
+    intervalMs: INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    handler: runQualityFloorOnce,
+  });
   logWarn("quality-floor-scheduled", "daily quality-floor tick scheduled", {
     mode: isEnforceMode() ? "enforce" : "dry_run",
     startup_delay_ms: STARTUP_DELAY_MS,

@@ -58,6 +58,7 @@ import postgres from "postgres";
 import { fireAndForget } from "../lib/fire-and-forget.js";
 import { log, logError } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const INGEST_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // weekly + skip-if-unchanged
 const STARTUP_DELAY_MS = 10 * 60 * 1000;
@@ -584,27 +585,18 @@ export async function runIngestOnce(): Promise<IngestResult> {
 
 // ─── Lifecycle wiring ────────────────────────────────────────────────────────
 
-let intervalHandle: ReturnType<typeof setInterval> | null = null;
-let startupTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export function startCyDirectorsIngest(): void {
-  if (intervalHandle || startupTimeout) return;
-  startupTimeout = setTimeout(() => {
-    fireAndForget(() => runIngestOnce(), { label: "ingest-cy-directors-tick" });
-    intervalHandle = setInterval(() => {
-      if (isShuttingDown()) return;
-      fireAndForget(() => runIngestOnce(), { label: "ingest-cy-directors-tick" });
-    }, INGEST_INTERVAL_MS);
-  }, STARTUP_DELAY_MS);
+  // WP10 (CR-08): cadence moved into `job_schedule`. A WEEKLY registry ingest
+  // whose only surviving arm was the 10-minute startup delay ran on every
+  // deploy — the `last_modified_upstream` guard kept that cheap, but the
+  // declared weekly period was not the real one.
+  registerJobSync({
+    name: "ingest-cy-directors",
+    intervalMs: INGEST_INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    leaseMs: 2 * 60 * 60 * 1000,
+    handler: runIngestOnce,
+  });
 }
 
-export function stopCyDirectorsIngestForTest(): void {
-  if (startupTimeout) {
-    clearTimeout(startupTimeout);
-    startupTimeout = null;
-  }
-  if (intervalHandle) {
-    clearInterval(intervalHandle);
-    intervalHandle = null;
-  }
-}

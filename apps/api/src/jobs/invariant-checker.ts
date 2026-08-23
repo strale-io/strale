@@ -21,6 +21,7 @@ import { alertOnce } from "../lib/alert-once.js";
 import { randomUUID } from "node:crypto";
 import { log, logError, logWarn } from "../lib/log.js";
 import { isShuttingDown } from "../lib/shutdown.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 import {
   classifyTransactionFailure,
   type TransactionFailureClass,
@@ -196,17 +197,16 @@ export function startInvariantChecker(): void {
     "invariant-started",
   );
 
-  // Run once on startup after DB warms up
-  setTimeout(() => {
-    if (isShuttingDown()) return;
-    runInvariantChecks().catch((err) => logError("invariant-startup-run-failed", err));
-  }, STARTUP_DELAY_MS);
+  // WP10 (CR-08): cadence moved into `job_schedule`. This job holds no
+  // advisory lock, so before WP10 two overlapping processes could both run it;
+  // the coordinator's lease now provides the exclusion as a side effect.
+  registerJobSync({
+    name: "invariant-checker",
+    intervalMs: CHECK_INTERVAL_MS,
+    startupDelayMs: STARTUP_DELAY_MS,
+    handler: runInvariantChecks,
+  });
 
-  // Recurring 2-hour check
-  setInterval(() => {
-    if (isShuttingDown()) return;
-    runInvariantChecks().catch((err) => logError("invariant-scheduled-run-failed", err));
-  }, CHECK_INTERVAL_MS);
 }
 
 

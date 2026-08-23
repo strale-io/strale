@@ -27,6 +27,7 @@ import { alertOnce } from "../lib/alert-once.js";
 import { log, logWarn } from "../lib/log.js";
 import { externalCustomers } from "../lib/metrics/populations.js";
 import { ACTOR_KEY_SQL } from "../lib/metrics/actor-identity.js";
+import { registerJobSync } from "../lib/job-coordinator.js";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly — the gap we care about is hours
 const ALERT_COOLDOWN_MS = 12 * 60 * 60 * 1000;
@@ -164,6 +165,13 @@ async function tick(): Promise<void> {
 
 export function startRevenueHeartbeat(): void {
   log.info({ label: "revenue-heartbeat-start" }, "revenue-heartbeat-start");
-  void tick();
-  setInterval(() => void tick(), CHECK_INTERVAL_MS).unref();
+  // WP10 (CR-08): cadence moved into `job_schedule`. This job had no startup
+  // delay and an hourly interval, so with a 1.0h median process lifetime it
+  // was the starvation case rather than the over-run case: it fired at boot
+  // and often never reached its first interval tick.
+  registerJobSync({
+    name: "revenue-heartbeat",
+    intervalMs: CHECK_INTERVAL_MS,
+    handler: tick,
+  });
 }
