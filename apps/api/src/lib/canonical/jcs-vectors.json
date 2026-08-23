@@ -1,0 +1,494 @@
+{
+  "_comment": [
+    "RFC 8785 conformance vectors, committed. `expected` is the canonical STRING.",
+    "Hand-derived from the RFC's rules, NOT generated from the implementation under",
+    "test — a vector produced by the code it checks proves nothing. Two independent",
+    "implementations are asserted to agree with every one of them in jcs.test.ts;",
+    "a disagreement fails the suite rather than being noted.",
+    "Values outside the JSON domain (NaN, BigInt, cycles, Map, Date, sparse arrays,",
+    "lone surrogates) cannot be expressed in a JSON file and live in the test."
+  ],
+  "property_ordering": [
+    {
+      "name": "top-level keys sort by UTF-16 code unit",
+      "input": {
+        "b": 1,
+        "a": 2,
+        "c": 3
+      },
+      "expected": "{\"a\":2,\"b\":1,\"c\":3}"
+    },
+    {
+      "name": "sorting is recursive, not just top level",
+      "input": {
+        "z": {
+          "d": 1,
+          "b": 2
+        },
+        "a": {
+          "y": 3,
+          "x": 4
+        }
+      },
+      "expected": "{\"a\":{\"x\":4,\"y\":3},\"z\":{\"b\":2,\"d\":1}}"
+    },
+    {
+      "name": "digits and uppercase sort before lowercase (code unit, not locale)",
+      "input": {
+        "a": 1,
+        "A": 2,
+        "1": 3,
+        "_": 4
+      },
+      "expected": "{\"1\":3,\"A\":2,\"_\":4,\"a\":1}"
+    },
+    {
+      "name": "the empty key is legal and sorts first",
+      "input": {
+        "a": 1,
+        "": 2
+      },
+      "expected": "{\"\":2,\"a\":1}"
+    },
+    {
+      "name": "a shorter key that is a prefix sorts before the longer one",
+      "input": {
+        "ab": 1,
+        "a": 2,
+        "abc": 3
+      },
+      "expected": "{\"a\":2,\"ab\":1,\"abc\":3}"
+    },
+    {
+      "name": "array order is DATA and is never sorted",
+      "input": {
+        "k": [
+          3,
+          1,
+          2
+        ]
+      },
+      "expected": "{\"k\":[3,1,2]}"
+    }
+  ],
+  "unicode_ordering": [
+    {
+      "name": "ASCII sorts before Latin-1 supplement",
+      "input": {
+        "é": 1,
+        "z": 2,
+        "a": 3
+      },
+      "expected": "{\"a\":3,\"z\":2,\"é\":1}"
+    },
+    {
+      "name": "UTF-16 CODE UNIT order, not code point order - the discriminating case",
+      "_why": [
+        "U+1F600 is the surrogate pair D83D DE00; U+FB00 is the single unit FB00.",
+        "By CODE POINT, FB00 (64256) < 1F600 (128512), so the ligature would sort first.",
+        "By UTF-16 CODE UNIT, D83D (55357) < FB00 (64256), so the emoji sorts first.",
+        "RFC 8785 section 3.2.3 mandates the code-unit rule. An implementation that",
+        "sorted by code point, or by UTF-8 bytes, fails exactly here."
+      ],
+      "input": {
+        "ﬀ": 1,
+        "😀": 2
+      },
+      "expected": "{\"😀\":2,\"ﬀ\":1}"
+    },
+    {
+      "name": "non-ASCII is emitted literally, never backslash-u escaped",
+      "input": {
+        "k": "héllo wörld — ünïcode ✓ 😀"
+      },
+      "expected": "{\"k\":\"héllo wörld — ünïcode ✓ 😀\"}"
+    },
+    {
+      "name": "combining marks are not normalized (NFC is NOT applied)",
+      "_why": "RFC 8785 does not normalize. e + combining acute stays two code points.",
+      "input": {
+        "k": "é"
+      },
+      "expected": "{\"k\":\"é\"}"
+    },
+    {
+      "name": "precomposed and decomposed forms are DIFFERENT keys",
+      "_why": "Follows from no normalization; a verifier must not silently fold them.",
+      "input": {
+        "é": 1,
+        "é": 2
+      },
+      "expected": "{\"é\":2,\"é\":1}"
+    }
+  ],
+  "string_escaping": [
+    {
+      "name": "quote and backslash",
+      "input": {
+        "k": "a\"b\\c"
+      },
+      "expected": "{\"k\":\"a\\\"b\\\\c\"}"
+    },
+    {
+      "name": "the five short control escapes",
+      "input": {
+        "k": "\b\t\n\f\r"
+      },
+      "expected": "{\"k\":\"\\b\\t\\n\\f\\r\"}"
+    },
+    {
+      "name": "other C0 controls use lowercase backslash-u00xx",
+      "input": {
+        "k": "\u0000\u0001\u001f"
+      },
+      "expected": "{\"k\":\"\\u0000\\u0001\\u001f\"}"
+    },
+    {
+      "name": "DEL (U+007F) is NOT escaped",
+      "_why": "RFC 8785 escapes only the C0 range, quote and backslash.",
+      "input": {
+        "k": ""
+      },
+      "expected": "{\"k\":\"\"}"
+    },
+    {
+      "name": "forward slash is NOT escaped",
+      "input": {
+        "k": "a/b"
+      },
+      "expected": "{\"k\":\"a/b\"}"
+    },
+    {
+      "name": "control characters in KEYS escape the same way",
+      "input": {
+        "a\nb": 1
+      },
+      "expected": "{\"a\\nb\":1}"
+    },
+    {
+      "name": "U+0080 and U+009F (C1 controls) are NOT escaped",
+      "_why": "Only C0 is in scope; C1 are ordinary non-ASCII characters here.",
+      "input": {
+        "k": ""
+      },
+      "expected": "{\"k\":\"\"}"
+    }
+  ],
+  "nesting": [
+    {
+      "name": "arrays of objects keep array order and sort object keys",
+      "input": {
+        "a": [
+          {
+            "b": 1,
+            "a": 2
+          },
+          {
+            "d": 3,
+            "c": 4
+          }
+        ]
+      },
+      "expected": "{\"a\":[{\"a\":2,\"b\":1},{\"c\":4,\"d\":3}]}"
+    },
+    {
+      "name": "deeply nested mixed structure",
+      "input": {
+        "z": [
+          [
+            1,
+            [
+              2,
+              {
+                "b": [],
+                "a": {}
+              }
+            ]
+          ],
+          []
+        ],
+        "a": {
+          "n": [
+            null,
+            true
+          ]
+        }
+      },
+      "expected": "{\"a\":{\"n\":[null,true]},\"z\":[[1,[2,{\"a\":{},\"b\":[]}]],[]]}"
+    },
+    {
+      "name": "array of arrays preserves inner order",
+      "input": [
+        [
+          3,
+          2,
+          1
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "expected": "[[3,2,1],[1,2,3]]"
+    }
+  ],
+  "numbers": [
+    {
+      "name": "zero",
+      "input": {
+        "k": 0
+      },
+      "expected": "{\"k\":0}"
+    },
+    {
+      "name": "negative zero serializes as 0",
+      "_why": "RFC 8785 section 3.2.2.3. -0 and 0 are the same JSON number.",
+      "input": {
+        "k": -0.0
+      },
+      "expected": "{\"k\":0}"
+    },
+    {
+      "name": "negative integer",
+      "input": {
+        "k": -1
+      },
+      "expected": "{\"k\":-1}"
+    },
+    {
+      "name": "trailing zeros are dropped (1.0 is the double 1)",
+      "input": {
+        "k": 1.0
+      },
+      "expected": "{\"k\":1}"
+    },
+    {
+      "name": "simple fraction",
+      "input": {
+        "k": 1.5
+      },
+      "expected": "{\"k\":1.5}"
+    },
+    {
+      "name": "shortest round-tripping form, not the input spelling",
+      "input": {
+        "k": 0.1
+      },
+      "expected": "{\"k\":0.1}"
+    },
+    {
+      "name": "classic binary-float sum keeps full precision",
+      "input": {
+        "k": 0.30000000000000004
+      },
+      "expected": "{\"k\":0.30000000000000004}"
+    },
+    {
+      "name": "max safe integer",
+      "input": {
+        "k": 9007199254740991
+      },
+      "expected": "{\"k\":9007199254740991}"
+    },
+    {
+      "name": "large negative",
+      "input": {
+        "k": -9007199254740991
+      },
+      "expected": "{\"k\":-9007199254740991}"
+    }
+  ],
+  "exponents": [
+    {
+      "name": "small exponents expand to plain digits",
+      "input": {
+        "k": 100.0
+      },
+      "expected": "{\"k\":100}"
+    },
+    {
+      "name": "1e20 stays expanded",
+      "input": {
+        "k": 1e+20
+      },
+      "expected": "{\"k\":100000000000000000000}"
+    },
+    {
+      "name": "1e21 switches to exponent form with an explicit plus",
+      "_why": "ECMAScript Number::toString switches to exponent form at 1e21.",
+      "input": {
+        "k": 1e+21
+      },
+      "expected": "{\"k\":1e+21}"
+    },
+    {
+      "name": "small magnitudes expand down to 1e-6",
+      "input": {
+        "k": 1e-06
+      },
+      "expected": "{\"k\":0.000001}"
+    },
+    {
+      "name": "1e-7 switches to exponent form",
+      "input": {
+        "k": 1e-07
+      },
+      "expected": "{\"k\":1e-7}"
+    },
+    {
+      "name": "denormal minimum",
+      "input": {
+        "k": 5e-324
+      },
+      "expected": "{\"k\":5e-324}"
+    },
+    {
+      "name": "near-max double",
+      "input": {
+        "k": 1.7976931348623157e+308
+      },
+      "expected": "{\"k\":1.7976931348623157e+308}"
+    }
+  ],
+  "literals_and_empty": [
+    {
+      "name": "booleans",
+      "input": {
+        "t": true,
+        "f": false
+      },
+      "expected": "{\"f\":false,\"t\":true}"
+    },
+    {
+      "name": "null",
+      "input": {
+        "k": null
+      },
+      "expected": "{\"k\":null}"
+    },
+    {
+      "name": "empty object",
+      "input": {},
+      "expected": "{}"
+    },
+    {
+      "name": "empty array",
+      "input": [],
+      "expected": "[]"
+    },
+    {
+      "name": "empty string value",
+      "input": {
+        "k": ""
+      },
+      "expected": "{\"k\":\"\"}"
+    },
+    {
+      "name": "empty nested containers",
+      "input": {
+        "a": {},
+        "b": []
+      },
+      "expected": "{\"a\":{},\"b\":[]}"
+    },
+    {
+      "name": "top-level scalar string",
+      "input": "hi",
+      "expected": "\"hi\""
+    },
+    {
+      "name": "top-level scalar number",
+      "input": 42,
+      "expected": "42"
+    },
+    {
+      "name": "top-level null",
+      "input": null,
+      "expected": "null"
+    },
+    {
+      "name": "top-level true",
+      "input": true,
+      "expected": "true"
+    }
+  ],
+  "receipt_shape": [
+    {
+      "name": "a strale.execution.v1 payload canonicalizes stably",
+      "_why": "The shape Phase 2 specifies, run end to end through the primitive.",
+      "input": {
+        "version": "strale.execution.v1",
+        "transaction_id": "8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f",
+        "subject": {
+          "kind": "capability",
+          "slug": "vat-validate"
+        },
+        "implementation": {
+          "deploy_commit": "ce5e63f091863f56764829b498525211cd2ab234",
+          "manifest_digest": "sha256:9a3f0000000000000000000000000000000000000000000000000000000000ff",
+          "steps": null
+        },
+        "request": {
+          "rail": "v1_do",
+          "inputs": {
+            "vat_number": "SE556677889901"
+          }
+        },
+        "response": {
+          "status": "completed",
+          "result": {
+            "valid": true
+          },
+          "error": null
+        },
+        "execution": {
+          "method": "algorithmic",
+          "source_observation": {
+            "kind": "live_fetch",
+            "observed_at": "2026-08-23T09:14:50.311Z"
+          }
+        }
+      },
+      "expected": "{\"execution\":{\"method\":\"algorithmic\",\"source_observation\":{\"kind\":\"live_fetch\",\"observed_at\":\"2026-08-23T09:14:50.311Z\"}},\"implementation\":{\"deploy_commit\":\"ce5e63f091863f56764829b498525211cd2ab234\",\"manifest_digest\":\"sha256:9a3f0000000000000000000000000000000000000000000000000000000000ff\",\"steps\":null},\"request\":{\"inputs\":{\"vat_number\":\"SE556677889901\"},\"rail\":\"v1_do\"},\"response\":{\"error\":null,\"result\":{\"valid\":true},\"status\":\"completed\"},\"subject\":{\"kind\":\"capability\",\"slug\":\"vat-validate\"},\"transaction_id\":\"8f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f\",\"version\":\"strale.execution.v1\"}"
+    },
+    {
+      "name": "a FAILED execution receipt canonicalizes stably",
+      "_why": "Amendment: failures are executions. result null, error bound.",
+      "input": {
+        "version": "strale.execution.v1",
+        "transaction_id": "0000aaaa-bbbb-cccc-dddd-eeeeffff0000",
+        "subject": {
+          "kind": "capability",
+          "slug": "iban-validate"
+        },
+        "implementation": {
+          "deploy_commit": "unknown-local-build",
+          "manifest_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "steps": null
+        },
+        "request": {
+          "rail": "x402",
+          "inputs": {
+            "iban": "XX00"
+          }
+        },
+        "response": {
+          "status": "failed",
+          "result": null,
+          "error": {
+            "code": "invalid_input",
+            "message": "iban is not valid"
+          }
+        },
+        "execution": {
+          "method": "algorithmic",
+          "source_observation": {
+            "kind": "computed"
+          }
+        }
+      },
+      "expected": "{\"execution\":{\"method\":\"algorithmic\",\"source_observation\":{\"kind\":\"computed\"}},\"implementation\":{\"deploy_commit\":\"unknown-local-build\",\"manifest_digest\":\"sha256:0000000000000000000000000000000000000000000000000000000000000000\",\"steps\":null},\"request\":{\"inputs\":{\"iban\":\"XX00\"},\"rail\":\"x402\"},\"response\":{\"error\":{\"code\":\"invalid_input\",\"message\":\"iban is not valid\"},\"result\":null,\"status\":\"failed\"},\"subject\":{\"kind\":\"capability\",\"slug\":\"iban-validate\"},\"transaction_id\":\"0000aaaa-bbbb-cccc-dddd-eeeeffff0000\",\"version\":\"strale.execution.v1\"}"
+    }
+  ]
+}

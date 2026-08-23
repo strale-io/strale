@@ -1,0 +1,238 @@
+/**
+ * RFC 8785 — JSON Canonicalization Scheme (JCS), implemented inside Strale.
+ *
+ * No third-party runtime dependency, by design: this produces the bytes a
+ * customer's execution receipt is committed to, so the rule has to be ours and
+ * has to be readable here. Independent implementations are used in tests as
+ * cross-check references only — never at runtime, never as the authority.
+ *
+ * ## Why this is short
+ *
+ * RFC 8785 was written around ECMAScript semantics, so a correct JS
+ * implementation is mostly *restriction*, not reimplementation:
+ *
+ *  - **Numbers.** RFC 8785 §3.2.2.3 specifies ECMAScript `Number::toString`,
+ *    which is exactly what `JSON.stringify` emits for a number. Shortest
+ *    round-tripping form, exponent normalisation, `1.0` → `1`, `1e2` → `100`,
+ *    `-0` → `0`: all already correct.
+ *  - **Strings.** RFC 8785 §3.2.2.2 specifies the same minimal escaping
+ *    `JSON.stringify` performs — `"` `\` and the C0 controls, using the short
+ *    forms `\b \t \n \f \r` where they exist and `\u00xx` otherwise, with
+ *    non-ASCII left as literal UTF-8.
+ *
+ * What JS does NOT do, and this module must:
+ *
+ *  1. **Sort object properties** by UTF-16 code unit, recursively (§3.2.3).
+ *  2. **Refuse everything outside the JSON domain.** `JSON.stringify` silently
+ *     drops `undefined`/function/symbol object members and turns them into
+ *     `null` inside arrays. Silent omission is precisely what the receipt
+ *     schema forbids, so these are errors here, not quiet coercions.
+ *  3. **Refuse `NaN`, `Infinity`, `BigInt`, cycles, and lone surrogates.**
+ *  4. **Ignore `toJSON`.** `JSON.stringify` would call it, letting an object
+ *     choose its own canonical form — a call site selecting what gets hashed,
+ *     which the schema forbids. A `Date` therefore does not silently become a
+ *     string here; the caller must convert it deliberately.
+ *
+ * ## Output
+ *
+ * `canonicalize()` returns a `string`; `canonicalBytes()` returns the UTF-8
+ * encoding of it, which is what gets hashed. RFC 8785 is defined over the UTF-8
+ * bytes, so anything that digests must go through `canonicalBytes`.
+ */
+
+export class CanonicalizationError extends Error {
+  readonly code: JcsErrorCode;
+  /** JSON Pointer-ish path to the offending value, for a usable message. */
+  readonly path: string;
+
+  constructor(code: JcsErrorCode, path: string, detail: string) {
+    super(`${code} at ${path || "<root>"}: ${detail}`);
+    this.name = "CanonicalizationError";
+    this.code = code;
+    this.path = path;
+  }
+}
+
+export type JcsErrorCode =
+  | "non_finite_number"
+  | "unsupported_type"
+  | "cyclic_structure"
+  | "lone_surrogate"
+  | "sparse_or_exotic_array";
+
+const CONTROL_ESCAPES: Record<number, string> = {
+  0x08: "\\b",
+  0x09: "\\t",
+  0x0a: "\\n",
+  0x0c: "\\f",
+  0x0d: "\\r",
+};
+
+/**
+ * Serialize one string per RFC 8785 §3.2.2.2.
+ *
+ * Written out rather than delegated to `JSON.stringify` for two reasons: it
+ * makes the escaping rule auditable in the file that claims to implement it,
+ * and it lets lone surrogates be an error instead of being silently replaced
+ * with `�`-style escapes by the engine's well-formed-stringify behaviour.
+ */
+function serializeString(value: string, path: string): string {
+  let out = '"';
+  for (let i = 0; i < value.length; i++) {
+    const cp = value.charCodeAt(i);
+
+    if (cp === 0x22) {
+      out += '\\"';
+    } else if (cp === 0x5c) {
+      out += "\\\\";
+    } else if (cp < 0x20) {
+      out += CONTROL_ESCAPES[cp] ?? `\\u${cp.toString(16).padStart(4, "0")}`;
+    } else if (cp >= 0xd800 && cp <= 0xdbff) {
+      // High surrogate: must be followed by a low surrogate.
+      const next = value.charCodeAt(i + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        throw new CanonicalizationError(
+          "lone_surrogate",
+          path,
+          `unpaired high surrogate U+${cp.toString(16).toUpperCase()}`,
+        );
+      }
+      out += value[i] + value[i + 1];
+      i++;
+    } else if (cp >= 0xdc00 && cp <= 0xdfff) {
+      throw new CanonicalizationError(
+        "lone_surrogate",
+        path,
+        `unpaired low surrogate U+${cp.toString(16).toUpperCase()}`,
+      );
+    } else {
+      out += value[i];
+    }
+  }
+  return out + '"';
+}
+
+/**
+ * Serialize one number per RFC 8785 §3.2.2.3 (ECMAScript `Number::toString`).
+ *
+ * `String(n)` is that algorithm. The only adjustment is `-0`, which RFC 8785
+ * requires to serialize as `0` and which `String(-0)` already gives — asserted
+ * explicitly below so the behaviour is pinned rather than assumed.
+ */
+function serializeNumber(value: number, path: string): string {
+  if (!Number.isFinite(value)) {
+    throw new CanonicalizationError(
+      "non_finite_number",
+      path,
+      Number.isNaN(value) ? "NaN is outside the JSON domain" : `${value} is outside the JSON domain`,
+    );
+  }
+  // Object.is distinguishes -0 from 0; String() already collapses it, and this
+  // makes that dependence visible instead of incidental.
+  if (Object.is(value, -0)) return "0";
+  return String(value);
+}
+
+function serialize(value: unknown, path: string, seen: Set<object>): string {
+  if (value === null) return "null";
+
+  const t = typeof value;
+
+  if (t === "boolean") return value ? "true" : "false";
+  if (t === "number") return serializeNumber(value as number, path);
+  if (t === "string") return serializeString(value as string, path);
+
+  if (t === "undefined") {
+    throw new CanonicalizationError(
+      "unsupported_type",
+      path,
+      "undefined is not a JSON value; JSON.stringify would silently drop it",
+    );
+  }
+  if (t === "bigint") {
+    throw new CanonicalizationError(
+      "unsupported_type",
+      path,
+      "BigInt cannot be represented as an IEEE 754 double",
+    );
+  }
+  if (t === "function" || t === "symbol") {
+    throw new CanonicalizationError("unsupported_type", path, `${t} is not a JSON value`);
+  }
+
+  // Objects and arrays.
+  const obj = value as object;
+  if (seen.has(obj)) {
+    throw new CanonicalizationError("cyclic_structure", path, "value refers to itself");
+  }
+  seen.add(obj);
+  try {
+    if (Array.isArray(value)) {
+      // A sparse array's holes would serialize as null under JSON.stringify —
+      // another silent coercion. Refuse instead.
+      for (let i = 0; i < value.length; i++) {
+        if (!(i in value)) {
+          throw new CanonicalizationError(
+            "sparse_or_exotic_array",
+            `${path}[${i}]`,
+            "sparse array hole would silently become null",
+          );
+        }
+      }
+      const parts = value.map((v, i) => serialize(v, `${path}[${i}]`, seen));
+      return `[${parts.join(",")}]`;
+    }
+
+    // Reject the exotic objects JSON.stringify would happily mangle. Map and
+    // Set stringify as `{}`, losing every entry without complaint.
+    if (
+      obj instanceof Map ||
+      obj instanceof Set ||
+      obj instanceof Date ||
+      obj instanceof RegExp ||
+      ArrayBuffer.isView(obj)
+    ) {
+      throw new CanonicalizationError(
+        "unsupported_type",
+        path,
+        `${obj.constructor?.name ?? "exotic object"} has no canonical JSON form; ` +
+          "convert it deliberately at the call site",
+      );
+    }
+
+    // RFC 8785 §3.2.3: sort by UTF-16 code unit. Array.prototype.sort's default
+    // comparator is exactly that, so it is used deliberately, not by accident.
+    const record = obj as Record<string, unknown>;
+    const keys = Object.keys(record).sort();
+
+    const members: string[] = [];
+    for (const key of keys) {
+      const child = record[key];
+      // An `undefined` MEMBER is the silent-omission case: JSON.stringify drops
+      // the whole property. It must be an error, or a call site could remove a
+      // hashed field just by leaving it undefined.
+      members.push(
+        `${serializeString(key, path)}:${serialize(child, `${path}/${key}`, seen)}`,
+      );
+    }
+    return `{${members.join(",")}}`;
+  } finally {
+    seen.delete(obj);
+  }
+}
+
+/**
+ * Canonicalize a JSON value to its RFC 8785 string form.
+ *
+ * Throws `CanonicalizationError` rather than coercing. Every refusal is a case
+ * where `JSON.stringify` would have produced *something*, quietly, and that
+ * something would have been committed to.
+ */
+export function canonicalize(value: unknown): string {
+  return serialize(value, "", new Set<object>());
+}
+
+/** The UTF-8 bytes RFC 8785 is defined over. Digest these, never the string. */
+export function canonicalBytes(value: unknown): Buffer {
+  return Buffer.from(canonicalize(value), "utf8");
+}
