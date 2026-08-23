@@ -21,6 +21,7 @@ import postgres from "postgres";
 import { randomUUID } from "node:crypto";
 
 import { useTestDatabase } from "../test-support/integration-db.js";
+import { withDeadline } from "./with-deadline.js";
 import {
   registerJob,
   claimJob,
@@ -281,22 +282,35 @@ describeMaybe("job coordinator against a real database", () => {
     expect(b.leaseOwner).not.toBe(a.leaseOwner);
     expect(b.leaseOwner.split(":")[0]).toBe(a.leaseOwner.split(":")[0]); // same process
 
-    await releaseJob(b, "error", "B's own error");
-    const afterB = await row(name);
+    // A returns while B's lease is STILL LIVE. This ordering is the whole test.
+    // An earlier version released B first, which set lease_owner to NULL — and
+    // then A's release matched nothing under ANY guard, including the
+    // per-process one this test exists to rule out. Every assertion below was
+    // vacuous. Found in review by swapping the guard back to the process id and
+    // watching this test stay green.
+    const beforeA = await row(name);
+    expect(beforeA!.lease_owner).toBe(b.leaseOwner);
 
-    // Now A returns, late, and tries every mutation in turn.
     await releaseJob(a, "ok");
     await releaseJob(a, "error", "A's stale error");
 
     const afterA = await row(name);
-    expect(afterA!.lease_owner).toBe(afterB!.lease_owner); // cannot release B's lease
-    expect(afterA!.last_outcome).toBe(afterB!.last_outcome); // cannot mark B complete or failed
-    expect(afterA!.last_error).toBe(afterB!.last_error); // cannot overwrite B's error
+    expect(afterA!.lease_owner).toBe(b.leaseOwner); // cannot release B's lease
+    expect(String(afterA!.lease_expires_at)).toBe(String(beforeA!.lease_expires_at));
+    expect(afterA!.last_outcome).toBe(beforeA!.last_outcome); // cannot mark B complete or failed
+    expect(afterA!.last_error).toBe(beforeA!.last_error); // cannot overwrite B's error
     expect(Number(afterA!.consecutive_failures)).toBe(
-      Number(afterB!.consecutive_failures),
+      Number(beforeA!.consecutive_failures),
     ); // cannot reset B's attempt counter
-    expect(String(afterA!.next_run_at)).toBe(String(afterB!.next_run_at)); // cannot move B's next run
-    expect(String(afterA!.last_finished_at)).toBe(String(afterB!.last_finished_at));
+    expect(String(afterA!.next_run_at)).toBe(String(beforeA!.next_run_at)); // cannot move B's next run
+    expect(String(afterA!.last_finished_at)).toBe(String(beforeA!.last_finished_at));
+
+    // And B, which does own the claim, can still complete normally afterwards.
+    await releaseJob(b, "ok");
+    const afterB = await row(name);
+    expect(afterB!.lease_owner).toBeNull();
+    expect(afterB!.last_outcome).toBe("ok");
+    expect(Number(afterB!.consecutive_failures)).toBe(0);
   });
 
   it("every claim gets a distinct identity, even back-to-back in one process", async () => {
@@ -621,6 +635,36 @@ describeMaybe("job coordinator against a real database", () => {
     // Untouched: not advanced by an interval, not rescheduled by a backoff.
     expect(String((await row(name))!.next_run_at)).toBe(dueBefore);
   }, 30_000);
+
+  it("a handler's OWN deadline is a failure, not the coordinator's watchdog firing", async () => {
+    // `withDeadline` is shared, and handlers use it — onboarding-retry bounds
+    // each slug with it. Matching the class alone would misread a handler's
+    // nested deadline as this cycle's watchdog: no failure recorded, no backoff
+    // armed, next_run_at not advanced, and the job unclaimable for the rest of
+    // its lease. Reviewer-found by leaking one deliberately.
+    const name = jobName("nested");
+    await registerJob({
+      name,
+      intervalMs: 3600_000,
+      handler: async () => {
+        // Settles fast, but with the same error type the watchdog uses.
+        await withDeadline("some inner thing", 1, new Promise<void>(() => {}));
+      },
+    });
+    await shiftDue(name, "- interval '1 second'");
+
+    const result = await runDueJobs();
+
+    // Treated as what it is: a failed run.
+    expect(result.timedOut).not.toContain(name);
+    expect(result.ran).toContain(name);
+
+    const r = await row(name);
+    expect(r!.last_outcome).toBe("error");
+    expect(String(r!.last_error)).toContain("some inner thing");
+    expect(Number(r!.consecutive_failures)).toBe(1);
+    expect(r!.lease_owner).toBeNull(); // released, not stranded
+  });
 
   // ── Invariant 4: the whole failure/recovery lifecycle ────────────────────
 

@@ -565,8 +565,16 @@ export async function runDueJobs(): Promise<{
     const startedAt = Date.now();
     const leaseMs = def.leaseMs ?? DEFAULT_LEASE_MS;
     const watchdogMs = watchdogFor(leaseMs);
+    const watchdogLabel = `job "${def.name}"`;
     try {
-      await withDeadline(`job "${def.name}"`, watchdogMs, Promise.resolve(def.handler()));
+      // The label is the sentinel the catch matches on. `withDeadline` is a
+      // shared primitive and handlers use it too (onboarding-retry bounds each
+      // slug with it), so matching the CLASS alone would misread a handler's
+      // own nested deadline as this cycle's watchdog firing — recording no
+      // failure, arming no backoff, and leaving the job unclaimable for the
+      // rest of its lease. Reviewer-found; latent, because the one handler
+      // that uses withDeadline today catches its own.
+      await withDeadline(watchdogLabel, watchdogMs, Promise.resolve(def.handler()));
       await releaseJob(claim, "ok");
       ran.push(def.name);
       log.info(
@@ -579,7 +587,7 @@ export async function runDueJobs(): Promise<{
         "job-coordinator-ran",
       );
     } catch (err) {
-      if (err instanceof DeadlineExceeded) {
+      if (err instanceof DeadlineExceeded && err.label === watchdogLabel) {
         // Deliberately NOT released. The handler is still running — this
         // process merely stopped waiting for it. Releasing here would clear
         // the lease out from under live work and let the next poll start a
