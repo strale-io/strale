@@ -367,6 +367,53 @@ describeMaybe("execution receipts bind what the caller received", () => {
     expect(asAlgorithmic).not.toBe(row.receipt_digest);
   });
 
+  it("an execution whose method cannot be established gets NO receipt, not a guessed one", async () => {
+    // The other half of the method fix, and the one the mutation battery
+    // showed was untested: the refusal itself.
+    //
+    // settlement-reconciler.ts writes transparency_marker 'unknown' precisely
+    // so it does not fabricate an EU AI Act Art. 50 marker on a call it cannot
+    // describe. If the capability's own declaration is also absent, there is
+    // nothing to establish the method from - and guessing 'algorithmic' would
+    // undo, one file over, the exact care that comment describes.
+    const capId = randomUUID();
+    seededCaps.push(capId);
+    await db.insert(capabilities).values({
+      id: capId,
+      slug: `p5-receipt-untagged-${randomUUID().slice(0, 8)}`,
+      name: "P5 untagged probe",
+      description: "Seeded by the Phase 5 receipt binding test.",
+      category: "developer-tools",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      priceCents: 5,
+      isActive: true,
+      transparencyTag: null,
+      avgLatencyMs: 20,
+      lifecycleState: "active",
+      visible: true,
+    });
+
+    const id = randomUUID();
+    await db.execute(sql`
+      INSERT INTO transactions (id, capability_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, output, receipt_rail,
+                                receipt_deploy_commit, completed_at)
+      VALUES (${id}::uuid, ${capId}::uuid, 'completed', 5, 'unknown', 'EU',
+              '{}'::jsonb, '{}'::jsonb, 'x402', ${LOCAL_BUILD_SENTINEL}, now())
+    `);
+
+    await settleExecutionReceipt(db, { transactionId: id });
+
+    const row = await receiptRow(id);
+    expect(row.receipt_status, "a guessed method must not produce a complete receipt").not.toBe(
+      "complete",
+    );
+    expect(row.receipt_digest).toBeNull();
+
+    await db.execute(sql`DELETE FROM transactions WHERE id = ${id}::uuid`);
+  });
+
   it("the receipt records the serving commit, and outside production that is the sentinel", async () => {
     await seedCapability(okSlug);
     const apiKey = await seedUser();
