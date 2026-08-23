@@ -2,16 +2,20 @@
 
 _Last updated: 2026-08-23 (WP11 session)_
 
-- **Current package:** WP11 — REVIEW PASSED, PR open, **not merged**.
-  PR #371, head `5021a05`. Eight adversarial rounds; round 8 returned
-  PASS_WITH_NON_BLOCKING_FINDINGS with an explicit merge recommendation.
+- **Current package:** WP11 — **ACCEPTED**. Merged `0d253ef` (PR #371),
+  deployed and verified live on `0d253efdc380`. Post-deploy reconciliation
+  complete: `docs/remediation/packages/WP11-ACCEPTANCE.md`.
 - **WP9:** merged and deployed, under its observation period. Untouched by
   WP11 — no watch condition fired.
-- **Next package:** WP12, per the approved graph — but note it is gated on
-  VERIFY-IP, which WP11 sharpened: `getClientIp` reads the client-supplied
-  leftmost X-Forwarded-For, and WP11's per-IP trial cap is documented as a
-  speed bump because of it. Confirm Railway's hop count before WP12 changes
-  anything; guessing it breaks every IP-keyed limit at once.
+- **Next package:** WP12 — **BLOCKED on VERIFY-IP, which remains OPEN.**
+  WP11 sharpened why: `getClientIp` reads the client-supplied leftmost
+  X-Forwarded-For, which is the reason WP11's per-IP trial cap is documented
+  as a speed bump rather than a gate. Railway's proxy hop-count behaviour is
+  not guessed and must not be — reading the wrong entry breaks every IP-keyed
+  rate limit in production at once. Confirm the hop count first.
+- **Founder decisions, 2026-08-23:** the 22 pre-WP2 drifted internal wallets
+  and the 1,600 cents of farmed trial credit are both left as historical
+  state. Verified present at acceptance and deliberately not mutated.
 
 ## What WP11 cost, and why it is worth writing down
 

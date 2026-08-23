@@ -1,8 +1,11 @@
 package: WP11
 title: Account / trial / Stripe lifecycle
-status: REVIEW_PASSED_AWAITING_MERGE
+status: ACCEPTED
 depends_on: [WP2]
 risks: [CR-09, CR-10]
+merged_as: 0d253ef  # PR #371
+deployed_commit_verified: 0d253efdc380  # GET /health, not a log line
+acceptance_record: docs/remediation/packages/WP11-ACCEPTANCE.md
 
 objective: >
   Make account creation, trial entitlement, Stripe crediting and key rotation
@@ -586,6 +589,17 @@ review:
       indefinitely against a closed account is what three rounds kept flagging,
       and the UNIQUE index on `email_hash` still forces a fresh address for
       every grant. Documented in the module rather than left to be rediscovered.
+
+founder_decisions_2026_08_23:
+  drifted_wallets: >
+    LEFT AS HISTORICAL STATE. 22 wallets where balance_cents does not equal the
+    ledger sum, net EUR 1,085.75, every one an internal account seeded by a
+    manual UPDATE before WP2 made mutation single-authority. Verified still
+    present at acceptance and deliberately not mutated.
+  farmed_trial_credit: >
+    LEFT AS HISTORICAL STATE. 1,600 cents granted to the eight accounts behind
+    signup IP hash d5ab85828d59fa6f. All eight spent zero, so the exposure was
+    already contained. Verified still present and deliberately not reclaimed.
 
 out_of_scope:
   - Repairing the 22 pre-WP2 drifted internal wallets (writes production
