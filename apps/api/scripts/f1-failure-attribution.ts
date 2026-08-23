@@ -37,7 +37,7 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(HERE, "../../..", ".env") });
 
-const { getDb } = await import("../src/db/index.js");
+const { openOperatorDrizzle } = await import("../src/lib/operator-db.js");
 const { sql } = await import("drizzle-orm");
 const { classifyTransactionFailure } = await import(
   "../src/lib/transaction-failure-taxonomy.js"
@@ -124,7 +124,10 @@ async function report(label: string, rows: Array<{ err: string; n: number }>) {
 }
 
 async function main() {
-  const db = getDb();
+  // Read-only by construction, not by intention: the operator handle is a
+  // Postgres role that refuses writes. CI refuses any script here that reaches
+  // for the application's read-write pool instead.
+  const db = openOperatorDrizzle();
   const all = (await db.execute(sql`
     select t.error as err, count(*)::int as n
     from transactions t

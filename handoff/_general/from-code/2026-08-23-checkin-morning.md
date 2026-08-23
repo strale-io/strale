@@ -395,6 +395,14 @@ No `preauthorized_notice` item had a matured window; nothing executed automatica
   produced 82% and the two disagreed. Recorded because "the script and the ad-hoc
   query disagree" is the only reason it was caught, and only one of them was going to
   be in the artifact.
+- **A gate that was not hollow, and caught me.** The first version of
+  `f1-failure-attribution.ts` opened its connection with `getDb()` — the
+  application's read-write pool. Every statement it ran was a `SELECT`, so the
+  session was read-only *by intention*; `guard-production-write-access.mjs`
+  refused it in CI because it was not read-only *by construction*. It now uses
+  `openOperatorDrizzle()`, a Postgres role that refuses writes. Worth recording
+  against LESSONS.md F5's population survey: this is one of the 17 gates, and
+  it discriminated.
 - **A finding I did not report.** `mcp-trust-contract.test.ts` failed locally with
   `expected undefined to be 'strale-mcp/0.2.8'`, which reads exactly like a hollow
   guard (family F5). It was a stale local build of `packages/mcp-server`; after
