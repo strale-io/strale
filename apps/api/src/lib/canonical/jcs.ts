@@ -58,7 +58,8 @@ export type JcsErrorCode =
   | "unsupported_type"
   | "cyclic_structure"
   | "lone_surrogate"
-  | "sparse_or_exotic_array";
+  | "sparse_or_exotic_array"
+  | "accessor_property";
 
 /**
  * The RFC 8785 §3.2.3 ordering rule, defined once.
@@ -93,7 +94,17 @@ export function sortKeysDeep(value: unknown): unknown {
   if (value === null || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(sortKeysDeep);
   const record = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
+  // NULL PROTOTYPE, deliberately. On an ordinary object literal,
+  // `out["__proto__"] = v` does not create a property — it sets the prototype,
+  // and the key vanishes from the result. `JSON.parse('{"__proto__":1}')`
+  // produces exactly that key as an OWN property, so the member was silently
+  // dropped: two requests differing only in `__proto__` produced the same
+  // idempotency fingerprint and would have replayed each other's result.
+  // Inherited from the private implementation this replaced, found by probing
+  // rather than by review. Measured before changing: 23 historical rows carry
+  // the literal in their input and ZERO live idempotency keys do, so the
+  // fingerprint moves for no key in flight.
+  const out: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
   for (const key of sortJsonKeys(Object.keys(record))) out[key] = sortKeysDeep(record[key]);
   return out;
 }
@@ -244,6 +255,21 @@ function serialize(value: unknown, path: string, seen: Set<object>): string {
 
     const members: string[] = [];
     for (const key of keys) {
+      // An accessor is not a value. A getter may return something different on
+      // every read, which would make the digest non-deterministic — the same
+      // object canonicalizing to two different commitments. Found by probing:
+      // `{ get k() { return ++n; } }` produced `{"a":1,"k":1}` then
+      // `{"a":1,"k":2}`. Unreachable from JSON.parse, which is the only source
+      // in the receipt path, so this is a guard rather than a fix for a live
+      // bug — but a commitment primitive must not depend on that staying true.
+      const descriptor = Object.getOwnPropertyDescriptor(record, key);
+      if (descriptor && typeof descriptor.get === "function") {
+        throw new CanonicalizationError(
+          "accessor_property",
+          `${path}/${key}`,
+          "a getter can return a different value on each read, so it has no stable canonical form",
+        );
+      }
       const child = record[key];
       // An `undefined` MEMBER is the silent-omission case: JSON.stringify drops
       // the whole property. It must be an error, or a call site could remove a

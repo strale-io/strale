@@ -24,7 +24,7 @@ import { join } from "node:path";
 import refA from "canonicalize";
 import { canonicalize as refB } from "json-canonicalize/src/index.ts";
 
-import { canonicalize, canonicalBytes, CanonicalizationError } from "./jcs.js";
+import { canonicalize, canonicalBytes, sortKeysDeep, CanonicalizationError } from "./jcs.js";
 import { DOMAIN_TAGS, domainDigest, digestPreimage } from "./domain-digest.js";
 
 interface Vector {
@@ -220,6 +220,81 @@ describe("values outside the JSON domain are refused, never coerced", () => {
     expect(JSON.stringify(o)).toBe('{"k":"hijacked"}');
     // We refuse, because toJSON is a function member.
     refusal(o, "unsupported_type");
+  });
+});
+
+describe("properties JavaScript treats specially", () => {
+  it("a literal __proto__ key survives canonicalization", () => {
+    // JSON.parse produces __proto__ as an OWN property, and `out[key] = v` on
+    // an ordinary object would set the prototype instead of storing it.
+    const parsed = JSON.parse('{"__proto__": 1, "a": 2}');
+    expect(Object.keys(parsed)).toContain("__proto__");
+    expect(canonicalize(parsed)).toBe('{"__proto__":1,"a":2}');
+  });
+
+  it("sortKeysDeep preserves __proto__ instead of silently dropping it", () => {
+    // The bug this fixes: two requests differing only in __proto__ produced
+    // the SAME idempotency fingerprint and would have replayed each other.
+    const parsed = JSON.parse('{"__proto__": 1, "a": 2}');
+    const sorted = sortKeysDeep(parsed) as Record<string, unknown>;
+    expect(Object.keys(sorted)).toEqual(["__proto__", "a"]);
+    expect(JSON.stringify(sorted)).toBe('{"__proto__":1,"a":2}');
+  });
+
+  it("two inputs differing ONLY in __proto__ get different fingerprints", () => {
+    const a = JSON.parse('{"__proto__": 1, "x": 1}');
+    const b = JSON.parse('{"x": 1}');
+    expect(JSON.stringify(sortKeysDeep(a))).not.toBe(JSON.stringify(sortKeysDeep(b)));
+  });
+
+  it("a getter is refused, because it has no stable value", () => {
+    let n = 0;
+    const withGetter = {
+      a: 1,
+      get k() {
+        return ++n;
+      },
+    };
+    let err: unknown;
+    try {
+      canonicalize(withGetter);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("accessor_property");
+  });
+
+  it("integer-like keys sort by code unit, not by JS integer-key order", () => {
+    // Object.keys returns integer-like keys first, ascending numerically:
+    // ["1","2","10","b"]. RFC 8785 wants "1","10","2","b".
+    const o = { "10": 1, "2": 2, b: 3, "1": 4 };
+    expect(Object.keys(o)).toEqual(["1", "2", "10", "b"]);
+    expect(canonicalize(o)).toBe('{"1":4,"10":1,"2":2,"b":3}');
+  });
+
+  it("a toJSON on the PROTOTYPE is ignored, not honoured", () => {
+    class T {
+      a = 1;
+      toJSON() {
+        return "hijacked";
+      }
+    }
+    const inst = new T();
+    expect(JSON.stringify({ k: inst })).toBe('{"k":"hijacked"}');
+    // Not an own enumerable member, so it is simply not serialized.
+    expect(canonicalize({ k: inst })).toBe('{"k":{"a":1}}');
+  });
+
+  it("symbol keys and non-enumerable properties are excluded, as JSON requires", () => {
+    // Documented rather than refused: these are not JSON members at all, and
+    // JSON.stringify omits them too. Pinned so the behaviour is a decision.
+    const withSymbol = { a: 1, [Symbol("s")]: 2 };
+    expect(canonicalize(withSymbol)).toBe('{"a":1}');
+
+    const withHidden = { a: 1 };
+    Object.defineProperty(withHidden, "hidden", { value: 2, enumerable: false });
+    expect(canonicalize(withHidden)).toBe('{"a":1}');
   });
 });
 
