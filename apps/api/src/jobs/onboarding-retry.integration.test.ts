@@ -243,6 +243,27 @@ describeMaybe("onboarding retry sweeper against a real database", () => {
     expect(await eventsFor(fresh, ESCALATION_ACTION)).toHaveLength(0);
   });
 
+  it("treats a hook that hangs as a failed attempt rather than stalling the job", async () => {
+    // `onCapabilityCreated` executes the capability live and has no timeout of
+    // its own. Ten slugs behind one unbounded call is what would push this job
+    // past the coordinator's 15-minute handler ceiling, at which point the
+    // cycle abandons a HEALTHY run and strands its lease until expiry.
+    const slug = newSlug("hangs");
+    await seedCapability(slug, "hook_failed");
+    hookMock.mockImplementation(() => new Promise<void>(() => {}));
+
+    const started = Date.now();
+    const outcome = await runOnboardingRetryOnce();
+
+    // It returned, rather than hanging with the test.
+    expect(Date.now() - started).toBeLessThan(90_000);
+    expect(outcome.stillFailing).toContain(slug);
+    expect(await failuresOf(slug)).toBe(1);
+
+    const failures = await eventsFor(slug, "retry_failed");
+    expect(JSON.stringify(failures[0].details)).toContain("exceeded");
+  }, 120_000);
+
   it("is a no-op when nothing is in hook_failed — the current production state", async () => {
     const outcome = await runOnboardingRetryOnce();
     expect(outcome).toEqual({ examined: 0, recovered: [], stillFailing: [], escalated: [] });

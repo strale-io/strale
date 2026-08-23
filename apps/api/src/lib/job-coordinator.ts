@@ -141,7 +141,10 @@ const MAX_HANDLER_WAIT_MS = 15 * 60 * 1000;
  * than the lease, so abandoning a run never makes it instantly claimable.
  */
 export function watchdogFor(leaseMs: number): number {
-  return leaseMs;
+  return Math.min(
+    MAX_HANDLER_WAIT_MS,
+    Math.max(Math.floor(leaseMs / 2), leaseMs - 2 * POLL_INTERVAL_MS),
+  );
 }
 
 function withWatchdog<T>(job: string, ms: number, p: Promise<T>): Promise<T> {

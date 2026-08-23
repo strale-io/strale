@@ -67,6 +67,33 @@ const MAX_PER_TICK = 10;
 /** Attempts before the slug becomes a human decision. */
 export const MAX_ATTEMPTS = 5;
 
+/**
+ * Ceiling on one slug's hook re-run.
+ *
+ * `onCapabilityCreated` executes the capability live and can fire paid upstream
+ * APIs, and it carries no timeout of its own. Ten slugs behind one unbounded
+ * call is the shape that would push this job past the coordinator's 15-minute
+ * handler ceiling — at which point the cycle abandons a HEALTHY run and its
+ * lease strands until expiry. Bounding each slug keeps the whole tick under ten
+ * minutes in the worst case, and a hook that hangs is what it looks like: a
+ * failed attempt, charged to that slug's budget, not a stalled job.
+ */
+const PER_SLUG_TIMEOUT_MS = 60_000;
+
+function withTimeout<T>(slug: string, ms: number, p: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`onboarding hook for "${slug}" exceeded ${ms / 1000}s`)),
+      ms,
+    );
+    timer.unref?.();
+    p.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
+
 export const RETRY_EVENT = "onboarding_retry";
 export const ESCALATION_ACTION = "retries_exhausted";
 
@@ -107,7 +134,7 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
 
   for (const slug of slugs) {
     try {
-      await onCapabilityCreated(slug);
+      await withTimeout(slug, PER_SLUG_TIMEOUT_MS, Promise.resolve(onCapabilityCreated(slug)));
 
       // The hook is idempotent and generates the missing test suites. On
       // success the row returns to 'draft' — the schema default, and the
