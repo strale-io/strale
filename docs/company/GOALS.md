@@ -1,6 +1,6 @@
 # Strale Goals — the document every agent reads first
 
-**Reviewed:** 2026-08-22 · next review at each Sunday synthesis · quarterly deep review.
+**Reviewed:** 2026-08-23 · next review at each Sunday synthesis · quarterly deep review.
 
 ## Mission
 
@@ -69,6 +69,47 @@ In USD ≈ **$50/week**. The goal is therefore **~40×**, and M1 is **~5×**, no
 > again. Logged as a new instance of failure family F2 in
 > [LESSONS.md](LESSONS.md).
 
+> **Week of 2026-08-17, measured 2026-08-23 on its final day: €59.42 on 929
+> calls.** The last *completed* week is 08-10 at €39.24 / 620, and `growth()`
+> over the discrete series still reads **rising** — two consecutive completed
+> rises (07-27 €10.85 · 08-03 €27.38 · 08-10 €39.24), with the week now closing
+> ahead of all of them. Concentration is unchanged and total: **4 payers, top
+> share 99.3%** (€59.02 against €0.40 from everyone else), 100% of the week's
+> revenue traceable to a payer. One payer bought on more than one day; nobody
+> else has a pattern. New-vs-returning is still `unavailable` and must not be
+> guessed — the lookback for this week reaches back past 2026-08-15, when payer
+> identity began recording.
+>
+> **The concentration risk stopped being theoretical on 2026-08-22.** The x402
+> settlement-volume watch paged at 20:47Z: 65 settled transactions in 24h
+> against a ~149/day trailing baseline. Measured independently through
+> `lib/metrics` on the canonical population, daily external revenue reads
+> 08-17 €16.29 / 186 calls · 08-18 €10.97 / 190 · 08-19 €8.72 / 195 ·
+> 08-20 €9.29 / 141 · 08-21 €9.32 / 145 · **08-22 €4.74 / 69** · 08-23 (to
+> 06:00Z) €0.09 / 3.
+>
+> **It is not ours, and that was checked rather than assumed.** Four
+> independent ways: the settlement state machine is healthy (192 of 195 intents
+> reached the terminal `recorded` state; the only 3 failures were on 08-21 at
+> 12:54, three minutes apart and before the fall); the 402 challenge path is
+> unchanged, with third-party monitor traffic flat across the boundary at 1,535
+> refusals in the last 48h against 1,525 in the 48h before; there were two
+> failed external transactions on 08-22 and none on 08-23; and a live call to
+> `/x402/email-validate` returns a valid challenge. The same payer hash
+> (`e9e672ef…`) is still calling — 3 times overnight — so this is one buyer
+> slowing, not churning. Their whole basket fell together: `email-validate`
+> 151 → 29 → 3 across five days, `keyword-suggest` 37 → 0, `google-search`
+> 35 → 9 → 0.
+>
+> **What is not yet known, and must not be written down as if it were:** whether
+> this is a durable decline. It is one full day plus an overnight. The first six
+> hours of 08-23 carry 3 calls, and the matched 00:00–06:15Z window on 08-21
+> also carried 3 — overnight variance at this volume swamps a one-day signal.
+> The read that survives is the one GOALS.md has carried for three weeks, now
+> demonstrated rather than argued: **a single buyer is the whole business, and
+> when they pause, the business pauses.** The alert's own 24h cooldown means it
+> can page again after 20:47Z today if it continues; that is the thing to watch.
+
 > **Read revenue week-over-week, not as a rolling 7d figure.** On 2026-08-17 the
 > rolling 7d read €36.64 against the €45.58 baseline and looked like a 20% fall.
 > Discrete weeks say the opposite: w-0 €36.64, w-1 €29.98, w-2 €10.85, w-3
@@ -93,6 +134,66 @@ matter more than the total at this size. One wallet buying more is not
 conversion.
 
 ## What we currently know (update as evidence lands)
+
+- **An agent that asked for something we sell, the way we tell agents to ask,
+  got HTTP 500 — for five and a half months** (found and fixed 2026-08-23,
+  `e8c36cb`). `/v1/do` takes either a `capability_slug` or a free-text `task`.
+  The unauthenticated auth gate was entered only in the first case, so a caller
+  who *described* what they wanted matched normally, fell past every anonymous
+  branch, and landed in the paid path with no user; the wallet read threw and
+  the top-level handler answered `internal_error`. Verified against production
+  before the change: `{"task":"search the web for news"}` → 500,
+  `{"task":"take a screenshot of this page"}` → 500,
+  `{"capability_slug":"google-search"}` → 402 with a price. So the rail worked
+  for anyone who already knew our slugs and returned an error to everyone else
+  — and `task` is what the MCP server, the SDKs and the docs all tell an agent
+  to send. Live since `1e8ebe6` (2026-03-08), the commit that added the gate.
+  After the fix, on production: the screenshot task now returns **402 quoting
+  $0.054 USDC**, and the search task returns the 401 that names the free
+  capabilities.
+
+  This bears directly on E1 and on "176 agents/week reach MCP; ~0 converted".
+  It does not by itself explain zero conversion — arrivals are dominated by
+  monitors and indexers, and nothing measures how many arrivals took the
+  task-shaped route — so it is **a wall that was there**, not the wall. The
+  honest follow-up is to attribute anonymous `/v1/do` arrivals by shape, which
+  nothing does today.
+
+- **The failure taxonomy's default direction is the F1 root cause, and it is now
+  measured rather than argued** (2026-08-23, `scripts/f1-failure-attribution.ts`).
+  Every distinct error string a failed transaction has carried in the 90-day
+  window, run through `classifyTransactionFailure`: **541 strings, 280,945
+  calls.** 154 strings and 47,582 calls land in `internal` — "everything else,
+  OUR bug until proven otherwise" — which is the only class the quality floor
+  counts against a capability. Applying deliberately conservative rules that
+  claim a string only on positive evidence it is *not* about our code,
+  **82.0% of those calls (39,039 of 47,582) are misattributed**, and that is a
+  lower bound because anything unclaimed stays in "possibly ours". The largest
+  single member is `fetch failed` — 13,874 calls across 26 capabilities, still
+  arriving today — a bare runtime transport error that by construction says
+  nothing about our logic. Also inside: 2,438 calls of **our own guards
+  refusing correctly** (the paid-API budget guard, the redirect limiter, the
+  reserved-IP-range refusal, documented coverage limits).
+
+  Second-sourced on a different population: external paid traffic only, the
+  only traffic the floor acts on. 446 failed calls, 92 of them `internal`; the
+  same conservative rules claim 25%, and the bulk of the remainder is a vendor
+  API quoting the *caller's* bad URL back at us ("Unable to download the file.
+  Please verify the URL") — not claimed by the rules because the string names
+  the vendor's error type rather than ours.
+
+  **The repair is designed and deliberately not shipped today.** `internal`
+  must stop being the fallback: it should be reachable only by positive match,
+  with an `unclassified` class that leaves the correctness denominator and
+  surfaces as an evidence shortfall so it is visible rather than silent. That
+  touches `execution-outcome.ts` (WP4's authority, which writes
+  `counts_against_capability` into the durable fact table) and
+  `jobs/quality-floor.ts` — both under concurrent modification by the
+  remediation programme — and LESSONS.md's three-strike rule forbids shipping a
+  seventh single-string patch in its place. One thing checked and found *not*
+  to be a blocker: both branches of `classifyExecutionOutcome` already set
+  `billable: false`, so widening what the floor ignores does not change what
+  any customer is charged.
 
 - **176 agents/week reach MCP; ~0 converted.** The wall was a web signup form;
   fixed 2026-08-15 (#249) — x402 pay-per-call is now advertised at the point of
