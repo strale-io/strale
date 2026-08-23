@@ -1,8 +1,15 @@
 package: WP10
 title: Durable Job Coordinator
-status: REVIEW
+status: MERGED_DEPLOYED_UNDER_OBSERVATION
 depends_on: [WP1]
 risks: [CR-08]
+merged_as: ce5e63f  # PR #376, squash
+deployed_commit_verified: ce5e63f09186  # GET /health, not a log line
+reconciliation_record: docs/remediation/packages/WP10-RECONCILIATION.md
+acceptance_gate: >
+  Seven-day cadence measurement, due 2026-08-30. Immediate reconciliation is
+  clean; acceptance waits on evidence that cadence survives a DEPLOY, which no
+  first-boot reading can show and which must not be manufactured.
 
 objective: >
   Own "when is this job next due" in one place, so that a deploy stops being
