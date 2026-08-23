@@ -1,4 +1,5 @@
 import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
+import { deployCommitOrNull } from "./receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "./receipt/settle.js";
 import { getDb } from "../db/index.js";
 import {
@@ -1875,6 +1876,11 @@ async function recordTestQuality(
   const [txn] = await db
     .insert(transactions)
     .values({
+      // Captured at INSERT because neither is recoverable later:
+      // the rail is not a property of the row, and the deploy commit
+      // drifts the moment anything redeploys (block 0110).
+      receiptRail: "internal",
+      receiptDeployCommit: deployCommitOrNull(),
       userId: await getSystemUserId(),
       capabilityId: cap.id,
       status: executionError ? "failed" : "completed",

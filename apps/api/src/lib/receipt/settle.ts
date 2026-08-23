@@ -65,7 +65,15 @@ export type SettleRail = "v1_do" | "x402" | "mcp" | "a2a" | "internal";
 
 export interface SettleParams {
   transactionId: string;
-  rail: SettleRail;
+  /**
+   * The rail, as the calling site knows it.
+   *
+   * Optional because the authoritative copy is `transactions.receipt_rail`,
+   * captured at INSERT (block 0110). When both are present they are
+   * cross-checked and a disagreement is logged - two derivations of one fact
+   * is exactly the shape that drifts, so it is better to notice.
+   */
+  rail?: SettleRail;
   /** The solution slug, when this transaction is a solution execution. */
   solutionSlug?: string | null;
   /**
@@ -101,6 +109,8 @@ interface TxnRow {
   receipt_status: string | null;
   capability_id: string | null;
   solution_slug: string | null;
+  receipt_rail: string | null;
+  receipt_deploy_commit: string | null;
   [k: string]: unknown;
 }
 
@@ -164,7 +174,7 @@ export async function settleExecutionReceipt(db: Db, params: SettleParams): Prom
       {
         label: "receipt-settle-failed",
         transaction_id: params.transactionId,
-        rail: params.rail,
+        rail: params.rail ?? null,
         err: err instanceof Error ? err.message : String(err),
       },
       "execution receipt could not be settled; left pending for the sweeper",
@@ -176,6 +186,7 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
   const rows = (await db.execute(sql`
     SELECT t.id, t.status, t.input, t.output, t.error, t.provenance,
            t.transparency_marker, t.receipt_status, t.capability_id, t.solution_slug,
+           t.receipt_rail, t.receipt_deploy_commit,
            c.slug              AS c_slug,
            c.name              AS c_name,
            c.input_schema      AS c_input_schema,
@@ -208,6 +219,29 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
   // on `pending` anyway, but returning early keeps a duplicate call from
   // writing a snapshot for nothing.
   if (row.receipt_status === "complete" || row.receipt_status === "failed") return;
+
+  // The rail the ROW recorded wins. It was written at INSERT by the site that
+  // created the transaction, which is the only moment the rail is known
+  // exactly; a caller-supplied value is a second derivation of the same fact.
+  const rowRail = row.receipt_rail as SettleRail | null;
+  if (rowRail && params.rail && rowRail !== params.rail) {
+    log.warn(
+      {
+        label: "receipt-rail-disagreement",
+        transaction_id: row.id,
+        row_rail: rowRail,
+        param_rail: params.rail,
+      },
+      "the transaction row and the settling call site disagree about the rail",
+    );
+  }
+  const rail = rowRail ?? params.rail ?? null;
+  if (!rail) {
+    // A site that writes a transaction and never records its rail. Phase 2's
+    // closed reason set has exactly the right name for this, and it is loud.
+    await markReceiptFailed(db, row.id, "unmapped_rail");
+    return;
+  }
 
   const isSolution = Boolean(params.solutionSlug ?? row.solution_slug);
   const subjectSlug = isSolution
@@ -277,10 +311,20 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
   // and the process would not be serving otherwise. Handled anyway rather than
   // assumed, because "cannot happen" is how the Phase 4 review found six of
   // its findings.
-  let deployCommit: string;
-  try {
-    deployCommit = resolveDeployCommit();
-  } catch {
+  // Likewise the commit: the row's copy is the one that was SERVING when the
+  // transaction was created. Reading the environment here instead would bind
+  // whatever is running now, which for a sweeper retry after a deploy is a
+  // different implementation than the one that produced the result - and the
+  // digest would verify perfectly against the wrong answer.
+  let deployCommit: string | null = (row.receipt_deploy_commit as string | null) ?? null;
+  if (!deployCommit) {
+    try {
+      deployCommit = resolveDeployCommit();
+    } catch {
+      deployCommit = null;
+    }
+  }
+  if (!deployCommit) {
     await markReceiptFailed(db, row.id, "missing_deploy_identity");
     return;
   }
@@ -292,7 +336,7 @@ async function settleOrThrow(db: Db, params: SettleParams): Promise<void> {
     deployCommit,
     manifestDigest,
     steps: isSolution ? solutionSteps : null,
-    rail: params.rail,
+    rail,
     inputs: row.input ?? null,
     status: row.status === "completed" ? "completed" : "failed",
     // Exactly the bytes the caller received: `/v1/do` returns this column as

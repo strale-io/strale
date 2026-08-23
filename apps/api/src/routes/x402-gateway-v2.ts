@@ -10,6 +10,7 @@
  */
 
 import { Hono } from "hono";
+import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import { cors } from "hono/cors";
 import { eq, and, inArray, sql } from "drizzle-orm";
@@ -795,6 +796,11 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       };
   try {
     const [row] = await db.insert(transactions).values({
+                                                 // Captured at INSERT because neither is recoverable later:
+                                                 // the rail is not a property of the row, and the deploy commit
+                                                 // drifts the moment anything redeploys (block 0110).
+                                                 receiptRail: "x402",
+                                                 receiptDeployCommit: deployCommitOrNull(),
       userId: null,
       capabilityId: args.capabilityId,
       solutionSlug: args.solutionSlug,

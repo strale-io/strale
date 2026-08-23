@@ -35,6 +35,7 @@
 
 import { sql, eq, and, lt, asc } from "drizzle-orm";
 import { getDb } from "../db/index.js";
+import { sweepPendingReceipts } from "../lib/receipt/sweeper.js";
 import { transactions } from "../db/schema.js";
 import {
   computeIntegrityHashVersioned,
@@ -71,6 +72,20 @@ export async function runIntegrityHashRetryOnce(): Promise<void> {
 
 async function runOnce(): Promise<void> {
   const db = getDb();
+
+  // Receipts first, and OUTSIDE the chain transaction below.
+  //
+  // First, because the chain refuses to admit a row whose receipt is still
+  // pending -- so a receipt settled now is a row that can chain in this same
+  // tick rather than waiting for the next one.
+  //
+  // Outside, because the chain tick is a single transaction: an exception
+  // raised while sweeping would roll back every hash written in it. That is
+  // the Phase 4 round-three failure exactly, where one receipt-bearing row
+  // would have halted the tamper-evident chain for every transaction in the
+  // system. sweepPendingReceipts never throws, and this await is still not
+  // inside the transaction, so neither property depends on the other.
+  await sweepPendingReceipts(db);
 
   // Advisory-lock + all work runs inside a single transaction so the
   // xact-scoped lock sits on the same connection as every subsequent

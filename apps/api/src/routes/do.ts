@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { settleExecutionReceipt } from "../lib/receipt/settle.js";
@@ -1541,6 +1542,11 @@ async function executeFreeTier(
   const [txnRecord] = await db
     .insert(transactions)
     .values({
+      // Captured at INSERT because neither is recoverable later:
+      // the rail is not a property of the row, and the deploy commit
+      // drifts the moment anything redeploys (block 0110).
+      receiptRail: "v1_do",
+      receiptDeployCommit: deployCommitOrNull(),
       userId: null,
       capabilityId: capability.id,
       status: "executing",
@@ -1798,6 +1804,11 @@ async function executeFreeTierAuthenticated(
   const [txnRecord] = await db
     .insert(transactions)
     .values({
+      // Captured at INSERT because neither is recoverable later:
+      // the rail is not a property of the row, and the deploy commit
+      // drifts the moment anything redeploys (block 0110).
+      receiptRail: "v1_do",
+      receiptDeployCommit: deployCommitOrNull(),
       userId: user.id,
       capabilityId: capability.id,
       idempotencyKey,
@@ -2097,6 +2108,11 @@ async function executeSync(
     const [txnRecord] = await tx
       .insert(transactions)
       .values({
+        // Captured at INSERT because neither is recoverable later:
+        // the rail is not a property of the row, and the deploy commit
+        // drifts the moment anything redeploys (block 0110).
+        receiptRail: "v1_do",
+        receiptDeployCommit: deployCommitOrNull(),
         userId: user.id,
         capabilityId: capability.id,
         idempotencyKey,
@@ -2470,6 +2486,11 @@ async function executeAsync(
     const [txnRecord] = await tx
       .insert(transactions)
       .values({
+        // Captured at INSERT because neither is recoverable later:
+        // the rail is not a property of the row, and the deploy commit
+        // drifts the moment anything redeploys (block 0110).
+        receiptRail: "v1_do",
+        receiptDeployCommit: deployCommitOrNull(),
         userId: user.id,
         capabilityId: capability.id,
         idempotencyKey,

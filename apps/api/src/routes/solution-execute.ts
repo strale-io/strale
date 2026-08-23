@@ -15,6 +15,7 @@
  */
 
 import { Hono } from "hono";
+import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
@@ -189,6 +190,11 @@ solutionExecuteRoute.post(
         const [txnRecord] = await tx
           .insert(transactions)
           .values({
+            // Captured at INSERT because neither is recoverable later:
+            // the rail is not a property of the row, and the deploy commit
+            // drifts the moment anything redeploys (block 0110).
+            receiptRail: "v1_do",
+            receiptDeployCommit: deployCommitOrNull(),
             userId: user.id,
             capabilityId: null,
             solutionSlug: sol.slug,

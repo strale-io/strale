@@ -405,6 +405,22 @@ export const transactions = pgTable(
     receiptManifestDigest: varchar("receipt_manifest_digest", { length: 71 }),
     /** Retry bookkeeping for the pending -> complete path. */
     receiptAttempts: integer("receipt_attempts").notNull().default(0),
+
+    /**
+     * The surface that created this transaction, captured at INSERT.
+     *
+     * Not recoverable afterwards, and not guessable: see block 0110. The
+     * sweeper needs it to rebuild a receipt the request path could not finish,
+     * and a guessed rail inside a commitment is worse than an admitted gap.
+     */
+    receiptRail: text("receipt_rail"),
+    /**
+     * The commit that was serving when this transaction was created.
+     *
+     * Captured at INSERT so a receipt built later - by a retry, or after a
+     * deploy - binds the code that actually ran rather than the code asking.
+     */
+    receiptDeployCommit: text("receipt_deploy_commit"),
     /**
      * Which integrity-chain payload rule hashed this row.
      * NULL = v1 (pre-epoch, by definition). 2 = v2, which anchors

@@ -277,9 +277,14 @@ export function describeReceiptState(row: {
   receiptStatus: string | null;
   receiptFailureReason: string | null;
   receiptDigest: string | null;
+  /** 90-day content redaction. */
+  redactedAt?: Date | string | null;
+  /** 1095-day deletion. */
+  deletedAt?: Date | string | null;
 }):
   | { status: "legacy_unavailable"; reason: string }
   | { status: "complete"; digest: string }
+  | { status: "redacted"; digest: string; reason: string }
   | { status: "pending" | "failed"; reason: string } {
   if (row.receiptStatus === null) {
     return {
@@ -290,6 +295,27 @@ export function describeReceiptState(row: {
     };
   }
   if (row.receiptStatus === "complete" && row.receiptDigest) {
+    // Retention erases the request and the result at 90 days, and deletion
+    // takes the row at 1095. The digest survives both, and it is still a
+    // truthful commitment -- what is gone is the ability to RECOMPUTE it.
+    //
+    // Calling that "complete" would be the single most misleading thing this
+    // module could say. A reader who asks for a receipt and is told "complete,
+    // here is the digest" will reasonably conclude they can verify it, and they
+    // cannot: the material the digest commits to no longer exists. `walkChain`
+    // already draws this distinction for chain rows; the receipt lifecycle did
+    // not, and Phase 4 recorded the gap as an acceptance criterion rather than
+    // fixing it in place.
+    if (row.redactedAt != null || row.deletedAt != null) {
+      return {
+        status: "redacted",
+        digest: row.receiptDigest,
+        reason:
+          "the receipt digest stands and is unchanged, but the request and result " +
+          "it commits to were erased under the retention policy, so it can no " +
+          "longer be independently recomputed from this transaction",
+      };
+    }
     return { status: "complete", digest: row.receiptDigest };
   }
   return {
