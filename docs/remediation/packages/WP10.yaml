@@ -73,6 +73,18 @@ defects:
   no_durable_retry_or_recovery_state: >
     A job that threw was retried at the next boot, at full rate, with no record
     that it had failed. A job whose process died mid-run left nothing to say so.
+  a_pruned_table_is_not_state: >
+    Found during this package, in this package's own first implementation. The
+    onboarding sweeper counted its retry attempts by querying
+    health_monitor_events and gated escalation on a NOT EXISTS against an
+    escalation event in that same table. jobs/db-retention.ts:83 prunes
+    health_monitor_events at 30 days. So the retry budget would have reset
+    every month, and — worse — the escalation marker would have aged out with
+    it, returning an already-escalated capability to the retry set forever in
+    30-day cycles, re-escalating each time. Fixed by moving the counter to
+    capabilities.onboarding_hook_failures, mirroring
+    test_suites.fixture_recapture_failures (block 0093), which exists for
+    exactly this reason and is not pruned.
   the_promised_sweeper_was_never_built: >
     See hook_failed_has_no_reader. The hook generates a capability's test
     suites, so a capability whose hook failed has none, is never selected by the
@@ -120,8 +132,8 @@ scope:
 proof:
   lane: real Postgres, --no-file-parallelism, startup migrations applied as boot applies them
   new_suites:
-    - src/lib/job-coordinator.integration.test.ts (21 tests)
-    - src/jobs/onboarding-retry.integration.test.ts (7 tests)
+    - src/lib/job-coordinator.integration.test.ts (22 tests)
+    - src/jobs/onboarding-retry.integration.test.ts (9 tests)
     - src/jobs/job-migration.integration.test.ts (11 tests)
   fail_before_proven:
     cadence_property: >
@@ -140,6 +152,15 @@ proof:
       Reverting quality-floor.ts alone to setTimeout+setInterval turns
       "quality-floor registers with a 24h period" red while the other ten stay
       green. The guard reads job_schedule rows, not source text.
+    retention_cannot_resurrect_an_escalated_capability: >
+      Reverting only the candidate predicate to the events-based NOT EXISTS,
+      then deleting the capability's events as retention would, turns "counts
+      attempts on the capability row" red while the other eight stay green.
+    backoff_cap_is_actually_exercised: >
+      The first version of the cap test ran four failures (max 480s) and
+      asserted "<= 1 hour" — true whether or not a cap existed. It now runs
+      eight, so the cap binds from the seventh, and removing the cap term from
+      the SQL turns it red.
     block_0104_guard_discriminates: >
       The block refuses to report success unless next_run_at is NOT NULL, because
       a nullable column would let a row exist that claimJob's `next_run_at <=
@@ -152,6 +173,11 @@ deploy_notes:
     The onboarding sweeper is the only new bulk operation. Production holds zero
     hook_failed rows, so there is no backlog to drain. It is nonetheless capped
     at 10 capabilities per tick, so a future backlog drains over ticks.
+  second_block: >
+    0105_onboarding_hook_failures adds an integer column with a NOT NULL
+    DEFAULT 0 to `capabilities` (304 active + 36 other rows). Postgres adds a
+    defaulted column without a table rewrite, so this is metadata-only and does
+    not lock the table for any meaningful time.
   boot_blocking_gate_check: >
     Block 0104 aborts boot if it throws. `to_regclass('public.job_schedule')` is
     NULL in production, so the table is created fresh with next_run_at NOT NULL
@@ -185,6 +211,11 @@ residual_risks:
     caller already runs inside the test scheduler's advisory lock, and the task
     bodies swallow their own errors, so a lease would not change any observable
     outcome today.
+  attempt_counter_is_per_capability_not_per_cause: >
+    A capability that exhausts its five attempts for one reason, is fixed, then
+    fails again later for an unrelated reason, starts from zero — the counter
+    resets on success. That is the intended trade, but it means the budget
+    measures consecutive failures rather than lifetime ones.
   recovered_capability_lands_in_draft: >
     The sweeper cannot know what lifecycle_state a capability held before its
     hook failed, because the marker overwrote it. It restores 'draft', which is

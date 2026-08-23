@@ -32,13 +32,23 @@
  * cap below is nonetheless real, so a future backlog drains gradually rather
  * than in one burst.
  *
- * ## Bounded retry without a schema change
+ * ## Bounded retry, counted somewhere that survives
  *
- * Attempts are counted from `health_monitor_events` rather than a new column.
- * After MAX_ATTEMPTS the sweeper emits one escalation event and thereafter
- * skips the slug, so a capability whose hook fails deterministically (a bad
- * manifest, say) does not retry forever — it becomes a human decision, which
- * is the honest outcome for a failure the platform cannot fix by repeating it.
+ * `capabilities.onboarding_hook_failures` holds the attempt count. After
+ * MAX_ATTEMPTS the sweeper emits one escalation event and the candidate query
+ * excludes the row from then on, so a capability whose hook fails
+ * deterministically (a bad manifest, say) does not retry forever — it becomes
+ * a human decision, which is the honest outcome for a failure the platform
+ * cannot fix by repeating it.
+ *
+ * The counter deliberately does NOT live in `health_monitor_events`. The first
+ * version of this file counted attempts by querying that table, which
+ * jobs/db-retention.ts prunes at 30 days: the budget would have silently reset
+ * every month, and the escalation marker would have aged out with it, so an
+ * already-escalated capability would rejoin the retry set forever in 30-day
+ * cycles and re-escalate each time. A pruned telemetry table is not state.
+ * The column mirrors `test_suites.fixture_recapture_failures`, which exists
+ * for exactly this reason.
  */
 
 import { sql } from "drizzle-orm";
@@ -79,18 +89,14 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
     escalated: [],
   };
 
-  // Candidates: hook_failed, and not already escalated. The NOT EXISTS is what
-  // stops a deterministically-broken capability from being retried forever.
+  // Candidates: hook_failed, with budget left. The budget predicate is what
+  // stops a deterministically-broken capability being retried forever, and it
+  // reads a column rather than an event so it cannot be undone by retention.
   const rows = await db.execute(sql`
     SELECT c.slug
       FROM capabilities c
      WHERE c.lifecycle_state = 'hook_failed'
-       AND NOT EXISTS (
-         SELECT 1 FROM health_monitor_events e
-          WHERE e.event_type = ${RETRY_EVENT}
-            AND e.capability_slug = c.slug
-            AND e.action_taken = ${ESCALATION_ACTION}
-       )
+       AND c.onboarding_hook_failures < ${MAX_ATTEMPTS}
      ORDER BY c.updated_at ASC
      LIMIT ${MAX_PER_TICK}
   `);
@@ -110,7 +116,9 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
       // promotion is capability-promotion's decision, not this sweeper's.
       await db.execute(sql`
         UPDATE capabilities
-           SET lifecycle_state = 'draft', updated_at = now()
+           SET lifecycle_state = 'draft',
+               onboarding_hook_failures = 0,
+               updated_at = now()
          WHERE slug = ${slug} AND lifecycle_state = 'hook_failed'
       `);
 
@@ -129,17 +137,18 @@ export async function runOnboardingRetryOnce(): Promise<SweepOutcome> {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
 
+      // Increment and read back in one statement, so two runners cannot both
+      // read the same prior count and each conclude they were the fourth.
       const attemptRows = await db.execute(sql`
-        SELECT count(*)::int AS n
-          FROM health_monitor_events
-         WHERE event_type = ${RETRY_EVENT}
-           AND capability_slug = ${slug}
-           AND action_taken = 'retry_failed'
+        UPDATE capabilities
+           SET onboarding_hook_failures = onboarding_hook_failures + 1,
+               updated_at = now()
+         WHERE slug = ${slug}
+        RETURNING onboarding_hook_failures AS attempts
       `);
-      const priorAttempts = Number(
-        (attemptRows as unknown as Array<{ n: number }>)[0]?.n ?? 0,
+      const attempts = Number(
+        (attemptRows as unknown as Array<{ attempts: number }>)[0]?.attempts ?? 1,
       );
-      const attempts = priorAttempts + 1;
 
       await db.insert(healthMonitorEvents).values({
         eventType: RETRY_EVENT,

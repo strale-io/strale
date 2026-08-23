@@ -365,8 +365,13 @@ was added, removed or widened; `AUTONOMOUS_PURPOSES` is unchanged.
 - **Also built:** the `hook_failed` onboarding-retry sweeper promised three times in
   `capability-persistence.ts` since DEC-20260421-B and never written (zero readers of
   the marker existed). Production holds 0 such rows — a latent gap, not a backlog.
-- **Migrations:** startup block `0104_job_schedule` (idempotent DDL + a NOT NULL
-  verification that refuses to report success on a shape `claimJob` could never match).
-- **Proof:** 39 new tests on real Postgres; fail-before demonstrated for the cadence
+- **Self-found defect:** this package's own sweeper first counted retry attempts in
+  `health_monitor_events`, which retention prunes at 30 days — the escalation marker
+  would have aged out and an escalated capability would have rejoined the retry set
+  every month. Moved to a durable column. A pruned telemetry table is not state.
+- **Migrations:** startup blocks `0104_job_schedule` (idempotent DDL + a NOT NULL
+  verification that refuses to report success on a shape `claimJob` could never match)
+  and `0105_onboarding_hook_failures` (defaulted column, metadata-only).
+- **Proof:** 42 new tests on real Postgres; fail-before demonstrated for the cadence
   property, the crash-recovery flag, and the per-job registration guard.
 - **Not touched:** WP12 and its VERIFY-IP gate; no Railway hop count inferred.

@@ -311,13 +311,17 @@ describeMaybe("job coordinator against a real database", () => {
     expect(due).toBeGreaterThan(0);
   });
 
-  it("backoff grows with consecutive failures and is capped", async () => {
+  it("backoff grows with consecutive failures and is capped at an hour", async () => {
     const name = jobName("backoff");
     const DAY = 24 * 3600_000;
     await registerJob({ name, intervalMs: DAY, handler: async () => {} });
 
+    // Eight failures, deliberately: the cap only binds from the seventh
+    // (60s * 2^6 = 3840s > 3600s). An earlier version of this test ran four
+    // and asserted "<= 1 hour", which 480s satisfies whether or not a cap
+    // exists — it named the cap and never reached it.
     const delays: number[] = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 8; i++) {
       await shiftDue(name, "- interval '1 second'");
       await claimJob(name);
       await releaseJob(name, "error", `attempt ${i}`);
@@ -325,9 +329,34 @@ describeMaybe("job coordinator against a real database", () => {
       delays.push(new Date(String(r!.next_run_at)).getTime() - Date.now());
     }
 
-    expect(Number((await row(name))!.consecutive_failures)).toBe(4);
-    expect(delays[1]).toBeGreaterThan(delays[0]);
-    expect(delays[3]).toBeLessThanOrEqual(60 * 60 * 1000 + 5_000);
+    expect(Number((await row(name))!.consecutive_failures)).toBe(8);
+
+    // Doubling while under the cap: 60s, 120s, 240s, 480s, 960s, 1920s.
+    expect(delays[0]).toBeLessThan(65_000);
+    expect(delays[1]).toBeGreaterThan(delays[0] * 1.5);
+    expect(delays[5]).toBeGreaterThan(delays[4] * 1.5);
+
+    // And then it stops growing. Without the cap the 8th would be 7680s.
+    expect(delays[6]).toBeLessThanOrEqual(60 * 60 * 1000 + 5_000);
+    expect(delays[7]).toBeLessThanOrEqual(60 * 60 * 1000 + 5_000);
+    expect(delays[7]).toBeLessThan(7680_000);
+  });
+
+  it("backoff never pushes a retry beyond the job's own interval", async () => {
+    // A five-minute job with an exhausted backoff must retry in five minutes,
+    // not in the hour the cap would otherwise allow — otherwise a failing
+    // frequent job silently becomes an infrequent one.
+    const name = jobName("shortbackoff");
+    await registerJob({ name, intervalMs: 5 * 60_000, handler: async () => {} });
+
+    for (let i = 0; i < 8; i++) {
+      await shiftDue(name, "- interval '1 second'");
+      await claimJob(name);
+      await releaseJob(name, "error", "still failing");
+    }
+
+    const delay = new Date(String((await row(name))!.next_run_at)).getTime() - Date.now();
+    expect(delay).toBeLessThanOrEqual(5 * 60_000 + 5_000);
   });
 
   it("a success after failures resets the counter and restores the full interval", async () => {

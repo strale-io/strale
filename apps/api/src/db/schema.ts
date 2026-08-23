@@ -236,6 +236,22 @@ export const capabilities = pgTable("capabilities", {
   // Pipeline Phase I: Lifecycle management
   lifecycleState: varchar("lifecycle_state", { length: 20 }).notNull().default("draft"),
   // 'draft' | 'validating' | 'probation' | 'active' | 'degraded' | 'suspended' | 'deactivated'
+  // ... plus 'hook_failed', written by lib/capability-persistence.ts when the
+  // post-commit onboarding hook throws.
+  //
+  // WP10: how many times the onboarding-retry sweeper has re-run that hook and
+  // had it fail again. Bounds the retry blast radius the same way
+  // test_suites.fixture_recapture_failures does, and for the same reason: a
+  // hook that fails deterministically will not start working on the sixth
+  // attempt, and retrying forever buries the escalation an operator is meant
+  // to act on. Reset to 0 when the hook finally succeeds.
+  //
+  // This lives on the row rather than being counted from health_monitor_events
+  // because that table is pruned at 30 days (jobs/db-retention.ts). Counting
+  // attempts there would silently reset the budget every month AND age out the
+  // escalation marker, so an already-escalated capability would rejoin the
+  // retry set forever in 30-day cycles.
+  onboardingHookFailures: integer("onboarding_hook_failures").notNull().default(0),
   deactivationReason: text("deactivation_reason"),
   outputFieldReliability: jsonb("output_field_reliability"),
   // { field_name: 'guaranteed' | 'common' | 'rare' }

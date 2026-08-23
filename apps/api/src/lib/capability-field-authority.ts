@@ -124,6 +124,13 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
     category: "db",
     reason: "State machine managed by onCapabilityCreated + admin endpoints.",
   },
+  onboarding_hook_failures: {
+    category: "db",
+    reason:
+      "WP10 retry budget for the onboarding-retry sweeper. Written only by that " +
+      "job — incremented when the post-commit hook fails again, reset to 0 when " +
+      "it finally succeeds. Never authored in a manifest.",
+  },
   deactivation_reason: {
     category: "db",
     reason: "Admin-recorded reason on suspension.",

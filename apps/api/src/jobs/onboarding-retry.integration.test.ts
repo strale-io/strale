@@ -49,13 +49,21 @@ describeMaybe("onboarding retry sweeper against a real database", () => {
     return slug;
   }
 
-  async function seedCapability(slug: string, lifecycleState: string) {
+  async function seedCapability(slug: string, lifecycleState: string, failures = 0) {
     await db.execute(sql`
       INSERT INTO capabilities (slug, name, description, category, price_cents,
-                                input_schema, output_schema, lifecycle_state)
+                                input_schema, output_schema, lifecycle_state,
+                                onboarding_hook_failures)
       VALUES (${slug}, ${slug}, 'wp10 fixture', 'validation', 1,
-              '{}'::jsonb, '{}'::jsonb, ${lifecycleState})
+              '{}'::jsonb, '{}'::jsonb, ${lifecycleState}, ${failures})
     `);
+  }
+
+  async function failuresOf(slug: string): Promise<number> {
+    const rows = await db.execute(
+      sql`SELECT onboarding_hook_failures AS n FROM capabilities WHERE slug = ${slug}`,
+    );
+    return Number((rows as unknown as Array<{ n: number }>)[0]?.n ?? -1);
   }
 
   async function lifecycleOf(slug: string): Promise<string | undefined> {
@@ -106,6 +114,21 @@ describeMaybe("onboarding retry sweeper against a real database", () => {
 
     const events = await eventsFor(slug, "recovered");
     expect(events).toHaveLength(1);
+
+    // A capability that recovers gets its budget back — the next unrelated
+    // hook failure months later must not inherit a spent counter.
+    expect(await failuresOf(slug)).toBe(0);
+  });
+
+  it("restores the full retry budget on recovery, not a partial one", async () => {
+    const slug = newSlug("budgetreset");
+    await seedCapability(slug, "hook_failed", MAX_ATTEMPTS - 1);
+    hookMock.mockResolvedValue(undefined);
+
+    await runOnboardingRetryOnce();
+
+    expect(await lifecycleOf(slug)).toBe("draft");
+    expect(await failuresOf(slug)).toBe(0);
   });
 
   it("leaves capabilities in other lifecycle states alone", async () => {
@@ -151,6 +174,29 @@ describeMaybe("onboarding retry sweeper against a real database", () => {
     const failures = await eventsFor(slug, "retry_failed");
     expect(failures).toHaveLength(1);
     expect(JSON.stringify(failures[0].details)).toContain("gate 3: schema incoherent");
+
+    // The attempt is counted on the row, which retention cannot touch.
+    expect(await failuresOf(slug)).toBe(1);
+  });
+
+  it("counts attempts on the capability row, so retention cannot resurrect an escalated one", async () => {
+    // Regression. The first implementation counted attempts by querying
+    // health_monitor_events and gated escalation on a NOT EXISTS against an
+    // escalation event in that same table. jobs/db-retention.ts prunes
+    // health_monitor_events at 30 days, so both the budget and the escalation
+    // marker aged out: an escalated capability rejoined the retry set every
+    // month and re-escalated, forever.
+    const slug = newSlug("survivesprune");
+    await seedCapability(slug, "hook_failed", MAX_ATTEMPTS);
+    hookMock.mockRejectedValue(new Error("should never be called"));
+
+    // Simulate retention having removed every trace of the prior attempts.
+    await db.execute(sql`DELETE FROM health_monitor_events WHERE capability_slug = ${slug}`);
+
+    const outcome = await runOnboardingRetryOnce();
+
+    expect(outcome.examined).toBe(0);
+    expect(hookMock).not.toHaveBeenCalled();
   });
 
   it("escalates after MAX_ATTEMPTS and then stops retrying that capability", async () => {
