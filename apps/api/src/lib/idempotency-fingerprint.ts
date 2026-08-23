@@ -26,6 +26,7 @@
  */
 
 import { createHash } from "node:crypto";
+import { sortKeysDeep } from "./canonical/jcs.js";
 
 /**
  * Stable across key order, so `{a:1,b:2}` and `{b:2,a:1}` are one request.
@@ -35,15 +36,6 @@ import { createHash } from "node:crypto";
  * retry — which is exactly when idempotency matters. Sorting recursively means
  * a retry that differs only in serialisation still replays instead of 409ing.
  */
-function canonicalize(value: unknown): unknown {
-  if (value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(canonicalize);
-  const obj = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(obj).sort()) out[key] = canonicalize(obj[key]);
-  return out;
-}
-
 /**
  * Bind a key to the work it was issued for.
  *
@@ -51,6 +43,25 @@ function canonicalize(value: unknown): unknown {
  * `capability_slug` are alternative ways of selecting what runs, and a key
  * reused across two different capabilities is precisely the case that returned
  * the wrong capability's output.
+ */
+/*
+ * WHY THIS STILL USES JSON.stringify RATHER THAN THE RFC 8785 CANONICALIZER.
+ *
+ * The ordering rule is now shared (`sortKeysDeep`), so there is one definition
+ * of canonical key order in the codebase. The SERIALIZATION is deliberately
+ * left alone.
+ *
+ * Moving this digest to `canonicalize()` would change its bytes — the fixed
+ * literal below is emitted in declaration order, while JCS would sort those six
+ * members too. Different bytes mean different fingerprints, and `isReplayable`
+ * returns false on a mismatch, so every idempotency key in flight across the
+ * deploy would 409 on a legitimate retry. That is precisely the failure this
+ * module's own comment calls "a worse failure than the one this package fixes".
+ *
+ * Full adoption therefore needs a dual-accept window (compute both, accept
+ * either, retire the old form once keys have aged out). That is receipt-
+ * integration work, not canonicalizer work, and it is recorded in the Phase 2
+ * spec rather than smuggled in here.
  */
 export function computeIdempotencyFingerprint(params: {
   task?: string | null;
@@ -77,7 +88,7 @@ export function computeIdempotencyFingerprint(params: {
     rail: params.rail ?? "capability",
     task: params.task ?? null,
     capability_slug: params.capabilitySlug ?? null,
-    inputs: canonicalize(params.inputs ?? null),
+    inputs: sortKeysDeep(params.inputs ?? null),
     dry_run: params.dryRun === true,
     require_fresh: params.requireFresh === true,
   });

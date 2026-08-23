@@ -60,6 +60,44 @@ export type JcsErrorCode =
   | "lone_surrogate"
   | "sparse_or_exotic_array";
 
+/**
+ * The RFC 8785 §3.2.3 ordering rule, defined once.
+ *
+ * Sorting is by UTF-16 code unit, which is exactly what
+ * `Array.prototype.sort`'s default comparator does — so this function is thin
+ * on purpose. It exists so the RULE has one home: `idempotency-fingerprint.ts`
+ * grew its own recursive key-sort independently, and two implementations of an
+ * ordering rule is how they drift. Anything needing "JSON keys in canonical
+ * order" calls this.
+ *
+ * Deliberately NOT code-point order and NOT UTF-8 byte order. Those three
+ * disagree above the BMP: U+1F600 (surrogates D83D DE00) sorts before U+FB00
+ * by code unit and after it by the other two.
+ */
+export function sortJsonKeys(keys: readonly string[]): string[] {
+  return [...keys].sort();
+}
+
+/**
+ * Recursively reorder an object's keys without serializing.
+ *
+ * A shape normalizer, **not** a canonicalizer — it performs §3.2.3 and nothing
+ * else, so the result still has to be serialized by something. It exists so the
+ * one caller that must keep its legacy `JSON.stringify` bytes
+ * (`computeIdempotencyFingerprint`) shares this module's ordering rule instead
+ * of keeping a private copy.
+ *
+ * New code should use `canonicalize` instead.
+ */
+export function sortKeysDeep(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(sortKeysDeep);
+  const record = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of sortJsonKeys(Object.keys(record))) out[key] = sortKeysDeep(record[key]);
+  return out;
+}
+
 const CONTROL_ESCAPES: Record<number, string> = {
   0x08: "\\b",
   0x09: "\\t",
@@ -200,10 +238,9 @@ function serialize(value: unknown, path: string, seen: Set<object>): string {
       );
     }
 
-    // RFC 8785 §3.2.3: sort by UTF-16 code unit. Array.prototype.sort's default
-    // comparator is exactly that, so it is used deliberately, not by accident.
+    // RFC 8785 §3.2.3, via the single definition of the ordering rule.
     const record = obj as Record<string, unknown>;
-    const keys = Object.keys(record).sort();
+    const keys = sortJsonKeys(Object.keys(record));
 
     const members: string[] = [];
     for (const key of keys) {
