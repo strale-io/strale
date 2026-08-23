@@ -25,6 +25,7 @@ import refA from "canonicalize";
 import { canonicalize as refB } from "json-canonicalize/src/index.ts";
 
 import { canonicalize, canonicalBytes, sortKeysDeep, CanonicalizationError } from "./jcs.js";
+import { computeIdempotencyFingerprint } from "../idempotency-fingerprint.js";
 import { DOMAIN_TAGS, domainDigest, digestPreimage } from "./domain-digest.js";
 
 interface Vector {
@@ -437,6 +438,168 @@ describe("nesting depth is bounded by us, not by the stack", () => {
   it("the input that overflows the stack still parses, so the bound is load-bearing", () => {
     // If JSON.parse refused first, the bound would be unreachable decoration.
     expect(() => nest(5000)).not.toThrow();
+  });
+});
+
+describe("the array branch enforces the same invariant as the object branch", () => {
+  // Every value read during serialization must be an own DATA property of a
+  // PLAIN container, with no member the reader will not visit. Three holes,
+  // all reviewer-demonstrated at acb97a4.
+
+  it("an accessor at an array INDEX is refused", () => {
+    let n = 0;
+    const arr: unknown[] = [];
+    Object.defineProperty(arr, "0", { get: () => ++n, enumerable: true, configurable: true });
+    arr.length = 1;
+    let err: unknown;
+    try {
+      canonicalize(arr);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("accessor_property");
+  });
+
+  it("keys that merely LOOK numeric are refused, not treated as indices", () => {
+    // `String(Number(k)) !== k` admitted every one of these, and
+    // JSON.stringify drops all of them.
+    for (const key of ["-1", "1.5", "NaN", "Infinity", "4294967296", "1e+21", "01"]) {
+      const arr: unknown[] = [1];
+      (arr as unknown as Record<string, unknown>)[key] = "SECRET";
+      expect(JSON.stringify(arr), `${key} baseline`).toBe("[1]");
+      let err: unknown;
+      try {
+        canonicalize(arr);
+      } catch (e) {
+        err = e;
+      }
+      expect(err, `key ${key} was not refused`).toBeInstanceOf(CanonicalizationError);
+      expect((err as CanonicalizationError).code).toBe("sparse_or_exotic_array");
+    }
+  });
+
+  it("an Array subclass supplying an index from its PROTOTYPE is refused", () => {
+    // Passes a stray-key check (no own keys) and an `in` hole check (the
+    // prototype answers), while map() reads the varying getter.
+    let n = 0;
+    class Sneaky extends Array {}
+    Object.defineProperty(Sneaky.prototype, "0", { get: () => ++n, configurable: true });
+    const sneaky = new Sneaky();
+    sneaky.length = 1;
+    let err: unknown;
+    try {
+      canonicalize(sneaky);
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("sparse_or_exotic_array");
+    delete (Sneaky.prototype as unknown as Record<string, unknown>)["0"];
+  });
+
+  it("ordinary arrays are unaffected", () => {
+    expect(canonicalize([1, "a", null, true, [], {}])).toBe('[1,"a",null,true,[],{}]');
+    expect(canonicalize([])).toBe("[]");
+  });
+});
+
+describe("the depth bound covers the path production actually reaches", () => {
+  function nest(depth: number): unknown {
+    return JSON.parse("[".repeat(depth) + "1" + "]".repeat(depth));
+  }
+
+  it("sortKeysDeep refuses with OUR error, not a RangeError", () => {
+    // THE ONE THAT MATTERED. canonicalize has no production caller; this does,
+    // through computeIdempotencyFingerprint from do.ts, on the raw parsed body
+    // before input validation. A ~6 KB body nested 3,000 deep produced a bare
+    // RangeError and a 500.
+    let err: unknown;
+    try {
+      sortKeysDeep(nest(5000));
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+    expect((err as CanonicalizationError).code).toBe("max_depth_exceeded");
+    expect(err).not.toBeInstanceOf(RangeError);
+  });
+
+  it("the fingerprint refuses the same input the same way", () => {
+    let err: unknown;
+    try {
+      computeIdempotencyFingerprint({ capabilitySlug: "x", inputs: { deep: nest(5000) } as never });
+    } catch (e) {
+      err = e;
+    }
+    expect(err).toBeInstanceOf(CanonicalizationError);
+  });
+
+  it("real-world depth is untouched — production's deepest input carries 42 brackets", () => {
+    expect(() => sortKeysDeep(nest(100))).not.toThrow();
+    expect(() => sortKeysDeep(nest(500))).not.toThrow();
+  });
+});
+
+describe("differential fuzz against both references", () => {
+  // Coverage gap the review named: the reference implementations only ever saw
+  // the 49 committed vectors, so the suite had no oracle beyond those points.
+  // Seeded, so a failure is reproducible rather than a one-off.
+  function makeRng(seed: number): () => number {
+    let s = seed >>> 0;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 0x100000000;
+    };
+  }
+
+  function randomJson(rnd: () => number, depth = 0): unknown {
+    const r = rnd();
+    if (depth > 3 || r < 0.3) {
+      const leaf = rnd();
+      if (leaf < 0.2) return null;
+      if (leaf < 0.35) return rnd() < 0.5;
+      if (leaf < 0.6) return (rnd() - 0.5) * Math.pow(10, Math.floor(rnd() * 40) - 20);
+      const chars = [
+        "a",
+        "é",
+        "😀",
+        String.fromCharCode(10), // newline
+        String.fromCharCode(34), // quote
+        String.fromCharCode(92), // backslash
+        String.fromCharCode(0), // NUL
+        String.fromCharCode(127), // DEL
+        "ﬀ",
+        "",
+        "/",
+      ];
+      return Array.from({ length: Math.floor(rnd() * 5) }, () =>
+        chars[Math.floor(rnd() * chars.length)],
+      ).join("");
+    }
+    if (r < 0.55) {
+      return Array.from({ length: Math.floor(rnd() * 4) }, () => randomJson(rnd, depth + 1));
+    }
+    const obj: Record<string, unknown> = {};
+    const keys = ["a", "b", "é", "😀", "ﬀ", "__proto__", "0", "10", "2", "", "Z"];
+    for (let i = 0; i < Math.floor(rnd() * 5); i++) {
+      obj[keys[Math.floor(rnd() * keys.length)]] = randomJson(rnd, depth + 1);
+    }
+    return obj;
+  }
+
+  it("2000 random JSON values agree with both references, byte for byte", () => {
+    const rnd = makeRng(20260823);
+    let compared = 0;
+    for (let i = 0; i < 2000; i++) {
+      // Round-trip so the value is exactly what JSON.parse would hand us.
+      const value = JSON.parse(JSON.stringify(randomJson(rnd)));
+      const ours = canonicalize(value);
+      expect(ours, `case ${i}`).toBe(refA(value as never));
+      expect(ours, `case ${i}`).toBe(refB(value));
+      compared++;
+    }
+    expect(compared).toBe(2000);
   });
 });
 

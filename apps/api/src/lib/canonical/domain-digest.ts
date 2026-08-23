@@ -33,7 +33,11 @@ const NUL = Buffer.from([0x00]);
 
 /** The exact bytes that get hashed. Exported so tests can assert on the preimage. */
 export function digestPreimage(domain: DomainTag, payload: unknown): Buffer {
-  return Buffer.concat([Buffer.from(domain, "ascii"), NUL, canonicalBytes(payload)]);
+  // utf8, not ascii: Buffer.from(x, "ascii") TRUNCATES to 7 bits rather
+  // than throwing, so a non-ASCII tag would frame byte-identically to an
+  // ASCII one. Not reachable today — DOMAIN_TAGS is closed and the suite
+  // asserts both members are printable ASCII — but the masking is gratuitous.
+  return Buffer.concat([Buffer.from(domain, "utf8"), NUL, canonicalBytes(payload)]);
 }
 
 /** `sha256:<64 lowercase hex>` — the prefixed form that gets persisted. */

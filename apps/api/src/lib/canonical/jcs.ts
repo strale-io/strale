@@ -93,9 +93,26 @@ export function sortJsonKeys(keys: readonly string[]): string[] {
  *
  * New code should use `canonicalize` instead.
  */
-export function sortKeysDeep(value: unknown): unknown {
+export function sortKeysDeep(value: unknown, depth = 0): unknown {
+  // THE BOUND HAS TO BE HERE TOO, and this is the one that mattered.
+  //
+  // MAX_DEPTH was added to `canonicalize` — which no production path calls.
+  // The only production consumer of this module is `sortKeysDeep`, through
+  // `computeIdempotencyFingerprint`, which `do.ts` invokes on the raw parsed
+  // body before input validation. So the guard protected code with no call
+  // site while the reachable path stayed unbounded: a ~6 KB body nested 3,000
+  // deep, well inside the 1 MB limit, produced a bare RangeError and a 500.
+  // Reviewer-found. Measured first: across 606,399 production inputs the
+  // deepest carries 42 opening brackets, so 512 cannot reach real traffic.
+  if (depth > MAX_DEPTH) {
+    throw new CanonicalizationError(
+      "max_depth_exceeded",
+      "",
+      `nesting deeper than ${MAX_DEPTH} levels`,
+    );
+  }
   if (value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(sortKeysDeep);
+  if (Array.isArray(value)) return value.map((v) => sortKeysDeep(v, depth + 1));
   const record = value as Record<string, unknown>;
   // NULL PROTOTYPE, deliberately. On an ordinary object literal,
   // `out["__proto__"] = v` does not create a property — it sets the prototype,
@@ -108,7 +125,7 @@ export function sortKeysDeep(value: unknown): unknown {
   // the literal in their input and ZERO live idempotency keys do, so the
   // fingerprint moves for no key in flight.
   const out: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
-  for (const key of sortJsonKeys(Object.keys(record))) out[key] = sortKeysDeep(record[key]);
+  for (const key of sortJsonKeys(Object.keys(record))) out[key] = sortKeysDeep(record[key], depth + 1);
   return out;
 }
 
@@ -127,6 +144,19 @@ export function sortKeysDeep(value: unknown): unknown {
  * below where the stack fails, so the refusal is always ours and never V8's.
  */
 const MAX_DEPTH = 512;
+
+/**
+ * Is `key` a canonical array index that the serializer will actually visit?
+ *
+ * Digits only, no leading zeros, and inside the array's length. Everything
+ * else — "-1", "1.5", "NaN", "Infinity", "01", "1e+21", 2^32 and beyond — is a
+ * member `JSON.stringify` drops without a word.
+ */
+function isCanonicalArrayIndex(key: string, length: number): boolean {
+  if (!/^(0|[1-9][0-9]*)$/.test(key)) return false;
+  const n = Number(key);
+  return Number.isSafeInteger(n) && n < length;
+}
 
 const CONTROL_ESCAPES: Record<number, string> = {
   0x08: "\\b",
@@ -266,27 +296,62 @@ function serialize(value: unknown, path: string, seen: Set<object>, depth = 0): 
     }
 
     if (Array.isArray(value)) {
-      // An array's own non-index properties are dropped by JSON.stringify:
-      // `const a = [1]; a.extra = 2` serializes as `[1]`, losing `extra`
-      // without a word.
-      const stray = Object.keys(obj).filter((k) => String(Number(k)) !== k);
-      if (stray.length > 0) {
+      // The SAME three-part invariant the object branch enforces, applied here.
+      // An earlier version checked only strays and holes, which left three
+      // holes of exactly the class the object branch had just closed:
+      // an accessor at an index, a bogus "index" key, and a subclass whose
+      // prototype supplies the index. Reviewer-found, in one pass, by checking
+      // both branches against the invariant instead of against a type list.
+      //
+      // The invariant: every value read during serialization must be an own
+      // DATA property of a PLAIN container, and no member may exist that the
+      // reader will not visit.
+
+      // 1. Plain container. An Array subclass can put an index on its
+      //    prototype, where `in` finds it, `Object.keys` does not, and
+      //    `Array.prototype.map` still reads it.
+      if (Object.getPrototypeOf(value) !== Array.prototype) {
         throw new CanonicalizationError(
           "sparse_or_exotic_array",
           path,
-          `array carries non-index own propert${stray.length === 1 ? "y" : "ies"} ` +
-            `(${stray.join(", ")}) that JSON.stringify would silently drop`,
+          `${(value as object).constructor?.name ?? "array subclass"} is not a plain array`,
         );
       }
+
+      // 2. No member the reader will not visit. `String(Number(k)) !== k` was
+      //    not an index test: it admitted "-1", "1.5", "NaN", "Infinity",
+      //    "1e+21" and out-of-range integers, every one of which
+      //    JSON.stringify silently drops.
+      for (const key of Object.keys(value)) {
+        if (!isCanonicalArrayIndex(key, value.length)) {
+          throw new CanonicalizationError(
+            "sparse_or_exotic_array",
+            `${path}/${key}`,
+            `array carries the non-index own property "${key}", which ` +
+              "JSON.stringify would silently drop",
+          );
+        }
+      }
+
+      // 3. Own data properties only — no holes, no accessors at an index.
       for (let i = 0; i < value.length; i++) {
-        if (!(i in value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, i);
+        if (!descriptor) {
           throw new CanonicalizationError(
             "sparse_or_exotic_array",
             `${path}[${i}]`,
             "sparse array hole would silently become null",
           );
         }
+        if (typeof descriptor.get === "function") {
+          throw new CanonicalizationError(
+            "accessor_property",
+            `${path}[${i}]`,
+            "a getter can return a different value on each read, so it has no stable canonical form",
+          );
+        }
       }
+
       const parts = value.map((v, i) => serialize(v, `${path}[${i}]`, seen, depth + 1));
       return `[${parts.join(",")}]`;
     }
