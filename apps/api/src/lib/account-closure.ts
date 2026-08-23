@@ -30,7 +30,7 @@
  * either handling it here or stating why it is retained.
  */
 
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 import {
   disputeRequests,
@@ -57,6 +57,19 @@ export interface ClosureRule {
   disposition: ClosureDisposition;
   /** Required for `retained` — why it cannot be cleared. */
   reason?: string;
+  /**
+   * True when the clearing statement for this rule skips rows under a legal
+   * hold, so the summary must report it as withheld rather than cleared.
+   *
+   * Declared per rule rather than inferred from the table name. Round 7 found
+   * the inference (`rule.table === "transactions"`) mis-sorting in both
+   * directions at once: `client_meta` was destroyed on held rows and reported
+   * as withheld — destroying data on a row we are legally required to preserve,
+   * and telling the subject in writing that we had not — while `audit_trail`,
+   * whose rule is keyed `transactions.audit_trail`, was preserved and reported
+   * as cleared.
+   */
+  respectsLegalHold?: boolean;
 }
 
 /**
@@ -95,6 +108,7 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
     table: "transactions",
     columns: ["client_meta"],
     disposition: "anonymized",
+    respectsLegalHold: true,
     reason:
       "Channel attribution: referer, user-agent, the client header, MCP client info, " +
       "the discovery source, and a day-salted HMAC of your IP address. " +
@@ -126,6 +140,7 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
     // it as exhaustive.
     columns: [...CUSTOMER_CONTENT_COLUMN_NAMES],
     disposition: "anonymized",
+    respectsLegalHold: true,
     reason:
       "Everything you sent and everything we made directly from it — the request payload, the response, " +
       "failure messages (which routinely echo the offending input back), the audit body, upstream source records, " +
@@ -157,13 +172,14 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
   },
   {
     table: "transactions.audit_trail",
-    columns: ["see retained_audit_trail_keys"],
+    columns: ["see erased_audit_trail_keys"],
     disposition: "anonymized",
+    respectsLegalHold: true,
     reason:
       "The audit body, including whatever request context the call recorded — a truncated hash of your IP, " +
       "your user-agent, Accept-Language, referer and origin, and for solution runs a per-step record. " +
       "It is cleared along with the rest of the content above. The keys your rows held are listed in " +
-      "`retained_audit_trail_keys`, read from those rows rather than from a list somebody maintains: " +
+      "`erased_audit_trail_keys`, read from those rows rather than from a list somebody maintains: " +
       "four review rounds each found another writer putting another shape in here, so it is no longer described from memory.",
   },
   {
@@ -261,7 +277,7 @@ export function buildClosureSummary(outcome?: ClosureOutcome): ClosureSummary {
     // rows are all held, listing its content as "anonymized" would hand the
     // subject a confirmation indistinguishable from a complete erasure.
     const heldBack =
-      rule.table === "transactions" &&
+      rule.respectsLegalHold === true &&
       rule.disposition === "anonymized" &&
       outcome !== undefined &&
       outcome.contentRedacted === 0 &&
@@ -336,10 +352,16 @@ export async function applyClosurePlan(
   // is NOT inside the hashed payload (`lib/integrity-hash.ts` hashes input,
   // output, error, price, auditTrail, markers and createdAt — not this
   // column), so it can be cleared without breaking the chain.
+  // `legal_hold` here too. Without it a held row lost its `client_meta` —
+  // referer, user-agent, the day-salted IP HMAC — while the receipt reported
+  // it as withheld: data destroyed on a row we are legally required to
+  // preserve intact, and a written statement to the subject that it was not.
   await tx
     .update(transactions)
     .set({ clientMeta: null })
-    .where(eq(transactions.userId, params.userId));
+    .where(
+      and(eq(transactions.userId, params.userId), eq(transactions.legalHold, false)),
+    );
 
   // Not in any hash chain, so the linkage and the request metadata go. The
   // task text stays as an unlinked demand signal and is pruned at 90 days.

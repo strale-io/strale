@@ -12,6 +12,8 @@
  */
 
 import { describe, it, expect, beforeAll, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 // A root transaction we always resolve "by id" first. Its previous_hash
 // points to a chain of rows we generate dynamically to simulate different
@@ -324,5 +326,63 @@ describe("classifyChainLink — F-AUDIT-13/16 redacted-aware verify", () => {
     });
     expect(result).not.toBe("broken");
     expect(result).toBe("redacted");
+  });
+});
+
+describe("isErasureReason — the tally and the prose must agree", () => {
+  let isErasureReason: (r: string | null) => boolean;
+  let isRetentionReason: (r: string | null) => boolean;
+  beforeAll(async () => {
+    ({ isErasureReason, isRetentionReason } = await import("./verify.js"));
+  });
+
+  it("counts an account-closure erasure as a customer erasure, not as 'other'", () => {
+    // WP11 introduced `account_closure_erasure` and taught only the PROSE
+    // about it. The structured tally still tested `=== "user_request"`, so
+    // every Art. 17 account closure landed in `redacted_by_reason.other` —
+    // documented in the response as "flagged for review" — while the
+    // `redaction_reason` text two fields above explained it as an erasure. A
+    // regulator walking a chain across N closed accounts would have counted N
+    // unexplained redactions.
+    expect(isErasureReason("account_closure_erasure")).toBe(true);
+    expect(isErasureReason("user_request")).toBe(true);
+  });
+
+  it("does not swallow retention purges or unknown reasons", () => {
+    // The buckets have to stay distinct: a retention purge is system-initiated
+    // and an unknown reason genuinely does want an operator's attention.
+    expect(isErasureReason("content_retention_purge")).toBe(false);
+    expect(isErasureReason("retention_purge")).toBe(false);
+    expect(isErasureReason(null)).toBe(false);
+    expect(isErasureReason("something_nobody_taught_us")).toBe(false);
+  });
+
+  it("every reason the codebase writes is classified by one of the two predicates", () => {
+    // The defect was a fourth reason string added without a consumer. This
+    // finds a fifth: it scans the source for the literals actually written to
+    // `deletionReason` and fails on any the classifiers do not know.
+    const sources = [
+      "src/routes/auth.ts",
+      "src/routes/transactions.ts",
+      "src/lib/data-retention.ts",
+      "src/lib/account-closure.ts",
+    ]
+      .map((f) => readFileSync(resolve(process.cwd(), f), "utf8"))
+      .join("\n");
+
+    const written = new Set(
+      [
+        ...sources.matchAll(/deletion_reason\s*=\s*'([a-z_]+)'/g),
+        ...sources.matchAll(/deletionReason:\s*"([a-z_]+)"/g),
+      ].map((m) => m[1]!),
+    );
+    // `user_request` arrives as a variable in one place; assert the scan found
+    // real literals rather than silently matching nothing.
+    expect(written.size).toBeGreaterThan(0);
+
+    const unclassified = [...written].filter(
+      (r) => !isErasureReason(r) && !isRetentionReason(r),
+    );
+    expect(unclassified).toEqual([]);
   });
 });

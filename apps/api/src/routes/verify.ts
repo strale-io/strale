@@ -183,10 +183,17 @@ verifyRoute.get("/:transactionId", async (c) => {
       redacted_links: chain.redactedLinks + (targetRedacted ? 1 : 0),
       // World-class #6: per-reason breakdown so a regulator walking the
       // chain sees how many links are GDPR-erasure vs. retention-purge.
+      // `isErasureReason`, not an equality check — the same correction the
+      // prose above needed and got, applied to the tally it disagreed with.
+      // WP11 added `account_closure_erasure`; testing `=== "user_request"`
+      // here put every Art. 17 account closure in `other` (documented below as
+      // "flagged for review") while the prose two fields up explained it as an
+      // erasure. A regulator walking a chain across N closed accounts would
+      // have counted N unexplained redactions.
       redacted_by_reason: {
-        user_request: chain.redactedByReason.user_request + (targetRedacted && targetDeletionReason === "user_request" ? 1 : 0),
+        user_request: chain.redactedByReason.user_request + (targetRedacted && isErasureReason(targetDeletionReason) ? 1 : 0),
         retention_purge: chain.redactedByReason.retention_purge + (targetRedacted && isRetentionReason(targetDeletionReason) ? 1 : 0),
-        other: chain.redactedByReason.other + (targetRedacted && targetDeletionReason !== "user_request" && !isRetentionReason(targetDeletionReason) ? 1 : 0),
+        other: chain.redactedByReason.other + (targetRedacted && !isErasureReason(targetDeletionReason) && !isRetentionReason(targetDeletionReason) ? 1 : 0),
       },
       reaches_genesis: chain.reachesGenesis,
       chain_start_date: chain.startDate,
@@ -288,7 +295,7 @@ export async function walkChain(
     if (prev.deletedAt != null || prev.redactedAt != null) {
       redactedLinks++;
       const reason = prev.deletionReason ?? "";
-      if (reason === "user_request") redactedByUserRequest++;
+      if (isErasureReason(reason)) redactedByUserRequest++;
       else if (isRetentionReason(reason)) redactedByRetentionPurge++;
       else redactedByOther++;
       startDate = prev.createdAt instanceof Date

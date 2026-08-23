@@ -1306,14 +1306,20 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     expect(after!.redactedAt!.toISOString()).toBe(body.redacted_at);
   });
 
-  it("does not let an async execution repopulate content the receipt says was cleared", async () => {
-    // An async capability completes in its own transaction seconds to minutes
-    // after the 202, and account closure can land in that window — four
-    // production capabilities exceed the threshold. Without a guard the
-    // background write puts output, provenance and auditTrail back onto a row
-    // the customer was told in writing was cleared, and it stays until the
-    // 90-day purge while /v1/verify reports a completed erasure.
-    const email = emailFor("async-race");
+  it("no write can put customer content back on a redacted row", async () => {
+    // The first version of this test re-typed the `AND redacted_at IS NULL`
+    // predicate inline instead of calling the code that carries it, so
+    // deleting the guard from do.ts left it green — and that is precisely why
+    // it missed the async FAILURE path in the same function, seven other
+    // content-writing UPDATEs, and the reservation reconciler. A regression
+    // guard aimed at the wrong artifact is not a guard, which is the same
+    // finding this package had fixed for `executionInput` one commit earlier.
+    //
+    // So it no longer tests a predicate. It tests the invariant, the way the
+    // database now enforces it: an unguarded UPDATE — the shape every one of
+    // those sites issues — cannot restore the content. Whatever a caller
+    // writes, and from wherever, a redacted row stays redacted.
+    const email = emailFor("no-resurrect");
     const created = await register({ email });
     const { api_key, user_id } = (await created.json()) as {
       api_key: string;
@@ -1323,43 +1329,65 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       .insert(transactions)
       .values({
         userId: user_id,
-        status: "pending",
+        status: "executing",
         priceCents: 0,
         pricePaidCents: 0,
         isFreeTier: true,
-        input: { a: 1 },
+        input: { secret: "customer text" },
       })
       .returning({ id: transactions.id });
     createdTransactionIds.add(row!.id);
 
-    await app.request("http://localhost/v1/auth/me", {
+    const closed = await app.request("http://localhost/v1/auth/me", {
       method: "DELETE",
       headers: { Authorization: `Bearer ${api_key}`, "Content-Type": "application/json" },
       body: JSON.stringify({ reason: "wp11 test" }),
     });
+    expect(closed.status).toBe(200);
 
-    // The completion write, with the guard the executor now carries.
+    // Deliberately UNGUARDED, matching the async-failure path and the seven
+    // other sites that carry no predicate.
     await db
       .update(transactions)
       .set({
-        status: "completed",
+        status: "failed",
+        error: "upstream said: could not find ACME GmbH",
         output: { leaked: "customer content" },
-        provenance: { source: "upstream" },
+        provenance: { source: "upstream", queried: "ACME GmbH" },
         auditTrail: { request_context: { ipHash: "deadbeef" } },
+        clientMeta: { ip_day_hash: "cafe" },
+        idempotencyKey: "order-123",
       })
-      .where(and(eq(transactions.id, row!.id), isNull(transactions.redactedAt)));
+      .where(eq(transactions.id, row!.id));
 
     const [after] = await db
       .select({
+        status: transactions.status,
+        input: transactions.input,
         output: transactions.output,
+        error: transactions.error,
         provenance: transactions.provenance,
         auditTrail: transactions.auditTrail,
+        clientMeta: transactions.clientMeta,
+        idempotencyKey: transactions.idempotencyKey,
+        redactedAt: transactions.redactedAt,
       })
       .from(transactions)
       .where(eq(transactions.id, row!.id));
+
+    // Content refused...
     expect(after!.output).toBeNull();
+    expect(after!.error).toBeNull();
     expect(after!.provenance).toBeNull();
     expect(after!.auditTrail).toBeNull();
+    expect(after!.clientMeta).toBeNull();
+    expect(after!.idempotencyKey).toBeNull();
+    expect(after!.input).toEqual({});
+    // ...and the redaction stamp cannot be cleared to get around it.
+    expect(after!.redactedAt).not.toBeNull();
+    // ...while everything the hash worker and the reconciler still need to
+    // write goes through untouched.
+    expect(after!.status).toBe("failed");
   });
 
   it("closure forfeits the balance through the ledger, not by zeroing it", async () => {
