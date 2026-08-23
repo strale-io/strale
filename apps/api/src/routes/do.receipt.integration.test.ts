@@ -342,6 +342,12 @@ describeMaybe("execution receipts bind what the caller received", () => {
     const apiKey = await seedUser();
     void apiKey;
 
+    // A commit that is NOT what the environment would answer, so the digest
+    // below depends on the row's recorded value rather than on process.env.
+    // Without that, a settle.ts that ignored receipt_deploy_commit and read the
+    // environment would produce an identical digest and this would pass.
+    const ROW_COMMIT = "a".repeat(40);
+
     for (const rail of ["x402", "internal"] as const) {
       const id = randomUUID();
       await db.execute(sql`
@@ -352,7 +358,7 @@ describeMaybe("execution receipts bind what the caller received", () => {
                 ${JSON.stringify({ probe: rail })}::jsonb,
                 ${JSON.stringify({ ok: rail })}::jsonb,
                 ${JSON.stringify({ source: "p5", fetched_at: new Date().toISOString() })}::jsonb,
-                ${rail}, ${LOCAL_BUILD_SENTINEL}, now())
+                ${rail}, ${ROW_COMMIT}, now())
       `);
 
       // Deliberately lie about the rail on the call.
