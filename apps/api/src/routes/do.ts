@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { eq, and, gte, inArray, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
@@ -285,6 +285,69 @@ type CapabilityInfo = {
   processesPersonalData: boolean;
   personalDataCategories: string[] | null;
 };
+
+/**
+ * The refusal an anonymous caller gets when the capability that answers their
+ * request costs money.
+ *
+ * ONE function, two call sites, because for five months there was one call
+ * site and a hole. The early auth gate in section 3 fires only when the caller
+ * NAMES a slug — but `task` is the documented, advertised way to call this
+ * endpoint, so a caller who described what they wanted instead of naming it
+ * fell past the gate, past the free-tier fork, and into the paid execution
+ * path with no user and no wallet. The wallet read threw and app.ts's
+ * top-level handler answered `internal_error`, HTTP 500.
+ *
+ * What that cost: an agent arriving the way we tell agents to arrive, asking
+ * for something we sell, was told "An unexpected error occurred" instead of
+ * the price and how to pay it. It is the same defect class as the free-tier
+ * front door on 2026-08-22 — the answer a caller is given must come from the
+ * code that decides, not from a second site that happens to agree.
+ *
+ * Live from 2026-03-08 (`1e8ebe6`, the commit that introduced the gate) to
+ * 2026-08-23.
+ */
+async function anonymousPaidRefusal(
+  c: Context,
+  db: ReturnType<typeof getDb>,
+  cap: {
+    slug: string;
+    name: string;
+    priceCents: number;
+    isActive: boolean;
+    isFreeTier: boolean | null;
+    x402Enabled: boolean;
+    marketplaceEligible: boolean;
+    lifecycleState: string;
+  },
+) {
+  if (isX402Configured() && isX402PayableCapability(cap)) {
+    const resp = build402Response({
+      slug: cap.slug,
+      name: cap.name,
+      priceCents: cap.priceCents,
+    });
+    return c.json(resp.body, 402);
+  }
+  const freeSlugs = await getFreeTierSlugs(db);
+  return c.json(
+    {
+      error_code: "unauthorized",
+      message:
+        "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
+      free_capabilities: freeSlugs,
+      hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
+      self_signup: {
+        url: "https://api.strale.io/v1/signup",
+        method: "POST",
+        body: { email: "your-agent@yourdomain.com" },
+        description:
+          "Create an account programmatically and get €2 free credits. Requires at least one prior free-tier call from this IP.",
+      },
+    },
+    401,
+  );
+}
 
 /**
  * Cert-audit C8: in-transaction spend-cap check. Caller must hold the
@@ -793,29 +856,12 @@ doRoute.post(
         c.set("x402_paid" as any, true);
         // Fall through to normal execution — the capability will execute
         // and the transaction will be logged with payment_method: "x402"
-      } else if (isX402Configured() && x402Payable) {
-        // No payment header, x402 configured → return 402 with price
-        const resp = build402Response({
-          slug: capabilitySlug,
-          name: lookedUp.name,
-          priceCents: lookedUp.priceCents,
-        });
-        return c.json(resp.body, 402);
       } else {
-        // x402 not configured → return 401 with signup prompt
-        const freeSlugs = await getFreeTierSlugs(db);
-        return c.json({
-          error_code: "unauthorized",
-          message: "This capability requires an API key. Sign up at strale.dev/signup for full access with €2 free credits.",
-          free_capabilities: freeSlugs,
-          hint: `These ${freeSlugs.length} capabilities are free with no signup — try them without an API key.`,
-          self_signup: {
-            url: "https://api.strale.io/v1/signup",
-            method: "POST",
-            body: { email: "your-agent@yourdomain.com" },
-            description: "Create an account programmatically and get €2 free credits. Requires at least one prior free-tier call from this IP.",
-          },
-        }, 401);
+        // No payment header: 402 with the price if the rail can take it,
+        // otherwise 401 with the free list and the signup route. Both come
+        // from anonymousPaidRefusal, which the task-based path below also
+        // calls — one answer, two ways in.
+        return anonymousPaidRefusal(c, db, { ...lookedUp, slug: capabilitySlug });
       }
       } // close progressive unlock else
     }
@@ -1265,6 +1311,17 @@ doRoute.post(
     }
 
     return executeFreeTier(c, db, capability, executor, executionInput, outputSchema, freshness);
+  }
+
+  // Anonymous, and the capability that answered is not free.
+  //
+  // Reached only by the task-based caller: the x402-paid, free-tier and
+  // progressive-unlock branches above have all been taken, so `!user` here
+  // means an unauthenticated request that matched something we charge for.
+  // Without this the request fell into executeSync with `user` null and the
+  // wallet read threw — HTTP 500 to an arriving agent, for five months.
+  if (!user) {
+    return anonymousPaidRefusal(c, db, capability);
   }
 
   // Free-tier with auth: skip wallet operations but still record transaction

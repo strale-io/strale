@@ -390,6 +390,8 @@ function makeApp() {
 // Imports after the mocks/helpers above so vi.mock hoisting applies cleanly.
 import { doRoute } from "./do.js";
 import { matchCapability } from "../lib/matching.js";
+import { isX402Configured, build402Response } from "../lib/x402-gateway.js";
+import { resetFreeTierCache } from "../lib/free-tier.js";
 import { getExecutor } from "../capabilities/index.js";
 
 const mockMatchCapability = matchCapability as unknown as ReturnType<typeof vi.fn>;
@@ -742,5 +744,92 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     // The transaction row is still marked failed for the audit trail.
     const txnUpdate = tx.__updateCalls.find((c) => c.table === transactions);
     expect((txnUpdate!.vals as any).status).toBe("failed");
+  });
+});
+
+// ─── Anonymous caller, paid capability, no slug named ────────────────────────
+//
+// The gap these close: `/v1/do`'s early auth gate is entered only when the
+// request NAMES a capability slug. `task` is the documented way in, so an
+// anonymous caller who described what they wanted matched a paid capability
+// and then fell through every anonymous branch into executeSync with `user`
+// undefined — where the wallet read threw and app.ts answered HTTP 500.
+//
+// Both tests below fail against the un-fixed route (500, and the executor is
+// reached) and pass against it. The 402 case is the one that matters
+// commercially: x402 IS configured in production, so an arriving agent should
+// be quoted a price, not handed an error.
+
+describe("POST /v1/do — anonymous, task-based, paid capability", () => {
+  it("quotes a price over x402 instead of 500-ing, and never reaches the executor or the wallet", async () => {
+    resetFreeTierCache();
+    const payable = {
+      ...CAPABILITY_FIXTURE,
+      x402Enabled: true,
+      marketplaceEligible: true,
+    };
+    mockMatchCapability.mockResolvedValue({ capability: payable });
+    const executorSpy = vi.fn(async () => ({ output: {}, provenance: { source: "x", fetched_at: "now" } }));
+    mockGetExecutor.mockReturnValue(executorSpy);
+
+    vi.mocked(isX402Configured).mockReturnValue(true);
+    vi.mocked(build402Response).mockReturnValue({
+      body: { x402Version: 1, error: "Payment required. Test Capability costs $0.005 USDC per call." },
+    } as any);
+
+    const app = makeApp();
+    const res = await app.request("/v1/do", {
+      method: "POST",
+      // No Authorization header. This is the arriving-agent shape.
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ task: "do the paid thing", inputs: { value: "x" }, max_price_cents: 100 }),
+    });
+
+    expect(res.status).toBe(402);
+    const body = await res.json();
+    expect(body.x402Version).toBe(1);
+    // The quote is for the capability that actually matched, at its price —
+    // not a generic 402 that tells the caller nothing.
+    expect(vi.mocked(build402Response)).toHaveBeenCalledWith({
+      slug: payable.slug,
+      name: payable.name,
+      priceCents: payable.priceCents,
+    });
+
+    expect(executorSpy).not.toHaveBeenCalled();
+    expect(mocks.dbTransactionCalls).toBe(0);
+  });
+
+  it("falls back to a 401 that names the free capabilities when the x402 rail is not configured", async () => {
+    resetFreeTierCache();
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    const executorSpy = vi.fn(async () => ({ output: {}, provenance: { source: "x", fetched_at: "now" } }));
+    mockGetExecutor.mockReturnValue(executorSpy);
+
+    vi.mocked(isX402Configured).mockReturnValue(false);
+    // The free-tier advertisement is read from the database through
+    // isServableCapability — never from a literal here, which is the defect
+    // lib/free-tier.ts exists to prevent.
+    mocks.outerSelectQueue.push([
+      { slug: "dns-lookup", priceCents: 0, description: "d", isActive: true, visible: true, lifecycleState: "active" },
+      { slug: "email-validate", priceCents: 0, description: "e", isActive: true, visible: true, lifecycleState: "active" },
+    ]);
+
+    const app = makeApp();
+    const res = await app.request("/v1/do", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ task: "do the paid thing", inputs: { value: "x" }, max_price_cents: 100 }),
+    });
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error_code).toBe("unauthorized");
+    expect(body.free_capabilities).toEqual(["dns-lookup", "email-validate"]);
+    expect(body.hint).toContain("2 capabilities are free");
+    expect(body.self_signup.url).toBe("https://api.strale.io/v1/signup");
+
+    expect(executorSpy).not.toHaveBeenCalled();
+    expect(mocks.dbTransactionCalls).toBe(0);
   });
 });
