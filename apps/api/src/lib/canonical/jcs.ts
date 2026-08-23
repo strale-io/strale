@@ -93,7 +93,15 @@ export function sortJsonKeys(keys: readonly string[]): string[] {
  *
  * New code should use `canonicalize` instead.
  */
-export function sortKeysDeep(value: unknown, depth = 0): unknown {
+export function sortKeysDeep(value: unknown): unknown {
+  // The recursion carries depth internally. It is deliberately NOT a second
+  // parameter on the exported function: `xs.map(sortKeysDeep)` would then pass
+  // the ARRAY INDEX as the depth and start throwing max_depth_exceeded at
+  // element 513. No such call site exists, and now none can.
+  return sortKeysDeepAt(value, 0);
+}
+
+function sortKeysDeepAt(value: unknown, depth: number): unknown {
   // THE BOUND HAS TO BE HERE TOO, and this is the one that mattered.
   //
   // MAX_DEPTH was added to `canonicalize` — which no production path calls.
@@ -112,7 +120,7 @@ export function sortKeysDeep(value: unknown, depth = 0): unknown {
     );
   }
   if (value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map((v) => sortKeysDeep(v, depth + 1));
+  if (Array.isArray(value)) return value.map((v) => sortKeysDeepAt(v, depth + 1));
   const record = value as Record<string, unknown>;
   // NULL PROTOTYPE, deliberately. On an ordinary object literal,
   // `out["__proto__"] = v` does not create a property — it sets the prototype,
@@ -125,7 +133,8 @@ export function sortKeysDeep(value: unknown, depth = 0): unknown {
   // the literal in their input and ZERO live idempotency keys do, so the
   // fingerprint moves for no key in flight.
   const out: Record<string, unknown> = Object.create(null) as Record<string, unknown>;
-  for (const key of sortJsonKeys(Object.keys(record))) out[key] = sortKeysDeep(record[key], depth + 1);
+  for (const key of sortJsonKeys(Object.keys(record)))
+    out[key] = sortKeysDeepAt(record[key], depth + 1);
   return out;
 }
 

@@ -621,6 +621,36 @@ describe("differential fuzz against both references", () => {
     return obj;
   }
 
+  it("PINNED: json-canonicalize is WRONG on a non-null toJSON property — we are not", () => {
+    // serializer.ts:29-33 routes any object whose `toJSON` PROPERTY is non-null
+    // straight to JSON.stringify, skipping the sort. A plain data value under
+    // that key is enough; `{"toJSON": null}` dodges the guard.
+    //
+    // Pinned rather than worked around, because the fuzz below asserts
+    // `ours === refB(value)` and its key alphabet deliberately omits "toJSON".
+    // Add it and the suite goes red with the message "reference
+    // `json-canonicalize` disagrees" — pointing at the wrong culprit and
+    // inviting someone to "fix" correct code. This test is the note they will
+    // find instead.
+    const value = JSON.parse('{"toJSON": 1, "-1": 2}');
+
+    expect(canonicalize(value)).toBe('{"-1":2,"toJSON":1}'); // RFC 8785 §3.2.3
+    expect(refA(value as never)).toBe('{"-1":2,"toJSON":1}'); // agrees with us
+    expect(refB(value)).toBe('{"toJSON":1,"-1":2}'); // unsorted — the bug
+
+    // And the guard really is the non-null check.
+    const nulled = JSON.parse('{"toJSON": null, "-1": 2}');
+    expect(refB(nulled)).toBe(canonicalize(nulled));
+  });
+
+  it("sortKeysDeep cannot be passed a depth by a stray .map()", () => {
+    // An exported optional depth parameter would make `xs.map(sortKeysDeep)`
+    // pass the array INDEX as the depth, throwing at element 513.
+    expect(sortKeysDeep.length).toBe(1);
+    const many = Array.from({ length: 600 }, (_, i) => ({ b: i, a: i }));
+    expect(() => many.map(sortKeysDeep)).not.toThrow();
+  });
+
   it("2000 random JSON values agree with both references, byte for byte", () => {
     const rnd = makeRng(20260823);
     let compared = 0;
