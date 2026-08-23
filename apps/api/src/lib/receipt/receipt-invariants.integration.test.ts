@@ -338,18 +338,26 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     ).rejects.toThrow(/terminal/i);
   });
 
-  it("the chain version cannot be flipped on a terminal row", async () => {
+  it("the chain version is WRITE-ONCE, not frozen-on-terminal", async () => {
+    // Semantics that matter: the worker sets this exactly once, in the same
+    // UPDATE as the hash — and it does so on a row whose receipt is ALREADY
+    // terminal, because the admission rule requires that. So "frozen on a
+    // terminal row" would block the only legitimate writer, which is precisely
+    // the defect this round fixed. Write-once is the correct rule.
     const id = await txn();
     await completed(id);
+
+    // First write, from NULL: allowed, even though the receipt is terminal.
     await db.execute(
-      sql`UPDATE transactions SET integrity_payload_version = NULL WHERE id = ${id}::uuid`,
-    ).catch(() => undefined);
-    // Setting it to 2 then clearing it must be refused, not merely detected.
+      sql`UPDATE transactions SET integrity_payload_version = 2 WHERE id = ${id}::uuid`,
+    );
+
+    // Any later change: refused, in both directions.
     await expect(
-      db.execute(sql`
-        UPDATE transactions SET integrity_payload_version = 2 WHERE id = ${id}::uuid
-      `),
-    ).rejects.toThrow(/terminal/i);
+      db.execute(
+        sql`UPDATE transactions SET integrity_payload_version = NULL WHERE id = ${id}::uuid`,
+      ),
+    ).rejects.toThrow(/cannot be rewritten/);
   });
 
   // ── R2-B3: the BUILDER enforces step rules, not only the snapshot ────────
