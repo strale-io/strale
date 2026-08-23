@@ -4,6 +4,18 @@
 that invoices). Set by Petter 2026-08-15. Compute rides the Claude plan and is
 optimized, not billed here.
 
+## Week of 2026-08-18 → 2026-08-24 (in progress, read 2026-08-23)
+
+| line | committed/spent | source of truth | note |
+|---|---|---|---|
+| All external spend, estimated | **~€4.08** | `externalSpend()` via the CEO dashboard | of €50 |
+| CDP settlement fees | below the free tier | 192 settlement intents since the instrument switched on 08-21 | 1,000/month free |
+| **Total vs envelope** | **≈ €4.08 / €50** | | comfortable |
+
+Nothing new was committed this week and no new recurring cost was incurred.
+The estimate is still derived from declared test costs and known fee schedules
+rather than from invoices — the standing gap recorded below.
+
 ## Week of 2026-08-11 → 2026-08-17
 
 | line | committed/spent | source of truth | note |

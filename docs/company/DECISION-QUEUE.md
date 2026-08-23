@@ -92,6 +92,12 @@ until they are done or you tell me to drop them.
 3. **A read-only GitHub token** for the frontend repo, as a repository secret.
    It makes an existing automatic check real — right now it silently cannot
    run. Ten minutes.
+   *Routed around 2026-08-23:* I ran both cross-repo checks by hand against a
+   local copy of the website. The shape check is clean (25 fields to 25) and the
+   wording sweep found nothing untrue — three of its five flags are a
+   competitor's name on a page that exists to compare us to competitors, and
+   the other two are a capability count that understates what we have. So
+   nothing is broken behind this; the token buys automation, not a fix.
 4. **The wow-core repository** — archive it or delete it. It is dead and only
    adds noise.
 
@@ -177,6 +183,51 @@ one I would not leave indefinitely.
 > without authority, pointing the other way — LESSONS.md family F10, incident 3.
 
 ## DECIDED — visible so you can reverse them
+
+**DQ-21** · `decided` · owner Claude · 2026-08-23
+Agents that asked for a paid service by describing it were getting an error page
+instead of a price. Fixed and live.
+*What was wrong:* our main endpoint accepts either the exact name of a service
+or a plain-English description of what you want. Only the first was handled for
+someone who has not signed up — a caller who described what they wanted fell
+through to the paid path with no account behind them, and the server answered
+"an unexpected error occurred". Anyone who already knew our internal names got a
+correct price; everyone else got an error. Plain-English is what our own
+installer, our SDKs and our documentation all tell an agent to send.
+*How long:* since 2026-03-08, the day the check was written.
+*Now:* the same request is answered with a price on the crypto rail — verified on
+production, "take a screenshot of this page" returns a quote of $0.054 — or with
+the list of services that are free with no signup.
+*Why this is mine:* a demonstrated, reversible defect with a test that fails
+against the un-fixed code. Reversible by reverting one commit.
+
+**DQ-22** · `decided` · owner Claude · 2026-08-23
+Seventeen dead branches removed, six of which a previous session had already
+recorded as deleted without them actually going.
+*What happened:* the 2026-08-22 run wrote down seven deletions. Six had not
+executed. Every branch removed today was first re-checked by comparing file
+contents against the main line — never commit counts, which are misleading
+after a squash merge — and every commit id is recorded in the session handoff,
+so all of them are restorable. Remote branches went from 24 to 7, verified
+afterwards against the remote itself rather than the local cache.
+*Also cleaned:* five stale working copies and a leftover throwaway database
+container.
+*Why this is mine:* routine cleanup, fully reversible from the recorded ids.
+
+**DQ-23** · `decided` · owner Claude · 2026-08-23
+The account-lifecycle work that had been sitting open was merged and is live.
+*What it does:* it makes signup a single all-or-nothing step, gives free trial
+credit one rulebook instead of two (one of which granted credit with no checks
+at all — eight accounts from one address took €16 that way in May), reads what
+Stripe says a payment settled rather than what we told Stripe it would be, and
+stops anyone rotating an account's key by knowing only its email address.
+*Why this is mine:* shipping is execution, not a decision. It had passed review
+and every gate. Verified live afterwards by querying production for the actual
+effect — both new tables, both guards, and the 59 backfilled entitlements.
+*Two items it raised are yours and are NOT actioned:* reconciling 22 drifted
+internal wallets, and whether to reclaim the €16 of farmed trial credit. Both
+write production wallets. Neither is urgent — all eight accounts spent nothing.
+
 
 **DQ-20** · `decided` · owner Claude · 2026-08-22 — **reclassified, then fixed**
 Two defects in the new production-authorization model, closed without asking you.

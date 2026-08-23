@@ -101,14 +101,55 @@ starts life misclassified and stays that way until it costs something visible.
 That is a default-direction problem, not a coverage problem, and no number of
 string additions reaches it.
 
-**State: investigation open, owner Claude, opened 2026-08-22.** Steps 1 and 2 are
-under way; the population to measure is every distinct error string that has
-ever reached the classifier, not the ones that produced a complaint. The
-falsifiable hypothesis: *if the taxonomy's default were "unclassified, excluded
-from the denominator" rather than "ours", every one of incidents 1, 3, 4, 5 and
-6 would have produced no quality action at all.* Step 6's replay is available —
-the historical error strings are still in the transaction rows within the
-90-day retention window.
+**State: investigation open, owner Claude, opened 2026-08-22. Steps 1 and 2 are
+DONE as of 2026-08-23; 3 is partly done; 4–7 are owed.**
+
+**Step 2 — the full population, measured.** `apps/api/scripts/f1-failure-attribution.ts`
+runs it and is read-only, so a later session can re-run it against the repaired
+taxonomy and watch the numbers move — which is step 6's replay, made cheap on
+purpose. Every distinct error string a failed transaction has carried in the
+90-day retention window, classified: **541 strings, 280,945 calls.** 154 strings
+and **47,582 calls land in `internal`** — the only class the floor counts
+against a capability.
+
+Applying rules that claim a string only on positive evidence it is *not* a
+statement about our code, and leaving anything unclaimed in "possibly ours":
+
+| share of the `internal` bucket | what it actually is |
+|---|---|
+| 29.2% (13,879 calls, 3 strings) | a bare runtime transport error — `fetch failed`, across 26 capabilities, still arriving today |
+| 23.1% (10,982) | caller input: a required field absent or malformed |
+| 15.4% (7,319) | a named third-party service returning an error |
+| 9.3% (4,421) | caller input: an identifier or country we do not cover |
+| 5.1% (2,438) | **our own guards refusing correctly** — the paid-API budget guard, the redirect limiter, the reserved-IP-range refusal, documented coverage limits |
+| 18.0% (8,543) | unclaimed by any rule |
+
+**82.0% is therefore a lower bound on misattribution**, not an estimate.
+Second-sourced on the external paid population — the only traffic the floor
+acts on, and a different cut of the table: 446 failed calls, 92 `internal`, the
+same conservative rules claim 25%, and most of the remainder is a vendor API
+quoting the *caller's* bad URL back at us.
+
+**Step 3 — the hypothesis survives its first falsification attempt.** The
+hypothesis is *if the default were "unclassified, excluded from the
+denominator" rather than "ours", incidents 1, 3, 4, 5 and 6 would have produced
+no quality action at all.* The obvious falsifier was economic: `CALLER_ATTRIBUTABLE`
+is read by `execution-outcome.ts` as well as by the floor, so widening it might
+change what customers are charged. Checked, and it does not — both branches of
+`classifyExecutionOutcome` already set `billable: false`. The repair is not
+blocked by billing.
+
+**Step 4 is deliberately NOT a seventh string patch.** `fetch failed` alone is
+29% of the bucket and one line would remove it. That is exactly the move this
+file forbids: six local widenings is how the family reached seven. The shared
+repair is to make `internal` reachable only by positive match, with an
+`unclassified` fallback that leaves the denominator *and* surfaces as an
+evidence shortfall so the floor reports "I could not attribute this" instead of
+"the capability is broken". It touches `execution-outcome.ts` (WP4's authority,
+which writes `counts_against_capability` into the durable fact table) and
+`jobs/quality-floor.ts`, both under concurrent modification by the remediation
+programme on 2026-08-23 — so it is scoped as the next session's work rather
+than slipped in beside a customer-facing fix.
 
 ### F2 · Wrong denominator / mislabelled window
 
@@ -248,16 +289,46 @@ the other two were caught by a human reading the page. A fourth guard is cheaper
 than a fifth incident: the investigation to open is "which public claims have no
 automated tie to the fact they assert".
 
+**Swept 2026-08-23 with both repos checked out** (the sweep normally skips
+because the frontend checkout is absent in CI — see F5's note on
+`check-shape-contracts.mjs`, which has the same blindness). `check-platform-facts-drift.ts`
+scanned 162 surface files and returned 5 findings, and **none of them is an
+inaccurate public claim today**: three are the string "ComplyAdvantage" on a
+page that exists to *compare us to competitors*, and two are a hardcoded
+"280+ capabilities" against a true count of 297, so the literal understates.
+Worth recording as a data point about the instrument rather than the copy: a
+guard with a 3-in-5 false-positive rate on a weekly cron that opens issues is
+on the path to being ignored, which is how F1 got to seven. The fix is a scoped,
+reasoned suppression a surface file can declare — diagnosed today, not shipped.
+`check-shape-contracts.mjs` was run the same way and is clean, 25 fields to 25.
+
 ### F7 · State drift
 
 > The recorded state and the real state disagree: a decision written down but
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 4.** A capability recorded as switched off that served errors for two
+**Count: 5.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
-asserting a wiring that had never existed. **State: INVESTIGATION DUE.**
+asserting a wiring that had never existed — and, on 2026-08-23, **the same
+branch-deletion drift again, in the session that had just documented it.** The
+2026-08-22 run found three phantom deletions, wrote the lesson down explicitly
+("a deletion written down is not a deletion executed"), recorded seven more
+deletions with their SHAs — and **six of the seven were still on the remote the
+next morning**, confirmed by `gh api` and independently by `git ls-remote`.
+Only `feat/phase-3-extraction-lv` had actually gone.
+
+That is the sharpest evidence this family has produced: writing the lesson in
+the same handoff did not prevent the next instance, because the record was
+still written by the actor who intended the change, immediately after intending
+it. The repair direction is unchanged and now has a worked example — **verify
+against the system, in the same breath as the claim.** The 2026-08-23 sweep
+re-verified every deletion against `git ls-remote` after executing it, and
+carries the resulting count (24 → 7) as a measured number rather than a
+described one.
+
+**State: INVESTIGATION DUE.**
 The pattern in all four: the record was written by the actor who *intended* the
 change, immediately after intending it. The repair direction is to verify
 against the system rather than the intention — the daily run already does this
