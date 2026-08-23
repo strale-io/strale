@@ -84,6 +84,42 @@ const RETRY_MAX_MS = 60 * 60 * 1000;
 /** `last_error` is diagnostic, not an archive. */
 const MAX_ERROR_LEN = 500;
 
+/**
+ * A handler that never settles must not be able to stop every other job.
+ *
+ * Before WP10 each job owned its own timer, so a hung handler stalled only
+ * itself. Running them all from one poll cycle would hand any single job the
+ * power to freeze the rest — a regression this package must not introduce,
+ * and a worse failure than the boot-relative scheduling it replaces.
+ *
+ * The watchdog does not cancel the handler; nothing here can safely abort
+ * arbitrary in-flight work. It stops the cycle AWAITING it, so the remaining
+ * jobs get their turn.
+ */
+class HandlerTimeout extends Error {
+  constructor(job: string, ms: number) {
+    super(`job "${job}" did not settle within ${Math.round(ms / 1000)}s`);
+    this.name = "HandlerTimeout";
+  }
+}
+
+function withWatchdog<T>(job: string, ms: number, p: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new HandlerTimeout(job, ms)), ms);
+    timer.unref?.();
+    p.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface JobDefinition {
@@ -383,9 +419,14 @@ export async function consumeDueSlot(name: string, intervalMs: number): Promise<
  * Try every registered job once. Exported for tests and for the admin path:
  * calling it is always safe, because the database decides what is due.
  */
-export async function runDueJobs(): Promise<{ ran: string[]; skipped: string[] }> {
+export async function runDueJobs(): Promise<{
+  ran: string[];
+  skipped: string[];
+  timedOut: string[];
+}> {
   const ran: string[] = [];
   const skipped: string[] = [];
+  const timedOut: string[] = [];
 
   // Heal any registration whose write failed at boot before deciding what is
   // due — a job with no row can never be claimed.
@@ -432,8 +473,12 @@ export async function runDueJobs(): Promise<{ ran: string[]; skipped: string[] }
     }
 
     const startedAt = Date.now();
+    // The watchdog is the job's own lease: a lease is precisely the claim that
+    // a legitimate run fits inside that window, so once it is exceeded the run
+    // is already in the state another runner is entitled to take over.
+    const watchdogMs = def.leaseMs ?? DEFAULT_LEASE_MS;
     try {
-      await def.handler();
+      await withWatchdog(def.name, watchdogMs, Promise.resolve(def.handler()));
       await releaseJob(def.name, "ok");
       ran.push(def.name);
       log.info(
@@ -446,6 +491,22 @@ export async function runDueJobs(): Promise<{ ran: string[]; skipped: string[] }
         "job-coordinator-ran",
       );
     } catch (err) {
+      if (err instanceof HandlerTimeout) {
+        // Deliberately NOT released. The handler is still running — this
+        // process merely stopped waiting for it. Releasing here would clear
+        // the lease out from under live work and let the next poll start a
+        // SECOND copy of the same job. Instead the lease runs out on its own,
+        // which is the same state a crashed run leaves behind and is recovered
+        // the same way: visibly, once, by whoever claims it next.
+        logError("job-coordinator-job-timed-out", err, {
+          job: def.name,
+          waited_ms: watchdogMs,
+          consequence: "lease left to expire; not rescheduled by this runner",
+        });
+        timedOut.push(def.name);
+        continue;
+      }
+
       const message = err instanceof Error ? err.message : String(err);
       logError("job-coordinator-job-failed", err, { job: def.name });
       // Releasing on the failure path is what arms the backoff. If this
@@ -458,7 +519,7 @@ export async function runDueJobs(): Promise<{ ran: string[]; skipped: string[] }
     }
   }
 
-  return { ran, skipped };
+  return { ran, skipped, timedOut };
 }
 
 async function pollCycle(): Promise<void> {

@@ -420,6 +420,48 @@ describeMaybe("job coordinator against a real database", () => {
     expect(String(r!.last_error)).toContain("handler blew up");
   });
 
+  it("a hung job does not stop the others, and its lease is left to expire", async () => {
+    // Before WP10 every job had its own timer, so one that hung stalled only
+    // itself. A shared poll cycle would otherwise hand any single job the power
+    // to freeze the rest — which would be a worse failure than the scheduling
+    // this package replaces.
+    const hung = jobName("hung");
+    const after = jobName("after");
+    let afterRan = 0;
+    let releaseHung: (() => void) | undefined;
+
+    await registerJob({
+      name: hung,
+      intervalMs: 3600_000,
+      // A 1-second lease, so the watchdog fires inside the test rather than in
+      // half an hour. The watchdog IS the lease, by construction.
+      leaseMs: 1_000,
+      handler: () => new Promise<void>((resolve) => { releaseHung = resolve; }),
+    });
+    await registerJob({
+      name: after,
+      intervalMs: 3600_000,
+      handler: async () => { afterRan++; },
+    });
+    await shiftDue(hung, "- interval '1 second'");
+    await shiftDue(after, "- interval '1 second'");
+
+    const result = await runDueJobs();
+
+    // The hung job was abandoned; the one behind it still ran.
+    expect(result.timedOut).toContain(hung);
+    expect(result.ran).toContain(after);
+    expect(afterRan).toBe(1);
+
+    // Its lease was NOT cleared. Releasing it would let the next poll start a
+    // second copy of a job that is still running.
+    const r = await row(hung);
+    expect(r!.lease_owner).not.toBeNull();
+    expect(r!.last_finished_at).toBeNull();
+
+    releaseHung?.();
+  });
+
   // ── consumeDueSlot: the 56x regression ───────────────────────────────────
 
   it("consumeDueSlot grants a weekly slot once, then refuses until the week elapses", async () => {

@@ -132,7 +132,7 @@ scope:
 proof:
   lane: real Postgres, --no-file-parallelism, startup migrations applied as boot applies them
   new_suites:
-    - src/lib/job-coordinator.integration.test.ts (21 tests)
+    - src/lib/job-coordinator.integration.test.ts (22 tests)
     - src/jobs/onboarding-retry.integration.test.ts (9 tests)
     - src/jobs/job-migration.integration.test.ts (11 tests)
   fail_before_proven:
@@ -204,6 +204,18 @@ residual_risks:
     reindex-transactions carry a 2h lease for this reason; the rest are
     self-throttled to a few items per tick. Not observed, and the consequence is
     a mis-recorded outcome rather than duplicated work.
+  one_poll_cycle_runs_jobs_sequentially: >
+    Jobs share one poll cycle and run one after another, where previously each
+    had an independent timer. A slow job therefore delays the ones behind it
+    within that cycle. A HUNG job would have frozen all of them, which would be
+    a worse failure than the scheduling this package replaces, so the cycle
+    abandons any handler that exceeds its own lease and moves on — logging at
+    ERROR and deliberately NOT releasing the lease, because the handler is
+    still running and releasing would let the next poll start a second copy.
+    The abandoned run is then recovered exactly as a crashed one is, when its
+    lease deadline passes. Ordinary slowness is still additive within a cycle;
+    every migrated job is self-throttled and runs at most hourly, so the
+    practical bound is minutes.
   aux_tasks_have_no_lease: >
     consumeDueSlot marks a slot consumed before the task body runs, exactly as
     the in-memory map did. A crash mid-task therefore skips that period rather
