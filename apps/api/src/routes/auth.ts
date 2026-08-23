@@ -154,12 +154,25 @@ authRoute.post(
       // the TRIAL_CREDITS_CENTS constant, so it asserted a balance it never
       // read — correct only for as long as the grant was unconditional.
       wallet_balance_cents: account.grantedCents,
-      ...(assessment.decision === "withhold"
+      // Present whenever nothing was granted, not only when the pre-check said
+      // so. `assessTrialGrant` is advisory — the authoritative claim is the
+      // UNIQUE index inside the transaction — so a concurrent signup for the
+      // same address can withhold a grant the assessment expected to make.
+      // Keying this block on the assessment alone would answer that caller
+      // with a zero balance and no reason for it.
+      ...(account.grantedCents === 0
         ? {
             trial_credits: {
               granted: false,
-              reason: assessment.reason,
-              message: assessment.message,
+              reason:
+                assessment.decision === "withhold"
+                  ? assessment.reason
+                  : "email_already_granted",
+              message:
+                assessment.decision === "withhold"
+                  ? assessment.message
+                  : "Trial credits have already been issued to this email address. " +
+                    "The account is active — top up with POST /v1/wallet/topup to make paid calls.",
             },
           }
         : {}),
@@ -636,12 +649,22 @@ export async function agentSignupHandler(c: Context) {
       account.grantedCents > 0
         ? `Account created. You have €${(account.grantedCents / 100).toFixed(2)} in credits.`
         : "Account created with no trial credits. Top up to make paid calls.",
-    ...(assessment.decision === "withhold"
+    // Same reasoning as the register handler above: keyed on what was
+    // actually granted, because the assessment is advisory and the unique
+    // index is the authority.
+    ...(account.grantedCents === 0
       ? {
           trial_credits: {
             granted: false,
-            reason: assessment.reason,
-            message: assessment.message,
+            reason:
+              assessment.decision === "withhold"
+                ? assessment.reason
+                : "email_already_granted",
+            message:
+              assessment.decision === "withhold"
+                ? assessment.message
+                : "Trial credits have already been issued to this email address. " +
+                  "The account is active — top up with POST /v1/wallet/topup to make paid calls.",
           },
         }
       : {}),
