@@ -1,0 +1,201 @@
+package: WP10
+title: Durable Job Coordinator
+status: REVIEW
+depends_on: [WP1]
+risks: [CR-08]
+
+objective: >
+  Own "when is this job next due" in one place, so that a deploy stops being
+  the thing that decides how often the platform's recurring work happens.
+
+# Measured against PRODUCTION read-only, not read off the audit.
+production_evidence:
+  the_only_caller_is_boot: >
+    `startQualityFloor` and `startCapabilityPromotion` are each called from
+    exactly one place — index.ts — and nowhere else in src/. Each installs
+    setTimeout(STARTUP_DELAY_MS) then setInterval(INTERVAL_MS). So every
+    completed tick recorded in health_monitor_events corresponds to one process
+    start that survived the startup delay. That is what makes the counts below
+    a measurement of restarts rather than of schedule.
+  declared_daily_ran_51_times_in_7_days: >
+    quality_floor 'tick_complete' events, 2026-08-16..2026-08-23: 51.
+    Declared INTERVAL_MS is 24h, so the expected count is 7. The floor
+    QUARANTINES capabilities and is armed in enforce mode, so its real
+    enforcement window was set by deploy frequency, not by policy.
+  capability_promotion_45_against_an_expected_7: >
+    Same window, same declared 24h period, 45 'tick_complete' events.
+  the_offset_proves_the_mechanism: >
+    45 of 47 capability-promotion ticks are preceded by a quality-floor tick at
+    a median offset of 4.8 minutes (min 4.3, max 5.0). That is exactly the
+    difference between their two startup delays — 20 minutes and 15 minutes.
+    Both jobs are firing off the same boot instant. If either were running on a
+    24h interval the offsets would be uncorrelated.
+  median_process_lifetime_one_hour: >
+    Median gap between consecutive quality-floor ticks: 1.0h (p25 0.6h, max
+    24.0h). Consequence: for any job whose period exceeds about an hour, the
+    setInterval arm is effectively unreachable in production. The ONLY arm that
+    ever fires is the startup delay, so the declared period is not merely
+    inaccurate — it is unobservable from the code.
+  a_weekly_sweep_ran_56x: >
+    The test scheduler gated seven auxiliary tasks on an in-process
+    Record<string, number> whose comment read "in-memory — reset on deploy is
+    fine". upstream_escalation events, emitted by runWeeklyHealthSweep, cluster
+    into 141 distinct sweep runs over 17.6 days against a declared 7-day
+    period. That sweep probes external URLs and applies auto-remediation to
+    test suites.
+  no_lease_table_exists: >
+    Filtering information_schema for job/lease/schedule/cron tables in
+    production returns health_monitor_events and startup_migration_ledger only.
+    Nothing durable holds a next-run time, a lease, a retry count or a last
+    result for any job.
+  hook_failed_has_no_reader: >
+    `lifecycle_state = 'hook_failed'` is written by lib/capability-persistence.ts
+    and read by nothing in src/. Its own comments promise the sweeper three
+    times ("Phase 6 retry scheduler will surface and re-run"). Production
+    currently holds ZERO rows in that state, so this is a latent gap rather
+    than an active incident — stated explicitly because DEC-20260504-B requires
+    the accumulated-workload question to be answered before a bulk operation
+    ships, and here the answer is "no backlog".
+
+defects:
+  cadence_lives_in_process_memory: >
+    The business fact "when should this run next" was held in a setInterval
+    closure. A process restart destroys it and rebuilds it from the boot
+    instant, so the schedule is re-founded on an event that has nothing to do
+    with the work.
+  duplicated_and_ad_hoc_durability: >
+    Four jobs had already grown private durable guards for the same fact —
+    reindex-transactions' MIN_GAP_MS, the two registry ingests'
+    last_modified_upstream, activation-drip's activation_email_stage, and the
+    test scheduler's MAX(test_results.executed_at) work selection. Each was
+    correct in isolation and none was shared, which is the duplicated-authority
+    shape this program exists to remove.
+  no_durable_retry_or_recovery_state: >
+    A job that threw was retried at the next boot, at full rate, with no record
+    that it had failed. A job whose process died mid-run left nothing to say so.
+  the_promised_sweeper_was_never_built: >
+    See hook_failed_has_no_reader. The hook generates a capability's test
+    suites, so a capability whose hook failed has none, is never selected by the
+    scheduler, and produces no quality signal — permanently and silently.
+
+authority:
+  job_schedule: >
+    One row per named job. Owns next_run_at, interval_ms, the lease and its
+    deadline, last started / finished / outcome / error, and the consecutive
+    failure count. Code owns RECURRENCE; the table owns WHEN.
+  the_fix_is_an_omission: >
+    registerJob's ON CONFLICT updates interval_ms and deliberately does not
+    write next_run_at. That single omission is what makes a deploy stop
+    resetting cadence. The one exception is a downward clamp, so that shortening
+    an interval in code cannot leave a job waiting out the old, longer one.
+  one_timer_remains: >
+    The coordinator's own 60s poll is boot-relative and deliberately so: it
+    holds no business fact, only asks the database what is due. Losing it to a
+    restart costs at most one poll interval of latency, never a schedule.
+
+scope:
+  migrated:
+    rule: >
+      A job is migrated when its period exceeds the observed median production
+      process lifetime (1.0h), because those are exactly the periods a
+      setInterval could never reach.
+    jobs: [quality-floor, capability-promotion, db-retention, activation-drip,
+           invariant-checker, ingest-cy-directors, ingest-ee-directors,
+           reindex-transactions, x402-settlement-watch, revenue-heartbeat,
+           onboarding-retry]
+    aux_tasks_via_consumeDueSlot: [chromium-probe, health-check, meta-hourly,
+                                   meta-daily, diagnostics, weekly-sweep, retention]
+  deliberately_not_migrated:
+    rule: >
+      Sub-hour tick loops keep their timers. For them the poll cadence IS the
+      point, a restart costs at most one tick, and moving them to the
+      coordinator would add a database round-trip per tick for no gain.
+    jobs: [reservation-reconciler (60s), settlement-reconciler (60s),
+           integrity-hash-retry (30s), test-scheduler poll (60s)]
+  advisory_locks_left_in_place: >
+    Existing pg_advisory_lock usage is untouched. A lock gives mutual exclusion
+    now; the lease is durable state with a deadline. They answer different
+    questions and WP10 only adds the second.
+
+proof:
+  lane: real Postgres, --no-file-parallelism, startup migrations applied as boot applies them
+  new_suites:
+    - src/lib/job-coordinator.integration.test.ts (21 tests)
+    - src/jobs/onboarding-retry.integration.test.ts (7 tests)
+    - src/jobs/job-migration.integration.test.ts (11 tests)
+  fail_before_proven:
+    cadence_property: >
+      Reverting registerJob's ON CONFLICT to `next_run_at = now() +
+      startup_delay` — literally what setTimeout did in memory — turns
+      "a second registration does not move next_run_at" and "lengthening the
+      interval does NOT push a pending run further out" red. Restored: green.
+    crash_recovery_flag: >
+      The first implementation derived "the previous run never finished" from
+      the POST-update row, where last_started_at has just been set to now().
+      Every job's first-ever run was therefore logged as crash recovery. Found
+      by reading the test output rather than the assertions, fixed with a CTE
+      that snapshots the row first, and pinned by two tests that fail against
+      the old shape.
+    migration_guard_is_not_hollow: >
+      Reverting quality-floor.ts alone to setTimeout+setInterval turns
+      "quality-floor registers with a 24h period" red while the other ten stay
+      green. The guard reads job_schedule rows, not source text.
+    block_0104_guard_discriminates: >
+      The block refuses to report success unless next_run_at is NOT NULL, because
+      a nullable column would let a row exist that claimJob's `next_run_at <=
+      now()` predicate can never match — a job that looks registered and never
+      runs. Verified against a deliberately-nullable probe table (is_nullable
+      YES → throws) and the real table (NO → passes).
+
+deploy_notes:
+  bulk_operation_audit_dec_20260504_b: >
+    The onboarding sweeper is the only new bulk operation. Production holds zero
+    hook_failed rows, so there is no backlog to drain. It is nonetheless capped
+    at 10 capabilities per tick, so a future backlog drains over ticks.
+  boot_blocking_gate_check: >
+    Block 0104 aborts boot if it throws. `to_regclass('public.job_schedule')` is
+    NULL in production, so the table is created fresh with next_run_at NOT NULL
+    and the verification passes. There is no pre-existing table of a different
+    shape that could trip it.
+  intended_behaviour_change: >
+    After this deploys, the quality floor evaluates and quarantines at most once
+    per day instead of roughly seven times. That is the point of the package,
+    not a side effect — but it is a real change to how quickly an armed
+    enforcement job reacts, and an operator restoring a capability now has up to
+    24h before the next tick rather than about an hour.
+  first_boot: >
+    Every job's row is created due at `now() + startupDelay`, so the first boot
+    after this deploys behaves exactly as today: one run per job at its startup
+    delay. Cadence becomes durable from the second run onward.
+
+residual_risks:
+  lease_shorter_than_a_slow_run: >
+    DEFAULT_LEASE_MS is 30 minutes. If a migrated job ever runs longer than its
+    lease, a second runner can claim it while the first is still working. Both
+    then contend on the job's existing advisory lock, so the second returns
+    immediately without doing the work — but it releases the schedule as 'ok',
+    which would mask a failure in the first run. The two registry ingests and
+    reindex-transactions carry a 2h lease for this reason; the rest are
+    self-throttled to a few items per tick. Not observed, and the consequence is
+    a mis-recorded outcome rather than duplicated work.
+  aux_tasks_have_no_lease: >
+    consumeDueSlot marks a slot consumed before the task body runs, exactly as
+    the in-memory map did. A crash mid-task therefore skips that period rather
+    than retrying. This preserves the previous semantics deliberately; every
+    caller already runs inside the test scheduler's advisory lock, and the task
+    bodies swallow their own errors, so a lease would not change any observable
+    outcome today.
+  recovered_capability_lands_in_draft: >
+    The sweeper cannot know what lifecycle_state a capability held before its
+    hook failed, because the marker overwrote it. It restores 'draft', which is
+    the schema default and the least permissive destination. A capability that
+    was 'active' before a hook failure would need an operator (or
+    capability-promotion) to publish it again.
+
+out_of_scope:
+  wp12: >
+    Untouched. WP12 remains blocked on the still-open VERIFY-IP gate and no
+    Railway proxy hop count was inferred anywhere in this package.
+  suggest_log_ip_hash: >
+    Surfaced by WP11's completeness guard and still flagged to WP14. Not
+    addressed here.

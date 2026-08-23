@@ -130,7 +130,7 @@ packages:
 
   WP10:
     title: Durable Job Coordinator
-    status: PLANNED
+    status: REVIEW
     depends_on: [WP1]
     risks: [CR-08]
     review: {codex: required, fable: optional}
