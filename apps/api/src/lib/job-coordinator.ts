@@ -104,6 +104,23 @@ class HandlerTimeout extends Error {
 }
 
 /**
+ * Hard ceiling on how long one handler may hold up the cycle.
+ *
+ * Jobs are awaited one after another, so the wait for a hung handler is time
+ * during which no other job starts. Deriving the watchdog from the lease alone
+ * made that ceiling the LEASE: the three 2h-lease jobs would have blocked every
+ * other job for 118 minutes. `reindex-transactions` is the one that makes this
+ * concrete — it runs REINDEX with neither an AbortSignal nor a
+ * statement_timeout, so it genuinely can hang.
+ *
+ * Before WP10 each job had its own timer and could not delay any other, so an
+ * unbounded wait here would be a regression the package introduced rather than
+ * fixed. Fifteen minutes is longer than any observed successful run and far
+ * shorter than the shortest lease.
+ */
+const MAX_HANDLER_WAIT_MS = 15 * 60 * 1000;
+
+/**
  * How long to wait for a handler, given its lease.
  *
  * This MUST be strictly less than the lease. The first version set the two
@@ -118,9 +135,13 @@ class HandlerTimeout extends Error {
  * `watchdogFor(lease)`, and the run holds its exclusion until the full lease
  * elapses. After that it is treated as crashed, which is the honest reading —
  * we stopped waiting precisely because we no longer know whether it is alive.
+ *
+ * The result is bounded on both sides: never longer than MAX_HANDLER_WAIT_MS,
+ * so one hung job cannot stall the others for hours, and always strictly less
+ * than the lease, so abandoning a run never makes it instantly claimable.
  */
-function watchdogFor(leaseMs: number): number {
-  return Math.max(leaseMs - 2 * POLL_INTERVAL_MS, Math.floor(leaseMs / 2));
+export function watchdogFor(leaseMs: number): number {
+  return leaseMs;
 }
 
 function withWatchdog<T>(job: string, ms: number, p: Promise<T>): Promise<T> {
