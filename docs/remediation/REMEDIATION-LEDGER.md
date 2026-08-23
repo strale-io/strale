@@ -372,6 +372,6 @@ was added, removed or widened; `AUTONOMOUS_PURPOSES` is unchanged.
 - **Migrations:** startup blocks `0104_job_schedule` (idempotent DDL + a NOT NULL
   verification that refuses to report success on a shape `claimJob` could never match)
   and `0105_onboarding_hook_failures` (defaulted column, metadata-only).
-- **Proof:** 42 new tests on real Postgres; fail-before demonstrated for the cadence
+- **Proof:** 76 new tests (44 against real Postgres); fail-before demonstrated for the cadence
   property, the crash-recovery flag, and the per-job registration guard.
 - **Not touched:** WP12 and its VERIFY-IP gate; no Railway hop count inferred.

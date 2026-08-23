@@ -132,9 +132,11 @@ scope:
 proof:
   lane: real Postgres, --no-file-parallelism, startup migrations applied as boot applies them
   new_suites:
-    - src/lib/job-coordinator.integration.test.ts (23 tests)
-    - src/jobs/onboarding-retry.integration.test.ts (9 tests)
-    - src/jobs/job-migration.integration.test.ts (11 tests)
+    - src/lib/job-coordinator.integration.test.ts (23 tests, real Postgres)
+    - src/jobs/onboarding-retry.integration.test.ts (10 tests, real Postgres)
+    - src/jobs/job-migration.integration.test.ts (11 tests, real Postgres)
+    - src/lib/job-coordinator.watchdog.test.ts (19 tests, pure function)
+    - src/jobs/no-boot-relative-timers.test.ts (13 tests, source lint)
     - src/jobs/no-boot-relative-timers.test.ts (13 tests, no DB)
     - src/lib/job-coordinator.watchdog.test.ts (19 tests, no DB)
   fail_before_proven:
