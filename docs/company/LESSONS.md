@@ -482,6 +482,53 @@ would have needed for `close_stranded_executing_rows` and confirm it is refused
 
 ---
 
+### F11 · Destroying uncommitted work to run a fail-before check — **THE GUARD ALREADY EXISTED**
+
+> Writing a fix, mutating it to prove a test discriminates, then "restoring"
+> with `git checkout -- <file>` — which does not restore uncommitted work, it
+> discards it.
+
+**Count: 6.** Four during the 2026-08-21 remediation program, which is what
+caused `apps/api/scripts/mutation-test.mjs` to be written. Then twice more on
+2026-08-23, in WP10 and in the execution-receipt package, by a session that had
+not reached for it.
+
+**What makes this family different from the others here: the repair already
+shipped, and the recurrence happened anyway.** The guard enforces exactly the
+right protocol — clean tree, baseline green, mutate, red, restore, green again,
+clean tree — and its own docstring opens with "`git checkout -- <file>`
+destroyed uncommitted work FOUR times". It was sitting in the repo, correct and
+sufficient, through both new incidents.
+
+So the defect is not missing tooling. **A tool nobody reaches for is not a
+control.** Both 2026-08-23 incidents came from hand-rolling `python -c` mutation
+scripts and `cp /tmp/backup` restores in a shell loop, which is faster to type
+than looking for whether a tool exists — and it works right up until the restore
+targets a file whose changes were never committed.
+
+Worth recording precisely, because the near-miss is the instructive part: in the
+WP10 case the mutation went into a **commit** (`7b1185d` shipped a reviewer's
+mutation as if it were the fix, under a message describing the opposite). In the
+receipt case the loss was caught within seconds only because the restored file
+left a dangling import that failed typecheck. Neither was caught by a control.
+
+**Local fix, applied 2026-08-23:** every fail-before check in the execution-
+receipt package now runs through `mutation-test.mjs`. Re-running the nine Phase 3
+mutations through it reproduced all nine as CAUGHT, with clean-tree enforcement
+and a verified-green baseline on both sides — which the hand-rolled version could
+not assert, and which is the difference between "the suite went red" and "the
+suite went red *because of the mutation*".
+
+**State: OPEN.** No new tooling is owed — the existing guard is sufficient and
+that is the finding. What is owed is the thing this file asks of every family: a
+discriminating control, and there is currently none that makes the *unguarded*
+path harder than the guarded one. A pre-commit or PostToolUse check that notices
+a mutation-shaped edit against a dirty tree would be one; deciding whether that
+is worth the friction is the open question, and it should not be answered by
+bolting it onto an unrelated PR.
+
+---
+
 ## How this file is maintained
 
 - Any session may add an incident to a family. No approval, no ceremony — one
