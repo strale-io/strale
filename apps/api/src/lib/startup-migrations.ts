@@ -2376,6 +2376,283 @@ export async function runMigration0101_capabilityInvocations(
   };
 }
 
+// ─── Block 0102: account lifecycle authority tables (WP11, CR-09/CR-10) ────
+//
+// Two tables, both new and both starting empty except for one bounded
+// backfill.
+//
+// `trial_grants` is the durable record of "this identity has already been
+// given trial credit". Before WP11 that fact was inferred per request from
+// whichever gate the handler happened to run — `/v1/auth/register` ran none —
+// so eight accounts behind one signup IP each took EUR 2.00 between
+// 2026-05-25 and 2026-05-27. The UNIQUE index on `email_hash` is what makes
+// "one trial per address" true under concurrency; the code path can only
+// produce a good error message.
+//
+// It is a separate table rather than a column on `users` because the erasure
+// endpoint anonymises the users row. An entitlement stored there is destroyed
+// by exactly the delete → re-register loop it exists to close. A one-way hash
+// survives Art. 17 anonymisation precisely because it is not the address.
+//
+// `api_key_recovery_tokens` backs proof-before-rotation. `/v1/auth/recover`
+// used to rotate the account's key on an unauthenticated request whose only
+// input was an email address.
+//
+// **Backfill.** 59 production wallets already hold a `trial_credit` ledger
+// entry. Without seeding them, every existing customer could close their
+// account and re-register for another grant on the day this ships — the
+// migration would install the rule and grandfather in every account that
+// predates it. The email hash is computed in SQL with
+// `encode(sha256(convert_to(lower(btrim(email)), 'UTF8')), 'hex')`, a Postgres
+// built-in needing no extension, and verified byte-for-byte against
+// `hashEmail()` on five production rows.
+//
+// Bounded workload, so DEC-20260504-B's drain question is answered rather
+// than skipped: one INSERT … SELECT over 60 users joined to 61 ledger rows,
+// grouped to at most one row per wallet. This is not a resumed bulk operation.
+//
+// Already-redacted accounts are skipped: their address is gone, so no hash can
+// be computed and their trial slot is unrecoverable. Production holds zero
+// such rows today (`deleted_at IS NOT NULL` census = 0), so the exclusion
+// costs nothing now and is stated so a later reader does not mistake it for an
+// oversight.
+//
+// `ip_hash` is seeded from `users.signup_ip_hash`, which hashes the EXACT
+// address. The live path hashes a bucket instead (IPv6 counted by /64, see
+// `trialRateBucket`), so for an IPv6 signup the backfilled hash will not match
+// the bucket a new signup from the same prefix produces. The two agree for
+// IPv4 by construction, and the consequence for IPv6 is only that a historical
+// grant does not count toward a new bucket's cap. Every backfilled row is
+// already outside the 7-day window, so nothing counts today either way.
+//
+// Idempotent three ways: `IF NOT EXISTS` DDL, `ON CONFLICT (email_hash) DO
+// NOTHING` on the backfill, and the block ledger gating the backfill to its
+// first successful run.
+export async function runMigration0102_accountLifecycleTables(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+  const BLOCK = "0102_account_lifecycle_tables";
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS "trial_grants" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "email_hash" varchar(64) NOT NULL,
+      "ip_hash" varchar(16),
+      "user_id" uuid,
+      "granted_cents" integer NOT NULL,
+      "channel" varchar(32) NOT NULL,
+      "granted_at" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  // The uniqueness IS the rule. Created as its own statement rather than
+  // inline on the column so a table that somehow predates this block still
+  // acquires the constraint.
+  await tx.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "trial_grants_email_hash_unique"
+      ON "trial_grants" ("email_hash")
+  `);
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS "trial_grants_ip_granted_idx"
+      ON "trial_grants" ("ip_hash", "granted_at")
+  `);
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS "api_key_recovery_tokens" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      "user_id" uuid NOT NULL REFERENCES "users"("id"),
+      "token_hash" varchar(64) NOT NULL,
+      "expires_at" timestamptz NOT NULL,
+      "used_at" timestamptz,
+      "requested_ip_hash" varchar(16),
+      "created_at" timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await tx.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "api_key_recovery_tokens_token_hash_unique"
+      ON "api_key_recovery_tokens" ("token_hash")
+  `);
+  await tx.execute(sql`
+    CREATE INDEX IF NOT EXISTS "api_key_recovery_tokens_user_created_idx"
+      ON "api_key_recovery_tokens" ("user_id", "created_at")
+  `);
+
+  // ── The Stripe replay guard, adopted into the migration path ─────────────
+  //
+  // `wallet_transactions_stripe_session_id_unique` exists in production and in
+  // schema.ts, and is created by NO migration block — it survives only from the
+  // original `drizzle-kit push`, which does not run against production. So a
+  // database rebuilt from `startup-migrations.ts` alone would come up without
+  // the one constraint standing between a duplicated Stripe delivery and a
+  // double credit, and nothing would say so.
+  //
+  // WP11 owns the Stripe crediting decision, so it adopts the guard that
+  // decision depends on. Idempotent, and a no-op wherever the index already
+  // exists (verified against a database materialised by drizzle-kit push,
+  // where the identically-named index is already present).
+  await tx.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS "wallet_transactions_stripe_session_id_unique"
+      ON "wallet_transactions" ("stripe_session_id")
+      WHERE "stripe_session_id" IS NOT NULL
+  `);
+
+  await tx.execute(sql`
+    CREATE TABLE IF NOT EXISTS startup_migration_ledger (
+      block text PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now(),
+      rows_affected integer NOT NULL DEFAULT 0
+    )`);
+  const priorRun = (await tx.execute(sql`
+    SELECT block FROM startup_migration_ledger WHERE block = ${BLOCK}
+  `)) as unknown as Array<{ block: string }>;
+  const alreadyBackfilled = (Array.isArray(priorRun) ? priorRun : []).length > 0;
+
+  let backfilled = 0;
+  if (!alreadyBackfilled) {
+    const inserted = await tx.execute(sql`
+      INSERT INTO "trial_grants" (email_hash, ip_hash, user_id, granted_cents, channel, granted_at)
+      SELECT encode(sha256(convert_to(lower(btrim(u.email)), 'UTF8')), 'hex'),
+             u.signup_ip_hash,
+             u.id,
+             g.total_cents,
+             'backfill',
+             g.first_at
+        FROM users u
+        JOIN wallets w ON w.user_id = u.id
+        JOIN (
+          SELECT wallet_id,
+                 SUM(amount_cents)::int AS total_cents,
+                 MIN(created_at) AS first_at
+            FROM wallet_transactions
+           WHERE type = 'trial_credit'
+           GROUP BY wallet_id
+        ) g ON g.wallet_id = w.id
+       WHERE u.deleted_at IS NULL
+         AND u.email NOT LIKE 'redacted-%@deleted.local'
+      ON CONFLICT (email_hash) DO NOTHING
+    `);
+    backfilled = (inserted as { count?: number }).count ?? 0;
+
+    await tx.execute(sql`
+      INSERT INTO startup_migration_ledger (block, rows_affected)
+      VALUES (${BLOCK}, ${backfilled})
+      ON CONFLICT (block) DO NOTHING
+    `);
+  }
+
+  return {
+    block: BLOCK,
+    outcome: alreadyBackfilled
+      ? "tables and indexes ensured; entitlement backfill already applied"
+      : `tables and indexes ensured; backfilled ${backfilled} existing trial entitlement(s)`,
+    rows_affected: backfilled,
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
+// ─── Block 0103: redacted content stays redacted (WP11, round 7) ───────────
+//
+// WP11 made account closure clear the customer content from the caller's
+// transaction rows. That created a race nobody had before: an async execution
+// completes in its OWN transaction, seconds to minutes after the request
+// returned 202 — four production capabilities exceed the 10-second threshold —
+// and account closure can land in that window. The background write then puts
+// `output`, `provenance` and `audit_trail` back onto a row the customer has
+// just been told, in writing, was cleared, where it sits until the 90-day
+// purge while `/v1/verify` reports a completed Art. 17 erasure.
+//
+// The first fix added `AND redacted_at IS NULL` to the async SUCCESS path.
+// Review then found the same window on the async FAILURE path in the same
+// function, plus seven other content-writing UPDATEs and the reservation
+// reconciler — and the test that "proved" the fix had re-typed the predicate
+// inline rather than calling the code, so it could not have caught any of them.
+//
+// Enumerating write sites is how this package spent six rounds getting the
+// closure receipt wrong. So this does not enumerate them. A BEFORE UPDATE
+// trigger holds the invariant for every site that exists and every site anyone
+// adds: **once a row is redacted, its customer content cannot come back.**
+//
+// It nulls the offending columns rather than raising. Raising would turn a
+// benign late write into an unhandled exception on a path that has already
+// returned to the customer, and the write is not an error — it is a result
+// arriving for a request that was legitimately made. What is refused is the
+// COPY we would otherwise retain after being asked not to; the customer's own
+// result was returned from the executor, never read back from the row.
+//
+// Deliberately narrow: only the customer-content columns, and only while
+// `redacted_at` is already set. Status, latency, hashes and reservation state
+// still update freely, which is what lets the hash-retry worker and the
+// reconciler finish their work on a closed account's rows.
+export async function runMigration0103_redactedContentStaysRedacted(
+  tx: MigrationExecutor,
+): Promise<BlockResult> {
+  const startedAt = Date.now();
+
+  await tx.execute(sql`
+    CREATE OR REPLACE FUNCTION "transactions_redacted_content_stays_cleared"()
+    RETURNS trigger AS $fn$
+    BEGIN
+      IF OLD.redacted_at IS NOT NULL THEN
+        NEW.input           := '{}'::jsonb;
+        NEW.output          := NULL;
+        NEW.error           := NULL;
+        NEW.audit_trail     := NULL;
+        NEW.provenance      := NULL;
+        NEW.idempotency_key := NULL;
+        NEW.client_meta     := NULL;
+        NEW.redacted_at     := OLD.redacted_at;
+        NEW.deletion_reason := OLD.deletion_reason;
+      END IF;
+      RETURN NEW;
+    END;
+    $fn$ LANGUAGE plpgsql
+  `);
+
+  // Created only when absent, never dropped and recreated — the same reasoning
+  // block 0101 records. A drop-then-create pair autocommits separately, so it
+  // opens a window on every boot during which the protection is simply gone,
+  // on a table the customer path writes to.
+  await tx.execute(sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger
+        WHERE tgname = 'transactions_redacted_content_stays_cleared_trg'
+          AND tgrelid = 'public.transactions'::regclass
+      ) THEN
+        CREATE TRIGGER "transactions_redacted_content_stays_cleared_trg"
+          BEFORE UPDATE ON "transactions"
+          FOR EACH ROW EXECUTE FUNCTION "transactions_redacted_content_stays_cleared"();
+      END IF;
+    END $$;
+  `);
+
+  // Verify, do not assume. A block that reports success while the trigger is
+  // absent leaves a guarantee the receipt depends on unenforced — and the
+  // receipt is a written statement to a data subject.
+  const check = (await tx.execute(sql`
+    SELECT COUNT(*)::int AS n
+      FROM pg_trigger
+     WHERE tgname = 'transactions_redacted_content_stays_cleared_trg'
+       AND tgrelid = 'public.transactions'::regclass
+  `)) as unknown as Array<{ n: number }>;
+  const present = Number((Array.isArray(check) ? check[0] : undefined)?.n ?? 0);
+  if (present !== 1) {
+    throw new Error(
+      "transactions_redacted_content_stays_cleared_trg is absent after creation " +
+        `(pg_trigger match count ${present}). Refusing to report success: without it, ` +
+        "an async execution completing after account closure silently restores the " +
+        "customer content the erasure receipt says was destroyed.",
+    );
+  }
+
+  return {
+    block: "0103_redacted_content_stays_redacted",
+    outcome: "trigger present and verified — redacted content cannot be restored",
+    duration_ms: Date.now() - startedAt,
+  };
+}
+
 export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResult>> = [
   runMigration0029_actualCostCents,
   runMigration0030_complianceColumns,
@@ -2422,6 +2699,10 @@ export const BLOCKS: ReadonlyArray<(tx: MigrationExecutor) => Promise<BlockResul
   runMigration0099_noHalfQuarantine,
   runMigration0100_relistUrlToMarkdown,
   runMigration0101_capabilityInvocations,
+  // WP11: account/trial/Stripe lifecycle authority tables.
+  runMigration0102_accountLifecycleTables,
+  // WP11 round 7: redacted content cannot be restored by a late write.
+  runMigration0103_redactedContentStaysRedacted,
 ];
 
 /**

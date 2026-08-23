@@ -2599,6 +2599,21 @@ async function executeInBackground(
           // with the final values — no race possible.
           complianceHashState: "pending",
         })
+        // No `redacted_at` predicate here, deliberately.
+        //
+        // An async execution completes in its own transaction seconds to
+        // minutes after the request returned 202, and account closure can land
+        // in that window — four production capabilities exceed the 10s async
+        // threshold — so the content must not come back. That is enforced by
+        // the BEFORE UPDATE trigger from migration 0103, for this site and the
+        // seven others that write content, rather than by a predicate each one
+        // has to remember.
+        //
+        // Gating the whole statement instead was the first attempt, and it
+        // costs something: the row keeps a non-terminal status forever while
+        // the reservation settles around it. Letting the write land and the
+        // trigger scrub the content is the better half of the trade — the
+        // status, latency and hash state are not the customer's data.
         .where(eq(transactions.id, transactionId));
 
       // False means the reconciler already released it — the execution

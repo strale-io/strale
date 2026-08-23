@@ -1,0 +1,607 @@
+package: WP11
+title: Account / trial / Stripe lifecycle
+status: REVIEW_PASSED_AWAITING_MERGE
+depends_on: [WP2]
+risks: [CR-09, CR-10]
+
+objective: >
+  Make account creation, trial entitlement, Stripe crediting and key rotation
+  ledger-consistent, each owned by one authority instead of decided
+  independently by whichever handler the request happened to reach.
+
+# Measured against PRODUCTION read-only on 2026-08-23, not read off the audit.
+production_evidence:
+  population: >
+    60 users, 59 wallets, 61 trial_credit ledger rows totalling 15,725 cents.
+    21 signups in the last 90 days.
+  the_one_user_without_a_wallet: >
+    `system@strale.internal`, the test-harness principal, created 2026-03-03
+    deliberately without one. So the non-atomic-signup window has NOT yet been
+    hit by a real registration. That is luck plus low volume, not a property of
+    the code — the users INSERT commits on its own and the wallet follows in a
+    second transaction.
+  trial_farming_is_live_not_hypothetical: >
+    Eight accounts share signup IP hash `d5ab85828d59fa6f`, created between
+    2026-05-25T21:40Z and 2026-05-27T17:07Z — seven at `abhoward.site`
+    (burg2, charls, aas, gjsad7, jkasdfgggg, zalupa2, zaebsaid) and one at
+    `kiacc.ink`. Each was granted 200 cents; total 1,600 cents. All eight spent
+    zero. Every one of them came through `/v1/auth/register`: their ledger rows
+    read "Welcome trial credits", and the whole database holds exactly ONE row
+    reading "(agent self-signup)".
+  the_disposable_list_would_not_have_caught_it: >
+    Neither `abhoward.site` nor `kiacc.ink` appears in the 5,361-domain
+    disposable list, so that gate would not have stopped this either. A per-IP
+    cap would have, and NEITHER path had one — `/v1/signup` counted same-IP
+    signups but only ever set `flagged_for_review: true`. Note the limit of
+    that claim, corrected in review: a per-IP cap stops THIS pattern (eight
+    sequential registrations from one real address, no spoofing) and not a
+    determined one, because `getClientIp` reads the client-supplied leftmost
+    X-Forwarded-For. The rule that holds under a hostile client is the UNIQUE
+    index on `trial_grants.email_hash`.
+  stripe_has_never_credited_a_wallet: >
+    `SELECT COUNT(*) FROM wallet_transactions WHERE stripe_session_id IS NOT NULL`
+    returns 0. The metadata-vs-amount_total defect is therefore latent, not
+    realised, and there is nothing to reconcile.
+  three_authorities_write_trial_credit: >
+    Beyond the two signup handlers, two rows carry manual admin grants typed
+    `trial_credit` — "SpendLatch evaluation credits" (2,300 cents) and
+    "SpendLatch evaluation top-up — restore to EUR 25.00" (1,625 cents), both
+    on 2026-04-09 for one user. 3,925 cents of the 15,725 total came from
+    neither signup path.
+  closure_has_never_run_in_production: >
+    `SELECT COUNT(*) FROM users WHERE deleted_at IS NOT NULL` returns 0. The
+    delete → re-register trial loop is reachable but unexercised.
+  ledger_drift_predating_wp2: >
+    22 wallets have `balance_cents <> SUM(ledger)`, net +108,575 cents. Every
+    one is an internal account (@strale.io, test@example.com, sdktest@test.com,
+    test-*), seeded by manual `UPDATE wallets` before WP2 made mutation
+    single-authority. No customer wallet is affected. NOT repaired here — see
+    residuals.
+
+defects:
+  non_atomic_signup: >
+    `routes/auth.ts` register and agentSignupHandler each ran
+    `db.insert(users)` as its own commit, then `db.transaction(openWallet)` as a
+    second. WP2 fixed the second half and said so in a comment: "The three
+    signup writes are still not one transaction — that is CR-09 and belongs to
+    WP11." A failure in the gap leaves an account that owns its email address
+    (409 forever on re-registration), has no wallet to debit, and that nothing
+    sweeps.
+  toctou_on_duplicate_email: >
+    Both handlers SELECT-then-INSERT on the email. Two concurrent registrations
+    for one address make the loser hit the unique index and surface as a raw
+    500 rather than 409.
+  two_trial_authorities: >
+    `/v1/auth/register` applied no gate of any kind. `/v1/signup` applied four,
+    one of which denied nothing. Same EUR 2.00, two different rulebooks.
+  entitlement_cannot_survive_erasure: >
+    `DELETE /v1/auth/me` anonymises the users row, so any entitlement recorded
+    against the account is destroyed by exactly the action the rule needs to
+    outlive. Close, re-register, take the grant again.
+  signup_response_asserted_an_unread_balance: >
+    Both handlers returned the `TRIAL_CREDITS_CENTS` constant as
+    `wallet_balance_cents` / `balance_cents`. Correct only for as long as the
+    grant was unconditional; an agent planning spend against it would overspend
+    the moment any gate withheld.
+  stripe_credited_our_own_echo: >
+    `webhook.ts` credited `session.metadata.amount_cents` — a string we wrote
+    when creating the session — and read none of `payment_status`,
+    `amount_total`, `currency`. `checkout.session.completed` does not mean paid:
+    for delayed-notification methods Stripe fires it with
+    `payment_status: unpaid` and settles later via
+    `checkout.session.async_payment_succeeded`, which the handler ignored. So
+    enabling any such method (a Dashboard toggle, not a deploy) converts an
+    unpaid checkout into spendable balance, and the eventual settlement credits
+    nothing.
+  paid_but_uncredited_was_silent: >
+    A paid session with no wallet, or with absent metadata, was logged and
+    answered 200 — which consumes the Stripe event. The money is collected and
+    never reaches a balance, with no retry and nothing paged.
+  unauthenticated_key_rotation: >
+    `/v1/auth/recover` rotated the account's key and mailed the replacement on
+    an unauthenticated request whose only input was an email address. A
+    revocation denial-of-service against any address an attacker knows; the
+    2-per-5-minutes-per-IP limit bounds the rate, not the outcome, and one
+    request is already the whole attack. The mailed key is also a reusable
+    bearer secret, permanently valid for anyone who later reads that mailbox.
+
+authorities:
+  account_exists_with_wallet_and_grant: lib/account-service.ts::createAccount
+  trial_entitlement: lib/trial-eligibility.ts + trial_grants.email_hash UNIQUE
+  amount_currency_and_settlement: lib/stripe-settlement.ts (reads Stripe's session)
+  key_rotation_authorization: lib/key-recovery.ts (single-use, 30-minute token)
+  balance_mutation: lib/wallet-service.ts (WP2, unchanged — re-proved here)
+
+design:
+  validity_versus_entitlement: >
+    A validity failure REFUSES the account (malformed or oversized address,
+    disposable domain, a domain that cannot receive mail). An entitlement
+    failure CREATES the account and WITHHOLDS the grant (address already
+    granted, per-IP cap). Refusing to create an account because a shared office
+    NAT already took its trials would lock out a paying customer to save
+    EUR 2.00.
+  the_channels_still_differ_but_visibly: >
+    The per-IP cap applies to `register` and NOT to `agent_signup`, declared as
+    one named constant with a reason rather than as two handlers that happened
+    to be written differently. The agent channel already REQUIRES a prior
+    free-tier call from the same IP, so same-IP clustering is designed into it,
+    and autonomous agents run behind shared cloud NAT — capping it would
+    silence the grant for exactly the ICP the platform is for.
+  why_a_table_and_not_a_users_column: >
+    The erasure endpoint anonymises the users row. An entitlement stored there
+    is destroyed by the delete → re-register loop it exists to close. A one-way
+    SHA-256 of the address survives Art. 17 anonymisation precisely because it
+    is not the address; `trial_grants.user_id` is nullable and carries no
+    foreign key for the same reason.
+  the_unique_index_is_the_rule: >
+    `assessTrialGrant` is advisory — two concurrent signups can both pass it.
+    The authoritative claim is `trial_grants_email_hash_unique`, taken inside
+    the account transaction BEFORE the credit, so the loser gets an account
+    with no grant rather than a second credit.
+  mx_gate_reads_the_error_code: >
+    `dns.resolveMx` almost never returns `[]`. A nonexistent domain throws
+    ENOTFOUND; a domain with no MX throws ENODATA. Catching every error
+    permissively disables the gate for the exact case it exists to catch;
+    catching every error as a refusal turns a resolver blip into a signup
+    outage. Both of those were shipped here in turn before the rule settled.
+    ENOTFOUND/NXDOMAIN refuse. ENODATA does NOT — it means the domain exists
+    and publishes no MX, which RFC 5321 §5.1 calls an implicit MX at the
+    address record, and `strale.dev` is exactly that shape — so it falls back
+    to A/AAAA and refuses only if neither answers. RFC 7505 null MX (an empty
+    exchange) refuses regardless, because that is the domain declaring it takes
+    no mail. Every other resolver failure is permissive, under a 3-second
+    deadline the resolver does not otherwise impose.
+  retry_only_where_retry_can_help: >
+    A paid Stripe session with no wallet answers 503, because a wallet can
+    appear between deliveries and Stripe's retry schedule is the durable queue.
+    A paid session with no user_id, a non-EUR currency or an absent amount
+    answers 200 and pages: redelivering the same object cannot change any of
+    those, and four more retries over three days end in the same place. What
+    was missing was never the retry, it was anyone finding out.
+  no_second_queue: >
+    Deliberately did NOT build a `stripe_uncredited_payments` table. Stripe
+    already holds every session, and production has never credited one. A
+    durable local queue is deferred until there is a real top-up to reconcile.
+
+exit_conditions:
+  atomic_signup:
+    status: MET
+    proof: >
+      routes/account-lifecycle.integration.test.ts "leaves no user row behind
+      when the wallet write fails" — a Postgres trigger makes the wallet INSERT
+      throw, and the users row and entitlement roll back with it. Fails against
+      pre-fix code with "expected [ Array(1) ] to have a length of +0 but got 1".
+  one_trial_authority:
+    status: MET
+    proof: >
+      Both channels call `assessTrialGrant`. Proved on both:
+      "grants up to the per-IP cap and withholds beyond it" and "applies the
+      same entitlement authority to the agent self-signup channel". Both fail
+      pre-fix with "expected 200 to be +0".
+  stripe_amount_currency_verified:
+    status: MET
+    proof: >
+      webhook.integration.test.ts "credits amount_total, not the metadata the
+      session was created with" fails pre-fix with "expected 9999 to be 2500" —
+      the pre-fix handler credited the metadata amount, measured. Plus unpaid,
+      async-settlement and non-EUR cases.
+  closure_ledger_consistent:
+    status: MET (WP2's invariant, re-proved end to end)
+    proof: >
+      "closure forfeits the balance through the ledger, not by zeroing it" —
+      balance 0, ledger sums to 0, exactly one closure_forfeit row. Passes
+      against pre-fix code too: WP2 closed this and WP11 only re-proves it
+      through the HTTP path.
+  proof_before_key_rotation:
+    status: MET
+    proof: >
+      "requesting recovery does not rotate the key" fails pre-fix with
+      "expected 401 to be 200" — the pre-fix request invalidated the working
+      key, which is the revocation DoS measured directly.
+
+migration:
+  block: 0102_account_lifecycle_tables
+  creates: [trial_grants, api_key_recovery_tokens]
+  indexes:
+    - trial_grants_email_hash_unique (UNIQUE) — the rule itself
+    - trial_grants_ip_granted_idx (ip_hash, granted_at)
+    - api_key_recovery_tokens_token_hash_unique (UNIQUE)
+    - api_key_recovery_tokens_user_created_idx (user_id, created_at)
+  backfill:
+    rows: 59
+    what: one entitlement per wallet holding a trial_credit ledger entry
+    why: >
+      Without it the rule grandfathers in every account that predates it —
+      each of the 59 could close and re-register for a second grant on the day
+      this ships.
+    hash_expression: "encode(sha256(convert_to(lower(btrim(email)), 'UTF8')), 'hex')"
+    hash_verified: >
+      Byte-for-byte against hashEmail() on five production rows. Postgres
+      built-in `sha256(bytea)`, no extension. Production is 17.11.
+    excluded: >
+      Already-redacted accounts (deleted_at IS NOT NULL, or the
+      redacted-%@deleted.local sentinel). Their address is gone so no hash can
+      be computed. Production holds ZERO such rows, so this costs nothing today
+      and is stated so a later reader does not read it as an oversight.
+  bulk_operation_audit: >
+    DEC-20260504-B: one INSERT … SELECT over 60 users joined to 61 ledger rows,
+    grouped to at most one row per wallet. Bounded, not a resumed bulk
+    operation, no drain plan required.
+  ip_window_effect_at_deploy: >
+    `granted_at` is backfilled to the ORIGINAL grant time, and the per-IP cap
+    measures a rolling 7 days. Zero of the 59 land inside that window (most
+    recent grant is 2026-08-05), so no existing signup IP is capped by the
+    backfill.
+  idempotency: >
+    IF NOT EXISTS DDL, ON CONFLICT (email_hash) DO NOTHING on the backfill, and
+    the startup_migration_ledger gating the backfill to its first successful
+    run. Verified by re-running against the test database.
+  deploy_mechanism_verified: >
+    DEC-20260504-C: the block is registered in BLOCKS (startup-migrations.ts),
+    which `index.ts:112` invokes via runStartupMigrations() before the API
+    listens. Applied successfully to a real Postgres materialised the same way
+    CI does (drizzle-kit push, then apply-startup-migrations.ts): 45 blocks,
+    0102 reported "tables and indexes ensured". Objects confirmed present with
+    `\d` — both UNIQUE indexes and the FK exist.
+  prod_precheck: >
+    `to_regclass('public.trial_grants')` and
+    `to_regclass('public.api_key_recovery_tokens')` are both NULL in
+    production, so this is a clean first install.
+
+api_surface_changes:
+  - POST /v1/auth/register now refuses (400) disposable-mail domains and
+    domains with no mail exchanger. Previously only /v1/signup did.
+  - Both signup responses report the amount actually granted and carry a
+    `trial_credits` object when it was withheld.
+  - POST /v1/auth/recover no longer rotates anything or returns a key; it
+    issues a code. POST /v1/auth/recover/confirm is new and is now the only
+    way to complete recovery.
+  - The recovery email carries a single-use code and a ready-to-run curl,
+    not an API key.
+  - OpenAPI spec updated for all of the above; /v1/auth/recover was previously
+    undocumented and /v1/auth/recover/confirm would otherwise be undiscoverable.
+  - No SDK consumes the register or recover response — checked
+    packages/sdk-typescript, sdk-python, mcp-server, semantic-kernel-strale.
+
+review:
+  method: >
+    Two independent adversarial agents given the same brief and different
+    lenses — money/concurrency/SQL, and security/abuse/privacy/contract — then
+    a third verification round against a frozen SHA. Codex credits are
+    exhausted until 27 Aug; the single Codex pass is reserved for the end of
+    the program (founder decision, 2026-08-21).
+  round_1:
+    verdict: FAIL_REMEDIATION_REQUIRED (both reviewers, independently)
+    convergence: >
+      Both landed on the same three blockers without seeing each other's work.
+      That overlap is the useful signal — it is what a single reviewer would
+      most likely have left in.
+    blocking_findings_fixed:
+      erasure_receipt_was_false: >
+        `DELETE /v1/auth/me` returns an itemised anonymized/retained pair that
+        reads as exhaustive. It listed `users.signup_ip_hash` as anonymised —
+        and block 0102 copies exactly that column into `trial_grants.ip_hash`,
+        alongside the user id and a hash of the address, in a table with no
+        retention rule. `api_key_recovery_tokens` kept a user id and an IP hash
+        too. A closing customer was being handed a written statement a later
+        subject-access request would contradict. Closure now clears both
+        identifying columns and deletes the token rows; only `email_hash`
+        survives, disclosed with its own Art. 6(1)(f) basis and an explicit
+        statement that a hash of an address is pseudonymous, not anonymous.
+      mx_gate_refused_implicit_mx_domains: >
+        `ENODATA` means the domain exists and publishes no MX, which RFC 5321
+        §5.1 says is a domain with an IMPLICIT MX at its address record.
+        `strale.dev` is one — A records, no MX. The first correction (itself a
+        fix for the opposite error) would have refused registration to anyone
+        at our own domain and to every operator running an MTA on their web
+        host. ENODATA now falls back to A/AAAA; only ENOTFOUND/NXDOMAIN is
+        authoritative; RFC 7505 null MX still refuses because that is the
+        domain saying so itself.
+      per_ip_cap_was_overstated: >
+        The module called it "the gate that was missing". It counted IPv6
+        addresses individually — every mainstream VPS gets a whole /64, so
+        2^64 free buckets, no spoofing needed — and it keys on the leftmost
+        X-Forwarded-For, which the client supplies. Now counted by /64, raised
+        to 5, scoped to the register channel (the agent channel REQUIRES
+        same-IP clustering by design), and described accurately: a speed bump
+        that stops the observed abuse and nothing more sophisticated. Recording
+        a control as stronger than it is, is how a package reports an exit
+        condition met when it is not.
+    non_blocking_findings_fixed:
+      - "Both validity gates read `email.split('@')[1]` — the wrong domain for a two-@ address. Verified before the fix: `a@gmail.com@mailinator.com` returned a 200-cent grant."
+      - "`trial_credits.reason` returned `email_already_granted`, so anyone could register victim@corp.com and learn the address had once been a customer. One undifferentiated public reason now; the specific one is logged."
+      - "Each recovery request expired all outstanding codes, so an attacker could loop the unauthenticated endpoint and kill a victim's code indefinitely — with /v1/auth/api-key needing the key they had already lost. Replaced with a five-code cap, which round 2 showed was the same defect wearing a different hat; see round_3."
+      - "Redemption burned the code before the ownership check, so a mistyped address spent it. SELECT … FOR UPDATE, then claim."
+      - "`pruneRecoveryTokens` was exported and never called, on a table its own docstring said should not be retained indefinitely — the WP5 defect class. Deleted; the table is a db-retention rule. `trial_grants` deliberately is not: pruning the rule hands every aged-out account a second grant."
+      - "The welcome email promised EUR 2.00 to zero-credit signups, whose first paid call would then fail on insufficient funds. `welcome.ts`'s eight unconditional claims corrected too."
+      - "`wallet_transactions_stripe_session_id_unique` — what actually prevents a double credit under concurrent delivery — was created by no migration block, surviving only from the original `drizzle-kit push`. Block 0102 adopts it."
+      - "`stripe-settlement.ts` claimed to own \"is it settled\", which reads as covering reversals; it does not. Scope narrowed, gap recorded as a residual."
+      - "A 300-character local part reached a varchar(255) INSERT and raised 22001 — not a unique violation, so a 500. Refused at the gate."
+      - "The backfill test re-ran the block's deliberately-unscoped INSERT … SELECT against the shared lane database, writing entitlements for other suites' users. Now bounded and rolled back."
+      - "A block-0102 test asserted SQL text under a behavioural name and would have passed with hashEmail switched to SHA-512. Renamed; the agreement is proved against a real Postgres elsewhere."
+      - "The block-0102 stub counted statements, so adding one shifted the ledger result onto a CREATE INDEX. It matches on the query now."
+      - "The outstanding-token cap was intermittently off by one because the read used the application clock and `now()` used the database's. Moved into SQL — and rounds 2 and 3 each found the OTHER half still on the wrong clock; see round_3."
+    process_note: >
+      Both reviewers objected that the tree moved under them mid-review. Fair,
+      and it cost each of them a finding written against code that no longer
+      existed. Rounds 2 and 3 ran against a frozen SHA with a clean tree.
+
+  round_2:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    blocking:
+      erasure_receipt_still_incomplete: >
+        Round 1's fix cleaned up the two tables WP11 added and stopped, without
+        re-auditing the receipt against `transactions` — which the same handler
+        explicitly retains. `/v1/do` records `audit_trail.request_context` on
+        every authenticated call (hashed IP, user-agent, Accept-Language,
+        referer, origin, fingerprint) and `client_meta.ip_day_hash`, a
+        day-salted HMAC of the address. Production: 476 user-linked rows across
+        6 users. `client_meta` is outside the hashed payload so closure clears
+        it; `request_context` is inside it and was disclosed instead.
+    non_blocking_fixed:
+      - "The token cap evicted the OLDEST code, so five requests displaced the one a victim was holding — and the docstring claimed the opposite. Reproduced 5/5 by the reviewer."
+      - "Expiry straddled two clocks: eviction wrote `now()` from SQL, redemption compared against `new Date()`. Measured skew swung 1.4s in 8 seconds."
+      - "OpenAPI still documented the eviction round 1 removed."
+      - "`name` at 300 characters still 500'd — round 1 gated `email` and stopped, on the same INSERT."
+      - "`trialRateBucket` collapsed IPv4-mapped addresses into one bucket."
+      - "A comment claimed the per-IP cap withholds money on the agent path, which IP_CAPPED_CHANNELS excludes."
+      - "The closure test leaked one uncollectable trial_grants row per run — its cleanup keyed on a user_id the closure had just NULLed. 38 orphans had accumulated."
+
+  round_3:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    the_finding_that_mattered: >
+      NB-1 diagnosed why the same defect survived three rounds: the tests for
+      every claim the receipt made were HOLLOW. They string-matched the
+      response body, which is built from literals in the handler, so deleting
+      the client_meta UPDATE or either clearing helper left all 147 integration
+      tests green. They proved the CLAIM, not the BEHAVIOUR.
+    structural_fix: >
+      `lib/account-closure.ts` is now the one authority: CLOSURE_PLAN both
+      performs the closure and produces the customer-facing summary, so the two
+      cannot drift. `account-closure.test.ts` parses `schema.ts` and fails if
+      any table declaring `user_id` is absent from the plan — a new table
+      cannot be added without either handling it or writing down why it is
+      retained. `request-context.ts` declares the seven fields once, and a test
+      cross-checks them against the object `do.ts` actually builds. The
+      behavioural test now reads the database, and was verified to fail when
+      each clearing step is removed in turn.
+    blocking_fixed:
+      request_context_under_enumerated: >
+        The disclosure named five of seven fields. `fingerprintHash` is a
+        device fingerprint carried on the same 476 production rows, named in
+        the code comment beside the text and missing from the text itself.
+      four_tables_wholly_undisclosed: >
+        `failed_requests` (32 production rows across 3 users, carrying ip_hash,
+        user_agent and the caller's free-text task), `dispute_requests` (a
+        plaintext contact address, no retention rule), `wallet_reservations`
+        and `capability_invocations` appeared in none of the three lists. The
+        first two are now cleared at closure; the last two cannot be — one is
+        NOT NULL, the other is protected by an append-only trigger — so they
+        are disclosed with that reason. The receipt also claimed "the user_id
+        linkage is severed", which was never true of `transactions`.
+      expiry_write_still_on_the_app_clock: >
+        Round 2 moved the READ into SQL and left the WRITE on `new Date()` —
+        same straddle, opposite side. An expired token still rotated the key,
+        reproduced 2 in 6 runs. Both halves are `now()` now. The test itself
+        was expiring rows with the application clock too, which is the same
+        mistake one layer out; fixed and stable across 10 consecutive runs.
+    non_blocking_fixed:
+      - "`trialRateBucket` still collapsed the HEX spelling of IPv4-mapped addresses — and that is the reachable one, because IPV6_RE rejects dots and accepts hex. A trailing dotted quad also parsed as one hextet instead of two, so `0:0:0:0:0:ffff:1.2.3.4` got no bucket at all."
+      - "A Stripe session settling after closure would credit a redacted account's wallet — money placed where it can never be spent, on the happy path, with nothing alerting. Now refused and paged."
+      - "Three docstrings described redemption as a conditional UPDATE; it is SELECT … FOR UPDATE, deliberately."
+      - "The growth bound cited the per-IP limiter, which places no bound on a single account. Retention is what actually holds."
+      - "This manifest claimed the token cap still existed."
+  round_4:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    the_fourth_instance: >
+      A SECOND request-context object, written by the solution executor under
+      the camelCase key `requestContext` with a different field set, on
+      user-linked transaction rows — 3 in production, and every completed
+      solution execution now takes that path. Undisclosed. Round 3's guard
+      could not see it by construction: it cross-checked the field list against
+      `routes/do.ts` only, and `tablesCovered()` collapsed
+      `transactions.audit_trail.request_context` to `transactions`, so it
+      verified table-level coverage while all four rounds' defects were
+      sub-table.
+    the_structural_answer: >
+      A hand-written list cannot enumerate a JSONB blob. So the receipt stopped
+      trying. `describeRetainedAuditKeys` reads the account's own rows and
+      reports the keys they actually hold, one level nested, keys never values.
+      That is exhaustive by construction and cannot drift, because there is
+      nothing left to keep in sync. The static plan still covers columns, where
+      a schema does define the shape.
+    also_fixed:
+      - "`applyClosurePlan` did not perform the `users` rule its own docstring said it performed — that write lived in the route. A second caller (an admin closure, a bulk Art. 17 job) would have cleared everything else while the customer's API key kept working, and the summary would have reported it anonymised."
+      - "`countRemainingLinkage` was a hand-written list covering 5 of the 11 columns the plan declared, so narrowing the clearing to `set({ userId: null })` left three IP hashes and a plaintext contact address in place with the test green. Derived from CLOSURE_PLAN now, and verified by that exact mutation — it fails with `failed_requests.ip_hash survived closure`."
+      - "The schema parser saw only `uuid(\"user_id\")` on one line with a double-quoted table name. It was blind to `text(\"user_id\")` — already the house style elsewhere in this schema — plus varchar, multi-line declarations and single quotes. A guard that cannot see the shape it guards against reports success."
+      - "The `do.ts` cross-check skipped spreads, quoted keys, computed keys and snake_case names. It now REFUSES shapes it cannot account for rather than passing over them."
+      - "`trialRateBucket` collapsed the RFC 2765 translated form `::ffff:0:a.b.c.d` (ffff at hextet 4, not 5) into the all-zero bucket, and the IPv4 branch returned its input unparsed — `abcd` and `999.999.999.999` were buckets, and one address had three spellings. Malformed IPv6 (`1:2:3:4::5:6:7:8`, `2001:db8::1:`) also produced plausible-looking buckets."
+      - "`transactions.error` (76 user-linked production rows, echoing customer input) and `idempotency_key` (421 rows, customer-chosen free text) are inside the hashed payload and were undisclosed. `wallet_transactions.stripe_session_id` resolves through Stripe's API to a billing name, email and card — an identifier, described as 'no identifier of its own'. `wallets` sat in an exclusions map the summary never read, so the one table the plan admitted saying nothing about appeared in none of the lists."
+    found_by_the_new_guard_not_by_review: >
+      Widening the completeness test to identifier-bearing columns without a
+      `user_id` immediately surfaced `suggest_log.ip_hash` and
+      `discovery_hits.ip_hash`. Neither links to an account, so closure cannot
+      reach them — but `suggest_log` had NO retention rule at all: 1,000 rows
+      carrying a truncated IP hash alongside the query text, going back to
+      2026-04-17, four months and counting. Given a 90-day rule matching
+      `discovery_hits`, which is the same data class and sets the duration, so
+      this is parity rather than a new policy call. Flagged to WP14, which owns
+      retention duration by data class.
+
+  round_5:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    the_decisive_observation: >
+      Round 4's answer was "stop enumerating a JSONB blob by hand", and it was
+      right about audit_trail. But the plan went on enumerating COLUMNS by
+      hand — one commit after CUSTOMER_CONTENT_COLUMNS landed in the same repo
+      for exactly that reason, with a docstring saying it exists because
+      someone once answered a privacy question from two columns out of thirty
+      and called it exhaustive. The plan retyped five of its six entries and
+      dropped `provenance`: 559 user-linked production rows carry it, holding
+      upstream source records keyed to whatever entity the customer queried.
+      Fifth instance, same direction, same table. The column lists are derived
+      now, and a test fails if they diverge.
+    the_receipt_was_refusing_on_a_false_ground: >
+      It told data subjects that input, output, error and audit_trail could not
+      be cleared because "severing it would break the chain for every
+      transaction recorded after yours". purgeCustomerContent sets exactly
+      those columns to NULL on EVERY transaction at 90 days;
+      integrity_hash/previous_hash are not on its clear list, so link N to N+1
+      survives and verify.ts reports a redacted predecessor as redacted, not
+      broken. 312,677 of 919,304 user-linked production rows already carry
+      redacted_at. So a subject asking on day 10 was told it was technically
+      impossible, and on day 90 the platform did it anyway, to everyone.
+      Closure now performs that redaction immediately, using the same statement
+      the retention job uses and respecting legal_hold. Erasure erases.
+    it_also_pointed_at_a_field_that_never_existed: >
+      The disclosure instructed data subjects to email us to redact
+      audit_trail.executionInput. Zero of 5,599 production rows with an audit
+      trail carry that key — it is a local variable name in do.ts. An operator
+      following the instruction would have redacted nothing and reported the
+      erasure complete while the input sat in the transactions.input column.
+      Round 4's own live key list contradicted it in the same response body.
+    also_fixed:
+      - "describeAuditKeysHeld was blind to arrays, so audit_trail.steps on a solution run reported as a bare 'steps' while each element carries an error field holding the same input-echoing text the column rule discloses. It walks arrays now, and moved INSIDE the transaction, because closure clears audit_trail and reading afterwards reported nothing."
+      - "The receipt read ran post-commit and unguarded. A failure there would 500 AFTER the erasure committed — key burned, balance forfeited — and authMiddleware then rejects any retry, so the Art. 17 written confirmation is lost permanently. Caught and degraded now."
+      - "trialRateBucket: `::102:304`, the hex spelling of the IPv4-compatible form, returned null — and it is the REACHABLE one, because IPV6_RE rejects dots and accepts hex. That is the identical argument the code already makes two branches up for the mapped form, unapplied to this one. The mapped branch also still returned its input unparsed, in the same commit that documented the promise not to."
+      - "x402_orphan_settlements.payer_address, transactions.x402_payer_hash and transactions.client_ip_hash were undisclosed. Found by the new catalogue-driven guard, not by review."
+      - "The retention job ran every rule in ONE transaction, so the first failing rule aborted it and every later rule failed with 'current transaction is aborted' while the closing COMMIT became a ROLLBACK — undoing earlier rules' deletions while the summary logged a non-zero total. WP11 made it reachable by adding rules on tables that do not exist until migration 0102 runs. Each rule has its own SAVEPOINT now, and the header's false claim about lock scope is corrected."
+    the_guard_reads_the_catalogue_now: >
+      The source-parsing completeness check was demonstrated blind to six
+      declaration shapes and limited to four hardcoded identifier names. A
+      guard that reads TypeScript is guessing at the schema. The authoritative
+      version queries information_schema in the integration lane, at COLUMN
+      granularity — table-level coverage is what let two identifier columns sit
+      unnamed under a covered transactions — and it immediately found the three
+      x402/client-IP columns above.
+
+  round_6:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    context: >
+      Round 5 changed what closure DOES — it clears the customer content
+      instead of telling the subject that was impossible. Three of round 6's
+      five blockers were consequences of that change, which is the right shape
+      for a review of new behaviour.
+    blocking_fixed:
+      verify_reported_every_erasure_as_unexplained: >
+        WP11 introduced a fourth deletion reason and did not teach
+        `/v1/verify` about it, so the endpoint returned
+        `deletion_reason: account_closure_erasure` in the same body as prose
+        saying the reason "was not recorded — flagged for operator review", and
+        bucketed every erased row under `other`. A regulator walking the chain
+        would have counted N unexplained redactions instead of N GDPR erasures.
+      receipt_promised_a_count_it_did_not_carry: >
+        "Your response above reports how many, if any, were skipped." It did
+        not — `applyClosurePlan` returned void. And because the summary was a
+        pure function of the plan, a subject every one of whose transactions is
+        under a legal hold would have received a confirmation identical to a
+        complete erasure. The branch had no tests, and `legal_hold` has no
+        writer, so "it never fires" was not a property anything enforced.
+      the_endpoint_header_said_the_opposite: >
+        "What this endpoint deliberately does NOT do: touch transactions /
+        wallet_transactions / audit chain." Both halves false. The handler was
+        rewritten a hundred lines below and the header left standing; an
+        operator answering a subject-access question from it would have said
+        "no, by design".
+      the_catch_could_not_catch_what_it_was_for: >
+        A SQL error inside a Postgres transaction aborts the whole
+        transaction, so catching it in JavaScript let execution continue into
+        `forfeitOnClosure`, which then failed on an aborted transaction and
+        threw — a 500 with nothing closed, deterministically, on every retry,
+        while the log claimed the condition was handled. The same semantic the
+        SAME commit fixed in the retention job with a SAVEPOINT. The read moved
+        outside the transaction.
+      async_execution_repopulated_erased_content: >
+        Four production capabilities exceed the 10s async threshold and
+        complete in a separate transaction after the 202. Closing inside that
+        window put `output`, `provenance` and `auditTrail` back onto a row the
+        customer was told in writing was cleared.
+    self_inflicted: >
+      Fixing the receipt/row clock split by binding a Date into a sql template
+      reintroduced the PR-43 defect class this repo has a written protocol
+      about — postgres-js cannot serialise a Date through that path — and 500'd
+      the endpoint until the integration lane caught it. Both halves are pinned
+      by a test now.
+
+  round_7:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    blocking_fixed:
+      the_tally_still_disagreed_with_the_prose: >
+        Round 6 added `isErasureReason` and gave it exactly one call site — the
+        prose. The structured tally at three other places still tested string
+        equality. Fixing the sentence and leaving the number is the same defect
+        the sentence was fixing. The guard against a FIFTH unclassified reason
+        is now a source scan rather than a list.
+      the_async_fix_landed_on_one_of_eight_write_sites: >
+        Including missing the FAILURE branch of the very function it fixed,
+        plus seven other content-writing UPDATEs and the reservation
+        reconciler. And the test that proved it re-typed the predicate inline
+        rather than calling the code, so it could not have caught any of them.
+      the_legal_hold_receipt_was_false_in_both_directions: >
+        `client_meta` was DESTROYED on held rows and reported as withheld —
+        destroying data on a row we are legally required to preserve intact,
+        plus a written statement to the subject that we had not — while
+        `audit_trail` was PRESERVED and reported as cleared. The sorting is
+        derived from a `respectsLegalHold` flag now, and the `client_meta`
+        clear carries the same legal-hold predicate the content clear does.
+    the_structural_answer: >
+      Enumerating write sites is how six rounds were spent getting the receipt
+      wrong, so the async race is not fixed by enumerating them. Migration
+      block 0103 installs a BEFORE UPDATE trigger holding the invariant for
+      every site that exists and every site anyone adds: once a row is
+      redacted, its customer content cannot come back. It nulls rather than
+      raises — a late write is not an error, it is a result arriving for a
+      request that was legitimately made — and it is narrow enough that status,
+      latency, hashes and reservation state still update, so the hash-retry
+      worker and the reconciler can finish. Verified load-bearing by dropping
+      the trigger and watching the test fail with the leaked payload.
+
+  round_8:
+    verdict: PASS_WITH_NON_BLOCKING_FINDINGS
+    recommendation: merge
+    bar: >
+      Explicitly narrowed: wrong money movement, money or data loss,
+      irreversible destruction of the wrong data, a false statement to a
+      customer or regulator, or a deploy that breaks production. Everything
+      else non-blocking, and "nothing blocking survives" stated as a valid
+      answer so the round could not manufacture one.
+    trigger_measured_not_assumed: >
+      2.45 microseconds per row over 500k rows; CREATE TRIGGER took 1 ms with
+      no table rewrite; production `n_tup_upd` is 5,394 since stats reset.
+      Production already carries a second BEFORE UPDATE trigger on the same
+      table (`strale_chain_append_only_trigger`) — it sorts first by name and
+      guards only the hash columns, which 0103 does not touch, so there is no
+      interaction in either direction. Exercised against the real table under
+      rollback: late write neutralised, live row untouched, un-redaction
+      refused, the 1095-day purge still lands.
+    polished_after_the_pass:
+      - "Removed the now-redundant `redacted_at IS NULL` from the async success write: it stranded the row in a non-terminal status forever while the reservation settled around it. The trigger scrubs the content; the status is not the customer's data."
+      - "Bounded `describeAuditKeysHeld` to a 5,000-row sample. Not customer-reachable — the largest real account holds 482 unredacted rows against the harness principal's 908,222 — but an unbounded three-way LATERAL scan is a bad shape to leave lying around."
+      - "`isRetentionReason` now knows `pii_retention_purge`, and the reason scan reads `startup-migrations.ts`, where that literal lives and where the first version of the scan did not look."
+      - "Corrected stale production figures in this file and in the module prose."
+
+    accepted_consequence: >
+      Closing an account releases its slot in the per-IP trial window, because
+      closure clears `trial_grants.ip_hash`. Deliberate: retaining a hashed IP
+      indefinitely against a closed account is what three rounds kept flagging,
+      and the UNIQUE index on `email_hash` still forces a fresh address for
+      every grant. Documented in the module rather than left to be rediscovered.
+
+out_of_scope:
+  - Repairing the 22 pre-WP2 drifted internal wallets (writes production
+    wallets; CHECK-IN B, same class as WP3's 11 stranded rows).
+  - A durable stripe_uncredited_payments table (no production top-up has ever
+    happened; Stripe holds the record).
+  - Reclaiming the 1,600 cents granted to the eight farmed accounts (writes
+    production wallets; all eight spent zero, so the exposure is already
+    contained).
+  - Spoofable X-Forwarded-For, which bounds how strong the per-IP cap can be.
+    Owned by WP12 + VERIFY-IP. Guessing Railway's proxy hop count and reading
+    the wrong entry would break every IP-keyed rate limit in production at
+    once, which is why it is a verification gate and not a passing fix.
+  - Stripe settlement REVERSALS. `charge.dispute.created` and
+    `charge.refunded` are unhandled platform-wide, so a charged-back top-up
+    leaves the credits spendable. Clawing back a balance the customer may have
+    spent is a refund-policy decision, not a bug fix.
+  - The frontend docs page describing the old recovery behaviour
+    (strale-frontend src/pages/docs-content.ts:1172). Separate repository.

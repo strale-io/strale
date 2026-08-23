@@ -356,7 +356,7 @@ export const openApiSpec = {
       post: {
         tags: ["auth"],
         summary: "Register a new account",
-        description: "Creates a new Strale account with €2.00 trial credits (no card required). Returns the API key — store it securely, it is shown only once.",
+        description: "Creates a new Strale account and returns the API key — store it securely, it is shown only once. Trial credits (€2.00, no card required) are granted once per email address; when they are withheld the account is still created and `wallet_balance_cents` is 0 with a `trial_credits` object explaining why. Read the granted amount from the response rather than assuming the default.",
         "x-ratelimit": { limit: 3, window: "1m", scope: "per IP" },
         requestBody: {
           required: true,
@@ -366,7 +366,7 @@ export const openApiSpec = {
                 type: "object" as const,
                 required: ["email"],
                 properties: {
-                  email: { type: "string" as const, format: "email", example: "dev@example.com" },
+                  email: { type: "string" as const, format: "email", example: "dev@yourcompany.com" },
                   name: { type: "string" as const, example: "Jane Developer" },
                 },
               },
@@ -384,14 +384,118 @@ export const openApiSpec = {
                     user_id: { type: "string" as const, format: "uuid" },
                     email: { type: "string" as const },
                     api_key: { type: "string" as const, description: "Shown once. Starts with sk_live_." },
-                    wallet_balance_cents: { type: "integer" as const, example: 200 },
+                    wallet_balance_cents: {
+                      type: "integer" as const,
+                      example: 200,
+                      description: "What the wallet was actually opened with. 0 when trial credits were withheld.",
+                    },
+                    trial_credits: {
+                      type: "object" as const,
+                      description: "Present only when no trial credit was granted. The account is still usable; top up to make paid calls.",
+                      properties: {
+                        granted: { type: "boolean" as const, example: false },
+                        reason: {
+                          type: "string" as const,
+                          enum: ["trial_not_available"],
+                          description:
+                            "Deliberately undifferentiated. Registration does not verify the mailbox, so a more specific reason would tell anyone who registers an address whether it had previously held an account.",
+                        },
+                        message: { type: "string" as const },
+                      },
+                    },
                   },
                 },
               },
             },
           },
-          "400": errorResponse("invalid_request", "Invalid email."),
+          "400": errorResponse(
+            "invalid_request",
+            "Invalid email, a disposable-mail domain, or a domain with no mail exchanger. `details.reason` carries disposable_domain or no_mail_exchanger.",
+          ),
           "409": errorResponse("invalid_request", "Email already registered."),
+        },
+      },
+    },
+    "/v1/auth/recover": {
+      post: {
+        tags: ["auth"],
+        summary: "Request an API key recovery code",
+        description:
+          "Sends a single-use recovery code to the account's email address. Your current API key keeps working — nothing is rotated until the code is redeemed at /v1/auth/recover/confirm. The response body and status are identical whether or not an account exists. Response TIMING is not equalised, so this is not a constant-time oracle.",
+        "x-ratelimit": { limit: 2, window: "5m", scope: "per IP" },
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object" as const,
+                required: ["email"],
+                properties: {
+                  email: { type: "string" as const, format: "email" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Accepted (whether or not an account exists)",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object" as const,
+                  properties: {
+                    message: { type: "string" as const },
+                    expires_in_minutes: { type: "integer" as const, example: 30 },
+                  },
+                },
+              },
+            },
+          },
+          "400": errorResponse("invalid_request", "A valid email address is required."),
+        },
+      },
+    },
+    "/v1/auth/recover/confirm": {
+      post: {
+        tags: ["auth"],
+        summary: "Redeem a recovery code and rotate the API key",
+        description:
+          "Redeems the single-use code sent by /v1/auth/recover. The previous API key stops working the moment this returns 200. Codes expire 30 minutes after issue. Requesting another does NOT invalidate an outstanding one — several can be live at once, each single-use — because an unauthenticated endpoint that invalidates a code on request lets anyone who knows the address keep cancelling a recovery in progress.",
+        "x-ratelimit": { limit: 10, window: "5m", scope: "per IP" },
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object" as const,
+                required: ["email", "token"],
+                properties: {
+                  email: { type: "string" as const, format: "email" },
+                  token: { type: "string" as const, description: "The code from the recovery email." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Key rotated",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object" as const,
+                  properties: {
+                    api_key: { type: "string" as const, description: "Shown once. The previous key is now invalid." },
+                    key_prefix: { type: "string" as const },
+                    message: { type: "string" as const },
+                  },
+                },
+              },
+            },
+          },
+          "400": errorResponse("invalid_request", "Both 'email' and 'token' are required."),
+          "401": errorResponse("unauthorized", "The code is invalid, expired, or already used."),
         },
       },
     },

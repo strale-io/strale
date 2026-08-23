@@ -1,6 +1,48 @@
 # Remediation Program — Current State
 
-_Last updated: 2026-08-21 (session 1)_
+_Last updated: 2026-08-23 (WP11 session)_
+
+- **Current package:** WP11 — REVIEW PASSED, PR open, **not merged**.
+  PR #371, head `5021a05`. Eight adversarial rounds; round 8 returned
+  PASS_WITH_NON_BLOCKING_FINDINGS with an explicit merge recommendation.
+- **WP9:** merged and deployed, under its observation period. Untouched by
+  WP11 — no watch condition fired.
+- **Next package:** WP12, per the approved graph — but note it is gated on
+  VERIFY-IP, which WP11 sharpened: `getClientIp` reads the client-supplied
+  leftmost X-Forwarded-For, and WP11's per-IP trial cap is documented as a
+  speed bump because of it. Confirm Railway's hop count before WP12 changes
+  anything; guessing it breaks every IP-keyed limit at once.
+
+## What WP11 cost, and why it is worth writing down
+
+Eight review rounds, seven of them FAIL. The account-closure receipt was
+found inaccurate in five consecutive rounds, each time somewhere the previous
+round had not pointed. Correcting the literals could not converge, because
+the claim and the behaviour were two artifacts kept in agreement by hand.
+
+**The generalisable lesson: when a claim enumerates something, derive the
+enumeration or delete the claim.** WP11 ended with the closure plan
+performing the closure AND building the customer-facing summary; the JSONB
+keys read from the account's own rows; the column lists derived from
+`CUSTOMER_CONTENT_COLUMNS`; and the completeness guard querying
+`information_schema` rather than parsing TypeScript. That guard then found
+three identifier columns no reviewer had named, plus `suggest_log.ip_hash` —
+3,011 rows carrying an IP hash since April with no retention rule at all.
+
+Second lesson, from the same rounds: **a guard that cannot see the shape it
+guards against reports success.** Three separate guards in this package were
+green while doing nothing — one asserted SQL text under a behavioural name,
+one was blind to a declaration style used elsewhere in the same file, one was
+aimed at a different file than the defect. Each was found by a reviewer, not
+by the suite.
+
+Third: the receipt **refused erasure on a false ground** — it told data
+subjects the content could not be cleared without breaking the hash chain,
+while the retention job cleared exactly those columns on every row at 90
+days. Closure now performs that redaction immediately. A claim nobody had
+checked against the platform's own scheduled behaviour survived months.
+
+## Prior state (WP0–WP9)
 
 - **Current package:** WP6 — ACCEPTED, merged as `4302547` (PR #354), verified live.
 - **Next package:** WP8

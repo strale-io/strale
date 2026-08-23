@@ -5,7 +5,7 @@
 The `claude-test@strale.io` API key may be in an invalidated state from a prior recovery call.
 
 1. Attempt: `curl -s https://api.strale.io/v1/wallet/balance -H "Authorization: Bearer $KEY"`. If 200 with expected balance (~170c minus prior charges), proceed.
-2. If 401: regenerate via `POST /v1/auth/recover` with `{"email": "claude-test@strale.io"}` — check inbox for new key.
+2. If 401: recovery is two steps as of WP11 — `POST /v1/auth/recover` with `{"email": "claude-test@strale.io"}` sends a one-time code and rotates nothing, then `POST /v1/auth/recover/confirm` with `{"email": ..., "token": ...}` returns the new key. **The old key keeps working until the code is redeemed**, so do not discard it after step one.
 3. Alternatively, use the authenticated API key regeneration endpoint: `POST /v1/auth/api-key` with the current valid key.
 4. Confirm the new key works via `GET /v1/wallet/balance` before proceeding.
 

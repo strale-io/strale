@@ -147,9 +147,11 @@ verifyRoute.get("/:transactionId", async (c) => {
         "because the row's input/output/audit_trail were zeroed by design. This is routine and not tampering."
       );
     }
-    if (reason === "user_request") {
+    if (isErasureReason(reason)) {
       return (
-        "Row redacted at the customer's request under GDPR Art. 17 right-to-erasure. " +
+        (reason === "account_closure_erasure"
+          ? "Row content redacted when the customer closed their account, under GDPR Art. 17 right-to-erasure. "
+          : "Row redacted at the customer's request under GDPR Art. 17 right-to-erasure. ") +
         "Original chain hash is preserved for chain continuity; per-row content hash no longer matches " +
         "because input/output/audit_trail were zeroed by design. This is a legitimate customer action and not tampering."
       );
@@ -181,10 +183,17 @@ verifyRoute.get("/:transactionId", async (c) => {
       redacted_links: chain.redactedLinks + (targetRedacted ? 1 : 0),
       // World-class #6: per-reason breakdown so a regulator walking the
       // chain sees how many links are GDPR-erasure vs. retention-purge.
+      // `isErasureReason`, not an equality check — the same correction the
+      // prose above needed and got, applied to the tally it disagreed with.
+      // WP11 added `account_closure_erasure`; testing `=== "user_request"`
+      // here put every Art. 17 account closure in `other` (documented below as
+      // "flagged for review") while the prose two fields up explained it as an
+      // erasure. A regulator walking a chain across N closed accounts would
+      // have counted N unexplained redactions.
       redacted_by_reason: {
-        user_request: chain.redactedByReason.user_request + (targetRedacted && targetDeletionReason === "user_request" ? 1 : 0),
+        user_request: chain.redactedByReason.user_request + (targetRedacted && isErasureReason(targetDeletionReason) ? 1 : 0),
         retention_purge: chain.redactedByReason.retention_purge + (targetRedacted && isRetentionReason(targetDeletionReason) ? 1 : 0),
-        other: chain.redactedByReason.other + (targetRedacted && targetDeletionReason !== "user_request" && !isRetentionReason(targetDeletionReason) ? 1 : 0),
+        other: chain.redactedByReason.other + (targetRedacted && !isErasureReason(targetDeletionReason) && !isRetentionReason(targetDeletionReason) ? 1 : 0),
       },
       reaches_genesis: chain.reachesGenesis,
       chain_start_date: chain.startDate,
@@ -286,7 +295,7 @@ export async function walkChain(
     if (prev.deletedAt != null || prev.redactedAt != null) {
       redactedLinks++;
       const reason = prev.deletionReason ?? "";
-      if (reason === "user_request") redactedByUserRequest++;
+      if (isErasureReason(reason)) redactedByUserRequest++;
       else if (isRetentionReason(reason)) redactedByRetentionPurge++;
       else redactedByOther++;
       startDate = prev.createdAt instanceof Date
@@ -372,7 +381,32 @@ export type ChainLinkClassification = "verified" | "redacted" | "broken";
  * retention count, not a mystery bucket.
  */
 export function isRetentionReason(reason: string | null): boolean {
-  return reason === "retention_purge" || reason === "content_retention_purge";
+  return (
+    reason === "retention_purge" ||
+    reason === "content_retention_purge" ||
+    // Written by an older sweep and rewritten away by migration 0087, so no
+    // production row carries it — but the classifier costs nothing and an
+    // unknown reason is the one thing that lands in the "flagged for review"
+    // bucket.
+    reason === "pii_retention_purge"
+  );
+}
+
+/**
+ * Customer-initiated erasure, whichever route wrote it.
+ *
+ * Two paths produce it: a single-transaction erasure writes `user_request`,
+ * and closing the whole account writes `account_closure_erasure` (WP11). The
+ * second was added without teaching this classifier about it, so every Art. 17
+ * account closure rendered as "deletion_reason unknown — flagged for operator
+ * review" while the same response body carried the reason verbatim. That is
+ * the exact self-contradiction the note above `redactionReasonText` exists to
+ * prevent, reintroduced from the other side — and it put every erased row in
+ * the `other` bucket, so a regulator walking the chain would count N
+ * unexplained redactions instead of N GDPR erasures.
+ */
+export function isErasureReason(reason: string | null): boolean {
+  return reason === "user_request" || reason === "account_closure_erasure";
 }
 
 export function classifyChainLink(prev: {

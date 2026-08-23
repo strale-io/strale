@@ -81,6 +81,79 @@ export const wallets = pgTable("wallets", {
 });
 
 // ─── wallet_transactions ────────────────────────────────────────────────────
+// ─── WP11: trial entitlement ledger ─────────────────────────────────────────
+//
+// The durable record of "this identity has already been given trial credit".
+//
+// Before this table the fact lived nowhere: it was inferred, per request, from
+// whichever gate the route handler happened to run. `/v1/auth/register` ran
+// none, `/v1/signup` ran four, and manual admin grants ran none while reusing
+// the same `trial_credit` ledger type. Production shows what that costs — 8
+// accounts created from one signup IP over 44 hours, each granted EUR 2.00,
+// all through the ungated register path.
+//
+// It is a separate table rather than a column on `users` for one reason that
+// decides the design: the erasure endpoint anonymises the users row, so any
+// entitlement fact stored there is destroyed by the delete → re-register loop
+// it is meant to close. `email_hash` is a one-way SHA-256 of the normalised
+// address, which survives Art. 17 anonymisation precisely because it is not
+// the address. `user_id` is intentionally nullable and carries no foreign key
+// for the same reason — the entitlement outlives the account.
+export const trialGrants = pgTable(
+  "trial_grants",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    /** SHA-256 hex of the normalised (trimmed, lower-cased) email address. */
+    emailHash: varchar("email_hash", { length: 64 }).notNull().unique(),
+    /** Same 16-char truncated SHA-256 the users row stores. Nullable: an IP is not always resolvable. */
+    ipHash: varchar("ip_hash", { length: 16 }),
+    /** Who received it, when known. No FK — the grant outlives the account. */
+    userId: uuid("user_id"),
+    grantedCents: integer("granted_cents").notNull(),
+    /** 'register' | 'agent_signup' | 'backfill' */
+    channel: varchar("channel", { length: 32 }).notNull(),
+    grantedAt: timestamp("granted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("trial_grants_ip_granted_idx").on(table.ipHash, table.grantedAt)],
+);
+
+// ─── WP11: proof-before-rotation for API key recovery ───────────────────────
+//
+// `/v1/auth/recover` used to rotate the key and email the new one on an
+// unauthenticated request whose only input was an email address. Two defects
+// in one handler: anyone who knew a customer's address could revoke their
+// working key at will, and the replacement was a reusable bearer secret
+// delivered over email.
+//
+// The token below separates the request from the rotation. Requesting costs
+// the account nothing; only redeeming a single-use, short-lived token that
+// was delivered to the mailbox rotates anything.
+export const apiKeyRecoveryTokens = pgTable(
+  "api_key_recovery_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    /** SHA-256 hex of the token. The token itself is never stored. */
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    requestedIpHash: varchar("requested_ip_hash", { length: 16 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("api_key_recovery_tokens_user_created_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+  ],
+);
+
 export const walletTransactions = pgTable(
   "wallet_transactions",
   {

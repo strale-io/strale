@@ -65,6 +65,7 @@ import {
   runMigration0082_reclassifyThrottledFreeUnlimited,
   runMigration0087_unhideRedactedRows,
   runMigration0093_fixtureRecaptureFailures,
+  runMigration0102_accountLifecycleTables,
   runMigration0066_ensureEligibilityColumnAndReconcile,
   runMigration0094_clearChurnInvalidatedBaselines,
   runMigration0100_relistUrlToMarkdown,
@@ -1237,8 +1238,130 @@ describe("startup-migrations — block 0087 (un-hide content-redacted rows)", ()
   });
 });
 
+/**
+ * A stub for block 0102 that answers the ledger probe by matching the SQL,
+ * not by counting statements.
+ *
+ * The positional `makeStub` queue meant every test in this describe carried a
+ * row of seven `undefined`s whose only job was to reach the eighth call. Adding
+ * one statement to the block silently shifted the ledger result onto a CREATE
+ * INDEX and the "already applied" test started failing for a reason that had
+ * nothing to do with what it asserts. Matching on the query removes the
+ * coupling between a test's fixture and the block's statement count.
+ */
+function makeBlock0102Stub(priorRun: Array<{ block: string }> = []) {
+  const captured: SQL[] = [];
+  const renderedSql: string[] = [];
+  const exec: MigrationExecutor & { captured: SQL[]; renderedSql: string[] } = {
+    captured,
+    renderedSql,
+    async execute(query: SQL) {
+      captured.push(query);
+      let rendered = "<unrendered>";
+      try {
+        rendered = dialect.sqlToQuery(query).sql;
+      } catch {
+        /* keep the placeholder */
+      }
+      renderedSql.push(rendered);
+      if (/SELECT block FROM startup_migration_ledger/i.test(rendered)) {
+        return priorRun;
+      }
+      return { count: 0 };
+    },
+  };
+  return exec;
+}
+
+describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
+  it("creates both tables and their indexes idempotently", async () => {
+    const stub = makeBlock0102Stub();
+    const result = await runMigration0102_accountLifecycleTables(stub);
+
+    const ddl = stub.renderedSql.join(" ").toLowerCase();
+    expect(ddl).toMatch(/create table if not exists "trial_grants"/);
+    expect(ddl).toMatch(/create unique index if not exists "trial_grants_email_hash_unique"/);
+    expect(ddl).toMatch(/create table if not exists "api_key_recovery_tokens"/);
+    expect(ddl).toMatch(
+      /create unique index if not exists "api_key_recovery_tokens_token_hash_unique"/,
+    );
+    expect(result.outcome).toMatch(/tables and indexes ensured/i);
+  });
+
+  it("the backfill cannot duplicate an entitlement", async () => {
+    // The UNIQUE index is the rule this block installs, so a backfill that
+    // could violate it would abort boot rather than silently skipping.
+    const stub = makeBlock0102Stub();
+    await runMigration0102_accountLifecycleTables(stub);
+    const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s));
+    expect(insert).toBeDefined();
+    expect(insert!.toLowerCase()).toMatch(/on conflict \(email_hash\) do nothing/);
+  });
+
+  it("pins the SQL hash expression that has to agree with hashEmail", async () => {
+    // The two halves of one rule live in different languages. If they diverge,
+    // every backfilled row is keyed on a hash the application will never
+    // produce, and the entitlement silently stops applying to exactly the
+    // accounts it was created to cover.
+    //
+    // This asserts the SQL TEXT and nothing more — it would pass unchanged if
+    // hashEmail() were switched to SHA-512 tomorrow. The agreement itself is
+    // proved where it can be: routes/account-lifecycle.integration.test.ts
+    // ("the migration backfills entitlements…") runs this block against a real
+    // Postgres and looks the row up BY hashEmail(), and
+    // lib/trial-eligibility.test.ts pins hashEmail to plain SHA-256 of the
+    // normalised address. Named for what it does, so the next reader does not
+    // count it as coverage twice.
+    const stub = makeBlock0102Stub();
+    await runMigration0102_accountLifecycleTables(stub);
+    const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s))!;
+    expect(insert.toLowerCase()).toContain(
+      "encode(sha256(convert_to(lower(btrim(u.email)), 'utf8')), 'hex')",
+    );
+  });
+
+  it("skips accounts whose address has already been erased", async () => {
+    // A redacted row has no recoverable address, so no hash can be computed
+    // for it. Stated in the query rather than left implicit, because a future
+    // reader could easily read the omission as an oversight.
+    const stub = makeBlock0102Stub();
+    await runMigration0102_accountLifecycleTables(stub);
+    const insert = stub.renderedSql.find((s) => /insert into "trial_grants"/i.test(s))!;
+    expect(insert.toLowerCase()).toMatch(/u\.deleted_at is null/);
+    expect(insert.toLowerCase()).toMatch(/redacted-%@deleted\.local/);
+  });
+
+  it("creates the Stripe replay index, which no migration block owned before", async () => {
+    // `wallet_transactions_stripe_session_id_unique` lives in schema.ts and in
+    // production, and was created by NO block — it survives only from the
+    // original `drizzle-kit push`, which never runs against production. A
+    // database rebuilt from startup-migrations.ts alone would come up without
+    // the one constraint standing between a duplicated Stripe delivery and a
+    // double credit, and nothing would say so. WP11 owns the Stripe crediting
+    // decision, so it adopts the guard that decision rests on.
+    const stub = makeBlock0102Stub();
+    await runMigration0102_accountLifecycleTables(stub);
+    const ddl = stub.renderedSql.join(" ").toLowerCase();
+    expect(ddl).toMatch(
+      /create unique index if not exists "wallet_transactions_stripe_session_id_unique"/,
+    );
+    // Partial, matching the schema: a NULL session id is the ordinary case for
+    // every non-Stripe ledger row, and a total index would reject the second one.
+    expect(ddl).toMatch(/where "stripe_session_id" is not null/);
+  });
+
+  it("does not re-run the backfill once the ledger records it", async () => {
+    // A second boot must not re-scan the users table. ON CONFLICT would make
+    // a re-run harmless, but the ledger gate is what keeps a boot cheap.
+    const stub = makeBlock0102Stub([{ block: "0102_account_lifecycle_tables" }]);
+    const result = await runMigration0102_accountLifecycleTables(stub);
+    expect(stub.renderedSql.some((s) => /insert into "trial_grants"/i.test(s))).toBe(false);
+    expect(result.outcome).toMatch(/already applied/i);
+  });
+});
+
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 44 blocks in historical order", () => {
+  it("exports the expected 46 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1290,6 +1413,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0099_noHalfQuarantine",
       "runMigration0100_relistUrlToMarkdown",
       "runMigration0101_capabilityInvocations",
+      "runMigration0102_accountLifecycleTables",
+      "runMigration0103_redactedContentStaysRedacted",
     ]);
   });
 });
@@ -2149,7 +2274,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(101);
+    expect(Math.max(...numbers)).toBe(103);
   });
 });
 

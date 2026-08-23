@@ -27,9 +27,15 @@
  *
  * The fix is mechanical: each rule loops in 10,000-row batches, exits when
  * the batch returns 0 rows affected, and stops if a per-rule wall-clock
- * budget (60 seconds) is exhausted. Bounded WAL per batch; no single
- * transaction holds more than one batch's worth of locks. Loop emits a
- * structured per-rule summary so a future regression is visible.
+ * budget (60 seconds) is exhausted. Loop emits a structured per-rule summary
+ * so a future regression is visible.
+ *
+ * The header used to claim "no single transaction holds more than one batch's
+ * worth of locks". That was never true — all rules share one transaction for
+ * the advisory lock, so locks accumulate until commit and batching bounds the
+ * statement size rather than the transaction. Each rule now runs inside a
+ * SAVEPOINT so a failure rolls back only that rule instead of silently undoing
+ * every earlier one.
  */
 
 import { randomUUID } from "node:crypto";
@@ -78,6 +84,28 @@ export const RULES: readonly RetentionRule[] = [
   { table: "test_run_log",          column: "started_at",   days: 180, idCols: "id",                       orderClause: "started_at, id" },
   { table: "rate_limit_counters",   column: "window_start", days: 7,   idCols: "bucket_key, window_start", orderClause: "window_start, bucket_key" },
   { table: "discovery_hits",        column: "created_at",   days: 90,  idCols: "id",                       orderClause: "created_at, id" },
+  // Found by WP11's closure-completeness guard, not by anyone reading this
+  // list: `suggest_log` carries a truncated IP hash alongside the query text
+  // and had NO rule at all — 1,000 such rows in production going back to
+  // 2026-04-17, four months and counting. `discovery_hits` directly above is
+  // the same data class and sets the duration, so this is parity rather than a
+  // new policy call (a novel duration would be WP14's).
+  //
+  // DEC-20260504-B: this table has never been pruned, so the first successful
+  // run is a workload-resumption event. Audited — 1,000 rows total against a
+  // 10,000-row batch size and a 60-second per-rule budget, so it drains in one
+  // batch of one tick. No drain plan needed; the rule is self-throttling
+  // regardless.
+  { table: "suggest_log",           column: "created_at",   days: 90,  idCols: "id",                       orderClause: "created_at, id" },
+  // WP11. Tokens live 30 minutes; anything a week old is long spent. Rows are
+  // a user id plus an IP hash, so retaining them indefinitely would quietly
+  // grow the set that survives an account closure.
+  //
+  // `trial_grants` is deliberately NOT here. Its email hash IS the "one trial
+  // per address" rule, and pruning it hands every account that ages out a
+  // second grant — the exact loop the table exists to close. Its identifying
+  // columns are cleared on erasure instead (anonymiseTrialGrantOnClosure).
+  { table: "api_key_recovery_tokens", column: "created_at", days: 7,   idCols: "id",                       orderClause: "created_at, id" },
 ] as const;
 
 let _running = false;
@@ -92,11 +120,14 @@ let _running = false;
  */
 export interface RuleResult {
   table: string;
+  /** Rows actually gone once the tick commits. Zero for a rolled-back rule. */
   deleted: number;
   batches: number;
   duration_ms: number;
   budget_hit: boolean;
   error?: string;
+  /** Rows deleted and then undone by the savepoint rollback. */
+  rolled_back?: number;
 }
 
 /**
@@ -205,12 +236,41 @@ async function runRetention(): Promise<void> {
       // from the 2026-04-30 cert-audit batch (this file: commit 968bc82;
       // do.ts: commit 6613bd7).
       const cutoffIso = new Date(Date.now() - rule.days * 86_400_000).toISOString();
+
+      // SAVEPOINT per rule.
+      //
+      // Every rule runs inside one transaction, and `runOneRulePaginated`
+      // catches its own SQL error — but Postgres aborts the WHOLE transaction
+      // on the first failing statement. Every later rule then fails with
+      // "current transaction is aborted", and the closing COMMIT is downgraded
+      // to ROLLBACK, so the earlier rules' successful deletions are undone
+      // while the summary logs a non-zero `total_deleted`. The per-rule catch
+      // made that look like one bad table rather than a tick that deleted
+      // nothing and said otherwise.
+      //
+      // WP11 is what made this reachable: it adds rules on tables that do not
+      // exist in production until migration 0102 has run, and a missing table
+      // is exactly the condition that fails a statement outright. A savepoint
+      // rolls back only the failing rule.
+      await tx.execute(sql`SAVEPOINT retention_rule`);
       const result = await runOneRulePaginated(rule, cutoffIso, tx);
+      if (result.error !== undefined) {
+        await tx.execute(sql`ROLLBACK TO SAVEPOINT retention_rule`);
+        // The rollback undoes every batch this rule completed, so reporting
+        // them as deleted is the same lie the savepoint was added to stop —
+        // one tick would log `total_deleted: 10000` for a table it left
+        // unchanged. Moved into a field whose name says what happened.
+        result.rolled_back = result.deleted;
+        result.deleted = 0;
+        result.batches = 0;
+      } else {
+        await tx.execute(sql`RELEASE SAVEPOINT retention_rule`);
+      }
       results.push(result);
 
       if (result.error !== undefined) {
         jobLog.error(
-          { label: "db-retention-delete-failed", table: rule.table, batches_completed: result.batches, deleted_before_failure: result.deleted, err: { message: result.error } },
+          { label: "db-retention-delete-failed", table: rule.table, rows_rolled_back: result.rolled_back ?? 0, err: { message: result.error } },
           "db-retention-delete-failed",
         );
       }

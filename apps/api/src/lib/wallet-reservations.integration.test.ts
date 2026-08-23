@@ -19,7 +19,7 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { randomUUID } from "node:crypto";
@@ -280,10 +280,19 @@ describeMaybe("wallet reservations against a real database", () => {
 
     expect(await reservations.findAbandoned(db)).toHaveLength(0);
 
-    await db
-      .update(walletReservations)
-      .set({ deadlineAt: new Date(Date.now() - 1000) })
-      .where(eq(walletReservations.id, fresh.id));
+    // Back-dated with the DATABASE clock, because `findAbandoned` compares
+    // `deadline_at < now()` in SQL. Writing `new Date(Date.now() - 1000)` here
+    // straddles two clocks that are not the same clock — the database runs in
+    // its own container — so when the app clock leads by more than a second
+    // the row is still in the future to `now()` and the query finds nothing.
+    // This flaked in the full lane and passed in isolation, which is what a
+    // clock-skew flake looks like. Found while fixing the identical defect in
+    // WP11's recovery-token expiry.
+    await db.execute(
+      sql`UPDATE wallet_reservations
+             SET deadline_at = now() - interval '1 second'
+           WHERE id = ${fresh.id}::uuid`,
+    );
 
     const abandoned = await reservations.findAbandoned(db);
     expect(abandoned).toHaveLength(1);
