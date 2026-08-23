@@ -27,6 +27,12 @@ const SRC = join(import.meta.dirname, "..", "..");
  * Key: path relative to `src/`, using forward slashes.
  */
 const EXEMPT: Record<string, string> = {
+  "lib/startup-migrations.ts":
+    "block 0109's behavioural self-check. It inserts an ordinary row inside a " +
+    "plpgsql subtransaction and unwinds it, to prove that the receipt defaults " +
+    "and the reason-required CHECK actually permit a write - the defect that " +
+    "would otherwise have stopped every INSERT in production. Nothing is " +
+    "executed and no row survives the statement.",
   "app.ts":
     "the /health/deep write-path probe. It inserts a status='health_probe' row " +
     "and DELETEs it in the same transaction - it is a database liveness check, " +
