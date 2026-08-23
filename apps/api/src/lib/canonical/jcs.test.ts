@@ -643,10 +643,24 @@ describe("differential fuzz against both references", () => {
     expect(refB(nulled)).toBe(canonicalize(nulled));
   });
 
-  it("sortKeysDeep cannot be passed a depth by a stray .map()", () => {
-    // An exported optional depth parameter would make `xs.map(sortKeysDeep)`
-    // pass the array INDEX as the depth, throwing at element 513.
-    expect(sortKeysDeep.length).toBe(1);
+  it("sortKeysDeep ignores a second argument, so a stray .map() cannot inject a depth", () => {
+    // `xs.map(sortKeysDeep)` passes the array INDEX as the second argument. If
+    // the export forwarded it as the depth, element 513 would start throwing
+    // max_depth_exceeded on values that are barely nested at all.
+    //
+    // The first version of this test asserted `sortKeysDeep.length === 1`,
+    // which the mutation battery showed is NOT discriminating: Function.length
+    // does not count a parameter with a default, and `(value, _d = 0)` is
+    // exactly the shape the footgun takes. Test the behaviour instead.
+    // Shallow enough to be fine on its own (100 << 512), but 600 + 100 would
+    // blow the budget if the second argument were honoured as a starting depth.
+    const nested = JSON.parse("[".repeat(100) + "1" + "]".repeat(100));
+    expect(() => (sortKeysDeep as (v: unknown, d?: number) => unknown)(nested, 600)).not.toThrow();
+    expect(
+      JSON.stringify((sortKeysDeep as (v: unknown, d?: number) => unknown)(nested, 600)),
+    ).toBe(JSON.stringify(sortKeysDeep(nested)));
+
+    // And the real call shape, at an index past the budget.
     const many = Array.from({ length: 600 }, (_, i) => ({ b: i, a: i }));
     expect(() => many.map(sortKeysDeep)).not.toThrow();
   });
