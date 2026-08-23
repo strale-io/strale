@@ -964,7 +964,16 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
         isFreeTier: true,
         input: { email: "someone@example.com" },
         clientMeta: { src: "test", ip_day_hash: "deadbeef", client_header: "x" },
-        auditTrail: { request_context: { ipHash: hashIp("203.0.113.9") } },
+        provenance: { source: "upstream-registry", queried: "ACME GmbH" },
+        // Both request-context shapes, plus the array the object-only walk
+        // used to report as a bare "steps". Round 4's blocking finding was the
+        // camelCase one; round 5 found `steps[].error` carries the same
+        // input-echoing text the column rule discloses.
+        auditTrail: {
+          request_context: { ipHash: hashIp("203.0.113.9"), fingerprintHash: "abc" },
+          requestContext: { userAgent: "curl/8.17.0", origin: null },
+          steps: [{ index: 0, capabilitySlug: "x", error: "echoes the input back" }],
+        },
       })
       .returning({ id: transactions.id });
     createdTransactionIds.add(txn!.id);
@@ -1033,6 +1042,37 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
       expect.arrayContaining(["user_id", "ip_hash", "user_agent"]),
     );
 
+    // Erasure that erases. The receipt used to say these could not be cleared
+    // without breaking the hash chain, while the retention job cleared exactly
+    // them on every row at 90 days.
+    const [cleared] = await db
+      .select({
+        input: transactions.input,
+        output: transactions.output,
+        error: transactions.error,
+        auditTrail: transactions.auditTrail,
+        provenance: transactions.provenance,
+        idempotencyKey: transactions.idempotencyKey,
+        redactedAt: transactions.redactedAt,
+      })
+      .from(transactions)
+      .where(eq(transactions.id, txn!.id));
+    expect(cleared!.output).toBeNull();
+    expect(cleared!.error).toBeNull();
+    expect(cleared!.provenance).toBeNull();
+    expect(cleared!.idempotencyKey).toBeNull();
+    expect(cleared!.auditTrail).toBeNull();
+    expect(cleared!.input).toEqual({});
+    expect(cleared!.redactedAt).not.toBeNull();
+
+    // And every column the plan says is cleared on transactions is one the
+    // canonical customer-content list names — derived, so `provenance` cannot
+    // be dropped again.
+    const { CUSTOMER_CONTENT_COLUMN_NAMES } = await import("../lib/customer-content.js");
+    expect(clearedColumnsByTable().get("transactions")).toEqual(
+      expect.arrayContaining([...CUSTOMER_CONTENT_COLUMN_NAMES]),
+    );
+
     // And the entitlement itself survives — clearing the linkage must not
     // clear the rule, or closing an account hands back the trial grant.
     const { hashEmail } = await import("../lib/trial-eligibility.js");
@@ -1049,20 +1089,29 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
         anonymized: string[];
         deleted: string[];
         retained: string[];
-        retained_audit_trail_keys: string[];
+        erased_audit_trail_keys: string[];
       };
     };
     expect(receipt.summary.anonymized.join(" ")).toContain("client_meta");
     expect(receipt.summary.anonymized.join(" ")).toContain("failed_requests");
     expect(receipt.summary.anonymized.join(" ")).toContain("dispute_requests");
     expect(receipt.summary.deleted.join(" ")).toContain("api_key_recovery_tokens");
-    expect(receipt.summary.retained.join(" ")).toContain("fingerprintHash");
-
     // Read from the account's own rows rather than from a list. Four review
     // rounds each found another writer putting another shape into audit_trail;
     // this reports what is actually there, so it cannot drift.
-    expect(receipt.summary.retained_audit_trail_keys).toEqual(
-      expect.arrayContaining(["request_context", "request_context.ipHash"]),
+    // Read from the account's own rows. Seeded with BOTH request-context
+    // shapes and an array, so a regression to a hardcoded two-element list
+    // cannot pass — which is what the previous version of this assertion
+    // allowed.
+    expect(receipt.summary.erased_audit_trail_keys).toEqual(
+      expect.arrayContaining([
+        "request_context",
+        "request_context.ipHash",
+        "request_context.fingerprintHash",
+        "requestContext",
+        "requestContext.userAgent",
+        "steps[].error",
+      ]),
     );
 
     // No inline cleanup. `afterEach` owns it, and owns the ORDER — this test
@@ -1071,6 +1120,78 @@ describeMaybe("WP11 — account lifecycle against a real database", () => {
     // does foreign keys innermost-first. Duplicating a subset of that here
     // reintroduces the ordering bug and, being inline, skips entirely when an
     // assertion above fails.
+  });
+
+  it("the closure plan accounts for every identifier column the DATABASE has", async () => {
+    // The source-parsing version of this guard is in
+    // `lib/account-closure.test.ts`, and round 5 demonstrated six declaration
+    // shapes it silently skips plus a four-name identifier list that misses
+    // `owner_id`, `contact_address`, `payer_address` and anything else nobody
+    // thought of. A guard that reads TypeScript is guessing at the schema.
+    //
+    // This one asks the database. `information_schema` is the authority on
+    // what columns exist, it cannot be fooled by declaration style, and it
+    // sees columns added by a startup migration that never appear in
+    // `schema.ts` at all.
+    const { tablesCovered, CLOSURE_PLAN } = await import("../lib/account-closure.js");
+    const covered = tablesCovered();
+    // Column granularity, not table. A table being "covered" by one rule said
+    // nothing about a second identifier column on it — which is how
+    // `x402_payer_hash` and `client_ip_hash` sat unnamed under a covered
+    // `transactions`.
+    const namedColumns = new Set(
+      CLOSURE_PLAN.flatMap((r) => r.columns.map((c) => `${r.table.split(".")[0]}.${c}`)),
+    );
+
+    const rows = (await db.execute(sql`
+      SELECT c.table_name, c.column_name
+        FROM information_schema.columns c
+        JOIN information_schema.tables t
+          ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+       WHERE c.table_schema = 'public'
+         AND t.table_type = 'BASE TABLE'
+         AND (
+              c.column_name LIKE '%user_id'
+           OR c.column_name LIKE '%owner_id'
+           OR c.column_name LIKE '%email%'
+           OR c.column_name LIKE '%ip_hash%'
+           OR c.column_name LIKE '%ip_address%'
+           OR c.column_name LIKE '%payer%'
+           OR c.column_name LIKE '%contact%'
+         )
+       ORDER BY 1, 2
+    `)) as unknown as Array<{ table_name: string; column_name: string }>;
+
+    expect(rows.length, "no identifier columns found — the query is broken").toBeGreaterThan(5);
+
+    // Tables the plan does not cover, and why each is acceptable, stated
+    // rather than silently skipped.
+    const outOfScope = new Map<string, string>([
+      ["users", "the account row itself, anonymised by the plan"],
+      ["capabilities", "catalogue metadata — provider contact, not customer"],
+      ["solutions", "catalogue metadata"],
+      ["email_events", "delivery log for mail we sent; keyed to the address, pruned by retention"],
+      ["waitlist", "sign-ups that never became accounts"],
+      ["demand_signals", "admin-gated aggregate; WP0 removed the public surface"],
+    ]);
+
+    // `activation_email_stage` is an integer counter that matches `%email%`.
+    const falsePositives = new Set(["users.activation_email_stage"]);
+
+    const unaccounted = [
+      ...new Set(
+        rows
+          .map((r) => `${r.table_name}.${r.column_name}`)
+          .filter((key) => {
+            const table = key.split(".")[0]!;
+            if (falsePositives.has(key)) return false;
+            if (outOfScope.has(table)) return false;
+            if (!covered.has(table)) return true;
+            return !namedColumns.has(key);
+          }),
+      ),
+    ];
+    expect(unaccounted).toEqual([]);
   });
 
   it("closure forfeits the balance through the ledger, not by zeroing it", async () => {

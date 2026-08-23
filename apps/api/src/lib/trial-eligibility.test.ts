@@ -343,6 +343,23 @@ describe("trialRateBucket — IPv6 counts by /64", () => {
     expect(trialRateBucket("2001:db8::1:")).toBeNull();
   });
 
+  it("counts the IPv4-compatible hex form, which is the spelling that can reach it", () => {
+    // `::102:304` is `::1.2.3.4` in hex and has no ffff marker. IPV6_RE
+    // rejects dots and accepts hex, so this is the spelling an attacker can
+    // actually send through X-Forwarded-For — and it returned null, meaning
+    // no bucket and no cap at all.
+    expect(trialRateBucket("::102:304")).toBe("1.2.3.4");
+    expect(trialRateBucket("::506:708")).toBe("5.6.7.8");
+    expect(trialRateBucket("::102:304")).toBe(trialRateBucket("::1.2.3.4"));
+  });
+
+  it("parses the mapped form instead of passing it through", () => {
+    // The IPv4 branch was fixed to parse and this one was left returning its
+    // input, in the same commit that documented the promise.
+    expect(trialRateBucket("::ffff:1.2.3.04")).toBe("1.2.3.4");
+    expect(trialRateBucket("::ffff:999.999.999.999")).toBeNull();
+  });
+
   it("gives the unspecified and loopback addresses no bucket at all", () => {
     // They are not a client's public address, and the all-zero prefix they
     // expand to would otherwise be a bucket shared with everything else that

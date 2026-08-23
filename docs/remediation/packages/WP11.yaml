@@ -428,6 +428,53 @@ review:
       this is parity rather than a new policy call. Flagged to WP14, which owns
       retention duration by data class.
 
+  round_5:
+    verdict: FAIL_REMEDIATION_REQUIRED
+    the_decisive_observation: >
+      Round 4's answer was "stop enumerating a JSONB blob by hand", and it was
+      right about audit_trail. But the plan went on enumerating COLUMNS by
+      hand — one commit after CUSTOMER_CONTENT_COLUMNS landed in the same repo
+      for exactly that reason, with a docstring saying it exists because
+      someone once answered a privacy question from two columns out of thirty
+      and called it exhaustive. The plan retyped five of its six entries and
+      dropped `provenance`: 559 user-linked production rows carry it, holding
+      upstream source records keyed to whatever entity the customer queried.
+      Fifth instance, same direction, same table. The column lists are derived
+      now, and a test fails if they diverge.
+    the_receipt_was_refusing_on_a_false_ground: >
+      It told data subjects that input, output, error and audit_trail could not
+      be cleared because "severing it would break the chain for every
+      transaction recorded after yours". purgeCustomerContent sets exactly
+      those columns to NULL on EVERY transaction at 90 days;
+      integrity_hash/previous_hash are not on its clear list, so link N to N+1
+      survives and verify.ts reports a redacted predecessor as redacted, not
+      broken. 308,347 of 909,107 user-linked production rows already carry
+      redacted_at. So a subject asking on day 10 was told it was technically
+      impossible, and on day 90 the platform did it anyway, to everyone.
+      Closure now performs that redaction immediately, using the same statement
+      the retention job uses and respecting legal_hold. Erasure erases.
+    it_also_pointed_at_a_field_that_never_existed: >
+      The disclosure instructed data subjects to email us to redact
+      audit_trail.executionInput. Zero of 5,599 production rows with an audit
+      trail carry that key — it is a local variable name in do.ts. An operator
+      following the instruction would have redacted nothing and reported the
+      erasure complete while the input sat in the transactions.input column.
+      Round 4's own live key list contradicted it in the same response body.
+    also_fixed:
+      - "describeAuditKeysHeld was blind to arrays, so audit_trail.steps on a solution run reported as a bare 'steps' while each element carries an error field holding the same input-echoing text the column rule discloses. It walks arrays now, and moved INSIDE the transaction, because closure clears audit_trail and reading afterwards reported nothing."
+      - "The receipt read ran post-commit and unguarded. A failure there would 500 AFTER the erasure committed — key burned, balance forfeited — and authMiddleware then rejects any retry, so the Art. 17 written confirmation is lost permanently. Caught and degraded now."
+      - "trialRateBucket: `::102:304`, the hex spelling of the IPv4-compatible form, returned null — and it is the REACHABLE one, because IPV6_RE rejects dots and accepts hex. That is the identical argument the code already makes two branches up for the mapped form, unapplied to this one. The mapped branch also still returned its input unparsed, in the same commit that documented the promise not to."
+      - "x402_orphan_settlements.payer_address, transactions.x402_payer_hash and transactions.client_ip_hash were undisclosed. Found by the new catalogue-driven guard, not by review."
+      - "The retention job ran every rule in ONE transaction, so the first failing rule aborted it and every later rule failed with 'current transaction is aborted' while the closing COMMIT became a ROLLBACK — undoing earlier rules' deletions while the summary logged a non-zero total. WP11 made it reachable by adding rules on tables that do not exist until migration 0102 runs. Each rule has its own SAVEPOINT now, and the header's false claim about lock scope is corrected."
+    the_guard_reads_the_catalogue_now: >
+      The source-parsing completeness check was demonstrated blind to six
+      declaration shapes and limited to four hardcoded identifier names. A
+      guard that reads TypeScript is guessing at the schema. The authoritative
+      version queries information_schema in the integration lane, at COLUMN
+      granularity — table-level coverage is what let two identifier columns sit
+      unnamed under a covered transactions — and it immediately found the three
+      x402/client-IP columns above.
+
     accepted_consequence: >
       Closing an account releases its slot in the per-IP trial window, because
       closure clears `trial_grants.ip_hash`. Deliberate: retaining a hashed IP

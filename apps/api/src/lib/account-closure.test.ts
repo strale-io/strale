@@ -24,10 +24,9 @@ import {
   buildClosureSummary,
   tablesCovered,
 } from "./account-closure.js";
-import { REQUEST_CONTEXT_FIELDS } from "./request-context.js";
+import { CUSTOMER_CONTENT_COLUMN_NAMES } from "./customer-content.js";
 
 const SCHEMA = readFileSync(resolve(process.cwd(), "src/db/schema.ts"), "utf8");
-const DO_ROUTE = readFileSync(resolve(process.cwd(), "src/routes/do.ts"), "utf8");
 
 /**
  * Every physical table in schema.ts that declares a `user_id` column.
@@ -130,59 +129,43 @@ describe("the closure plan accounts for every table that links to an account", (
   });
 });
 
-describe("the receipt names every field it retains", () => {
-  it("discloses all seven request_context fields", () => {
-    // Round 3: the disclosure enumerated five of seven. `fingerprintHash` is a
-    // device fingerprint on 476 user-linked production rows, and it was named
-    // in the code comment beside the text but not in the text.
-    const rule = CLOSURE_PLAN.find(
-      (r) => r.table === "transactions.audit_trail.request_context",
+describe("the plan derives its column lists rather than retyping them", () => {
+  it("covers every canonical customer-content column on transactions", () => {
+    // Round 5: the hand-written version dropped `provenance` — 559 user-linked
+    // production rows carry it, holding upstream source records keyed to
+    // whatever entity the customer queried. `CUSTOMER_CONTENT_COLUMNS` landed
+    // in this repo one commit earlier, for exactly this reason, and the plan
+    // retyped five of its six entries instead of importing it.
+    const declared = new Set(
+      CLOSURE_PLAN.filter((r) => r.table === "transactions").flatMap((r) => r.columns),
     );
-    expect(rule).toBeDefined();
-    expect([...rule!.columns].sort()).toEqual([...REQUEST_CONTEXT_FIELDS].sort());
+    const missing = CUSTOMER_CONTENT_COLUMN_NAMES.filter((c) => !declared.has(c));
+    expect(missing).toEqual([]);
   });
 
-  it("REQUEST_CONTEXT_FIELDS matches what /v1/do actually records", () => {
-    // The other half of the same drift. If a field is added to the object in
-    // do.ts and not here, the receipt silently stops being exhaustive again.
-    const block = DO_ROUTE.slice(
-      DO_ROUTE.indexOf("const requestContext = {"),
-      DO_ROUTE.indexOf("c.set(\"requestContext\""),
+  it("marks that content as cleared, not retained", () => {
+    // The receipt told data subjects these columns could not be cleared
+    // without breaking the hash chain, while `purgeCustomerContent` cleared
+    // exactly them on every row at 90 days. The refusal ground was false.
+    const rule = CLOSURE_PLAN.find(
+      (r) => r.table === "transactions" && r.columns.includes("provenance"),
     );
-    expect(block.length, "requestContext block not found in do.ts").toBeGreaterThan(100);
+    expect(rule?.disposition).toBe("anonymized");
+  });
 
-    // `userAgent,` is property shorthand, so match either spelling — an
-    // assertion that only understood `field:` would have reported a missing
-    // field that is right there.
-    //
-    // Round 4 got past the first version with a spread, a snake_case name, a
-    // quoted key, a computed key and a five-space indent. A regex that silently
-    // skips what it cannot read is a guard that reports success; this one
-    // refuses shapes it cannot account for instead.
-    const forbidden = [
-      [/^\s*\.\.\./m, "a spread — its fields cannot be enumerated from source"],
-      [/^\s*["'][^"']+["']\s*:/m, "a quoted key"],
-      [/^\s*\[[^\]]+\]\s*:/m, "a computed key"],
-    ] as const;
-    for (const [pattern, why] of forbidden) {
-      expect(
-        pattern.test(block),
-        `requestContext contains ${why}; REQUEST_CONTEXT_FIELDS cannot be verified against it`,
-      ).toBe(false);
-    }
+  it("keeps the hashes, which is what makes clearing the content safe", () => {
+    const retained = CLOSURE_PLAN.filter(
+      (r) => r.table === "transactions" && r.disposition === "retained",
+    ).flatMap((r) => r.columns);
+    expect(retained).toEqual(expect.arrayContaining(["integrity_hash", "previous_hash"]));
+  });
 
-    const topLevel = [
-      ...block.matchAll(/^\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[:,]/gm),
-    ].map((m) => m[1]!);
-    expect(topLevel.length, "no properties parsed out of the block").toBeGreaterThan(4);
-
-    for (const field of REQUEST_CONTEXT_FIELDS) {
-      expect(topLevel, `do.ts should record ${field}`).toContain(field);
-    }
-    // And nothing beyond the declared set.
-    const declared = new Set<string>(REQUEST_CONTEXT_FIELDS);
-    const undisclosed = topLevel.filter((f) => !declared.has(f as never));
-    expect(undisclosed).toEqual([]);
+  it("does not point at audit_trail.executionInput, which has never existed", () => {
+    // Zero of 5,599 production rows with an audit trail carry that key. An
+    // operator following the old instruction would have redacted nothing and
+    // reported the erasure complete.
+    const all = JSON.stringify(CLOSURE_PLAN);
+    expect(all).not.toContain("executionInput");
   });
 });
 

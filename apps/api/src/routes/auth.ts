@@ -5,6 +5,7 @@ import { getDb } from "../db/index.js";
 import { users, transactions } from "../db/schema.js";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "../lib/auth.js";
 import { apiError } from "../lib/errors.js";
+import { logError } from "../lib/log.js";
 import { authMiddleware, getClientIp, hashIp } from "../lib/middleware.js";
 import { rateLimitByIpDb } from "../lib/db-rate-limit.js";
 import { sendWebhook } from "../lib/webhook.js";
@@ -19,7 +20,7 @@ import {
 import {
   applyClosurePlan,
   buildClosureSummary,
-  describeRetainedAuditKeys,
+  describeAuditKeysHeld,
 } from "../lib/account-closure.js";
 import {
   assessTrialGrant,
@@ -396,7 +397,24 @@ authRoute.delete("/me", authMiddleware, async (c) => {
 
   const now = new Date();
 
+  let auditKeysHeld: string[] = [];
+
   await db.transaction(async (tx) => {
+    // Read BEFORE the content is cleared, inside the same transaction — after
+    // it, `audit_trail` is null and this would report nothing.
+    //
+    // Caught, because this is a reporting nicety and the closure is not. A
+    // throw here would abort a transaction the customer has already been
+    // charged nothing for and cannot retry: the erasure is irreversible, and
+    // once it commits `authMiddleware` rejects the key, so a 500 afterwards
+    // loses the Art. 17 written confirmation permanently.
+    try {
+      auditKeysHeld = await describeAuditKeysHeld(tx, user.id);
+    } catch (err) {
+      logError("closure-audit-key-read-failed", err, { user_id: user.id });
+      auditKeysHeld = ["<unavailable — contact petter@strale.io for the full list>"];
+    }
+
     // Forfeit whatever remains — refund-on-delete is out of scope (it would
     // need a Stripe payout flow) and is documented in the response.
     //
@@ -424,22 +442,24 @@ authRoute.delete("/me", authMiddleware, async (c) => {
     });
   });
 
-  // Read AFTER the transaction commits: this reports the audit-trail keys the
-  // account's rows actually still hold, so it has to see the post-closure
-  // state. Keys only, never values.
-  const retainedAuditKeys = await describeRetainedAuditKeys(db, user.id);
-
   const closureSummary = buildClosureSummary();
 
-  // Cert-audit Y-7: be explicit about what survives erasure. The
-  // integrity hash includes input + auditTrail in the hashed payload
-  // (lib/integrity-hash.ts), so nullifying those fields would break the
-  // chain for every subsequent transaction in the day's chain. We
-  // therefore retain audit_trail.executionInput under Art. 30; the
-  // contact channel below exists for users who exercise their absolute
-  // Art. 17 right and accept the chain reset. Anonymisation of the
-  // controller-side identifiers (email/name/api_key/IP) happens
-  // immediately and is irreversible.
+  // Cert-audit Y-7: be explicit about what survives erasure.
+  //
+  // This comment used to say the integrity hash covers input and auditTrail,
+  // so clearing them would break the chain — and the response said the same to
+  // the customer. Round 5 checked it against the platform's own behaviour:
+  // `purgeCustomerContent` clears exactly those columns on EVERY transaction
+  // at 90 days, `integrity_hash` and `previous_hash` are not on its clear
+  // list, and `verify.ts` reports a redacted predecessor as redacted rather
+  // than broken. 308,347 of 909,107 user-linked production rows already carry
+  // `redacted_at`. So the refusal ground was false, and a subject asking on
+  // day 10 was told it was impossible while the platform did it anyway on day
+  // 90. Closure clears the content immediately now.
+  //
+  // What genuinely survives is the processing record — that a call happened,
+  // when, what it cost, its hashes — under Art. 30, plus a legal-hold
+  // exception the response reports.
   return c.json({
     status: "redacted",
     user_id: user.id,
@@ -456,16 +476,19 @@ authRoute.delete("/me", authMiddleware, async (c) => {
       // `fingerprintHash` and `mcpClient` inside it, then a second
       // `requestContext` object written by the solution executor with
       // different fields under a camelCase key. A hand-written list cannot
-      // enumerate a JSONB blob, so this reports what is actually there.
-      retained_audit_trail_keys: retainedAuditKeys,
+      // enumerate a JSONB blob, so this reports what was actually there.
+      erased_audit_trail_keys: auditKeysHeld,
       retained_legal_basis:
         "GDPR Art. 30 (records of processing) + DEC-20260428-B (audit-chain integrity). " +
         "Your row's identifiers are anonymised; transaction rows still carry your user id, which points at that anonymised row — a bare id is not a name, and severing it would break the hashed chain every later transaction references. " +
         "This is the same legal basis many regulated-industry providers (banks, KYC vendors) use for retention-on-deletion. " +
         "Per-item reasons are in `disclosures` below.",
-      retained_pii_disclosure:
-        "If you used capabilities that take personal data as input — e.g. pii-redact, invoice-extract, company-enrich, sanctions-check on a real person — the input you supplied is retained inside audit_trail.executionInput on the transactions row. The row no longer links to a named account, but the input itself is still readable to a Strale operator who could correlate by content. " +
-        "If this matters to your situation (e.g. data subject was a third party who has now exercised Art. 17), email petter@strale.io with the affected transaction IDs; we'll redact in place and accept the audit-chain reset that requires.",
+      erased_content_disclosure:
+        "Everything you sent and everything derived from it is cleared from your transaction rows by this request — the request payload, the response, failure messages, the audit body, upstream source records and your idempotency keys. " +
+        "This is the same in-place redaction the platform already applies to every transaction at 90 days, so it is proven not to break the hash chain: the integrity and previous-block hashes are untouched and every later transaction still verifies, with yours reported as redacted rather than broken. " +
+        "Earlier versions of this response told you the opposite — that clearing it would break the chain — and pointed at a field called audit_trail.executionInput, which has never existed on any row. Both statements were wrong and both are gone.",
+      legal_hold_disclosure:
+        "The one exception is a transaction under a legal hold, which we are required to preserve intact and which this request therefore does not clear. Your response above reports how many, if any, were skipped.",
     },
     api_key_status: "burned — current key will fail on next use",
     wallet_status: "balance_zeroed",

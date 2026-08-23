@@ -39,20 +39,13 @@ import {
   users,
 } from "../db/schema.js";
 import { generateApiKey, hashApiKey } from "./auth.js";
+import {
+  CUSTOMER_CONTENT_CLEAR_SQL,
+  CUSTOMER_CONTENT_COLUMNS,
+  CUSTOMER_CONTENT_COLUMN_NAMES,
+} from "./customer-content.js";
 import { anonymiseTrialGrantOnClosure } from "./trial-eligibility.js";
 import { purgeRecoveryTokensOnClosure } from "./key-recovery.js";
-
-/**
- * The fields `/v1/do` records on every authenticated call as
- * `audit_trail.request_context`.
- *
- * Declared here rather than described in prose because the receipt has to name
- * all of them and the list drifted the moment it was written out twice — round
- * 3 found `fingerprintHash` and `mcpClient` present in the data and absent from
- * the disclosure. `request-context.ts` owns the list; this is the consumer.
- */
-export { REQUEST_CONTEXT_FIELDS } from "./request-context.js";
-import { REQUEST_CONTEXT_FIELDS } from "./request-context.js";
 
 export type ClosureDisposition = "anonymized" | "deleted" | "retained";
 
@@ -124,32 +117,52 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
   },
   {
     table: "transactions",
+    // Derived from CUSTOMER_CONTENT_COLUMNS, not retyped. Round 5: the
+    // hand-written version dropped `provenance` — 559 user-linked production
+    // rows carry it, holding upstream source records keyed to whatever entity
+    // the customer queried — one commit after that canonical list landed in
+    // this repo for exactly this reason. The list exists because someone once
+    // answered a privacy question from two columns out of thirty and reported
+    // it as exhaustive.
+    columns: [...CUSTOMER_CONTENT_COLUMN_NAMES],
+    disposition: "anonymized",
+    reason:
+      "Everything you sent and everything we made directly from it — the request payload, the response, " +
+      "failure messages (which routinely echo the offending input back), the audit body, upstream source records, " +
+      "and the idempotency key you chose. Cleared in place, immediately, by this request. " +
+      "Rows under a legal hold are the one exception and are left intact.",
+  },
+  {
+    table: "transactions",
     columns: [
       "rows",
       "user_id",
-      "input",
-      "output",
-      "error",
-      "idempotency_key",
-      "audit_trail",
+      "integrity_hash",
+      "previous_hash",
+      "price_cents",
+      "created_at",
+      "x402_payer_hash",
+      "client_ip_hash",
     ],
     disposition: "retained",
     reason:
-      "Processing records under Art. 30, and the hashed chain that gives the audit trail its tamper-evidence. " +
-      "The row still carries your user id, pointing at the anonymised users row — the id itself is not a name, " +
-      "and severing it would break the chain for every transaction recorded after yours. " +
-      "`error` is part of the hashed payload too and often echoes what you sent (\"Country 'TH' is not covered by …\"); " +
-      "`idempotency_key` is free text you chose, so it can carry whatever you put in it.",
+      "The processing record itself under Art. 30: that a call happened, when, what it cost, and its place in the hash chain. " +
+      "The row keeps your user id, which points at the anonymised users row — a bare id is not a name. " +
+      "The hashes are what make the chain tamper-evident and are not derived from the content just cleared, " +
+      "so clearing it leaves every later transaction verifiable. " +
+      "`x402_payer_hash` identifies a crypto wallet that paid on the x402 rail, which needs no account and is never linked to one; " +
+      "`client_ip_hash` is only ever written on unauthenticated free-tier calls, so no row of yours carries it.",
   },
   {
-    table: "transactions.audit_trail.request_context",
-    columns: [...REQUEST_CONTEXT_FIELDS],
-    disposition: "retained",
+    table: "transactions.audit_trail",
+    columns: ["see retained_audit_trail_keys"],
+    disposition: "anonymized",
     reason:
-      "The request each call arrived on: a truncated SHA-256 of your IP address, your user-agent, your Accept-Language, " +
-      "the referer and origin headers if your client sent them, a fingerprint hash derived from those headers, and the MCP client name if we recognised one. " +
-      "This sits inside audit_trail, which is part of the hashed payload, so clearing it would break the integrity chain for every transaction recorded after yours — " +
-      "the same constraint that applies to executionInput.",
+      "The audit body, including whatever request context the call recorded — a truncated hash of your IP, " +
+      "your user-agent, Accept-Language, referer and origin, and for solution runs a per-step record. " +
+      "It is cleared along with the rest of the content above. The keys your rows held are listed in " +
+      "`retained_audit_trail_keys`, read from those rows rather than from a list somebody maintains: " +
+      "four review rounds each found another writer putting another shape in here, so it is no longer described from memory.",
   },
   {
     table: "wallet_transactions",
@@ -169,6 +182,14 @@ export const CLOSURE_PLAN: readonly ClosureRule[] = [
     reason:
       "Your wallet row survives with a zero balance, carrying no identifier beyond the user id that points at the anonymised users row. " +
       "It is what the retained ledger rows link to.",
+  },
+  {
+    table: "x402_orphan_settlements",
+    columns: ["payer_address"],
+    disposition: "retained",
+    reason:
+      "On-chain wallet addresses from x402 payments that need reconciling. The x402 rail has no accounts — the payment is the authentication — " +
+      "so these rows never carried a link to yours and closure cannot find them among them.",
   },
   {
     table: "suggest_log",
@@ -297,6 +318,36 @@ export async function applyClosurePlan(
     .update(disputeRequests)
     .set({ userId: null, contactEmail: null })
     .where(eq(disputeRequests.userId, params.userId));
+
+  // Erasure that erases.
+  //
+  // The receipt used to tell the data subject that `input`, `output`, `error`
+  // and `audit_trail` could not be cleared because "severing it would break
+  // the chain for every transaction recorded after yours". That was false, and
+  // the platform's own scheduled behaviour is the proof: `purgeCustomerContent`
+  // sets exactly these columns to NULL on EVERY transaction at 90 days.
+  // `integrity_hash` and `previous_hash` are not on the clear list, so link
+  // N→N+1 survives untouched and `verify.ts` classifies a redacted predecessor
+  // as "redacted" rather than broken. Production already carries `redacted_at`
+  // on 308,347 of 909,107 user-linked rows.
+  //
+  // So a subject asking on day 10 was told it was technically impossible, and
+  // on day 90 we did it anyway, to everyone. Closure now does it immediately,
+  // using the same statement the retention job uses rather than a second
+  // opinion about which columns count.
+  //
+  // `legal_hold` is respected, exactly as the retention purge does: a row we
+  // are legally required to preserve is the one thing erasure cannot reach,
+  // and the receipt says so.
+  await tx.execute(sql`
+    UPDATE transactions
+       SET ${CUSTOMER_CONTENT_CLEAR_SQL},
+           redacted_at = NOW(),
+           deletion_reason = 'account_closure_erasure'
+     WHERE user_id = ${params.userId}::uuid
+       AND legal_hold = false
+       AND redacted_at IS NULL
+  `);
 }
 
 /**
@@ -316,7 +367,8 @@ export function tablesCovered(): Set<string> {
 }
 
 /**
- * The audit-trail keys this account's own rows actually hold.
+ * The audit-trail keys this account's own rows hold, read before they are
+ * cleared.
  *
  * The receipt used to enumerate what `audit_trail` contains from a list
  * somebody maintained by hand, and four consecutive review rounds each found
@@ -327,9 +379,14 @@ export function tablesCovered(): Set<string> {
  * production rows carry it today.
  *
  * A hand-written list cannot enumerate a JSONB blob. So this reads the blob.
- * The receipt reports the keys THIS account's rows actually carry, which is
+ * The receipt reports the keys THIS account's rows actually carried, which is
  * exhaustive by construction and cannot drift, because there is nothing left
  * to keep in sync.
+ *
+ * Runs INSIDE the closure transaction, before the content is cleared —
+ * otherwise it reads an already-nulled column and reports nothing, which would
+ * be an honest answer to the wrong question. What the subject wants to know is
+ * what we were holding.
  *
  * Keys only, never values: the point is to tell the customer what categories of
  * data survive, and echoing the contents back would be a fresh disclosure of
@@ -339,7 +396,7 @@ export function tablesCovered(): Set<string> {
  * (`request_context`, `requestContext`) and deeper recursion would surface
  * per-capability output field names, which are not about them.
  */
-export async function describeRetainedAuditKeys(
+export async function describeAuditKeysHeld(
   db: any,
   userId: string,
 ): Promise<string[]> {
@@ -357,6 +414,20 @@ export async function describeRetainedAuditKeys(
      WHERE t.user_id = ${userId}::uuid
        AND jsonb_typeof(t.audit_trail) = 'object'
        AND jsonb_typeof(t.audit_trail -> outer_k) = 'object'
+    UNION
+    -- Arrays too. audit_trail.steps on a solution run is an array of
+    -- per-step objects, one field of which is error — the same
+    -- input-echoing text the column-level rule discloses. An object-only
+    -- walk reported "steps" and stopped there.
+    SELECT DISTINCT outer_k || '[].' || elem_k AS key
+      FROM transactions t,
+           LATERAL jsonb_object_keys(t.audit_trail) AS outer_k,
+           LATERAL jsonb_array_elements(t.audit_trail -> outer_k) AS elem,
+           LATERAL jsonb_object_keys(elem) AS elem_k
+     WHERE t.user_id = ${userId}::uuid
+       AND jsonb_typeof(t.audit_trail) = 'object'
+       AND jsonb_typeof(t.audit_trail -> outer_k) = 'array'
+       AND jsonb_typeof(elem) = 'object'
      ORDER BY 1
   `);
   const list = (Array.isArray(rows) ? rows : (rows as { rows?: unknown[] })?.rows ?? []) as Array<{
@@ -439,11 +510,21 @@ export async function countUnclearedColumns(
     sql`, `,
   );
   for (const column of columns) {
+    // "Cleared" is not always "null". `transactions.input` is NOT NULL and
+    // empties to `{}` instead — which `CUSTOMER_CONTENT_COLUMNS` already
+    // records as `clearsTo: "empty_json"`, and which an IS NOT NULL check
+    // reads as "survived". Taking the predicate from the same declaration the
+    // clearing statement is built from, rather than assuming.
+    const spec = CUSTOMER_CONTENT_COLUMNS.find((c) => c.column === column);
+    const stillSet =
+      spec?.clearsTo === "empty_json"
+        ? sql`${sql.raw(`"${column}"`)} IS NOT NULL AND ${sql.raw(`"${column}"`)}::text <> '{}'`
+        : sql`${sql.raw(`"${column}"`)} IS NOT NULL`;
     const r = await db.execute(sql`
       SELECT COUNT(*)::int AS n
         FROM ${sql.raw(`"${table}"`)}
        WHERE "id" IN (${idList})
-         AND ${sql.raw(`"${column}"`)} IS NOT NULL
+         AND ${stillSet}
     `);
     out[`${table}.${column}`] = readCount(r);
   }

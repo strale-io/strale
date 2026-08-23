@@ -130,7 +130,11 @@ export function trialRateBucket(ip: string): string | null {
   // unrelated registrant behind it would be refused a grant. Node reports this
   // form for every IPv4 peer on a dual-stack listener.
   const mapped = /^::(?:ffff:)?(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(head);
-  if (mapped) return mapped[1]!;
+  // Parsed, not passed through. The IPv4 branch above was fixed to parse and
+  // this one was left returning its input — so `::ffff:1.2.3.04` and
+  // `::ffff:999.999.999.999` were still buckets, contradicting this function's
+  // documented promise in the same commit that added it.
+  if (mapped) return normaliseIpv4(mapped[1]!);
 
   // A trailing dotted quad occupies the last TWO hextets, so counting it as
   // one leaves seven and the address is rejected — `0:0:0:0:0:ffff:1.2.3.4`
@@ -192,6 +196,18 @@ export function trialRateBucket(ip: string): string | null {
     }
     if (marker === 5) {
       return embeddedIpv4(normalised[6]!, normalised[7]!);
+    }
+    // The IPv4-COMPATIBLE form, `::a.b.c.d`, whose hex spelling `::102:304`
+    // has no ffff marker at all. `IPV6_RE` rejects dots and accepts hex, so
+    // the hex spelling is the one that can actually arrive through
+    // `getClientIp` — the identical argument this function already makes two
+    // branches up for the mapped form, and it was not applied here. An
+    // attacker sending `X-Forwarded-For: ::102:304` got no bucket and the cap
+    // never applied.
+    if (normalised.slice(4, 6).every((h) => h === "0000")) {
+      const embedded = embeddedIpv4(normalised[6]!, normalised[7]!);
+      // `::` and `::1` land here too and are not a client's public address.
+      return embedded === "0.0.0.0" || embedded === "0.0.0.1" ? null : embedded;
     }
     // `::`, `::1` and anything else with an all-zero prefix: the unspecified
     // and loopback addresses are not a client's public address, and no bucket

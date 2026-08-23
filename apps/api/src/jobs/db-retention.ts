@@ -27,9 +27,15 @@
  *
  * The fix is mechanical: each rule loops in 10,000-row batches, exits when
  * the batch returns 0 rows affected, and stops if a per-rule wall-clock
- * budget (60 seconds) is exhausted. Bounded WAL per batch; no single
- * transaction holds more than one batch's worth of locks. Loop emits a
- * structured per-rule summary so a future regression is visible.
+ * budget (60 seconds) is exhausted. Loop emits a structured per-rule summary
+ * so a future regression is visible.
+ *
+ * The header used to claim "no single transaction holds more than one batch's
+ * worth of locks". That was never true — all rules share one transaction for
+ * the advisory lock, so locks accumulate until commit and batching bounds the
+ * statement size rather than the transaction. Each rule now runs inside a
+ * SAVEPOINT so a failure rolls back only that rule instead of silently undoing
+ * every earlier one.
  */
 
 import { randomUUID } from "node:crypto";
@@ -227,7 +233,29 @@ async function runRetention(): Promise<void> {
       // from the 2026-04-30 cert-audit batch (this file: commit 968bc82;
       // do.ts: commit 6613bd7).
       const cutoffIso = new Date(Date.now() - rule.days * 86_400_000).toISOString();
+
+      // SAVEPOINT per rule.
+      //
+      // Every rule runs inside one transaction, and `runOneRulePaginated`
+      // catches its own SQL error — but Postgres aborts the WHOLE transaction
+      // on the first failing statement. Every later rule then fails with
+      // "current transaction is aborted", and the closing COMMIT is downgraded
+      // to ROLLBACK, so the earlier rules' successful deletions are undone
+      // while the summary logs a non-zero `total_deleted`. The per-rule catch
+      // made that look like one bad table rather than a tick that deleted
+      // nothing and said otherwise.
+      //
+      // WP11 is what made this reachable: it adds rules on tables that do not
+      // exist in production until migration 0102 has run, and a missing table
+      // is exactly the condition that fails a statement outright. A savepoint
+      // rolls back only the failing rule.
+      await tx.execute(sql`SAVEPOINT retention_rule`);
       const result = await runOneRulePaginated(rule, cutoffIso, tx);
+      if (result.error !== undefined) {
+        await tx.execute(sql`ROLLBACK TO SAVEPOINT retention_rule`);
+      } else {
+        await tx.execute(sql`RELEASE SAVEPOINT retention_rule`);
+      }
       results.push(result);
 
       if (result.error !== undefined) {
