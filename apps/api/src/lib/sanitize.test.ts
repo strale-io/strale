@@ -182,3 +182,82 @@ describe("sanitizeFailureReason — idempotent", () => {
     }
   });
 });
+
+/**
+ * Bare IP literals were not redacted at all.
+ *
+ * `HOSTNAME_PATTERN` requires a dot-plus-letters TLD, so `10.0.3.14` slipped
+ * through while the hostname beside it was stripped — naming internal
+ * infrastructure just as precisely. Pre-existing; unrelated to #383.
+ */
+describe("sanitizeFailureReason — IP literals", () => {
+  it("redacts a bare IPv4 address", () => {
+    const out = sanitizeFailureReason("connect 10.0.3.14:5432 — ECONNREFUSED");
+    expect(out).not.toContain("10.0.3.14");
+    expect(out).toContain("[service]");
+  });
+
+  it("redacts a public IPv4 too, not just RFC1918", () => {
+    expect(sanitizeFailureReason("upstream 203.0.113.7 refused")).not.toContain("203.0.113.7");
+  });
+
+  it("redacts an IPv6 address", () => {
+    const out = sanitizeFailureReason("connect to 2001:0db8:85a3:0000:0000:8a2e:0370:7334 failed");
+    expect(out).not.toContain("2001:0db8");
+    expect(out).toContain("[service]");
+  });
+
+  it("does NOT eat a clock time", () => {
+    // Three hex-shaped groups is also HH:MM:SS. Turning a timestamp into
+    // "[service]" would be a worse bug than the one this closes, so the IPv6
+    // pattern requires four groups.
+    expect(sanitizeFailureReason("job started at 10:30:00 and stalled")).toContain("10:30:00");
+  });
+
+  it("does NOT eat a four-part version string with an out-of-range part", () => {
+    // Octets are validated to 0-255, which is what separates an address from
+    // a dotted version number.
+    expect(sanitizeFailureReason("schema version 1.2.3.999 unsupported")).toContain("1.2.3.999");
+  });
+});
+
+/**
+ * Truncation used to cut mid-token, which made the function non-idempotent.
+ *
+ * By the time truncation runs, hostname replacement has already happened — so
+ * the only hostname-shaped tokens still present are ALLOWLISTED ones. Split
+ * one across the cut and the remnant stops matching the allowlist, so a second
+ * application replaces it with "[service]" and the string changes.
+ *
+ * Pre-existing and unreachable in production (no message has an allowlisted
+ * token straddling offset 497), but latent is not absent — which is the whole
+ * lesson of #383.
+ */
+describe("sanitizeFailureReason — truncation cuts on a word boundary", () => {
+  const STRADDLING = "P".repeat(485) + " error.message tail";
+
+  it("is idempotent when truncation would have split an allowlisted token", () => {
+    const once = sanitizeFailureReason(STRADDLING);
+    expect(sanitizeFailureReason(once)).toBe(once);
+  });
+
+  it("leaves no partial allowlisted token at the cut", () => {
+    const out = sanitizeFailureReason(STRADDLING);
+    // "error.messa" and friends must not appear: either the whole token
+    // survives, or none of it does.
+    expect(/error\.mess(?!age)/.test(out)).toBe(false);
+  });
+
+  it("still bounds the output at 500 characters", () => {
+    for (const input of [STRADDLING, "z".repeat(900), "word ".repeat(300)]) {
+      expect(sanitizeFailureReason(input).length).toBeLessThanOrEqual(500);
+    }
+  });
+
+  it("does not back up so far that it loses meaningful text", () => {
+    // The window is 32 characters, chosen because the longest allowlist entry
+    // is 18. A hard cut is still taken when there is no space in that window.
+    const noSpaces = "q".repeat(900);
+    expect(sanitizeFailureReason(noSpaces).length).toBe(500);
+  });
+});

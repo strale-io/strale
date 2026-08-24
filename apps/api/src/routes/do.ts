@@ -50,7 +50,7 @@ import { extractClientMeta } from "../lib/attribution.js";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
-import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { sanitizeFailureReason, redactAuditTrail } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
 import { isX402PayableCapability } from "../lib/x402-eligibility.js";
 import { getFreeTierSlugs } from "../lib/free-tier.js";
@@ -782,7 +782,10 @@ doRoute.post(
         provenance: existing.provenance,
         meta: {
           idempotency_replay: true,
-          audit: existing.auditTrail,
+          // A STORED audit body, so it can predate the sanitising write below
+          // and carry a raw error. Reviewer-found: the fix originally covered
+          // only GET /v1/transactions/:id and missed both replay paths.
+          audit: redactAuditTrail(existing.auditTrail),
         },
       });
     }

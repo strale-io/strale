@@ -15,6 +15,26 @@ const HOSTNAME_PATTERN =
 const STACK_TRACE_PATTERN =
   /\s+at\s+[\w$.]+\s*\(.*?\)/g;
 
+/**
+ * Dotted-quad IPv4, with each octet validated to 0-255.
+ *
+ * The validation is what stops it eating four-part version strings and the
+ * like; `1.2.3.999` is left alone because it is not an address. Ports are not
+ * matched, and do not need to be — a bare port identifies nothing.
+ */
+const IPV4_PATTERN =
+  /\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b/g;
+
+/**
+ * IPv6, deliberately requiring at least four hex groups.
+ *
+ * Three groups would also match a clock time — `10:30:00` is hex-shaped — and
+ * turning timestamps in error messages into `[service]` would be a worse bug
+ * than the one this closes. The cost of the conservative bound is that the
+ * loopback shorthands (`::1`) are not matched, which identifies nothing.
+ */
+const IPV6_PATTERN = /\b(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}\b/gi;
+
 const PROVIDER_NAMES = [
   /\bBrowserless\b/gi,
   /\bSerper\b/gi,
@@ -121,6 +141,15 @@ function redact(input: string): string {
   // Strip URLs
   msg = msg.replace(URL_PATTERN, "[service]");
 
+  // Strip bare IP literals.
+  //
+  // The hostname pattern requires a dot-plus-letters TLD, so an address like
+  // `connect 10.0.3.14:5432 - ECONNREFUSED` went through untouched - naming
+  // internal infrastructure just as precisely as the hostnames next to it.
+  // Pre-existing and unrelated to the canned-branch fix in #383.
+  msg = msg.replace(IPV4_PATTERN, "[service]");
+  msg = msg.replace(IPV6_PATTERN, "[service]");
+
   // Strip raw hostnames (but preserve common words that match the pattern)
   // Only strip if it looks like a real hostname (has dots, not just "error.message")
   msg = msg.replace(HOSTNAME_PATTERN, (match) => {
@@ -197,8 +226,30 @@ export function sanitizeFailureReason(raw: string | null): string {
   // Collapse multiple spaces and trim
   msg = msg.replace(/\s+/g, " ").trim();
 
-  // Truncate
-  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  // Truncate on a WORD BOUNDARY.
+  //
+  // Cutting mid-token made the function non-idempotent, and in a way that
+  // destroyed information rather than merely moving it. Hostname replacement
+  // has already run by this point, so the only hostname-shaped tokens still
+  // present are ALLOWLISTED ones - `reviews.io`, `patents.google.com` and the
+  // rest. Split one of those across the cut and the remnant no longer matches
+  // the allowlist, so a second application replaces it with `[service]`.
+  //
+  // That bounds the fix precisely: the longest allowlist entry is 18
+  // characters, so backing the cut up to the nearest preceding space within a
+  // 32-character window cannot leave a partial one. If there is no space in
+  // that window the token is longer than any allowlist entry, so cutting it is
+  // safe.
+  //
+  // Pre-existing, and unreachable in production today - no message has an
+  // allowlisted token straddling offset 497 - but it is the same class as the
+  // leak this PR fixes: latent is not the same as absent.
+  if (msg.length > 500) {
+    const hardCut = 497;
+    const lastSpace = msg.lastIndexOf(" ", hardCut);
+    const cut = lastSpace >= hardCut - 32 ? lastSpace : hardCut;
+    msg = msg.slice(0, cut).trimEnd() + "...";
+  }
 
   return msg || "Unknown error";
 }
