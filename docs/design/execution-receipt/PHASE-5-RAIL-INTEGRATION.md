@@ -1,5 +1,19 @@
 # Execution receipt, Phase 5 — rail integration and activation
 
+**Status: ACCEPTED** — 2026-08-24 21:20 UTC.
+
+Activation merged as `967c9be4ad774bbd8f14c7585accc6667f523bab`. Held `UNDER
+OBSERVATION` from deploy until the two conditions in §9 were met by production
+evidence rather than by argument; both are now satisfied. §9 records what
+closed them.
+
+Everything below §9 is the record as written at the time, including the review
+rounds that failed and the residual risks that remain true. None of it has been
+revised in light of acceptance — the failures are the most useful part of the
+audit trail, and a residual does not stop being real because the phase shipped.
+
+---
+
 Phase 4 built every artifact and deliberately wired none of it, and its own
 reconciliation said the epoch was **not** structurally real: a transaction
 inserted after that deploy was byte-identical to one from April. This phase
@@ -364,3 +378,74 @@ state is ~10,000 transactions/day against a sweeper capacity of 100 rows per
     `{steps, errors}` while the response omits `errors` when empty, so a holder
     of the response cannot unambiguously reconstruct the hashed object. The
     capability path on that rail is unaffected.
+
+---
+
+## 9. Acceptance
+
+**ACCEPTED 2026-08-24 21:20 UTC.** Recorded after the two observation
+conditions were closed by production evidence.
+
+The phase was deliberately **not** accepted at deploy. Post-deploy
+reconciliation passed on every check that could be run, but two things could
+not be established from a five-minute window, and calling the phase accepted
+without them would have been the same overclaim this document criticises
+elsewhere.
+
+### Condition 1 — organic x402 with a valid receipt and v2 chain verification
+
+**Met: 5 of 5.** Every x402 row created after the epoch:
+
+| property | result |
+|---|---|
+| `receipt_status` | `complete` |
+| receipt metadata | `strale.execution.v1` / `RFC8785` / `sha256`, none missing |
+| `receipt_manifest_digest` | present and resolving to a stored snapshot |
+| `integrity_payload_version` | `2` |
+| `/v1/verify/:id` | `hash_valid: true` |
+
+**No x402 traffic was manufactured.** These are organic executions, observed
+rather than produced — which is why the condition was written as "wait" rather
+than "test".
+
+### Condition 2 — epoch stability across a normal deploy
+
+**Met by the #385 deploy**, which was an unrelated privacy fix
+(`657c911ba1436fcd0db9962b387a8b35b12f0d80`) and therefore a genuinely normal
+deploy rather than one staged to prove a point.
+
+- The epoch instant remained **exactly `2026-08-24 20:32:58.705669+00`**
+  through it. Block 0109 chooses the epoch once, guarded on the constraint's
+  existence, and this is the production evidence for what was previously only
+  proven locally.
+- Transactions created after that deploy record the **new** serving commit
+  `657c911ba143…`, while earlier post-epoch rows retain `967c9be4ad77…`. The
+  deploy commit is captured per transaction at INSERT (block 0110), so the two
+  populations coexist correctly rather than the later deploy rewriting history.
+
+### An operational observation, not a defect
+
+During verification, `/v1/verify/:id` twice returned a response with no
+`hash_valid` key, which reads at a glance like a verification failure. Both
+times the cause was **HTTP 429 rate limiting triggered by the verification
+probing itself** — a `{"error_code":"rate_limited"}` body, not a verdict. Both
+rows returned `hash_valid: true` when rechecked after cooldown.
+
+Worth writing down because it is a trap for anyone reconciling a future phase:
+a verification sweep that walks rows quickly will rate-limit itself, and the
+resulting absence of a verdict is easy to read as a negative one. Check the
+`error_code` before concluding anything from a missing `hash_valid`.
+
+### What acceptance does not close
+
+The residual risks in §8 remain true and are not retired by this acceptance.
+Two are worth restating because they will recur:
+
+- **The cutover-window artifact.** Two rows created after the new instance set
+  the epoch but while the previous deployment was still serving received the
+  new database defaults with no rail and no settle call; the sweeper resolved
+  them to `failed` / `unmapped_rail`, which is the designed outcome for a site
+  that records no rail. This will happen on every deploy of this shape, and it
+  is correct behaviour rather than something to fix.
+- **`a2a` and `mcp` remain unreachable rails** by deliberate design (see §5).
+
