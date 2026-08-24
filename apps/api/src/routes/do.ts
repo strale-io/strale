@@ -52,7 +52,7 @@ import { extractClientMeta } from "../lib/attribution.js";
 import { getShareableUrl } from "../lib/audit-token.js";
 import { getAiDescription, getDataSourceUrl } from "../lib/audit-helpers.js";
 import { getCapabilityQuality } from "../lib/quality-aggregation.js";
-import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { sanitizeFailureReason, redactAuditTrail } from "../lib/sanitize.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
 import { isX402PayableCapability } from "../lib/x402-eligibility.js";
 import { getFreeTierSlugs } from "../lib/free-tier.js";
@@ -807,7 +807,10 @@ doRoute.post(
         provenance: existing.provenance,
         meta: {
           idempotency_replay: true,
-          audit: existing.auditTrail,
+          // A STORED audit body, so it can predate the sanitising write below
+          // and carry a raw error. Reviewer-found: the fix originally covered
+          // only GET /v1/transactions/:id and missed both replay paths.
+          audit: redactAuditTrail(existing.auditTrail),
         },
       });
     }
@@ -3119,7 +3122,33 @@ function buildFailureAudit(params: {
     latency_ms: Date.now() - startTime,
     input_hash: hashInput(executionInput),
     request_context: requestContext ?? null,
-    error_message: errorMessage.substring(0, 500),
+    // SANITISED, and this is the authority for it.
+    //
+    // This wrote the RAW `err.message` for as long as the field has existed,
+    // and `GET /v1/transactions/:id` serves `audit_trail` verbatim — on the
+    // same response whose `error` key is carefully
+    // `sanitizeFailureReason(row.error)`. So the caller was handed the
+    // redacted string and the un-redacted one side by side.
+    //
+    // Measured read-only against production before the fix: 120 rows carry
+    // this field, 15 distinct values across 51 rows differ from their
+    // sanitised form (2026-05-29 .. 2026-08-20) — 14 leaking a hostname, 2 a
+    // full URL, plus vendor names like Browserless and CoinGecko that the
+    // sanitiser exists to withhold. No credentials or internal IPs in that
+    // corpus, but the class is open: this is the same privacy boundary
+    // PR #383 closed for `transactions.error`, and unlike that one it does
+    // not need a special message shape to fire.
+    //
+    // Nothing is lost by sanitising here. Every row's audit copy was exactly
+    // `left(error, 500)` — a duplicate of a column that is already kept raw at
+    // rest for operators and sanitised on the way out. The raw text therefore
+    // still exists in `transactions.error` and in the structured logs; it just
+    // stops being served.
+    //
+    // Same function as the response path, deliberately: one authority, not a
+    // second sanitiser. Sanitising before truncating also matters — clipping
+    // first can sever a hostname mid-token and defeat the stripper.
+    error_message: sanitizeFailureReason(errorMessage).substring(0, 500),
     schema_validated: false,
     compliance: {
       ai_involvement: getAiDescription(capability.slug, marker),
