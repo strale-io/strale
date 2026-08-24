@@ -51,6 +51,56 @@ const HOSTNAME_ALLOWLIST = [
 ];
 
 /**
+ * Keys inside an audit body whose value is a failure message.
+ *
+ * `audit_trail` is free-form JSONB written by four different builders, so
+ * there is no type to lean on. Naming the keys explicitly is the honest
+ * option: a builder that invents a fifth name is not covered, and
+ * `sanitize.audit.test.ts` fails when a builder emits an error-bearing key
+ * this set does not contain — so the gap is caught at build time rather than
+ * discovered in a response.
+ */
+const AUDIT_ERROR_KEYS = new Set(["error_message", "error"]);
+
+/**
+ * Sanitise the failure messages inside a stored audit body, at the boundary.
+ *
+ * ## Why this exists at all, given the builders now sanitise
+ *
+ * `buildFailureAudit` sanitises when it writes, and that is the authority.
+ * This is for the rows written before it did: 51 production rows carry a raw
+ * `error_message`, and they cannot be rewritten, because `audit_trail` is
+ * inside the integrity-chain payload and editing it would invalidate the
+ * row's hash. Serving is the only place left to fix them.
+ *
+ * It is the same function, applied again, not a second sanitiser — and
+ * `sanitizeFailureReason` is idempotent, so for anything written from now on
+ * this is a no-op.
+ *
+ * Walks nested structures because solution audits carry `steps[].error`.
+ * Leaves non-string values alone: a null error must stay null rather than
+ * becoming the string "Unknown error", which is what sanitising a null would
+ * produce and would be a fabricated failure on a row that had none.
+ */
+export function redactAuditTrail(auditTrail: unknown): unknown {
+  if (Array.isArray(auditTrail)) return auditTrail.map(redactAuditTrail);
+  if (!auditTrail || typeof auditTrail !== "object") return auditTrail;
+
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(auditTrail as Record<string, unknown>)) {
+    if (AUDIT_ERROR_KEYS.has(key) && typeof value === "string" && value !== "") {
+      out[key] = sanitizeFailureReason(value);
+    } else {
+      out[key] = redactAuditTrail(value);
+    }
+  }
+  return out;
+}
+
+/** The key set, exported so a test can prove it covers what the builders emit. */
+export const AUDIT_ERROR_KEY_NAMES: readonly string[] = [...AUDIT_ERROR_KEYS];
+
+/**
  * Everything that has to be removed before a message can face a customer.
  *
  * Extracted so it can run on EVERY path out of `sanitizeFailureReason`. It
