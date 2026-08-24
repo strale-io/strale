@@ -22,7 +22,9 @@ import { randomUUID } from "node:crypto";
 
 import { useTestDatabase } from "../test-support/integration-db.js";
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
-import { capabilities, transactions, users, wallets, walletTransactions } from "../db/schema.js";
+import { capabilities, transactions, users, wallets, walletTransactions,
+  solutions,
+} from "../db/schema.js";
 
 if (process.env.DATABASE_URL_TEST) {
   process.env.FRONTEND_URL ??= "https://strale.dev";
@@ -68,6 +70,7 @@ describeMaybe("GET /v1/transactions/:id does not leak the raw error", () => {
   let registerCapability: (slug: string, fn: () => Promise<never>) => void;
   let boomSlug = "";
   const seeded: { userId: string; walletId: string }[] = [];
+  const seededSolutions: string[] = [];
   const seededCaps: string[] = [];
 
   beforeAll(async () => {
@@ -83,6 +86,10 @@ describeMaybe("GET /v1/transactions/:id does not leak the raw error", () => {
   });
 
   afterEach(async () => {
+    for (const id of seededSolutions) {
+      await db.delete(solutions).where(eq(solutions.id, id));
+    }
+    seededSolutions.length = 0;
     for (const { userId, walletId } of seeded) {
       await db.delete(transactions).where(eq(transactions.userId, userId));
       await db.delete(walletTransactions).where(eq(walletTransactions.walletId, walletId));
@@ -357,6 +364,82 @@ describeMaybe("GET /v1/transactions/:id does not leak the raw error", () => {
     for (const forbidden of FORBIDDEN) {
       const offenders = allStrings(body).filter((x) => x.includes(forbidden));
       expect(offenders, `"${forbidden}" survived through the replay path`).toEqual([]);
+    }
+  });
+
+  it("SOLUTION REPLAY PATH: the same, on the rail the lint alone was guarding", async () => {
+    // Reviewer-found, and the second half of a two-step regression that no
+    // gate caught: revert the lint to file-granular (one line, no test failed
+    // before this PR added the two-read case), then drop the call here (one
+    // line, no behavioural test) and legacy solution rows serve raw again.
+    //
+    // Three of the four serve sites had belt AND braces; this one had braces
+    // only. Now it has both.
+    const apiKey = await seedUser();
+    const userId = seeded[seeded.length - 1].userId;
+    const key = `sol-replay-${randomUUID()}`;
+    const slug = `p5-leak-sol-${randomUUID().slice(0, 8)}`;
+
+    const solId = randomUUID();
+    await db.insert(solutions).values({
+      id: solId,
+      slug,
+      name: "Audit leak replay probe",
+      description: "Seeded by the audit-leak test.",
+      category: "compliance",
+      priceCents: 20,
+      componentSumCents: 10,
+      valueTier: "standard",
+      maintenanceLevel: "low",
+      geography: "EU",
+      inputSchema: { type: "object", properties: { probe: { type: "string" } } },
+      isActive: true,
+    });
+    seededSolutions.push(solId);
+
+    // A prior row carrying a RAW audit body, reachable by idempotency replay.
+    //
+    // status must be `completed`: on this rail a prior FAILURE is deliberately
+    // re-executed rather than replayed, because handing back HTTP 200 carrying
+    // status:"failed" reads as success to anything keying off response.ok.
+    // A completed run with per-step errors is the realistic shape anyway --
+    // that is a partial success, which is exactly when steps[].error is set.
+    await db.insert(transactions).values({
+      id: randomUUID(),
+      userId,
+      solutionSlug: slug,
+      status: "completed",
+      input: {},
+      output: { steps: {} },
+      error: LEAKY,
+      priceCents: 0,
+      idempotencyKey: key,
+      idempotencyFingerprint: null,
+      transparencyMarker: "algorithmic",
+      dataJurisdiction: "EU",
+      auditTrail: {
+        status: "failed",
+        error_message: LEAKY,
+        steps: [{ index: 0, capabilitySlug: "x", status: "failed", latencyMs: 1, error: LEAKY }],
+      },
+      completedAt: new Date(),
+    });
+
+    const res = await app.request(`http://localhost/v1/solutions/${slug}/execute`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "Idempotency-Key": key,
+      },
+      body: JSON.stringify({ inputs: { probe: "x" }, max_price_cents: 100 }),
+    });
+    const body: any = await res.json();
+    expect(body?.meta?.idempotency_replay, JSON.stringify(body).slice(0, 300)).toBe(true);
+
+    for (const forbidden of FORBIDDEN) {
+      const offenders = allStrings(body).filter((x) => x.includes(forbidden));
+      expect(offenders, `"${forbidden}" survived through the SOLUTION replay path`).toEqual([]);
     }
   });
 
