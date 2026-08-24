@@ -77,6 +77,15 @@ design:
     else. It carries no customer content, so it is not subject to the 90-day
     content redaction and can be retained on its own schedule.
 
+# transaction_id linkage: RESIDUAL, NOT AN ACCEPTANCE BLOCKER.
+#
+# Determined 2026-08-25 by reading the six exit conditions below rather than by
+# judgement: none of them mentions it. The column is null for 100% of writes
+# and its index is dead, and this file already records that as deliberately out
+# of scope -- "a one-line-per-site change". It is cheap enough to fold into the
+# next touch of those sites and it does not hold acceptance. The observation
+# gate is the bundle-only quarantine signal, which is a different thing.
+
 exit_conditions:
   - one immutable invocation fact per capability execution, including solution sub-calls
   - the quality floor consumes facts rather than joining billing rows

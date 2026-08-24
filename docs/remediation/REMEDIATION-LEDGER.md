@@ -4,7 +4,13 @@ Durable source of truth for the autonomous remediation program
 (governing doc: `STRALE-AUTONOMOUS-REMEDIATION-ORCHESTRATOR.md`, v1.0, 2026-08-20).
 Audited baseline: `482ef93341df1fe676bd6f9de4688be85609394b`.
 
-Status values: PLANNED · IN_PROGRESS · REVIEW · ACCEPTED · BLOCKED
+Status values: PLANNED · IN_PROGRESS · REVIEW · ACCEPTED · BLOCKED ·
+MERGED_DEPLOYED_UNDER_OBSERVATION · PARTIALLY_SUPERSEDED · NOT_STARTED ·
+SPECIFIED_NOT_STARTED
+
+_The last four were in use before they were in this legend. Added 2026-08-25;
+`REMEDIATED` was also in use, once, and was an unintended value — see
+`packages/WP8.yaml`._
 
 Companion files:
 - `CURRENT-STATE.md` — what a fresh session needs to resume

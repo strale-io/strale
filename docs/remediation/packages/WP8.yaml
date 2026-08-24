@@ -1,6 +1,22 @@
 package: WP8
 title: Policy convergence — one eligibility authority
-status: REMEDIATED
+status: ACCEPTED
+
+# Was REMEDIATED, which is not a value in this programme's status legend
+# (PLANNED / IN_PROGRESS / REVIEW / ACCEPTED / BLOCKED) and was used exactly
+# once, here, with no explanation anywhere in the file.
+#
+# It was not deliberate. Commit f2e76f4 -- "docs(WP8): accepted, with
+# production reconciliation", 2026-08-22 -- changed this line to ACCEPTED and
+# recorded the reconciliation: the constraint present and validated in
+# production, census zero, both incident capabilities correctly withdrawn, and
+# the constraint proved to BITE by a half-quarantine write inside a rolled-back
+# transaction being refused. Existence is not enforcement, and that commit
+# checked the difference.
+#
+# That commit never reached main. It exists only on remediation/wp9-artifacts,
+# an unmerged branch, so the acceptance was written and then lost. Normalised
+# 2026-08-25 on that evidence rather than for tidiness.
 depends_on: [WP4]
 risks: [CR-05, N5, N6]
 
