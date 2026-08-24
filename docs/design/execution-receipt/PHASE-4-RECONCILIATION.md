@@ -1,7 +1,19 @@
 # Execution receipt, Phase 4 — post-deploy reconciliation
 
-**Status:** `MERGED_DEPLOYED_NOT_YET_ACTIVE`. **Not** accepted, and not active: no
-rail produces receipt state, so every artifact below is present and inert.
+**Status: ACCEPTED** — superseded 2026-08-24 by Phase 5 activation.
+
+Phase 4's artifacts are no longer inert: Phase 5 wired the rails, the epoch is
+`2026-08-24 20:32:58.705669+00`, and the snapshot authority, receipt lifecycle
+and chain-v2 machinery built here are all carrying production traffic. See
+`README.md` for the programme record and `PHASE-5-RAIL-INTEGRATION.md` §9 for
+the acceptance evidence.
+
+The original status line is kept below rather than edited, because it was
+accurate when written and the reasoning behind it is the point.
+
+> **Status (as recorded 2026-08-23):** `MERGED_DEPLOYED_NOT_YET_ACTIVE`. **Not**
+> accepted, and not active: no rail produces receipt state, so every artifact
+> below is present and inert.
 
 **Merged:** PR #380, squash `bd539ecf14e1643a24a655c3c86641b908192302`.
 **Deployed:** `GET /health` → `{"status":"ok","commit":"bd539ecf14e1"}` — the
