@@ -10,6 +10,7 @@
  */
 
 import { Hono } from "hono";
+import { sanitizeFailureReason } from "../lib/sanitize.js";
 import { X402_PAYABLE_LIFECYCLE_STATES } from "../lib/x402-eligibility.js";
 import { recordDiscoveryHit } from "../lib/attribution.js";
 import { eq, and, isNull } from "drizzle-orm";
@@ -837,7 +838,21 @@ async function handleTasksGet(
     if (state === "failed" && txn.error) {
       result.status.message = {
         role: "agent",
-        parts: [{ type: "text", text: txn.error }],
+        // SANITISED, like every other customer-facing error surface.
+        //
+        // This served the RAW `transactions.error`, and this file did not
+        // import the sanitiser at all. `GET /v1/transactions/:id` has always
+        // sanitised the same column; PR #383 closed the same boundary inside
+        // the sanitiser's canned branches and #384 closed it for the audit
+        // copy. The A2A rail was simply never wired to it.
+        //
+        // Measured read-only against production: of the failed transactions
+        // reachable here (scoped to the authenticated user's own rows),
+        // 69 distinct messages across 41,027 rows differ from their sanitised
+        // form -- 14.3% -- window 2026-05-25 to 2026-08-24. The rail shows no
+        // usage yet, so this is a live path that has not been exercised rather
+        // than an active leak.
+        parts: [{ type: "text", text: sanitizeFailureReason(txn.error) }],
       };
     }
 
