@@ -12,7 +12,7 @@ import {
 } from "../lib/integrity-hash.js";
 import { walkChain } from "./verify.js";
 import { generateAuditToken } from "../lib/audit-token.js";
-import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { sanitizeFailureReason, redactAuditTrail } from "../lib/sanitize.js";
 import type { AppEnv } from "../types.js";
 
 export const transactionsRoute = new Hono<AppEnv>();
@@ -106,7 +106,16 @@ transactionsRoute.get(
         price_cents: row.price_cents,
         latency_ms: row.latency_ms,
         provenance: row.provenance,
-        audit_trail: row.audit_trail,
+        // The stored audit body is sanitised at the point it is BUILT
+        // (`buildFailureAudit`), which is the authority. This second
+        // application exists for the rows written before that was true: 51 of
+        // them carry a raw `error_message`, and they cannot be rewritten
+        // because `audit_trail` is inside the integrity-chain payload — any
+        // edit would invalidate their hash.
+        //
+        // Not a second sanitiser: the same function, and it is idempotent, so
+        // for every row written from now on this is a no-op.
+        audit_trail: redactAuditTrail(row.audit_trail),
         transparency_marker: row.transparency_marker,
         data_jurisdiction: row.data_jurisdiction,
         is_free_tier: row.is_free_tier,

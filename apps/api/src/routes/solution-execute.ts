@@ -32,7 +32,7 @@ import {
   assessOutput,
   outcomeFromOutput,
 } from "../lib/execution-outcome.js";
-import { sanitizeFailureReason } from "../lib/sanitize.js";
+import { sanitizeFailureReason, redactAuditTrail } from "../lib/sanitize.js";
 import { logError, logWarn } from "../lib/log.js";
 import * as walletService from "../lib/wallet-service.js";
 import * as reservations from "../lib/wallet-reservations.js";
@@ -275,7 +275,8 @@ solutionExecuteRoute.post(
             price_cents: prior.priceCents,
             latency_ms: prior.latencyMs,
           },
-          meta: { idempotency_replay: true, audit: prior.auditTrail },
+          // A STORED audit body — same reason as the do.ts replay path.
+          meta: { idempotency_replay: true, audit: redactAuditTrail(prior.auditTrail) },
         });
       }
 

@@ -727,7 +727,15 @@ function buildX402AuditTrail(args: {
     settlement_id: settlementId ?? null,
     payer_address: payerAddress ?? null,
     price_usd: priceUsd,
-    ...(error ? { error: error.substring(0, 500) } : {}),
+    // Sanitised HERE, not at the callers.
+    //
+    // Both reviewers flagged this: the builder itself was unguarded, and the
+    // solution path DID reach it with raw text (outcome.error_message traces
+    // to err.message in lib/execution-outcome.ts). The capability path already
+    // passed sanitised text, so the leak was one caller wide -- and one new
+    // caller from reopening. Sanitising in the builder makes the write-side
+    // authority true for this rail too, rather than true for one of its paths.
+    ...(error ? { error: sanitizeFailureReason(error).substring(0, 500) } : {}),
     compliance: {
       ai_involvement: aiInvolvement,
       personal_data_processed: cap.processesPersonalData,
@@ -790,7 +798,8 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
         capability: args.slug,
         latency_ms: args.latencyMs,
         timestamp: new Date().toISOString(),
-        ...(args.error ? { error: args.error.substring(0, 500) } : {}),
+        // Same reason as the rich shape above.
+        ...(args.error ? { error: sanitizeFailureReason(args.error).substring(0, 500) } : {}),
       };
   try {
     const [row] = await db.insert(transactions).values({
