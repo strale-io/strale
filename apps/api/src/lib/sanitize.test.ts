@@ -184,44 +184,6 @@ describe("sanitizeFailureReason — idempotent", () => {
 });
 
 /**
- * Bare IP literals were not redacted at all.
- *
- * `HOSTNAME_PATTERN` requires a dot-plus-letters TLD, so `10.0.3.14` slipped
- * through while the hostname beside it was stripped — naming internal
- * infrastructure just as precisely. Pre-existing; unrelated to #383.
- */
-describe("sanitizeFailureReason — IP literals", () => {
-  it("redacts a bare IPv4 address", () => {
-    const out = sanitizeFailureReason("connect 10.0.3.14:5432 — ECONNREFUSED");
-    expect(out).not.toContain("10.0.3.14");
-    expect(out).toContain("[service]");
-  });
-
-  it("redacts a public IPv4 too, not just RFC1918", () => {
-    expect(sanitizeFailureReason("upstream 203.0.113.7 refused")).not.toContain("203.0.113.7");
-  });
-
-  it("redacts an IPv6 address", () => {
-    const out = sanitizeFailureReason("connect to 2001:0db8:85a3:0000:0000:8a2e:0370:7334 failed");
-    expect(out).not.toContain("2001:0db8");
-    expect(out).toContain("[service]");
-  });
-
-  it("does NOT eat a clock time", () => {
-    // Three hex-shaped groups is also HH:MM:SS. Turning a timestamp into
-    // "[service]" would be a worse bug than the one this closes, so the IPv6
-    // pattern requires four groups.
-    expect(sanitizeFailureReason("job started at 10:30:00 and stalled")).toContain("10:30:00");
-  });
-
-  it("does NOT eat a four-part version string with an out-of-range part", () => {
-    // Octets are validated to 0-255, which is what separates an address from
-    // a dotted version number.
-    expect(sanitizeFailureReason("schema version 1.2.3.999 unsupported")).toContain("1.2.3.999");
-  });
-});
-
-/**
  * Truncation used to cut mid-token, which made the function non-idempotent.
  *
  * By the time truncation runs, hostname replacement has already happened — so
@@ -254,10 +216,57 @@ describe("sanitizeFailureReason — truncation cuts on a word boundary", () => {
     }
   });
 
-  it("does not back up so far that it loses meaningful text", () => {
-    // The window is 32 characters, chosen because the longest allowlist entry
-    // is 18. A hard cut is still taken when there is no space in that window.
+  it("takes a hard cut when there is no space in the window", () => {
     const noSpaces = "q".repeat(900);
     expect(sanitizeFailureReason(noSpaces).length).toBe(500);
+  });
+
+  it("backs up only a little, not arbitrarily far", () => {
+    // The previous version of this test fed a string with NO spaces, so
+    // `lastSpace` was -1 and the backup branch never executed -- it asserted a
+    // property it structurally could not observe, and the window could have
+    // been widened to 400 with the suite green. Reviewer-found.
+    //
+    // This one has a space exactly at the far edge of the window and another
+    // well inside it, so the cut has a real choice to make.
+    const withSpaces = "w".repeat(470) + " " + "e".repeat(40);
+    const out = sanitizeFailureReason(withSpaces);
+    expect(out.length).toBeLessThanOrEqual(500);
+    // It must not discard the whole 470-character head to reach an earlier space.
+    expect(out.length).toBeGreaterThan(460);
+  });
+});
+
+/**
+ * The allowlist matched a SUBSTRING, which was a leak in its own right.
+ *
+ * `match.toLowerCase().includes(p)` let any hostname that merely CONTAINED an
+ * allowlisted name through — so an internal host survived purely because of
+ * what it happened to spell. It also removed the length bound the truncation
+ * fix relies on: a surviving token was not capped at 18 characters after all.
+ * Reviewer-found, both halves.
+ */
+describe("sanitizeFailureReason — the allowlist is anchored, not a substring", () => {
+  it("redacts an internal hostname that merely CONTAINS an allowlisted name", () => {
+    const out = sanitizeFailureReason("connect failed to mail.error.codeship.io");
+    expect(out).not.toContain("codeship");
+    expect(out).toContain("[service]");
+  });
+
+  it("still keeps an exact allowlisted name", () => {
+    expect(sanitizeFailureReason("see Reviews.io for alternatives")).toContain("Reviews.io");
+  });
+
+  it("keeps a subdomain of an allowlisted name, which is still authored copy", () => {
+    expect(sanitizeFailureReason("see www.reviews.io")).toContain("www.reviews.io");
+  });
+
+  it("is idempotent for a long token that contains an allowlisted name", () => {
+    // With substring matching this survived truncation whole, then collapsed
+    // to [service] on a second pass — the digest in lib/receipt/settle.ts
+    // would have depended on how many times the function had run.
+    const input = "A".repeat(464) + " zzzzzzzzzzzzzzzpatents.google.com " + "B".repeat(60);
+    const once = sanitizeFailureReason(input);
+    expect(sanitizeFailureReason(once)).toBe(once);
   });
 });

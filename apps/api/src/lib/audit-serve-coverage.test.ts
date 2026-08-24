@@ -176,6 +176,21 @@ describe("stored audit bodies are redacted wherever they are served", () => {
       ).toBe("redacts");
     });
 
+    it("FLAGS A FILE WITH ONE WRAPPED READ AND ONE BARE ONE", () => {
+      // The case that separates occurrence-granular from file-granular, and
+      // it was missing — so reverting this file's own reason for existing
+      // (`before.endsWith("redactAuditTrail(")` back to
+      // `source.includes("redactAuditTrail")`) passed all eight tests.
+      // Reviewer-found. Every other case here has a single read, where the two
+      // rules are indistinguishable.
+      expect(
+        classify(
+          "routes/new.ts",
+          "const a = redactAuditTrail(row.auditTrail); const b = other.auditTrail;",
+        ),
+      ).toBe("offender");
+    });
+
     it("does not flag a file that never touches a stored body", () => {
       expect(classify("lib/whatever.ts", "export const x = 1;")).toBe("not-a-reader");
     });

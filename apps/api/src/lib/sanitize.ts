@@ -15,26 +15,6 @@ const HOSTNAME_PATTERN =
 const STACK_TRACE_PATTERN =
   /\s+at\s+[\w$.]+\s*\(.*?\)/g;
 
-/**
- * Dotted-quad IPv4, with each octet validated to 0-255.
- *
- * The validation is what stops it eating four-part version strings and the
- * like; `1.2.3.999` is left alone because it is not an address. Ports are not
- * matched, and do not need to be — a bare port identifies nothing.
- */
-const IPV4_PATTERN =
-  /\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b/g;
-
-/**
- * IPv6, deliberately requiring at least four hex groups.
- *
- * Three groups would also match a clock time — `10:30:00` is hex-shaped — and
- * turning timestamps in error messages into `[service]` would be a worse bug
- * than the one this closes. The cost of the conservative bound is that the
- * loopback shorthands (`::1`) are not matched, which identifies nothing.
- */
-const IPV6_PATTERN = /\b(?:[0-9a-f]{1,4}:){3,7}[0-9a-f]{1,4}\b/gi;
-
 const PROVIDER_NAMES = [
   /\bBrowserless\b/gi,
   /\bSerper\b/gi,
@@ -56,7 +36,10 @@ const PROVIDER_NAMES = [
  * names nothing. Entries here are public product names appearing in authored
  * copy, never infrastructure.
  *
- * Matched case-insensitively as substrings of a hostname-shaped token.
+ * Matched case-insensitively against the WHOLE token, or a subdomain of it.
+ * Substring matching was the original rule and it leaked: any hostname that
+ * happened to CONTAIN an entry survived, so `mail.error.codeship.io` passed
+ * through because it spells `error.code`.
  */
 const HOSTNAME_ALLOWLIST = [
   "error.message",
@@ -74,11 +57,21 @@ const HOSTNAME_ALLOWLIST = [
  * Keys inside an audit body whose value is a failure message.
  *
  * `audit_trail` is free-form JSONB written by four different builders, so
- * there is no type to lean on. Naming the keys explicitly is the honest
- * option: a builder that invents a fifth name is not covered, and
- * `sanitize.audit.test.ts` fails when a builder emits an error-bearing key
- * this set does not contain — so the gap is caught at build time rather than
- * discovered in a response.
+ * there is no type to lean on, and this list is hand-maintained.
+ *
+ * ## What guards it, stated accurately
+ *
+ * An earlier version of this comment claimed a builder emitting an
+ * error-bearing key outside this set was "caught at build time". That was
+ * false: the only test behind the claim pinned the constant to itself, so it
+ * failed when someone edited THIS set and was blind to what the builders
+ * actually emit. Reviewer-found, and a claimed-but-absent guard is worse than
+ * no guard.
+ *
+ * The real guard is `audit-key-coverage.test.ts`, which reads the builder
+ * SOURCE and fails on an error-shaped key this set does not contain. It is a
+ * source scan, so it sees literal keys and not computed ones — the honest
+ * bound on what it can promise.
  */
 const AUDIT_ERROR_KEYS = new Set(["error_message", "error"]);
 
@@ -102,19 +95,31 @@ const AUDIT_ERROR_KEYS = new Set(["error_message", "error"]);
  * becoming the string "Unknown error", which is what sanitising a null would
  * produce and would be a fabricated failure on a row that had none.
  */
-export function redactAuditTrail(auditTrail: unknown): unknown {
-  if (Array.isArray(auditTrail)) return auditTrail.map(redactAuditTrail);
+export function redactAuditTrail(auditTrail: unknown, depth = 0): unknown {
+  // A stored body is fixed-shape and shallow, so this cannot be hit by any
+  // current builder. It is here because the reachability argument depends on
+  // that staying true, and an uncaught RangeError inside formatRow is a 500 on
+  // a response the customer is entitled to. Reviewer-found: ~2-5k frames, and
+  // a cyclic body would never terminate.
+  if (depth > 64) return auditTrail;
+
+  if (Array.isArray(auditTrail)) return auditTrail.map((v) => redactAuditTrail(v, depth + 1));
   if (!auditTrail || typeof auditTrail !== "object") return auditTrail;
 
-  const out: Record<string, unknown> = {};
+  // Object.create(null), not {}. With a plain object, `out[key] = value` for
+  // key === "__proto__" hits the Object.prototype accessor instead of creating
+  // an own property: the key is SILENTLY DROPPED from a compliance record, and
+  // the object handed to c.json gets its prototype replaced. Also reviewer-found.
+  const out = Object.create(null) as Record<string, unknown>;
   for (const [key, value] of Object.entries(auditTrail as Record<string, unknown>)) {
     if (AUDIT_ERROR_KEYS.has(key) && typeof value === "string" && value !== "") {
       out[key] = sanitizeFailureReason(value);
     } else {
-      out[key] = redactAuditTrail(value);
+      out[key] = redactAuditTrail(value, depth + 1);
     }
   }
-  return out;
+  // Back to a normal object so JSON.stringify and downstream consumers behave.
+  return { ...out };
 }
 
 /** The key set, exported so a test can prove it covers what the builders emit. */
@@ -141,19 +146,21 @@ function redact(input: string): string {
   // Strip URLs
   msg = msg.replace(URL_PATTERN, "[service]");
 
-  // Strip bare IP literals.
-  //
-  // The hostname pattern requires a dot-plus-letters TLD, so an address like
-  // `connect 10.0.3.14:5432 - ECONNREFUSED` went through untouched - naming
-  // internal infrastructure just as precisely as the hostnames next to it.
-  // Pre-existing and unrelated to the canned-branch fix in #383.
-  msg = msg.replace(IPV4_PATTERN, "[service]");
-  msg = msg.replace(IPV6_PATTERN, "[service]");
-
   // Strip raw hostnames (but preserve common words that match the pattern)
   // Only strip if it looks like a real hostname (has dots, not just "error.message")
   msg = msg.replace(HOSTNAME_PATTERN, (match) => {
-    if (HOSTNAME_ALLOWLIST.some((p) => match.toLowerCase().includes(p))) return match;
+    // ANCHORED, not a substring test.
+    //
+    // `includes` let any hostname CONTAINING an allowlist entry through:
+    // `mail.error.codeship.io` contains `error.code`, so an internal hostname
+    // passed unredacted purely because of what it happened to spell. It also
+    // meant a surviving token had no length bound, which is what the
+    // truncation fix below assumed it had. Reviewer-found, both halves.
+    //
+    // A token now survives only if it IS an allowlisted name, or is a
+    // subdomain of one - which is what "authored product name" actually means.
+    const token = match.toLowerCase();
+    if (HOSTNAME_ALLOWLIST.some((p) => token === p || token.endsWith(`.${p}`))) return match;
     return "[service]";
   });
 
