@@ -309,6 +309,57 @@ describeMaybe("GET /v1/transactions/:id does not leak the raw error", () => {
     }
   });
 
+  it("REPLAY PATH: an idempotency replay does not serve a stored raw audit", async () => {
+    // The surface a reviewer found missing, and one a file-granular lint
+    // cannot pin: `do.ts` still CONTAINS the word redactAuditTrail (the
+    // import), so removing the call at the replay site leaves the lint green.
+    // Only driving the path proves it.
+    //
+    // A stored fingerprint of NULL is replayable by design, so seeding one is
+    // enough to reach the replay branch without reproducing a real first call.
+    const capId = await seedCapability();
+    const apiKey = await seedUser();
+    const userId = seeded[seeded.length - 1].userId;
+    const key = `replay-${randomUUID()}`;
+
+    await db.insert(transactions).values({
+      id: randomUUID(),
+      userId,
+      capabilityId: capId,
+      status: "failed",
+      input: {},
+      error: LEAKY,
+      priceCents: 0,
+      idempotencyKey: key,
+      idempotencyFingerprint: null,
+      transparencyMarker: "algorithmic",
+      dataJurisdiction: "EU",
+      auditTrail: { status: "failed", error_message: LEAKY },
+      completedAt: new Date(),
+    });
+
+    const res = await app.request("http://localhost/v1/do", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "Idempotency-Key": key,
+      },
+      body: JSON.stringify({
+        capability_slug: boomSlug,
+        inputs: { probe: "x" },
+        max_price_cents: 25,
+      }),
+    });
+    const body: any = await res.json();
+    expect(body?.meta?.idempotency_replay, JSON.stringify(body).slice(0, 300)).toBe(true);
+
+    for (const forbidden of FORBIDDEN) {
+      const offenders = allStrings(body).filter((x) => x.includes(forbidden));
+      expect(offenders, `"${forbidden}" survived through the replay path`).toEqual([]);
+    }
+  });
+
   it("keeps the raw text at rest for operators, on the internal surface only", async () => {
     // Requirement: do not destroy diagnostic value. `transactions.error` still
     // holds the unredacted message; it is simply never served. That column is
