@@ -235,6 +235,80 @@ describeMaybe("GET /v1/transactions/:id does not leak the raw error", () => {
     expect(String(txBody.audit_trail?.error_message ?? "")).not.toBe(stored.error);
   });
 
+  it("WRITE SIDE: what is STORED in audit_trail is already sanitised", async () => {
+    // Read from the database, not from the response, so this pins the write
+    // half ON ITS OWN. The mutation battery found that reverting either half
+    // alone left the end-to-end test green -- each independently prevents the
+    // leak -- so neither was actually proven. This is the write half.
+    //
+    // It matters beyond belt-and-braces: sanitising at write is what makes the
+    // row safe AT REST and on any future surface that reads audit_trail.
+    await seedCapability();
+    const apiKey = await seedUser();
+    const { txnId } = await failThenFetch(apiKey);
+
+    const [stored] = await db
+      .select({ auditTrail: transactions.auditTrail })
+      .from(transactions)
+      .where(eq(transactions.id, txnId));
+
+    const storedMsg = String(
+      (stored.auditTrail as { error_message?: unknown } | null)?.error_message ?? "",
+    );
+    expect(storedMsg, "no error_message was stored at all").not.toBe("");
+    for (const forbidden of FORBIDDEN) {
+      expect(storedMsg, `"${forbidden}" is stored raw in audit_trail`).not.toContain(forbidden);
+    }
+  });
+
+  it("SERVE SIDE: a legacy row stored RAW is redacted on the way out", async () => {
+    // The other half, pinned on its own. The 51 rows written before the write
+    // fix carry a raw error_message and CANNOT be rewritten -- audit_trail is
+    // inside the integrity-chain payload, so editing one would invalidate its
+    // hash. Serving is the only place left to fix them, and this is the case
+    // that proves it happens.
+    const capId = await seedCapability();
+    const apiKey = await seedUser();
+    const userId = seeded[seeded.length - 1].userId;
+
+    // Written directly, exactly as a pre-fix row looks.
+    const txnId = randomUUID();
+    await db.insert(transactions).values({
+      id: txnId,
+      userId,
+      capabilityId: capId,
+      status: "failed",
+      input: {},
+      error: LEAKY,
+      priceCents: 0,
+      transparencyMarker: "algorithmic",
+      dataJurisdiction: "EU",
+      auditTrail: { status: "failed", error_message: LEAKY },
+      completedAt: new Date(),
+    });
+
+    const res = await app.request(`http://localhost/v1/transactions/${txnId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    const body: any = await res.json();
+    expect(res.status, JSON.stringify(body)).toBe(200);
+
+    // The stored row is still raw -- history is not rewritten.
+    const [stillStored] = await db
+      .select({ auditTrail: transactions.auditTrail })
+      .from(transactions)
+      .where(eq(transactions.id, txnId));
+    expect(
+      String((stillStored.auditTrail as { error_message?: unknown }).error_message),
+    ).toBe(LEAKY);
+
+    // ...and none of it reaches the caller.
+    for (const forbidden of FORBIDDEN) {
+      const offenders = allStrings(body).filter((x) => x.includes(forbidden));
+      expect(offenders, `"${forbidden}" survived from a legacy row`).toEqual([]);
+    }
+  });
+
   it("keeps the raw text at rest for operators, on the internal surface only", async () => {
     // Requirement: do not destroy diagnostic value. `transactions.error` still
     // holds the unredacted message; it is simply never served. That column is
