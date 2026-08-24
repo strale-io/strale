@@ -31,6 +31,10 @@ import { randomUUID } from "node:crypto";
 
 import { useTestDatabase } from "../../test-support/integration-db.js";
 import { buildExecutionReceipt } from "./execution-receipt.js";
+import {
+  normalizeCapabilityDeclaration,
+  recordManifestSnapshot,
+} from "./manifest-snapshot.js";
 import { markReceiptComplete, markReceiptFailed, markReceiptPending } from "./receipt-lifecycle.js";
 import {
   computeIntegrityHashVersioned,
@@ -77,6 +81,59 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     txns.clear();
   });
 
+  /**
+   * A digest that names a real stored snapshot.
+   *
+   * `transactions.receipt_manifest_digest` is a foreign key as of block 0109,
+   * so the old `sha256:aaa...` fixture is refused.
+   */
+  async function realManifestDigest(): Promise<string> {
+    return recordManifestSnapshot(
+      db,
+      normalizeCapabilityDeclaration({
+        slug: "vat-validate",
+        name: "VAT Validate",
+        inputSchema: { type: "object" },
+        outputSchema: { type: "object" },
+        transparencyTag: "algorithmic",
+        dataSource: "VIES",
+        capabilityType: "stable_api",
+        freshnessCategory: "live-fetch",
+        outputFieldReliability: { valid: "guaranteed" },
+        processesPersonalData: false,
+        personalDataCategories: [],
+        gdprArt22Classification: "data_lookup",
+        dataUpdateCycleDays: null,
+        datasetLastUpdated: null,
+        dataClassification: "public",
+        x402Method: "POST",
+      }),
+    );
+  }
+
+  /**
+   * Past the CHAIN worker's grace window (10s) but inside the RECEIPT
+   * sweeper's (60s).
+   *
+   * Phase 5 gave the same tick a sweeper that finishes pending receipts, and
+   * that changes what these tests can assume: an aged row with a pending
+   * receipt no longer STAYS pending across a tick - the sweeper terminalises
+   * it, and then the chain quite correctly admits it. So a test about "a
+   * pending receipt blocks chaining" has to use a row the sweeper will not
+   * touch yet, or it is really testing the sweeper.
+   */
+  async function youngTransaction(): Promise<string> {
+    const id = randomUUID();
+    txns.add(id);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at, completed_at)
+      VALUES (${id}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU', '{}'::jsonb,
+              now() - interval '30 seconds', now() - interval '30 seconds')
+    `);
+    return id;
+  }
+
   /** Old enough to clear the worker's grace window. */
   async function agedTransaction(): Promise<string> {
     const id = randomUUID();
@@ -99,7 +156,7 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     const built = buildExecutionReceipt(
       {
         transactionId: id, subjectKind: "capability", subjectSlug: "vat-validate",
-        deployCommit: "c".repeat(40), manifestDigest: `sha256:${"a".repeat(64)}`,
+        deployCommit: "c".repeat(40), manifestDigest: await realManifestDigest(),
         steps: null, rail: "v1_do", inputs: { vat: "SE1" }, status: "completed",
         result: { valid: true }, error: null, method: "algorithmic",
         sourceObservation: { kind: "computed" },
@@ -149,15 +206,37 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     // receipt at all.
     const withReceipt = await agedTransaction();
     await completeReceipt(withReceipt);
-    const plainV1 = await agedTransaction();
+    const neighbour = await agedTransaction();
+
+    // A genuine v1 row has to be PRE-epoch now. Since block 0109 every new
+    // transaction carries receipt state from birth, so "a row with no receipt"
+    // is no longer something a present-day insert can produce - v1 is exactly
+    // the 887k rows that predate the epoch, and this is the coexistence the
+    // chain-versioning design exists to support.
+    const legacy = randomUUID();
+    txns.add(legacy);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at, completed_at,
+                                receipt_status, receipt_failure_reason)
+      VALUES (${legacy}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU',
+              '{}'::jsonb, now() - interval '400 days', now() - interval '400 days',
+              NULL, NULL)
+    `);
 
     await runOnce();
 
     const a = await row(withReceipt);
-    const b = await row(plainV1);
+    const b = await row(neighbour);
+    const c = await row(legacy);
     expect(a.integrity_hash, "receipt row not chained").not.toBeNull();
     expect(b.integrity_hash, "innocent neighbour not chained").not.toBeNull();
-    expect(b.integrity_payload_version, "a row with no receipt is v1").toBeNull();
+    expect(c.integrity_hash, "legacy row not chained").not.toBeNull();
+    expect(c.integrity_payload_version, "a PRE-epoch row is v1").toBeNull();
+    expect(
+      Number(b.integrity_payload_version),
+      "a post-epoch row is v2, because it cannot exist without receipt state",
+    ).toBe(CHAIN_PAYLOAD_V2);
   });
 
   it("a receipt-FAILED row is chained as v2 with a null digest", async () => {
@@ -176,8 +255,7 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
   });
 
   it("a receipt-PENDING row is not chained, and does not block the batch", async () => {
-    const pending = await agedTransaction();
-    await markReceiptPending(db, pending);
+    const pending = await youngTransaction();
     const neighbour = await agedTransaction();
 
     await runOnce();
@@ -187,15 +265,14 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
   });
 
   it("a pending row chains once its receipt settles, on a later tick", async () => {
-    const id = await agedTransaction();
-    await markReceiptPending(db, id);
+    const id = await youngTransaction();
     await runOnce();
     expect((await row(id)).integrity_hash).toBeNull();
 
     const built = buildExecutionReceipt(
       {
         transactionId: id, subjectKind: "capability", subjectSlug: "vat-validate",
-        deployCommit: "c".repeat(40), manifestDigest: `sha256:${"a".repeat(64)}`,
+        deployCommit: "c".repeat(40), manifestDigest: await realManifestDigest(),
         steps: null, rail: "v1_do", inputs: {}, status: "completed",
         result: {}, error: null, method: "algorithmic",
         sourceObservation: { kind: "computed" },
@@ -217,15 +294,19 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     // counts only selected rows — cannot see it. With the retry sweeper
     // deferred to the rail PR, such a row would sit outside the chain forever
     // with nothing saying so.
+    // status='executing', deliberately. Phase 5's sweeper resolves a pending
+    // receipt on any SETTLED row within a minute or so, so the population this
+    // counter still exists for is the row whose transaction never reached a
+    // terminal status at all - wedged, and invisible to both the sweeper (no
+    // final result to commit to) and the chain (nothing to hash).
     const id = randomUUID();
     txns.add(id);
     await db.execute(sql`
       INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
-                                data_jurisdiction, input, created_at, completed_at)
-      VALUES (${id}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU', '{}'::jsonb,
-              now() - interval '20 minutes', now() - interval '20 minutes')
+                                data_jurisdiction, input, created_at)
+      VALUES (${id}::uuid, ${userId}::uuid, 'executing', 5, 'algorithmic', 'EU', '{}'::jsonb,
+              now() - interval '20 minutes')
     `);
-    await markReceiptPending(db, id);
 
     const warnings: string[] = [];
     const { log } = await import("../log.js");
@@ -245,6 +326,142 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
     expect(warnings).toContain("integrity-hash-receipt-blocked");
     // And it is still, correctly, not chained.
     expect((await row(id)).integrity_hash).toBeNull();
+  });
+
+  it("the sweeper leaves a transaction that has NOT settled completely alone", async () => {
+    // Found by the mutation battery, not by review: removing the sweeper's
+    // `status IN ('completed','failed')` filter left every test green.
+    //
+    // The filter matters because settle returns early for a non-terminal row -
+    // there is no final result to commit to - so the sweeper would see "still
+    // pending, attempts unchanged" and burn an attempt on it every tick. After
+    // five ticks a transaction that is still EXECUTING would carry a terminally
+    // failed receipt, claiming we could not commit to a result that had not
+    // been produced yet.
+    const id = randomUUID();
+    txns.add(id);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at)
+      VALUES (${id}::uuid, ${userId}::uuid, 'executing', 5, 'algorithmic', 'EU', '{}'::jsonb,
+              now() - interval '20 minutes')
+    `);
+
+    // Several ticks, so an off-by-one budget would still show up.
+    await runOnce();
+    await runOnce();
+    await runOnce();
+
+    const r = await row(id);
+    expect(r.receipt_status, "an unsettled transaction must stay pending").toBe("pending");
+    expect(Number(r.receipt_attempts), "no attempt may be spent on it").toBe(0);
+    expect(r.receipt_failure_reason).toBe("not_yet_built");
+  });
+
+  it("A ROW THE WORKER CANNOT UPDATE COSTS THAT ROW, NOT THE CHAIN", async () => {
+    // Reviewer-found, and it is Phase 4's round-three defect in a new shape.
+    //
+    // `transactions_post_epoch_has_receipt` is NOT VALID, which in Postgres
+    // skips the initial table scan but STILL ENFORCES ON UPDATE. So a
+    // post-epoch row with a NULL receipt_status cannot be updated by anyone -
+    // including this worker, which admits it (`receiptStatus IS NULL` is on
+    // the admission allowlist, because that is what a legacy row looks like).
+    //
+    // The tick is one transaction. Before the per-row SAVEPOINT, the first
+    // failing UPDATE poisoned it, every later statement raised 25P02, the
+    // per-row catch swallowed the cascade, and the tick rolled back - so
+    // NOTHING chained, permanently, retrying every 30 seconds.
+    //
+    // Such a row is hard to create by accident and trivial to create by
+    // operation: `drizzle-kit push` drops the constraint, and re-adding it
+    // NOT VALID does not scan for rows that already violate it. That is
+    // exactly what this test does, restoring the original definition
+    // afterwards so the epoch instant is not disturbed.
+    const [{ def }] = (await db.execute(sql`
+      SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint
+       WHERE conname = 'transactions_post_epoch_has_receipt'
+    `)) as unknown as Array<{ def: string }>;
+    expect(def, "the epoch constraint is missing; this test would prove nothing").toContain(
+      "receipt_status IS NOT NULL",
+    );
+
+    const poison = randomUUID();
+    const healthy = await agedTransaction();
+
+    // The epoch is REPLACED for the duration, not borrowed.
+    //
+    // The first version inserted the poison row at `now() - 2 minutes` and
+    // relied on the real epoch being older than that. True on a long-lived
+    // database and false on a freshly-migrated one, where the epoch is seconds
+    // old - so the row was PRE-epoch, perfectly updatable, and the test proved
+    // nothing. It passed locally and failed in CI, which is the right way
+    // round to find out but not a difference the test should have had.
+    //
+    // Substituting a deliberately old epoch makes the row post-epoch by
+    // construction, independent of how old the database is. The original
+    // definition is restored at the end, so the real epoch instant - which the
+    // design calls the single immutable record of when enforcement began - is
+    // unchanged.
+    // The DROP is INSIDE the try, and the restore is IF NOT EXISTS-shaped.
+    //
+    // Reviewer-found: with the DROP outside, anything throwing between it and
+    // the ADD - the poison INSERT is the candidate - left the `finally`'s own
+    // DROP failing with "constraint does not exist". The finally then threw,
+    // the original error was lost, and the epoch constraint was never
+    // restored, so every later suite in the lane ran without the post-epoch
+    // invariant. It only fires when this test is already red, which is
+    // precisely when the diagnostic matters.
+    try {
+      await db.execute(sql`
+        ALTER TABLE transactions DROP CONSTRAINT transactions_post_epoch_has_receipt
+      `);
+      await db.execute(sql`
+        INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                  data_jurisdiction, input, created_at, completed_at,
+                                  receipt_status, receipt_failure_reason)
+        VALUES (${poison}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU',
+                '{}'::jsonb, now() - interval '2 minutes', now() - interval '2 minutes',
+                NULL, NULL)
+      `);
+      await db.execute(sql`
+        ALTER TABLE transactions
+          ADD CONSTRAINT transactions_post_epoch_has_receipt
+          CHECK (created_at < now() - interval '10 minutes' OR receipt_status IS NOT NULL)
+          NOT VALID
+      `);
+
+      // Sanity: the row really is un-updatable, or the test proves nothing.
+      await expect(
+        db.execute(sql`
+          UPDATE transactions SET latency_ms = 1 WHERE id = ${poison}::uuid
+        `),
+      ).rejects.toThrow(/transactions_post_epoch_has_receipt/);
+
+      await runOnce();
+
+      // The property: the innocent neighbour still chained.
+      const h = await row(healthy);
+      expect(
+        h.integrity_hash,
+        "one un-updatable row stopped the whole chain - the savepoint is not working",
+      ).not.toBeNull();
+
+      // And the poison row did not chain, which is correct and expected.
+      const p = await row(poison);
+      expect(p.integrity_hash).toBeNull();
+    } finally {
+      // DELETE is permitted - the CHECK constrains INSERT and UPDATE - and the
+      // real epoch definition goes back regardless of how the assertions went.
+      await db.execute(sql`DELETE FROM transactions WHERE id = ${poison}::uuid`);
+      await db.execute(sql`
+        ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_post_epoch_has_receipt
+      `);
+      await db.execute(
+        sql.raw(
+          `ALTER TABLE transactions ADD CONSTRAINT transactions_post_epoch_has_receipt ${def}`,
+        ),
+      );
+    }
   });
 
   it("the worker chains a row exactly once", async () => {

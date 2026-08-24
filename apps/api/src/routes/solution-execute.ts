@@ -15,6 +15,8 @@
  */
 
 import { Hono } from "hono";
+import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
+import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import { and, eq, isNull } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import {
@@ -26,7 +28,7 @@ import { solutions, wallets, walletTransactions, transactions } from "../db/sche
 import { authMiddleware } from "../lib/middleware.js";
 import { rateLimitByKey } from "../lib/rate-limit.js";
 import { apiError } from "../lib/errors.js";
-import { executeSolution } from "../lib/solution-executor.js";
+import { stepsThatRan, executeSolution } from "../lib/solution-executor.js";
 import {
   aggregateSolutionOutcome,
   assessOutput,
@@ -188,6 +190,11 @@ solutionExecuteRoute.post(
         const [txnRecord] = await tx
           .insert(transactions)
           .values({
+            // Captured at INSERT because neither is recoverable later:
+            // the rail is not a property of the row, and the deploy commit
+            // drifts the moment anything redeploys (block 0110).
+            receiptRail: "v1_do",
+            receiptDeployCommit: deployCommitOrNull(),
             userId: user.id,
             capabilityId: null,
             solutionSlug: sol.slug,
@@ -338,6 +345,14 @@ solutionExecuteRoute.post(
             complianceHashState: "pending",
           })
           .where(eq(transactions.id, transactionId));
+        // executeSolution THREW. Steps may well have run before it did, and
+        // we have no result map to tell which - so the honest answer is
+        // `stepsUnknown`, which marks every declared step `unresolved`.
+        // Passing an empty ranStepSlugs would mark them all `skipped`, and
+        // `skipped` is a positive claim that a step never executed.
+        await settleExecutionReceipt(db, {
+          transactionId, rail: "v1_do", solutionSlug: slug, stepsUnknown: true,
+        });
       } catch (e) {
         c.get("log").error(
           { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
@@ -377,6 +392,11 @@ solutionExecuteRoute.post(
             complianceHashState: "pending",
           })
           .where(eq(transactions.id, transactionId));
+        // A solution with no declared steps has no recipe to bind. settle
+        // records `unresolvable_manifest` rather than hashing an empty list.
+        await settleExecutionReceipt(db, {
+          transactionId, rail: "v1_do", solutionSlug: slug, ranStepSlugs: [],
+        });
       } catch (e) {
         c.get("log").error(
           { label: "solutions-tx-update-failed", transaction_id: transactionId, solution_slug: slug, err: e instanceof Error ? { message: e.message } : e },
@@ -567,6 +587,16 @@ solutionExecuteRoute.post(
       },
       "solutions-execute-done",
     );
+
+    // The two-phase write has committed. execResult.steps is keyed by the
+    // capability slug of every step that produced output, which is exactly the
+    // fact settle cannot recover for itself.
+    await settleExecutionReceipt(db, {
+      transactionId,
+      rail: "v1_do",
+      solutionSlug: sol.slug,
+      ranStepSlugs: stepsThatRan(execResult.steps ?? {}),
+    });
 
     // ── 8. Build response ─────────────────────────────────────────────
     // result.status uses the richer vocabulary for the caller:

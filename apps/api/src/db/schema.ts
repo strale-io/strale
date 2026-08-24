@@ -390,9 +390,26 @@ export const transactions = pgTable(
     // enforced by a CHECK in migration 0107 — a post-epoch row cannot
     // masquerade as legacy by leaving the column null.
     /** 'complete' | 'pending' | 'failed'; NULL only for pre-epoch rows. */
-    receiptStatus: varchar("receipt_status", { length: 16 }),
+    /**
+     * Defaulted here as well as in block 0109, so `drizzle-kit push` stops
+     * dropping it.
+     *
+     * This comment previously claimed that also protected the epoch instant.
+     * It does not, and a reviewer measured it: push additionally drops
+     * `transactions_post_epoch_has_receipt`, `transactions_receipt_reason_required`
+     * and the manifest-digest FK, and the next boot mints a FRESH epoch
+     * (observed moving by 13 minutes across one push). Nothing in production
+     * runs push -- `drizzle.config.ts` refuses without DATABASE_URL_TEST, the
+     * Dockerfile runs startup migrations only, and CI's order re-adds
+     * everything -- so this is a limit worth stating rather than a live risk.
+     * The migration remains the authority.
+     */
+    receiptStatus: varchar("receipt_status", { length: 16 }).default("pending"),
     /** Closed reason code, set when status is 'pending' or 'failed'. */
-    receiptFailureReason: varchar("receipt_failure_reason", { length: 40 }),
+    /** Defaulted for the same reason as receiptStatus, and it is not optional:
+     *  transactions_receipt_reason_required means a `pending` row must say why,
+     *  so a status default without this one makes every INSERT fail. */
+    receiptFailureReason: varchar("receipt_failure_reason", { length: 40 }).default("not_yet_built"),
     /** 'strale.execution.v1' */
     receiptVersion: varchar("receipt_version", { length: 32 }),
     /** 'RFC8785' — named so a verifier need not infer it. */
@@ -405,6 +422,22 @@ export const transactions = pgTable(
     receiptManifestDigest: varchar("receipt_manifest_digest", { length: 71 }),
     /** Retry bookkeeping for the pending -> complete path. */
     receiptAttempts: integer("receipt_attempts").notNull().default(0),
+
+    /**
+     * The surface that created this transaction, captured at INSERT.
+     *
+     * Not recoverable afterwards, and not guessable: see block 0110. The
+     * sweeper needs it to rebuild a receipt the request path could not finish,
+     * and a guessed rail inside a commitment is worse than an admitted gap.
+     */
+    receiptRail: text("receipt_rail"),
+    /**
+     * The commit that was serving when this transaction was created.
+     *
+     * Captured at INSERT so a receipt built later - by a retry, or after a
+     * deploy - binds the code that actually ran rather than the code asking.
+     */
+    receiptDeployCommit: text("receipt_deploy_commit"),
     /**
      * Which integrity-chain payload rule hashed this row.
      * NULL = v1 (pre-epoch, by definition). 2 = v2, which anchors

@@ -10,6 +10,8 @@
  */
 
 import { Hono } from "hono";
+import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
+import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 import { cors } from "hono/cors";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
@@ -43,7 +45,7 @@ import { encodePaymentRequiredHeader } from "@x402/core/http";
 import { extractClientMeta, recordDiscoveryHit, hashX402Payer } from "../lib/attribution.js";
 import { rateLimitByIp } from "../lib/rate-limit.js";
 import { sanitizeFailureReason } from "../lib/sanitize.js";
-import { executeSolution } from "../lib/solution-executor.js";
+import { executeSolution, stepsThatRan } from "../lib/solution-executor.js";
 import * as settlementIntent from "../lib/x402-settlement-intent.js";
 import { isX402RailEligible } from "../lib/x402-eligibility.js";
 import {
@@ -803,6 +805,11 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
       };
   try {
     const [row] = await db.insert(transactions).values({
+                                                 // Captured at INSERT because neither is recoverable later:
+                                                 // the rail is not a property of the row, and the deploy commit
+                                                 // drifts the moment anything redeploys (block 0110).
+                                                 receiptRail: "x402",
+                                                 receiptDeployCommit: deployCommitOrNull(),
       userId: null,
       capabilityId: args.capabilityId,
       solutionSlug: args.solutionSlug,
@@ -873,6 +880,20 @@ async function recordX402Transaction(args: RecordX402Args): Promise<string | nul
         });
       }
     }
+    // The row is inserted already terminal on this rail, so there is no
+    // separate settlement write to wait for. For a solution, the step outputs
+    // travel inside `args.output` as `{ steps, errors }` - the same shape
+    // solution-execute.ts stores - so the step slugs are recoverable here.
+    if (insertedId) {
+      const stepMap = (args.output as { steps?: Record<string, unknown> } | null)?.steps;
+      await settleExecutionReceipt(db, {
+        transactionId: insertedId,
+        rail: "x402",
+        solutionSlug: args.solutionSlug,
+        ranStepSlugs: args.solutionSlug && stepMap ? stepsThatRan(stepMap) : [],
+      });
+    }
+
     return insertedId;
   } catch (err) {
     logError("x402-transaction-recording-failed", err);

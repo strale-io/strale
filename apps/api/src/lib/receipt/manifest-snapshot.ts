@@ -78,6 +78,44 @@ export interface CapabilityDeclarationSource {
   processesPersonalData: boolean;
   personalDataCategories: string[] | null;
   gdprArt22Classification: string | null;
+  /**
+   * The freshness pair. Phase 4 excluded these as "metadata"; that was wrong,
+   * and the correction is derived from execution semantics rather than
+   * convenience.
+   *
+   * They are the inputs to the trust grade (`lib/trust-grade.ts`), and
+   * `POST /v1/do` REFUSES a reference-data request outright when
+   * `require_fresh` is set and the computed grade is C (`routes/do.ts`). So
+   * these two columns decide whether a request is served or rejected. Two
+   * executions of the same slug, one served and one refused, would otherwise
+   * carry byte-identical implementation identity — which is exactly the
+   * under-specification a receipt exists to prevent.
+   */
+  dataUpdateCycleDays: number | null;
+  datasetLastUpdated: Date | null;
+  /**
+   * Not a display label, despite the name.
+   *
+   * `routes/do.ts` writes `data_source: capability.dataSource ?? capability.name`
+   * into the audit body at three sites, and `x402-gateway-v2.ts` does the same
+   * with the slug. So for any capability with a null `data_source` — and there
+   * are such rows — `name` IS the recorded provenance source. Renaming one
+   * changes what the audit trail says produced the answer, which makes it
+   * execution-relevant by the same test as the pair above.
+   */
+  name: string | null;
+  /**
+   * Written into the audit body as `data_classification` at three sites in
+   * `routes/do.ts`. Same test as `name`: it changes what we recorded about the
+   * execution, so it is bound.
+   */
+  dataClassification: string | null;
+  /**
+   * The HTTP method the x402 rail exposes, and part of the challenge and
+   * schema it publishes (`x402-gateway-v2.ts`). It shapes how the request is
+   * made, so two capabilities differing only here are not interchangeable.
+   */
+  x402Method: string | null;
 }
 
 /**
@@ -131,8 +169,117 @@ export function normalizeCapabilityDeclaration(
     processes_personal_data: source.processesPersonalData,
     personal_data_categories: [...(source.personalDataCategories ?? [])].sort(),
     gdpr_art_22_classification: source.gdprArt22Classification ?? null,
+    name: source.name ?? null,
+    data_classification: source.dataClassification ?? null,
+    x402_method: source.x402Method ?? null,
+    data_update_cycle_days: source.dataUpdateCycleDays ?? null,
+    // A Date is not canonicalizable and two Dates one millisecond apart are a
+    // different declaration, so this is pinned to its UTC ISO form here rather
+    // than left to whatever the caller happens to pass.
+    dataset_last_updated: source.datasetLastUpdated
+      ? source.datasetLastUpdated.toISOString()
+      : null,
   };
 }
+
+/**
+ * Every column of `capabilities`, classified: does it enter the declaration
+ * digest, or not, and why not?
+ *
+ * This exists because `CapabilityDeclarationSource` is hand-maintained. Listing
+ * the fields explicitly stops a NEW column from silently changing every future
+ * digest — but it has the mirror-image failure, which is what this map closes:
+ * a new execution-relevant column silently NEVER entering the digest, so two
+ * materially different implementations share one identity. Nothing would fail;
+ * the receipts would just quietly mean less.
+ *
+ * The parity test in `manifest-declaration-parity.test.ts` fails when a column
+ * appears in the schema and not here, so the choice has to be made by a person
+ * once, in the open, rather than defaulted to "excluded" by inaction.
+ */
+export const CAPABILITY_COLUMN_DISPOSITION: Record<string, "declaration" | string> = {
+  // ---------------------------------------------------------------- included
+  slug: "declaration",
+  name: "declaration",
+  input_schema: "declaration",
+  output_schema: "declaration",
+  transparency_tag: "declaration",
+  data_source: "declaration",
+  capability_type: "declaration",
+  freshness_category: "declaration",
+  output_field_reliability: "declaration",
+  processes_personal_data: "declaration",
+  personal_data_categories: "declaration",
+  gdpr_art_22_classification: "declaration",
+  data_update_cycle_days: "declaration",
+  dataset_last_updated: "declaration",
+  data_classification: "declaration",
+  x402_method: "declaration",
+
+  // ---------------------------------------------------------------- excluded
+  //
+  // Three tests separate these from the list above, and only the first two
+  // admit a column:
+  //   1. does it change what the execution COMPUTED?
+  //   2. does it change what we RECORDED about the execution?
+  //   3. does it merely decide whether the execution was allowed to happen?
+  // (3) is admission control. It is excluded on purpose: a refusal is not an
+  // execution, and when a request IS served the column had no bearing on the
+  // answer. The rail — which is what admission is usually keyed on — is
+  // already a fixed-point member of the receipt.
+
+  id: "surrogate key; slug is the identity a reader can act on",
+  created_at: "row bookkeeping",
+  updated_at: "row bookkeeping, and it churns on every metadata write",
+  description: "prose for humans and SEO; never read on the execution path",
+  category: "catalog taxonomy; routing reads the slug",
+  search_tags: "discovery only",
+  visible: "catalog display",
+  geography: "where the data is ABOUT, a property of the dataset. Deliberately NOT the processing jurisdiction -- F-AUDIT-01 removed it from that use (see x402-gateway-v2.ts) -- and the jurisdiction actually applied is recorded per-execution on the transaction row",
+
+  price_cents: "commercial term; the transaction row records what was charged",
+  is_free_tier: "commercial term; likewise recorded per-execution",
+
+  is_active: "admission control (3)",
+  lifecycle_state: "admission control (3)",
+  x402_enabled: "admission control (3), and the rail is already bound",
+  cost_class: "admission control (3): ALLOW_MATRIX in guarded-executor.ts refuses invocation from some context kinds. It gates whether a call is permitted, and changes nothing about the answer when it is",
+  quota_window: "admission control (3), vendor budget",
+  quota_cap: "admission control (3), vendor budget",
+  quota_reset_dom: "admission control (3), vendor budget",
+  marketplace_eligible: "admission control (3), listing",
+  marketplace_eligible_reason: "operator note attached to the line above",
+  maintenance_class: "operational scheduling; read by the test generators, not by execution",
+
+  avg_latency_ms: "observed statistic, not a declaration. It does select sync vs async routing, but the receipt records the execution mode it actually took, so the fact is bound directly rather than by proxy",
+  success_rate: "observed statistic",
+  last_tested_at: "observed statistic",
+  degraded_recovery_count: "observed statistic",
+  deactivation_reason: "operator note",
+  onboarding_hook_failures: "operational counter",
+  onboarding_manifest: "the AUTHORING artifact. The columns in force are what execution reads, and binding both would let a receipt claim a declaration that never took effect",
+
+  error_codes_json:
+    "documentation of the errors a capability MAY return. The error actually returned is bound by the receipt's own result",
+  freshness_level:
+    "derived label. The trust grade is computed from freshness_category plus the data_update_cycle_days / dataset_last_updated pair, all three of which are bound",
+  freshness_decayed_at: "derived timestamp of the same computation",
+
+  fallback_capability_slug: "trust-DISPLAY data for the capability detail page, not routing: no execution-path file reads it. If it ever becomes routing, it moves to declaration -- and this guard is what will force that decision",
+  fallback_coverage: "trust-display data, as above",
+  fallback_verification_level: "trust-display data, as above",
+
+  // Residue of the SQS engine deleted under DEC-20260503-B (2026-05-05). PR2
+  // drops the columns; nothing reads them now.
+  qp_score: "dead SQS column",
+  rp_score: "dead SQS column",
+  matrix_sqs: "dead SQS column",
+  matrix_sqs_raw: "dead SQS column",
+  trend: "dead SQS column",
+  guidance_usable: "dead SQS column",
+  guidance_strategy: "dead SQS column",
+  guidance_confidence: "dead SQS column",
+};
 
 /**
  * The normalized solution declaration.

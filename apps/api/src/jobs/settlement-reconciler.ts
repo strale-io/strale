@@ -27,6 +27,8 @@
  */
 
 import { eq, sql } from "drizzle-orm";
+import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
+import { settleExecutionReceipt } from "../lib/receipt/settle.js";
 
 import { getDb } from "../db/index.js";
 import { transactions } from "../db/schema.js";
@@ -149,6 +151,11 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
         const [recreated] = await db
           .insert(transactions)
           .values({
+            // Captured at INSERT because neither is recoverable later:
+            // the rail is not a property of the row, and the deploy commit
+            // drifts the moment anything redeploys (block 0110).
+            receiptRail: "x402",
+            receiptDeployCommit: deployCommitOrNull(),
             userId: null,
             capabilityId: cap?.id ?? null,
             solutionSlug: intent.solutionSlug,
@@ -183,6 +190,17 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
         await markRecordedBySettlement(db, {
           settlementId: intent.settlementId,
           transactionId: recreated.id,
+        });
+        // The recovered row is a real, paid execution that we cannot describe:
+        // the output was lost with the process. It still gets a receipt, and
+        // the receipt says exactly that - `stepsUnknown` marks every declared
+        // step `unresolved` rather than `skipped`, because `skipped` would be
+        // a positive claim that the step never ran, and it very probably did.
+        await settleExecutionReceipt(db, {
+          transactionId: recreated.id,
+          rail: "x402",
+          solutionSlug: intent.solutionSlug,
+          stepsUnknown: Boolean(intent.solutionSlug),
         });
         // The orphan table is the OTHER channel for this same event, and it
         // says "awaiting reconciliation" with a procedure ("recreate the row

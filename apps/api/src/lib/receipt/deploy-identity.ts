@@ -96,3 +96,21 @@ export function assertDeployIdentity(env = process.env): {
   const deployCommit = resolveDeployCommit(env); // throws in production if absent
   return { deployCommit, enforced };
 }
+
+/**
+ * The serving commit, or null, for a value written on the request path.
+ *
+ * `resolveDeployCommit` throws in production when the identity is missing -
+ * correct for the boot gate, wrong for an INSERT that is part of a customer
+ * request. The gate has already run by the time any request is served, so this
+ * cannot legitimately return null in production; it exists so that a
+ * hypothetical failure degrades to a receipt the sweeper marks
+ * `missing_deploy_identity` rather than to a 500 on a paid call.
+ */
+export function deployCommitOrNull(env = process.env): string | null {
+  try {
+    return resolveDeployCommit(env);
+  } catch {
+    return null;
+  }
+}

@@ -1,4 +1,6 @@
 import { eq, and, not, sql, desc, inArray } from "drizzle-orm";
+import { deployCommitOrNull } from "./receipt/deploy-identity.js";
+import { settleExecutionReceipt } from "./receipt/settle.js";
 import { getDb } from "../db/index.js";
 import {
   testSuites,
@@ -1864,7 +1866,12 @@ async function recordTestQuality(
   const db = getDb();
 
   const [cap] = await db
-    .select({ outputSchema: capabilities.outputSchema, id: capabilities.id })
+    .select({
+      outputSchema: capabilities.outputSchema,
+      id: capabilities.id,
+      // Needed for the Art. 50 marker below, which used to be a constant.
+      transparencyTag: capabilities.transparencyTag,
+    })
     .from(capabilities)
     .where(eq(capabilities.slug, capabilitySlug))
     .limit(1);
@@ -1874,18 +1881,44 @@ async function recordTestQuality(
   const [txn] = await db
     .insert(transactions)
     .values({
+      // Captured at INSERT because neither is recoverable later:
+      // the rail is not a property of the row, and the deploy commit
+      // drifts the moment anything redeploys (block 0110).
+      receiptRail: "internal",
+      receiptDeployCommit: deployCommitOrNull(),
       userId: await getSystemUserId(),
       capabilityId: cap.id,
       status: executionError ? "failed" : "completed",
       input: {},
       priceCents: 0,
-      transparencyMarker: "algorithmic",
+      // The capability's own declaration, not a constant.
+      //
+      // This hardcoded 'algorithmic' for every harness row - 99.3% of platform
+      // traffic - including capabilities that declare ai_generated or mixed.
+      // transparency_marker is the EU AI Act Art. 50 marker, so that was a
+      // fabricated disclosure independently of receipts; it also fed a
+      // receipt asserting no model was involved. Reviewer-found.
+      transparencyMarker:
+        cap.transparencyTag === "algorithmic"
+          ? "algorithmic"
+          : cap.transparencyTag === "mixed"
+            ? "hybrid"
+            : "ai_generated",
       dataJurisdiction: "EU",
       error: executionError,
       latencyMs: responseTimeMs,
       completedAt: new Date(),
     })
     .returning({ id: transactions.id });
+
+  // The internal harness is roughly 98% of all platform traffic, so leaving it
+  // unwired would have meant the overwhelming majority of post-epoch rows
+  // sitting `pending` forever and the chain backlog growing without bound. It
+  // is a real execution of a real capability; it gets a real receipt, on its
+  // own rail so it can be told apart from customer traffic.
+  if (txn?.id) {
+    await settleExecutionReceipt(db, { transactionId: txn.id, rail: "internal" });
+  }
 
   const outputSchema = (cap.outputSchema ?? {}) as Record<string, unknown>;
   const properties =

@@ -60,6 +60,11 @@ const BASE_DECL: CapabilityDeclarationSource = {
   processesPersonalData: false,
   personalDataCategories: [],
   gdprArt22Classification: "data_lookup",
+  name: "VAT Validate",
+  dataClassification: "public",
+  x402Method: "POST",
+  dataUpdateCycleDays: null,
+  datasetLastUpdated: null,
 };
 
 function baseReceipt(overrides: Partial<ReceiptInput> = {}): ReceiptInput {
@@ -129,6 +134,28 @@ describeMaybe("execution receipts against a real database", () => {
     return id;
   }
 
+  /**
+   * A row as it existed before the epoch: no receipt state at all.
+   *
+   * Since block 0109 an ordinary insert is `pending` from birth, and the
+   * post-epoch CHECK forbids a NULL status on a present-day row - so the
+   * legacy shape has to be constructed with a pre-epoch `created_at`. That is
+   * the epoch being structural rather than conventional, and it is worth
+   * having to say out loud in a test.
+   */
+  async function legacyTransaction(): Promise<string> {
+    const id = randomUUID();
+    txns.add(id);
+    await db.execute(sql`
+      INSERT INTO transactions (id, user_id, status, price_cents, transparency_marker,
+                                data_jurisdiction, input, created_at,
+                                receipt_status, receipt_failure_reason)
+      VALUES (${id}::uuid, ${userId}::uuid, 'completed', 5, 'algorithmic', 'EU',
+              '{}'::jsonb, now() - interval '400 days', NULL, NULL)
+    `);
+    return id;
+  }
+
   async function store(decl: Record<string, unknown>): Promise<string> {
     const d = await recordManifestSnapshot(db, decl);
     snapshots.add(d);
@@ -187,7 +214,16 @@ describeMaybe("execution receipts against a real database", () => {
       priceCents: 999,
       avgLatencyMs: 12345,
       description: "a completely rewritten description",
-      name: "Renamed Capability",
+      // `name` USED to be in this list, and Phase 5 moved it into the
+      // declaration. Not for tidiness: routes/do.ts writes
+      // `data_source: capability.dataSource ?? capability.name` into the audit
+      // body at three sites, so for a capability with a null data_source the
+      // name IS the recorded provenance source. Renaming one changes what the
+      // audit trail says produced the answer, which is the same test that
+      // admits every other member here.
+      //
+      // manifest-declaration-parity.test.ts proves the new direction: it
+      // asserts `name` MOVES the digest.
     } as unknown as CapabilityDeclarationSource;
     expect(declarationDigest(normalizeCapabilityDeclaration(withNoise))).toBe(base);
   });
@@ -482,7 +518,13 @@ describeMaybe("execution receipts against a real database", () => {
     // battery caught it. This one sets a real complete receipt FIRST, so the
     // clearing has something to clear.
     const id = await newTransaction();
-    const built = buildExecutionReceipt(baseReceipt({ transactionId: id }), {
+    // A REAL snapshot digest: transactions.receipt_manifest_digest is a
+    // foreign key as of block 0109, so the fixture's `sha256:aaa...` is
+    // refused. That refusal is the constraint working - a receipt whose
+    // manifest digest names nothing is unverifiable - so the test records the
+    // declaration it claims to have used instead of loosening the FK.
+    const manifestDigest = await store(normalizeCapabilityDeclaration(BASE_DECL));
+    const built = buildExecutionReceipt(baseReceipt({ transactionId: id, manifestDigest }), {
       NODE_ENV: "test",
     } as NodeJS.ProcessEnv);
     if (built.outcome !== "complete") throw new Error("fixture must build");
@@ -521,10 +563,18 @@ describeMaybe("execution receipts against a real database", () => {
   });
 
   it("the database refuses a pending/failed row with no reason", async () => {
+    // The reason has to be cleared explicitly to test this now. Since block
+    // 0109, `receipt_failure_reason` DEFAULTS to 'not_yet_built' alongside the
+    // pending status - and it has to, because otherwise every INSERT into
+    // transactions would violate this very constraint. Leaving the test as
+    // "set status and expect a violation" would have passed for the wrong
+    // reason and stopped guarding anything.
     const id = await newTransaction();
     await expect(
       db.execute(sql`
-        UPDATE transactions SET receipt_status = 'failed' WHERE id = ${id}::uuid
+        UPDATE transactions
+           SET receipt_status = 'failed', receipt_failure_reason = NULL
+         WHERE id = ${id}::uuid
       `),
     ).rejects.toThrow(/transactions_receipt_reason_required/);
   });
@@ -586,7 +636,13 @@ describeMaybe("execution receipts against a real database", () => {
 
   it("a complete receipt records everything needed to recompute it", async () => {
     const id = await newTransaction();
-    const built = buildExecutionReceipt(baseReceipt({ transactionId: id }), {
+    // A REAL snapshot digest: transactions.receipt_manifest_digest is a
+    // foreign key as of block 0109, so the fixture's `sha256:aaa...` is
+    // refused. That refusal is the constraint working - a receipt whose
+    // manifest digest names nothing is unverifiable - so the test records the
+    // declaration it claims to have used instead of loosening the FK.
+    const manifestDigest = await store(normalizeCapabilityDeclaration(BASE_DECL));
+    const built = buildExecutionReceipt(baseReceipt({ transactionId: id, manifestDigest }), {
       NODE_ENV: "test",
     } as NodeJS.ProcessEnv);
     expect(built.outcome).toBe("complete");
@@ -616,7 +672,7 @@ describeMaybe("execution receipts against a real database", () => {
   // ── F. Epoch ─────────────────────────────────────────────────────────────
 
   it("a pre-epoch row reads as legacy_unavailable, and post-epoch cannot masquerade as it", async () => {
-    const legacy = await newTransaction(); // no receipt columns written
+    const legacy = await legacyTransaction(); // pre-epoch: no receipt state
     const rows = await db.execute(sql`
       SELECT receipt_status, receipt_failure_reason, receipt_digest, integrity_payload_version
         FROM transactions WHERE id = ${legacy}::uuid
@@ -631,6 +687,19 @@ describeMaybe("execution receipts against a real database", () => {
       receiptDigest: row.receipt_digest as string | null,
     });
     expect(described.status).toBe("legacy_unavailable");
+
+    // The other half, and it is new: a row created TODAY cannot be given the
+    // legacy shape at all. Before block 0109 this was a property of the wiring
+    // (nothing wrote receipt state); now it is a property of the database.
+    await expect(
+      db.execute(sql`
+        INSERT INTO transactions (user_id, status, price_cents, transparency_marker,
+                                  data_jurisdiction, input, receipt_status,
+                                  receipt_failure_reason)
+        VALUES (${userId}::uuid, 'completed', 5, 'algorithmic', 'EU', '{}'::jsonb,
+                NULL, NULL)
+      `),
+    ).rejects.toThrow(/transactions_post_epoch_has_receipt/);
 
     // A v2 row cannot leave receipt_status null and read as legacy.
     await expect(

@@ -36,6 +36,57 @@ async function main() {
   const { assertAlertingConfigured } = await import("./lib/alerting.js");
   assertAlertingConfigured();
 
+  // Execution receipts (Phase 5): the process must be able to name the commit
+  // it is serving BEFORE it serves anything.
+  //
+  // Every receipt records which code produced the result. A process that
+  // cannot identify its own build would emit commitments nobody can later
+  // interpret, and it would do so silently -- so this refuses to boot instead.
+  //
+  // Placed here, before any database work, because it is a synchronous
+  // environment read: a deployment that cannot satisfy it should fail in a
+  // second, not after migrations.
+  //
+  // Verified against the platform before wiring (PHASE-5-DEPLOY-IDENTITY-
+  // EVIDENCE.md): 994 of the last 1000 deployments carry a full 40-hex
+  // commitHash, and the redeploy path -- which is also how Railway expresses
+  // rollback -- is 25 for 25. The six that carry nothing are repo=null CLI
+  // upload deploys from 2026-04-05/06, four of which served production. That
+  // path is real, so the guidance below names it.
+  //
+  // Refusing is safe: the service healthchecks /health/deep, and a failed
+  // healthcheck does not cut over -- the previous deployment keeps serving.
+  const { assertDeployIdentity } = await import("./lib/receipt/deploy-identity.js");
+  try {
+    const identity = assertDeployIdentity();
+    // The structured logger, not console: `lint:no-new-console` is a ratchet on
+    // this file and it is right to be. The eight console.log lines already here
+    // predate it.
+    const { log } = await import("./lib/log.js");
+    log.info(
+      {
+        label: "startup-deploy-identity",
+        deploy_commit: identity.deployCommit,
+        enforced: identity.enforced,
+      },
+      "startup-deploy-identity",
+    );
+  } catch (err) {
+    const { StartupFatalError } = await import("./lib/startup-fatal.js");
+    throw new StartupFatalError(
+      (err as Error).message,
+      "This deployment has no git commit identity, so it cannot produce " +
+        "execution receipts and refused to start. Railway sets " +
+        "RAILWAY_GIT_COMMIT_SHA only for deploys originating from a GitHub " +
+        "commit -- a CLI upload deploy (railway up) has none, and this " +
+        "project used that path on 2026-04-05/06. " +
+        "Production is NOT down: this deploy failed its healthcheck and " +
+        "Railway kept the previous deployment serving. " +
+        "Fix: deploy from git instead -- push to main, or Railway dashboard " +
+        "-> Deployments -> Redeploy on any git-sourced deployment.",
+    );
+  }
+
   // Validate required provider env vars
   const { getActiveProviders } = await import("./lib/dependency-manifest.js");
   const missingVars: string[] = [];
@@ -100,12 +151,20 @@ async function main() {
   // main().catch, and real migration failures still abort immediately.
   //
   // PLATFORM CONSTRAINT: this retry loop runs BEFORE the server listens.
-  // The Railway service currently has healthcheckPath: null (verified
-  // 2026-07-02), so nothing kills a slow boot. If a deploy healthcheck is
-  // ever configured on /health, its timeout MUST exceed
-  // STARTUP_DB_RETRY_BUDGET_MS (Railway's default healthcheck timeout is
-  // 300s < our 600s budget) or deploys during DB degradation get killed
-  // mid-retry and the budget silently never applies.
+  //
+  // This comment used to say healthcheckPath was null, "verified 2026-07-02",
+  // and warned about what would happen if one were ever configured. One HAS
+  // been configured since, so that warning is now a live condition rather
+  // than a hypothetical: the build log of the current deployment reads
+  // "Path: /health/deep, Retry window: 20s", and 20s is far below this
+  // budget's 600s default (STARTUP_DB_RETRY_BUDGET_MS).
+  //
+  // Consequence, stated plainly: during database degradation the deploy is
+  // killed at 20s and this budget never applies. The fix is the Railway
+  // healthcheck window, not this code, so nothing is changed here beyond
+  // correcting a comment that had gone false. Confirmed 2026-08-23, when a
+  // good build failed with "1/1 replicas never became healthy" and a
+  // redeploy of the identical commit went green.
   const { withStartupDbRetry } = await import("./lib/startup-db-retry.js");
   const { runStartupMigrations } = await import("./lib/startup-migrations.js");
   const dbRetryStartedAt = Date.now();
