@@ -39,16 +39,21 @@ const EXEMPT: Record<string, string> = {
     "make every row fail verification. The single most important exemption in " +
     "this map, and the reason the rule is 'redact what you SERVE', not 'redact " +
     "every read'.",
+  "routes/admin.ts":
+    "reaches into audit_trail->'request_context' subfields inside SQL text " +
+    "(userAgent, mcpClient, referer, ipHash) for an internal traffic view. The " +
+    "body is never selected or served, and the error message is never read.",
+  "lib/account-closure.ts":
+    "names transactions.audit_trail as a retention-rule key and enumerates its " +
+    "keys in SQL to report what erasure cleared. Nothing is served.",
+  "lib/startup-migrations.ts":
+    "a trigger body that NULLs audit_trail on redaction. A write, not a read.",
   "lib/integrity-hash.ts":
     "BUILDS the chain payload. The stored audit body is hashed material, not " +
     "served output -- same reason as verify.ts.",
   "jobs/integrity-hash-retry.ts":
     "the chain worker; hashes the stored body. Redacting would make the hash " +
     "disagree with every verifier.",
-  "routes/auth.ts":
-    "uses transactions.auditTrail inside a SQL predicate " +
-    "(->'request_context'->>'ipHash') to count free-tier usage by IP. Nothing is " +
-    "served.",
 };
 
 function walk(dir: string, acc: string[] = []): string[] {
@@ -64,16 +69,49 @@ function walk(dir: string, acc: string[] = []): string[] {
 
 const isTest = (p: string) => /\.(test|spec)\.ts$/.test(p) || p.includes("test-support");
 
-/** Reads a stored audit body: `.auditTrail` off a row, or `audit_trail` off one. */
-const READS_STORED_AUDIT = /\.auditTrail\b|\baudit_trail:\s*row\./;
+/**
+ * A stored audit body being read off a row: `row.auditTrail`, `prior.auditTrail`,
+ * or served as `audit_trail: row.audit_trail`. Broad on purpose: a narrower
+ * pattern missed the very file the fix started in. Files that only touch the
+ * column inside SQL text are handled by the exemption map, which forces the
+ * reason to be written down.
+ *
+ * `transactions.auditTrail` is excluded because that is the drizzle COLUMN
+ * reference in a select, not a value. Bare `t.audit_trail->'...'` inside SQL
+ * text is not matched either: admin.ts, account-closure.ts and the startup
+ * migrations reach into request_context subfields that way and never serve
+ * the body.
+ */
+const STORED_AUDIT_READ = /\b(\w+)\.(?:auditTrail|audit_trail)\b/g;
+const DRIZZLE_TABLE = "transactions";
 
+/**
+ * OCCURRENCE-granular, not file-granular.
+ *
+ * The first version asked whether the file contained `redactAuditTrail`
+ * anywhere. The mutation battery walked straight through it: removing the call
+ * at a replay site left the import behind, so the file still "contained" the
+ * word and the lint stayed green. A guard that a one-line revert defeats is
+ * not a guard.
+ *
+ * Every read is now checked individually — it must be the argument of a
+ * `redactAuditTrail(` call.
+ */
 export function classify(
   rel: string,
   source: string,
 ): "not-a-reader" | "exempt" | "offender" | "redacts" {
-  if (!READS_STORED_AUDIT.test(source)) return "not-a-reader";
+  const reads = [...source.matchAll(STORED_AUDIT_READ)].filter(
+    (m) => (m[1] ?? m[2]) !== DRIZZLE_TABLE,
+  );
+  if (reads.length === 0) return "not-a-reader";
   if (EXEMPT[rel]) return "exempt";
-  return source.includes("redactAuditTrail") ? "redacts" : "offender";
+
+  for (const m of reads) {
+    const before = source.slice(Math.max(0, m.index! - 20), m.index!);
+    if (!before.endsWith("redactAuditTrail(")) return "offender";
+  }
+  return "redacts";
 }
 
 describe("stored audit bodies are redacted wherever they are served", () => {
