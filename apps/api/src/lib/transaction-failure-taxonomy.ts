@@ -30,13 +30,64 @@ export type TransactionFailureClass =
   | "config"         // missing key/credential/env on our side
   | "timeout"        // execution or upstream deadline exceeded
   | "upstream"       // vendor/upstream failure: 5xx, quota, unavailability
-  | "internal";      // everything else — OUR bug until proven otherwise
+  | "internal"       // POSITIVELY identified as our own defect
+  | "unclassified";  // no rule claimed it — an evidence shortfall, not a verdict
 
 /** Classes that must NOT count against a capability's completion rate. */
 export const CALLER_ATTRIBUTABLE: ReadonlySet<TransactionFailureClass> = new Set([
   "caller_input",
   "tos_policy",
 ]);
+
+/**
+ * The default is "unclassified", not "ours" — LESSONS.md F1 step 4.
+ *
+ * Six times between 2026-08-12 and 2026-08-22 this module's fallback scored a
+ * failure as a capability defect on evidence that never said so: a correct
+ * refusal, an environment, the caller's own input, our own harness's
+ * bookkeeping. Each incident was repaired by adding one more string to the
+ * caller-attributable list. The family reached seven incidents anyway, because
+ * every repair widened *coverage* while the *default direction* stayed "ours" —
+ * so each newly observed error string starts life misclassified and stays that
+ * way until it costs something visible.
+ *
+ * Measured before changing it (`scripts/f1-failure-attribution.ts`, 90-day
+ * window, 541 distinct strings over 280,945 calls): 47,582 calls landed in
+ * `internal`, and rules that claim a string only on positive evidence it is NOT
+ * a statement about our code account for **82.0% of them — a lower bound on
+ * misattribution, not an estimate**. 29.2% is a bare `fetch failed` transport
+ * error; 32.4% is caller input; 15.4% is a named third party; 5.1% is our own
+ * guards refusing correctly.
+ *
+ * So `internal` is now reachable only through `INTERNAL_RE`, which matches our
+ * own diagnostic signatures. Everything unclaimed becomes `unclassified`, which
+ * behaves like the caller-attributable classes for scoring — it leaves the
+ * denominator — but is deliberately a *different* class, because the two say
+ * opposite things to an operator: "this was not the capability's fault" versus
+ * "nothing here tells me whose fault this was". Consumers must surface the
+ * second as a shortfall rather than silently discarding it; dropping it without
+ * a trace would replace a false accusation with a blind spot.
+ *
+ * What this does NOT change: billing. Both branches of
+ * `classifyExecutionOutcome` that a reclassified string can reach already set
+ * `billable: false`, so no customer is charged differently. Verified as F1
+ * step 3's falsification attempt before the change was written.
+ */
+export const UNATTRIBUTED: ReadonlySet<TransactionFailureClass> = new Set<
+  TransactionFailureClass
+>(["unclassified"]);
+
+/**
+ * The single authority on "does this failure count against the capability".
+ *
+ * Exists so the quality floor, the fact writer and any future consumer cannot
+ * answer it differently. Before this, each site spelled out
+ * `!CALLER_ATTRIBUTABLE.has(...)`, which silently acquires the wrong answer the
+ * moment a new non-attributing class is added — exactly what `unclassified` is.
+ */
+export function countsAgainstCapability(cls: TransactionFailureClass): boolean {
+  return !CALLER_ATTRIBUTABLE.has(cls) && !UNATTRIBUTED.has(cls);
+}
 
 // ENV-var-shaped names (OPENREGISTER_API_KEY, COURTLISTENER_API_TOKEN,
 // BROWSERLESS_URL…) — tight on purpose: env-key errors also contain the
@@ -82,7 +133,43 @@ const CONFIG_PHRASE_RE = /not configured|rejected the (?:api )?(?:key|token)|mis
  * report — and encoding one specific bug's string into a money-path classifier
  * to fix a label is a worse trade than fixing the bug. Tracked separately.
  */
-const INTERNAL_RE = /\bin JSON at position\b|\bunterminated string\b|response parse failed|failed to parse\b/i;
+/**
+ * Our own code breaking, positively identified.
+ *
+ * Two groups. The first is the original: parse failures on a payload we were
+ * reading, plus `failed to extract` - the house phrasing every capability's
+ * `parseFailureError` uses when an LLM extraction produced nothing usable.
+ * That one is claimed here for the same reason as the rest of its group: the
+ * message frequently carries a `Raw:` payload of third-party text, so it has
+ * to be claimed by our own signature before any pattern reads the vendor's
+ * prose. The second group was added with LESSONS.md F1 step 4, and is the
+ * reason that change is safe to make.
+ *
+ * Once `internal` stops being the fallback, it is reachable ONLY through this
+ * expression - so anything this expression does not recognise stops counting
+ * against the capability. Left as it was, a thrown `TypeError` would have
+ * become `unclassified` and the floor would have lost sight of the single
+ * largest class of genuine defect: our own code crashing. That trades F1's
+ * false accusations for a real blindness, which is not the deal.
+ *
+ * The runtime shapes are V8 error names and V8 message text. A vendor payload
+ * could in principle quote one back at us; if a third party is returning us a
+ * JavaScript stack trace then something is broken on this side of the call
+ * regardless, so the misfiling direction is the conservative one.
+ *
+ * Deliberately NOT included: a bare `internal`, which appears in plenty of
+ * third-party prose - "internal server error" is upstream's, and UPSTREAM_RE
+ * already claims it - and `Error:` alone, which prefixes almost every error
+ * string ever written.
+ *
+ * This vocabulary is now the thing to GROW, and it grows from measurement
+ * rather than from guessing: `scripts/f1-failure-attribution.ts` re-runs the
+ * full 90-day census read-only, so the `unclassified` bucket can be read back
+ * and any recurring shape in it that is genuinely ours added here with its
+ * observed call count attached.
+ */
+const INTERNAL_RE =
+  /\bin JSON at position\b|\bunterminated string\b|response parse failed|failed to parse\b|failed to extract\b|\b(?:TypeError|ReferenceError|RangeError|SyntaxError):|cannot read propert(?:y|ies) of (?:undefined|null)|is not a function\b|is not iterable\b|assertion failed/i;
 
 const TIMEOUT_RE = /timed? ?out|timeout|deadline|aborted due to timeout|operation was aborted/i;
 
@@ -273,7 +360,11 @@ const CALLER_INPUT_RE = new RegExp(
 
 export function classifyTransactionFailure(error: string | null | undefined): TransactionFailureClass {
   const msg = (error ?? "").trim();
-  if (!msg) return "internal";
+  // No error text at all. This used to return `internal` — a failed call with
+  // no message became evidence of our defect purely because nothing else
+  // matched. It is the emptiest possible input and the clearest case for the
+  // shortfall class.
+  if (!msg) return "unclassified";
   if (msg.includes(TOS_REFUSAL_MARKER)) return "tos_policy";
   // Our own harness marker, claimed before every other pattern: the message
   // embeds suite metadata and timestamps that must never be pattern-matched
@@ -287,5 +378,8 @@ export function classifyTransactionFailure(error: string | null | undefined): Tr
   if (TIMEOUT_RE.test(msg)) return "timeout";
   if (UPSTREAM_RE.test(msg)) return "upstream";
   if (CALLER_INPUT_RE.test(msg)) return "caller_input";
-  return "internal";
+  // The default. NOT `internal` — see UNATTRIBUTED above. Reaching this line
+  // means no rule in this module recognised the string, which is a statement
+  // about this module, not about the capability.
+  return "unclassified";
 }

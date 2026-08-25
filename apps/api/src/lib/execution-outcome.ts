@@ -73,7 +73,19 @@ export type FailureClass =
   /** The executor resolved, but with something that is not the purchased answer. */
   | "output_unusable"
   /** Strale's own code broke. */
-  | "internal_error";
+  | "internal_error"
+  /**
+   * Nothing in the evidence says whose fault this was.
+   *
+   * Distinct from every class above, all of which are verdicts. This one is an
+   * admission: the failure taxonomy recognised none of the error text, so the
+   * honest record is "unattributed" rather than a guess. It does not count
+   * against the capability (LESSONS.md F1 step 4) and it is not billable.
+   * Consumers that aggregate failures must show it as a shortfall — a large
+   * unattributed count means the taxonomy needs a rule, and hiding it would
+   * trade a false accusation for a blind spot.
+   */
+  | "unattributed";
 
 /** Who is answerable. Drives the breaker and the quality floor, not billing. */
 export type Fault = "provider" | "strale" | "caller";
@@ -358,6 +370,28 @@ export function outcomeFromError(error: unknown): ExecutionOutcome {
   // below, which is where the taxonomy's config/timeout/upstream/internal all
   // correctly belong for billability purposes.
   const taxonomyClass = classifyTransactionFailure(base.error_message);
+
+  // Unrecognised error text. Before LESSONS.md F1 step 4 the taxonomy's
+  // fallback was `internal`, so this string fell through to the provider branch
+  // below and was written `counts_against_capability: true` — a durable fact
+  // asserting a defect, on the strength of no rule having matched. 82% of that
+  // bucket was measured to be something else.
+  //
+  // `fault: null` is the point: not "provider", not "strale", not "caller".
+  // `billable` is unchanged at false, so this reclassification moves no money.
+  if (taxonomyClass === "unclassified") {
+    return {
+      ...base,
+      failure_class: "unattributed",
+      billable: false,
+      // Nothing here says the failure was transient, and claiming it was would
+      // make the retry decision on the same absent evidence.
+      retryable: false,
+      fault: null,
+      counts_against_capability: false,
+    };
+  }
+
   if (CALLER_ATTRIBUTABLE.has(taxonomyClass)) {
     return {
       ...base,
@@ -552,11 +586,13 @@ export class UnbillableOutputError extends Error {
      * the first version discarded it, so an output of
      * `{error: "Bolagsverket returned HTTP 503", status: 503}` reached
      * `transactions.error` as "Capability returned an error marker rather than
-     * output" — which classifyTransactionFailure files as `internal`, i.e.
-     * Strale's bug, when the original text would have matched UPSTREAM_RE and
-     * filed correctly as `upstream`. That misfiling is not cosmetic: the
-     * quality floor is armed in production and `internal` counts against a
-     * capability while `upstream` is read differently.
+     * output" — which classifyTransactionFailure now files as `unclassified`
+     * (it filed as `internal` until LESSONS.md F1 step 4), when the original
+     * text would have matched UPSTREAM_RE and filed correctly as `upstream`.
+     * Still worth carrying: the taxonomy's new default stops the misfiling
+     * being scored as a defect, but it cannot recover the *cause*, and
+     * "unattributed" is a worse operational answer than "upstream" even when
+     * it is a safer one.
      */
     public readonly upstreamMessage?: string | null,
   ) {
