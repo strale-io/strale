@@ -47,6 +47,8 @@ export const MAX_OUTPUT_DIMENSION = 10_000;
  */
 export const MAX_OUTPUT_PIXELS = 25_000_000;
 
+import { logError } from "../../lib/log.js";
+
 /** Thrown for a refusal that is the caller's fault, so it maps to a 4xx rather than a 500. */
 export class ImageLimitError extends Error {
   constructor(message: string) {
@@ -176,7 +178,15 @@ export async function readBodyWithLimit(
       if (total > maxBytes) {
         // Stop pulling. The bytes already read are bounded by maxBytes plus
         // one chunk, which is the point.
-        await reader.cancel().catch(() => {});
+        //
+        // cancel() can reject if the peer already tore the connection down.
+        // That is expected here and must not mask the refusal below — but it
+        // is logged rather than swallowed, per F-0-009: a bare
+        // `.catch(() => {})` is exactly how a real transport fault becomes
+        // invisible.
+        await reader
+          .cancel()
+          .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
         throw new ImageLimitError(
           `'${field}' must return ${mib(maxBytes)} or less.`,
         );
