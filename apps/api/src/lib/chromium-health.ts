@@ -1,8 +1,9 @@
 /**
  * Chromium/Browserless health monitor.
  *
- * Probes the Browserless.io managed service every 30 minutes with a real
- * page render (example.com). Exports isChromiumHealthy() for capability
+ * Probes Browserless reachability and control-tower account state every 30
+ * minutes without rendering a page or consuming a browser unit. Exports
+ * isChromiumHealthy() for capability
  * executors on the live customer path (see data-provider.ts's
  * executeWithFallback, which skips a fallback-chain provider whose
  * requiredServices includes "browserless" when this reports unhealthy) to
@@ -30,9 +31,9 @@
  * State transitions are logged and trigger interrupt emails on critical changes.
  */
 
-import { buildBrowserlessRequestUrl, stripToken } from "./browserless-launch.js";
 import { fireAndForget } from "./fire-and-forget.js";
 import { log, logError, logWarn } from "./log.js";
+import { vendorReachabilityFetch } from "./metered-vendor-fetch.js";
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -105,38 +106,18 @@ export async function probeChromiumHealth(): Promise<boolean> {
   }
 
   try {
-    // Browserless v2 cloud uses ?token= query auth — Bearer is rejected at edge.
-    // buildBrowserlessRequestUrl also appends the per-request `?launch=` query
-    // param required by Browserless v2 (LAUNCH_ARGS env var is deprecated and
-    // ignored — see browserless-launch.ts for the discovery context).
-    const contentUrl = buildBrowserlessRequestUrl(url, "/content", key);
-
-    // Phase 2 (Understand) instrumentation for the 2026-05-04 chromium
-    // bug fix: log the token-stripped wire URL once per probe so we can
-    // decode the `launch=` payload from logs and disambiguate (A) RLIMIT
-    // ceilings vs (B) v2 OSS-tier flag filtering. Safe against the public
-    // hosted endpoint (no-op) and against the internal chromium service
-    // (captures the exact URL that reaches the wire).
-    log.info(
-      { label: "chromium-probe-url", contentUrl: stripToken(contentUrl) },
-      "chromium probe URL",
-    );
-
-    const res = await fetch(contentUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        url: "https://example.com",
-        gotoOptions: { waitUntil: "domcontentloaded", timeout: 10000 },
-      }),
+    // A real /content render every 30 minutes consumed ~1,440 units/month by
+    // itself. The root request is zero-unit; 401/403/404 still prove the edge
+    // is reachable, while browserlessFetch refuses before the network when the
+    // control tower has blocked the account. Customer renders remain the
+    // authoritative end-to-end signal and record their actual failures.
+    const res = await vendorReachabilityFetch("browserless", url, {
+      method: "GET",
       signal: AbortSignal.timeout(15000),
     });
 
-    if (res.ok) {
-      const html = await res.text();
-      const nowHealthy = html.length > 50;
+    if (res.ok || res.status === 401 || res.status === 403 || res.status === 404) {
+      const nowHealthy = true;
 
       if (nowHealthy && !_healthy) {
         // Recovery detected
@@ -160,7 +141,7 @@ export async function probeChromiumHealth(): Promise<boolean> {
       return _healthy;
     }
 
-    // Non-OK response
+    // Non-reachability response
     return handleFailure(`HTTP ${res.status}`);
   } catch (err) {
     return handleFailure(err instanceof Error ? err.message : String(err));

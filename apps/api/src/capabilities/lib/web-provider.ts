@@ -21,6 +21,7 @@
  */
 
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
+import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { safeFetch } from "../../lib/safe-fetch.js";
 import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
 
@@ -473,7 +474,7 @@ export async function fetchPage(
 
       const start = Date.now();
       try {
-        const response = await fetch(contentUrl, {
+        const response = await browserlessFetch(contentUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

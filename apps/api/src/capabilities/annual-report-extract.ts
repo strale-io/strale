@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
+import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
 const ORG_NUMBER_RE = /^(\d{6})-?(\d{4})$/;
@@ -74,7 +75,7 @@ async function findAnnualReportPdf(
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
   const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
 
-  const pageResponse = await fetch(contentUrl, {
+  const pageResponse = await browserlessFetch(contentUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

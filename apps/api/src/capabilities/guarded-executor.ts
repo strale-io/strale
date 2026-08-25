@@ -100,9 +100,9 @@ type Decision = "allow" | "refuse" | "budget_check";
 //     health_probe is allowed because probes don't invoke the executor;
 //     they ping the vendor URL directly (lib/dependency-manifest.ts).
 //   * free_quota × non-customer → budget_check. Scheduler/CI consumption
-//     leaves headroom for customer traffic via the 10%/20% caps.
-//   * paid_with_free_tier × non-customer → budget_check. Tighter 5%/10%
-//     caps because the next call could be the one that bills.
+//     is capped at 5% of the vendor allowance.
+//   * paid_with_free_tier × non-customer → budget_check. The tighter 2%
+//     cap reflects that the next call after the allowance could be billable.
 //   * free_unlimited × anything → allow. No constraint.
 //   * customer_paid × anything → allow. Customer paid; budget reservations
 //     are for Strale's own non-customer testing.
@@ -333,8 +333,8 @@ export function computeWindowStart(
 /**
  * Pick the budget cap as a percentage of the vendor quota.
  * Per design point 4:
- *   free_quota          → 10% daily / 20% monthly
- *   paid_with_free_tier → 5% daily / 10% monthly
+ *   free_quota          → 5% of the allowance
+ *   paid_with_free_tier → 2% of the allowance
  * Ceiling at 1 — a capability with quota_cap < 10 still gets at least
  * one test slot per window. (free_unlimited / paid_* never reach here.)
  */
@@ -344,9 +344,9 @@ export function computeBudgetCap(meta: CapabilityCostMeta): number {
   }
   let pct: number;
   if (meta.cost_class === "free_quota") {
-    pct = meta.quota_window === "daily" ? 0.10 : 0.20;
+    pct = 0.05;
   } else if (meta.cost_class === "paid_with_free_tier") {
-    pct = meta.quota_window === "daily" ? 0.05 : 0.10;
+    pct = 0.02;
   } else {
     throw new Error(
       `computeBudgetCap: ${meta.slug} cost_class ${meta.cost_class} doesn't budget-track`,

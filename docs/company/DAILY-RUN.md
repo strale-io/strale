@@ -56,9 +56,23 @@ run the commercial pack (`npx tsx scripts/commercial-brief.ts`). The commercial
 pack is not optional and is not a nice-to-have — the commercial-intelligence
 list below is the minimum the run must be able to answer.
 
-**B. Overnight health.** Open breakers, newly quarantined capabilities, failing
-CI on main, invariant alerts. For each: is it a defect, a correct refusal, or an
-instrument fault? Answering that question is the run's job, not the brief's.
+**B. Overnight health.** First run the Vendor Control Tower report
+(`cd apps/api && npm run vendor:status`, production read-only). Treat every
+`CRITICAL`, `WARNING`, stale balance reading, prepaid-credit expiry, inventory
+gap, and automatic vendor suspension as an overnight-health finding. Then check
+open breakers, newly quarantined capabilities, failing CI on main, and invariant
+alerts. For each: is it a defect, a correct refusal, or an instrument fault?
+Answering that question is the run's job, not the brief's. The report is the
+account-balance authority; never rely on remembering which vendor dashboard
+needs a manual check.
+
+Credential failures for Serper and Dilisense are re-armed automatically only
+after the configured API-key value changes; the tower stores a one-way key
+fingerprint, never the credential, and spends no synthetic vendor call. A
+finite account that exposes no balance endpoint stays `CRITICAL` after
+exhaustion until its dashboard top-up is explicitly reconciled. Do not “test”
+that top-up with scheduled paid traffic: the morning finding is deliberately
+durable because the vendor provides no zero-cost evidence.
 
 **B2. Stale-work sweep.** Every open PR, every branch ahead of main, every
 uncommitted tracked change. Dispose of each *now*: merge if gates pass and it is

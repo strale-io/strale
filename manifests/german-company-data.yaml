@@ -4,15 +4,17 @@ description: >-
   Look up German Handelsregister company data via OpenRegister. Returns name, registration number, court, legal form,
   status, address, directors, capital, LEI, incorporation and termination dates.
 category: company-data
-price_cents: 5
+price_cents: 20
 is_free_tier: false
 avg_latency_ms: 600
-# Phase A0b cost-class: OpenRegister free tier is 50 req/month, resets on the 1st.
-# See apps/api/src/capabilities/german-company-data.ts:115-120 for the 429 handler.
+# OpenRegister Free includes 500 credits per rolling 30 days. A normal name
+# lookup consumes 11 credits, so 45 complete calls is the conservative
+# capability-level equivalent used by the internal test budget. The Vendor
+# Control Tower stores the exact reset timestamp returned by GET /v1/credits.
 cost_class: free_quota
 quota_window: monthly
-quota_cap: 50
-quota_reset_dom: 1
+quota_cap: 45
+quota_reset_dom: 7
 input_schema:
   type: object
   required: []
@@ -151,18 +153,20 @@ output_field_reliability:
   incorporated_at: common
   terminated_at: rare
 limitations:
-  - title: Free tier capped at 50 requests/month
+  - title: Free plan has a hard credit allowance
     text: >-
-      Per DEC-20260506-G this capability runs on OpenRegister's Free tier (50 req/mo, €0/mo).
-      Sustained traffic above that cap requires a Pro-tier upgrade decision gated on
-      (customer attachment) AND (audit-retention written confirmation) per DEC-20260505-H.
-      On HTTP 429 the executor returns a structured 'capability-unavailable' error and the
-      framework's circuit breaker (DEC-20260503-B) trips after 3 consecutive failures.
+      OpenRegister's Free plan includes 500 credits per rolling 30 days. A name lookup
+      normally costs 11 credits (1 for autocomplete and 10 for company details), while a
+      canonical company-id lookup costs 10. HTTP 402 means the allowance is exhausted;
+      HTTP 429 is a separate short-term rate limit. The Vendor Control Tower reads the
+      zero-cost credits endpoint, takes this capability off every serving rail when the
+      account cannot pay, and restores the saved state only after the vendor reports
+      usable credits again.
     category: cost
     severity: warning
     workaround: >-
-      Cache results per Strale's stored-with-refresh primary architecture (caching is
-      permitted while the OpenRegister subscription is active).
+      Prefer canonical company_id inputs when available and use the cached result within
+      the product's permitted refresh window to avoid repeating an 11-credit lookup.
   - title: UBO data not covered
     text: >-
       OpenRegister does not expose Transparenzregister (German UBO registry) data. UBO

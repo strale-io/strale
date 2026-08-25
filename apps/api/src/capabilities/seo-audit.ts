@@ -1,7 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
-import Anthropic from "@anthropic-ai/sdk";
 
 registerCapability("seo-audit", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();

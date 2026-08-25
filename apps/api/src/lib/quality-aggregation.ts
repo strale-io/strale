@@ -157,7 +157,8 @@ async function computeCapabilityQuality(
       -- tq.created_at, so the unfiltered baseline already sorts the
       -- capability's ENTIRE transaction_quality history to find the newest
       -- 50 rows; filtering internal traffic out first (~98%+ of rows on
-      -- most capabilities, via the hourly free-tier test scheduler) shrinks
+      -- most capabilities, historically via the hourly free-tier test
+      -- scheduler) shrinks
       -- that candidate set instead of growing it. Verified against
       -- production with EXPLAIN ANALYZE across the 8 busiest capabilities:
       -- cut execution time 3.6x-13.5x (vat-validate 161.7ms -> 44.4ms,
