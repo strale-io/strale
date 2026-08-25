@@ -86,7 +86,7 @@ async function buildCard(): Promise<object> {
       countries_covered: 27,
       free_tier_available: true,
       trust_model:
-        "Free capabilities canary-tested hourly; paid capabilities observed via production traffic. Every call returns a cryptographically chain-hashed audit record.",
+        "Free capabilities canary-tested hourly; paid capabilities observed via production traffic. Every call returns an audit record.",
       compliance: ["EU AI Act", "GDPR"],
       protocols: ["MCP", "A2A", "REST", "x402"],
     },

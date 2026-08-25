@@ -327,7 +327,7 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
   const card = {
     name: "Strale",
     description:
-      `Commercial capability marketplace for AI agents. ${capCount}+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across ${countryCount} countries, regulatory intelligence, and developer tools. Every call returns an audit record with cryptographic chain hashing.`,
+      `Commercial capability marketplace for AI agents. ${capCount}+ capabilities with transparent per-call pricing. Available via API key (EUR wallet) or x402 pay-per-use (USDC on Base). Compliance, KYC/KYB, payment validation, company data across ${countryCount} countries, regulatory intelligence, and developer tools. Every call returns an audit record.`,
     url: `${BASE_URL}/a2a`,
     version: "1.0.0",
     documentationUrl: "https://strale.dev/docs",

@@ -221,7 +221,7 @@ footnote. If a fourth lands, open the investigation.
 > A test, gate or check that passes whether or not the thing it guards is
 > working.
 
-**Count: 6 — threshold reached, investigation OPENED 2026-08-22.** Integration
+**Count: 7 — threshold reached, investigation OPENED 2026-08-22.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -269,6 +269,34 @@ The rest simply say "clean".
 > zero across the whole population, and a second approximate figure adds
 > nothing but another thing to be wrong about.
 
+**Incident 7, 2026-08-25 — a gate that examined the wrong repository.**
+`scripts/session-close-check.ts --hygiene-only` exists, in its own words, to
+catch "exactly how the primary checkout ended up sitting 77 commits behind main
+on a fully-superseded branch with five uncommitted changes". Run from a
+worktree during the daily run it reported **0 red, 1 yellow** — while the
+primary checkout was, at that moment, sitting on `remediation/wp9-artifacts`,
+29 commits behind main, with three modified files and five untracked ones,
+including two incident records that existed nowhere else.
+
+The cause is one line: `REPO_ROOT = resolve(import.meta.dirname, "../../..")`.
+It inspects whichever checkout the script is installed in. DAILY-RUN.md step B2b
+claims it "reports which branch the primary checkout sits on"; that claim is
+false whenever the run is done from a worktree — which is what B2b's *own*
+caution about not switching branches in the main tree pushes a session to do.
+
+Verified in both directions rather than reasoned about: from the worktree, 1
+warning; from the primary checkout, **4 warnings**, and the three it added are
+precisely the three the check exists to raise.
+
+This belongs to the family for the reason step 1 identified — the gate verifies
+its assertions and not its *reachability*. It is a sharper case than the first
+six, because the input set was neither empty nor absent: it was a real, valid,
+complete repository that simply was not the one anybody wanted checked. A
+fail-on-empty helper, the repair direction proposed for the other six, would not
+have caught this one. That is worth carrying into step 3: the invariant is
+"examined the artefact it claims to guard", and "examined something" is a weaker
+condition that this incident satisfies.
+
 **Steps 3–7 owed.** The hypothesis to falsify: *a gate that asserted a non-empty
 input set, or a minimum expected count, would have caught incidents 1, 4 and 5.*
 The repair direction is a shared helper every gate routes its input through,
@@ -288,6 +316,17 @@ and not for ordering or deletion across a 3.5-month window.
 the other two were caught by a human reading the page. A fourth guard is cheaper
 than a fifth incident: the investigation to open is "which public claims have no
 automated tie to the fact they assert".
+
+**A guard now exists for the withdrawn integrity vocabulary (2026-08-25).**
+F6's open question is "which public claims have no automated tie to the fact
+they assert". The tamper-evidence family now has one:
+`apps/api/src/lib/withdrawn-integrity-claims.test.ts` scans ten public-prose
+surfaces for the phrasings Petter approved removing, and both fail-before runs
+were done through `mutation-test.mjs` rather than by hand. Two limits, stated in
+the file rather than glossed: it asserts **absence only** — approving
+replacement wording would claim an authority this side does not have — and it
+knows only phrasings we have actually published, so a new way of saying it is
+unguarded. That is one claim family of four, and it does not close this family.
 
 **Swept 2026-08-23 with both repos checked out** (the sweep normally skips
 because the frontend checkout is absent in CI — see F5's note on
