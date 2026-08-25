@@ -63,6 +63,11 @@ describe("vendor suspension serving-state integrity", () => {
     expect(suspensionInserts.every((sql) => sql.includes("::timestamptz"))).toBe(true);
     expect(suspensionInserts.find((sql) => sql.includes("vendor_solution_suspensions")))
       .toContain("OR s.deactivation_reason LIKE 'vendor:%'");
+    const auditInserts = seen.filter((sql) => sql.includes("INSERT INTO health_monitor_events"));
+    expect(auditInserts).toHaveLength(2);
+    expect(auditInserts.every((sql) =>
+      sql.includes("jsonb_build_object") && sql.includes("::text")
+    )).toBe(true);
   });
 
   it("records a second blocker when a solution is already vendor-disabled", async () => {
@@ -194,6 +199,9 @@ describe("vendor suspension serving-state integrity", () => {
     expect(requestedUrl).toContain("sortcode=000000");
     const completion = seen.find((source) =>
       source.includes("Scheduled authenticated recovery canary succeeded") && source.includes("RETURNING status"));
+    const claim = seen.find((source) =>
+      source.includes("jsonb_build_object") && source.includes("RETURNING provider_name"));
+    expect(claim).toContain("::text");
     expect(completion).toContain("metadata#>>'{recovery_probe,token}' =");
     expect(completion).toContain("metadata#>>'{recovery_probe,status}' =");
     expect(completion).not.toContain("included_units -");

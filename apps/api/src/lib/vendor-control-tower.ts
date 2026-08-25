@@ -288,8 +288,8 @@ async function claimRecoveryProbe(
              COALESCE(metadata, '{}'::jsonb),
              '{recovery_probe}',
              jsonb_build_object(
-               'token', ${token},
-               'status', ${status},
+               'token', ${token}::text,
+               'status', ${status}::text,
                'expires_at', now() + INTERVAL '5 minutes'
              )
            ),
@@ -483,7 +483,11 @@ export async function suspendRequiredCapabilities(
         VALUES (
           'vendor_suspension', ${slug}, 1,
           ${`Suspended because ${providerName} is ${status}`},
-          jsonb_build_object('provider', ${providerName}, 'status', ${status}, 'restore_after', ${restoreAfter}),
+          jsonb_build_object(
+            'provider', ${providerName}::text,
+            'status', ${status}::text,
+            'restore_after', ${restoreAfter}::text
+          ),
           false
         )
       `);
@@ -495,7 +499,11 @@ export async function suspendRequiredCapabilities(
         VALUES (
           'vendor_solution_suspension', ${slug}, 1,
           ${`Suspended solution because ${providerName} is ${status}`},
-          jsonb_build_object('provider', ${providerName}, 'status', ${status}, 'restore_after', ${restoreAfter}),
+          jsonb_build_object(
+            'provider', ${providerName}::text,
+            'status', ${status}::text,
+            'restore_after', ${restoreAfter}::text
+          ),
           false
         )
       `);
@@ -625,7 +633,7 @@ export async function restoreVendorSuspensions(providerName: string): Promise<st
         VALUES (
           'vendor_restoration', ${s.capability_slug}, 1,
           ${`Restored after ${providerName} reported usable allowance`},
-          jsonb_build_object('provider', ${providerName}, 'restore_policy', 'provider-confirmed'),
+          jsonb_build_object('provider', ${providerName}::text, 'restore_policy', 'provider-confirmed'),
           false
         )
       `);
@@ -719,7 +727,7 @@ export async function restoreVendorSuspensions(providerName: string): Promise<st
         VALUES (
           'vendor_solution_restoration', ${s.solution_slug}, 1,
           ${`Restored solution after ${providerName} reported usable allowance`},
-          jsonb_build_object('provider', ${providerName}, 'restore_policy', 'provider-confirmed'),
+          jsonb_build_object('provider', ${providerName}::text, 'restore_policy', 'provider-confirmed'),
           false
         )
       `);
