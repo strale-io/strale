@@ -37,7 +37,11 @@ import {
   isInternalAccountEmail,
   INTERNAL_EMAIL_SUFFIXES,
 } from "./internal-accounts.js";
-import { classifyTransactionFailure, CALLER_ATTRIBUTABLE } from "./transaction-failure-taxonomy.js";
+import {
+  classifyTransactionFailure,
+  CALLER_ATTRIBUTABLE,
+  countsAgainstCapability,
+} from "./transaction-failure-taxonomy.js";
 
 /** Verbatim from `transactions` on 2026-08-14. */
 const ALLOW_MATRIX_REFUSAL =
@@ -98,12 +102,19 @@ describe("no customer-facing path can produce one of these refusals", () => {
 });
 
 describe("cost-control refusals keep their classification", () => {
-  it("classifies as internal, and that is deliberate", () => {
-    // Pinned, not fixed. See the module comment: the refusal is the platform's
-    // own decision, so it is neither a capability fault nor caller-
-    // attributable. It is inert because it never reaches a scoring consumer,
-    // not because the bucket is right.
-    expect(classifyTransactionFailure(ALLOW_MATRIX_REFUSAL)).toBe("internal");
+  it("classifies as unclassified, which is now the right bucket rather than an inert one", () => {
+    // This assertion read `internal` until LESSONS.md F1 step 4, and the
+    // comment then said: "Pinned, not fixed. The refusal is the platform's own
+    // decision, so it is neither a capability fault nor caller-attributable.
+    // It is inert because it never reaches a scoring consumer, not because the
+    // bucket is right."
+    //
+    // Inverting the taxonomy's default fixed it as a side effect. No rule
+    // claims this string, so it now lands in `unclassified` - which is exactly
+    // what it is: a failure that says nothing about the capability. It no
+    // longer depends on never reaching a scoring consumer to be harmless.
+    expect(classifyTransactionFailure(ALLOW_MATRIX_REFUSAL)).toBe("unclassified");
+    expect(countsAgainstCapability(classifyTransactionFailure(ALLOW_MATRIX_REFUSAL))).toBe(false);
   });
 
   it("is not caller-attributable — nobody asked for it", () => {

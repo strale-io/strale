@@ -112,7 +112,24 @@ describe("translate output-truncation handling", () => {
     expect(error).not.toBeInstanceOf(CapabilityRefusalError);
     expect((error as Error).message).toBe("Translation failed.");
     const cls = classifyTransactionFailure((error as Error).message);
-    expect(cls).toBe("internal");
+    // This read `internal` until LESSONS.md F1 step 4 — but only because
+    // `internal` was the fallback, not because anything in the string said so.
+    // "Translation failed." is two words that identify no cause, name no
+    // actor, and quote nothing. It IS our defect (the model returned prose
+    // where JSON was required), and the taxonomy cannot tell, so the honest
+    // classification is `unclassified`.
+    //
+    // Deliberately NOT repaired by adding "translation failed" to INTERNAL_RE.
+    // That is the per-capability string patch F1 exists to stop: six of them
+    // is how the family reached seven incidents. The repair belongs in the
+    // message — a parse failure that said so would be claimed by the house
+    // `failed to parse` / `failed to extract` signature the way every other
+    // capability's is. Recorded as a follow-up rather than papered over here.
+    //
+    // What this test still pins, and what actually matters, is the boundary:
+    // it is not a refusal and it is not excused as the caller's fault.
+    expect(cls).toBe("unclassified");
+    expect(CALLER_ATTRIBUTABLE.has(cls)).toBe(false);
   });
 
   it("still succeeds normally when the response completes within budget (no over-triggering)", async () => {

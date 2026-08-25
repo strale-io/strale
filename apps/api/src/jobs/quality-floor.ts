@@ -60,7 +60,11 @@ import postgres from "postgres";
 import { getDb } from "../db/index.js";
 import { capabilities, healthMonitorEvents } from "../db/schema.js";
 import { eq } from "drizzle-orm";
-import { classifyTransactionFailure, CALLER_ATTRIBUTABLE } from "../lib/transaction-failure-taxonomy.js";
+import {
+  classifyTransactionFailure,
+  countsAgainstCapability,
+  UNATTRIBUTED,
+} from "../lib/transaction-failure-taxonomy.js";
 import { evaluateFloor, DEFAULT_FLOOR_CONFIG, type FloorStats } from "../lib/quality-floor.js";
 import { INTERNAL_EMAIL_LIKE_PATTERNS, EXTRA_EXCLUDED_EMAILS } from "../lib/internal-accounts.js";
 import { FACT_WRITE_FAILED_EVENT } from "../lib/invocation-facts.js";
@@ -147,6 +151,7 @@ export function foldTrafficRows(
         distinctFailureDays: 0,
         recentEligibleCalls: 0,
         recentCompletedCalls: 0,
+        unattributedFailures: 0,
         failureDays: new Set<string>(),
       };
       bySlug.set(r.slug, s);
@@ -158,10 +163,13 @@ export function foldTrafficRows(
     // answers to one question get created, which is the defect this whole
     // program exists to remove.
     const completed = r.source === "fact" ? r.success === true : r.status === "completed";
+    // Transaction rows only: the class is also needed to tell "not the
+    // capability's fault" from "nothing said whose fault it was". Both leave
+    // the denominator; only the second is an evidence shortfall the operator
+    // has to see (LESSONS.md F1 step 4).
+    const txClass = r.source === "transaction" ? classifyTransactionFailure(r.error) : null;
     const countsAsFailure =
-      r.source === "fact"
-        ? r.counts === true
-        : !CALLER_ATTRIBUTABLE.has(classifyTransactionFailure(r.error));
+      r.source === "fact" ? r.counts === true : countsAgainstCapability(txClass!);
 
     if (completed) {
       s.eligibleCalls += r.n;
@@ -174,6 +182,12 @@ export function foldTrafficRows(
       s.eligibleCalls += r.n;
       s.failureDays.add(r.day);
       if (r.recent) s.recentEligibleCalls += r.n;
+    } else if (txClass !== null && UNATTRIBUTED.has(txClass)) {
+      // Out of the denominator, but counted here so the decision can say "and
+      // N failures I could not attribute to anyone". Silently dropping them
+      // would swap a false accusation for a blind spot — the taxonomy failing
+      // to recognise 400 errors on one capability is itself a finding.
+      s.unattributedFailures += r.n;
     }
   }
   return [...bySlug.values()].map((s) => {

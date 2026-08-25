@@ -57,6 +57,18 @@ export interface FloorStats {
   /** Same counters over the trailing 7 days — the recovery override. */
   recentEligibleCalls: number;
   recentCompletedCalls: number;
+  /**
+   * Failures no taxonomy rule recognised, so they are absent from
+   * `eligibleCalls` entirely (LESSONS.md F1 step 4).
+   *
+   * Reported rather than discarded. A capability whose completion looks fine
+   * on 12 attributed calls while 300 more could not be attributed at all has
+   * not been assessed, and the decision has to say so — the failure family
+   * this counter exists for was caused by scoring on evidence nobody had
+   * examined, and a silent exclusion is the same mistake pointed the other
+   * way.
+   */
+  unattributedFailures: number;
 }
 
 export interface FloorConfig {
@@ -97,6 +109,12 @@ export interface FloorDecision {
   requiresHuman: boolean;
   completion: number;
   eligibleCalls: number;
+  /**
+   * Failures excluded from `eligibleCalls` because no taxonomy rule recognised
+   * them. Carried on every decision so an operator reading one can tell
+   * "assessed and found wanting" from "assessed on the fraction I could read".
+   */
+  unattributedFailures: number;
   reason: string;
 }
 
@@ -133,6 +151,20 @@ export function evaluateFloor(
   for (const r of candidates) {
     if (r.completion >= config.quarantineBelow) continue;
 
+    // Appended to every reason below rather than to one of them. The shortfall
+    // is a property of the evidence, so it qualifies a quarantine and a
+    // deferral equally; putting it on only the action would let a "none" hide
+    // that the rate was computed over a fraction of the failures.
+    //
+    // Reported, deliberately NOT suppressing. Whether a large shortfall should
+    // also defer the action is a real question and it is the next measurement
+    // (LESSONS.md F1 step 6's replay answers it), but arming a new suppression
+    // rule on an unmeasured threshold is how this family started.
+    const shortfall =
+      r.unattributedFailures > 0
+        ? ` · ${r.unattributedFailures} further failure(s) could not be attributed to anyone and are outside this rate`
+        : "";
+
     const belowDeactivate = r.completion < config.deactivateBelow;
     const requiresHuman = belowDeactivate && r.revenueCents > 0;
 
@@ -148,8 +180,9 @@ export function evaluateFloor(
         requiresHuman,
         completion: r.completion,
         eligibleCalls: r.eligibleCalls,
+        unattributedFailures: r.unattributedFailures,
         suppressedForIncompleteEvidence: true,
-        reason: `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d, but this capability's invocation evidence is incomplete for the window — deferred without spending quarantine budget`,
+        reason: `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d, but this capability's invocation evidence is incomplete for the window — deferred without spending quarantine budget${shortfall}`,
       });
       continue;
     }
@@ -165,7 +198,8 @@ export function evaluateFloor(
         requiresHuman,
         completion: r.completion,
         eligibleCalls: r.eligibleCalls,
-        reason: `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d, but counted failures span only ${r.distinctFailureDays} day(s) (< ${config.minDistinctFailureDays}) — burst, not a trend; deferred`,
+        unattributedFailures: r.unattributedFailures,
+        reason: `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d, but counted failures span only ${r.distinctFailureDays} day(s) (< ${config.minDistinctFailureDays}) — burst, not a trend; deferred${shortfall}`,
       });
       continue;
     }
@@ -186,7 +220,8 @@ export function evaluateFloor(
         requiresHuman,
         completion: r.completion,
         eligibleCalls: r.eligibleCalls,
-        reason: `30d completion ${(r.completion * 100).toFixed(0)}% is below floor, but the trailing 7d (${r.recentCompletedCalls}/${r.recentEligibleCalls}, required ≥${recentRequired}) shows recovery — deferring`,
+        unattributedFailures: r.unattributedFailures,
+        reason: `30d completion ${(r.completion * 100).toFixed(0)}% is below floor, but the trailing 7d (${r.recentCompletedCalls}/${r.recentEligibleCalls}, required ≥${recentRequired}) shows recovery — deferring${shortfall}`,
       });
       continue;
     }
@@ -199,7 +234,8 @@ export function evaluateFloor(
         requiresHuman,
         completion: r.completion,
         eligibleCalls: r.eligibleCalls,
-        reason: `below floor (${(r.completion * 100).toFixed(0)}% of ${r.eligibleCalls}) but per-run quarantine budget exhausted — next tick`,
+        unattributedFailures: r.unattributedFailures,
+        reason: `below floor (${(r.completion * 100).toFixed(0)}% of ${r.eligibleCalls}) but per-run quarantine budget exhausted — next tick${shortfall}`,
       });
       continue;
     }
@@ -212,9 +248,10 @@ export function evaluateFloor(
       requiresHuman,
       completion: r.completion,
       eligibleCalls: r.eligibleCalls,
+      unattributedFailures: r.unattributedFailures,
       reason: belowDeactivate
-        ? `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d — below the 30% deactivation floor; quarantined now, deactivation is a ${r.revenueCents > 0 ? "Petter-only (revenue-earning)" : "human"} decision`
-        : `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d — below the 70% quarantine floor`,
+        ? `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d — below the 30% deactivation floor; quarantined now, deactivation is a ${r.revenueCents > 0 ? "Petter-only (revenue-earning)" : "human"} decision${shortfall}`
+        : `completion ${(r.completion * 100).toFixed(0)}% on ${r.eligibleCalls} eligible calls/30d — below the 70% quarantine floor${shortfall}`,
     });
   }
 
