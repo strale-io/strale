@@ -356,3 +356,68 @@ state-drift family it was documenting.
 5. **F5's step 3 hypothesis needs rewriting** after today's incident 7. "A gate
    that asserted a non-empty input set would have caught incidents 1, 4 and 5"
    is still worth testing, but it demonstrably does not cover 7.
+
+---
+
+## Addendum — written after the record was first merged
+
+### A second PR arrived mid-sweep, and disposing of it produced an error
+
+**#389** (`js-yaml` 4.3.1) was opened at 06:04Z by a concurrent session, *after*
+this run's first PR sweep at ~05:40Z. Substance: `workflow-security-audit` calls
+`jsYaml.load()` directly on an unparsed request body, and 4.1.1 is affected by
+quadratic-complexity DoS in merge-key handling. Measured in the PR: 235 KB of
+request body costs **14.2 seconds** of CPU on the shared event loop against
+`/v1/do`'s 15-second synchronous ceiling. The capability is live, and an API key
+is free. Attacker-controlled input to a vulnerable function, on production.
+
+Merged after its gates went green. Deployed and verified: served commit equals
+`main` at `5da3251`.
+
+### The error, recorded because it was mine and it was nearly costly
+
+I ran `gh pr merge 389 --squash` and, **without reading its output**, went
+straight on to delete three merged branches — including `fix/js-yaml-quadratic-
+dos`. The merge had not succeeded. It failed with *"Required status check
+'check' is expected"*, because `main` had moved twice while I worked and the
+branch was `BEHIND`. Deleting the head branch closed the PR.
+
+Recovered within one command: `gh pr view 389 --json headRefOid` still resolved
+to `4f9a75a`, the commit survived deletion of the ref, the branch was re-pushed
+to the same SHA, and the PR reopened `MERGEABLE`. Then `gh pr update-branch`,
+wait for green, merge properly. Nothing was lost.
+
+**The generalisation, and it is not "be careful".** I batched a state-changing
+command with the cleanup that assumed its success, in a single shell invocation,
+so the failure and the destructive follow-up executed without a human or a check
+between them. The three earlier merges this session had all succeeded, which is
+exactly what made the fourth feel safe to batch.
+
+This is the same shape as F7 — *the record and the system disagree because the
+actor wrote the record from their own intention* — pointing at execution rather
+than documentation: I acted on an intended outcome instead of an observed one.
+The applicable rule already exists and I did not follow it. Not logged as a new
+family: F7's repair direction ("verify against the system, in the same breath as
+the claim") covers it exactly, and inventing a twelfth family for an instance of
+the seventh is the pattern LESSONS.md was written to stop. Recorded here as an
+instance, with the recovery, so the next session sees the failure mode rather
+than a clean sweep.
+
+**Worth knowing:** `fix/js-yaml-quadratic-dos` had a live worktree at
+`C:\Users\pette\Projects\strale-wt-jsyaml`, so a concurrent session was working
+in it. Branch deletion in a shared clone is not a private act.
+
+### Final state
+
+- Open PRs: **0**. Merged this session: #387, #388, #389, #390.
+- `main` = `5da3251`, deployed and verified by served commit.
+- Remote branches: **17**, verified against `git ls-remote`.
+- The withdrawn integrity claims: **0** occurrences across all five live public
+  surfaces, re-checked after the last deploy.
+
+### Correction to "for the next session", item 3
+
+`feat/phase-7a-it-stakeholders` still has no owner and I did not give it one.
+Stated plainly rather than left implied: **this run did not do item 3, it only
+described it.** It is the oldest unowned work on the remote and it is now on its
+second morning of being written down instead of disposed of.
