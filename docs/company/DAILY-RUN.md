@@ -70,9 +70,20 @@ Petter.
 
 **B2b. Local repo hygiene.**
 `cd apps/api && npx tsx scripts/session-close-check.ts --hygiene-only`. No DB, no
-credentials. Deliberately not session-scoped: it reports which branch the primary
+credentials. Deliberately not session-scoped: it reports which branch the
 checkout sits on and how far behind main, handoffs never committed at any age,
 and branches untouched 14+ days. Act on each finding the same morning.
+
+> **Run it from the primary checkout, not from your worktree.** The script
+> resolves its repository root relative to its own file location, so it inspects
+> *whichever checkout it is installed in*. On 2026-08-25 it returned "0 red, 1
+> yellow" from a worktree while the primary checkout sat on a superseded branch
+> 29 commits behind main with two incident records untracked — the exact state
+> the check exists to catch. Run from the primary checkout the same morning, it
+> raised four warnings. This paragraph previously said it reports on "the
+> primary checkout"; it does not, and the instruction above is the fix. Logged
+> as LESSONS.md F5 incident 7. Running it is read-only and switches no branches,
+> so it is safe there.
 *Caution:* if the checkout is off main, do **not** `git checkout` there casually —
 that has corrupted the tree three times. Confirm the branch's content is already
 on main by comparing **file contents**, never commit counts (squash merges make a

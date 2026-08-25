@@ -72,7 +72,7 @@ for anything.
   then verification, then enrichment, then extraction. That is four vendors, or
   one endpoint pattern.
 - **Variable cost.** No monthly minimum. A workflow that runs twice costs twice.
-- **Auditable.** Every call returns provenance and a hash-chained audit record,
+- **Auditable.** Every call returns provenance and an audit record,
   which matters when your own customers ask where a fact came from.
 
 ## Example flow

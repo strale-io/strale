@@ -72,8 +72,8 @@ to 7 years).
   `provenance.upstream_vendor`, `acquisition_method`, and
   `primary_source_reference` so the customer can verify.
 - **Engineering bar** (DEC-20260428-B): all compliance capabilities ship
-  versioned datasets, source manifests per response, audit chain
-  integrity, dispute endpoint, replay capability, golden test suite.
+  versioned datasets, source manifests per response, per-record audit
+  hashing, dispute endpoint, golden test suite.
 - **Art. 22 disclosure**: every audit response carries the
   classification (`screening_signal`), plain-language disclosure text,
   and the dispute endpoint URL. The data subject receives a shareable

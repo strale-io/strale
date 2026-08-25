@@ -26,7 +26,7 @@ export const openApiSpec = {
     title: "Strale API",
     version: "1.0.0",
     description:
-      "The trust layer for AI agents — 250+ independently tested data capabilities across 27 countries. Execute capabilities via REST, MCP, A2A, or x402 micropayments. Every call returns an audit record with cryptographic chain hashing.",
+      "The trust layer for AI agents — 250+ independently tested data capabilities across 27 countries. Execute capabilities via REST, MCP, A2A, or x402 micropayments. Every call returns an audit record.",
     contact: { name: "Strale", email: "hello@strale.io", url: "https://strale.dev" },
     termsOfService: "https://strale.dev/terms",
     license: { name: "MIT", url: "https://opensource.org/licenses/MIT" },
@@ -767,7 +767,7 @@ export const openApiSpec = {
       get: {
         tags: ["trust"],
         summary: "Verify transaction integrity",
-        description: "Verify the integrity of a transaction's audit trail by recomputing its SHA-256 hash and walking the hash chain backward to genesis. Public, no auth required.",
+        description: "Recompute a transaction's SHA-256 content hash and walk the recorded chain backward from it, up to a bounded depth. Public, no auth required.",
         parameters: [
           { name: "transactionId", in: "path" as const, required: true, schema: { type: "string" as const, format: "uuid" } },
           { name: "depth", in: "query" as const, required: false, schema: { type: "integer" as const, minimum: 1, maximum: 50, default: 20 }, description: "Max chain depth to verify (default 20, max 50). F-A-012: values >50 are clamped to 50." },
