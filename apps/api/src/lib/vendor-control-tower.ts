@@ -400,7 +400,7 @@ export async function suspendRequiredCapabilities(
         previous_visible, previous_x402_enabled, suspension_marker, restore_after
       )
       SELECT ${providerName}, c.slug, c.lifecycle_state, c.visible, c.x402_enabled,
-             ${marker}, ${restoreAfter}
+             ${marker}, ${restoreAfter}::timestamptz
         FROM vendor_capability_dependencies d
         JOIN capabilities c ON c.slug = d.capability_slug
        WHERE d.provider_name = ${providerName}
@@ -427,7 +427,7 @@ export async function suspendRequiredCapabilities(
         previous_x402_enabled, suspension_marker, restore_after
       )
       SELECT DISTINCT ${providerName}, s.slug, s.is_active, s.x402_enabled,
-             ${marker}, ${restoreAfter}
+             ${marker}, ${restoreAfter}::timestamptz
         FROM vendor_capability_dependencies d
         JOIN solution_steps ss ON ss.capability_slug = d.capability_slug
         JOIN solutions s ON s.id = ss.solution_id
