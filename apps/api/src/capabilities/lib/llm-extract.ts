@@ -50,6 +50,24 @@ export interface ExtractJsonWithLlmArgs {
   /** The single user-message content. Every current caller uses one plain-text user message. */
   prompt: string;
   /**
+   * Sampling temperature, forwarded to the API only when set. Left unset, the
+   * API default (1.0) applies — which is what every executor did before this
+   * field existed, so omitting it keeps a caller's behaviour byte-identical.
+   *
+   * Why it exists (2026-08-25): the first card-paying customer ran the same
+   * competitor-compare input four times and got four different analyses —
+   * trust-signal counts 11/13/10/9, analysis prose 180–294 chars — because no
+   * LLM call on the platform set a temperature. Measured decomposition: on
+   * identical input at the default, three runs produced three different
+   * outputs with exactly that wobble; at temperature 0, three runs were
+   * byte-identical. Extraction-shaped capabilities should pass 0; generative
+   * ones (fake-data-generate, blog-post-outline, …) may legitimately want
+   * sampling and should leave it unset. Note the honest limit: temperature 0
+   * is near-deterministic within a model version, not a notarised guarantee —
+   * a model update can still change the answer.
+   */
+  temperature?: number;
+  /**
    * Caller-actionable sentence appended after the shared refusal prefix
    * sentence, e.g. "Narrow the request or process fewer items per call."
    */
@@ -67,11 +85,15 @@ export interface ExtractJsonWithLlmArgs {
 export async function extractJsonWithLlm(
   args: ExtractJsonWithLlmArgs,
 ): Promise<Record<string, unknown>> {
-  const { client, model, maxTokens, prompt, truncationGuidance, parseFailureError } = args;
+  const { client, model, maxTokens, prompt, truncationGuidance, parseFailureError, temperature } = args;
 
   const response = await client.messages.create({
     model,
     max_tokens: maxTokens,
+    // Spread rather than `temperature: temperature` so an unset field sends
+    // no key at all — the request body stays identical to the pre-field era
+    // for the ~70 callers that do not pass one.
+    ...(temperature !== undefined ? { temperature } : {}),
     messages: [{ role: "user", content: prompt }],
   });
 

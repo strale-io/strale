@@ -28,6 +28,12 @@ registerCapability("competitor-compare", async (input: CapabilityInput) => {
     client,
     model: "claude-haiku-4-5-20251001",
     maxTokens: 2000,
+    // Deterministic extraction: the same pair of sites should yield the same
+    // comparison. A paying customer ran one input four times on 2026-08-23/25
+    // and got four different answers at €1.00 each — that was sampling at the
+    // API-default temperature, not a malfunction, and it reads as
+    // unreliability on a platform whose product is trust.
+    temperature: 0,
     prompt: `Compare these two competitor websites. Return ONLY valid JSON.
 
 COMPANY A: ${url1}

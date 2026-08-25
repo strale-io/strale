@@ -62,6 +62,43 @@ describe("extractJsonWithLlm", () => {
     });
   });
 
+  it("forwards temperature verbatim when set — including 0, which a truthiness guard would drop", async () => {
+    const client = fakeClient({
+      stop_reason: "end_turn",
+      content: [{ type: "text", text: "{}" }],
+    });
+
+    await extractJsonWithLlm({
+      client,
+      model: "claude-haiku-4-5-20251001",
+      maxTokens: 100,
+      temperature: 0,
+      prompt: "p",
+      truncationGuidance: "g",
+      parseFailureError: () => new Error("x"),
+    });
+
+    expect(client.messages.create).toHaveBeenCalledExactlyOnceWith({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 100,
+      temperature: 0,
+      messages: [{ role: "user", content: "p" }],
+    });
+  });
+
+  it("competitor-compare pins temperature 0 — same input, same €1.00 answer", async () => {
+    // The executor itself needs Browserless + network, so the pin is on its
+    // source: the call that cost a paying customer four sampled variants of
+    // one comparison must carry temperature: 0. The exact-args test above
+    // proves the helper forwards it; this proves the caller passes it.
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(
+      new URL("../competitor-compare.ts", import.meta.url),
+      "utf8",
+    );
+    expect(src).toContain("temperature: 0,");
+  });
+
   it("throws CapabilityRefusalError with the registered prefix when stop_reason is max_tokens", async () => {
     const client = fakeClient({
       stop_reason: "max_tokens",
