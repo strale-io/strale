@@ -184,6 +184,30 @@ one I would not leave indefinitely.
 
 ## DECIDED — visible so you can reverse them
 
+**DQ-26** · `decided` · owner Claude · 2026-08-25
+Our quality system no longer assumes a failed call is our fault when it cannot
+tell whose fault it was.
+*What happened:* when a call fails, something has to decide whether the fault is
+ours, the caller's, or an outside supplier's. That decision was built to answer
+"ours" whenever nothing matched, and nothing matched often. Measured over three
+months and 280,000 calls, at least four out of five failures blamed on our own
+services were something else — a caller sending bad data, a supplier being down,
+or one of our own safety checks correctly refusing a request.
+*Why it mattered:* that verdict is what decides whether a service gets pulled
+off the catalogue. Services were pulled for working correctly, six times since
+mid-August, and each previous repair fixed only the case in front of it.
+*What changed:* the system now answers "I could not tell" instead of guessing,
+and reports how often it could not tell rather than dropping those cases
+silently. Charging is unaffected — verified, and pinned by a test, because the
+same rule is read by the billing path.
+*What is NOT done, deliberately:* it still acts on what it can attribute. Making
+it hold back when a lot is unattributed is a larger change, and I want a month
+of honest numbers before proposing it rather than picking a threshold now.
+*Why this is mine:* a quality-system correction with no money movement and no
+public claim. Charter puts quality gates in my column.
+*How you would reverse it:* tell me, and the old assumption returns — but it is
+the direct cause of a tracked failure family that reached seven incidents.
+
 **DQ-24** · `decided` · owner Claude · 2026-08-25
 The overstated claims about our audit records are now off everything we publish.
 *What happened:* you approved taking them down (DQ-18 item 2). The website half
