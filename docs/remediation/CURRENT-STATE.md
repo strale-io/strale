@@ -1,6 +1,65 @@
 # Remediation Program — Current State
 
-_Last updated: 2026-08-23 (WP10 session)_
+_Last updated: 2026-08-25 (governance rebaseline)_
+
+## Governance rebaseline, 2026-08-25
+
+`PACKAGE-GRAPH.yaml` had drifted far enough to mislead: WP3–WP9 and WP11 still
+read `PLANNED` long after acceptance, WP17 was absent entirely, WP12 was not
+marked blocked, and WP7's exit list still asked for a unique index the package
+file itself records as impossible. The graph is machine-readable, so a graph
+that disagrees with its own package files is worse than none.
+
+**Authority is now stated explicitly: the per-package YAML files are the
+source of truth for status, and the graph is a view reconciled against them.**
+
+### One finding worth more than the tidy-up
+
+**WP8's acceptance was written and lost.** Its status read `REMEDIATED` — not a
+value in this programme's own legend, used exactly once, unexplained. It was
+not deliberate. Commit `f2e76f4` ("docs(WP8): accepted, with production
+reconciliation", 2026-08-22) set it to `ACCEPTED` and recorded a real
+reconciliation: constraint present and validated in production, census zero,
+both incident capabilities correctly withdrawn, and the constraint proved to
+**bite** — a half-quarantine write inside a rolled-back transaction was
+refused, because existence is not enforcement.
+
+**That commit never reached `main`.** It exists only on
+`remediation/wp9-artifacts`, unmerged. So for three days the programme record
+said a package was in an undefined state when it had in fact been accepted with
+evidence.
+
+The mechanism is worth naming, because it will recur: squash merges make a
+merged branch look permanently "ahead", so a branch that still shows unmerged
+commits reads as normal. Most of that branch's content *did* land via PR #360;
+this one docs commit did not, and nothing distinguished it.
+
+**Two documents on that branch are also still unmerged** and were deliberately
+not swept into this PR, because they have not been reviewed here:
+`docs/remediation/DECISION-BRIEFS.md` and
+`docs/remediation/PUBLIC-COPY-CORRECTION.md`. They need a decision of their
+own — merge, supersede, or discard.
+
+### Also reconciled
+
+- **WP7** — the impossible `prev_hash uniqueness` exit criterion is formally
+  superseded in the graph, with the reason preserved rather than deleted. The
+  package file was already correct; only the graph asked for it.
+- **VERIFY-P3** — no longer an undifferentiated `PARTIAL`. Three of its four
+  deferred portions are closed (settlement by WP5, process-kill by WP10's
+  measured 1.0h restart interval, plus the original read-only work); only
+  cadence remains, and that is WP10's dated gate rather than unstarted work.
+- **WP9's `transaction_id` linkage** — classified as a **residual, not an
+  acceptance blocker**, determined by reading the package's six exit
+  conditions, none of which mention it.
+- **Adjacent workstreams recorded** in the graph — the execution-receipt
+  programme, the production-authorization incident, daily-run reform, trusted
+  publishing / MCP trust / post-publish smoke test, and the three privacy PRs —
+  because several of them narrowed packages above and a graph that omits them
+  overstates the remaining work.
+
+---
+
 
 - **Current package:** WP10 — **MERGED, DEPLOYED, UNDER OBSERVATION**.
   Squash `ce5e63f` (PR #376), verified live on `ce5e63f09186`. Immediate

@@ -4,7 +4,19 @@
 
 meta:
   audited_baseline: "482ef93"
-  current_main: "e825a05"
+  current_main: "82c59e0"          # rebaselined 2026-08-25
+  rebaselined:
+    date: "2026-08-25"
+    why: >
+      Statuses here had drifted badly enough to be misleading: WP3-WP9 and WP11
+      still read PLANNED long after they were accepted, WP17 was missing
+      entirely, and WP7's exit list still asked for something the package itself
+      had already recorded as impossible. A graph that disagrees with its own
+      package files is worse than no graph, because it is the machine-readable
+      one.
+    authority: >
+      Per-package YAML files are the authority for status. This file is a view
+      over them and is reconciled against them, never the other way round.
   m0_status: ACCEPTED
   checkin_a_triggered: false
   fable_acceptance_required:
@@ -56,7 +68,7 @@ packages:
 
   WP3:
     title: Durable wallet reservations + reconciler
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [WP2]
     risks: [CR-01, N1]
     inherited_exit_conditions:
@@ -66,7 +78,7 @@ packages:
 
   WP4:
     title: Capability Runner + canonical ExecutionOutcome/OutputAssessment
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [WP2]
     risks: [CR-02]
     review: {codex: required, fable: required}
@@ -74,7 +86,7 @@ packages:
 
   WP5:
     title: x402 durable payment state + recovery
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [WP3, WP4]
     risks: [CR-01]
     review: {codex: required, fable: required}
@@ -82,15 +94,30 @@ packages:
 
   WP7:
     title: Audit finality (reframed threat model — see C2)
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [WP4]
     risks: [CR-04]
     review: {codex: required, fable: required}
-    exit: [terminal-only admission incl. free-tier, consistent head selection, prev_hash uniqueness, fail-closed genesis, branch-topology check]
+    exit: [terminal-only admission incl. free-tier, consistent head selection,
+           single-parent CHECKED not enforced, fail-closed genesis, branch-topology check]
+    superseded_exit_criterion:
+      was: "prev_hash uniqueness"
+      superseded: "2026-08-25"
+      why: >
+        A unique index over prev_hash CANNOT be added: it would abort boot on
+        the existing forks. One parent has 150,719 children and the chain has
+        not been a chain since 2026-05-04. History is deliberately not
+        rewritten, because recomputing 863,946 hashes would erase the evidence
+        that the break happened — the opposite of what an audit chain is for.
+        Block 0097 adds a NON-unique index and detectChainForks() checks
+        single-parent instead, scoped to rows after the fix so the historical
+        break does not drown the signal that a NEW fork appeared.
+        The package file (packages/WP7.yaml) already recorded this correctly;
+        only this graph still asked for the impossible thing.
 
   WP6:
     title: Idempotency & replay (fingerprint + capability binding)
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [WP4]
     risks: [CR-03, N4]
     review: {codex: required, fable: required}
@@ -98,7 +125,18 @@ packages:
 
   WP8:
     title: Policy convergence (one eligibility authority)
-    status: PLANNED
+    status: ACCEPTED
+    status_note: >
+      The package file read REMEDIATED, which is not a value in this programme's
+      own status legend and was used exactly once. It was NOT deliberate: commit
+      f2e76f4 ("docs(WP8): accepted, with production reconciliation",
+      2026-08-22) changed it to ACCEPTED and recorded the reconciliation —
+      constraint present and validated in production, census zero, both incident
+      capabilities correctly withdrawn, and the constraint proved to BITE by a
+      half-quarantine write inside a rolled-back transaction being refused.
+      That commit never reached main. It exists only on the unmerged branch
+      remediation/wp9-artifacts, so the acceptance was written and then lost.
+      Normalised here on that evidence rather than on tidiness.
     depends_on: [WP4]
     risks: [CR-05, N5, N6]
     review: {codex: required, fable: required}
@@ -106,7 +144,17 @@ packages:
 
   WP9:
     title: Capability Invocation Facts
-    status: PLANNED
+    status: MERGED_DEPLOYED_UNDER_OBSERVATION
+    observation_exit: >
+      The first solution_step fact whose slug has no direct transaction traffic
+      becoming quarantinable. Condition, not a date.
+    transaction_id_linkage: >
+      RESIDUAL, NOT AN ACCEPTANCE BLOCKER. Checked against the package's own six
+      exit conditions, none of which mention it: the column is null for 100% of
+      writes and its index is dead, and the package file already records this as
+      deliberately out of scope ("a one-line-per-site change"). It is a cheap
+      enhancement to fold into the next touch of those sites, and it does not
+      hold acceptance.
     depends_on: [WP4, WP8]
     risks: [CR-06]
     review: {codex: required, fable: optional}
@@ -114,7 +162,7 @@ packages:
 
   WP11:
     title: Account / trial / Stripe lifecycle
-    status: PLANNED
+    status: ACCEPTED
     depends_on: [WP2]
     risks: [CR-09, CR-10]
     review: {codex: required, fable: required}
@@ -122,7 +170,11 @@ packages:
 
   WP12:
     title: Network/resource safety substrate
-    status: PLANNED
+    status: BLOCKED
+    blocked_by: VERIFY-IP
+    blocked_note: >
+      Reading the wrong X-Forwarded-For entry breaks every IP-keyed rate limit
+      at once. Confirm the Railway hop count first; do not infer it.
     depends_on: [WP0]
     risks: [CR-11, CR-12, CR-19]
     review: {codex: required, fable: required}
@@ -131,6 +183,7 @@ packages:
   WP10:
     title: Durable Job Coordinator
     status: MERGED_DEPLOYED_UNDER_OBSERVATION
+    acceptance_gate: "2026-08-30 — seven-day cadence measurement. Do not manufacture a deploy to satisfy it."
     depends_on: [WP1]
     risks: [CR-08]
     review: {codex: required, fable: optional}
@@ -138,7 +191,16 @@ packages:
 
   WP14:
     title: Legal & Data Policy Authority
-    status: PLANNED
+    status: NOT_STARTED
+    blocked_by: VERIFY-LEGAL
+    blocked_note: "Founder-only under DEC-20260815-A. Not a Claude-closable gate."
+    partially_superseded_by: [privacy-prs-383-384-385]
+    superseded_note: >
+      sanitizeFailureReason is now a single, tested, mutation-proven authority
+      for customer-visible error text on every rail — a control this package
+      would otherwise have had to build. The legal-text rewrites, the Dilisense
+      role and DPA, real assent, and WP0's deferred publication-approval
+      artifact all remain.
     depends_on: [WP0]
     risks: [CR-14, CR-15, CR-16, CR-17, CR-18]
     review: {codex: required, fable: required}
@@ -149,7 +211,11 @@ packages:
 
   WP16:
     title: Discovery & Retrieval Authority
-    status: PLANNED
+    status: NOT_STARTED
+    sequencing_note: >
+      Held deliberately as of 2026-08-25: the remaining cheap, unblocked
+      defensive work finishes before the programme moves from remediation into
+      forward-looking product.
     depends_on: [WP8]
     subpackages:
       WP16.0: {title: Discovery containment, start: immediate_parallel}
@@ -163,14 +229,47 @@ packages:
 
   WP13:
     title: Supply chain
-    status: PLANNED
+    status: NOT_STARTED
+    partially_superseded_by: [trusted-publishing, mcp-trust-fix, post-publish-smoke-test]
+    superseded_note: >
+      The publish-integrity half is closed: npm trusted publishing (PR #363,
+      #367) removed the long-lived token, PR #369 fixed MCP trust data that had
+      been silently empty for every public install, and PR #370 made a
+      production contract smoke test mandatory after every publish. What
+      remains is the dependency half, and VERIFY-DEP's reachability triage is
+      the gate on it.
     depends_on: [VERIFY-DEP]
     risks: [CR-13, N8]
     review: {codex: required, fable: optional}
 
+  WP17:
+    title: Immutable capability-state change ledger
+    status: SPECIFIED_NOT_STARTED
+    depends_on: [WP8]
+    risks: [CR-05]
+    note: >
+      Absent from this graph until the 2026-08-25 rebaseline; it exists as
+      packages/WP17.yaml and was spawned by WP8.
+    narrowed_by_execution_receipts: >
+      The DETECTION half is delivered and was not asked for. Manifest snapshots
+      make the declaration in force at execution time immutable and
+      recomputable, so two executions carrying different manifest digests now
+      PROVE the declaration changed between them. What remains is ATTRIBUTION:
+      the digest establishes THAT a capability's state changed, never WHO
+      changed it or on what authority — which is the question the 2026-08-21
+      incident could not answer at all.
+
   WP15:
     title: CI/runtime hygiene
-    status: PLANNED
+    status: PARTIALLY_SUPERSEDED
+    superseded_by: production-authorization-incident-2026-08-22
+    superseded_note: >
+      guard-production-write-access.mjs, guard-worktree-isolation.mjs and the
+      test-runner alerting isolation were all delivered by that workstream
+      rather than by this package. What remains is WP1's inherited residual:
+      the integration lane should create and drop its own uniquely-named
+      database, so disposability holds by construction rather than by
+      row-count heuristics.
     depends_on: [WP1]
     risks: [CR-20, N7]
     inherited_exit_conditions:
@@ -183,7 +282,42 @@ verification_gates:
   VERIFY-IP:    {status: OPEN, blocks: [WP12], note: "leftmost XFF confirmed spoofable; confirm Railway hop count"}
   VERIFY-DEP:   {status: PARTIAL, blocks: [WP13], note: "1crit/14high/7mod/2low counted; reachability triage unrun"}
   VERIFY-LEGAL: {status: OPEN, blocks: [WP14], note: "Dilisense role, DPA, assent evidence"}
-  VERIFY-P3:    {status: PARTIAL, note: "prod read-only done for index/orphans/delisting/free-x402/publication; process-kill+cadence+settlement deferred to WP1-5"}
+  VERIFY-P3:
+    status: PARTIAL
+    complete:
+      - "index / orphans / delisting / free-x402 / publication — production read-only, done at audit time"
+      - "settlement — closed by WP5 (durable x402 payment state and its reconciler), ACCEPTED"
+      - "process-kill — closed by WP10, which MEASURED the production restart interval at a 1.0h median rather than assuming one"
+    outstanding:
+      - "cadence — the measurement exists but its acceptance is WP10's seven-day gate, due 2026-08-30"
+    note: >
+      Previously an undifferentiated PARTIAL, which read as though none of it
+      had moved. Three of the four deferred portions are in fact closed, and
+      the fourth is a dated gate rather than unstarted work.
+
+# Workstreams outside the master plan that changed its assumptions. Recorded
+# here because several of them narrowed or partly closed packages above, and a
+# graph that omits them overstates the remaining work.
+adjacent_workstreams:
+  execution-receipt-programme:
+    status: ACCEPTED
+    closed: "2026-08-25"
+    record: docs/design/execution-receipt/README.md
+    effect: "Narrows WP17 to attribution only. Additive to WP7 rather than superseding it."
+  production-authorization-incident:
+    status: ACCEPTED
+    date: "2026-08-22"
+    effect: "Delivers most of WP15."
+  daily-run-reform:
+    status: ACCEPTED
+    date: "2026-08-22"
+  trusted-publishing + mcp-trust-fix + post-publish-smoke-test:
+    status: SHIPPED
+    effect: "Closes WP13's publish-integrity half."
+  privacy-prs-383-384-385:
+    status: SHIPPED
+    date: "2026-08-24"
+    effect: "Establishes one sanitisation authority; partly serves WP14."
 
 execution_order:
   [M0, WP0, WP1, WP2, WP3, WP4, WP5, WP7, WP6, WP8, WP9, WP11, WP12, WP10, WP14, WP16, WP13, WP15]
