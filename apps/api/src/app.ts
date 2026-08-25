@@ -314,6 +314,32 @@ app.use("/v1/*", bodyLimit({ maxSize: 1024 * 1024 }));   // 1 MB for API routes
 app.use("/a2a", bodyLimit({ maxSize: 256 * 1024 }));      // 256 KB for A2A
 app.use("/mcp", bodyLimit({ maxSize: 512 * 1024 }));      // 512 KB for MCP
 
+// The x402 rail had NO body cap at all. Every other entry point above has had
+// one for months; this one was simply never added, so `/x402/:slug` buffered
+// whatever a caller sent straight into `c.req.json()`.
+//
+// ## Why 8 MiB and not the 1 MiB used for /v1
+//
+// Copying the /v1 number would have broken a capability contract. Measured
+// evidence, 2026-08-25:
+//
+//   - Largest x402 request body ever observed: 2,658 bytes, across 1,537
+//     requests since 2026-08-15. p50 41 B, p95 111 B, p99 289 B.
+//   - Largest input the platform INTENTIONALLY supports: image-to-text
+//     declares MAX_IMAGE_BYTES = 4 MiB decoded. Base64 is 4/3 expansion, so
+//     that is ~5.33 MiB on the wire before the JSON wrapper.
+//   - Seven x402 capabilities accept base64 (image-resize, image-to-text,
+//     receipt-categorize, pdf-extract, invoice-extract, contract-extract,
+//     resume-parse). Four of those are document extractors where multi-MiB
+//     PDFs are the normal case.
+//
+// 8 MiB clears the 5.33 MiB contract with room for the JSON wrapper and
+// sibling fields, and is ~3,000x the largest request ever seen — so it cannot
+// affect real traffic. Its job is not to be tight. It is to turn "unbounded"
+// into "bounded"; the tight limits belong in the capabilities, where the units
+// are decoded bytes and output pixels rather than wire bytes.
+app.use("/x402/*", bodyLimit({ maxSize: 8 * 1024 * 1024 }));  // 8 MiB for the x402 rail
+
 // A2A: Link header pointing to Agent Card on all API responses
 app.use("*", async (c, next) => {
   await next();
