@@ -137,8 +137,13 @@ const CONFIG_PHRASE_RE = /not configured|rejected the (?:api )?(?:key|token)|mis
  * Our own code breaking, positively identified.
  *
  * Two groups. The first is the original: parse failures on a payload we were
- * reading. The second was added with LESSONS.md F1 step 4, and is the reason
- * that change is safe to make.
+ * reading, plus `failed to extract` - the house phrasing every capability's
+ * `parseFailureError` uses when an LLM extraction produced nothing usable.
+ * That one is claimed here for the same reason as the rest of its group: the
+ * message frequently carries a `Raw:` payload of third-party text, so it has
+ * to be claimed by our own signature before any pattern reads the vendor's
+ * prose. The second group was added with LESSONS.md F1 step 4, and is the
+ * reason that change is safe to make.
  *
  * Once `internal` stops being the fallback, it is reachable ONLY through this
  * expression - so anything this expression does not recognise stops counting
@@ -164,7 +169,7 @@ const CONFIG_PHRASE_RE = /not configured|rejected the (?:api )?(?:key|token)|mis
  * observed call count attached.
  */
 const INTERNAL_RE =
-  /\bin JSON at position\b|\bunterminated string\b|response parse failed|failed to parse\b|\b(?:TypeError|ReferenceError|RangeError|SyntaxError):|cannot read propert(?:y|ies) of (?:undefined|null)|is not a function\b|is not iterable\b|assertion failed/i;
+  /\bin JSON at position\b|\bunterminated string\b|response parse failed|failed to parse\b|failed to extract\b|\b(?:TypeError|ReferenceError|RangeError|SyntaxError):|cannot read propert(?:y|ies) of (?:undefined|null)|is not a function\b|is not iterable\b|assertion failed/i;
 
 const TIMEOUT_RE = /timed? ?out|timeout|deadline|aborted due to timeout|operation was aborted/i;
 

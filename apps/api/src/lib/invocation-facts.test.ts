@@ -175,8 +175,21 @@ describe("the floor can see a capability that only runs inside solutions", () =>
     const unrecognised = new CapabilityRefusalError(
       "This source is out of scope for automated retrieval.",
     );
-    expect(classifyTransactionFailure(unrecognised.message)).toBe("internal");
-    expect(outcomeFromError(unrecognised).counts_against_capability).toBe(false);
+    // Since LESSONS.md F1 step 4 this string classifies `unclassified`, not
+    // `internal` — no rule claims it, and the taxonomy now says so instead of
+    // guessing. That REMOVED the discrimination this test had: `unclassified`
+    // already sets counts_against_capability false, so the assertion below
+    // would pass with the isCapabilityRefusal branch deleted, which is the
+    // precise failure the comment above describes.
+    //
+    // So the assertion moved to `failure_class`. Only the structural branch
+    // produces `capability_refused`; the taxonomy route produces
+    // `unattributed`. The two are distinguishable, and deleting the branch
+    // fails this test again.
+    expect(classifyTransactionFailure(unrecognised.message)).toBe("unclassified");
+    const out = outcomeFromError(unrecognised);
+    expect(out.failure_class).toBe("capability_refused");
+    expect(out.counts_against_capability).toBe(false);
   });
 
   it("a bug in our own step plumbing is not the capability's fault", () => {
