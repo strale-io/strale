@@ -1,10 +1,23 @@
 /**
  * Reconcile the 11 pre-reservation transactions stuck in `status='executing'`.
  *
- * NOT YET APPLIED. Dry-run has been exercised read-only against production; the
- * --apply path has not run. This script exists to be reviewed, then executed
- * once under an explicit founder approval, and it prints a full before/after
- * economic statement so the approval is given against numbers rather than prose.
+ * APPLIED 2026-08-22T07:50:01Z against production, under the founder
+ * instruction issued that morning in response to alert STARVE-SET-1. All
+ * eleven rows moved `executing` → `failed`; the single charge (100c,
+ * `e995cbb7`, internal account `test2@strale.io`) was refunded; wallet
+ * `32abb6eb` went 3047c → 3147c; eleven `manual_reconciliation` events were
+ * written to `health_monitor_events`. Verified independently after the run.
+ *
+ * It is now SPENT. A second --apply run finds zero targets still `executing`
+ * and refuses at the count check before writing anything. Kept in the tree as
+ * the executable record of what was done, not as a tool to run again.
+ *
+ * One inaccuracy worth knowing rather than rewriting: the events carry
+ * `authorised_by: "founder approval, 2026-08-21 stranded-row reconciliation"`,
+ * naming the date of the reconciliation PLAN. The approval itself was given
+ * 2026-08-22, which each event's own `created_at` records correctly. The rows
+ * were not edited after the fact — amending an audit record to improve its
+ * wording is the thing this program exists to prevent.
  *
  * ── The founder policy this implements ──────────────────────────────────────
  *
