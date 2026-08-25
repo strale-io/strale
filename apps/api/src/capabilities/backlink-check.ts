@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 
 // F-0-006 Bucket D (preemptive migration): user domain is embedded in the
 // query string to hardcoded third-party APIs (index.commoncrawl.org,
@@ -72,12 +73,12 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     if (serperKey) {
       try {
         const query = `"${domain}" -site:${domain}`;
-        const resp = await safeFetch("https://google.serper.dev/search", {
+        const resp = await meteredVendorFetch("serper", "https://google.serper.dev/search", {
           method: "POST",
           headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
           body: JSON.stringify({ q: query, num: 10 }),
           signal: AbortSignal.timeout(10000),
-        });
+        }, 1, safeFetch);
 
         if (resp.ok) {
           source = "google.com";

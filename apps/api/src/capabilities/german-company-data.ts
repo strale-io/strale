@@ -1,9 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { classifyNameMatch } from "../lib/company-name-match.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 
 // German company data via OpenRegister (https://api.openregister.de).
 // Replaces the deactivated northdata.com scraper (DEC-20260427-I) with a
-// licensed Tier-2 partner-API path per DEC-20260505-H. Free tier: 50 req/mo.
+// licensed Tier-2 partner-API path per DEC-20260505-H. Free plan: 500 credits
+// per rolling 30 days. A normal name lookup costs 11 credits (1 autocomplete
+// + 10 company details); a canonical company-id lookup costs 10.
 //
 // Inputs accepted (in priority order):
 //   - company_id       OpenRegister canonical id, e.g. "DE-HRB-F1103-267645"
@@ -96,7 +99,7 @@ function getApiKey(): string {
   const key = process.env.OPENREGISTER_API_KEY;
   if (!key) {
     throw new Error(
-      "OPENREGISTER_API_KEY is required. Register at https://openregister.de/keys (50 free req/mo).",
+      "OPENREGISTER_API_KEY is required. Register at https://openregister.de/keys (500 free credits per rolling 30 days).",
     );
   }
   return key;
@@ -110,14 +113,16 @@ function authHeaders(): Record<string, string> {
 }
 
 function classifyHttp(status: number, body: unknown): never {
-  // Free-tier exhaustion or burst-rate limit. Surface as graceful unavailability —
-  // the framework's circuit breaker (recordFailure in do.ts) will trip after
-  // 3 consecutive failures and protect downstream callers.
+  if (status === 402) {
+    throw new Error(
+      "capability-unavailable: OpenRegister account credits are exhausted (HTTP 402). " +
+      "The Vendor Control Tower has taken this capability off sale until the vendor confirms a reset or refill.",
+    );
+  }
   if (status === 429) {
     throw new Error(
       "capability-unavailable: OpenRegister rate limit hit (HTTP 429). " +
-      "Free tier is capped at 50 requests/month and resets on the 1st. " +
-      "Try again next billing cycle or upgrade per DEC-20260505-H.",
+      "This is a short-term request-rate limit, not an account-balance failure. Retry later.",
     );
   }
   if (status === 401 || status === 403) {
@@ -139,7 +144,12 @@ function classifyHttp(status: number, body: unknown): never {
 
 async function autocomplete(query: string): Promise<AutocompleteResult[]> {
   const url = `${API}/v1/autocomplete/company?query=${encodeURIComponent(query)}`;
-  const r = await fetch(url, { headers: authHeaders(), signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const r = await meteredVendorFetch(
+    "openregister",
+    url,
+    { headers: authHeaders(), signal: AbortSignal.timeout(TIMEOUT_MS) },
+    1,
+  );
   if (!r.ok) {
     const body = (await r.json().catch(() => ({}))) as unknown;
     classifyHttp(r.status, body);
@@ -255,7 +265,12 @@ export function pickByRegisterNumber(hrbNumber: string, court: string, results: 
 
 async function fetchCompany(companyId: string): Promise<CompanyV1> {
   const url = `${API}/v1/company/${encodeURIComponent(companyId)}`;
-  const r = await fetch(url, { headers: authHeaders(), signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const r = await meteredVendorFetch(
+    "openregister",
+    url,
+    { headers: authHeaders(), signal: AbortSignal.timeout(TIMEOUT_MS) },
+    10,
+  );
   if (!r.ok) {
     const body = (await r.json().catch(() => ({}))) as unknown;
     classifyHttp(r.status, body);

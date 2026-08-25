@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -30,7 +31,7 @@ registerCapability("google-search", async (input: CapabilityInput) => {
   if (language) body.hl = language;
   if (country) body.gl = country.toLowerCase(); // Serper expects lowercase gl
 
-  const res = await fetch("https://google.serper.dev/search", {
+  const res = await meteredVendorFetch("serper", "https://google.serper.dev/search", {
     method: "POST",
     headers: {
       "X-API-KEY": serperKey,

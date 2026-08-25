@@ -4,6 +4,7 @@ import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { logWarn } from "../lib/log.js";
+import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 
 /**
  * Normalize the `wait_for` input into a Browserless wait directive.
@@ -145,7 +146,7 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   };
 
   const shoot = (waitShape: Record<string, unknown> | null) =>
-    fetch(endpoint, {
+    browserlessFetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(waitShape ? { ...bodyObj, ...waitShape } : bodyObj),

@@ -15,10 +15,9 @@
  * dependency_health suites in 30 days, at effectively hourly cadence,
  * because nothing in the scheduler read `test_mode` at all.
  *
- * `minRetestIntervalHours` is the fix: an independent daily floor for
- * `test_mode = 'canary'`, combined via `GREATEST` with the pre-existing
- * `test_status` floor, so quarantined/upstream_broken canaries back off
- * further still rather than the canary floor silently overriding them.
+ * `minRetestIntervalHours` applies risk tiers to finite-cost live work, then
+ * combines canary/status backoff and a quota-account floor. Zero-cost fixtures
+ * and genuinely free-unlimited suites retain their hourly regression signal.
  *
  * No DB harness exists for the scheduler's live SQL (test-harness
  * exemption, DEC-20260504-A, same posture as the sibling stagger/skip-bumper
@@ -32,31 +31,56 @@ import { describe, it, expect } from "vitest";
 import { minRetestIntervalHours } from "./test-scheduler.js";
 
 describe("minRetestIntervalHours", () => {
-  it("floors at 1 hour for a normal, non-canary suite", () => {
-    expect(minRetestIntervalHours("normal", "live")).toBe(1);
-    expect(minRetestIntervalHours("normal", "fixture")).toBe(1);
+  it("honours risk tiers only for finite-cost live work", () => {
+    expect(minRetestIntervalHours("normal", "live", "A", "free_quota")).toBe(24);
+    expect(minRetestIntervalHours("normal", "live", "C", "paid_with_free_tier")).toBe(72);
     expect(minRetestIntervalHours(null, null)).toBe(1);
   });
 
+  it("keeps fixtures and free-unlimited suites on the established hourly cadence", () => {
+    expect(minRetestIntervalHours("normal", "fixture", "C", "free_quota")).toBe(1);
+    expect(minRetestIntervalHours("normal", "live", "C", "free_unlimited")).toBe(1);
+  });
+
   it("gives test_mode = 'canary' a 24h floor on an otherwise-normal suite", () => {
-    expect(minRetestIntervalHours("normal", "canary")).toBe(24);
+    expect(minRetestIntervalHours("normal", "canary", "A")).toBe(24);
   });
 
   it("status-based backoff still applies to non-canary suites, unchanged", () => {
-    expect(minRetestIntervalHours("upstream_broken", "live")).toBe(24);
-    expect(minRetestIntervalHours("infra_limited", "live")).toBe(24);
-    expect(minRetestIntervalHours("quarantined", "live")).toBe(168);
+    expect(minRetestIntervalHours("upstream_broken", "live", "A", "free_unlimited")).toBe(24);
+    expect(minRetestIntervalHours("infra_limited", "live", "A", "free_unlimited")).toBe(24);
+    expect(minRetestIntervalHours("quarantined", "live", "A", "free_unlimited")).toBe(168);
   });
 
   it("combines via GREATEST — a quarantined canary backs off to the longer of the two, not the canary floor", () => {
     // The canary floor (24h) must never silently override a longer
     // status-based backoff — GREATEST, not "canary wins".
-    expect(minRetestIntervalHours("quarantined", "canary")).toBe(168);
-    expect(minRetestIntervalHours("upstream_broken", "canary")).toBe(24);
+    expect(minRetestIntervalHours("quarantined", "canary", "A")).toBe(168);
+    expect(minRetestIntervalHours("upstream_broken", "canary", "A")).toBe(24);
   });
 
-  it("an unrecognized test_status/test_mode never throws and never drops below the 1h floor", () => {
-    expect(minRetestIntervalHours("some_future_status", "some_future_mode")).toBe(1);
+  it("quota accounts get a conservative floor and unknown tiers fail safe", () => {
+    expect(minRetestIntervalHours("normal", "live", "A", "free_quota")).toBe(24);
+    expect(minRetestIntervalHours("normal", "live", "A", "paid_with_free_tier")).toBe(72);
+    expect(minRetestIntervalHours("some_future_status", "some_future_mode", "future")).toBe(1);
+  });
+});
+
+describe("scheduler SQL carries risk-tier and quota floors", () => {
+  it("both dispatch and queue-depth queries contain the tier and cost-class CASEs", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+    expect((src.match(/THEN CASE ts\.schedule_tier/g) ?? []).length).toBe(2);
+    expect((src.match(/ELSE INTERVAL '1 hour'/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect((src.match(/WHEN 'free_quota' THEN INTERVAL '24 hours'/g) ?? []).length).toBe(2);
+    expect((src.match(/WHEN 'paid_with_free_tier' THEN INTERVAL '72 hours'/g) ?? []).length).toBe(2);
+    expect((src.match(/AND ts\.test_type <> 'piggyback'/g) ?? []).length).toBe(2);
+  });
+
+  it("monthly budget lookup uses the previous cycle before reset day", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("./test-scheduler.ts", import.meta.url), "utf8");
+    expect(src).toContain("date_trunc('month', NOW()) - INTERVAL '1 month'");
   });
 });
 

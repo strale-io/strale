@@ -3,6 +3,7 @@ import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 
@@ -77,7 +78,7 @@ async function scrapeUrl(url: string): Promise<string> {
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
   const contentUrl = buildBrowserlessRequestUrl(browserlessUrl, "/content", browserlessKey);
   // unguarded-fetch-ok: our Browserless endpoint; caller URL gated by assertTargetAllowed above
-  const response = await fetch(contentUrl, {
+  const response = await browserlessFetch(contentUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
