@@ -264,3 +264,47 @@ describe("gate outcome", () => {
     expect(outcome.error_message).toBe("gate tripped: s.f");
   });
 });
+
+/**
+ * LESSONS.md F1 step 4, at the fact writer.
+ *
+ * This function writes `counts_against_capability` into the durable fact
+ * table, so what it decides here outlives the request. Before the change an
+ * unrecognised error string fell through to the provider branch and was
+ * recorded `counts_against_capability: true` — a permanent assertion that the
+ * capability was at fault, made on the strength of no rule having matched.
+ *
+ * Both tests fail against the un-fixed module: the first reads
+ * `provider_rejected` / `true`, and the second is the guard that the repair
+ * did not quietly change what customers are charged.
+ */
+describe("an unrecognised failure is recorded as unattributed, not as a defect (F1 step 4)", () => {
+  it("does not blame the capability for a string no rule claims", () => {
+    const outcome = outcomeFromError(new Error("fetch failed"));
+    expect(outcome.failure_class).toBe("unattributed");
+    expect(outcome.counts_against_capability).toBe(false);
+    // Not "provider", not "strale", not "caller". The absence is the record.
+    expect(outcome.fault).toBeNull();
+    // No evidence it was transient either, so retrying on this basis would be
+    // a second guess resting on the same absent evidence.
+    expect(outcome.retryable).toBe(false);
+  });
+
+  it("moves no money — the reclassification is not billable either way", () => {
+    // F1 step 3's falsification attempt was economic: CALLER_ATTRIBUTABLE is
+    // read by this module as well as by the floor, so widening what leaves the
+    // denominator could in principle change a charge. It does not, and this
+    // pins it: both the old destination (provider_rejected) and the new one
+    // are unbillable.
+    expect(outcomeFromError(new Error("fetch failed")).billable).toBe(false);
+    expect(outcomeFromError(new Error("Upstream returned 400 Bad Request")).billable).toBe(false);
+  });
+
+  it("a positively identified crash still counts against the capability", () => {
+    // The boundary that keeps the floor useful. A V8 error name is evidence,
+    // so it keeps its verdict.
+    const outcome = outcomeFromError(new Error("TypeError: Cannot read properties of undefined"));
+    expect(outcome.failure_class).not.toBe("unattributed");
+    expect(outcome.counts_against_capability).toBe(true);
+  });
+});

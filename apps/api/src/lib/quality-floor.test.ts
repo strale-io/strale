@@ -22,6 +22,7 @@ function cap(partial: Partial<FloorStats>): FloorStats {
     distinctFailureDays: 5,
     recentEligibleCalls: 0,
     recentCompletedCalls: 0,
+    unattributedFailures: 0,
     ...partial,
   };
 }
@@ -189,9 +190,13 @@ describe("classifyTransactionFailure", () => {
   it("classifies the remaining dimensions distinctly", () => {
     expect(classifyTransactionFailure("Request timed out after 35000ms")).toBe("timeout");
     expect(classifyTransactionFailure("eur-lex.europa.eu served an anti-bot challenge to the rendered browser as well.")).toBe("upstream");
+    // Still `internal`: a V8 runtime error is positive evidence our own code
+    // broke, and INTERNAL_RE claims those shapes explicitly since F1 step 4.
     expect(classifyTransactionFailure("TypeError: Cannot read properties of undefined")).toBe("internal");
-    expect(classifyTransactionFailure("")).toBe("internal");
-    expect(classifyTransactionFailure(null)).toBe("internal");
+    // No longer `internal`. The fallback is `unclassified` - an absent error
+    // message is a shortfall in the evidence, not a verdict about anyone.
+    expect(classifyTransactionFailure("")).toBe("unclassified");
+    expect(classifyTransactionFailure(null)).toBe("unclassified");
   });
 });
 
@@ -239,5 +244,77 @@ describe("isInternalAccountEmail (H-3 suffix rule)", () => {
     }
     expect(isInternalAccountEmail("customer@gmail.com")).toBe(false);
     expect(isInternalAccountEmail(null)).toBe(false);
+  });
+});
+
+/**
+ * LESSONS.md F1 step 4, the consumer half.
+ *
+ * Inverting the taxonomy's default is only half the repair. The other half is
+ * that the floor must SAY it could not attribute a failure, rather than
+ * quietly dropping it — otherwise a false accusation is replaced by a blind
+ * spot, which is the same family pointed the other way.
+ *
+ * Both tests below fail against the un-fixed state: before the change the fold
+ * routed an unrecognised error string into `eligibleCalls` (so the first test
+ * reads 12 eligible, not 10) and no decision carried an unattributed count at
+ * all (so the second reads `undefined`).
+ */
+describe("unrecognised failures leave the rate but stay visible (F1 step 4)", () => {
+  const row = (partial: Partial<FloorTrafficRow>): FloorTrafficRow => ({
+    slug: "s", lifecycle_state: "active", visible: true, x402_enabled: true,
+    source: "transaction", status: "failed", error: null, success: null,
+    counts: null, day: "2026-08-01", recent: false, n: 1, ...partial,
+  });
+
+  it("a bare transport error is out of the denominator and counted as a shortfall", () => {
+    // 10 completed, 2 genuine defects, 8 the taxonomy does not recognise.
+    // "fetch failed" is 29.2% of the real `internal` bucket over 90 days, so
+    // this is the shape that dominates the effect in production.
+    const [s] = foldTrafficRows([
+      row({ status: "completed", n: 10 }),
+      row({ error: "TypeError: Cannot read properties of undefined", n: 2, day: "2026-08-02" }),
+      row({ error: "fetch failed", n: 8, day: "2026-08-03" }),
+    ], new Map());
+
+    expect(s.eligibleCalls).toBe(12);       // 10 + 2, NOT 20
+    expect(s.completedCalls).toBe(10);
+    expect(s.unattributedFailures).toBe(8);
+    // 83% on what could be attributed, so no quarantine. Before the change
+    // this capability read 50% on 20 calls and was quarantine-eligible on
+    // eight failures nobody had examined.
+    expect(s.completedCalls / s.eligibleCalls).toBeGreaterThan(0.7);
+  });
+
+  it("caller-attributable and unattributed are counted separately, not merged", () => {
+    // Both leave the denominator; only one is a claim about anyone. A fold
+    // that treated them as one bucket would report a shortfall where there is
+    // none, and the operator would go looking for a taxonomy gap that does not
+    // exist.
+    const [s] = foldTrafficRows([
+      row({ status: "completed", n: 5 }),
+      row({ error: 'No Estonian company found matching "10667868".', n: 4 }),
+      row({ error: "fetch failed", n: 3 }),
+    ], new Map());
+
+    expect(s.eligibleCalls).toBe(5);
+    expect(s.unattributedFailures).toBe(3);   // the refusals are NOT in here
+  });
+
+  it("the decision reports the shortfall instead of hiding it", () => {
+    const [d] = evaluateFloor([
+      cap({ slug: "bad", eligibleCalls: 20, completedCalls: 12, unattributedFailures: 40 }),
+    ]);
+    expect(d.action).toBe("quarantine");
+    expect(d.unattributedFailures).toBe(40);
+    // The operator has to be able to see that the 60% was computed over a
+    // third of the failures.
+    expect(d.reason).toContain("40 further failure(s) could not be attributed");
+  });
+
+  it("says nothing when there is nothing to say", () => {
+    const [d] = evaluateFloor([cap({ slug: "bad", eligibleCalls: 20, completedCalls: 12 })]);
+    expect(d.unattributedFailures).toBe(0);
+    expect(d.reason).not.toContain("could not be attributed");
   });
 });
