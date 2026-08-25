@@ -96,8 +96,8 @@ configure their own retention via account-level controls (default
   own DPIA.
 - **Engineering bar** (DEC-20260428-B): both capabilities ship a
   versioned dataset reference (per-call `lists_queried`), source
-  manifest per response, audit chain integrity, dispute endpoint,
-  replay capability, golden test suite, per-list source citation.
+  manifest per response, per-record audit hashing, dispute endpoint,
+  golden test suite, per-list source citation.
 - **Per-response source manifest**: `lists_queried` field includes
   `source_count`, `major_lists`, `freshness_note`, and
   `source_catalog_url` — more transparent than the typical KYB SaaS

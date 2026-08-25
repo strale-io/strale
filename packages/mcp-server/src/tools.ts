@@ -944,7 +944,7 @@ export function registerStraleTools(
     "strale_methodology",
     {
       description:
-        "Returns Strale's trust methodology as a short reference document — covers test cadence, audit-trail integrity, and provenance. No API key required.",
+        "Returns Strale's trust methodology as a short reference document — covers test cadence, audit records, and provenance. No API key required.",
       inputSchema: z.object({}),
     },
     async () => {
@@ -952,15 +952,14 @@ export function registerStraleTools(
 =========================
 
 WHAT STRALE IS
-Strale is data infrastructure for AI agents. Agents call capabilities (atomic data operations) and solutions (multi-step workflows) via a unified API. Every call returns a chain-hashed audit record.
+Strale is data infrastructure for AI agents. Agents call capabilities (atomic data operations) and solutions (multi-step workflows) via a unified API. Every call returns an audit record.
 
 TEST CADENCE
 Free capabilities are tested hourly with canary inputs that don't consume vendor quota. The scheduler hash-spreads runs across the hour to keep upstream pressure even.
 Paid capabilities are not proactively scheduled. Quality signals come from production traffic, piggyback test suites attached to real customer calls, and any zero-cost auth-less probes the vendor permits.
 
 AUDIT TRAIL
-Every execution writes a transaction row with input, output, provenance (source + fetched_at), latency, price, and an integrity_hash chained to the previous transaction. Retrieve via /v1/audit/{transactionId} or programmatically via strale_transaction.
-The chain is independently verifiable at /v1/verify/{transactionId} — Counterparty Assurance and standalone capability calls both produce the same chain shape.
+Every execution writes a transaction row with input, output, provenance (source + fetched_at), latency, price, and a content hash. Retrieve via /v1/audit/{transactionId} or programmatically via strale_transaction.
 
 PROVENANCE
 Every successful call includes:

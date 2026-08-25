@@ -267,7 +267,7 @@ methodologyRoute.get("/", (c) => {
           "array — explicit cross-vendor disagreements (e.g. Sourcify says verified but Etherscan disagrees). Surfaces conflicts single-source competitors cannot detect.",
         explanation_chain:
           "array of {reason_code, severity, source_evaluator, evidence_excerpt, why} — structured causal chain. For each fired reason_code, walks back to the evaluator that produced it, the specific evidence values that triggered it, and a why-it-matters string. Workflow gates and human reviewers consume this directly.",
-        audit_url: "string — sidecar URL to hash-chained audit record (HMAC-signed, 90-day TTL)",
+        audit_url: "string — sidecar URL to the audit record (HMAC-signed, 90-day TTL)",
         sla: { mode: "outbound | reverse-call", p99_ms: "integer", p50_ms: "integer" },
       },
       modes: {
@@ -309,10 +309,9 @@ methodologyRoute.get("/", (c) => {
           "Material changes to verdict logic or evaluator set are surfaced via response-header X-Strale-Methodology-Hash, which downstream consumers can monitor for drift.",
       },
       audit_trail_policy: {
-        chain: "SHA-256 hash chain, per-day, anchored to GENESIS_HASH = sha256('strale-genesis-v1').",
+        chain: "Each record carries a SHA-256 content hash and a reference to the record it was written after.",
         token: "audit_url uses HMAC-SHA256(secret, `${recordId}:${expiresAt}`) signing with 90-day TTL.",
-        retention: "Indefinite for completed records.",
-        replay_capability: "Each record can be replayed to confirm the evidence trail available at the time the verdict was issued.",
+        retention: "Record metadata is retained for 3 years; record content is redacted at 90 days.",
       },
       contact: { email: "hello@strale.io", docs: "https://strale.dev/docs" },
     },

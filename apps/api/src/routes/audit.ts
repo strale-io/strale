@@ -617,7 +617,7 @@ auditRoute.get("/:transactionId", async (c) => {
             "This transaction predates Strale's cryptographic audit chain (introduced in migration 0047, finalised by 0052). " +
             "The compliance record above is reconstructed from execution metadata but is NOT hash-protected; " +
             "/v1/verify will return hash_valid: null for this transaction by design. " +
-            "Transactions executed after the chain was finalised carry hash_valid: true | false on /v1/verify and are independently verifiable.",
+            "Transactions executed after the chain was finalised carry hash_valid: true | false on /v1/verify.",
         }
       : {}),
   });

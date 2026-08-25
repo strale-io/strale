@@ -190,7 +190,9 @@ export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string 
     settledBy:
       "the founder approved the correction itself — unsupported tamper-evidence and " +
       "downstream-regulatory-verification claims are removed, with no replacement " +
-      "integrity claim until independently substantiated. The operative surface plan lives on the remediation branch, not yet on main. It supersedes " +
+      "integrity claim until independently substantiated. The operative surface plan is " +
+      "docs/remediation/PUBLIC-COPY-CORRECTION.md, applied 2026-08-25 except the " +
+      "founder-gated npm publish. It supersedes " +
       "the withdrawn hedged rewording, so 'which wording should we publish' is not the " +
       "open question; removal is what was approved",
   },

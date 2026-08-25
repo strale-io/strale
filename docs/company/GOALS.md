@@ -135,6 +135,59 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **The first customer to pay us by card arrived, and they are buying the
+  compliance wedge — not the growth cluster** (measured 2026-08-25). A domain we
+  had never seen registered at 2026-08-23T21:12Z, spent the €2 trial credit on
+  `competitor-compare` within six minutes, and then on 2026-08-24T23:58Z **paid
+  €10.00 through Stripe** and resumed buying immediately. 16 paid calls, €5.09
+  spent, **zero failures**, across two separate days. Their user agents are
+  `Python-urllib`, `python-httpx` and `curl` — an agent integration, not a
+  person clicking.
+
+  **This is the only Stripe top-up in the last 120 days.** Every euro before it
+  arrived over x402. Second-sourced four ways: the wallet ledger shows the
+  trial-credit grant, the two trial purchases, the €10.00 `top_up` carrying a
+  Stripe session id, and the purchases after it; the domain is outside
+  `INTERNAL_EMAIL_SUFFIXES`, so the canonical filter counts them as external by
+  the same rule every revenue number uses; it is the only account on that
+  domain; and there are no failed calls to explain away.
+
+  **What they bought contradicts a claim this file has carried since
+  2026-08-16.** "All revenue is one cluster — SEO and growth research" is no
+  longer true. After topping up they called `pep-check`, `insolvency-check`,
+  `vat-validate`, `lei-lookup`, `uk-company-data`,
+  `uk-disqualified-director-check` and `us-company-data` — the KYB/compliance
+  wedge, in one burst of seven capabilities inside five seconds, which is a
+  screening workflow. DQ-9 (Petter, 2026-08-16) declined to re-point the company
+  at SEO/growth and keep compliance's investment. That decision now has its
+  first supporting evidence rather than only the argument.
+
+  **What is NOT established, and must not be written down as if it were:** that
+  this is a durable customer. It is two days and €10. The honest next
+  measurement is whether they top up a second time.
+
+- **The 2026-08-22 "the business pauses when one buyer pauses" scare did not
+  become a decline** (re-measured 2026-08-25 per-day through `lib/metrics`):
+  08-17 €16.29 · 08-18 €10.97 · 08-19 €8.72 · 08-20 €9.29 · 08-21 €9.32 ·
+  **08-22 €4.74** · 08-23 €6.98 · **08-24 €11.51** · 08-25 €3.90 by 05:40Z.
+  The dip was one day. The week of 08-17 closed at **€66.31 on 1,000 calls** —
+  the highest week in the series — and `growth()` over the discrete completed
+  series reads **rising**, now three consecutive completed rises (07-27 €10.85 ·
+  08-03 €27.38 · 08-10 €39.24 · 08-17 €66.31).
+
+  The GOALS entry written on 08-23 was right to refuse to call one day a trend,
+  and the refusal is what kept a wrong conclusion out of the record. Worth
+  keeping as the worked example: **at this volume a single day is inside the
+  noise in both directions**, and the alert that paged at 20:47Z on 08-22 was
+  measuring variance, not churn.
+
+  Concentration in the current partial week reads 79.3% top share across 5
+  payers against last week's 96.4% across 5. **That is not a comparison and must
+  not be presented as one** — `Concentration.comparable` returns `false` on the
+  current window because it is a partial week, which on any Monday or Tuesday
+  reads as a movement that is purely an artefact of which days have elapsed. The
+  first honest read is after this week closes.
+
 - **An agent that asked for something we sell, the way we tell agents to ask,
   got HTTP 500 — for five and a half months** (found and fixed 2026-08-23,
   `e8c36cb`). `/v1/do` takes either a `capability_slug` or a free-text `task`.

@@ -184,6 +184,42 @@ one I would not leave indefinitely.
 
 ## DECIDED — visible so you can reverse them
 
+**DQ-24** · `decided` · owner Claude · 2026-08-25
+The overstated claims about our audit records are now off everything we publish.
+*What happened:* you approved taking them down (DQ-18 item 2). The website half
+was done; the machine-readable half — what agents, crawlers and integration
+partners actually read — was not, and had been live the whole time. The
+strongest of them told readers an audit record was retrievable "for downstream
+regulatory verification", which claims it is fit for a regulatory purpose rather
+than describing what it does. Also removed: a promise that we walk the record
+chain all the way back to the beginning, when we stop after twenty steps; a
+statement that we keep records indefinitely, when we erase their content after
+ninety days; and a "replay" feature listed as delivered in two published data-
+protection assessments, which that same erasure makes impossible.
+*What replaces them:* nothing. Pure removal, as you decided. Nothing new is
+claimed, hedged or otherwise.
+*Why this is mine:* executing a decision you already made. Your queue entry says
+so explicitly — "what remains is execution, and it is mine".
+*What is NOT done, deliberately:* republishing our installer package to the
+public registry. That is a one-way public act and stays yours. The live text is
+already fixed by the deploy; only the package version trails.
+*What stops it coming back:* an automatic check now fails our build if any of
+that wording reappears. It was tested by putting the claims back and confirming
+the check goes red.
+*How you'd reverse it:* tell me, and the wording returns.
+
+**DQ-25** · `decided` · owner Claude · 2026-08-25
+Three dead branches removed and two incident records rescued off one machine's
+hard drive.
+*What happened:* two abandoned snapshots from mid-July and one already-merged
+branch were deleted, each commit id recorded first so all three are restorable.
+Separately, the two written records of the August 22nd process violation existed
+only as untracked files in a working directory — three days from being lost with
+that folder. They are now committed. Nothing in them is changed and the incident
+stays closed.
+*Why this is mine:* routine cleanup, fully reversible.
+
+
 **DQ-21** · `decided` · owner Claude · 2026-08-23
 Agents that asked for a paid service by describing it were getting an error page
 instead of a price. Fixed and live.
