@@ -101,8 +101,8 @@ starts life misclassified and stays that way until it costs something visible.
 That is a default-direction problem, not a coverage problem, and no number of
 string additions reaches it.
 
-**State: investigation open, owner Claude, opened 2026-08-22. Steps 1 and 2 are
-DONE as of 2026-08-23; 3 is partly done; 4–7 are owed.**
+**State: investigation open, owner Claude, opened 2026-08-22. Steps 1 and 2
+DONE 2026-08-23; step 3 partly done; step 4 DONE 2026-08-25; 5–7 owed.**
 
 **Step 2 — the full population, measured.** `apps/api/scripts/f1-failure-attribution.ts`
 runs it and is read-only, so a later session can re-run it against the repaired
@@ -139,17 +139,63 @@ change what customers are charged. Checked, and it does not — both branches of
 `classifyExecutionOutcome` already set `billable: false`. The repair is not
 blocked by billing.
 
-**Step 4 is deliberately NOT a seventh string patch.** `fetch failed` alone is
-29% of the bucket and one line would remove it. That is exactly the move this
-file forbids: six local widenings is how the family reached seven. The shared
-repair is to make `internal` reachable only by positive match, with an
-`unclassified` fallback that leaves the denominator *and* surfaces as an
-evidence shortfall so the floor reports "I could not attribute this" instead of
-"the capability is broken". It touches `execution-outcome.ts` (WP4's authority,
-which writes `counts_against_capability` into the durable fact table) and
-`jobs/quality-floor.ts`, both under concurrent modification by the remediation
-programme on 2026-08-23 — so it is scoped as the next session's work rather
-than slipped in beside a customer-facing fix.
+**Step 4 was deliberately NOT a seventh string patch — DONE 2026-08-25.**
+`fetch failed` alone is 29% of the bucket and one line would have removed it.
+That is exactly the move this file forbids: six local widenings is how the
+family reached seven. The shared repair shipped instead: `internal` is now
+reachable only by positive match, and the fallback is a new `unclassified`
+class that leaves the denominator *and* surfaces as an evidence shortfall, so
+the floor reports "I could not attribute this" rather than "the capability is
+broken". `foldTrafficRows` counts unattributed failures separately from
+caller-attributable ones, and `evaluateFloor` carries the count on every
+decision and in its reason string.
+
+**What nearly went wrong, and is the transferable part.** Inverting a default
+is only safe if the class losing its default has real positive evidence to
+stand on. `INTERNAL_RE` was four parse-failure phrasings, so with the fallback
+gone, every runtime crash — a `TypeError`, a null dereference — would have
+become `unclassified` and the floor would have stopped seeing genuine defects.
+That is this same family pointed the other way: a false accusation traded for
+a blindness. It was caught by an existing test asserting a `TypeError` is
+`internal`, not by design. `INTERNAL_RE` therefore also gained V8 error names
+and V8 message text, plus the house `failed to extract` phrasing, each pinned
+by a test that the widening steals nothing from `timeout`, `upstream`,
+`config` or `caller_input`. **Generalisation: when a fallback is removed, the
+question is not "is the new default safer" but "what did the old default carry
+that nothing else now does".**
+
+One test regressed silently in the same way and was repaired rather than
+relaxed: `invocation-facts` pinned that a refusal whose wording the taxonomy
+does not recognise is saved by the *structural* branch, not by the string.
+Once the fallback became `unclassified`, `counts_against_capability` was false
+either way, so the assertion would have passed with the branch deleted — the
+exact failure its own comment warned about. Moved to `failure_class`, which
+only the structural branch can set.
+
+**Reported, not suppressed.** A large unattributed count does NOT defer the
+floor's action. Whether it should is a real question and it is step 6's replay
+to answer; arming a new suppression rule on an unmeasured threshold is how
+this family started.
+
+**Follow-ups this opened, both small and both recorded where they belong:**
+
+1. `translate` throws `"Translation failed."` — two words naming no cause, no
+   actor, quoting nothing. It IS our defect and the taxonomy cannot tell, so
+   it now reads `unclassified`. The repair belongs in the message, not in a
+   per-capability entry in `INTERNAL_RE`. The new default is what made this
+   visible; previously the fallback absorbed it silently. Expect more of these
+   as step 6 replays the census — that is the mechanism working.
+2. A taxonomy-`internal` failure still maps to `provider_rejected` /
+   `fault: "provider"` in `execution-outcome.ts`, which is the wrong actor for
+   our own crash. `counts_against_capability` is unaffected, so it mislabels a
+   report rather than a decision. Untouched here on purpose.
+
+**Step 6's replay is now cheap and is the next measurement.**
+`scripts/f1-failure-attribution.ts` is read-only and unchanged, so re-running
+it against the repaired taxonomy reads the `unclassified` bucket back
+directly: every recurring shape in it that is genuinely ours earns a rule in
+`INTERNAL_RE` with its observed call count attached, and the bucket's size
+over time is the honest measure of whether the taxonomy is catching up.
 
 ### F2 · Wrong denominator / mislabelled window
 

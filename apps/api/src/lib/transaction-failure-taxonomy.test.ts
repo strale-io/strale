@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyTransactionFailure,
+  countsAgainstCapability,
   CALLER_ATTRIBUTABLE,
+  UNATTRIBUTED,
   type TransactionFailureClass,
 } from "./transaction-failure-taxonomy.js";
 
@@ -206,10 +208,18 @@ describe("classes that were already right stay right", () => {
     expect(classOf("'cik' or 'company_name' is required. Provide a CIK number or US company name.")).toBe("caller_input");
   });
 
-  it("an empty or absent error is our problem until proven otherwise", () => {
-    expect(classOf("")).toBe("internal");
-    expect(classifyTransactionFailure(null)).toBe("internal");
-    expect(classifyTransactionFailure(undefined)).toBe("internal");
+  it("an empty or absent error is an evidence shortfall, not our defect", () => {
+    // Reversed with LESSONS.md F1 step 4. It read `internal` before, on the
+    // premise "our problem until proven otherwise" - so a failed call with no
+    // error text at all became evidence of a defect purely because nothing
+    // matched. That premise is the common cause of all seven F1 incidents.
+    expect(classOf("")).toBe("unclassified");
+    expect(classifyTransactionFailure(null)).toBe("unclassified");
+    expect(classifyTransactionFailure(undefined)).toBe("unclassified");
+    // And it must not be laundered into "the caller's fault" either: the two
+    // are different statements and only one of them is a claim about anyone.
+    expect(excused("")).toBe(false);
+    expect(countsAgainstCapability(classOf(""))).toBe(false);
   });
 });
 
@@ -340,16 +350,26 @@ describe("a page with nothing in it is the caller's URL, not our defect", () => 
     for (const msg of notExcused) expect(excused(msg)).toBe(false);
   });
 
-  it("does not excuse our own empty-output defects", () => {
+  it("does not excuse our own empty-output defects as the caller's fault", () => {
     // The pattern is anchored to one house phrasing. A generic claim about
-    // emptiness in OUR OWN pipeline must keep counting — these are the
-    // assertions that fail if it is ever loosened to `no readable` or
-    // `returned too little`.
+    // emptiness in OUR OWN pipeline must never be excused as caller input -
+    // these are the assertions that fail if the caller rule is ever loosened
+    // to `no readable` or `returned too little`.
+    //
+    // The assertion is on `excused`, not on the class. Since F1 step 4 these
+    // land in `unclassified` rather than `internal`: no rule recognises them,
+    // and the honest record of that is "I could not attribute this". They are
+    // invented probe strings rather than observed production text, so there is
+    // nothing to anchor a positive `internal` rule to; if either shape ever
+    // shows up in the census it earns a rule in INTERNAL_RE with its call
+    // count attached. What matters here, and what is pinned, is that the
+    // caller boundary does not move.
     for (const msg of [
       "Extraction pipeline returned too little data to build a result.",
       "Internal renderer produced no readable output for the requested page.",
     ]) {
-      expect(classOf(msg)).toBe("internal");
+      expect(classOf(msg)).toBe("unclassified");
+      expect(excused(msg)).toBe(false);
     }
   });
 
@@ -369,5 +389,94 @@ describe("a page with nothing in it is the caller's URL, not our defect", () => 
     const counted = failures.filter((e) => !excused(e)).length;
     expect(counted).toBe(4);
     expect(completed / (completed + counted)).toBeGreaterThanOrEqual(0.7);
+  });
+});
+
+/**
+ * LESSONS.md F1 step 4 — the default direction, not another string patch.
+ *
+ * The family reached seven incidents because six repairs widened the
+ * caller-attributable *coverage* while the *default* stayed "ours". These
+ * tests pin the default itself, and every one of them fails against the
+ * un-fixed module: before the change the fallback returned "internal", so each
+ * `unclassified` assertion here would read "internal" and each
+ * `countsAgainstCapability` assertion would read `true`.
+ */
+describe("the default is a shortfall, not an accusation (F1 step 4)", () => {
+  // Verbatim from `scripts/f1-failure-attribution.ts`, 90-day census: the
+  // three largest shapes in the 47,582-call `internal` bucket that no rule
+  // claimed. 29.2% of that bucket is the bare transport error alone.
+  const unrecognised = [
+    "fetch failed",
+    "TypeError: fetch failed",
+    "terminated",
+  ];
+
+  it("an error string no rule recognises is unclassified, never internal", () => {
+    // "TypeError: fetch failed" is the one exception in this set and it is
+    // deliberate: it carries a V8 error name, which IS positive evidence our
+    // own code threw, so INTERNAL_RE claims it. The bare transport strings
+    // carry no such evidence and must not be guessed at.
+    expect(classOf("fetch failed")).toBe("unclassified");
+    expect(classOf("terminated")).toBe("unclassified");
+    expect(classOf("TypeError: fetch failed")).toBe("internal");
+  });
+
+  it("unclassified failures leave the capability's denominator", () => {
+    for (const msg of unrecognised.filter((m) => classOf(m) === "unclassified")) {
+      expect(countsAgainstCapability(classOf(msg))).toBe(false);
+    }
+  });
+
+  it("unclassified is NOT the caller's fault either — the two are different claims", () => {
+    // The distinction is the whole point. "Not the capability's fault" and
+    // "nothing here says whose fault this was" are opposite operator
+    // situations, and collapsing the second into the first would hide an
+    // evidence shortfall behind a verdict.
+    expect(excused("fetch failed")).toBe(false);
+    expect(CALLER_ATTRIBUTABLE.has("unclassified" as TransactionFailureClass)).toBe(false);
+    expect(UNATTRIBUTED.has("unclassified")).toBe(true);
+  });
+
+  it("still sees our own code crashing — the class the change must not blind", () => {
+    // If inverting the default had left INTERNAL_RE alone, every runtime crash
+    // would have become `unclassified` and the floor would have stopped
+    // counting real defects. That is the failure mode this change could have
+    // introduced, so it is pinned harder than the rest.
+    for (const msg of [
+      "TypeError: Cannot read properties of undefined (reading 'items')",
+      "ReferenceError: capabilityRegistry is not defined",
+      "RangeError: Invalid array length",
+      "resolveCountry is not a function",
+      "result.rows is not iterable",
+    ]) {
+      expect(classOf(msg)).toBe("internal");
+      expect(countsAgainstCapability(classOf(msg))).toBe(true);
+    }
+  });
+
+  it("does not steal strings the other classes already claim", () => {
+    // Ordering regression guard. INTERNAL_RE runs BEFORE timeout, upstream and
+    // caller-input, so widening it risks claiming their traffic. Each of these
+    // is a class the census assigns elsewhere and must keep.
+    expect(classOf("Companies House returned HTTP 503")).toBe("upstream");
+    expect(classOf("Request timed out after 35000ms")).toBe("timeout");
+    expect(classOf("Verify COURTLISTENER_API_TOKEN.")).toBe("config");
+    expect(classOf('No Estonian company found matching "10667868".')).toBe("caller_input");
+    // "internal server error" is the upstream's phrasing, not evidence about
+    // our code, and it is the string most likely to be captured by a careless
+    // widening of INTERNAL_RE. The assertion is that INTERNAL_RE does NOT
+    // claim it — which is the property under test.
+    //
+    // What it lands in instead is `unclassified`, and that is worth writing
+    // down rather than asserting away: UPSTREAM_RE reads
+    // `service.*(?:down|error)`, so it needs the literal word "service" and
+    // this phrasing has none. The taxonomy has no rule for a bare "internal
+    // server error". Before F1 step 4 that gap was invisible because the
+    // fallback swallowed it as our defect; now it shows up as a shortfall,
+    // which is the intended behaviour of the change and the mechanism by
+    // which the gap gets found and fixed from the census.
+    expect(classOf("Registry returned an internal server error")).not.toBe("internal");
+    expect(classOf("Registry returned an internal server error")).toBe("unclassified");
   });
 });
