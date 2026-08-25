@@ -65,15 +65,32 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 
+/**
+ * The DB mock returns an EMPTY ARRAY from every terminal call, including a
+ * bare `.where(...)`.
+ *
+ * The obvious mock — `where: () => ({ limit: … })` — makes `.where()` resolve
+ * to an object rather than an array, so the x402 gateway's `ensureCache()`
+ * threw `capRows is not iterable` on every request and retried. The tests
+ * still passed, but each passing request cost about a second and three of them
+ * intermittently blew vitest's 10 s default. A mock that makes the code under
+ * test fail internally is not a neutral stand-in.
+ */
+const emptyResult = () => {
+  const thenable: any = Promise.resolve([]);
+  thenable.where = () => emptyResult();
+  thenable.limit = () => emptyResult();
+  thenable.orderBy = () => emptyResult();
+  thenable.innerJoin = () => emptyResult();
+  thenable.leftJoin = () => emptyResult();
+  thenable.from = () => emptyResult();
+  return thenable;
+};
+
 vi.mock("../db/index.js", () => ({
   getDb: () => ({
     execute: () => Promise.resolve([]),
-    select: () => ({
-      from: () => ({
-        where: () => ({ limit: () => Promise.resolve([]) }),
-        innerJoin: () => ({ where: () => ({ orderBy: () => Promise.resolve([]) }) }),
-      }),
-    }),
+    select: () => emptyResult(),
   }),
 }));
 
@@ -87,9 +104,23 @@ beforeAll(() => {
   process.env.AUDIT_HMAC_SECRET = "unit-test-audit-secret-plenty-of-entropy-0123456789";
 });
 
-async function loadApp() {
+/**
+ * Loaded ONCE. Each test previously called this, and while the module cache
+ * makes the second import cheap, every request still drives app.ts's x402
+ * cache refresh against the mocked (empty) DB. Under load that pushed three
+ * of these past vitest's 10 s default and produced timeouts that looked like
+ * failures of the limit rather than of the harness.
+ */
+let cachedApp: Awaited<ReturnType<typeof importApp>> | undefined;
+
+async function importApp() {
   const { app } = await import("./../app.js");
   return app;
+}
+
+async function loadApp() {
+  cachedApp ??= await importApp();
+  return cachedApp;
 }
 
 /** The declared rail cap, restated so a change in app.ts must change this too. */
@@ -110,7 +141,7 @@ function declaring(bytes: number) {
   };
 }
 
-describe("/x402/* enforces a request body cap", () => {
+describe("/x402/* enforces a request body cap", { timeout: 30_000 }, () => {
   it("refuses a body declared just OVER the limit", async () => {
     const app = await loadApp();
     const res = await app.request("/x402/image-resize", declaring(X402_LIMIT + 1));
@@ -252,7 +283,7 @@ describe("the gateway itself no longer swallows the abort", () => {
   });
 });
 
-describe("the other rails are untouched", () => {
+describe("the other rails are untouched", { timeout: 30_000 }, () => {
   const cases: Array<{ path: string; limit: number; name: string }> = [
     { path: "/v1/do", limit: 1024 * 1024, name: "/v1" },
     { path: "/a2a", limit: 256 * 1024, name: "/a2a" },
