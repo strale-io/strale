@@ -3,7 +3,7 @@ country: AT
 evidence_type: Company registry
 provider: Firmenbuch (Republik Österreich, BMJ) via JustizOnline IWG/HVD API
 status: Committed
-sourcing_pattern: Direct official API (Tier 2, DEC-20260428-A)
+sourcing_pattern: Direct API
 per_call_price_eur: 0.05
 evidence_grade: live-verified
 tier_1_coverage: 7/7 (legal_form via FI_DKZ07 code + text)

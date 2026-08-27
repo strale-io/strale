@@ -229,7 +229,7 @@ output_field_reliability:
   first_registered_date: common
   historical_registration_number: rare
   homepage: rare
-  legal_facts: guaranteed
+  legal_facts: common
   resolved_via: guaranteed
   legal_name: guaranteed
   primary_registration_id: guaranteed
