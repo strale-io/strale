@@ -135,6 +135,66 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Correction to the entry below, 2026-08-27: the card customer's money goes
+  to competitive intelligence, not to compliance — and their runway is days,
+  not weeks.** Measured per-day over the canonical external population. They
+  have now been active on **three** days, the third being 08-26, which no
+  session was watching: 08-23 two calls €2.00 on trial credit; 08-25 fourteen
+  calls €3.09; **08-26 three calls €3.00, all `competitor-compare`**. Zero
+  failures throughout.
+
+  **€7.00 of the €10.09 they have spent — 69% — is `competitor-compare` at
+  €1.00 a call.** The eleven-capability compliance burst that the 08-25 entry
+  built its conclusion on was 12 calls for **€1.09 in total**, at €0.02–€0.25
+  each, and the very next day they went back to the expensive capability. Under
+  GOALS' own "follow the money" rule this customer is a competitive-intelligence
+  buyer who *sampled* compliance once. What survives from 08-25: a card payer
+  exists, they are an agent integration, and compliance got its first
+  supporting evidence rather than only the argument. What does not survive:
+  "they are buying the compliance wedge" as a description of their spending.
+
+  **Their wallet holds €3.91** — under four more `competitor-compare` calls.
+  The 08-25 correction that replaced "wait for a second payment" with "watch
+  the balance" was right, and its own estimate ("weeks of the cheap compliance
+  checks they mostly buy") is superseded by the same evidence: at their actual
+  basket this is days.
+
+  **They are assembling N-way comparisons by hand, and paying three times for
+  it.** All three 08-26 calls were *different* domain pairs covering three
+  companies, inside 49 seconds — every pairwise combination of a three-company
+  set. Our catalogue sells only pairwise, so a three-way question costs them
+  €3.00 and costs us six page renders across three distinct domains. This is
+  demonstrated, paid-for demand for a multi-entity comparison from the only
+  customer who has ever paid us by card, and it is the strongest product lead
+  on the board. Not yet built; a new slug goes through the onboarding pipeline
+  (DEC-20260320-B).
+
+  **What is still NOT established:** that they are a durable customer. Three
+  days and €12. The honest next measurement is unchanged — a second top-up —
+  and it is now close enough to observe rather than to wait for.
+
+- **The 24h `competitor-compare` result cache is confirmed working in
+  production** (2026-08-27), closing the `unverified:` the 08-25 handoff filed
+  because `STRALE_API_KEY` is dead. Production traffic settled it without a
+  key: the same input at 08-25 08:43:28Z and 08:44:05Z returned
+  `cache_hit=false` then `cache_hit=true, cache_age_hours=0`. Self-second-
+  sourcing — the `cache_hit` field exists only in the post-`f992fd5` build, and
+  every earlier row has it null, so the rows also evidence which build served
+  them. The exercising account was internal, so this is our own production
+  call, not a customer's. Note for anyone reasoning about its value: **the
+  cache cannot help the card customer**, who never repeats a pair. Its value is
+  against the double-charge shape (same pair twice in 43 minutes, 08-25) that
+  prompted it.
+
+- **The German suspension costs €1.80, from the buyer who is already ours**
+  (measured 2026-08-27). All 36 external `german-company-data` calls landed on
+  a single day, 2026-08-24, and every one came from `e9e672ef719ee934` — the
+  dominant wallet, not a new customer. OpenRegister Pro at €59/month needs
+  ~295 paid calls/month to break even against a corrected €0.20 price; one day
+  of 36 calls is €7.20. Buying it is not justified and is therefore **not a
+  founder decision**. Re-open only if the 2026-09-06 free reset is exhausted
+  again immediately.
+
 - **The first customer to pay us by card arrived, and they are buying the
   compliance wedge — not the growth cluster** (measured 2026-08-25). A domain we
   had never seen registered at 2026-08-23T21:12Z, spent the €2 trial credit on

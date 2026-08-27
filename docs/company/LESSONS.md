@@ -267,7 +267,7 @@ footnote. If a fourth lands, open the investigation.
 > A test, gate or check that passes whether or not the thing it guards is
 > working.
 
-**Count: 7 — threshold reached, investigation OPENED 2026-08-22.** Integration
+**Count: 8 — threshold reached, investigation OPENED 2026-08-22, and incident 8 is incident 7's direct consequence.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -342,6 +342,50 @@ fail-on-empty helper, the repair direction proposed for the other six, would not
 have caught this one. That is worth carrying into step 3: the invariant is
 "examined the artefact it claims to guard", and "examined something" is a weaker
 condition that this incident satisfies.
+
+**Incident 8, 2026-08-27 — the same script again, firing on something correct.**
+`session-close-check --hygiene-only` reported two incident records as *"exist
+only on disk — losing this directory loses them"*: the 2026-08-22
+process-violation writeup and the stranded-settlement investigation. Both were
+byte-identical to the copies already on `origin/main` (`c97235f1` and
+`9d9f630d` on both sides). Nothing was at risk. A session acting on the warning
+would have spent its morning re-committing files git already had.
+
+One line again: `git ls-files --error-unmatch` answers *is this path in the
+index of whichever branch this checkout is sitting on*, which is not the
+question the warning's own words ask. Incident 7 left the primary checkout on
+`remediation/wp9-artifacts`; by this morning it was 48 commits behind main, so
+every handoff added to main since read as unsaved. Incident 7 is therefore the
+*cause* of incident 8, which is the clearest evidence available that the
+family's local-fix pattern is still running.
+
+**This one inverts the family's usual direction and is filed here anyway.**
+F5's definition is a check that passes when it should fail; this one failed
+when it should have passed. It is filed under F5 rather than F1 because it is
+the same instrument as incident 7, and splitting one script's history across
+two families to satisfy a definition would lose the thing that matters — that
+this check has now been wrong twice in three days, in opposite directions,
+about what repository state it is describing. The shared root is the one step 1
+already named: the gate never established that the artefact it examined is the
+artefact its output claims to describe. Incident 7 examined the wrong
+repository; incident 8 examined the right repository and reported a property of
+the wrong *branch*.
+
+Repaired in #407 (`ab69416`). The predicate moved to
+`src/lib/handoff-preservation.ts` — in `src/` because vitest collects only
+`src/**` and `test/**`, so a predicate left in `scripts/` cannot be tested at
+all, which is itself the F5 mechanism one level up. A file is now cleared by any
+of: tracked here, identical blob at the same path on `origin/main`, identical
+blob on the branch's pushed upstream. Strict superset of the old safe-set, so
+it can only withdraw false positives; matching is on content rather than path,
+so a locally-edited handoff whose filename exists on main is still flagged, and
+that direction has its own test.
+
+Discriminated in both directions rather than asserted: the un-fixed predicate
+(`return !trackedHere`) fails 2 of the 6 unit tests, and end-to-end — a handoff
+un-indexed while its identical content sits on `origin/main`, the real
+condition — the old script emits the warning and the new one is silent on the
+same repository state.
 
 **Steps 3–7 owed.** The hypothesis to falsify: *a gate that asserted a non-empty
 input set, or a minimum expected count, would have caught incidents 1, 4 and 5.*
