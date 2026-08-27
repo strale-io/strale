@@ -77,7 +77,9 @@ const DETERMINISTIC_SLUGS = [
 ];
 
 const SCRAPING_SLUGS = [
-  "accessibility-audit", "australian-company-data", "austrian-company-data",
+  // austrian-company-data removed 2026-08-27: migrated to the direct
+  // Firmenbuch HVD API (no scraping-class failure modes).
+  "accessibility-audit", "australian-company-data",
   "belgian-company-data", "business-license-check-se", "canadian-company-data",
   "company-tech-stack", "competitor-compare", "container-track", "cookie-scan",
   "credit-report-summary", "customs-duty-lookup", "dutch-company-data",

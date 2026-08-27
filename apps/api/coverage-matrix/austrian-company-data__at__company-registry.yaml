@@ -1,30 +1,29 @@
 capability_slug: austrian-company-data
 country: AT
 evidence_type: Company registry
-provider: Openapi.com
+provider: Firmenbuch (Republik Österreich, BMJ) via JustizOnline IWG/HVD API
 status: Committed
-sourcing_pattern: Vendor (Tier 3 aggregator)
-per_call_price_eur: 0.16
+sourcing_pattern: Direct official API (Tier 2, DEC-20260428-A)
+per_call_price_eur: 0.05
 evidence_grade: live-verified
-tier_1_coverage: 6/7 (no legal_form via WW-Top)
-tier_2_coverage: 4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via WW-Top)
-tier_3_coverage: 1/6 (NACE only)
-last_verified: "2026-05-15"
+tier_1_coverage: 7/7 (legal_form via FI_DKZ07 code + text)
+tier_2_coverage: directors with roles, representation authority, start dates via Kurzinformation FUN/PER join; no vatCode (Firmenbuch carries no UID)
+tier_3_coverage: legal facts (insolvency/dissolution RECHTSTATSACHE), EUID, court, homepage; no NACE, no financials at HVD tier
+last_verified: "2026-08-27"
 products:
-  - Counterparty Assurance
+  - KYB
 vendor_roster_url: https://www.notion.so/35667c87082c811189f3e1824b52ac72
 provider_tos_notes: >-
-  Openapi.com WW-Top via case 151296 resale addendum (PAYG; €0.16/call inc 22% IT VAT pre-VAT-flip
-  target). AT identifier path: VAT only (Firmenbuch FN format returns 406). Previous finapu.com
-  scraping path deprecated 2026-05-17 per Tier-1 doctrine DEC-20260428-A (see corresponding
-  Deprecated row in matrix).
+  IWG reuse grant issued to Moonlighter AB by BRZ/JustizOnline 2026-08-27 (application 2026-08-13,
+  token delivered by email). Terms CC BY 4.0 — attribution carried in every response's provenance
+  block. Firmenbuch HVD scope only; token extendable to further JustizOnline interfaces on request.
+  Ops contact on file: petter@strale.io.
 doctrine_reference: >-
-  Moonlighter AB VAT issuance (via Skatteverket); Openapi resale addendum case 151296 awaiting
-  countersignature
+  DEC-20260427-I-6 reactivation trigger ("licensed contract with the Austrian Justizministerium for
+  direct Firmenbuch API access") satisfied; preference-order top per DEC-20260813-A. Supersedes the
+  Openapi.com WW-Top path (case 151296 addendum never countersigned; AT never activated on it).
 notes: >-
-  v4 probe 2026-05-15: OMV at ATU14189108 returned 200 via WW-Top. AT-start scope accessible on prod
-  credentials but returns same WW-Top dataset (normalized projection, not richer). 2026-05-11 prior
-  probe confirmed Erste/Andritz/Voestalpine catalog hits. Estimated cost €0.13 + 22% IT VAT =
-  €0.1586/call. Cheaper AT-start (€0.055) path exists but coverage is identical to WW-Top — defer
-  wire decision.
+  Live-verified 2026-08-27: OMV (FN 93363 z) full Kurzinformation extract with 10 officers; NIKI
+  Luftfahrt (FN 230533 w) returns insolvency + dissolution legal facts. SOAP 1.2, X-API-KEY auth
+  (JUSTIZONLINE_API_KEY), WSDL requires the key. FN path ~1s, name path ~4s (search + extract).
 _source_notion_page_id: 34867c87-082c-8165-9fcd-d01bc75c9766

@@ -455,10 +455,9 @@ export const LIMITATIONS: LimitationDef[] = [
     workaround: "Use the ACN/ABN from the response to purchase detailed extracts directly from ASIC Connect" },
 
   // ── austrian-company-data ──
-  { capabilitySlug: "austrian-company-data", category: "coverage", severity: "info",
-    title: "Extracted from Firmenbuch via web scraping — older registrations may have incomplete fields",
-    limitationText: "Extracted from Firmenbuch via web scraping — some fields may be incomplete for older registrations",
-    workaround: "For complete records, use the Firmenbuchnummer from the response to query the Austrian Commercial Register directly" },
+  // (Scraping-era limitation removed 2026-08-27: the capability now reads the
+  // Firmenbuch directly via the JustizOnline HVD API. Current limitations are
+  // authored in manifests/austrian-company-data.yaml.)
 
   // ── backlink-check ──
   { capabilitySlug: "backlink-check", category: "coverage", severity: "info",

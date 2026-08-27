@@ -46,7 +46,8 @@ interface CountryConfig {
 }
 
 const COUNTRIES: CountryConfig[] = [
-  { country: "AT", slug: "austrian-company-data", product: "ww-top", validFixture: { vat_number: "ATU14189108" }, invalidShape: { vat_number: "FN93363z" }, expectedCompanyName: "OMV", expectedT3Fields: ["nace_codes"] },
+  // AT removed 2026-08-27: austrian-company-data migrated off the Openapi
+  // resolver to the direct Firmenbuch HVD API (JustizOnline IWG grant).
   { country: "BG", slug: "bulgarian-company-data", product: "ww-top", validFixture: { vat_number: "831902088" }, invalidShape: { vat_number: "ABC" }, expectedCompanyName: "Sopharma", expectedT3Fields: ["nace_codes"] },
   { country: "CY", slug: "cypriot-company-data", product: "ww-top", validFixture: { vat_number: "C165" }, invalidShape: { vat_number: "INVALID" }, expectedCompanyName: "Bank of Cyprus", expectedT3Fields: ["nace_codes"] },
   { country: "HU", slug: "hungarian-company-data", product: "ww-top", validFixture: { vat_number: "HU10537914" }, invalidShape: { vat_number: "01-10-041585" }, expectedCompanyName: "OTP", expectedT3Fields: ["nace_codes"] },

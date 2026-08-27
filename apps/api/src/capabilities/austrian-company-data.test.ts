@@ -12,12 +12,20 @@ import {
 // OMV Aktiengesellschaft (FN 93363 z), captured live 2026-08-27 with the
 // IWG token issued that day. Re-capture: see the curl command in the
 // executor header comment; the endpoint requires X-API-KEY even for reads.
+// Officer names and birth dates in both fixtures are pseudonymized (structure,
+// titles, and the whitespace-padded PNR join keys are verbatim).
+const fixturesDir = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "__fixtures__",
+);
 const auszugXml = readFileSync(
-  join(
-    dirname(fileURLToPath(import.meta.url)),
-    "__fixtures__",
-    "at-firmenbuch-auszug-omv.xml",
-  ),
+  join(fixturesDir, "at-firmenbuch-auszug-omv.xml"),
+  "utf-8",
+);
+// NIKI Luftfahrt GmbH (FN 230533 w): still registered, but dissolved via
+// insolvency — carries three current RECHTSTATSACHE legal facts.
+const nikiXml = readFileSync(
+  join(fixturesDir, "at-firmenbuch-auszug-niki.xml"),
   "utf-8",
 );
 
@@ -79,7 +87,7 @@ describe("parseAuszug (OMV Kurzinformation fixture)", () => {
     expect(parsed.legal_form_code).toBe("AG");
     expect(parsed.court).toBe("Handelsgericht Wien");
     expect(parsed.court_code).toBe("007");
-    expect(parsed.is_current).toBe(true);
+    expect(parsed.legal_facts).toEqual([]);
   });
 
   it("extracts registration history and identifiers", () => {
@@ -95,12 +103,12 @@ describe("parseAuszug (OMV Kurzinformation fixture)", () => {
     expect(parsed.representatives).toHaveLength(10);
     const roles = new Set(parsed.representatives.map((r) => r.role));
     expect(roles).toEqual(new Set(["VORSTAND", "PROKURIST/IN"]));
-    const dillenz = parsed.representatives.find((r) =>
-      r.name.includes("Dillenz"),
+    const first = parsed.representatives.find((r) =>
+      r.name.includes("Beispielmann"),
     );
-    expect(dillenz).toMatchObject({
+    expect(first).toMatchObject({
       type: "person",
-      name: "Dr. Oliver Dillenz, MBA",
+      name: "Dr. Anna Beispielmann, MBA",
       date_of_birth: "1970-12-16",
     });
     // Every current officer must resolve to a person with a start date.
@@ -122,5 +130,49 @@ describe("parseAuszug (OMV Kurzinformation fixture)", () => {
       '<ns6:FU_DKZ10 ns6:AUFRECHT="false"',
     );
     expect(parseAuszug(withdrawn).representatives).toHaveLength(9);
+  });
+
+  it("survives an amended entry: historical block before the current one", () => {
+    // Duplicate the name block as a preceding AUFRECHT="false" version — the
+    // parser must return the current name, not the first block it sees.
+    const amended = auszugXml.replace(
+      /<ns6:FI_DKZ02 ns6:AUFRECHT="true"([^>]*)><ns6:BEZEICHNUNG>[^<]*<\/ns6:BEZEICHNUNG>/,
+      '<ns6:FI_DKZ02 ns6:AUFRECHT="false"$1><ns6:BEZEICHNUNG>Old Name AG</ns6:BEZEICHNUNG></ns6:FI_DKZ02>$&',
+    );
+    expect(parseAuszug(amended).company_name).toBe("OMV Aktiengesellschaft");
+  });
+
+  it("decodes XML entities in extracted text", () => {
+    const withEntity = auszugXml.replace(
+      "OMV Aktiengesellschaft",
+      "M&#252;ller &amp; S&#246;hne GmbH",
+    );
+    expect(parseAuszug(withEntity).company_name).toBe("Müller & Söhne GmbH");
+  });
+
+  it("does not corrupt names containing colon-uppercase sequences", () => {
+    const colonName = auszugXml.replace(
+      "OMV Aktiengesellschaft",
+      "TEAM:WORK Handels GmbH",
+    );
+    expect(parseAuszug(colonName).company_name).toBe("TEAM:WORK Handels GmbH");
+  });
+});
+
+describe("parseAuszug (NIKI dissolved-company fixture)", () => {
+  const parsed = parseAuszug(nikiXml);
+
+  it("still parses core fields for a dissolved-but-registered company", () => {
+    expect(parsed.company_name).toBe("NIKI Luftfahrt GmbH");
+    expect(parsed.legal_form_code).toBe("GES");
+  });
+
+  it("extracts current legal facts with decoded umlauts", () => {
+    expect(parsed.legal_facts).toHaveLength(3);
+    const codes = parsed.legal_facts.map((f) => f.code);
+    expect(codes).toContain("0930"); // KONKURS eröffnet
+    expect(codes).toContain("0938"); // aufgelöst
+    const dissolution = parsed.legal_facts.find((f) => f.code === "0938");
+    expect(dissolution?.text).toContain("aufgelöst");
   });
 });

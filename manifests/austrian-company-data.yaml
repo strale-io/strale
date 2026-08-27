@@ -1,14 +1,13 @@
 slug: austrian-company-data
 name: Austrian Company Data
 description: >-
-  Look up Austrian companies in the official Firmenbuch via the JustizOnline HVD API (direct, CC BY 4.0). Accepts
-  Firmenbuchnummer or company name. Returns name, legal form, status, registered address, court, first registration
-  date, EUID, and current officers with roles and representation authority.
+  Official Austrian Firmenbuch lookup via the JustizOnline HVD API: company core data, current officers, and
+  registry legal facts, by Firmenbuchnummer or name.
 category: company-data
 cost_class: free_quota
 price_cents: 5
 is_free_tier: false
-avg_latency_ms: 800
+avg_latency_ms: 1500
 input_schema:
   type: object
   properties:
@@ -46,9 +45,10 @@ output_schema:
     legal_name: OMV Aktiengesellschaft
     primary_registration_id: FN 93363 z
     date_incorporated: "1944-03-10"
+    legal_facts: []
     legal_representatives:
       - type: person
-        name: "Dr. Oliver Dillenz, MBA"
+        name: "Beispiel-Prokuristin Dr. Anna Muster (EXAMPLE)"
         role: PROKURIST/IN
         role_code: PR
         role_group: management
@@ -57,7 +57,7 @@ output_schema:
         representation: "vertritt seit 15.03.2023 gemeinsam mit einem Vorstandsmitglied oder einer/einem weiteren Prokuristin/Prokuristen"
     total_legal_representatives: 10
     directors:
-      - "Dr. Oliver Dillenz, MBA"
+      - "Beispiel-Prokuristin Dr. Anna Muster (EXAMPLE)"
     tier_2_available: true
     tier_2_available_reason: Current officers (role, representation authority, start date) extracted from the Firmenbuch Kurzinformation extract.
     ubo_availability: unavailable_no_registry
@@ -87,7 +87,7 @@ output_schema:
       type: string
       enum:
         - active
-        - inactive
+        - dissolved
     status_note:
       type:
         - string
@@ -122,6 +122,8 @@ output_schema:
       type:
         - string
         - "null"
+    legal_facts:
+      type: array
     resolved_via:
       type: string
       enum:
@@ -205,10 +207,6 @@ test_fixtures:
       - field: court
         operator: not_null
         reliability: guaranteed
-      - field: first_registered_date
-        operator: equals
-        reliability: guaranteed
-        value: "1944-03-10"
       - field: total_legal_representatives
         operator: not_null
         reliability: guaranteed
@@ -231,6 +229,7 @@ output_field_reliability:
   first_registered_date: common
   historical_registration_number: rare
   homepage: rare
+  legal_facts: guaranteed
   resolved_via: guaranteed
   legal_name: guaranteed
   primary_registration_id: guaranteed
@@ -279,6 +278,14 @@ limitations:
     category: coverage
     severity: info
     workaround: Look up the company by name, or find the FN on any official company document or at firmen.wko.at.
+  - title: Name-path latency
+    text: >-
+      Resolving by company_name costs one or two search calls plus the extract call against a SOAP registry
+      (~4s typical, slower under registry load). Callers with the Firmenbuchnummer should pass registration_number,
+      which is a single call (~1s).
+    category: performance
+    severity: info
+    workaround: Pass registration_number instead of company_name when the FN is known.
   - title: Attribution obligation (CC BY 4.0)
     text: >-
       Data is reused under the Austrian IWG with a CC BY 4.0 attribution condition. Every response carries the
