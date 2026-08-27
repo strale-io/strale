@@ -14,7 +14,17 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-20** · `your_call` · owner Petter · raised 2026-08-27 — **activate austrian-company-data on the official Firmenbuch API, at €0.05**
+**DQ-20** · `answered` · owner Petter · raised 2026-08-27 · answered 2026-08-27 — **activate austrian-company-data on the official Firmenbuch API, at €0.05**
+*Answered:* Petter approved in chat the same evening (“go ahead with DQ-20 —
+activate at €0.05 with x402 on”). Executed at 2026-08-27T21:16Z as the exact
+UPDATE below (before-state captured: inactive/invisible/x402-off/80¢/8000ms/
+degraded). Verified after: listed in /v1/capabilities at 5¢ with the Firmenbuch
+data_source, present in /x402/catalog, /x402/v2/austrian-company-data answers
+402 with a USDC challenge, and the full prod test suite runs 7/7 (two stored
+known_answer rows still asserted a literal source_as_of timestamp from the
+--discover era; relaxed to not_null under fixture_refresh). Remaining
+follow-ups — regenerate the strale-capabilities package snapshot, AT KYB VIES
+wiring — tracked in the 2026-08-27 handoff. Original entry below, unedited.
 Austria's registry capability is rebuilt on the official government API and
 fully verified in production; turning it on — and its price — is yours.
 *What happened:* JustizOnline granted Moonlighter AB the IWG token for the
