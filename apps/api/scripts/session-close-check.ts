@@ -43,6 +43,7 @@ import { execSync } from "node:child_process";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import postgres from "postgres";
+import { handoffIsAtRisk } from "../src/lib/handoff-preservation.js";
 
 type Finding = { level: "red" | "yellow" | "green"; section: string; detail: string };
 const findings: Finding[] = [];
@@ -424,12 +425,32 @@ function checkRepoHygiene(): void {
   // Uncommitted handoffs of ANY age. checkStaleHandoffs only considers files
   // dated today, so anything left overnight became permanently invisible —
   // the precise gap that orphaned five session records.
+  //
+  // "Uncommitted" is decided by handoffIsAtRisk, not by `git ls-files` alone.
+  // Index membership is a fact about whichever branch this checkout is sitting
+  // on; when that branch is behind main, files safely stored on main read as
+  // one directory deletion from oblivion. See src/lib/handoff-preservation.ts.
   if (existsSync(HANDOFF_DIR)) {
     const today = new Date().toISOString().slice(0, 10);
+    const upstream = sh("git rev-parse --abbrev-ref --symbolic-full-name @{u}", {
+      cwd: REPO_ROOT,
+      allowFail: true,
+    });
     const orphaned = readdirSync(HANDOFF_DIR)
       .filter((f) => f.endsWith(".md"))
       .filter((f) => !f.startsWith(today)) // today's is checkStaleHandoffs' job
-      .filter((f) => !sh(`git ls-files --error-unmatch "${join(HANDOFF_DIR, f)}"`, { cwd: REPO_ROOT, allowFail: true }));
+      .filter((f) => {
+        const abs = join(HANDOFF_DIR, f);
+        const rel = `handoff/_general/from-code/${f}`;
+        return handoffIsAtRisk({
+          workingBlob: sh(`git hash-object "${abs}"`, { cwd: REPO_ROOT, allowFail: true }),
+          trackedHere: Boolean(sh(`git ls-files --error-unmatch "${abs}"`, { cwd: REPO_ROOT, allowFail: true })),
+          mainBlob: sh(`git rev-parse --verify --quiet "origin/main:${rel}"`, { cwd: REPO_ROOT, allowFail: true }) || null,
+          upstreamBlob: upstream
+            ? sh(`git rev-parse --verify --quiet "${upstream}:${rel}"`, { cwd: REPO_ROOT, allowFail: true }) || null
+            : null,
+        });
+      });
     if (orphaned.length > 0) {
       findings.push({
         level: "yellow",
