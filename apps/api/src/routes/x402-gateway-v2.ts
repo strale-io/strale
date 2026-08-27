@@ -263,7 +263,13 @@ function isSimpleSchema(schema: Record<string, unknown> | null): boolean {
   );
 }
 
-async function extractInputs(
+/**
+ * Exported for `x402-body-limit.test.ts`, which asserts the body-cap abort is
+ * rethrown rather than swallowed. Reaching this through a full request needs a
+ * populated capability cache and therefore a database; the swallow is a
+ * property of this function alone, so it is tested on this function alone.
+ */
+export async function extractInputs(
   c: any,
   schema: Record<string, unknown> | null,
 ): Promise<Record<string, unknown>> {
@@ -271,7 +277,28 @@ async function extractInputs(
   if (c.req.method === "POST" || c.req.header("content-type")?.includes("json")) {
     try {
       return await c.req.json();
-    } catch {
+    } catch (err) {
+      // A body-cap abort is NOT a parse failure and must not fall through.
+      //
+      // Hono's bodyLimit has two paths. With a Content-Length header it
+      // rejects up front and this catch never runs. Without one — a chunked
+      // request, which is what a client streaming a large upload sends — it
+      // instead wraps the body in a counting stream and ERRORS THAT STREAM
+      // once the cap is crossed, then converts the error to 413 only if it
+      // reaches `c.error`.
+      //
+      // This catch used to eat it. Measured against a real HTTP socket before
+      // the fix: an oversized chunked POST returned `200 OK` with the body
+      // silently treated as empty, so the request continued past payment
+      // verification into input validation with no inputs. Memory was bounded
+      // — the stream did abort — but the caller was told the request
+      // succeeded, and a capability with no required fields would have
+      // executed on empty input.
+      //
+      // Rethrowing lets Hono finish the job: bodyLimit sees the error and
+      // emits its 413, which app.ts's onError maps to the platform's
+      // { error_code: "invalid_request" } shape.
+      if ((err as { name?: string })?.name === "BodyLimitError") throw err;
       // Fall through to query params
     }
   }

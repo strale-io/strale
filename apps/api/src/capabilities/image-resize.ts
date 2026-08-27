@@ -1,6 +1,12 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import sharp from "sharp";
 import { safeFetch } from "../lib/safe-fetch.js";
+import {
+  assertDecodedSizeWithinLimit,
+  assertOutputGeometryWithinLimit,
+  decodedLengthOfBase64,
+  readBodyWithLimit,
+} from "./lib/image-limits.js";
 
 registerCapability("image-resize", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string) ?? (input.url as string) ?? undefined;
@@ -20,12 +26,23 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
     throw new Error("'target_width' or 'target_height' is required.");
   }
 
+  // Geometry first, before a single byte is fetched or decoded. This is the
+  // cheap-request/expensive-work case: a 235-byte source with
+  // target_width=100000 produced a 131 MB output over 96 seconds of CPU. The
+  // rail body cap cannot see that — the request is tiny — so the check has to
+  // sit next to the parameter that does the amplifying. See lib/image-limits.ts.
+  assertOutputGeometryWithinLimit(targetWidth, targetHeight);
+
   // Get image buffer
   let imageBuffer: Buffer;
   if (base64Input) {
     const data = base64Input.startsWith("data:")
       ? base64Input.replace(/^data:image\/\w+;base64,/, "")
       : base64Input;
+    // Sized from the string, then decoded — not decoded and then measured. A
+    // check that runs after Buffer.from() has already allocated the thing it
+    // was meant to prevent.
+    assertDecodedSizeWithinLimit(decodedLengthOfBase64(data));
     imageBuffer = Buffer.from(data, "base64");
   } else {
     // F-0-006: safeFetch validates + refuses DNS-rebinding / private-IP redirects.
@@ -34,7 +51,11 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
       headers: { "User-Agent": "Strale/1.0 (image processor; admin@strale.io)" },
     });
     if (!response.ok) throw new Error(`Failed to fetch image: HTTP ${response.status}`);
-    imageBuffer = Buffer.from(await response.arrayBuffer());
+    // Streamed with a cap rather than arrayBuffer(). Without this the URL path
+    // is the cheaper way in: it is not covered by the rail body limit at all,
+    // so it would set the real ceiling and the base64 cap above would be
+    // decorative.
+    imageBuffer = await readBodyWithLimit(response);
   }
 
   // Process with Sharp
