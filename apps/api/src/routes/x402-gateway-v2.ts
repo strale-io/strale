@@ -994,6 +994,7 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
     method: cap.x402Method,
     endpoint: `${BASE_URL}/x402/${cap.slug}`,
     input_schema: cap.inputSchema,
+    output_schema: cap.outputSchema,
   }));
 
   const sols = [..._solCache.values()].map((sol) => ({
