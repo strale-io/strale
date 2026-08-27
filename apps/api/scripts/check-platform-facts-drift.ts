@@ -138,6 +138,23 @@ for (const r of surfaceRoots) {
 
 const staleVendors = getStaleVendorNames();
 
+/**
+ * A stale-vendor mention is suppressed when the SAME or the IMMEDIATELY
+ * PRECEDING line carries a `drift-allow: <VendorName>` marker naming that
+ * vendor. The marker exists for content whose *purpose* is to name a
+ * competitor — comparison tables, pricing citations — where the mention is
+ * truthful editorial content, not a vendor claim (first case: the
+ * sanctions-screening comparison guide naming ComplyAdvantage as a compared
+ * competitor while correctly crediting Dilisense as the vendor in the same
+ * sentence). One marker covers exactly one line, so a new unmarked mention
+ * elsewhere in the same file still fails the sweep. Marker lines are
+ * comments, which isCommentLine already exempts from being flagged.
+ */
+function isDriftAllowed(lines: string[], i: number, vendor: string): boolean {
+  const marker = new RegExp(`drift-allow:.*\\b${vendor}\\b`, "i");
+  return marker.test(lines[i]) || (i > 0 && marker.test(lines[i - 1]));
+}
+
 for (const file of surfaceFiles) {
   let src;
   try {
@@ -151,7 +168,7 @@ for (const file of surfaceFiles) {
     for (const stale of staleVendors) {
       // Word-boundary match — avoid matching substrings of other words.
       const pattern = new RegExp(`\\b${stale}\\b`, "i");
-      if (pattern.test(lines[i])) {
+      if (pattern.test(lines[i]) && !isDriftAllowed(lines, i, stale)) {
         flag(
           file,
           i + 1,
