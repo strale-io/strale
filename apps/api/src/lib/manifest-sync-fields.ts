@@ -241,9 +241,32 @@ export async function applyAssignments(
   // Column names come from CANONICAL_SYNC_FIELDS, never from user input — the
   // selection is validated against that list before reaching here — so they
   // are safe to interpolate. Values are always bound parameters.
-  const setSql = assignments.map((a, i) => `${a.column} = $${i + 2}`).join(", ");
+  //
+  // The casts are load-bearing, not decoration. Passing a JSON string as an
+  // untyped parameter into a jsonb column stores it DOUBLE-ENCODED: the column
+  // ends up holding the string `"{\"type\":\"object\"…}"` rather than the
+  // object. The unit tests could not see this — they inspect the SQL that gets
+  // built, not what the database ends up containing — and it took the
+  // real-Postgres integration test to surface it. `::jsonb` makes the server
+  // parse the text, and `::text[]` does the same job for the array column.
+  const setSql = assignments
+    .map((a, i) => {
+      const p = `$${i + 2}`;
+      if (a.kind === "json") return `${a.column} = ${p}::jsonb`;
+      if (a.kind === "textArray") return `${a.column} = ${p}::text[]`;
+      return `${a.column} = ${p}`;
+    })
+    .join(", ");
   const params = assignments.map((a) => {
     if (a.kind === "json") return JSON.stringify(a.value);
+    if (a.kind === "textArray") {
+      // Postgres array literal. postgres.js will not infer text[] for a JS
+      // array behind `unsafe`, and an explicit literal is unambiguous.
+      const items = (a.value as unknown[]).map((v) =>
+        `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`,
+      );
+      return `{${items.join(",")}}`;
+    }
     return a.value;
   });
 

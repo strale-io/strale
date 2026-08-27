@@ -162,7 +162,9 @@ describe("the UPDATE sets only the selected columns", () => {
     const { sql, calls } = recorder();
     await applyAssignments(sql, "demo", buildAssignments(["input_schema"], MANIFEST));
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.query).toMatch(/SET input_schema = \$2 WHERE slug = \$1/);
+    // ::jsonb is required, not cosmetic — see applyAssignments. An untyped
+    // parameter into a jsonb column stores the value double-encoded.
+    expect(calls[0]!.query).toMatch(/SET input_schema = \$2::jsonb WHERE slug = \$1/);
   });
 
   it("NO SQL BUILDER FALLS BACK TO ALL FIELDS", async () => {
