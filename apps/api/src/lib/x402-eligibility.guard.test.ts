@@ -76,6 +76,9 @@ const REVIEWED_NOT_DECIDING = new Set([
   // permissive destination, so it cannot widen serving eligibility.
   "jobs/onboarding-retry.ts",
   "lib/startup-migrations.ts",
+  // Writes and reverses vendor-owned suspensions. It never gates a request;
+  // the shared serving predicates observe the resulting capability state.
+  "lib/vendor-control-tower.ts",
   "lib/capability-persistence.ts",
   "lib/capability-onboarding.ts",
   // REPORT on lifecycle — dashboards, digests, monitors, issue filing.

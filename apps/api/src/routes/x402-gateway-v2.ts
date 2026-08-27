@@ -1065,6 +1065,32 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   await ensureCache();
 
   const sol = _solCache.get(slug);
+  // The catalogue cache is a routing hint, never the final authority on a
+  // money path. Vendor suspension can disable a solution between cache
+  // refreshes; re-check the two solution rail switches before presenting a
+  // payment challenge, verifying a payment, or executing any step.
+  if (sol) {
+    const [live] = await getDb()
+      .select({
+        isActive: solutions.isActive,
+        x402Enabled: solutions.x402Enabled,
+      })
+      .from(solutions)
+      .where(eq(solutions.slug, slug))
+      .limit(1);
+
+    if (!live?.isActive || !live.x402Enabled) {
+      _solCache.delete(slug);
+      return c.json(
+        {
+          error: "Solution is no longer available via x402. No payment was taken.",
+          hint: `${BASE_URL}/x402/catalog`,
+        },
+        503,
+      );
+    }
+  }
+
   if (!sol) {
     const known = await isKnownSlug(slug);
     recordX402Miss({ slug, kind: known ? "x402_not_on_rail" : "x402_unknown_slug",

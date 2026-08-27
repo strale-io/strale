@@ -6,6 +6,7 @@ import { firstString } from "./lib/input-aliases.js";
 import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
 import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
+import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 import { classifyNameMatch } from "../lib/company-name-match.js";
@@ -127,7 +128,7 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
   // Browserless v2 (LAUNCH_ARGS env var is deprecated). See lib/browserless-launch.ts.
   const { buildBrowserlessRequestUrl } = await import("../lib/browserless-launch.js");
   // unguarded-fetch-ok: our Browserless EU proxy; target is the fixed ariregister API host
-  const resp = await fetch(buildBrowserlessRequestUrl(url, "/content", key), {
+  const resp = await browserlessFetch(buildBrowserlessRequestUrl(url, "/content", key), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

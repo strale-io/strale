@@ -49,5 +49,6 @@ export const MIGRATED_JOBS: readonly MigratedJob[] = [
   { module: "./reindex-transactions.js", file: "reindex-transactions.ts", start: "startReindexTransactions", job: "reindex-transactions", intervalMs: DAY },
   { module: "./x402-settlement-watch.js", file: "x402-settlement-watch.ts", start: "startX402SettlementWatch", job: "x402-settlement-watch", intervalMs: HOUR },
   { module: "./revenue-heartbeat.js", file: "revenue-heartbeat.ts", start: "startRevenueHeartbeat", job: "revenue-heartbeat", intervalMs: HOUR },
+  { module: "./vendor-control-tower.js", file: "vendor-control-tower.ts", start: "startVendorControlTower", job: "vendor-control-tower", intervalMs: HOUR },
   { module: "./onboarding-retry.js", file: "onboarding-retry.ts", start: "startOnboardingRetry", job: "onboarding-retry", intervalMs: HOUR },
 ];

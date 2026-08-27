@@ -4,6 +4,7 @@ import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
+import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 
 registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -17,7 +18,7 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   // Get screenshot via Browserless
   const { url: blessUrl, key } = getBrowserlessConfig();
   // unguarded-fetch-ok: our Browserless /screenshot endpoint; caller URL gated by assertTargetAllowed above
-  const screenshotRes = await fetch(`${blessUrl}/screenshot?token=${key}`, {
+  const screenshotRes = await browserlessFetch(`${blessUrl}/screenshot?token=${key}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

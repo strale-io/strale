@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { logError } from "../lib/log.js";
 
 /**
@@ -114,7 +115,7 @@ async function queryDilisense(
   const params = new URLSearchParams({ names: name, fetch_articles: "true", start_date: startDate });
   const url = `${DILISENSE_MEDIA_API}/${endpoint}?${params}`;
 
-  const res = await fetch(url, {
+  const res = await meteredVendorFetch("dilisense", url, {
     method: "GET",
     headers: { "x-api-key": apiKey },
     signal: AbortSignal.timeout(20000),
@@ -181,7 +182,7 @@ async function querySerper(
   // Search for adverse media: company name + risk keywords
   const query = `"${name}" (fraud OR sanctions OR investigation OR lawsuit OR regulatory OR penalty)`;
 
-  const res = await fetch(SERPER_API, {
+  const res = await meteredVendorFetch("serper", SERPER_API, {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify({ q: query, num: 20, tbs: "qdr:y" }), // last year

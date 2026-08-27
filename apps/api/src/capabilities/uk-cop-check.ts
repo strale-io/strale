@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 
 /**
  * UK Confirmation of Payee (CoP) check via eSortcode.
@@ -111,11 +112,11 @@ registerCapability("uk-cop-check", async (input: CapabilityInput) => {
   if (secondaryAccountId) params.set("secondaryAccountId", secondaryAccountId);
   if (testOutcome) params.set("testOutcome", testOutcome);
 
-  const res = await fetch(`${ESORTCODE_API}/cop?${params.toString()}`, {
+  const res = await meteredVendorFetch("esortcode", `${ESORTCODE_API}/cop?${params.toString()}`, {
     method: "GET",
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(15000),
-  });
+  }, testOutcome ? 0 : 1);
 
   if (res.status === 403) {
     const body = (await res.json().catch(() => ({}))) as { message?: string };

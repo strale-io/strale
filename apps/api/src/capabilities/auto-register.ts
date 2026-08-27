@@ -186,7 +186,9 @@ const DEACTIVATED = new Map<string, string>([
   // upgrade per DEC-20260507-C.
   // german-company-data REACTIVATED 2026-05-06: migrated from northdata.com
   // ToS-prohibited scrape (DEC-20260427-I-5) to direct OpenRegister API
-  // (api.openregister.de). Free tier 50 req/mo per DEC-20260505-H +
+  // (api.openregister.de). Free plan 500 credits/rolling 30d; a normal name
+  // lookup consumes 11 credits. Account state is monitored by the Vendor
+  // Control Tower and restored only after a provider-confirmed reset.
   // DEC-20260506-G; auth via OPENREGISTER_API_KEY. acquisition_method:
   // direct_api per DEC-20260428-A Tier 2.
   // austrian-company-data REACTIVATED 2026-05-16: migrated from FinAPU + WKO
