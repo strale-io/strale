@@ -57,6 +57,10 @@ import sharp from "sharp";
 import "./image-resize.js";
 import { getExecutor } from "./index.js";
 import {
+  assertDecodedSizeWithinLimit,
+  effectiveOutputGeometry,
+  assertEffectiveGeometryWithinLimit,
+  stripDataUriPrefix,
   MAX_DECODED_IMAGE_BYTES,
   MAX_OUTPUT_DIMENSION,
   MAX_OUTPUT_PIXELS,
@@ -187,17 +191,177 @@ describe("output geometry is bounded before anything is decoded", () => {
   });
 });
 
+describe("the geometry cap survives an omitted dimension and fit=outside", () => {
+  /**
+   * Reviewer-found, and it left the whole amplification attack open. Checking
+   * only the REQUESTED dimensions misses two routes to a huge output, and the
+   * original tests used square sources, which hid both.
+   */
+
+  /** A very tall, narrow source: 100 x 4000. */
+  async function tallPng(): Promise<Buffer> {
+    return sharp({
+      create: { width: 100, height: 4000, channels: 3, background: { r: 9, g: 9, b: 9 } },
+    })
+      .png()
+      .toBuffer();
+  }
+
+  it("width-only on a tall source resolves to an enormous height", () => {
+    // The arithmetic, stated before the behaviour: 100x4000 asked for
+    // target_width 10000 gives a derived height of 400,000. Every value the
+    // caller supplied is inside its own cap.
+    const g = effectiveOutputGeometry(100, 4000, 10_000, undefined, "cover");
+    expect(g).toEqual({ width: 10_000, height: 400_000 });
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+  });
+
+  /** A very wide, short source: 4000 x 100. */
+  async function widePng(): Promise<Buffer> {
+    return sharp({
+      create: { width: 4000, height: 100, channels: 3, background: { r: 7, g: 7, b: 7 } },
+    })
+      .png()
+      .toBuffer();
+  }
+
+  it("height-only on a wide source resolves to an enormous width", () => {
+    // The mirror of the width-only case, and it was NOT covered: a mutation
+    // that stopped deriving the width left every test green.
+    const g = effectiveOutputGeometry(4000, 100, undefined, 10_000, "cover");
+    expect(g).toEqual({ width: 400_000, height: 10_000 });
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+  });
+
+  it("the EXECUTOR refuses height-only on a wide source", async () => {
+    const b64 = (await widePng()).toString("base64");
+    await expect(
+      run()({ base64: b64, target_height: MAX_OUTPUT_DIMENSION }),
+    ).rejects.toThrow(/aspect ratio/);
+  });
+
+  it("the EXECUTOR refuses width-only on a tall source", async () => {
+    const b64 = (await tallPng()).toString("base64");
+    await expect(
+      run()({ base64: b64, target_width: MAX_OUTPUT_DIMENSION }),
+    ).rejects.toThrow(/aspect ratio/);
+  });
+
+  it("fit=outside can exceed both requested edges, and is refused", () => {
+    // outside COVERS the requested box, so both output edges can be larger
+    // than both requested edges.
+    const g = effectiveOutputGeometry(100, 4000, 10_000, 10_000, "outside");
+    expect(g.height).toBeGreaterThan(10_000);
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+  });
+
+  it("the EXECUTOR refuses fit=outside that resolves past the caps", async () => {
+    const b64 = (await tallPng()).toString("base64");
+    await expect(
+      run()({ base64: b64, target_width: 5_000, target_height: 5_000, fit: "outside" }),
+    ).rejects.toThrow(/aspect ratio/);
+  });
+
+  it("POSITIVE CONTROL: width-only on a normal source still works", async () => {
+    // 64x64 asked for width 400 resolves to 400x400 — well inside the caps.
+    const b64 = (await tinyPng()).toString("base64");
+    const r = (await run()({ base64: b64, target_width: 400 })) as {
+      output: { width: number; height: number };
+    };
+    expect(r.output).toEqual(expect.objectContaining({ width: 400, height: 400 }));
+  });
+
+  it("cover, fill and contain resolve exactly to the requested box", () => {
+    for (const fit of ["cover", "fill", "contain"] as const) {
+      expect(effectiveOutputGeometry(320, 240, 100, 60, fit)).toEqual({ width: 100, height: 60 });
+    }
+  });
+
+  it("inside never exceeds the requested box", () => {
+    expect(effectiveOutputGeometry(320, 240, 100, 60, "inside")).toEqual({ width: 80, height: 60 });
+  });
+});
+
+describe("data-URI prefixes are stripped once, by one function", () => {
+  /**
+   * Reviewer-found. The measurer stripped at the first comma while the caller
+   * stripped only `data:image/\w+;base64,`. For a payload the caller did not
+   * recognise, the measurer saw the short suffix and `Buffer.from` decoded the
+   * whole string — prefix included, because those characters are themselves in
+   * the base64 alphabet. A long prefix was measured as one byte.
+   */
+  it("the measurer and the executor agree on what gets decoded", () => {
+    const payload = "A".repeat(1000);
+    for (const uri of [
+      `data:image/png;base64,${payload}`,
+      `data:image/svg+xml;base64,${payload}`,
+      `data:${"A".repeat(5000)},${payload}`,
+      payload,
+    ]) {
+      const stripped = stripDataUriPrefix(uri);
+      // What the size check measures is exactly what Buffer.from is handed.
+      expect(decodedLengthOfBase64(stripped)).toBe(
+        Buffer.from(stripped, "base64").byteLength,
+      );
+    }
+  });
+
+  it("an oversized payload behind an unrecognised data: prefix is still refused", () => {
+    const oversized = "A".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
+    const uri = `data:image/svg+xml;base64,${oversized}`;
+    const stripped = stripDataUriPrefix(uri);
+    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped))).toThrow(
+      ImageLimitError,
+    );
+  });
+
+  it("never under-estimates a payload containing a comma", () => {
+    // The specific shape that let the two-opinions bug through, and the one a
+    // "strip at the first comma" regression reintroduces: a comma is not a
+    // base64 character, so Buffer.from ignores it and decodes everything —
+    // while a comma-stripping measurer would see only the first four bytes.
+    const payload = "AAAA," + "B".repeat(200_000);
+    expect(decodedLengthOfBase64(payload)).toBeGreaterThanOrEqual(
+      Buffer.from(payload, "base64").byteLength,
+    );
+  });
+
+  it("an oversized payload containing a comma is still refused", () => {
+    const oversized = "AAAA," + "B".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
+    const stripped = stripDataUriPrefix(oversized);
+    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped))).toThrow(
+      ImageLimitError,
+    );
+  });
+
+  it("the EXECUTOR refuses an oversized payload behind an unrecognised prefix", async () => {
+    // Drives the executor, not just the helper. The helper-only tests could
+    // not catch a caller that stripped differently from the measurer.
+    const oversized = "B".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
+    await expect(
+      run()({ base64: `data:image/svg+xml;base64,${oversized}`, target_width: 100 }),
+    ).rejects.toThrow(/must be .* or less once decoded/);
+  });
+
+  it("never under-estimates: whitespace, padding and empty input", () => {
+    for (const raw of ["", "QQ==", "QQ=", "QUJD", "QUJ\nD", "  QUJD  "]) {
+      const est = decodedLengthOfBase64(raw);
+      expect(est).toBeGreaterThanOrEqual(Buffer.from(raw.replace(/\s/g, ""), "base64").byteLength);
+    }
+  });
+});
+
 describe("the image_url path is bounded too", () => {
   // Otherwise it is simply the cheaper way in: it carries no body at all, so
   // the rail cap never sees it and the base64 limit above is decorative.
   it("refuses on a declared content-length over the limit, without reading", async () => {
     const res = streamingResponse(1024, MAX_DECODED_IMAGE_BYTES + 1);
-    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must return/);
+    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must be/);
   });
 
   it("aborts a stream that exceeds the limit even with no content-length", async () => {
     const res = streamingResponse(MAX_DECODED_IMAGE_BYTES + 2 * 1024 * 1024);
-    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must return/);
+    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must be/);
   });
 
   it("does not buffer materially more than the limit before aborting", async () => {
@@ -237,7 +401,7 @@ describe("the image_url path is bounded too", () => {
 
     await expect(
       run()({ image_url: "https://example.test/big.png", target_width: 100 }),
-    ).rejects.toThrow(/'image_url' must return/);
+    ).rejects.toThrow(/'image_url' must be/);
   });
 
   it("and sharp is never constructed for an oversized image_url", async () => {
@@ -289,7 +453,22 @@ describe("a refusal is the caller's fault, not the capability's", () => {
     capture(() => assertOutputGeometryWithinLimit(-1, 10));
     capture(() => assertOutputGeometryWithinLimit(MAX_OUTPUT_DIMENSION + 1, 10));
     capture(() => assertOutputGeometryWithinLimit(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION));
-    expect(messages.length).toBe(3);
+    capture(() => assertDecodedSizeWithinLimit(MAX_DECODED_IMAGE_BYTES + 1));
+    capture(() => assertEffectiveGeometryWithinLimit(10, MAX_OUTPUT_DIMENSION + 1));
+    capture(() => assertEffectiveGeometryWithinLimit(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION));
+    // The URL-path refusals too. The first version of this test captured only
+    // the three geometry messages, so it could not have caught the "must
+    // return" phrasing those used, which the taxonomy does not recognise.
+    // Reviewer-found.
+    capture(() => {
+      throw new ImageLimitError(
+        `'image_url' must be 4.0MB or less (it declared 9.0MB).`,
+      );
+    });
+    capture(() => {
+      throw new ImageLimitError(`'image_url' must be 4.0MB or less.`);
+    });
+    expect(messages.length).toBe(8);
 
     for (const m of messages) {
       const cls = classifyTransactionFailure(m);
