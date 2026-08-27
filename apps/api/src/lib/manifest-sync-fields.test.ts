@@ -202,11 +202,15 @@ describe("the UPDATE sets only the selected columns", () => {
     expect(calls[0]!.query).not.toContain("'d'");
   });
 
-  it("serialises json columns rather than passing an object", async () => {
+  it("passes json columns as OBJECTS, not pre-stringified JSON", async () => {
+    // Inverted after a real-Postgres run: pre-stringifying stores the value
+    // double-encoded, because postgres.js serialises whatever it is handed.
+    // Measured on Postgres 17 with and without a ::jsonb cast; the object form
+    // is the only one that lands as an object.
     const { sql, calls } = recorder();
     await applyAssignments(sql, "demo", buildAssignments(["input_schema"], MANIFEST));
-    expect(typeof calls[0]!.params[1]).toBe("string");
-    expect(JSON.parse(calls[0]!.params[1] as string)).toEqual(MANIFEST.input_schema);
+    expect(typeof calls[0]!.params[1]).toBe("object");
+    expect(calls[0]!.params[1]).toEqual(MANIFEST.input_schema);
   });
 
   it("refuses to run an UPDATE with an empty SET", async () => {

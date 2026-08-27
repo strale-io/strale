@@ -257,18 +257,19 @@ export async function applyAssignments(
       return `${a.column} = ${p}`;
     })
     .join(", ");
-  const params = assignments.map((a) => {
-    if (a.kind === "json") return JSON.stringify(a.value);
-    if (a.kind === "textArray") {
-      // Postgres array literal. postgres.js will not infer text[] for a JS
-      // array behind `unsafe`, and an explicit literal is unambiguous.
-      const items = (a.value as unknown[]).map((v) =>
-        `"${String(v).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`,
-      );
-      return `{${items.join(",")}}`;
-    }
-    return a.value;
-  });
+  // Pass the OBJECT, never a pre-stringified JSON string.
+  //
+  // Measured against a real Postgres 17: `JSON.stringify(value)` as the
+  // parameter stores the value DOUBLE-ENCODED — the column ends up holding the
+  // JSON *string* `"{\"type\":\"object\"…}"` rather than the object — with or
+  // without a ::jsonb cast, because postgres.js serialises what it is given.
+  // Handing it the object lets it serialise exactly once. A JS array likewise
+  // binds correctly to text[] on its own.
+  //
+  // The unit tests could not see this: they read the SQL that gets built, not
+  // what the database ends up containing. The real-Postgres integration test is
+  // what caught it, twice — the first fix (adding the cast) was still wrong.
+  const params = assignments.map((a) => a.value);
 
   const rows = await sql.unsafe(
     `UPDATE capabilities SET ${setSql} WHERE slug = $1 RETURNING slug`,
