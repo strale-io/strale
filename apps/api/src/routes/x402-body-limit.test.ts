@@ -99,10 +99,15 @@ vi.mock("./mcp.js", () => {
   return { mcpRoute: new H() };
 });
 
-beforeAll(() => {
+beforeAll(async () => {
   process.env.ADMIN_SECRET = "unit-test-admin-secret-plenty-of-entropy-0123456789";
   process.env.AUDIT_HMAC_SECRET = "unit-test-audit-secret-plenty-of-entropy-0123456789";
-});
+  // Importing app.ts pulls in every route module. Doing it inside the first
+  // `it` charged that one-off cost to that test's timeout, so on a loaded
+  // machine the first assertion failed at 36s while the limit it was testing
+  // worked perfectly. The cost is setup, so it is paid in setup.
+  await loadApp();
+}, 120_000);
 
 /**
  * Loaded ONCE. Each test previously called this, and while the module cache
