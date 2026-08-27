@@ -1207,7 +1207,13 @@ x402GatewayV2.on(["GET", "POST"], ["/solutions/:slug", "/v2/solutions/:slug"], a
   let inputs: Record<string, unknown>;
   try {
     inputs = await extractInputs(c, sol.inputSchema);
-  } catch {
+  } catch (err) {
+    // Reviewer-found. extractInputs rethrows a body-cap abort so the rail can
+    // answer 413 -- and this catch turned it straight back into a 400, which
+    // is where the first version of that fix quietly failed. Hono's bodyLimit
+    // emits its 413 only when the error reaches `c.error`, so a handler that
+    // absorbs it defeats the middleware no matter what extractInputs does.
+    if ((err as { name?: string })?.name === "BodyLimitError") throw err;
     return c.json({ error: "Invalid request body. Expected JSON." }, 400);
   }
 
@@ -1570,7 +1576,13 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   let inputs: Record<string, unknown>;
   try {
     inputs = await extractInputs(c, cap.inputSchema);
-  } catch {
+  } catch (err) {
+    // Reviewer-found. extractInputs rethrows a body-cap abort so the rail can
+    // answer 413 -- and this catch turned it straight back into a 400, which
+    // is where the first version of that fix quietly failed. Hono's bodyLimit
+    // emits its 413 only when the error reaches `c.error`, so a handler that
+    // absorbs it defeats the middleware no matter what extractInputs does.
+    if ((err as { name?: string })?.name === "BodyLimitError") throw err;
     return c.json({ error: "Invalid request body. Expected JSON." }, 400);
   }
 

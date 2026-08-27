@@ -57,6 +57,11 @@ import sharp from "sharp";
 import "./image-resize.js";
 import { getExecutor } from "./index.js";
 import {
+  assertDecodedSizeWithinLimit,
+  effectiveOutputGeometry,
+  assertEffectiveGeometryWithinLimit,
+  stripDataUriPrefix,
+  normalizeBase64,
   MAX_DECODED_IMAGE_BYTES,
   MAX_OUTPUT_DIMENSION,
   MAX_OUTPUT_PIXELS,
@@ -187,17 +192,292 @@ describe("output geometry is bounded before anything is decoded", () => {
   });
 });
 
+describe("the geometry cap survives an omitted dimension and fit=outside", () => {
+  /**
+   * Reviewer-found, and it left the whole amplification attack open. Checking
+   * only the REQUESTED dimensions misses two routes to a huge output, and the
+   * original tests used square sources, which hid both.
+   */
+
+  /** A very tall, narrow source: 100 x 4000. */
+  async function tallPng(): Promise<Buffer> {
+    return sharp({
+      create: { width: 100, height: 4000, channels: 3, background: { r: 9, g: 9, b: 9 } },
+    })
+      .png()
+      .toBuffer();
+  }
+
+  it("width-only on a tall source resolves to an enormous height", () => {
+    // The arithmetic, stated before the behaviour: 100x4000 asked for
+    // target_width 10000 gives a derived height of 400,000. Every value the
+    // caller supplied is inside its own cap.
+    const g = effectiveOutputGeometry(100, 4000, 10_000, undefined, "cover");
+    expect(g).toEqual({ width: 10_000, height: 400_000 });
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+  });
+
+  /** A very wide, short source: 4000 x 100. */
+  async function widePng(): Promise<Buffer> {
+    return sharp({
+      create: { width: 4000, height: 100, channels: 3, background: { r: 7, g: 7, b: 7 } },
+    })
+      .png()
+      .toBuffer();
+  }
+
+  it("height-only on a wide source resolves to an enormous width", () => {
+    // The mirror of the width-only case, and it was NOT covered: a mutation
+    // that stopped deriving the width left every test green.
+    const g = effectiveOutputGeometry(4000, 100, undefined, 10_000, "cover");
+    expect(g).toEqual({ width: 400_000, height: 10_000 });
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+  });
+
+  it("the EXECUTOR refuses height-only on a wide source", async () => {
+    const b64 = (await widePng()).toString("base64");
+    await expect(
+      run()({ base64: b64, target_height: MAX_OUTPUT_DIMENSION }),
+    ).rejects.toThrow(/aspect ratio/);
+  });
+
+  it("the EXECUTOR refuses width-only on a tall source", async () => {
+    const b64 = (await tallPng()).toString("base64");
+    await expect(
+      run()({ base64: b64, target_width: MAX_OUTPUT_DIMENSION }),
+    ).rejects.toThrow(/aspect ratio/);
+  });
+
+  it("fit=outside can exceed both requested edges, and is refused", () => {
+    // outside COVERS the requested box, so both output edges can be larger
+    // than both requested edges.
+    const g = effectiveOutputGeometry(100, 4000, 10_000, 10_000, "outside");
+    expect(g.height).toBeGreaterThan(10_000);
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+  });
+
+  it("the EXECUTOR refuses fit=outside that resolves past the caps", async () => {
+    const b64 = (await tallPng()).toString("base64");
+    await expect(
+      run()({ base64: b64, target_width: 5_000, target_height: 5_000, fit: "outside" }),
+    ).rejects.toThrow(/aspect ratio/);
+  });
+
+  it("never under-estimates what SHARP actually produces", async () => {
+    // Compared against sharp itself rather than against my own arithmetic.
+    // The reviewer supplied the counterexample this catches: a 1295x560 source
+    // asked for 1x3288 at fit=outside resolved to 7603x3288 in the helper and
+    // 7604x3288 in sharp, so a request one column over the pixel cap passed.
+    // Math.round became Math.ceil; this holds the property rather than the fix.
+    const cases: Array<{ w: number; h: number; rw?: number; rh?: number; fit: string }> = [
+      { w: 1295, h: 560, rw: 1, rh: 3288, fit: "outside" },
+      { w: 1295, h: 560, rw: 3288, rh: 1, fit: "outside" },
+      { w: 320, h: 240, rw: 100, rh: 60, fit: "inside" },
+      { w: 320, h: 240, rw: 100, rh: 60, fit: "outside" },
+      { w: 977, h: 313, rw: 500, rh: 500, fit: "inside" },
+      { w: 977, h: 313, rw: 500, rh: 500, fit: "outside" },
+      { w: 100, h: 4000, rw: 700, fit: "cover" },
+      { w: 4000, h: 100, rh: 700, fit: "cover" },
+    ];
+
+    for (const c of cases) {
+      const src = await sharp({
+        create: { width: c.w, height: c.h, channels: 3, background: { r: 4, g: 5, b: 6 } },
+      })
+        .png()
+        .toBuffer();
+      const actual = await sharp(src)
+        .resize(c.rw, c.rh, { fit: c.fit as never })
+        .png()
+        .toBuffer()
+        .then((b) => sharp(b).metadata());
+
+      const predicted = effectiveOutputGeometry(c.w, c.h, c.rw, c.rh, c.fit as never);
+      const label = `${c.w}x${c.h} -> ${c.rw ?? "-"}x${c.rh ?? "-"} fit=${c.fit}`;
+      expect(predicted.width, `${label}: width under-estimated`).toBeGreaterThanOrEqual(
+        actual.width!,
+      );
+      expect(predicted.height, `${label}: height under-estimated`).toBeGreaterThanOrEqual(
+        actual.height!,
+      );
+      // And not wildly over: a cap that refuses legitimate work is its own bug.
+      expect(predicted.width - actual.width!, `${label}: width over-estimated`).toBeLessThanOrEqual(1);
+      expect(predicted.height - actual.height!, `${label}: height over-estimated`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("refuses when the source dimensions cannot be read", () => {
+    // Used to fall back to the REQUESTED dimensions, which fails open: the
+    // derived side is exactly what could not be computed. Reviewer-found.
+    expect(() => effectiveOutputGeometry(0, 0, 100, 100, "cover")).toThrow(ImageLimitError);
+    expect(() => effectiveOutputGeometry(Number.NaN, 100, 100, 100, "cover")).toThrow(
+      ImageLimitError,
+    );
+  });
+
+  it("POSITIVE CONTROL: width-only on a normal source still works", async () => {
+    // 64x64 asked for width 400 resolves to 400x400 — well inside the caps.
+    const b64 = (await tinyPng()).toString("base64");
+    const r = (await run()({ base64: b64, target_width: 400 })) as {
+      output: { width: number; height: number };
+    };
+    expect(r.output).toEqual(expect.objectContaining({ width: 400, height: 400 }));
+  });
+
+  it("cover, fill and contain resolve exactly to the requested box", () => {
+    for (const fit of ["cover", "fill", "contain"] as const) {
+      expect(effectiveOutputGeometry(320, 240, 100, 60, fit)).toEqual({ width: 100, height: 60 });
+    }
+  });
+
+  it("inside never exceeds the requested box", () => {
+    expect(effectiveOutputGeometry(320, 240, 100, 60, "inside")).toEqual({ width: 80, height: 60 });
+  });
+});
+
+describe("data-URI prefixes are stripped once, by one function", () => {
+  /**
+   * Reviewer-found. The measurer stripped at the first comma while the caller
+   * stripped only `data:image/\w+;base64,`. For a payload the caller did not
+   * recognise, the measurer saw the short suffix and `Buffer.from` decoded the
+   * whole string — prefix included, because those characters are themselves in
+   * the base64 alphabet. A long prefix was measured as one byte.
+   */
+  it("the measurer and the executor agree on what gets decoded", () => {
+    const payload = "A".repeat(1000);
+    for (const uri of [
+      `data:image/png;base64,${payload}`,
+      `data:image/svg+xml;base64,${payload}`,
+      `data:${"A".repeat(5000)},${payload}`,
+      payload,
+    ]) {
+      const stripped = stripDataUriPrefix(uri);
+      // What the size check measures is exactly what Buffer.from is handed.
+      expect(decodedLengthOfBase64(stripped)).toBe(
+        Buffer.from(stripped, "base64").byteLength,
+      );
+    }
+  });
+
+  it("an oversized payload behind an unrecognised data: prefix is still refused", () => {
+    const oversized = "A".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
+    const uri = `data:image/svg+xml;base64,${oversized}`;
+    const stripped = stripDataUriPrefix(uri);
+    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped))).toThrow(
+      ImageLimitError,
+    );
+  });
+
+  it("the estimate is an UPPER BOUND on what Buffer.from allocates", () => {
+    // The invariant, stated directly, on the NORMALISED string that production
+    // both measures and decodes. Two reviewer-supplied counterexamples broke
+    // the previous version:
+    //
+    //   - whitespace: the measurer stripped it, the caller decoded the
+    //     unstripped string, and Node sizes its backing store from the input
+    //     LENGTH — so 6 MiB of spaces measured as 3 bytes and allocated ~4.7 MB;
+    //   - padding: "A"*5592407 + "==" measured exactly at the limit and
+    //     decoded to one byte more.
+    const cases = [
+      " ".repeat(6 * 1024 * 1024) + "AAAA",
+      "A".repeat(5_592_407) + "==",
+      "A".repeat(5_592_407) + "=",
+      "QUJD",
+      "",
+      "AAAA," + "B".repeat(1000),
+      "data:image/svg+xml;base64," + "C".repeat(1000),
+    ];
+    for (const raw of cases) {
+      const normalised = normalizeBase64(raw);
+      expect(
+        decodedLengthOfBase64(normalised),
+        `under-estimated for a ${raw.length}-char input`,
+      ).toBeGreaterThanOrEqual(Buffer.from(normalised, "base64").byteLength);
+    }
+  });
+
+  it("POSITIVE CONTROL: line-wrapping must not push a legal payload over the cap", async () => {
+    // Standard base64 is wrapped at 76 characters, so this is ordinary input.
+    //
+    // It is also what makes the normalisation OBSERVABLE. The payload decodes
+    // to just under the 4 MiB cap; wrapping adds ~1.3% newlines. If the
+    // executor stripped only the data-URI prefix and left the newlines in, the
+    // measurer would count them and refuse a legal image.
+    //
+    // The discriminator is WHICH error comes back. Correctly normalised, the
+    // bytes clear the cap and reach sharp, which rejects them for what they
+    // are — not an image. Un-normalised, the cap refuses them first. Both
+    // throw; only one of them is the limit talking.
+    // 8 KiB of slack, not 64 KiB. Line-wrapping at 76 adds only ~1.3%, so a
+    // wider margin left the un-normalised estimate still under the cap and the
+    // control did not discriminate — it passed under the mutation too.
+    const decodedTarget = MAX_DECODED_IMAGE_BYTES - 8 * 1024;
+    const raw = "A".repeat(Math.floor((decodedTarget * 4) / 3));
+    const wrapped = raw.replace(/(.{76})/g, "$1\n");
+
+    await expect(
+      run()({ base64: wrapped, target_width: 32, target_height: 32 }),
+    ).rejects.toThrow(/unsupported image format/i);
+  });
+
+  it("the EXECUTOR refuses an oversized payload padded with whitespace", async () => {
+    // Would have passed before: measured tiny, allocated megabytes.
+    const oversized = "A".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
+    const padded = oversized.replace(/(.{76})/g, "$1\n");
+    sharpCalls.mockClear();
+    await expect(run()({ base64: padded, target_width: 100 })).rejects.toThrow(
+      /must be .* or less once decoded/,
+    );
+    expect(sharpCalls, "whitespace-padded oversized bytes reached the decoder").not.toHaveBeenCalled();
+  });
+
+  it("never under-estimates a payload containing a comma", () => {
+    // The specific shape that let the two-opinions bug through, and the one a
+    // "strip at the first comma" regression reintroduces: a comma is not a
+    // base64 character, so Buffer.from ignores it and decodes everything —
+    // while a comma-stripping measurer would see only the first four bytes.
+    const payload = "AAAA," + "B".repeat(200_000);
+    expect(decodedLengthOfBase64(payload)).toBeGreaterThanOrEqual(
+      Buffer.from(payload, "base64").byteLength,
+    );
+  });
+
+  it("an oversized payload containing a comma is still refused", () => {
+    const oversized = "AAAA," + "B".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
+    const stripped = stripDataUriPrefix(oversized);
+    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped))).toThrow(
+      ImageLimitError,
+    );
+  });
+
+  it("the EXECUTOR refuses an oversized payload behind an unrecognised prefix", async () => {
+    // Drives the executor, not just the helper. The helper-only tests could
+    // not catch a caller that stripped differently from the measurer.
+    const oversized = "B".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
+    await expect(
+      run()({ base64: `data:image/svg+xml;base64,${oversized}`, target_width: 100 }),
+    ).rejects.toThrow(/must be .* or less once decoded/);
+  });
+
+  it("never under-estimates: whitespace, padding and empty input", () => {
+    for (const raw of ["", "QQ==", "QQ=", "QUJD", "QUJ\nD", "  QUJD  "]) {
+      const est = decodedLengthOfBase64(raw);
+      expect(est).toBeGreaterThanOrEqual(Buffer.from(raw.replace(/\s/g, ""), "base64").byteLength);
+    }
+  });
+});
+
 describe("the image_url path is bounded too", () => {
   // Otherwise it is simply the cheaper way in: it carries no body at all, so
   // the rail cap never sees it and the base64 limit above is decorative.
   it("refuses on a declared content-length over the limit, without reading", async () => {
     const res = streamingResponse(1024, MAX_DECODED_IMAGE_BYTES + 1);
-    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must return/);
+    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must be/);
   });
 
   it("aborts a stream that exceeds the limit even with no content-length", async () => {
     const res = streamingResponse(MAX_DECODED_IMAGE_BYTES + 2 * 1024 * 1024);
-    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must return/);
+    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must be/);
   });
 
   it("does not buffer materially more than the limit before aborting", async () => {
@@ -237,7 +517,7 @@ describe("the image_url path is bounded too", () => {
 
     await expect(
       run()({ image_url: "https://example.test/big.png", target_width: 100 }),
-    ).rejects.toThrow(/'image_url' must return/);
+    ).rejects.toThrow(/'image_url' must be/);
   });
 
   it("and sharp is never constructed for an oversized image_url", async () => {
@@ -277,24 +557,62 @@ describe("a refusal is the caller's fault, not the capability's", () => {
    * toward delisting for doing its job — the exact failure the taxonomy's own
    * comments describe. Verified rather than assumed.
    */
-  it("every refusal message classifies as caller_input and does not count", () => {
+  it("every refusal message classifies as caller_input and does not count", async () => {
+    // Messages are PROVOKED from the producing code, never hand-written here.
+    // The previous version recreated the two URL messages as string literals,
+    // so production wording could drift while this stayed green —
+    // reviewer-found. Anything that reaches a caller as a refusal should be in
+    // this list; if a new one is added and not covered, the count assertion
+    // below fails and someone has to look.
     const messages: string[] = [];
-    const capture = (f: () => void) => {
+    const capture = async (f: () => unknown) => {
       try {
-        f();
+        await f();
       } catch (e) {
-        messages.push((e as Error).message);
+        if (e instanceof ImageLimitError || (e as Error)?.message) {
+          messages.push((e as Error).message);
+        }
       }
     };
-    capture(() => assertOutputGeometryWithinLimit(-1, 10));
-    capture(() => assertOutputGeometryWithinLimit(MAX_OUTPUT_DIMENSION + 1, 10));
-    capture(() => assertOutputGeometryWithinLimit(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION));
-    expect(messages.length).toBe(3);
 
+    const b64 = (await tinyPng()).toString("base64");
+
+    // Requested-geometry refusals, both sides.
+    await capture(() => assertOutputGeometryWithinLimit(-1, 10));
+    await capture(() => assertOutputGeometryWithinLimit(10, -1));
+    await capture(() => assertOutputGeometryWithinLimit(MAX_OUTPUT_DIMENSION + 1, 10));
+    await capture(() => assertOutputGeometryWithinLimit(10, MAX_OUTPUT_DIMENSION + 1));
+    await capture(() => assertOutputGeometryWithinLimit(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION));
+    // Decoded size.
+    await capture(() => assertDecodedSizeWithinLimit(MAX_DECODED_IMAGE_BYTES + 1));
+    // Effective-geometry refusals, both sides and the area.
+    await capture(() => assertEffectiveGeometryWithinLimit(MAX_OUTPUT_DIMENSION + 1, 10));
+    await capture(() => assertEffectiveGeometryWithinLimit(10, MAX_OUTPUT_DIMENSION + 1));
+    await capture(() =>
+      assertEffectiveGeometryWithinLimit(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION),
+    );
+    // Unreadable source dimensions.
+    await capture(() => effectiveOutputGeometry(0, 0, 100, 100, "cover"));
+    // URL-path refusals, provoked through the real helper rather than quoted.
+    await capture(() =>
+      readBodyWithLimit(streamingResponse(1024, MAX_DECODED_IMAGE_BYTES + 1)),
+    );
+    await capture(() =>
+      readBodyWithLimit(streamingResponse(MAX_DECODED_IMAGE_BYTES + 2 * 1024 * 1024)),
+    );
+    // Executor-level required-field refusals.
+    await capture(() => run()({ target_width: 10 }));
+    await capture(() => run()({ base64: b64 }));
+
+    expect(messages.length, "a refusal path stopped throwing").toBe(14);
+
+    const unclassified = messages.filter((m) => classifyTransactionFailure(m) !== "caller_input");
+    expect(
+      unclassified,
+      "these refusals do not classify as caller_input: " + unclassified.join(" | "),
+    ).toEqual([]);
     for (const m of messages) {
-      const cls = classifyTransactionFailure(m);
-      expect(cls, `"${m}" classified as ${cls}`).toBe("caller_input");
-      expect(countsAgainstCapability(cls)).toBe(false);
+      expect(countsAgainstCapability(classifyTransactionFailure(m))).toBe(false);
     }
   });
 
