@@ -15,13 +15,17 @@ input_schema:
     fit:
       type: string
       description: cover, contain, fill, inside, outside
+      enum: [cover, contain, fill, inside, outside]
     base64:
       type: string
     format:
       type: string
       description: png, jpeg, or webp
+      enum: [png, jpeg, webp]
     quality:
       type: integer
+      minimum: 1
+      maximum: 100
     image_url:
       type: string
     target_width:

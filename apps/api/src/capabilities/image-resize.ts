@@ -2,6 +2,10 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import sharp from "sharp";
 import { safeFetch } from "../lib/safe-fetch.js";
 import {
+  IMAGE_FORMATS,
+  FIT_MODES,
+  assertEnum,
+  assertQuality,
   assertDecodedSizeWithinLimit,
   assertEffectiveGeometryWithinLimit,
   assertOutputGeometryWithinLimit,
@@ -21,9 +25,26 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
 
   const targetWidth = (input.target_width as number) ?? (input.width as number) ?? undefined;
   const targetHeight = (input.target_height as number) ?? (input.height as number) ?? undefined;
-  const format = ((input.format as string) ?? "png").toLowerCase() as "png" | "jpeg" | "webp";
-  const quality = (input.quality as number) ?? 80;
-  const fit = ((input.fit as string) ?? "cover") as "cover" | "contain" | "fill" | "inside" | "outside";
+
+  // VALIDATED, not cast.
+  //
+  // `format` used to be `as "png" | "jpeg" | "webp"` — a cast, which asserts a
+  // type without checking one. Anything that was not "jpeg" or "webp" fell
+  // through to the PNG branch, so `format: "gif"` returned PNG bytes with
+  // `content_type: "image/png"` and `format: "gif"`: a 200 whose own fields
+  // contradict each other, and whose declared format is not what the bytes
+  // are. A caller trusting `output.format` to pick a file extension or a
+  // decoder gets it wrong, and nothing anywhere reports an error.
+  //
+  // `fit` and `quality` carried the identical pattern on the adjacent lines.
+  // They do not produce a contradictory success — sharp rejects them — but it
+  // rejects them with its own internal text ("Expected valid fit for fit but
+  // received bogus of type string"), which reaches the caller as a capability
+  // failure rather than as a validation refusal, and only after the decoder
+  // has been constructed.
+  const format = assertEnum(input.format, IMAGE_FORMATS, "format", "png");
+  const fit = assertEnum(input.fit, FIT_MODES, "fit", "cover");
+  const quality = assertQuality(input.quality);
 
   if (!targetWidth && !targetHeight) {
     throw new Error("'target_width' or 'target_height' is required.");
