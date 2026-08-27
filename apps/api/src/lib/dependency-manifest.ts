@@ -250,6 +250,28 @@ export const PROVIDERS: DependencyProvider[] = [
     tier: "free",
   },
   {
+    name: "justizonline",
+    displayName: "JustizOnline Firmenbuch (Austria)",
+    description:
+      "Austrian Firmenbuch high-value datasets via the JustizOnline IWG API (SOAP, CC BY 4.0).",
+    baseUrl: "https://justizonline.gv.at",
+    authType: "api-key-header",
+    envVar: "JUSTIZONLINE_API_KEY",
+    authHeader: "X-API-KEY",
+    healthProbe: {
+      // The WSDL itself requires the IWG token (verified live 2026-08-27:
+      // 401 without, 200 with). An unauthenticated GET therefore proves
+      // reachability at zero cost and without spending the token.
+      path: "/jop/api/at.gv.justiz.fbw/ws/fbw.wsdl",
+      method: "GET",
+      healthyStatuses: [200, 401, 403],
+      timeoutMs: 8000,
+      skipAuth: true,
+    },
+    capabilities: ["austrian-company-data"],
+    tier: "free",
+  },
+  {
     name: "esortcode",
     displayName: "eSortcode Confirmation of Payee",
     description: "Commercial Pay.UK Confirmation of Payee lookups with finite account credits.",
