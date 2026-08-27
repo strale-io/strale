@@ -1,8 +1,23 @@
 /**
  * Sync ALL manifest-canonical fields from a YAML manifest into the capabilities
  * row. Extends sync-manifest-text-to-db.ts (which only covers description +
- * schemas) to also handle category, data_source, maintenance_class,
- * transparency_tag, freshness_category, and output_field_reliability.
+ * schemas) to also handle name, category, data_source, maintenance_class,
+ * transparency_tag, freshness_category, output_field_reliability, and the
+ * Phase A0b cost-class group (cost_class, quota_window, quota_cap,
+ * quota_reset_dom).
+ *
+ * Field set contract: every `category: "manifest"` entry in
+ * FIELD_CATEGORIES (src/lib/capability-field-authority.ts) must be synced
+ * here, so one run of this script clears every AuthorityViolationError the
+ * onboarding gate can raise. The 2026-08-27 austrian-company-data backfill
+ * aborted on cost_class drift immediately after a sync run because this
+ * script predated the A0b taxonomy — that gap class is what the parity
+ * check below prevents.
+ *
+ * Optional-field semantics mirror checkAuthorityDrift exactly: a field
+ * ABSENT from the manifest is left untouched in the DB (the gate tolerates
+ * manifest-undefined), while an explicit `field: null` in the YAML writes
+ * NULL — which is how a cost-class transition clears its old quota fields.
  *
  * Why: when migrating an existing capability to a new data source (e.g.
  * Tier-1 violation remediation: Browserless scrape → direct API), several
@@ -43,6 +58,7 @@ if (!slug) {
 const manifestPath = resolve(import.meta.dirname, `../../../manifests/${slug}.yaml`);
 const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
   slug: string;
+  name?: string;
   description: string;
   category: string;
   input_schema: unknown;
@@ -58,6 +74,12 @@ const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
   // 2026-04-30. Optional; the DB applies a 'data_lookup' default
   // when unset.
   gdpr_art_22_classification?: string;
+  // Phase A0b cost-class taxonomy. All four are manifest-canonical;
+  // quota_* may be explicit null (clears the DB value) or absent (keeps it).
+  cost_class?: string | null;
+  quota_window?: string | null;
+  quota_cap?: number | null;
+  quota_reset_dom?: number | null;
 };
 
 if (manifest.slug !== slug) {
@@ -72,10 +94,11 @@ console.log(`Slug: ${slug}`);
 console.log(`Mode: ${dryRun ? "dry-run" : "WRITE"}`);
 
 const before = await sql`
-  SELECT slug, description, category, input_schema, output_schema,
+  SELECT slug, name, description, category, input_schema, output_schema,
          data_source, maintenance_class, transparency_tag, freshness_category,
          output_field_reliability, processes_personal_data, personal_data_categories,
-         gdpr_art_22_classification
+         gdpr_art_22_classification, cost_class, quota_window, quota_cap,
+         quota_reset_dom
   FROM capabilities
   WHERE slug = ${slug}
 `;
@@ -122,6 +145,9 @@ function compare(field: string, dbVal: unknown, manifestVal: unknown) {
   }
 }
 
+if (manifest.name !== undefined) {
+  compare("name", dbRow.name, manifest.name);
+}
 compare("description", dbRow.description, manifest.description);
 compare("category", dbRow.category, manifest.category);
 compare("input_schema", dbRow.input_schema, manifest.input_schema);
@@ -164,6 +190,33 @@ if (manifest.gdpr_art_22_classification !== undefined) {
     manifest.gdpr_art_22_classification,
   );
 }
+// Phase A0b cost-class group. Explicit null in the YAML is a declared value
+// and participates in drift (it clears the DB field on write).
+if (manifest.cost_class !== undefined) {
+  compare("cost_class", dbRow.cost_class, manifest.cost_class);
+}
+if (manifest.quota_window !== undefined) {
+  compare("quota_window", dbRow.quota_window, manifest.quota_window);
+}
+if (manifest.quota_cap !== undefined) {
+  compare("quota_cap", dbRow.quota_cap, manifest.quota_cap);
+}
+if (manifest.quota_reset_dom !== undefined) {
+  compare("quota_reset_dom", dbRow.quota_reset_dom, manifest.quota_reset_dom);
+}
+
+// transparency_tag is db-canonical (drift-audit 5.1: DB corrected invalid
+// manifest values) and freshness_category is hybrid. This escape hatch still
+// pushes them for genuine data-source migrations, but make the overwrite of
+// a DB-authoritative value impossible to miss.
+if (drifts.includes("transparency_tag") || drifts.includes("freshness_category")) {
+  console.log(
+    "\n⚠ transparency_tag / freshness_category are NOT manifest-canonical " +
+      "(db / hybrid authority). Pushing the manifest value overwrites a " +
+      "DB-corrected or operator-set value — confirm the manifest side is " +
+      "actually the new truth before running without --dry-run.",
+  );
+}
 
 if (drifts.length === 0) {
   console.log("\nNo drift — DB already matches manifest. Nothing to do.");
@@ -181,7 +234,8 @@ if (dryRun) {
 
 const result = await sql`
   UPDATE capabilities
-  SET description = ${manifest.description},
+  SET name = ${manifest.name ?? dbRow.name},
+      description = ${manifest.description},
       category = ${manifest.category},
       input_schema = ${sql.json(manifest.input_schema as never)},
       output_schema = ${sql.json(manifest.output_schema as never)},
@@ -200,9 +254,13 @@ const result = await sql`
           ? sql.array(manifest.personal_data_categories, 1009)
           : (dbRow.personal_data_categories as never)
       },
-      gdpr_art_22_classification = ${manifest.gdpr_art_22_classification ?? dbRow.gdpr_art_22_classification}
+      gdpr_art_22_classification = ${manifest.gdpr_art_22_classification ?? dbRow.gdpr_art_22_classification},
+      cost_class = ${manifest.cost_class !== undefined ? manifest.cost_class : (dbRow.cost_class as never)},
+      quota_window = ${manifest.quota_window !== undefined ? manifest.quota_window : (dbRow.quota_window as never)},
+      quota_cap = ${manifest.quota_cap !== undefined ? manifest.quota_cap : (dbRow.quota_cap as never)},
+      quota_reset_dom = ${manifest.quota_reset_dom !== undefined ? manifest.quota_reset_dom : (dbRow.quota_reset_dom as never)}
   WHERE slug = ${slug}
-  RETURNING slug, data_source, maintenance_class
+  RETURNING slug, data_source, maintenance_class, cost_class
 `;
 
 console.log(`\nUpdated ${result.length} row(s).`);
