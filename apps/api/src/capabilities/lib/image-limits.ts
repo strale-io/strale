@@ -50,6 +50,13 @@ export const MAX_OUTPUT_DIMENSION = 10_000;
 export const MAX_OUTPUT_PIXELS = 25_000_000;
 
 
+/** The output encodings this capability actually produces. */
+export const IMAGE_FORMATS = ["png", "jpeg", "webp"] as const;
+export type ImageFormat = (typeof IMAGE_FORMATS)[number];
+
+/** The resize strategies sharp supports, and the only ones this capability accepts. */
+export const FIT_MODES = ["cover", "contain", "fill", "inside", "outside"] as const;
+
 /** Thrown for a refusal that is the caller's fault, so it maps to a 4xx rather than a 500. */
 export class ImageLimitError extends Error {
   constructor(message: string) {
@@ -67,6 +74,50 @@ const mib = (n: number) => `${(n / 1024 / 1024).toFixed(1)}MB`;
  * would allocate the very thing being checked, so a check performed after
  * decoding is not a limit, it is a post-mortem.
  */
+/**
+ * Accept a caller value only if it is genuinely one of the allowed options.
+ *
+ * The failure this replaces: `as "png" | "jpeg" | "webp"` is a cast. It tells
+ * the compiler what to believe and checks nothing, so an unsupported value
+ * flowed through to a default branch and the response ended up describing
+ * itself incorrectly. Casting caller input is the bug; the fix is to narrow by
+ * testing, which is also what makes the type honest.
+ *
+ * Case-insensitive and whitespace-trimmed, because "PNG" is plainly the same
+ * request as "png" and refusing it would be pedantry rather than safety.
+ */
+export function assertEnum<T extends readonly string[]>(
+  raw: unknown,
+  allowed: T,
+  field: string,
+  fallback: T[number],
+): T[number] {
+  if (raw === undefined || raw === null || raw === "") return fallback;
+  if (typeof raw !== "string") {
+    throw new ImageLimitError(`'${field}' must be one of: ${allowed.join(", ")}.`);
+  }
+  const normalised = raw.trim().toLowerCase();
+  if ((allowed as readonly string[]).includes(normalised)) return normalised as T[number];
+  throw new ImageLimitError(
+    `'${field}' must be one of: ${allowed.join(", ")} (received ${JSON.stringify(raw)}).`,
+  );
+}
+
+/**
+ * Quality is 1-100 in sharp. Out of range it throws its own message after the
+ * pipeline has been built; this refuses first, in the house style.
+ */
+export function assertQuality(raw: unknown, fallback = 80): number {
+  if (raw === undefined || raw === null || raw === "") return fallback;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 100) {
+    throw new ImageLimitError(
+      `'quality' must be a whole number between 1 and 100 (received ${JSON.stringify(raw)}).`,
+    );
+  }
+  return n;
+}
+
 export function stripDataUriPrefix(b64: string): string {
   return b64.startsWith("data:") ? b64.slice(b64.indexOf(",") + 1) : b64;
 }
