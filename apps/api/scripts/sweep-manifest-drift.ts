@@ -219,8 +219,7 @@ if (apply && drifts.length > 0) {
       // no record of WHICH columns each sync wrote, which is precisely the
       // thing a reader needs afterwards.
       const audit = result.out
-        .split("
-")
+        .split("\n")
         .find((l) => l.startsWith("Audit: "));
       console.log(`  ✓ ${d.slug}${audit ? `  ${audit}` : ""}`);
     } else {
