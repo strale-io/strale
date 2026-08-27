@@ -50,6 +50,28 @@ export interface CanonicalSyncField {
    * fields are always compared and always written when selected.
    */
   readonly optional: boolean;
+  /**
+   * What an explicit `null` in the manifest means for THIS column.
+   *
+   * The old UPDATE was not uniform and the difference is load-bearing:
+   * `name ?? dbRow.name` PRESERVED the DB value when the manifest said null,
+   * while `cost_class !== undefined ? … : dbRow…` WROTE the null — which is how
+   * a cost-class transition clears its old quota fields. Collapsing both into
+   * "null is a declared value" silently broadened the blast radius on six
+   * columns and could turn a preserved value into a NOT NULL failure.
+   * Reviewer-found; the per-field behaviour is restored here.
+   */
+  readonly nullMeans: "write" | "preserve";
+  /**
+   * True for columns the authority taxonomy does NOT mark manifest-canonical.
+   *
+   * `transparency_tag` is db-canonical and `freshness_category` is hybrid. The
+   * script has always been able to push them — it is the migration escape
+   * hatch, and it prints a loud warning when it does — but they are not
+   * manifest-canonical, so a caller has to name them explicitly and cannot
+   * reach them through a taxonomy-derived selection by accident.
+   */
+  readonly nonCanonical?: true;
 }
 
 /**
@@ -60,23 +82,23 @@ export interface CanonicalSyncField {
  * row's identity and the WHERE key, never a value to overwrite.
  */
 export const CANONICAL_SYNC_FIELDS: readonly CanonicalSyncField[] = [
-  { column: "name", kind: "plain", optional: true },
-  { column: "description", kind: "plain", optional: false },
-  { column: "category", kind: "plain", optional: false },
-  { column: "input_schema", kind: "json", optional: false },
-  { column: "output_schema", kind: "json", optional: false },
-  { column: "data_source", kind: "plain", optional: false },
-  { column: "maintenance_class", kind: "plain", optional: true },
-  { column: "transparency_tag", kind: "plain", optional: true },
-  { column: "freshness_category", kind: "plain", optional: true },
-  { column: "output_field_reliability", kind: "json", optional: true },
-  { column: "processes_personal_data", kind: "plain", optional: true },
-  { column: "personal_data_categories", kind: "textArray", optional: true },
-  { column: "gdpr_art_22_classification", kind: "plain", optional: true },
-  { column: "cost_class", kind: "plain", optional: true },
-  { column: "quota_window", kind: "plain", optional: true },
-  { column: "quota_cap", kind: "plain", optional: true },
-  { column: "quota_reset_dom", kind: "plain", optional: true },
+  { column: "name", kind: "plain", optional: true, nullMeans: "preserve" },
+  { column: "description", kind: "plain", optional: false, nullMeans: "write" },
+  { column: "category", kind: "plain", optional: false, nullMeans: "write" },
+  { column: "input_schema", kind: "json", optional: false, nullMeans: "write" },
+  { column: "output_schema", kind: "json", optional: false, nullMeans: "write" },
+  { column: "data_source", kind: "plain", optional: false, nullMeans: "write" },
+  { column: "maintenance_class", kind: "plain", optional: true, nullMeans: "preserve" },
+  { column: "transparency_tag", kind: "plain", optional: true, nullMeans: "preserve", nonCanonical: true },
+  { column: "freshness_category", kind: "plain", optional: true, nullMeans: "preserve", nonCanonical: true },
+  { column: "output_field_reliability", kind: "json", optional: true, nullMeans: "write" },
+  { column: "processes_personal_data", kind: "plain", optional: true, nullMeans: "preserve" },
+  { column: "personal_data_categories", kind: "textArray", optional: true, nullMeans: "write" },
+  { column: "gdpr_art_22_classification", kind: "plain", optional: true, nullMeans: "preserve" },
+  { column: "cost_class", kind: "plain", optional: true, nullMeans: "write" },
+  { column: "quota_window", kind: "plain", optional: true, nullMeans: "write" },
+  { column: "quota_cap", kind: "plain", optional: true, nullMeans: "write" },
+  { column: "quota_reset_dom", kind: "plain", optional: true, nullMeans: "write" },
 ] as const;
 
 export const CANONICAL_SYNC_FIELD_NAMES: readonly string[] = CANONICAL_SYNC_FIELDS.map(
@@ -108,7 +130,18 @@ export interface FieldSelection {
  */
 export function parseFieldSelection(argv: readonly string[]): FieldSelection {
   const wantsAll = argv.includes("--all-fields");
-  const idx = argv.findIndex((a) => a === "--fields" || a.startsWith("--fields="));
+  const all = argv
+    .map((a, i) => (a === "--fields" || a.startsWith("--fields=") ? i : -1))
+    .filter((i) => i !== -1);
+
+  // Reviewer-found: `findIndex` took the first occurrence, so
+  // `--fields=input_schema --fields=price_cents` succeeded and SILENTLY IGNORED
+  // the second — narrow, but it falsifies "unknown field names are refused".
+  // Two scopes is an ambiguous instruction; refuse rather than pick one.
+  if (all.length > 1) {
+    throw new FieldSelectionError("--fields was given more than once; pass a single list.");
+  }
+  const idx = all.length === 1 ? all[0]! : -1;
 
   if (wantsAll && idx !== -1) {
     throw new FieldSelectionError(
@@ -187,9 +220,10 @@ export function buildAssignments(
     if (!selectedSet.has(field.column)) continue;
 
     const value = manifest[field.column];
-    // Absent from the manifest: leave the DB value alone. `null` is NOT
-    // absent — it is a declared value and is written.
+    // Absent from the manifest: leave the DB value alone.
     if (value === undefined) continue;
+    // Explicit null: written only for the columns whose old behaviour wrote it.
+    if (value === null && field.nullMeans === "preserve") continue;
 
     assignments.push({ column: field.column, kind: field.kind, value });
   }
@@ -236,6 +270,21 @@ export async function applyAssignments(
 ): Promise<number> {
   if (assignments.length === 0) {
     throw new FieldSelectionError("Refusing to run an UPDATE with no columns to set.");
+  }
+
+  // REVALIDATE at the sink, not only at the CLI.
+  //
+  // `Assignment.column` is a string, and this function is exported. A caller
+  // that hand-built `{ column: "description = description, price_cents" }`
+  // would otherwise produce a valid SET clause that writes a column nobody
+  // authorised. The CLI path cannot do this — buildAssignments rematerialises
+  // names from constants — but the sink is the thing that concatenates, so the
+  // sink is where the check belongs. Reviewer-found.
+  const illegal = assignments.filter((a) => !CANONICAL_SYNC_FIELD_NAMES.includes(a.column));
+  if (illegal.length > 0) {
+    throw new FieldSelectionError(
+      `Refusing to write non-canonical column(s): ${illegal.map((a) => a.column).join(", ")}.`,
+    );
   }
 
   // Column names come from CANONICAL_SYNC_FIELDS, never from user input — the

@@ -43,7 +43,9 @@ function gatesDiffOnSelection(src: string): boolean {
 
 /** Does it derive the write from the same `selection.fields`? */
 function writesFromSelection(src: string): boolean {
-  return /buildAssignments\(\s*selection\.fields\s*,/.test(src);
+  // `drifts` is itself computed only for selected fields (compare() is gated),
+  // so this is the selection narrowed to what actually differs.
+  return /buildAssignments\(\s*drifts\s*,/.test(src);
 }
 
 describe("the script wires one selection into both the diff and the write", () => {
@@ -56,19 +58,40 @@ describe("the script wires one selection into both the diff and the write", () =
     ).toBe(true);
   });
 
-  it("derives the write from the same selection", () => {
+  it("derives the write from the drifted subset of the same selection", () => {
     expect(writesFromSelection(SCRIPT)).toBe(true);
   });
 
-  it("never reaches the database before the scope is parsed", () => {
+  it("never reaches a credential before the scope is parsed", () => {
     // An invalid scope should cost nothing and touch no credential.
+    //
+    // This used to compare the parse against openOperatorWriteDb only, and so
+    // did not notice that `config({ path: … })` — which loads the root .env,
+    // write credential included, into process.env — ran BEFORE it.
+    // Reviewer-found; dotenv is now part of the ordering.
     const parseAt = SCRIPT.indexOf("parseFieldSelection(args)");
+    // Matched on the CALL, not the phrase: the comment above this ordering
+    // mentions `config({ path: … })` and an indexOf on that prefix found the
+    // comment first, which is its own small lesson about source scans.
+    const dotenvAt = SCRIPT.search(/config\(\{ path: resolve\(/);
     const connectAt = SCRIPT.indexOf("openOperatorWriteDb(");
     expect(parseAt).toBeGreaterThan(-1);
+    expect(dotenvAt).toBeGreaterThan(-1);
     expect(connectAt).toBeGreaterThan(-1);
+    expect(parseAt, "dotenv loads the environment before the scope is validated").toBeLessThan(
+      dotenvAt,
+    );
     expect(parseAt, "the write connection opens before the scope is validated").toBeLessThan(
       connectAt,
     );
+  });
+
+  it("writes only the DRIFTED subset, so the printed diff equals the write", () => {
+    // Passing selection.fields wrote every selected field, including ones
+    // already equal — so `--fields description,data_source` with only
+    // description drifted displayed one column and wrote two. Reviewer-found.
+    expect(SCRIPT).toMatch(/buildAssignments\(\s*drifts\s*,/);
+    expect(SCRIPT).not.toMatch(/buildAssignments\(\s*selection\.fields\s*,/);
   });
 
   it("prints the selected set, so the authorised scope is reconstructable", () => {
@@ -102,7 +125,8 @@ describe("the script wires one selection into both the diff and the write", () =
       expect(writesFromSelection("buildAssignments(CANONICAL_SYNC_FIELD_NAMES, manifest)")).toBe(
         false,
       );
-      expect(writesFromSelection("buildAssignments(selection.fields, manifest)")).toBe(true);
+      expect(writesFromSelection("buildAssignments(selection.fields, manifest)")).toBe(false);
+      expect(writesFromSelection("buildAssignments(drifts, manifest)")).toBe(true);
     });
   });
 });

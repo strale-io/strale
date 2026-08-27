@@ -58,7 +58,6 @@ import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
-config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 import * as yaml from "js-yaml";
 
@@ -74,8 +73,12 @@ if (!slug) {
   process.exit(1);
 }
 
-// Parsed BEFORE any DB connection is opened: an invalid scope should cost
-// nothing and reach no credential.
+// Parsed BEFORE dotenv runs, so an invalid scope reaches no credential at all.
+//
+// It used to sit after `config({ path: … })`, which loads the root .env —
+// including any write credential — into process.env before the scope had been
+// validated. Reviewer-found: the wiring test only compared the parse against
+// openOperatorWriteDb and so did not see it.
 let selection;
 try {
   selection = parseFieldSelection(args);
@@ -86,6 +89,8 @@ try {
   }
   throw err;
 }
+
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 
 const manifestPath = resolve(import.meta.dirname, `../../../manifests/${slug}.yaml`);
 const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
@@ -280,9 +285,15 @@ if (dryRun) {
   process.exit(0);
 }
 
-const assignments = buildAssignments(selection.fields, manifest as Record<string, unknown>);
+// The DRIFTED subset, not merely the selected one.
+//
+// Reviewer-found: `--fields description,data_source` with only description
+// drifted displayed one field and wrote two, so the printed diff was not the
+// write. Passing `drifts` makes them identical by construction — and writing a
+// column whose value already matches buys nothing but blast radius.
+const assignments = buildAssignments(drifts, manifest as Record<string, unknown>);
 
-const skipped = unwritableSelected(selection.fields, manifest as Record<string, unknown>);
+const skipped = unwritableSelected(drifts, manifest as Record<string, unknown>);
 if (skipped.length > 0) {
   console.log(
     `\nSelected but absent from the manifest, so left untouched: ${skipped.join(", ")}`,
