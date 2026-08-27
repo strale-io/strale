@@ -3,8 +3,11 @@ import sharp from "sharp";
 import { safeFetch } from "../lib/safe-fetch.js";
 import {
   assertDecodedSizeWithinLimit,
+  assertEffectiveGeometryWithinLimit,
   assertOutputGeometryWithinLimit,
+  effectiveOutputGeometry,
   decodedLengthOfBase64,
+  stripDataUriPrefix,
   readBodyWithLimit,
 } from "./lib/image-limits.js";
 
@@ -36,9 +39,11 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
   // Get image buffer
   let imageBuffer: Buffer;
   if (base64Input) {
-    const data = base64Input.startsWith("data:")
-      ? base64Input.replace(/^data:image\/\w+;base64,/, "")
-      : base64Input;
+    // ONE stripping, shared with the size check below. The narrower
+    // `data:image/\w+;base64,` regex used here before disagreed with the
+    // measurer's own stripping, and a payload neither recognised was measured
+    // short and decoded whole — reviewer-found.
+    const data = stripDataUriPrefix(base64Input);
     // Sized from the string, then decoded — not decoded and then measured. A
     // check that runs after Buffer.from() has already allocated the thing it
     // was meant to prevent.
@@ -60,6 +65,26 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
 
   // Process with Sharp
   let pipeline = sharp(imageBuffer);
+
+  // The requested geometry was bounded before any bytes were fetched. That is
+  // not sufficient on its own: with one dimension omitted sharp derives the
+  // other from the source aspect ratio, and `fit: "outside"` can exceed BOTH
+  // requested edges. Both routes reopen the amplification this capability is
+  // being hardened against, so the cap is applied again to the geometry sharp
+  // will actually produce. Reviewer-found.
+  //
+  // metadata() is a header parse, not a decode, and the input is already
+  // capped at 4 MiB — so this reads the dimensions without doing the
+  // allocation the cap exists to prevent.
+  const source = await pipeline.metadata();
+  const resolved = effectiveOutputGeometry(
+    source.width ?? 0,
+    source.height ?? 0,
+    targetWidth || undefined,
+    targetHeight || undefined,
+    fit,
+  );
+  assertEffectiveGeometryWithinLimit(resolved.width, resolved.height);
 
   // Resize
   pipeline = pipeline.resize(targetWidth || undefined, targetHeight || undefined, { fit });
