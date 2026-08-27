@@ -31,7 +31,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| austrian-company-data | AT | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
+| austrian-company-data | AT | Company registry | Firmenbuch (Republik Österreich, BMJ) via JustizOnline IWG/HVD API | Committed | €0.05 | live-verified | 2026-08-27 |
 | belgian-company-data | BE | Company registry | cbeapi.be | Live | €0.05 | live-verified | 2026-05-15 |
 | bulgarian-company-data | BG | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
 | swiss-company-data | CH | Company registry | Zefix | Live | €0.05 | live-verified | 2026-05-15 |
@@ -109,7 +109,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| austrian-company-data | AT | Company registry | Openapi.com | Committed | €0.16 | live-verified | 2026-05-15 |
+| austrian-company-data | AT | Company registry | Firmenbuch (Republik Österreich, BMJ) via JustizOnline IWG/HVD API | Committed | €0.05 | live-verified | 2026-08-27 |
 
 ### BE (1)
 

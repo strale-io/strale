@@ -258,7 +258,7 @@ const CLASSIFICATION: Record<string, MaintenanceClass> = {
   // ── scraping-stable-target ──────────────────────────────────────────────────
   // Browserless scraping of government portals or large stable institutional sites.
   "australian-company-data": "scraping-stable-target",  // ASIC (Australian government)
-  "austrian-company-data": "scraping-stable-target",    // Austrian commercial register
+  "austrian-company-data": "free-stable-api",           // Firmenbuch via JustizOnline HVD API (2026-08-27)
   "belgian-company-data": "scraping-stable-target",     // Belgian Crossroads Bank
   "business-license-check-se": "scraping-stable-target", // Bolagsverket
   "canadian-company-data": "scraping-stable-target",    // Canadian government registries

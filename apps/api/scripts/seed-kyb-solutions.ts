@@ -53,7 +53,7 @@ const COUNTRIES: Country[] = [
   { code: "fr", name: "France", companyDataSlug: "french-company-data", isEU: true, geography: "eu", inputField: "siren", inputLabel: "French SIREN/SIRET number", exampleId: "542051180" },
   { code: "nl", name: "Netherlands", companyDataSlug: "dutch-company-data", isEU: true, geography: "eu", inputField: "kvk_number", inputLabel: "Dutch KVK number", exampleId: "34186284" },
   { code: "be", name: "Belgium", companyDataSlug: "belgian-company-data", isEU: true, geography: "eu", inputField: "enterprise_number", inputLabel: "Belgian enterprise number", exampleId: "0403.170.701" },
-  { code: "at", name: "Austria", companyDataSlug: "austrian-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Austrian company name or register number", exampleId: "Red Bull GmbH" },
+  { code: "at", name: "Austria", companyDataSlug: "austrian-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Austrian company name or register number", exampleId: "OMV Aktiengesellschaft" },
   { code: "ie", name: "Ireland", companyDataSlug: "irish-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Irish company name or CRO number", exampleId: "Ryanair Holdings plc" },
   { code: "es", name: "Spain", companyDataSlug: "spanish-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Spanish company name or CIF", exampleId: "Banco Santander" },
   { code: "it", name: "Italy", companyDataSlug: "italian-company-data", isEU: true, geography: "eu", inputField: "company_name", inputLabel: "Italian company name or codice fiscale", exampleId: "Ferrari" },
