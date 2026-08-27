@@ -1,10 +1,10 @@
 slug: austrian-company-data
 name: Austrian Company Data
 description: >-
-  Official Austrian Firmenbuch lookup via the JustizOnline HVD API: company core data, current officers, and
-  registry legal facts, by Firmenbuchnummer or name.
+  Official Austrian Firmenbuch lookup via the JustizOnline HVD API: company core data, current officers, and registry
+  legal facts, by Firmenbuchnummer or name.
 category: company-data
-cost_class: free_quota
+cost_class: free_unlimited
 price_cents: 5
 is_free_tier: false
 avg_latency_ms: 1500
@@ -20,8 +20,10 @@ input_schema:
         Company name for a registry search. Must resolve to exactly one Firmenbuch entry; ambiguous names return a
         candidate list and require a follow-up call with registration_number.
   anyOf:
-    - required: [registration_number]
-    - required: [company_name]
+    - required:
+        - registration_number
+    - required:
+        - company_name
 output_schema:
   type: object
   example:
@@ -34,7 +36,7 @@ output_schema:
     status: active
     status_note: null
     is_active: true
-    registered_address: "Trabrennstraße 6-8, 1020 Wien"
+    registered_address: Trabrennstraße 6-8, 1020 Wien
     seat: Wien
     court: Handelsgericht Wien
     court_code: "007"
@@ -48,18 +50,22 @@ output_schema:
     legal_facts: []
     legal_representatives:
       - type: person
-        name: "Beispiel-Prokuristin Dr. Anna Muster (EXAMPLE)"
+        name: Beispiel-Prokuristin Dr. Anna Muster (EXAMPLE)
         role: PROKURIST/IN
         role_code: PR
         role_group: management
         start_date: "2023-03-15"
         date_of_birth: "1970-12-16"
-        representation: "vertritt seit 15.03.2023 gemeinsam mit einem Vorstandsmitglied oder einer/einem weiteren Prokuristin/Prokuristen"
+        representation: >-
+          vertritt seit 15.03.2023 gemeinsam mit einem Vorstandsmitglied oder einer/einem weiteren
+          Prokuristin/Prokuristen
     total_legal_representatives: 10
     directors:
-      - "Beispiel-Prokuristin Dr. Anna Muster (EXAMPLE)"
+      - Beispiel-Prokuristin Dr. Anna Muster (EXAMPLE)
     tier_2_available: true
-    tier_2_available_reason: Current officers (role, representation authority, start date) extracted from the Firmenbuch Kurzinformation extract.
+    tier_2_available_reason: >-
+      Current officers (role, representation authority, start date) extracted from the Firmenbuch Kurzinformation
+      extract.
     ubo_availability: unavailable_no_registry
     ubo_availability_reason: Austrian UBO data lives in the WiEReg, which has no free public API; access requires a paid BMF account.
     source_checksum: AE5C3FA050D3B445A9488BF39C4CA3EE
@@ -174,42 +180,113 @@ personal_data_categories:
 geography: eu
 test_fixtures:
   known_answer:
-    input:
-      registration_number: FN 93363 z
-    expected_fields:
-      - field: company_name
-        operator: equals
-        reliability: guaranteed
-        value: OMV Aktiengesellschaft
-      - field: registration_number
-        operator: equals
-        reliability: guaranteed
-        value: FN 93363 z
-      - field: country_code
-        operator: equals
-        reliability: guaranteed
-        value: AT
-      - field: legal_form
-        operator: equals
-        reliability: guaranteed
-        value: Aktiengesellschaft
-      - field: status
-        operator: equals
-        reliability: guaranteed
-        value: active
-      - field: is_active
-        operator: equals
-        reliability: guaranteed
-        value: true
-      - field: registered_address
-        operator: not_null
-        reliability: guaranteed
-      - field: court
-        operator: not_null
-        reliability: guaranteed
-      - field: total_legal_representatives
-        operator: not_null
-        reliability: guaranteed
+    - input:
+        registration_number: FN 93363 z
+      expected_fields:
+        - field: company_name
+          operator: equals
+          reliability: guaranteed
+          value: OMV Aktiengesellschaft
+        - field: registration_number
+          operator: equals
+          reliability: guaranteed
+          value: FN 93363 z
+        - field: euid
+          operator: equals
+          reliability: guaranteed
+          value: ATBRA.093363-000
+        - field: country_code
+          operator: equals
+          reliability: guaranteed
+          value: AT
+        - field: legal_form
+          operator: equals
+          reliability: guaranteed
+          value: Aktiengesellschaft
+        - field: legal_form_code
+          operator: equals
+          reliability: guaranteed
+          value: AG
+        - field: status
+          operator: equals
+          reliability: guaranteed
+          value: active
+        - field: is_active
+          operator: equals
+          reliability: guaranteed
+          value: true
+        - field: registered_address
+          operator: not_null
+          reliability: guaranteed
+        - field: seat
+          operator: equals
+          reliability: guaranteed
+          value: Wien
+        - field: court
+          operator: not_null
+          reliability: guaranteed
+        - field: court_code
+          operator: equals
+          reliability: guaranteed
+          value: "007"
+        - field: resolved_via
+          operator: equals
+          reliability: guaranteed
+          value: registration_number
+        - field: legal_name
+          operator: not_null
+          reliability: guaranteed
+        - field: primary_registration_id
+          operator: not_null
+          reliability: guaranteed
+        - field: legal_representatives
+          operator: not_null
+          reliability: guaranteed
+        - field: total_legal_representatives
+          operator: not_null
+          reliability: guaranteed
+        - field: directors
+          operator: not_null
+          reliability: guaranteed
+        - field: tier_2_available
+          operator: equals
+          reliability: guaranteed
+          value: true
+        - field: tier_2_available_reason
+          operator: not_null
+          reliability: guaranteed
+        - field: ubo_availability
+          operator: equals
+          reliability: guaranteed
+          value: unavailable_no_registry
+        - field: ubo_availability_reason
+          operator: not_null
+          reliability: guaranteed
+        - field: source_checksum
+          operator: not_null
+          reliability: guaranteed
+        - field: source_as_of
+          operator: not_null
+          reliability: guaranteed
+    - input:
+        company_name: OMV Aktiengesellschaft
+      expected_fields:
+        - field: company_name
+          operator: equals
+          reliability: guaranteed
+          value: OMV Aktiengesellschaft
+        - field: registration_number
+          operator: equals
+          reliability: guaranteed
+          value: FN 93363 z
+        - field: resolved_via
+          operator: equals
+          reliability: guaranteed
+          value: company_name
+        - field: status
+          operator: equals
+          reliability: guaranteed
+          value: active
   health_check_input:
     registration_number: FN 93363 z
 output_field_reliability:
@@ -247,8 +324,8 @@ limitations:
   - title: Name search must resolve to exactly one entry
     text: >-
       Firmenbuch name search does not rank by relevance. When a company_name query matches more than one entry and no
-      unique exact name match exists, the capability refuses with a candidate list (name, FN, seat) instead of
-      guessing. Callers should retry with the Firmenbuchnummer from the candidate list.
+      unique exact name match exists, the capability refuses with a candidate list (name, FN, seat) instead of guessing.
+      Callers should retry with the Firmenbuchnummer from the candidate list.
     category: coverage
     severity: info
     workaround: Call again with registration_number taken from the returned candidate list.
@@ -261,8 +338,8 @@ limitations:
     severity: info
   - title: No UBO data
     text: >-
-      Austrian beneficial-ownership data lives in the WiEReg (separate register, paid BMF access) and is not part of
-      the Firmenbuch HVD datasets. ubo_availability is reported as unavailable_no_registry.
+      Austrian beneficial-ownership data lives in the WiEReg (separate register, paid BMF access) and is not part of the
+      Firmenbuch HVD datasets. ubo_availability is reported as unavailable_no_registry.
     category: coverage
     severity: info
   - title: Officers limited to the Kurzinformation scope
@@ -273,16 +350,16 @@ limitations:
     severity: info
   - title: VAT numbers are not accepted
     text: >-
-      The Firmenbuch is keyed by Firmenbuchnummer, not UID (VAT). The previous vendor path accepted only ATU-format
-      VAT input; that contract is retired. UID-to-FN resolution is not offered by the registry API.
+      The Firmenbuch is keyed by Firmenbuchnummer, not UID (VAT). The previous vendor path accepted only ATU-format VAT
+      input; that contract is retired. UID-to-FN resolution is not offered by the registry API.
     category: coverage
     severity: info
     workaround: Look up the company by name, or find the FN on any official company document or at firmen.wko.at.
   - title: Name-path latency
     text: >-
-      Resolving by company_name costs one or two search calls plus the extract call against a SOAP registry
-      (~4s typical, slower under registry load). Callers with the Firmenbuchnummer should pass registration_number,
-      which is a single call (~1s).
+      Resolving by company_name costs one or two search calls plus the extract call against a SOAP registry (~4s
+      typical, slower under registry load). Callers with the Firmenbuchnummer should pass registration_number, which is
+      a single call (~1s).
     category: performance
     severity: info
     workaround: Pass registration_number instead of company_name when the FN is known.

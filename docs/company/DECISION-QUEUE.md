@@ -14,6 +14,31 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-20** · `your_call` · owner Petter · raised 2026-08-27 — **activate austrian-company-data on the official Firmenbuch API, at €0.05**
+Austria's registry capability is rebuilt on the official government API and
+fully verified in production; turning it on — and its price — is yours.
+*What happened:* JustizOnline granted Moonlighter AB the IWG token for the
+Firmenbuch HVD API on 2026-08-27 (the exact reactivation trigger DEC-20260427-I-6
+named). The migration shipped as PR #410 the same day: Firmenbuchnummer or
+company-name input, legal form, court, EUID, current officers with representation
+authority, insolvency/dissolution legal facts, CC BY 4.0 attribution in every
+response, €0 external cost per call. Deploy verified on prod; manifest and all
+eight test suites synced under the delegated operator authorities; smoke test
+11/11 green against live prod code. NIKI Luftfahrt correctly returns
+`status: dissolved`.
+*What needs you:* listing state and money are founder-gated by
+production-authority design (and the founder-grant key is not installed, so no
+session can discharge this). One statement covers it:
+`UPDATE capabilities SET is_active = true, visible = true, lifecycle_state = 'active', x402_enabled = true, price_cents = 5, avg_latency_ms = 1500 WHERE slug = 'austrian-company-data';`
+Price 5¢ matches the other direct-registry capabilities (SE, DE, SK; DB still
+says the Openapi-era 80¢). x402 on matches catalog policy — AT is not in the
+DEACTIVATED map. Say the word in chat and I run it under your named approval,
+or run it yourself against the write role.
+*Also worth knowing:* the AT KYB solutions' VIES step now resolves null and is
+skipped (the Firmenbuch carries no VAT numbers — same standing pattern as SK);
+`packages/strale-capabilities/capabilities.json` gets regenerated after
+activation so the published catalog picks up the new contract.
+
 **DQ-10** · `decided` · owner Claude · 2026-08-16 — **a correction, not a reversal**
 The "one paying customer" figure in DQ-3 below is not measured, and should not
 be carried into other decisions.
