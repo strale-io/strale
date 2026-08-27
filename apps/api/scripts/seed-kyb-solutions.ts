@@ -164,8 +164,8 @@ function buildKybEssentials(c: Country): SolutionDef {
     slug: `kyb-essentials-${c.code}`,
     name: `KYB Essentials — ${c.name}`,
     marketingName: `KYB Essentials — ${c.name}`,
-    description: `Quick company verification for ${c.name}. Confirms the company exists in the official registry, ${c.isEU ? "validates VAT registration, " : ""}screens against international sanctions lists, and checks LEI status.`,
-    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup via ${c.companyDataSlug}, ${c.isEU ? "EU VAT validation via VIES, " : ""}sanctions screening against OFAC/EU/UN lists, and LEI (Legal Entity Identifier) lookup. Returns structured check results with a disclaimer.`,
+    description: `Quick company verification for ${c.name}. Confirms the company exists in the official registry, ${c.isEU ? "validates VAT registration (from registry data or a VAT number you provide), " : ""}screens against international sanctions lists, and checks LEI status.`,
+    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup via ${c.companyDataSlug}, ${c.isEU ? "EU VAT validation via VIES (using the registry's VAT number where the registry publishes one — some registries, e.g. the Austrian Firmenbuch and Slovak RPO, do not — otherwise the optional vat_number input; the step is skipped when neither is available), " : ""}sanctions screening against OFAC/EU/UN lists, and LEI (Legal Entity Identifier) lookup. Returns structured check results with a disclaimer.`,
     agentDescription: `verify ${c.name.toLowerCase()} company, kyb ${c.code}, check ${c.name.toLowerCase()} business, ${c.code} company verification, onboard ${c.name.toLowerCase()} customer`,
     category: "compliance-verification",
     priceCents: 150,
@@ -180,6 +180,19 @@ function buildKybEssentials(c: Country): SolutionDef {
       type: "object",
       properties: {
         [c.inputField]: { type: "string", description: c.inputLabel },
+        // The VIES step maps $steps[0].vat_number with an $input fallback.
+        // Registries that publish no VAT number (Austrian Firmenbuch, Slovak
+        // RPO) can only run VIES off this optional input — undeclared, the
+        // fallback exists but no caller knows to use it.
+        ...(c.isEU
+          ? {
+              vat_number: {
+                type: "string",
+                description:
+                  "EU VAT number with country prefix (e.g. ATU14189108). Optional — used for VIES validation when the registry lookup does not return one (e.g. AT, SK); auto-derived from registry data where possible.",
+              },
+            }
+          : {}),
       },
       required: [c.inputField],
     },
@@ -356,7 +369,7 @@ function buildKybComplete(c: Country): SolutionDef {
     name: `KYB Complete — ${c.name}`,
     marketingName: `KYB Complete — ${c.name}`,
     description: `Comprehensive company verification for ${c.name}. Full compliance check including registry verification, sanctions screening, PEP screening, adverse media search, digital presence analysis, and a plain-language risk narrative.`,
-    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation, " : ""}LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${
+    longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation (registry-derived or caller-provided), " : ""}LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${
       c.code === "se" ? " plus credit report summary" :
       c.code === "fr" ? " plus BODACC commercial-registry and insolvency events" :
       c.code === "no" ? " plus Brreg bankruptcy / dissolution detail" :
