@@ -34,9 +34,25 @@
  * test suites, limitations, lifecycle_state, or operator-tunable fields.
  *
  * Usage:
- *   npx tsx scripts/sync-manifest-canonical-to-db.ts <slug> [--dry-run]
+ *   npx tsx scripts/sync-manifest-canonical-to-db.ts <slug> --fields <a,b> [--dry-run]
+ *   npx tsx scripts/sync-manifest-canonical-to-db.ts <slug> --all-fields [--dry-run]
+ *
+ * FIELD SCOPE IS MANDATORY. Omitting both flags is refused rather than
+ * treated as "everything": a destructive default that fires when you say
+ * nothing is the wrong default for a tool whose entire risk is writing more
+ * than you meant. See src/lib/manifest-sync-fields.ts for the incident that
+ * prompted it. The selected set is echoed into the log so the authorisation
+ * boundary is reconstructable later.
  */
 
+import {
+  parseFieldSelection,
+  buildAssignments,
+  unwritableSelected,
+  applyAssignments,
+  FieldSelectionError,
+  type SqlLike,
+} from "../src/lib/manifest-sync-fields.js";
 import { openOperatorWriteDb } from "../src/lib/operator-db.js";
 import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
@@ -51,8 +67,24 @@ const slug = args.find((a) => !a.startsWith("--"));
 const dryRun = args.includes("--dry-run");
 
 if (!slug) {
-  console.error("Usage: npx tsx scripts/sync-manifest-canonical-to-db.ts <slug> [--dry-run]");
+  console.error(
+    "Usage: npx tsx scripts/sync-manifest-canonical-to-db.ts <slug> " +
+      "(--fields <a,b> | --all-fields) [--dry-run]",
+  );
   process.exit(1);
+}
+
+// Parsed BEFORE any DB connection is opened: an invalid scope should cost
+// nothing and reach no credential.
+let selection;
+try {
+  selection = parseFieldSelection(args);
+} catch (err) {
+  if (err instanceof FieldSelectionError) {
+    console.error(err.message);
+    process.exit(1);
+  }
+  throw err;
 }
 
 const manifestPath = resolve(import.meta.dirname, `../../../manifests/${slug}.yaml`);
@@ -92,6 +124,11 @@ const dbHost = process.env.DATABASE_URL?.match(/@([^/:]+)/)?.[1];
 console.log(`DB host: ${dbHost}`);
 console.log(`Slug: ${slug}`);
 console.log(`Mode: ${dryRun ? "dry-run" : "WRITE"}`);
+// AUDIT LINE. The authorisation boundary, in the log, in one place.
+console.log(
+  `Field scope: ${selection.mode === "all" ? "ALL (--all-fields)" : "--fields"} ` +
+    `-> ${selection.fields.join(", ")}`,
+);
 
 const before = await sql`
   SELECT slug, name, description, category, input_schema, output_schema,
@@ -134,7 +171,18 @@ function canonical(value: unknown): string {
   );
 }
 
+const selected = new Set(selection.fields);
+
+/**
+ * Drift for ONE field, and only if it was selected.
+ *
+ * The gate lives here rather than at the ~17 call sites so the printed diff
+ * and the executed UPDATE are driven by the same `selection` object. A diff
+ * wider than the write would be worse than no diff at all: it is the artefact
+ * a reviewer approves a scoped mutation against.
+ */
 function compare(field: string, dbVal: unknown, manifestVal: unknown) {
+  if (!selected.has(field)) return;
   const a = canonical(dbVal);
   const b = canonical(manifestVal);
   if (a !== b) {
@@ -232,39 +280,34 @@ if (dryRun) {
   process.exit(0);
 }
 
-const result = await sql`
-  UPDATE capabilities
-  SET name = ${manifest.name ?? dbRow.name},
-      description = ${manifest.description},
-      category = ${manifest.category},
-      input_schema = ${sql.json(manifest.input_schema as never)},
-      output_schema = ${sql.json(manifest.output_schema as never)},
-      data_source = ${manifest.data_source},
-      maintenance_class = ${manifest.maintenance_class ?? dbRow.maintenance_class},
-      transparency_tag = ${manifest.transparency_tag ?? dbRow.transparency_tag},
-      freshness_category = ${manifest.freshness_category ?? dbRow.freshness_category},
-      output_field_reliability = ${
-        manifest.output_field_reliability !== undefined
-          ? sql.json(manifest.output_field_reliability)
-          : (dbRow.output_field_reliability as never)
-      },
-      processes_personal_data = ${manifest.processes_personal_data ?? dbRow.processes_personal_data},
-      personal_data_categories = ${
-        manifest.personal_data_categories !== undefined
-          ? sql.array(manifest.personal_data_categories, 1009)
-          : (dbRow.personal_data_categories as never)
-      },
-      gdpr_art_22_classification = ${manifest.gdpr_art_22_classification ?? dbRow.gdpr_art_22_classification},
-      cost_class = ${manifest.cost_class !== undefined ? manifest.cost_class : (dbRow.cost_class as never)},
-      quota_window = ${manifest.quota_window !== undefined ? manifest.quota_window : (dbRow.quota_window as never)},
-      quota_cap = ${manifest.quota_cap !== undefined ? manifest.quota_cap : (dbRow.quota_cap as never)},
-      quota_reset_dom = ${manifest.quota_reset_dom !== undefined ? manifest.quota_reset_dom : (dbRow.quota_reset_dom as never)}
-  WHERE slug = ${slug}
-  RETURNING slug, data_source, maintenance_class, cost_class
-`;
+const assignments = buildAssignments(selection.fields, manifest as Record<string, unknown>);
 
-console.log(`\nUpdated ${result.length} row(s).`);
-console.log(`data_source (new): ${result[0]?.data_source}`);
-console.log(`maintenance_class (new): ${result[0]?.maintenance_class}`);
+const skipped = unwritableSelected(selection.fields, manifest as Record<string, unknown>);
+if (skipped.length > 0) {
+  console.log(
+    `\nSelected but absent from the manifest, so left untouched: ${skipped.join(", ")}`,
+  );
+}
+
+if (assignments.length === 0) {
+  console.log("\nNothing to write: every selected field is absent from the manifest.");
+  await sql.end();
+  process.exit(0);
+}
+
+console.log(
+  `\nWriting ${assignments.length} column(s): ${assignments.map((a) => a.column).join(", ")}`,
+);
+
+const updated = await applyAssignments(sql as unknown as SqlLike, slug, assignments);
+
+console.log(`\nUpdated ${updated} row(s).`);
+// AUDIT LINE. One grep-able record of exactly which columns this invocation
+// was authorised to write and did write.
+console.log(
+  `Audit: slug=${slug} scope=${selection.mode} fields=[${assignments
+    .map((a) => a.column)
+    .join(",")}]`,
+);
 
 await sql.end();

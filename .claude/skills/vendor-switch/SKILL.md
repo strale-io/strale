@@ -61,7 +61,7 @@ catches accidental reversions.
 the same string format as the rest of the catalogue). Then sync to DB:
 
 ```bash
-cd apps/api && npx tsx --env-file=../../.env scripts/sync-manifest-canonical-to-db.ts <slug>
+cd apps/api && npx tsx --env-file=../../.env scripts/sync-manifest-canonical-to-db.ts <slug> --all-fields
 ```
 
 ## Step 4 — Run the drift sweep — twice

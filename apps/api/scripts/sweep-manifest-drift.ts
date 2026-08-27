@@ -188,10 +188,18 @@ if (apply && drifts.length > 0) {
   for (const d of drifts) {
     const result = await new Promise<{ code: number; out: string }>((resolveP) => {
       let out = "";
-      const child = spawn("npx", ["tsx", "scripts/sync-manifest-canonical-to-db.ts", d.slug], {
-        cwd: resolve(import.meta.dirname, ".."),
-        shell: true,
-      });
+      // --all-fields is now explicit. The sweep's whole purpose is to clear
+      // EVERY authority drift on a capability in one pass, so full sync is the
+      // intended behaviour here — it just has to be stated rather than assumed,
+      // now that omitting the flag is refused.
+      const child = spawn(
+        "npx",
+        ["tsx", "scripts/sync-manifest-canonical-to-db.ts", d.slug, "--all-fields"],
+        {
+          cwd: resolve(import.meta.dirname, ".."),
+          shell: true,
+        },
+      );
       child.stdout.on("data", (chunk) => (out += chunk));
       child.stderr.on("data", (chunk) => (out += chunk));
       child.on("close", (code) => resolveP({ code: code ?? -1, out }));
