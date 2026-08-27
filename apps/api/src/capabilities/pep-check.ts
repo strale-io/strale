@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { logError } from "../lib/log.js";
 import { DILISENSE_PEP_LISTS_QUERIED } from "./lib/dilisense-sources.js";
 
@@ -36,7 +37,7 @@ registerCapability("pep-check", async (input: CapabilityInput) => {
       if (parts) params.set("dob", `${parts[3]}/${parts[2]}/${parts[1]}`);
     }
 
-    const res = await fetch(`${DILISENSE_API}?${params}`, {
+    const res = await meteredVendorFetch("dilisense", `${DILISENSE_API}?${params}`, {
       headers: { "x-api-key": dilisenseKey },
       signal: AbortSignal.timeout(15000),
     });

@@ -304,6 +304,13 @@ async function main() {
   const { startRevenueHeartbeat } = await import("./jobs/revenue-heartbeat.js");
   startRevenueHeartbeat();
 
+  // Account balances are a separate health dimension from endpoint uptime.
+  // Runs immediately through the durable coordinator, then hourly; hard
+  // exhaustion suspends every required dependent capability and a confirmed
+  // refill/reset restores only state this job itself replaced.
+  const { startVendorControlTower } = await import("./jobs/vendor-control-tower.js");
+  startVendorControlTower();
+
   const port = parseInt(process.env.PORT || "3000", 10);
 
   const server = serve({ fetch: app.fetch, port }, (info) => {

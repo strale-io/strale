@@ -752,6 +752,10 @@ export const solutions = pgTable("solutions", {
   extendsWith: jsonb("extends_with").$type<string[]>().default([]),
   complianceCoverage: jsonb("compliance_coverage").$type<ComplianceCoverageItem[]>().default([]),
   isActive: boolean("is_active").notNull().default(true),
+  // Machine-readable owner marker for reversible vendor suspensions. A
+  // restoration only writes back when this marker still matches, so a later
+  // human or quality decision cannot be overwritten by the control tower.
+  deactivationReason: text("deactivation_reason"),
   displayOrder: integer("display_order").notNull().default(0),
   searchTags: text("search_tags").array().default([]),
   // x402 payment gateway (DB-driven, no-deploy exposure).
@@ -1055,8 +1059,8 @@ export const rateLimitCounters = pgTable(
 //
 // budget_cap is snapshotted from a percentage of capabilities.quota_cap at
 // counter creation:
-//   - free_quota: 10% daily / 20% monthly
-//   - paid_with_free_tier: 5% daily / 10% monthly
+//   - free_quota: 5% of the allowance
+//   - paid_with_free_tier: 2% of the allowance
 // (Customer traffic against free_quota does NOT increment this counter —
 // the budget protects Strale's own test/CI usage. See guarded-executor.ts.)
 export const capabilityBudgetCounters = pgTable(
@@ -1084,6 +1088,115 @@ export const capabilityBudgetCounters = pgTable(
       table.windowKind,
       table.windowStart,
     ),
+  ],
+);
+
+// ─── Vendor Control Tower ──────────────────────────────────────────────────
+// Account-level billing/allowance state. This is deliberately separate from
+// capability_health: one vendor balance can govern several capabilities, and
+// a healthy network endpoint can still refuse every authenticated request
+// because its account has no credits left.
+export const vendorAccounts = pgTable("vendor_accounts", {
+  providerName: text("provider_name").primaryKey(),
+  displayName: text("display_name").notNull(),
+  billingModel: text("billing_model").notNull(),
+  planName: text("plan_name"),
+  currency: varchar("currency", { length: 3 }),
+  paymentMethod: text("payment_method"),
+  monitorMode: text("monitor_mode").notNull(),
+  status: text("status").notNull().default("unknown"),
+  statusReason: text("status_reason"),
+  includedUnits: integer("included_units"),
+  usedUnits: integer("used_units"),
+  remainingUnits: integer("remaining_units"),
+  overageUnits: integer("overage_units"),
+  usageUnit: text("usage_unit"),
+  lowBalanceThresholdUnits: integer("low_balance_threshold_units"),
+  resetAt: timestamp("reset_at", { withTimezone: true }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  consecutiveCheckFailures: integer("consecutive_check_failures").notNull().default(0),
+  lastError: text("last_error"),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const vendorCapabilityDependencies = pgTable(
+  "vendor_capability_dependencies",
+  {
+    providerName: text("provider_name")
+      .notNull()
+      .references(() => vendorAccounts.providerName),
+    capabilitySlug: text("capability_slug")
+      .notNull()
+      .references(() => capabilities.slug),
+    dependencyKind: text("dependency_kind").notNull().default("required"),
+    unitsPerExecution: decimal("units_per_execution", { precision: 12, scale: 3 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.providerName, table.capabilitySlug] }),
+    index("vendor_capability_dependencies_slug_idx").on(table.capabilitySlug),
+  ],
+);
+
+// Saves the exact capability state the tower replaced. Restoration only
+// happens while the tower's own suspension marker is still present, so a
+// later quality/legal quarantine cannot be accidentally undone by a balance
+// refill.
+export const vendorCapabilitySuspensions = pgTable(
+  "vendor_capability_suspensions",
+  {
+    providerName: text("provider_name")
+      .notNull()
+      .references(() => vendorAccounts.providerName),
+    capabilitySlug: text("capability_slug")
+      .notNull()
+      .references(() => capabilities.slug),
+    previousLifecycleState: text("previous_lifecycle_state").notNull(),
+    previousVisible: boolean("previous_visible").notNull(),
+    previousX402Enabled: boolean("previous_x402_enabled").notNull(),
+    suspensionMarker: text("suspension_marker").notNull(),
+    suspendedAt: timestamp("suspended_at", { withTimezone: true }).notNull().defaultNow(),
+    restoreAfter: timestamp("restore_after", { withTimezone: true }),
+    restoredAt: timestamp("restored_at", { withTimezone: true }),
+    restoreError: text("restore_error"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.providerName, table.capabilitySlug] }),
+    index("vendor_capability_suspensions_active_idx")
+      .on(table.restoredAt)
+      .where(sql`${table.restoredAt} IS NULL`),
+  ],
+);
+
+export const vendorSolutionSuspensions = pgTable(
+  "vendor_solution_suspensions",
+  {
+    providerName: text("provider_name")
+      .notNull()
+      .references(() => vendorAccounts.providerName),
+    solutionSlug: text("solution_slug")
+      .notNull()
+      .references(() => solutions.slug),
+    previousIsActive: boolean("previous_is_active").notNull(),
+    previousX402Enabled: boolean("previous_x402_enabled").notNull(),
+    suspensionMarker: text("suspension_marker").notNull(),
+    suspendedAt: timestamp("suspended_at", { withTimezone: true }).notNull().defaultNow(),
+    restoreAfter: timestamp("restore_after", { withTimezone: true }),
+    restoredAt: timestamp("restored_at", { withTimezone: true }),
+    restoreError: text("restore_error"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.providerName, table.solutionSlug] }),
+    index("vendor_solution_suspensions_active_idx")
+      .on(table.restoredAt)
+      .where(sql`${table.restoredAt} IS NULL`),
   ],
 );
 

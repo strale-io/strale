@@ -251,6 +251,20 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
       }
     });
 
+    it("re-checks live solution eligibility before any payment or execution", () => {
+      const liveReadIdx = body.indexOf("isActive: solutions.isActive");
+      const refusalIdx = body.indexOf("Solution is no longer available via x402");
+      const verifyIdx = body.indexOf("await verifyX402PaymentOnly(");
+      const executeIdx = body.indexOf("await executeSolution(");
+
+      expect(liveReadIdx, "live solution read must exist").toBeGreaterThan(-1);
+      expect(refusalIdx, "stale-cache refusal must exist").toBeGreaterThan(liveReadIdx);
+      expect(verifyIdx, "payment verification must exist").toBeGreaterThan(refusalIdx);
+      expect(executeIdx, "solution execution must exist").toBeGreaterThan(refusalIdx);
+      expect(body).toContain("!live?.isActive || !live.x402Enabled");
+      expect(body).toContain("No payment was taken");
+    });
+
     it("'no steps produced output' early-return precedes every settle call", () => {
       // The solution handler's equivalent of validation failure: if no
       // step succeeded the caller's authorization is left to expire.

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -32,7 +33,7 @@ registerCapability("serp-related-questions", async (input: CapabilityInput) => {
   if (language) body.hl = language;
   if (country) body.gl = country.toLowerCase();
 
-  const res = await fetch("https://google.serper.dev/search", {
+  const res = await meteredVendorFetch("serper", "https://google.serper.dev/search", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify(body),

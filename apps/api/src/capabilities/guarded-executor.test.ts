@@ -200,44 +200,44 @@ describe("NULL_DECISIONS (unclassified cap_class)", () => {
 // ─── Budget cap arithmetic ──────────────────────────────────────────────────
 
 describe("computeBudgetCap", () => {
-  it("free_quota monthly: 20% of quota_cap", () => {
+  it("free_quota monthly: 5% of quota_cap", () => {
     expect(computeBudgetCap({
       slug: "x",
       cost_class: "free_quota",
       quota_window: "monthly",
       quota_cap: 50,
       quota_reset_dom: 1,
-    })).toBe(10);
+    })).toBe(2);
   });
 
-  it("free_quota daily: 10% of quota_cap", () => {
+  it("free_quota daily: 5% of quota_cap", () => {
     expect(computeBudgetCap({
       slug: "x",
       cost_class: "free_quota",
       quota_window: "daily",
       quota_cap: 50,
       quota_reset_dom: null,
-    })).toBe(5);
+    })).toBe(2);
   });
 
-  it("paid_with_free_tier monthly: 10% of quota_cap", () => {
+  it("paid_with_free_tier monthly: 2% of quota_cap", () => {
     expect(computeBudgetCap({
       slug: "x",
       cost_class: "paid_with_free_tier",
       quota_window: "monthly",
       quota_cap: 1000,
       quota_reset_dom: 1,
-    })).toBe(100);
+    })).toBe(20);
   });
 
-  it("paid_with_free_tier daily: 5% of quota_cap", () => {
+  it("paid_with_free_tier daily: 2% of quota_cap", () => {
     expect(computeBudgetCap({
       slug: "x",
       cost_class: "paid_with_free_tier",
       quota_window: "daily",
       quota_cap: 200,
       quota_reset_dom: null,
-    })).toBe(10);
+    })).toBe(4);
   });
 
   it("floor at 1 for very small quotas", () => {

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { resolveCountryOrThrow } from "./lib/iso-3166.js";
 import { resolveLanguageOrThrow } from "./lib/language-tag.js";
 
@@ -87,7 +88,7 @@ registerCapability("keyword-rank-check", async (input: CapabilityInput) => {
   // so there is no SSRF surface to guard. Same shape as google-search.ts and
   // serp-analyze.ts, which call the identical fixed endpoint.
   // unguarded-fetch-ok: fixed licensed Serper API host
-  const resp = await fetch("https://google.serper.dev/search", {
+  const resp = await meteredVendorFetch("serper", "https://google.serper.dev/search", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
     body: JSON.stringify({ q: keyword, gl: country, hl: language, num: depth }),

@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
@@ -20,7 +21,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   let query = `"${brandName}"`;
   if (excludeOwnDomain) query += ` -site:${excludeOwnDomain}`;
 
-  const res = await fetch("https://google.serper.dev/search", {
+  const res = await meteredVendorFetch("serper", "https://google.serper.dev/search", {
     method: "POST",
     headers: {
       "X-API-KEY": serperKey,

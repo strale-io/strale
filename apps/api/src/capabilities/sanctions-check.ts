@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import { logError } from "../lib/log.js";
 import { DILISENSE_SANCTIONS_LISTS_QUERIED } from "./lib/dilisense-sources.js";
 
@@ -45,7 +46,7 @@ registerCapability("sanctions-check", async (input: CapabilityInput) => {
       const parts = birthDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (parts) params.set("dob", `${parts[3]}/${parts[2]}/${parts[1]}`);
     }
-    const res = await fetch(`${DILISENSE_API}/${endpoint}?${params}`, {
+    const res = await meteredVendorFetch("dilisense", `${DILISENSE_API}/${endpoint}?${params}`, {
       headers: { "x-api-key": dilisenseKey },
       signal: AbortSignal.timeout(15000),
     });

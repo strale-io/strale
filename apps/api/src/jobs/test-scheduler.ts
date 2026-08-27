@@ -1,31 +1,20 @@
 /**
- * DB-Driven Test Scheduler — hourly free-only (DEC-20260503-B).
+ * DB-driven test scheduler — risk-tiered and quota-aware.
  *
  * Replaces the old setInterval-based scheduler that counted time from process
  * start. That approach broke on every Railway deploy (timers reset, tests
  * never fire during active development).
  *
- * Per DEC-20260503-B (2026-05-04), the previous tiered cadence (A=6h /
- * B=24h / C=72h) is replaced by a single hourly schedule for eligible
- * capabilities only. Paid / LLM capabilities (test_suites.scheduled_testing_eligible
- * = FALSE) are removed from scheduled testing entirely; quality signals
- * for them come from production observability, piggyback test suites,
- * and any zero-cost auth-less probes the vendor permits. The
- * schedule_tier column stays on test_suites for backwards compatibility
- * but is no longer read by the scheduler. Eligibility is an explicit
- * column per the PR A decoupling (see DEC-20260511-C). Phase A0b extends
- * this further: eligibility is now derived from capabilities.cost_class
- * (Block 0069) rather than external_cost_cents = 0, and the SELECT below
- * also excludes capabilities whose per-window budget counter has reached
- * its cap — defense-in-depth against the assertBudgetAvailable per-call
- * check at the dispatcher gate.
- * TODO(chat-draft): cite new cost-class DEC after Phase A0b session-end review
+ * Paid capabilities remain excluded from scheduled testing. Zero-cost fixture
+ * and free-unlimited suites retain the established hourly cadence. Finite-cost
+ * live/canary suites run at their declared risk cadence (A=6h, B=24h, C=72h),
+ * with conservative daily/72h quota floors. Per-window budget counters are
+ * checked here and atomically enforced again at the dispatcher.
  *
  * Cadence: the scheduler ticks every minute. Each minute M (0–59) it
- * picks free capabilities whose `abs(hashtext(slug)) % 60 = M` and whose
- * last_tested_at is older than 1 hour. This stagger spreads the per-hour
- * test load across the hour to avoid spiky pressure on shared upstream
- * sources (Companies House, GLEIF, VIES, etc.).
+ * picks eligible suites whose stable hash maps to M and whose most recent
+ * result is older than the applicable cadence. The stagger spreads due work
+ * across each hour to avoid spiky pressure on shared upstream sources.
  *
  * Also runs auxiliary periodic tasks (health checks, chromium probes,
  * weekly sweep, diagnostics, snapshots, retention, staleness refresh,
@@ -106,13 +95,10 @@ const POLL_INTERVAL_MS = 60 * 1000;                 // 1 minute (per-minute slug
 const BATCH_SIZE = 20;                              // safety cap; expected ~5/min with hash spread
 const DELAY_BETWEEN_CAPABILITIES_MS = 2_000;        // 2s between capabilities
 const STARTUP_DELAY_MS = 90_000;                    // 90 seconds after startup
-const FREE_TEST_INTERVAL_HOURS = 1;                 // DEC-20260503-B: hourly free-only
-
-// schedule_tier (A/B/C) is no longer read by the scheduler. The column
-// remains on test_suites for backwards compatibility and downstream
-// consumers (refresh-stale-scores.ts uses it for freshness-decay tier
-// hours). Per DEC-20260503-B + PR A decoupling, the scheduler dispatches
-// strictly on scheduled_testing_eligible = TRUE + slug-hash stagger.
+// schedule_tier governs finite-cost live/canary work: A=6h, B=24h, C=72h.
+// Fixture and genuinely free-unlimited suites stay hourly so cost protection
+// does not silently reduce their regression signal. Finite account allowances
+// get an additional 24h/72h floor.
 
 // Auxiliary task intervals (in ms)
 const HEALTH_CHECK_INTERVAL_MS      = 6 * 60 * 60 * 1000;   // 6h
@@ -288,6 +274,8 @@ export function slugStaggerMinute(slug: string, testType?: string): number {
 export function minRetestIntervalHours(
   testStatus: string | null,
   testMode: string | null,
+  scheduleTier: string | null = "B",
+  costClass: string | null = "free_unlimited",
 ): number {
   const statusHours: Record<string, number> = {
     upstream_broken: 24,
@@ -297,10 +285,22 @@ export function minRetestIntervalHours(
   const modeHours: Record<string, number> = {
     canary: 24,
   };
+  const tierHours: Record<string, number> = {
+    A: 6,
+    B: 24,
+    C: 72,
+  };
+  const quotaHours: Record<string, number> = {
+    free_quota: 24,
+    paid_with_free_tier: 72,
+  };
+  const finiteLive = testMode !== "fixture"
+    && (costClass === "free_quota" || costClass === "paid_with_free_tier");
   return Math.max(
-    1,
+    finiteLive ? (tierHours[scheduleTier ?? ""] ?? 24) : 1,
     statusHours[testStatus ?? ""] ?? 0,
     modeHours[testMode ?? ""] ?? 0,
+    finiteLive ? (quotaHours[costClass ?? ""] ?? 0) : 0,
   );
 }
 
@@ -309,7 +309,7 @@ export function minRetestIntervalHours(
  *
  * Per DEC-20260503-B + DEC-20260513-D (per-suite spread):
  *   - scheduled_testing_eligible = TRUE  (free/eligible; paid caps skipped)
- *   - per-suite last-run older than 1h  (derived from test_results)
+ *   - per-suite last-run older than its 6h/24h/72h risk tier
  *   - abs(hashtext(slug || ':' || test_type)) % 60 = current minute
  *
  * Per-suite stagger replaces the prior per-capability stagger. The earlier
@@ -324,8 +324,7 @@ export function minRetestIntervalHours(
  * haven't actually run for an hour.
  *
  * The status floor (upstream_broken, infra_limited, quarantined) still
- * applies — known-broken suites back off to daily/weekly even on the new
- * hourly cadence. The "no status creates a black hole" invariant from the
+ * applies — known-broken suites back off to daily/weekly. The "no status creates a black hole" invariant from the
  * old tiered query is preserved by the ELSE branch. `test_mode = 'canary'`
  * adds an independent daily floor on top (see `minRetestIntervalHours`).
  *
@@ -358,12 +357,23 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
       AND ts.scheduled_testing_eligible = TRUE
+      AND ts.test_type <> 'piggyback'
       AND (abs(hashtext(c.slug || ':' || ts.test_type)) % 60) = EXTRACT(MINUTE FROM NOW())::int
       AND (
         (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) IS NULL
         OR (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id)
            < NOW() - GREATEST(
-          INTERVAL '1 hour',
+          CASE
+            WHEN ts.test_mode <> 'fixture'
+              AND c.cost_class IN ('free_quota', 'paid_with_free_tier')
+            THEN CASE ts.schedule_tier
+              WHEN 'A' THEN INTERVAL '6 hours'
+              WHEN 'B' THEN INTERVAL '24 hours'
+              WHEN 'C' THEN INTERVAL '72 hours'
+              ELSE INTERVAL '24 hours'
+            END
+            ELSE INTERVAL '1 hour'
+          END,
           CASE ts.test_status
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'
             WHEN 'infra_limited'   THEN INTERVAL '24 hours'
@@ -373,6 +383,14 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
           CASE ts.test_mode
             WHEN 'canary' THEN INTERVAL '24 hours'
             ELSE INTERVAL '0 hours'
+          END,
+          CASE WHEN ts.test_mode <> 'fixture' THEN
+            CASE c.cost_class
+              WHEN 'free_quota' THEN INTERVAL '24 hours'
+              WHEN 'paid_with_free_tier' THEN INTERVAL '72 hours'
+              ELSE INTERVAL '0 hours'
+            END
+          ELSE INTERVAL '0 hours'
           END
         )
       )
@@ -386,8 +404,14 @@ async function findOverdueSuites(): Promise<OverdueSuite[]> {
             AND b.window_start = (
               CASE c.quota_window
                 WHEN 'daily'   THEN date_trunc('day', NOW())
-                WHEN 'monthly' THEN date_trunc('month', NOW())
-                  + (COALESCE(c.quota_reset_dom, 1) - 1) * INTERVAL '1 day'
+                WHEN 'monthly' THEN CASE
+                  WHEN NOW() >= date_trunc('month', NOW())
+                    + (COALESCE(c.quota_reset_dom, 1) - 1) * INTERVAL '1 day'
+                  THEN date_trunc('month', NOW())
+                    + (COALESCE(c.quota_reset_dom, 1) - 1) * INTERVAL '1 day'
+                  ELSE date_trunc('month', NOW()) - INTERVAL '1 month'
+                    + (COALESCE(c.quota_reset_dom, 1) - 1) * INTERVAL '1 day'
+                END
                 ELSE NULL
               END
             )
@@ -437,11 +461,22 @@ async function countOverdueCapabilities(): Promise<number> {
       ON ts.capability_slug = c.slug AND ts.active = true
     WHERE c.is_active = true
       AND ts.scheduled_testing_eligible = TRUE
+      AND ts.test_type <> 'piggyback'
       AND (
         (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id) IS NULL
         OR (SELECT MAX(tr.executed_at) FROM test_results tr WHERE tr.test_suite_id = ts.id)
            < NOW() - GREATEST(
-          INTERVAL '1 hour',
+          CASE
+            WHEN ts.test_mode <> 'fixture'
+              AND c.cost_class IN ('free_quota', 'paid_with_free_tier')
+            THEN CASE ts.schedule_tier
+              WHEN 'A' THEN INTERVAL '6 hours'
+              WHEN 'B' THEN INTERVAL '24 hours'
+              WHEN 'C' THEN INTERVAL '72 hours'
+              ELSE INTERVAL '24 hours'
+            END
+            ELSE INTERVAL '1 hour'
+          END,
           CASE ts.test_status
             WHEN 'upstream_broken' THEN INTERVAL '24 hours'
             WHEN 'infra_limited'   THEN INTERVAL '24 hours'
@@ -451,6 +486,14 @@ async function countOverdueCapabilities(): Promise<number> {
           CASE ts.test_mode
             WHEN 'canary' THEN INTERVAL '24 hours'
             ELSE INTERVAL '0 hours'
+          END,
+          CASE WHEN ts.test_mode <> 'fixture' THEN
+            CASE c.cost_class
+              WHEN 'free_quota' THEN INTERVAL '24 hours'
+              WHEN 'paid_with_free_tier' THEN INTERVAL '72 hours'
+              ELSE INTERVAL '0 hours'
+            END
+          ELSE INTERVAL '0 hours'
           END
         )
       )

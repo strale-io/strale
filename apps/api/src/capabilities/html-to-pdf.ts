@@ -3,6 +3,7 @@ import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 
 registerCapability("html-to-pdf", async (input: CapabilityInput) => {
   const html = (input.html as string) ?? undefined;
@@ -43,7 +44,7 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
   }
 
   // unguarded-fetch-ok: our Browserless /pdf endpoint; caller URL gated by assertTargetAllowed above
-  const response = await fetch(endpoint, {
+  const response = await browserlessFetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(bodyObj),
