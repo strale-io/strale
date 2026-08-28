@@ -327,13 +327,24 @@ describe("URL-path byte boundary is exact", () => {
 
 // ─── base64 path: measured before anything is allocated or forwarded ─────────
 
+// Built once per distinct limit (two, not six) — each is a multi-MB
+// alloc+encode that would otherwise repeat per capability.
+const overLimitB64ByLimit = new Map<number, string>();
+function overLimitB64(limit: number): string {
+  let b64 = overLimitB64ByLimit.get(limit);
+  if (!b64) {
+    b64 = Buffer.alloc(limit + 1).toString("base64");
+    overLimitB64ByLimit.set(limit, b64);
+  }
+  return b64;
+}
+
 describe.each(CAPS)("$slug base64 path", (cap) => {
   it("refuses a payload decoding to limit + 1 and never reaches the LLM stage", async () => {
     // Canonical, well-formed base64 of exactly limit + 1 decoded bytes — the
     // tightest possible discrimination: a capability whose effective base64
     // cap silently drifted even one byte upward fails this.
-    const b64 = Buffer.alloc(cap.limit + 1).toString("base64");
-    await expect(run(cap.slug)({ base64: b64 })).rejects.toThrow(
+    await expect(run(cap.slug)({ base64: overLimitB64(cap.limit) })).rejects.toThrow(
       /'base64' must be .* or less once decoded/,
     );
     expect(messagesCreate, "oversized base64 reached the LLM stage").not.toHaveBeenCalled();
@@ -366,15 +377,8 @@ describe.each(CAPS)("$slug base64 path", (cap) => {
 });
 
 describe("base64 boundary semantics", () => {
-  it("a padded payload decoding to limit + 1 is refused (image, 4 MiB)", async () => {
-    // Real bytes, real padding — Buffer gives the canonical base64 of exactly
-    // limit + 1 decoded bytes.
-    const b64 = Buffer.alloc(IMG + 1).toString("base64");
-    await expect(run("image-to-text")({ base64: b64 })).rejects.toThrow(
-      /'base64' must be 4\.0MB or less once decoded/,
-    );
-    expect(messagesCreate).not.toHaveBeenCalled();
-  });
+  // limit + 1 refusal for every capability is covered by the describe.each
+  // block above (same canonical Buffer-derived payload, per-capability).
 
   it("a payload measured exactly at the limit is accepted (document, 8 MiB)", async () => {
     // 8 MiB − 2 is divisible by 3, so its base64 needs no padding and the
@@ -497,7 +501,15 @@ describe("all six capabilities are wired to the shared enforcement", () => {
     "resume-parse.ts",
   ]);
 
-  const src = (f: string) => readFileSync(resolve(__dirname, f), "utf-8");
+  const srcCache = new Map<string, string>();
+  const src = (f: string) => {
+    let s = srcCache.get(f);
+    if (!s) {
+      s = readFileSync(resolve(__dirname, f), "utf-8");
+      srcCache.set(f, s);
+    }
+    return s;
+  };
 
   it.each(FILES)("%s never buffers a response with arrayBuffer()", (f) => {
     // `await x.arrayBuffer(` is the unbounded read this issue removed; the
@@ -514,11 +526,15 @@ describe("all six capabilities are wired to the shared enforcement", () => {
     expect(s).not.toMatch(/(?<![A-Za-z.])fetch\(/);
   });
 
-  it.each(FILES)("%s measures base64 from the normalised string before use", (f) => {
+  it.each(FILES)("%s bounds base64 through the sealed checkedBase64 helper", (f) => {
+    // checkedBase64 normalises, measures the normalised string, and returns
+    // it — so its presence, plus the absence of the raw primitives, proves the
+    // measure-what-you-send invariant by construction rather than by ritual.
     const s = src(f);
-    expect(s).toMatch(/normalizeBase64\(/);
-    expect(s).toMatch(/decodedLengthOfBase64\(/);
-    expect(s).toMatch(/assertDecodedSizeWithinLimit\(/);
+    expect(s).toMatch(/checkedBase64\(/);
+    expect(s, `${f} composes the base64 primitives by hand`).not.toMatch(
+      /normalizeBase64\(|decodedLengthOfBase64\(|assertDecodedSizeWithinLimit\(/,
+    );
   });
 
   it.each(FILES)("%s uses the named shared constant for its media class", (f) => {

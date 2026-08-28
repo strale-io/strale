@@ -4,9 +4,7 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 import {
   MAX_DECODED_DOCUMENT_BYTES,
-  assertDecodedSizeWithinLimit,
-  decodedLengthOfBase64,
-  normalizeBase64,
+  checkedBase64,
   readBodyWithLimit,
 } from "./lib/image-limits.js";
 
@@ -53,16 +51,9 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
     pdfBase64 = buf.toString("base64");
     sourceInfo = `pdf-extract:url:${parsedUrl.hostname}`;
   } else {
-    // #412: ONE normalisation (data-URI prefix + whitespace), and the SAME
-    // string is measured and sent — see image-limits.ts on why measuring a
-    // different representation than the one used downstream is not a limit.
-    const cleanBase64 = normalizeBase64(base64Input!);
-    assertDecodedSizeWithinLimit(
-      decodedLengthOfBase64(cleanBase64),
-      "base64",
-      MAX_DECODED_DOCUMENT_BYTES,
-    );
-    pdfBase64 = cleanBase64;
+    // #412: normalised, measured, and refused-if-oversized in one step; the
+    // returned string is the one that was measured.
+    pdfBase64 = checkedBase64(base64Input!, MAX_DECODED_DOCUMENT_BYTES);
     sourceInfo = "pdf-extract:base64";
   }
 

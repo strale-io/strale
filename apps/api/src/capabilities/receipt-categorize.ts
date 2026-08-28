@@ -4,9 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
 import {
   MAX_DECODED_IMAGE_BYTES,
-  assertDecodedSizeWithinLimit,
-  decodedLengthOfBase64,
-  normalizeBase64,
+  checkedBase64,
   readBodyWithLimit,
 } from "./lib/image-limits.js";
 
@@ -14,8 +12,6 @@ registerCapability("receipt-categorize", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string)?.trim() ?? (input.url as string)?.trim();
   const rawBase64 = (input.base64 as string)?.trim();
   const text = (input.text as string)?.trim();
-  // Refusal messages name the field the caller actually used.
-  const urlField = input.image_url ? "image_url" : "url";
 
   if (!imageUrl && !rawBase64 && !text) {
     throw new Error("'image_url', 'base64', or 'text' is required.");
@@ -28,14 +24,9 @@ registerCapability("receipt-categorize", async (input: CapabilityInput) => {
   const messages: Anthropic.MessageParam[] = [];
 
   if (rawBase64) {
-    // #412: ONE normalisation (data-URI prefix + whitespace); the SAME string
-    // is measured, sniffed, and sent downstream.
-    const base64 = normalizeBase64(rawBase64);
-    assertDecodedSizeWithinLimit(
-      decodedLengthOfBase64(base64),
-      "base64",
-      MAX_DECODED_IMAGE_BYTES,
-    );
+    // #412: normalised, measured, and refused-if-oversized in one step; the
+    // returned string is the one that was measured — sniffed and sent as-is.
+    const base64 = checkedBase64(rawBase64, MAX_DECODED_IMAGE_BYTES);
     const mediaType = base64.startsWith("/9j") ? "image/jpeg" : "image/png";
     messages.push({
       role: "user",
@@ -49,8 +40,13 @@ registerCapability("receipt-categorize", async (input: CapabilityInput) => {
     const res = await safeFetch(imageUrl, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) throw new Error(`Failed to fetch image: HTTP ${res.status}`);
     // #412: streamed with a cap, not arrayBuffer() — a post-buffer length
-    // check bounds nothing because the bytes are already resident.
-    const buf = await readBodyWithLimit(res, MAX_DECODED_IMAGE_BYTES, urlField);
+    // check bounds nothing because the bytes are already resident. The refusal
+    // names the field the caller actually used.
+    const buf = await readBodyWithLimit(
+      res,
+      MAX_DECODED_IMAGE_BYTES,
+      input.image_url ? "image_url" : "url",
+    );
     const contentType = res.headers.get("content-type") ?? "";
     const mediaType = contentType.includes("jpeg") || contentType.includes("jpg") ? "image/jpeg" : "image/png";
     messages.push({

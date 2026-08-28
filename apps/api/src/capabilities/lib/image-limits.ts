@@ -207,6 +207,26 @@ export function decodedLengthOfBase64(b64: string): number {
  * Checked, not assumed: the phrasings below were run through
  * `classifyTransactionFailure` before being written this way.
  */
+/**
+ * The ONE way to accept a caller's base64 payload: normalise, measure the
+ * normalised string, refuse if over `maxBytes`, and return THAT string for the
+ * caller to send/decode.
+ *
+ * Composed here (#412 review) so the measure-the-string-you-use invariant is
+ * unforgeable at call sites instead of being a three-call ritual upheld by
+ * comments — the whitespace, padding and data-URI bugs narrated above all came
+ * from callers composing the primitives divergently.
+ */
+export function checkedBase64(
+  raw: string,
+  maxBytes: number,
+  field = "base64",
+): string {
+  const b64 = normalizeBase64(raw);
+  assertDecodedSizeWithinLimit(decodedLengthOfBase64(b64), field, maxBytes);
+  return b64;
+}
+
 export function assertDecodedSizeWithinLimit(
   bytes: number,
   field = "base64",

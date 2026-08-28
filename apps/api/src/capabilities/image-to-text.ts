@@ -4,9 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
 import {
   MAX_DECODED_IMAGE_BYTES,
-  assertDecodedSizeWithinLimit,
-  decodedLengthOfBase64,
-  normalizeBase64,
+  checkedBase64,
   readBodyWithLimit,
 } from "./lib/image-limits.js";
 
@@ -37,26 +35,18 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
   let imageContent: Anthropic.ImageBlockParam;
 
   if (base64Input) {
-    // Detect media type from base64 header or default to png
+    // Detect media type from the data-URI header or default to png
     let mediaType: "image/png" | "image/jpeg" | "image/gif" | "image/webp" = "image/png";
-
-    if (base64Input.startsWith("data:")) {
-      const match = base64Input.match(/^data:(image\/\w+);base64,/);
-      if (match) {
-        mediaType = match[1] as typeof mediaType;
-      }
+    const match = base64Input.match(/^data:(image\/\w+);base64,/);
+    if (match) {
+      mediaType = match[1] as typeof mediaType;
     }
 
     // #412: this path used to be entirely unchecked — the 4 MiB cap applied
-    // only to the URL branch, and only after the bytes were buffered. ONE
-    // normalisation (data-URI prefix + whitespace); the SAME string is
-    // measured and sent downstream.
-    const data = normalizeBase64(base64Input);
-    assertDecodedSizeWithinLimit(
-      decodedLengthOfBase64(data),
-      "base64",
-      MAX_DECODED_IMAGE_BYTES,
-    );
+    // only to the URL branch, and only after the bytes were buffered.
+    // Normalised, measured, and refused-if-oversized in one step; the returned
+    // string is the one that was measured.
+    const data = checkedBase64(base64Input, MAX_DECODED_IMAGE_BYTES);
 
     imageContent = {
       type: "image",

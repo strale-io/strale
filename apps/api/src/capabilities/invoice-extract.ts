@@ -4,9 +4,7 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 import {
   MAX_DECODED_DOCUMENT_BYTES,
-  assertDecodedSizeWithinLimit,
-  decodedLengthOfBase64,
-  normalizeBase64,
+  checkedBase64,
   readBodyWithLimit,
 } from "./lib/image-limits.js";
 
@@ -130,14 +128,9 @@ registerCapability("invoice-extract", async (input: CapabilityInput) => {
   if (url) {
     imageBlock = await extractFromUrl(url);
   } else {
-    // #412: ONE normalisation (data-URI prefix + whitespace), and the SAME
-    // string is measured, sniffed, and sent downstream.
-    const cleanBase64 = normalizeBase64(base64Input!);
-    assertDecodedSizeWithinLimit(
-      decodedLengthOfBase64(cleanBase64),
-      "base64",
-      MAX_DECODED_DOCUMENT_BYTES,
-    );
+    // #412: normalised, measured, and refused-if-oversized in one step; the
+    // returned string is the one that was measured — sniffed and sent as-is.
+    const cleanBase64 = checkedBase64(base64Input!, MAX_DECODED_DOCUMENT_BYTES);
     const mediaType = detectMediaType(cleanBase64);
     imageBlock = {
       type: "image",
