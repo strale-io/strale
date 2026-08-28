@@ -135,6 +135,27 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **We will not be asking the card customer why they stopped — Petter declined
+  the outreach on 2026-08-28 (DQ-21), and that decision reranks the work.** The
+  08-28 recommendation was to write one short note on 04-09 if they were still
+  silent; declined. The charter's boundary (no outreach from transaction
+  evidence; a registration is a relationship, a payment is not) is unchanged and
+  remains the operative default, so this is not a narrow exception to a
+  permissive rule — it is the strict rule holding.
+
+  **The consequence is the useful part.** The cheap way to learn why our only
+  card-paying customer went quiet is closed, so the *only* remaining instrument
+  is their behaviour. That promotes the multi-entity comparison from "strongest
+  product lead" to **the actual experiment**: they paid €3.00 and waited ~45
+  seconds to assemble by hand a three-way comparison we sell only pairwise, and
+  building it is now the only lever we have on whether they return. It is also
+  falsifiable in a way asking them is not — if we ship it and they still do not
+  come back, the hypothesis that the product shape was the problem is wrong, and
+  that is worth more than an answer we would have had to take on trust.
+
+  Do not re-raise the outreach question as a standing policy item. Raise it only
+  for a concrete case the charter genuinely does not resolve.
+
 - **The single-buyer dependency broke this week, and the sound way to say so is
   in euros rather than in a percentage** (measured 2026-08-28, canonical
   external population, `lib/metrics`). Revenue from *everyone except that

@@ -14,6 +14,34 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-21** · `answered` · owner Petter · raised 2026-08-27 · answered 2026-08-28 — **we do not contact the card-paying customer**
+*Answered:* Petter, in chat: "we will not reach out to the buyer." Clear and
+final on the specific case. Marked `answered` rather than `decided` because he
+made this call, not me — `decided` would record his judgement as mine.
+*What was asked:* the 08-27 brief and again the 08-28 brief put the same
+question — whether to write one short note to `provider@dlgt.io`, our only
+card-paying customer, asking what they were building. The 08-28 recommendation
+was to set a date (04-09) and write only if they were still silent by it. That
+recommendation is declined.
+*What this settles, and what it does not:* it settles this buyer. It does not
+by itself establish the general rule I also asked for, and **no session should
+read the narrower answer as licence to approach anyone else.** The operative
+default is unchanged and already strict: CHARTER.md § The boundary, items 1–4 —
+no outreach derived from transaction evidence, telemetry yields anonymous
+insight only, and a registration is a relationship while a payment is not. This
+customer registered, so item 4 was the only thing that made the question askable
+at all. Absent an explicit widening, **no outreach happens**, and the general
+rule stays unstated rather than being inferred from this answer in either
+direction. Do not re-raise it as a standing question; raise it only if a
+concrete case needs it and the charter genuinely does not resolve that case.
+*Consequence, recorded because it changes what we do next:* the only remaining
+way to learn anything about this customer is their behaviour. That removes the
+cheap route and makes the expensive one the real one — build the multi-entity
+comparison they demonstrably wanted and paid three times over to assemble by
+hand, and see whether they come back for it. See GOALS.md.
+*How you'd reverse it:* say so in chat. Nothing has been sent, and nothing is
+scheduled to be.
+
 **DQ-20** · `answered` · owner Petter · raised 2026-08-27 · answered 2026-08-27 — **activate austrian-company-data on the official Firmenbuch API, at €0.05**
 *Answered:* Petter approved in chat the same evening (“go ahead with DQ-20 —
 activate at €0.05 with x402 on”). Executed at 2026-08-27T21:16Z as the exact

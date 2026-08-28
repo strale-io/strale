@@ -167,7 +167,25 @@ export type StatusTag = (typeof STATUS_TAGS)[number];
  * A new entry belongs here when a decision is recorded somewhere durable. Each
  * carries where, so a reader can check the claim rather than trust the list.
  */
-export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string }> = [
+/**
+ * A settled matter is only settled from the day it was settled.
+ *
+ * `settledOn` (YYYY-MM-DD) is the date the founder decided it. The check fires
+ * only on briefs dated STRICTLY AFTER that day. Without this the guard is
+ * retroactive: adding an entry makes every earlier brief that legitimately
+ * asked the question fail CI, and the only ways out are to skip the guard or to
+ * rewrite briefs he has already read — so the mechanism would punish its own
+ * correct use. Three real briefs (08-25, 08-27, 08-28) failed exactly this way
+ * when `card-customer-outreach` was first added.
+ *
+ * Strictly-after, not on-or-after: a brief written the morning of the day he
+ * answered asked the question before the answer existed, and is correct.
+ *
+ * A brief whose filename carries no date is checked against every entry — the
+ * conservative direction, since an undated brief cannot prove it predates
+ * anything.
+ */
+export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string; settledOn: string }> = [
   {
     id: "eleven-row-reconciliation",
     // Matched on the ACT, not on a count. The first version keyed on "eleven"
@@ -180,6 +198,7 @@ export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string 
       "the production-authorization incident was closed and ACCEPTED on 2026-08-22 " +
       "(PR #361, accepted in #364); the remediation ledger records that the rows were " +
       "deliberately not rewritten and that the incident record is the correction",
+    settledOn: "2026-08-22",
   },
   {
     id: "integrity-claim-wording",
@@ -195,6 +214,38 @@ export const SETTLED_MATTERS: Array<{ id: string; re: RegExp; settledBy: string 
       "founder-gated npm publish. It supersedes " +
       "the withdrawn hedged rewording, so 'which wording should we publish' is not the " +
       "open question; removal is what was approved",
+    settledOn: "2026-08-22",
+  },
+  {
+    id: "card-customer-outreach",
+    // Petter declined this on 2026-08-28 after it had been put to him twice —
+    // 08-27 ("wait for the second payment, then one short note") and 08-28
+    // ("set a date, write only if still silent"). A third asking is the F10
+    // pattern exactly: spending his attention on a decision he has made.
+    //
+    // Keyed on a contacting ACT near a CUSTOMER noun, in either order, rather
+    // than on any single phrasing. Deliberately NOT keyed on "outreach" alone,
+    // and deliberately not on vendor/registry/regulator nouns — contacting a
+    // vendor as the company is separately founder-reserved and is a legitimate
+    // escalation, so this must not swallow it.
+    //
+    // KNOWN AND DELIBERATE: it does not exempt negations, so "we did not
+    // contact the customer" fires *if written inside an escalation block*.
+    // That is accepted rather than fixed. The check runs only on blocks in
+    // "Needs your decision" (see the SETTLED_MATTERS loop), so reporting the
+    // decision anywhere else in the brief is unaffected and there is a test
+    // for that. Exempting negations would open the obvious evasion — "I do not
+    // propose contacting the customer, but should I?" — and an escalation
+    // block that needs to discuss this at all is almost certainly the thing
+    // this entry exists to stop.
+    re: /\b(?:contact(?:ing)?|reach(?:ing)?\s+out\s+to|writ(?:e|ing)\s+to|email(?:ing)?|messag(?:e|ing)|approach(?:ing)?|get(?:ting)?\s+in\s+touch\s+with|ask(?:ing)?|survey(?:ing)?|interview(?:ing)?)\s+(?:the\s+|our\s+|this\s+|them\s+|him\s+|her\s+)?(?:[a-z-]+\s+){0,3}(?:customer|buyer|payer|card[- ]payer|account\s+holder)\b|\b(?:customer|buyer|payer|account\s+holder)\b[^.]{0,50}\b(?:outreach|cold[- ]?email|reach(?:ing)?\s+out|get(?:ting)?\s+in\s+touch)\b|\b(?:outreach|cold[- ]?email)\b[^.]{0,50}\b(?:customer|buyer|payer|account\s+holder)\b|\bsend(?:ing)?\b[^.]{0,40}\bnote\b[^.]{0,40}\b(?:customer|buyer|payer)\b|\b(?:customer|buyer|payer)\b[^.]{0,40}\bsend(?:ing)?\b[^.]{0,25}\bnote\b/i,
+    settledBy:
+      "Petter declined it in chat on 2026-08-28 (\"we will not reach out to the buyer\"), " +
+      "recorded as DQ-21 in docs/company/DECISION-QUEUE.md. It had already been put to " +
+      "him on 08-27 and 08-28. CHARTER.md § The boundary items 1-4 remain the " +
+      "operative default: no outreach derived from transaction evidence. Raise a " +
+      "concrete case the charter does not resolve; do not re-ask the standing question",
+    settledOn: "2026-08-28",
   },
 ];
 
@@ -225,7 +276,10 @@ export interface BriefLintResult {
   ok: boolean;
 }
 
-export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}): BriefLintResult {
+export function lintBrief(
+  source: string,
+  opts: { allowTerms?: string[]; briefDate?: string } = {},
+): BriefLintResult {
   const findings: Finding[] = [];
   const lines = source.split(/\r?\n/);
   const allow = new Set((opts.allowTerms ?? []).map((t) => t.toLowerCase()));
@@ -357,7 +411,10 @@ export function lintBrief(source: string, opts: { allowTerms?: string[] } = {}):
       // FOUNDER_DECISION left the obvious escape: relabel it a handover and it
       // lints clean while reproducing F10 incident 3 word for word — a settled
       // thing presented as awaiting his approval.
-      const settled = SETTLED_MATTERS.find((m) => m.re.test(b.text));
+      // Only matters settled BEFORE this brief was written. See SETTLED_MATTERS.
+      const settled = SETTLED_MATTERS.find(
+        (m) => m.re.test(b.text) && (!opts.briefDate || opts.briefDate > m.settledOn),
+      );
       if (settled && b.status !== "SYSTEM_ACTING") {
         findings.push({
           severity: "error", rule: "settled-matter-reopened",
