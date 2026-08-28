@@ -135,6 +135,69 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **The single-buyer dependency broke this week, and the sound way to say so is
+  in euros rather than in a percentage** (measured 2026-08-28, canonical
+  external population, `lib/metrics`). Revenue from *everyone except that
+  week's largest payer*, by discrete ISO week: 07-13 €0.00 · 07-20 €2.15 ·
+  07-27 €0.45 · 08-03 €0.73 · 08-10 €7.47 · 08-17 €2.40 · **08-24 €14.03 with
+  two days still to run.** That already beats every completed week in the
+  series, and the previous best was €7.47. Distinct payers over the same two
+  weeks: 5 → 9.
+
+  **Why this comparison is legitimate where the concentration ratio is not.**
+  `Concentration.comparable` returns false on the current window because it is
+  a partial week, and it is right to: the *ratio* on a Tuesday is an artefact
+  of which days have elapsed. But an absolute count of euros from non-largest
+  payers in a partial week can only **understate** the completed week, and the
+  same holds for a payer count, which only accumulates. So the direction is
+  safe in a way the percentage is not. The top share does read 70.7% against
+  last week's 96.4%; that pair is **not** written down here as a movement, per
+  the correction of 2026-08-22.
+
+  **The largest buyer did not shrink to produce this.** `e9e672ef719ee934` ran
+  €9.13/day across the completed week of 08-17 and €8.08/day across the four
+  completed days of 08-24 — an 11% per-day difference at a volume where a
+  single day moved 3.4× in either direction last week, so it is noise and is
+  not reported as a decline. The business grew *around* its largest buyer
+  rather than away from him. That is the first evidence for M1's concentration
+  bar since the bar was written.
+
+- **Our only card-paying customer stopped while still funded, which is a
+  different fact from the one the 08-27 brief was watching for** (measured
+  2026-08-28). `provider@dlgt.io` last bought at 2026-08-26T19:02:51Z. Their
+  wallet still holds **€3.91** — roughly four more purchases of the thing they
+  actually buy — and it has not moved for two days.
+
+  The 08-27 read framed the next event as *"they run out in days; watch for a
+  second top-up"*. They did not run out. **Nothing on our side turned them
+  away, and that was checked rather than assumed:** 19 transactions, every one
+  `completed`, zero rows in any other status, zero `failed_requests`, no error
+  string on any row. So the honest statement is that we have no evidence of a
+  cause, and the absence is itself the finding — a customer who stops while
+  funded and unblocked is a demand or fit signal, not a reliability one.
+
+  **What their calls cost them in time is the one lead worth pulling.** Every
+  `competitor-compare` call they made took between 11.9 and 15.0 seconds
+  (14,949 · 14,276 · 14,056 · 11,892 · 14,791 · 14,776 · 14,855 ms). Their
+  final session was three of those inside 49 seconds — the hand-assembled
+  three-way comparison the 08-27 entry identified — so the shape they want
+  costs them **€3.00 and about 45 seconds of waiting**. A multi-entity
+  capability would be cheaper for them on both axes and cheaper for us on page
+  fetches. Note for anyone tempted to file this as a defect: the capability
+  declares `avg_latency_ms = 15000`, which is above `/v1/do`'s 10s async
+  threshold, so these route async and the 15s in-transaction ceiling does not
+  apply. No timeout has been demonstrated, and none is claimed here.
+
+- **E4 is at day 10 of 14 with zero external sales across all four bundles**
+  (measured 2026-08-28; kill criterion fires 2026-09-01). The control
+  `lead-email-verify` is the only bundle selling at all — 8 external orders
+  for €1.60 since 08-18, last sale 08-24 — and it is itself quieter than the
+  week before (26 orders in the week of 08-17, 3 so far in the week of 08-24).
+  **That weakens the inference the kill criterion is about to license:** "the
+  four do not sell" and "bundle traffic is down generally" are not
+  distinguishable from this data alone. Whoever closes E4 on 09-01 should say
+  which of the two it is, or record that it could not.
+
 - **Correction to the entry below, 2026-08-27: the card customer's money goes
   to competitive intelligence, not to compliance — and their runway is days,
   not weeks.** Measured per-day over the canonical external population. They

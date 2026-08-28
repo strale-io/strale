@@ -203,7 +203,7 @@ over time is the honest measure of whether the taxonomy is catching up.
 > total labelled weekly, a one-day-old instrument read as a 30-day fact, funnel
 > steps compared over different periods, a population defined by hand.
 
-**Count: 7.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
+**Count: 8.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
 (a hand-rolled filter that inner-joined `users` and therefore silently measured
 ~nothing, because nearly all revenue arrives with no user attached); a seventh
 on 2026-08-22 — a largest-buyer share compared across two windows of different
@@ -229,6 +229,32 @@ and the seventh incident happened inside the module built to close it. Calling
 that closed is how F1 reached seven. The replay is owed: re-derive the five
 2026-08-15 conclusions through `lib/metrics` and confirm each now refuses or
 changes.
+
+**Incident 8, 2026-08-28 — a branch-triage measurement that answered a
+different question, caught before it decided anything.** The daily run's B3
+sweep needs, per branch, "how many of the files this branch changed are still
+not on main". The sweep computed it by comparing blob ids from
+`git rev-parse origin/main:<path>` against `git rev-parse origin/<branch>:<path>`.
+For any path beginning with a dot — `.claude/skills/…`, `.agents/skills/…` —
+git resolves `<rev>:<path>` **relative to the current working directory**, not
+the repository root, so both lookups failed and the comparison ran on two error
+sentinels. It reported a fully-merged branch as carrying two unique files.
+
+Caught because the number contradicted a second measurement taken a different
+way (`git diff origin/main <branch>`, which is authoritative and said the trees
+were identical), and the contradiction was chased rather than averaged. The
+error direction happened to be fail-safe — it makes a merged branch look
+unmerged, so it retains rather than deletes — but the sweep it feeds **deletes
+branches**, and the same bug pointed the other way (both sentinels equal ⇒
+"identical") silently marks a divergent file as merged. Seven deletions were
+executed this morning only after re-verifying each with `git diff`, and then
+re-confirmed against `git ls-remote` per F7.
+
+Generalisation, and it is the family's own rule applied to a tool rather than a
+metric: **a comparison is only as trustworthy as its behaviour on the inputs
+that make it fail silently.** `git rev-parse <rev>:<path>` has a
+path-interpretation rule that differs from every other path argument in git,
+and a comparison built on it needs `./`-prefixing or `git diff` instead.
 
 Two standing rules already in force — any business number computed outside that
 module is a new instance of this family, whoever computes it and however careful
@@ -267,7 +293,7 @@ footnote. If a fourth lands, open the investigation.
 > A test, gate or check that passes whether or not the thing it guards is
 > working.
 
-**Count: 8 — threshold reached, investigation OPENED 2026-08-22, and incident 8 is incident 7's direct consequence.** Integration
+**Count: 9 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, and incident 9 is the same checkout still being the cause.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -386,6 +412,35 @@ Discriminated in both directions rather than asserted: the un-fixed predicate
 un-indexed while its identical content sits on `origin/main`, the real
 condition — the old script emits the warning and the new one is silent on the
 same repository state.
+
+**Incident 9, 2026-08-28 — the repair exists and cannot reach the place the
+procedure sends you.** DAILY-RUN.md B2b says to run
+`session-close-check --hygiene-only` **from the primary checkout**, which is
+incident 7's fix. This morning that produced the orphaned-handoff warning over
+three files, and #407 — the content-matching predicate written specifically to
+stop that — was not in play at all, because the primary checkout sits on
+`remediation/wp9-artifacts`, now **62 commits behind main**, and therefore runs
+its own stale copy of the script. Verified by content against `origin/main`
+rather than by reading the output: two of the three were byte-identical blobs
+already on main (`c97235f1`, `9d9f630d`) and are exactly the false positives
+incident 8 diagnosed; the third,
+`2026-08-27-at-firmenbuch-migration.md` (`edff5dd2`), was **genuinely absent
+from main** and existed nowhere but that one directory. It is now committed.
+
+The new mechanism is worth stating separately from 7 and 8, because it is not
+"the gate examined the wrong artefact" — it is that **the gate's repair is
+undeployable to the location the procedure mandates.** B2b's instruction and
+B2b's own caution against switching the primary checkout's branch combine into
+a standing guarantee that the staler the checkout gets, the staler the check
+run against it becomes — and staleness is the condition the check exists to
+detect. A version-independent check (or one that takes a `--repo` path and is
+run from a current checkout) is the repair direction; a third edit to the
+predicate is not.
+
+Also worth carrying: the check was still **net useful** here. One genuine
+finding in three, and the genuine one was real work that would have been lost.
+The failure mode this family tracks is a check nobody believes; a 1-in-3 signal
+on a destructive-loss warning is close to that line.
 
 **Steps 3–7 owed.** The hypothesis to falsify: *a gate that asserted a non-empty
 input set, or a minimum expected count, would have caught incidents 1, 4 and 5.*
