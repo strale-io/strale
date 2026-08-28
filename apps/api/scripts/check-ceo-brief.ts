@@ -59,7 +59,14 @@ function main(): number {
     }
     const name = path.split(/[\\/]/).pop()!;
     const allow = ALLOWED[name.replace(/\.md$/, "")];
-    const result = lintBrief(readFileSync(path, "utf8"), { allowTerms: allow?.terms });
+    // The leading YYYY-MM-DD of the filename, when it has one. Gates the
+    // settled-matter check so it never fires on a brief written before the
+    // matter was settled.
+    const briefDate = /^(\d{4}-\d{2}-\d{2})/.exec(name)?.[1];
+    const result = lintBrief(readFileSync(path, "utf8"), {
+      allowTerms: allow?.terms,
+      briefDate,
+    });
     errors += result.findings.filter((f) => f.severity === "error").length;
     warnings += result.findings.filter((f) => f.severity === "warning").length;
     console.log(formatFindings(name, result));

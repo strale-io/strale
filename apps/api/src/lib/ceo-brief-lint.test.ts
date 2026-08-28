@@ -573,6 +573,105 @@ describe("a settled matter must never come back as a decision", () => {
     expect(r.findings.some((x) => x.rule === "settled-matter-reopened")).toBe(true);
   });
 
+  it("rejects re-asking whether to contact the card-paying customer", () => {
+    // Put to Petter on 08-27 and again on 08-28; declined on 08-28 ("we will
+    // not reach out to the buyer"), recorded as DQ-21. A third asking is F10.
+    const r = lintBrief(goodBrief({
+      decide:
+        "FOUNDER_DECISION\n\n**The choice: whether I may contact the card-paying customer.**\n" +
+        "**What is established:** they stopped buying with money left.\n" +
+        "**Options:** stay silent, or write one short note.\n**I recommend** writing.\n" +
+        "**The consequence:** silence teaches us nothing.",
+    }));
+    expect(r.ok).toBe(false);
+    const f = r.findings.find((x) => x.rule === "settled-matter-reopened");
+    expect(f, JSON.stringify(r.findings)).toBeDefined();
+    expect(f!.message).toMatch(/card-customer-outreach/);
+    expect(f!.message, "the message must say where it was settled").toMatch(/DQ-21/);
+  });
+
+  it("recognises the rewordings of the outreach question, not one phrasing", () => {
+    for (const phrasing of [
+      "**The choice: whether to reach out to the buyer.**",
+      "**The choice: should we write to the customer who went quiet?**",
+      "**The choice: may I email the customer to ask what they built?**",
+      "**The choice: whether to approach the buyer now or wait.**",
+      "**The choice: whether to send one short note to the customer.**",
+      "**The choice: the customer has gone quiet - permission for outreach?**",
+      "**The choice: whether to ask the buyer what they were building.**",
+      "**The choice: whether to get in touch with the card customer.**",
+    ]) {
+      const r = lintBrief(goodBrief({
+        decide: `FOUNDER_DECISION\n\n${phrasing}\n**What is established:** x.\n` +
+                "**Options:** a or b.\n**I recommend** a.\n**The consequence:** y.",
+      }));
+      expect(r.findings.some((x) => x.rule === "settled-matter-reopened"), phrasing).toBe(true);
+    }
+  });
+
+  it("does not swallow contacting a VENDOR, which is a separate live reservation", () => {
+    // Vendor contact as the company is founder-reserved in its own right, so it
+    // is a legitimate escalation. A guard aimed at customer outreach that also
+    // blocked this would suppress a decision he genuinely has to make.
+    const r = lintBrief(goodBrief({
+      decide:
+        "FOUNDER_DECISION\n\n**The choice: whether to contact the vendor about their broken interface.**\n" +
+        "**What is established:** their service returns an error to everyone.\n" +
+        "**Options:** report it, or wait.\n**I recommend** reporting it.\n" +
+        "**The consequence:** it stays broken until someone tells them.",
+    }));
+    expect(r.findings.some((x) => x.rule === "settled-matter-reopened"),
+      JSON.stringify(r.findings)).toBe(false);
+  });
+
+  it("lets the outreach decision be REPORTED outside the decision section", () => {
+    // The scoping that makes the guard's negation-blindness acceptable: the
+    // settled-matter check runs only on escalation blocks, so saying what was
+    // decided, anywhere else in the brief, is fine.
+    const r = lintBrief(goodBrief({
+      changed: "You decided we will not contact the buyer, so we learn from their behaviour only.",
+      now: "Building the comparison the customer assembled by hand, rather than asking them about it.",
+    }));
+    expect(r.findings.filter((f) => f.severity === "error"), JSON.stringify(r.findings)).toEqual([]);
+  });
+
+  it("does not fire on a brief written BEFORE the matter was settled", () => {
+    // The guard is dated for a reason. Adding card-customer-outreach without a
+    // date made three real briefs (08-25, 08-27, 08-28) fail CI for having
+    // asked a question whose answer did not exist yet — a mechanism that
+    // punishes its own correct use. Strictly-after, so the brief written the
+    // morning of the decision is still fine.
+    const decide =
+      "FOUNDER_DECISION\n\n**The choice: whether I may contact the card-paying customer.**\n" +
+      "**What is established:** they stopped buying with money left.\n" +
+      "**Options:** stay silent, or write.\n**I recommend** writing.\n" +
+      "**The consequence:** silence teaches us nothing.";
+
+    for (const [date, shouldFire] of [
+      ["2026-08-27", false],  // asked the day before it was settled
+      ["2026-08-28", false],  // asked the morning of the day it was settled
+      ["2026-08-29", true],   // asked the day after — this is the F10 repeat
+    ] as Array<[string, boolean]>) {
+      const r = lintBrief(goodBrief({ decide }), { briefDate: date });
+      expect(
+        r.findings.some((x) => x.rule === "settled-matter-reopened"),
+        `${date} should ${shouldFire ? "" : "not "}fire`,
+      ).toBe(shouldFire);
+    }
+  });
+
+  it("checks an undated brief against every settled matter", () => {
+    // Conservative direction: a brief that cannot prove it predates a decision
+    // is checked against all of them.
+    const r = lintBrief(goodBrief({
+      decide:
+        "FOUNDER_DECISION\n\n**The choice: whether to reach out to the buyer.**\n" +
+        "**What is established:** x.\n**Options:** a or b.\n**I recommend** a.\n" +
+        "**The consequence:** y.",
+    }));
+    expect(r.findings.some((x) => x.rule === "settled-matter-reopened")).toBe(true);
+  });
+
   it("allows the same subjects to be REPORTED rather than asked about", () => {
     // The settled matters may still appear in the brief — as progress, or as
     // history. What is forbidden is putting them back in front of him as a
