@@ -233,9 +233,11 @@ Every deletion above was re-verified with `git diff` before execution.
   work. Owner: the remediation programme. **Deadline 2026-08-31** (unchanged
   from 08-27; if untouched then, raise at synthesis). It is now also the
   *cause* of F5 incidents 8 and 9, which raises its cost beyond tidiness.
-- **16 remaining unmerged branches**, none content-merged, none over a month
+- **23 remaining unmerged branches**, none content-merged, none over a month
   old. Owner: me. Deadline: next synthesis — a PR or a deletion each, not a
-  third listing.
+  third listing. (An earlier version of this line said 16; it was written
+  before the sweep was counted against the remote and was simply wrong. 30 − 7
+  = 23, confirmed by `git ls-remote --heads`.)
 - **#409.** Owner: me. Closes when #421 merges.
 
 ## Not investigated, deliberately
