@@ -71,26 +71,16 @@ import {
   ImageLimitError,
 } from "./lib/image-limits.js";
 import { classifyTransactionFailure, countsAgainstCapability } from "../lib/transaction-failure-taxonomy.js";
+import { streamingResponse as sharedStreamingResponse } from "./lib/streaming-response-testutil.js";
 
 const run = () => getExecutor("image-resize")!;
 
-/** A Response that streams `totalBytes`, optionally declaring a content-length. */
+/**
+ * Thin adapter over the shared factory (#426 review — this file held the
+ * original, now-diverged copy). Call sites here only need the Response.
+ */
 function streamingResponse(totalBytes: number, declare?: number): Response {
-  const chunk = new Uint8Array(64 * 1024);
-  let sent = 0;
-  const body = new ReadableStream<Uint8Array>({
-    pull(ctrl) {
-      if (sent >= totalBytes) {
-        ctrl.close();
-        return;
-      }
-      ctrl.enqueue(chunk);
-      sent += chunk.byteLength;
-    },
-  });
-  const headers = new Headers();
-  if (declare !== undefined) headers.set("content-length", String(declare));
-  return new Response(body, { status: 200, headers });
+  return sharedStreamingResponse(totalBytes, { declare }).response;
 }
 
 async function tinyPng(): Promise<Buffer> {

@@ -1,10 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
-import {
-  MAX_MEASURED_TRANSFER_BYTES,
-  countBodyBytes,
-  formatMib,
-} from "./lib/image-limits.js";
+import { MAX_MEASURED_TRANSFER_BYTES, countBodyBytes } from "./lib/image-limits.js";
 
 // Constants from the Sustainable Web Design model / Website Carbon methodology
 const ENERGY_PER_GB_KWH = 0.81; // kWh per GB transferred
@@ -43,7 +39,7 @@ registerCapability("website-carbon-estimate", async (input: CapabilityInput) => 
     resp,
     MAX_MEASURED_TRANSFER_BYTES,
     "url",
-    `a page transferring ${formatMib(MAX_MEASURED_TRANSFER_BYTES)} or less`,
+    "a page transferring",
   );
   const transferSizeKb = Math.round(transferSizeBytes / 1024);
 

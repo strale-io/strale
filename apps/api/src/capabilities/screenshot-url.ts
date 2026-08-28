@@ -5,11 +5,7 @@ import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { logWarn } from "../lib/log.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import {
-  MAX_RENDERED_SCREENSHOT_BYTES,
-  formatMib,
-  readBodyWithLimit,
-} from "./lib/image-limits.js";
+import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
 
 /**
  * Normalize the `wait_for` input into a Browserless wait directive.
@@ -217,7 +213,7 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
     response,
     MAX_RENDERED_SCREENSHOT_BYTES,
     "url",
-    `a page whose screenshot renders to ${formatMib(MAX_RENDERED_SCREENSHOT_BYTES)} or less`,
+    "a page whose screenshot renders to",
   );
   const base64 = buffer.toString("base64");
 

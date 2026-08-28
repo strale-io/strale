@@ -24,6 +24,13 @@
 
 const CHUNK = 64 * 1024;
 
+// One shared zero template; each pull enqueues a subarray view instead of a
+// fresh zero-filled allocation. The limit suites stream hundreds of MiB per
+// run, so per-pull allocation dominated their wall time. Safe for both
+// consumers: readBodyWithLimit copies via Buffer.concat, countBodyBytes drops
+// chunks — and no test asserts on chunk CONTENT, only on byte counts.
+const ZERO_CHUNK = new Uint8Array(CHUNK);
+
 export interface StreamingResponseHandle {
   response: Response;
   pulls: () => number;
@@ -46,7 +53,7 @@ export function streamingResponse(
         }
         pulls++;
         const size = Math.min(CHUNK, totalBytes - sent);
-        ctrl.enqueue(new Uint8Array(size));
+        ctrl.enqueue(ZERO_CHUNK.subarray(0, size));
         sent += size;
       },
       cancel() {

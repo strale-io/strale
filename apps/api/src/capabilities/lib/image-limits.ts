@@ -80,6 +80,18 @@ export const MAX_RENDERED_SCREENSHOT_BYTES = 32 * 1024 * 1024;
 export const MAX_RENDERED_PDF_BYTES = 32 * 1024 * 1024;
 
 /**
+ * Largest media file `c2pa-inspect` fetches for provenance parsing (#426
+ * review — moved here from a local constant so the authority module holds
+ * every byte cap and the no-local-caps structural test needs no exemption).
+ *
+ * 15 MB, the capability's own product declaration since launch: C2PA media is
+ * commonly TIFF/DNG camera output, which legitimately dwarfs the 4 MiB
+ * decoded-image cap that governs images we SEND to a vision model — here the
+ * bytes go to a local metadata parser, not an LLM.
+ */
+export const MAX_C2PA_MEDIA_BYTES = 15 * 1024 * 1024;
+
+/**
  * Hard stop for byte-COUNTING reads (#426), where the body is measured and
  * discarded rather than kept (`website-carbon-estimate`). Counting is O(1)
  * memory, so this is not a residency bound — it is a work bound that stops a
@@ -117,14 +129,6 @@ export class ImageLimitError extends Error {
 }
 
 const mib = (n: number) => `${(n / 1024 / 1024).toFixed(1)}MB`;
-
-/**
- * The one rendering of a byte cap in caller-facing text. Exported so call
- * sites composing a custom `mustBe` phrase quote the SAME figure the helper
- * would — a hardcoded "32.0MB" in a capability drifts silently when the
- * constant moves.
- */
-export const formatMib = mib;
 
 /**
  * Decoded size of a base64 payload, WITHOUT allocating it.
@@ -457,35 +461,20 @@ export function assertEffectiveGeometryWithinLimit(
  * mechanism behind the #412 fallback bug, and with image/document/render caps
  * in play there is no defensible implicit choice.
  *
- * `mustBe` optionally replaces the default "<size> or less" phrase when the
- * thing being bounded is not the field's own bytes — a Browserless render of
- * a caller URL says "a page whose screenshot renders to 32.0MB or less"
- * rather than implying the URL itself is 32 MB. The helper writes the
- * `'field' must be ` prefix either way, so the caller_input classification
- * (transaction-failure-taxonomy) holds by construction; compose the size into
- * the phrase with `formatMib` so the quoted figure cannot drift from the cap.
+ * `entity` optionally describes WHAT must be within the limit when it is not
+ * the field's own bytes — a Browserless render of a caller URL passes
+ * "a page whose screenshot renders to", producing "'url' must be a page whose
+ * screenshot renders to 32.0MB or less" rather than implying the URL itself
+ * is 32 MB. The helper writes both the `'field' must be ` prefix (so the
+ * caller_input classification holds by construction) and the size figure (so
+ * the quoted number cannot drift from the cap — callers never format it).
  */
 export async function readBodyWithLimit(
   response: Response,
   maxBytes: number,
   field = "image_url",
-  mustBe?: string,
+  entity?: string,
 ): Promise<Buffer> {
-  const limitPhrase = mustBe ?? `${mib(maxBytes)} or less`;
-  // Trust a declared length enough to refuse early, never enough to accept.
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maxBytes) {
-    // Cancel the unconsumed body before throwing — leaving it open pins the
-    // keep-alive connection until GC (same class as safe-fetch's review L-1
-    // fix for 3xx bodies; #412 review found it here).
-    await response.body
-      ?.cancel()
-      .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
-    throw new ImageLimitError(
-      `'${field}' must be ${limitPhrase} (it declared ${mib(declared)}).`,
-    );
-  }
-
   if (!response.body) {
     // Only reachable for bodyless responses (204/205/304, HEAD, or a test
     // Response constructed with a null body) — a real 200 with content always
@@ -498,9 +487,70 @@ export async function readBodyWithLimit(
     assertDecodedSizeWithinLimit(buf.byteLength, maxBytes, field);
     return buf;
   }
-
-  const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
+  const total = await consumeBody(response, maxBytes, field, entity, (c) => chunks.push(c));
+  return Buffer.concat(chunks, total);
+}
+
+/**
+ * Count a response body's bytes WITHOUT keeping them (#426).
+ *
+ * For consumers that need the size and nothing else (`website-carbon-estimate`
+ * measures page weight), buffering is not just unbounded — it is unnecessary.
+ * Chunks are counted and dropped, so memory is O(one chunk) regardless of body
+ * size; `maxBytes` is a work bound (stop reading a deliberately endless
+ * stream), not a residency bound.
+ */
+export async function countBodyBytes(
+  response: Response,
+  maxBytes: number,
+  field = "url",
+  entity?: string,
+): Promise<number> {
+  if (!response.body) {
+    // Synthetic/bodyless responses only — see readBodyWithLimit's note.
+    const bytes = (await response.arrayBuffer()).byteLength;
+    if (bytes > maxBytes) {
+      throw new ImageLimitError(`'${field}' must be ${limitPhrase(entity, maxBytes)}.`);
+    }
+    return bytes;
+  }
+  return consumeBody(response, maxBytes, field, entity);
+}
+
+const limitPhrase = (entity: string | undefined, maxBytes: number) =>
+  `${entity ? `${entity} ` : ""}${mib(maxBytes)} or less`;
+
+/**
+ * The ONE streaming-enforcement core (#426 review): declared content-length
+ * refusal that never trusts a declaration to accept, actual-byte counting,
+ * cancel-at-cap, reader cleanup. `readBodyWithLimit` retains chunks through
+ * `onChunk`; `countBodyBytes` passes no sink. Two exports, one discipline —
+ * a fix to either lands in both by construction.
+ */
+async function consumeBody(
+  response: Response,
+  maxBytes: number,
+  field: string,
+  entity: string | undefined,
+  onChunk?: (chunk: Uint8Array) => void,
+): Promise<number> {
+  const phrase = limitPhrase(entity, maxBytes);
+  // Trust a declared length enough to refuse early, never enough to accept.
+  const declared = Number(response.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    // Cancel the unconsumed body before throwing — leaving it open pins the
+    // keep-alive connection until GC (same class as safe-fetch's review L-1
+    // fix for 3xx bodies; #412 review found it here).
+    await response.body
+      ?.cancel()
+      .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
+    throw new ImageLimitError(
+      `'${field}' must be ${phrase} (it declared ${mib(declared)}).`,
+    );
+  }
+
+  const reader = response.body!.getReader();
   let total = 0;
   try {
     for (;;) {
@@ -519,69 +569,9 @@ export async function readBodyWithLimit(
         await reader
           .cancel()
           .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
-        throw new ImageLimitError(
-          `'${field}' must be ${limitPhrase}.`,
-        );
+        throw new ImageLimitError(`'${field}' must be ${phrase}.`);
       }
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock?.();
-  }
-  return Buffer.concat(chunks, total);
-}
-
-/**
- * Count a response body's bytes WITHOUT keeping them (#426).
- *
- * For consumers that need the size and nothing else (`website-carbon-estimate`
- * measures page weight), buffering is not just unbounded — it is unnecessary.
- * Chunks are counted and dropped, so memory is O(one chunk) regardless of body
- * size; `maxBytes` is a work bound (stop reading a deliberately endless
- * stream), not a residency bound. Same content-length discipline as
- * `readBodyWithLimit`: an over-limit declaration refuses before the first
- * read, and a declaration is never trusted to accept — the counter is.
- */
-export async function countBodyBytes(
-  response: Response,
-  maxBytes: number,
-  field = "url",
-  mustBe?: string,
-): Promise<number> {
-  const limitPhrase = mustBe ?? `${mib(maxBytes)} or less`;
-  const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maxBytes) {
-    await response.body
-      ?.cancel()
-      .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
-    throw new ImageLimitError(
-      `'${field}' must be ${limitPhrase} (it declared ${mib(declared)}).`,
-    );
-  }
-
-  if (!response.body) {
-    // Synthetic/bodyless responses only — see readBodyWithLimit's note.
-    const bytes = (await response.arrayBuffer()).byteLength;
-    if (bytes > maxBytes) {
-      throw new ImageLimitError(`'${field}' must be ${limitPhrase}.`);
-    }
-    return bytes;
-  }
-
-  const reader = response.body.getReader();
-  let total = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      total += value.byteLength;
-      if (total > maxBytes) {
-        await reader
-          .cancel()
-          .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
-        throw new ImageLimitError(`'${field}' must be ${limitPhrase}.`);
-      }
-      // Deliberately NOT retained — counting is the whole job.
+      onChunk?.(value);
     }
   } finally {
     reader.releaseLock?.();

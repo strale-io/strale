@@ -5,11 +5,7 @@ import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import {
-  MAX_DECODED_IMAGE_BYTES,
-  formatMib,
-  readBodyWithLimit,
-} from "./lib/image-limits.js";
+import { MAX_DECODED_IMAGE_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
 
 registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -45,7 +41,7 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
     screenshotRes,
     MAX_DECODED_IMAGE_BYTES,
     "url",
-    `a page whose screenshot is ${formatMib(MAX_DECODED_IMAGE_BYTES)} or less`,
+    "a page whose screenshot is",
   );
   const screenshotB64 = screenshotBuf.toString("base64");
 

@@ -4,11 +4,7 @@ import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import {
-  MAX_RENDERED_PDF_BYTES,
-  formatMib,
-  readBodyWithLimit,
-} from "./lib/image-limits.js";
+import { MAX_RENDERED_PDF_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
 
 registerCapability("html-to-pdf", async (input: CapabilityInput) => {
   const html = (input.html as string) ?? undefined;
@@ -69,7 +65,7 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
     response,
     MAX_RENDERED_PDF_BYTES,
     url ? "url" : "html",
-    `a page whose rendered PDF is ${formatMib(MAX_RENDERED_PDF_BYTES)} or less`,
+    "a page whose rendered PDF is",
   );
   const base64 = buffer.toString("base64");
 

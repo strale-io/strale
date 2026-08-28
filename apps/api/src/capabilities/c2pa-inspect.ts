@@ -1,11 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
-import { readBodyWithLimit } from "./lib/image-limits.js";
+import { MAX_C2PA_MEDIA_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
 import { logWarn } from "../lib/log.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const MAX_BYTES = 15 * 1024 * 1024; // 15 MB cap on fetched media
 const FETCH_TIMEOUT_MS = 30_000;
 
 // MIME types c2pa-rs/c2pa-node can parse. Keep v1 to images; video/audio later.
@@ -162,7 +161,7 @@ registerCapability("c2pa-inspect", async (input: CapabilityInput) => {
   // over-limit early and counts actual bytes; its `'url' must be …` refusal
   // also classifies caller_input, which the old "Media too large" prose did
   // not.
-  const buffer = await readBodyWithLimit(resp, MAX_BYTES, "url");
+  const buffer = await readBodyWithLimit(resp, MAX_C2PA_MEDIA_BYTES, "url");
 
   const c2pa = await getC2pa();
   const result = (await c2pa.read({ buffer, mimeType })) as ManifestStoreLike | null;
