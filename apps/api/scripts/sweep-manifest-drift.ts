@@ -4,7 +4,9 @@
  * Compares the canonical fields between manifests/*.yaml and the
  * capabilities table for every YAML manifest. Reports drift per cap.
  * Read-only — does NOT apply fixes; for that, run
- * sync-manifest-canonical-to-db.ts <slug> per drifted cap.
+ * sync-manifest-canonical-to-db.ts <slug> --fields <a,b> per drifted cap.
+ * (--apply below does exactly that, passing the fields THIS sweep found
+ * drifted, so the mutation covers the same set as the detection.)
  *
  * Why: yesterday's audit-grade hardening for adverse-media-check ran
  * sync-manifest-text-to-db.ts (which only covers description + schemas)
@@ -188,17 +190,38 @@ if (apply && drifts.length > 0) {
   for (const d of drifts) {
     const result = await new Promise<{ code: number; out: string }>((resolveP) => {
       let out = "";
-      const child = spawn("npx", ["tsx", "scripts/sync-manifest-canonical-to-db.ts", d.slug], {
-        cwd: resolve(import.meta.dirname, ".."),
-        shell: true,
-      });
+      // Sync exactly the fields THIS SWEEP COMPARED and found drifted — not
+      // --all-fields.
+      //
+      // Reviewer-found, and it recreated the very failure the scoping work
+      // exists to stop: the sweep compares nine fields, so passing
+      // --all-fields would push the other eight too, including output_schema.
+      // A capability reported as drifting on data_source could have had an
+      // unrelated, unreviewed output_schema example swept along with it.
+      // Detection and mutation now cover the same set by construction.
+      const fields = d.fields.map((f) => f.field).join(",");
+      const child = spawn(
+        "npx",
+        ["tsx", "scripts/sync-manifest-canonical-to-db.ts", d.slug, "--fields", fields],
+        {
+          cwd: resolve(import.meta.dirname, ".."),
+          shell: true,
+        },
+      );
       child.stdout.on("data", (chunk) => (out += chunk));
       child.stderr.on("data", (chunk) => (out += chunk));
       child.on("close", (code) => resolveP({ code: code ?? -1, out }));
     });
     if (result.code === 0) {
       applied++;
-      console.log(`  ✓ ${d.slug}`);
+      // Echo the child's own audit line rather than a bare checkmark.
+      // Reviewer-found: discarding successful output meant a --apply run left
+      // no record of WHICH columns each sync wrote, which is precisely the
+      // thing a reader needs afterwards.
+      const audit = result.out
+        .split("\n")
+        .find((l) => l.startsWith("Audit: "));
+      console.log(`  ✓ ${d.slug}${audit ? `  ${audit}` : ""}`);
     } else {
       failed++;
       appliedFailed++;
