@@ -18,7 +18,7 @@ chip): take the platform-facts drift sweep to 0 findings.
   failures are `CapabilityRefusalError` (french-company-data breaker incident
   not repeated). 8-angle review produced 21 findings, 19 applied in-PR.
 - **Prod prepped under delegated authorities** (`catalogue_metadata_sync`,
-  `capability_onboarding`, `fixture_refresh` via `DATABASE_URL_WRITE` +
+  `capability_onboarding`, `fixture_refresh` via the production write credential +
   `autonomousAuthority`): manifest synced, cost_class corrected
   free_quota→free_unlimited (free_quota demands a quota window; the guarded
   executor threw `window=null` on every internal execution), all 8 test suites
@@ -76,3 +76,7 @@ chip): take the platform-facts drift sweep to 0 findings.
 
 Worktrees removed and merged branches deleted. All four PRs (backend #410,
 #413, #414; frontend #21) merged same-day.
+
+---
+
+*Redaction note (2026-08-28): this record originally named the production write-credential environment variable in prose. `scripts/guard-production-write-access.mjs` refuses any reference outside the single authority module, and its allowlist is deliberately a per-file decision rather than a standing exemption for documentation. The literal is replaced by the phrase "the production write credential"; nothing else is changed, and no credential value ever appeared here. This is why the file could not be committed as written on the day it was authored.*
