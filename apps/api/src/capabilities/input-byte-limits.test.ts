@@ -328,13 +328,12 @@ describe("URL-path byte boundary is exact", () => {
 // ─── base64 path: measured before anything is allocated or forwarded ─────────
 
 describe.each(CAPS)("$slug base64 path", (cap) => {
-  const overLimitB64 = () =>
-    // Well-formed base64 (all 'a') decoding to ~limit + 2 MiB — refused for
-    // size, provably not for malformedness.
-    "a".repeat(Math.ceil(((cap.limit + 2 * 1024 * 1024) * 4) / 3));
-
-  it("refuses an over-limit payload and never reaches the LLM stage", async () => {
-    await expect(run(cap.slug)({ base64: overLimitB64() })).rejects.toThrow(
+  it("refuses a payload decoding to limit + 1 and never reaches the LLM stage", async () => {
+    // Canonical, well-formed base64 of exactly limit + 1 decoded bytes — the
+    // tightest possible discrimination: a capability whose effective base64
+    // cap silently drifted even one byte upward fails this.
+    const b64 = Buffer.alloc(cap.limit + 1).toString("base64");
+    await expect(run(cap.slug)({ base64: b64 })).rejects.toThrow(
       /'base64' must be .* or less once decoded/,
     );
     expect(messagesCreate, "oversized base64 reached the LLM stage").not.toHaveBeenCalled();
@@ -465,6 +464,18 @@ describe("failure taxonomy", () => {
   it("NEGATIVE CONTROL: a genuine upstream failure is not rebadged caller_input", () => {
     const cls = classifyTransactionFailure("Failed to fetch PDF: HTTP 502");
     expect(cls).not.toBe("caller_input");
+  });
+
+  it("the armed quality floor's own authority excuses the refusal", async () => {
+    // outcomeFromError is the sole authority (WP9) on whether a failure counts
+    // against a capability. Asserting on classifyTransactionFailure alone
+    // would leave the actual floor junction untested.
+    const { outcomeFromError } = await import("../lib/execution-outcome.js");
+    const outcome = outcomeFromError(
+      new ImageLimitError("'url' must be 8.0MB or less (it declared 9.5MB)."),
+    );
+    expect(outcome.counts_against_capability).toBe(false);
+    expect(outcome.billable).toBe(false);
   });
 });
 
