@@ -3,6 +3,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
+import { safeFetch } from "../lib/safe-fetch.js";
+import { MAX_DECODED_DOCUMENT_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
 const ORG_NUMBER_RE = /^(\d{6})-?(\d{4})$/;
@@ -129,16 +131,30 @@ async function findAnnualReportPdf(
     }
 
     try {
-      const pdfResponse = await fetch(targetLink, {
+      // #426: this link is scraped out of third-party HTML — an absolute href
+      // in the Allabolag page could point anywhere, so it gets the full
+      // safeFetch treatment (scheme/IP validation, DNS-rebind dispatcher,
+      // per-hop redirect re-validation, ToS gate). The old unguarded call had
+      // none of that, and the file was invisible to the unguarded-fetch lint
+      // because it reads no caller-URL input field.
+      const pdfResponse = await safeFetch(targetLink, {
         signal: AbortSignal.timeout(20000),
         headers: { "User-Agent": "Strale/1.0 annual-report-extract" },
       });
 
       if (pdfResponse.ok) {
-        const pdfBuffer = await pdfResponse.arrayBuffer();
+        // #426: streamed with a cap, not arrayBuffer(). A refusal (like any
+        // other failure here) falls through to Strategy 2 — extracting from
+        // the page HTML — so an oversized filing degrades gracefully instead
+        // of buffering unbounded.
+        const pdfBuffer = await readBodyWithLimit(
+          pdfResponse,
+          MAX_DECODED_DOCUMENT_BYTES,
+          "annual_report_pdf",
+        );
         if (pdfBuffer.byteLength > 1000) {
           return {
-            pdfBase64: Buffer.from(pdfBuffer).toString("base64"),
+            pdfBase64: pdfBuffer.toString("base64"),
             source: `allabolag.se (${targetLink})`,
           };
         }

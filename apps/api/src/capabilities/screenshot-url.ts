@@ -5,6 +5,11 @@ import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { logWarn } from "../lib/log.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
+import {
+  MAX_RENDERED_SCREENSHOT_BYTES,
+  formatMib,
+  readBodyWithLimit,
+} from "./lib/image-limits.js";
 
 /**
  * Normalize the `wait_for` input into a Browserless wait directive.
@@ -204,7 +209,16 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
     throwBrowserlessError(response.status, err);
   }
 
-  const buffer = Buffer.from(await response.arrayBuffer());
+  // #426: streamed with a cap. The PNG comes from our Browserless, but its
+  // size is caller-shaped — full_page defaults to true and the viewport is
+  // caller-chosen, so a long page renders a very large screenshot. 32 MiB is
+  // ~25x the largest render ever observed in production.
+  const buffer = await readBodyWithLimit(
+    response,
+    MAX_RENDERED_SCREENSHOT_BYTES,
+    "url",
+    `a page whose screenshot renders to ${formatMib(MAX_RENDERED_SCREENSHOT_BYTES)} or less`,
+  );
   const base64 = buffer.toString("base64");
 
   return {

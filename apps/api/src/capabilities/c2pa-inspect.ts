@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readBodyWithLimit } from "./lib/image-limits.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -144,15 +145,14 @@ registerCapability("c2pa-inspect", async (input: CapabilityInput) => {
     );
   }
 
-  const contentLength = parseInt(resp.headers.get("content-length") ?? "0", 10);
-  if (contentLength > MAX_BYTES) {
-    throw new Error(`Media too large: ${contentLength} bytes exceeds ${MAX_BYTES} byte limit.`);
-  }
-
-  const buffer = Buffer.from(await resp.arrayBuffer());
-  if (buffer.length > MAX_BYTES) {
-    throw new Error(`Media too large: ${buffer.length} bytes exceeds ${MAX_BYTES} byte limit.`);
-  }
+  // #426: streamed with a cap. The old shape was the image-to-text pattern —
+  // a content-length pre-check plus a post-arrayBuffer() length check, which
+  // reports the 15 MB limit without enforcing it against a body that lies
+  // about (or omits) its length. readBodyWithLimit refuses a declared
+  // over-limit early and counts actual bytes; its `'url' must be …` refusal
+  // also classifies caller_input, which the old "Media too large" prose did
+  // not.
+  const buffer = await readBodyWithLimit(resp, MAX_BYTES, "url");
 
   const c2pa = await getC2pa();
   const result = (await c2pa.read({ buffer, mimeType })) as ManifestStoreLike | null;

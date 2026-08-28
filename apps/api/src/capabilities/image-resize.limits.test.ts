@@ -363,7 +363,7 @@ describe("data-URI prefixes are stripped once, by one function", () => {
     const oversized = "A".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
     const uri = `data:image/svg+xml;base64,${oversized}`;
     const stripped = stripDataUriPrefix(uri);
-    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped))).toThrow(
+    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped), MAX_DECODED_IMAGE_BYTES)).toThrow(
       ImageLimitError,
     );
   });
@@ -445,7 +445,7 @@ describe("data-URI prefixes are stripped once, by one function", () => {
   it("an oversized payload containing a comma is still refused", () => {
     const oversized = "AAAA," + "B".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
     const stripped = stripDataUriPrefix(oversized);
-    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped))).toThrow(
+    expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped), MAX_DECODED_IMAGE_BYTES)).toThrow(
       ImageLimitError,
     );
   });
@@ -472,12 +472,12 @@ describe("the image_url path is bounded too", () => {
   // the rail cap never sees it and the base64 limit above is decorative.
   it("refuses on a declared content-length over the limit, without reading", async () => {
     const res = streamingResponse(1024, MAX_DECODED_IMAGE_BYTES + 1);
-    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must be/);
+    await expect(readBodyWithLimit(res, MAX_DECODED_IMAGE_BYTES)).rejects.toThrow(/'image_url' must be/);
   });
 
   it("aborts a stream that exceeds the limit even with no content-length", async () => {
     const res = streamingResponse(MAX_DECODED_IMAGE_BYTES + 2 * 1024 * 1024);
-    await expect(readBodyWithLimit(res)).rejects.toThrow(/'image_url' must be/);
+    await expect(readBodyWithLimit(res, MAX_DECODED_IMAGE_BYTES)).rejects.toThrow(/'image_url' must be/);
   });
 
   it("does not buffer materially more than the limit before aborting", async () => {
@@ -491,13 +491,13 @@ describe("the image_url path is bounded too", () => {
         ctrl.enqueue(chunk);
       },
     });
-    await expect(readBodyWithLimit(new Response(body))).rejects.toThrow();
+    await expect(readBodyWithLimit(new Response(body), MAX_DECODED_IMAGE_BYTES)).rejects.toThrow();
     expect(pulled).toBeLessThanOrEqual(MAX_DECODED_IMAGE_BYTES + 128 * 1024);
   });
 
   it("POSITIVE CONTROL: an under-limit body is returned intact", async () => {
     const png = await tinyPng();
-    const out = await readBodyWithLimit(new Response(new Uint8Array(png)));
+    const out = await readBodyWithLimit(new Response(new Uint8Array(png)), MAX_DECODED_IMAGE_BYTES);
     expect(out.byteLength).toBe(png.byteLength);
   });
 
@@ -584,7 +584,7 @@ describe("a refusal is the caller's fault, not the capability's", () => {
     await capture(() => assertOutputGeometryWithinLimit(10, MAX_OUTPUT_DIMENSION + 1));
     await capture(() => assertOutputGeometryWithinLimit(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION));
     // Decoded size.
-    await capture(() => assertDecodedSizeWithinLimit(MAX_DECODED_IMAGE_BYTES + 1));
+    await capture(() => assertDecodedSizeWithinLimit(MAX_DECODED_IMAGE_BYTES + 1, MAX_DECODED_IMAGE_BYTES));
     // Effective-geometry refusals, both sides and the area.
     await capture(() => assertEffectiveGeometryWithinLimit(MAX_OUTPUT_DIMENSION + 1, 10));
     await capture(() => assertEffectiveGeometryWithinLimit(10, MAX_OUTPUT_DIMENSION + 1));
@@ -595,10 +595,10 @@ describe("a refusal is the caller's fault, not the capability's", () => {
     await capture(() => effectiveOutputGeometry(0, 0, 100, 100, "cover"));
     // URL-path refusals, provoked through the real helper rather than quoted.
     await capture(() =>
-      readBodyWithLimit(streamingResponse(1024, MAX_DECODED_IMAGE_BYTES + 1)),
+      readBodyWithLimit(streamingResponse(1024, MAX_DECODED_IMAGE_BYTES + 1), MAX_DECODED_IMAGE_BYTES),
     );
     await capture(() =>
-      readBodyWithLimit(streamingResponse(MAX_DECODED_IMAGE_BYTES + 2 * 1024 * 1024)),
+      readBodyWithLimit(streamingResponse(MAX_DECODED_IMAGE_BYTES + 2 * 1024 * 1024), MAX_DECODED_IMAGE_BYTES),
     );
     // Executor-level required-field refusals.
     await capture(() => run()({ target_width: 10 }));

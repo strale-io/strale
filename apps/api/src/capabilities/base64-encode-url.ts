@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { MAX_DECODED_DOCUMENT_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
 
 registerCapability("base64-encode-url", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -18,7 +19,10 @@ registerCapability("base64-encode-url", async (input: CapabilityInput) => {
   if (!response.ok) throw new Error(`HTTP ${response.status} from ${fullUrl}.`);
 
   const contentType = response.headers.get("content-type") ?? "application/octet-stream";
-  const buffer = Buffer.from(await response.arrayBuffer());
+  // #426: streamed with a cap, not arrayBuffer() — this capability fetches
+  // ANY caller URL, so an unbounded read let one call buffer an arbitrarily
+  // large remote file. 8 MiB is the platform's document-class input cap.
+  const buffer = await readBodyWithLimit(response, MAX_DECODED_DOCUMENT_BYTES, "url");
   const base64 = buffer.toString("base64");
 
   return {
