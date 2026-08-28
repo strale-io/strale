@@ -87,8 +87,11 @@ output_field_reliability:
   size_bytes: guaranteed
   content_type: guaranteed
 limitations:
-  - title: Fetches URL content before encoding — files larger than 10MB may timeout or exceed memory limits
-    text: Fetches URL content for encoding — very large files (>10MB) may timeout or exceed memory limits
+  - title: Fetched files are limited to 8 MiB
+    text: >-
+      The fetch is refused above 8 MiB of body bytes (streamed enforcement, not a
+      timeout). Oversized input returns a caller_input refusal naming the field;
+      no charge is taken.
     category: coverage
     severity: info
-    workaround: For large files, download locally and use a native base64 encoder instead of fetching through the API
+    workaround: For larger files, download locally and use a native base64 encoder instead of fetching through the API

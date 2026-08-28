@@ -161,7 +161,7 @@ registerCapability("c2pa-inspect", async (input: CapabilityInput) => {
   // over-limit early and counts actual bytes; its `'url' must be …` refusal
   // also classifies caller_input, which the old "Media too large" prose did
   // not.
-  const buffer = await readBodyWithLimit(resp, MAX_C2PA_MEDIA_BYTES, "url");
+  const buffer = await readBodyWithLimit(resp, MAX_C2PA_MEDIA_BYTES, "url", "a media file of");
 
   const c2pa = await getC2pa();
   const result = (await c2pa.read({ buffer, mimeType })) as ManifestStoreLike | null;

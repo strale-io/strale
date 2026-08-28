@@ -129,13 +129,12 @@ async function loadApp() {
 }
 
 /**
- * The rail cap, taken from the byte-limit authority module (#426). This is the
- * documented alignment invariant made discriminating: `MAX_DECODED_DOCUMENT_BYTES`
- * was chosen (#412) to equal the `/x402/*` body cap, and these tests drive the
- * REAL app's bodyLimit at exactly this boundary (cap−1 passes, cap+1 413s) —
- * so if app.ts's literal ever drifts from the document authority, the
- * boundary tests fail instead of the two numbers diverging silently. If the
- * drift is ever intentional, change both deliberately and rewrite this note.
+ * The rail cap, taken from the byte-limit authority module (#426). app.ts now
+ * imports the SAME constant for its bodyLimit, so rail/document alignment
+ * holds by construction — these boundary tests are regression cover for the
+ * middleware's actual enforcement at the cap (cap−1 passes, cap+1 413s), and
+ * the magnitude itself is pinned by the "8.0MB" refusal-message regexes in
+ * bounded-fetch-residuals.test.ts.
  */
 import { MAX_DECODED_DOCUMENT_BYTES } from "../capabilities/lib/image-limits.js";
 const X402_LIMIT = MAX_DECODED_DOCUMENT_BYTES;

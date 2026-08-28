@@ -22,7 +22,7 @@ registerCapability("base64-encode-url", async (input: CapabilityInput) => {
   // #426: streamed with a cap, not arrayBuffer() — this capability fetches
   // ANY caller URL, so an unbounded read let one call buffer an arbitrarily
   // large remote file. 8 MiB is the platform's document-class input cap.
-  const buffer = await readBodyWithLimit(response, MAX_DECODED_DOCUMENT_BYTES, "url");
+  const buffer = await readBodyWithLimit(response, MAX_DECODED_DOCUMENT_BYTES, "url", "a fetched file of");
   const base64 = buffer.toString("base64");
 
   return {

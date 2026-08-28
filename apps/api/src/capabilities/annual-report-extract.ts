@@ -4,6 +4,7 @@ import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { logWarn } from "../lib/log.js";
 import { MAX_DECODED_DOCUMENT_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
@@ -159,8 +160,16 @@ async function findAnnualReportPdf(
           };
         }
       }
-    } catch {
-      // Fall through to alternative strategies
+    } catch (err) {
+      // Fall through to the page-text strategy — but visibly (#426 review):
+      // this catch now swallows two failure classes this change introduced
+      // (the 8 MiB refusal and an SSRF-blocked scraped link), and a silent
+      // swallow is exactly the F-0-009 pattern. The log names the reason so
+      // degradation is diagnosable if the capability is ever reactivated.
+      logWarn("annual-report-pdf-leg-fallthrough", "PDF leg failed; using page-text strategy", {
+        link: targetLink,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

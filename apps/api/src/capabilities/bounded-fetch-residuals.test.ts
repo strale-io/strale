@@ -88,6 +88,7 @@ import {
   MAX_RENDERED_SCREENSHOT_BYTES,
   MAX_RENDERED_PDF_BYTES,
   MAX_MEASURED_TRANSFER_BYTES,
+  MAX_C2PA_MEDIA_BYTES,
   checkedBase64,
   countBodyBytes,
   normalizeBase64,
@@ -137,7 +138,7 @@ const SITES: SiteSpec[] = [
     slug: "base64-encode-url",
     limit: MAX_DECODED_DOCUMENT_BYTES,
     bigOk: 6 * 1024 * 1024,
-    refusal: /'url' must be 8\.0MB or less/,
+    refusal: /'url' must be a fetched file of 8\.0MB or less/,
     fetchMock: safeFetchMock,
     invoke: () =>
       run("base64-encode-url")({ url: "https://example.com/f" }) as Promise<{
@@ -147,9 +148,9 @@ const SITES: SiteSpec[] = [
   },
   {
     slug: "c2pa-inspect",
-    limit: 15 * 1024 * 1024,
+    limit: MAX_C2PA_MEDIA_BYTES,
     bigOk: 12 * 1024 * 1024,
-    refusal: /'url' must be 15\.0MB or less/,
+    refusal: /'url' must be a media file of 15\.0MB or less/,
     fetchMock: safeFetchMock,
     contentType: "image/jpeg",
     invoke: () =>
@@ -297,7 +298,7 @@ describe("c2pa-inspect enforcement ordering", () => {
     });
     safeFetchMock.mockResolvedValue(response);
     await expect(run("c2pa-inspect")({ url: "https://example.com/p.jpg" })).rejects.toThrow(
-      /'url' must be 15\.0MB or less/,
+      /'url' must be a media file of 15\.0MB or less/,
     );
     expect(c2paRead, "oversized bytes reached the native parser").not.toHaveBeenCalled();
   });
@@ -426,8 +427,8 @@ describe("normalizeBase64 strips whitespace before the data-URI prefix", () => {
 describe("failure taxonomy", () => {
   it("POSITIVE CONTROL: every #426 refusal shape classifies caller_input and is floor-exempt", () => {
     const messages = [
-      "'url' must be 8.0MB or less.",
-      "'url' must be 15.0MB or less (it declared 20.0MB).",
+      "'url' must be a fetched file of 8.0MB or less.",
+      "'url' must be a media file of 15.0MB or less (it declared 20.0MB).",
       "'url' must be a page transferring 100.0MB or less.",
       "'url' must be a page whose rendered PDF is 32.0MB or less.",
       "'html' must be a page whose rendered PDF is 32.0MB or less (it declared 40.0MB).",

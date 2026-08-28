@@ -34,9 +34,10 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   // #426: streamed with a cap. This is a viewport-only screenshot (fullPage:
   // false at a fixed viewport), so it is naturally small — and it is sent to
   // Anthropic as a base64 image block, whose effective limit is ~3.75 MiB
-  // binary. The platform image cap (4 MiB) therefore refuses only renders
-  // that were going to fail upstream anyway, with a message that names the
-  // caller's field instead of an opaque vendor 400.
+  // binary. The platform image cap (4 MiB) is marginally looser, so a render
+  // in the 3.75-4 MiB sliver still fails upstream with a vendor error; the
+  // cap's job is bounding the buffer and naming the caller's field for
+  // everything beyond it.
   const screenshotBuf = await readBodyWithLimit(
     screenshotRes,
     MAX_DECODED_IMAGE_BYTES,

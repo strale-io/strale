@@ -99,3 +99,10 @@ limitations:
     workaround: >-
       Use as a relative benchmark for comparing pages; for certified carbon reporting, use tools like Green Web
       Foundation or Ecograder
+  - title: Pages transferring more than 100 MiB are not measured
+    text: >-
+      Page weight is counted while streaming (nothing is buffered), so heavy
+      pages measure fine — but the count stops at 100 MiB and returns a
+      caller_input refusal rather than a measurement. No charge is taken.
+    category: coverage
+    severity: info

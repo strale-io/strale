@@ -100,3 +100,10 @@ limitations:
     workaround: >-
       Use the structural and CTA recommendations directly, but validate brand-voice feedback against your own style
       guide
+  - title: Screenshots are limited to 4 MiB
+    text: >-
+      A page whose viewport screenshot exceeds 4 MiB is refused — the analysis
+      model cannot accept larger images anyway, so this converts an opaque
+      upstream error into a caller_input refusal. No charge is taken.
+    category: coverage
+    severity: info

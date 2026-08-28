@@ -101,3 +101,10 @@ limitations:
     category: coverage
     severity: info
     workaround: Inline critical CSS and fonts in the HTML input for consistent rendering across environments
+  - title: Rendered PDFs are limited to 32 MiB
+    text: >-
+      A page or markup whose rendered PDF exceeds 32 MiB is refused (streamed
+      enforcement, ~25x the largest render observed in production). The refusal
+      is caller_input and no charge is taken.
+    category: coverage
+    severity: info
