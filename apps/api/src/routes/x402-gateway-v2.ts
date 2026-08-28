@@ -979,12 +979,43 @@ x402GatewayV2.use(
 
 // ─── Discovery: /x402/catalog ───────────────────────────────────────────────
 
+/**
+ * Which optional projections a caller asked for: `?include=output_schema`,
+ * comma-separated. Unknown names are ignored rather than refused — this is a
+ * discovery endpoint, and a crawler sending a name we do not know yet should
+ * still get a catalogue.
+ *
+ * Why `output_schema` is opt-in rather than always present: every one of the
+ * 271 listed capabilities carries a populated output schema, so including it
+ * unconditionally takes the response from 203 KB to 574 KB raw, and — measured
+ * on the real payload rather than assumed — from 40 KB to 182 KB gzipped,
+ * which is what actually crosses the wire. That is a 4.5x regression on an
+ * unauthenticated endpoint that discovery crawlers poll, in exchange for
+ * something a buyer already receives per-capability: the 402 challenge for a
+ * given slug embeds the same schema under `accepts[].outputSchema`, at the
+ * moment of authorization and in ~3.5 KB. Bulk consumers that genuinely want
+ * every contract in one request ask for it; everyone else keeps the small
+ * catalogue.
+ */
+function requestedIncludes(raw: string | undefined): Set<string> {
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+}
+
 x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
   recordDiscoveryHit("/x402/catalog", c.req, {
     src: c.req.query("src"),
     ip: c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? c.req.header("cf-connecting-ip"),
   });
   await ensureCache();
+
+  const includes = requestedIncludes(c.req.query("include"));
+  const withOutputSchema = includes.has("output_schema");
 
   const caps = [..._capCache.values()].map((cap) => ({
     slug: cap.slug,
@@ -994,6 +1025,10 @@ x402GatewayV2.get("/catalog", rateLimitByIp(120, 60_000), async (c) => {
     method: cap.x402Method,
     endpoint: `${BASE_URL}/x402/${cap.slug}`,
     input_schema: cap.inputSchema,
+    // Solutions deliberately never gain this key: the solutions table has no
+    // output_schema column (see ensureCache), so an absent contract must stay
+    // absent rather than be rendered as null and read as "declared empty".
+    ...(withOutputSchema ? { output_schema: cap.outputSchema } : {}),
   }));
 
   const sols = [..._solCache.values()].map((sol) => ({
