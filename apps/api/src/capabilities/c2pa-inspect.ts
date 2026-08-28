@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { readBodyWithLimit } from "./lib/image-limits.js";
+import { logWarn } from "../lib/log.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -140,6 +141,15 @@ registerCapability("c2pa-inspect", async (input: CapabilityInput) => {
   const contentTypeRaw = resp.headers.get("content-type") ?? "";
   const mimeType = contentTypeRaw.split(";")[0]!.trim().toLowerCase();
   if (!SUPPORTED_MIME_TYPES.has(mimeType)) {
+    // #426 review: cancel the unconsumed body before refusing — throwing with
+    // it open pins the keep-alive connection until GC, and a wrong
+    // content-type is attacker-cheap to serve (same class as the
+    // declared-length refusal fix in image-limits.ts).
+    await resp.body?.cancel().catch((err) =>
+      logWarn("c2pa-body-cancel-failed", "unsupported-type body cancel failed", {
+        err: String(err),
+      }),
+    );
     throw new Error(
       `Unsupported media type '${mimeType || "(unknown)"}'. Supported: ${Array.from(SUPPORTED_MIME_TYPES).join(", ")}.`
     );

@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -277,6 +277,20 @@ describe.each(SITES)("$slug byte boundary", (site) => {
 });
 
 describe("c2pa-inspect enforcement ordering", () => {
+  it("an unsupported content-type refusal cancels the unconsumed body", async () => {
+    // Round-1 review find: throwing on the media-type check with the body
+    // open pins the keep-alive connection until GC, and a wrong content-type
+    // is attacker-cheap to serve.
+    const { response, cancelled } = streamingResponse(1024, {
+      contentType: "text/html",
+    });
+    safeFetchMock.mockResolvedValue(response);
+    await expect(run("c2pa-inspect")({ url: "https://example.com/p" })).rejects.toThrow(
+      /Unsupported media type/,
+    );
+    expect(cancelled(), "refused body left unconsumed").toBe(true);
+  });
+
   it("an over-limit body never reaches the native c2pa parser", async () => {
     const { response } = streamingResponse(15 * 1024 * 1024 + CHUNK, {
       contentType: "image/jpeg",
@@ -482,6 +496,20 @@ describe("all seven residual sites are wired to the shared enforcement", () => {
       expect(s).not.toMatch(/(?<![A-Za-z.])fetch\(/);
     },
   );
+
+  it("NO capability file in the directory buffers with arrayBuffer() — including future ones", () => {
+    // Round-3 review find: the per-file lists above are static, so an eighth
+    // capability added later with `await resp.arrayBuffer()` would evade both
+    // this file and input-byte-limits.test.ts. After #426 the ONLY sanctioned
+    // sites are image-limits.ts's own bodyless-response fallbacks, so the
+    // sweep can be directory-wide: a new offender fails here by existing.
+    const offenders: string[] = [];
+    for (const entry of readdirSync(__dirname)) {
+      if (!entry.endsWith(".ts") || entry.endsWith(".test.ts")) continue;
+      if (/await\s+\w+\.arrayBuffer\(/.test(src(entry))) offenders.push(entry);
+    }
+    expect(offenders, "unbounded arrayBuffer() buffering reintroduced").toEqual([]);
+  });
 
   it("the render caps come from the named authority constants", () => {
     expect(src("html-to-pdf.ts")).toContain("MAX_RENDERED_PDF_BYTES");
