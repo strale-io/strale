@@ -2,13 +2,22 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
+import {
+  MAX_DECODED_DOCUMENT_BYTES,
+  assertDecodedSizeWithinLimit,
+  decodedLengthOfBase64,
+  normalizeBase64,
+  readBodyWithLimit,
+} from "./lib/image-limits.js";
 
 registerCapability("contract-extract", async (input: CapabilityInput) => {
   const pdfUrl = (input.pdf_url as string)?.trim() ?? (input.url as string)?.trim();
-  const base64 = (input.base64 as string)?.trim();
+  const rawBase64 = (input.base64 as string)?.trim();
   const text = (input.text as string)?.trim();
+  // Refusal messages name the field the caller actually used.
+  const urlField = input.pdf_url ? "pdf_url" : "url";
 
-  if (!pdfUrl && !base64 && !text) {
+  if (!pdfUrl && !rawBase64 && !text) {
     throw new Error("'pdf_url', 'base64', or 'text' is required.");
   }
 
@@ -18,7 +27,15 @@ registerCapability("contract-extract", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const messages: Anthropic.MessageParam[] = [];
 
-  if (base64) {
+  if (rawBase64) {
+    // #412: ONE normalisation (data-URI prefix + whitespace); the SAME string
+    // is measured, sniffed, and sent downstream.
+    const base64 = normalizeBase64(rawBase64);
+    assertDecodedSizeWithinLimit(
+      decodedLengthOfBase64(base64),
+      "base64",
+      MAX_DECODED_DOCUMENT_BYTES,
+    );
     const mediaType = detectMediaType(base64);
     if (mediaType === "application/pdf") {
       messages.push({
@@ -41,7 +58,9 @@ registerCapability("contract-extract", async (input: CapabilityInput) => {
     // F-0-006: safeFetch validates + refuses DNS-rebinding and redirect-to-private.
     const res = await safeFetch(pdfUrl, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(`Failed to fetch document: HTTP ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
+    // #412: streamed with a cap, not arrayBuffer() — a post-buffer length
+    // check bounds nothing because the bytes are already resident.
+    const buf = await readBodyWithLimit(res, MAX_DECODED_DOCUMENT_BYTES, urlField);
     const contentType = res.headers.get("content-type") ?? "";
 
     if (contentType.includes("pdf")) {

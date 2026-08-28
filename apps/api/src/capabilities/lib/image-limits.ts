@@ -31,13 +31,26 @@ import { logError } from "../../lib/log.js";
 /**
  * Largest decoded image the platform accepts.
  *
- * 4 MiB, matching `image-to-text`'s existing `MAX_IMAGE_BYTES` rather than
- * inventing a second number. Note that image-to-text applies it only on its
- * URL path — its base64 path is unchecked — so this is the platform's stated
- * figure, not a uniformly enforced one. Enforcing the same value here keeps
- * the number singular while that asymmetry is closed separately.
+ * 4 MiB, matching `image-to-text`'s original `MAX_IMAGE_BYTES` rather than
+ * inventing a second number. Since #412 this is enforced uniformly — URL and
+ * base64 paths alike — on every image-input capability (`image-resize`,
+ * `image-to-text`, `receipt-categorize`).
  */
 export const MAX_DECODED_IMAGE_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Largest decoded document (PDF or document-as-image) the platform accepts.
+ *
+ * 8 MiB, matching the `/x402/*` rail body cap so a PDF that fits on the wire
+ * as base64 input also fits when the platform fetches it from a caller URL —
+ * the two paths must agree or the looser one sets the real limit. Applies to
+ * `pdf-extract`, `invoice-extract`, `contract-extract`, `resume-parse` (#412).
+ *
+ * Lives in this module despite the name: image-limits.ts is the single
+ * authority for caller-input byte caps, and a second module holding a second
+ * 8 MiB constant is how six magic numbers happen.
+ */
+export const MAX_DECODED_DOCUMENT_BYTES = 8 * 1024 * 1024;
 
 /** No single output edge beyond this. 10,000 px is well past any real display or print need. */
 export const MAX_OUTPUT_DIMENSION = 10_000;
@@ -197,10 +210,11 @@ export function decodedLengthOfBase64(b64: string): number {
 export function assertDecodedSizeWithinLimit(
   bytes: number,
   field = "base64",
+  maxBytes: number = MAX_DECODED_IMAGE_BYTES,
 ): void {
-  if (bytes > MAX_DECODED_IMAGE_BYTES) {
+  if (bytes > maxBytes) {
     throw new ImageLimitError(
-      `'${field}' must be ${mib(MAX_DECODED_IMAGE_BYTES)} or less once decoded (received ${mib(bytes)}).`,
+      `'${field}' must be ${mib(maxBytes)} or less once decoded (received ${mib(bytes)}).`,
     );
   }
 }
@@ -371,8 +385,15 @@ export async function readBodyWithLimit(
   }
 
   if (!response.body) {
+    // Only reachable for bodyless responses (204/205/304, HEAD, or a test
+    // Response constructed with a null body) — a real 200 with content always
+    // exposes a stream under undici. The post-hoc check here is therefore a
+    // belt for synthetic Responses, not the enforcement path.
+    //
+    // #412: `maxBytes` is forwarded — this used to fall back to the helper's
+    // 4 MiB default, silently shrinking any caller that passed a larger cap.
     const buf = Buffer.from(await response.arrayBuffer());
-    assertDecodedSizeWithinLimit(buf.byteLength, field);
+    assertDecodedSizeWithinLimit(buf.byteLength, field, maxBytes);
     return buf;
   }
 
