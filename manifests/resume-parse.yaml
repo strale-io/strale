@@ -125,3 +125,10 @@ limitations:
     category: accuracy
     severity: info
     workaround: For best results, accept resumes in standard single-column formats or plain text alongside the PDF
+  - title: Input documents are limited to 8 MiB decoded
+    text: >-
+      Both url/pdf_url fetches and base64 payloads are refused above 8 MiB of decoded
+      document bytes. Oversized input returns a caller_input refusal naming the field;
+      no charge is taken. Shrink or split the document before submitting.
+    category: coverage
+    severity: info

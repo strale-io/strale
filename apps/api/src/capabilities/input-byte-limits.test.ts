@@ -493,6 +493,10 @@ describe("all six capabilities are wired to the shared enforcement", () => {
     "resume-parse.ts",
     "receipt-categorize.ts",
     "image-to-text.ts",
+    // Not part of #412's six, but the sibling the shared helpers were
+    // originally extracted for — held to the same structural bar so it cannot
+    // drift back to hand-composed primitives.
+    "image-resize.ts",
   ];
   const DOC_FILES = new Set([
     "pdf-extract.ts",

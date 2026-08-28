@@ -41,10 +41,12 @@ export const MAX_DECODED_IMAGE_BYTES = 4 * 1024 * 1024;
 /**
  * Largest decoded document (PDF or document-as-image) the platform accepts.
  *
- * 8 MiB, matching the `/x402/*` rail body cap so a PDF that fits on the wire
- * as base64 input also fits when the platform fetches it from a caller URL —
- * the two paths must agree or the looser one sets the real limit. Applies to
- * `pdf-extract`, `invoice-extract`, `contract-extract`, `resume-parse` (#412).
+ * 8 MiB, matching the `/x402/*` rail body cap. Note the two are aligned, not
+ * equal in effect: base64 wire overhead means an x402 request body can carry
+ * at most ~6 MiB decoded under the 8 MiB rail cap, while the URL path can use
+ * the full 8 MiB — the URL path is deliberately the not-stricter one, so no
+ * document that fits on the wire is refused here. Applies to `pdf-extract`,
+ * `invoice-extract`, `contract-extract`, `resume-parse` (#412).
  *
  * Lives in this module despite the name: image-limits.ts is the single
  * authority for caller-input byte caps, and a second module holding a second
@@ -399,6 +401,12 @@ export async function readBodyWithLimit(
   // Trust a declared length enough to refuse early, never enough to accept.
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
+    // Cancel the unconsumed body before throwing — leaving it open pins the
+    // keep-alive connection until GC (same class as safe-fetch's review L-1
+    // fix for 3xx bodies; #412 review found it here).
+    await response.body
+      ?.cancel()
+      .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
     throw new ImageLimitError(
       `'${field}' must be ${mib(maxBytes)} or less (it declared ${mib(declared)}).`,
     );
