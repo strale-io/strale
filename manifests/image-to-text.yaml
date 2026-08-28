@@ -77,3 +77,10 @@ limitations:
     category: accuracy
     severity: info
     workaround: Pre-process images to improve contrast and resolution before submission for better OCR results
+  - title: Input images are limited to 4 MiB decoded
+    text: >-
+      Both image_url fetches and base64 payloads are refused above 4 MiB of decoded
+      image bytes. Oversized input returns a caller_input refusal naming the field;
+      no charge is taken. Resize or compress the image before submitting.
+    category: coverage
+    severity: info

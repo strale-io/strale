@@ -2,6 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
+import {
+  MAX_DECODED_DOCUMENT_BYTES,
+  checkedBase64,
+  readBodyWithLimit,
+} from "./lib/image-limits.js";
 
 registerCapability("pdf-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;
@@ -39,17 +44,16 @@ registerCapability("pdf-extract", async (input: CapabilityInput) => {
     if (!response.ok) {
       throw new Error(`Failed to fetch PDF: HTTP ${response.status}`);
     }
-    const buffer = await response.arrayBuffer();
-    pdfBase64 = Buffer.from(buffer).toString("base64");
+    // #412: streamed with a cap, not arrayBuffer() — by the time arrayBuffer
+    // resolves the bytes are already resident, so a length check afterwards
+    // bounds nothing.
+    const buf = await readBodyWithLimit(response, MAX_DECODED_DOCUMENT_BYTES, "url");
+    pdfBase64 = buf.toString("base64");
     sourceInfo = `pdf-extract:url:${parsedUrl.hostname}`;
   } else {
-    // Clean base64 input
-    let cleanBase64 = base64Input!;
-    const dataUriMatch = cleanBase64.match(/^data:([^;]+);base64,(.+)$/);
-    if (dataUriMatch) {
-      cleanBase64 = dataUriMatch[2];
-    }
-    pdfBase64 = cleanBase64;
+    // #412: normalised, measured, and refused-if-oversized in one step; the
+    // returned string is the one that was measured.
+    pdfBase64 = checkedBase64(base64Input!, MAX_DECODED_DOCUMENT_BYTES);
     sourceInfo = "pdf-extract:base64";
   }
 

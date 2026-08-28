@@ -4,14 +4,13 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import {
   IMAGE_FORMATS,
   FIT_MODES,
+  MAX_DECODED_IMAGE_BYTES,
   assertEnum,
   assertQuality,
-  assertDecodedSizeWithinLimit,
   assertEffectiveGeometryWithinLimit,
   assertOutputGeometryWithinLimit,
+  checkedBase64,
   effectiveOutputGeometry,
-  decodedLengthOfBase64,
-  normalizeBase64,
   readBodyWithLimit,
 } from "./lib/image-limits.js";
 
@@ -60,19 +59,12 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
   // Get image buffer
   let imageBuffer: Buffer;
   if (base64Input) {
-    // ONE stripping, shared with the size check below. The narrower
-    // `data:image/\w+;base64,` regex used here before disagreed with the
-    // measurer's own stripping, and a payload neither recognised was measured
-    // short and decoded whole — reviewer-found.
-    // normalizeBase64 strips the data-URI prefix AND whitespace, and the SAME
-    // string is measured and decoded. Stripping only the prefix here let a
-    // whitespace-padded payload be measured small and allocated large, because
-    // Node sizes the decode buffer from the input length.
-    const data = normalizeBase64(base64Input);
-    // Sized from the string, then decoded — not decoded and then measured. A
-    // check that runs after Buffer.from() has already allocated the thing it
-    // was meant to prevent.
-    assertDecodedSizeWithinLimit(decodedLengthOfBase64(data));
+    // #412 review: migrated to the sealed helper — normalised, measured, and
+    // refused-if-oversized in one step, and the RETURNED string is the one
+    // that was measured, so it is safe to hand to Buffer.from. The history of
+    // hand-composing these primitives (whitespace, padding, and data-URI bugs,
+    // all reviewer-found) is narrated in image-limits.ts.
+    const data = checkedBase64(base64Input, MAX_DECODED_IMAGE_BYTES);
     imageBuffer = Buffer.from(data, "base64");
   } else {
     // F-0-006: safeFetch validates + refuses DNS-rebinding / private-IP redirects.

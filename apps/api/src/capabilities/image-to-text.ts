@@ -2,6 +2,11 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
+import {
+  MAX_DECODED_IMAGE_BYTES,
+  checkedBase64,
+  readBodyWithLimit,
+} from "./lib/image-limits.js";
 
 // URL inputs are fetched by US via safeFetch and sent to Anthropic as base64.
 // Two reasons (P1, 2026-08-12): (a) Anthropic's own URL fetcher fails on
@@ -11,7 +16,8 @@ import { safeFetch } from "../lib/safe-fetch.js";
 // their network, outside our SSRF controls — the old F-0-006 Bucket D
 // residual risk, now closed instead of accepted.
 
-const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // Claude base64 limit is ~5MB; margin.
+// 4 MiB image cap now comes from the shared MAX_DECODED_IMAGE_BYTES (the value
+// this capability originally declared; Claude's base64 limit is ~5MB, margin).
 const ALLOWED_MEDIA = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
 registerCapability("image-to-text", async (input: CapabilityInput) => {
@@ -29,17 +35,18 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
   let imageContent: Anthropic.ImageBlockParam;
 
   if (base64Input) {
-    // Detect media type from base64 header or default to png
+    // Detect media type from the data-URI header or default to png
     let mediaType: "image/png" | "image/jpeg" | "image/gif" | "image/webp" = "image/png";
-    let data = base64Input;
-
-    if (base64Input.startsWith("data:")) {
-      const match = base64Input.match(/^data:(image\/\w+);base64,(.+)$/);
-      if (match) {
-        mediaType = match[1] as typeof mediaType;
-        data = match[2];
-      }
+    const match = base64Input.match(/^data:(image\/\w+);base64,/);
+    if (match) {
+      mediaType = match[1] as typeof mediaType;
     }
+
+    // #412: this path used to be entirely unchecked — the 4 MiB cap applied
+    // only to the URL branch, and only after the bytes were buffered.
+    // Normalised, measured, and refused-if-oversized in one step; the returned
+    // string is the one that was measured.
+    const data = checkedBase64(base64Input, MAX_DECODED_IMAGE_BYTES);
 
     imageContent = {
       type: "image",
@@ -59,12 +66,14 @@ registerCapability("image-to-text", async (input: CapabilityInput) => {
         `image_url returned '${rawType || "unknown"}', not a supported image type (png/jpeg/gif/webp).`,
       );
     }
-    const buf = Buffer.from(await resp.arrayBuffer());
-    if (buf.byteLength > MAX_IMAGE_BYTES) {
-      throw new Error(
-        `Image is ${(buf.byteLength / 1024 / 1024).toFixed(1)}MB — the limit is ${MAX_IMAGE_BYTES / 1024 / 1024}MB. Provide a smaller image.`,
-      );
-    }
+    // #412: streamed with a cap, not arrayBuffer() — the old check here ran
+    // AFTER the full response was buffered, so it reported the limit without
+    // enforcing it.
+    const buf = await readBodyWithLimit(
+      resp,
+      MAX_DECODED_IMAGE_BYTES,
+      input.image_url ? "image_url" : "url",
+    );
     imageContent = {
       type: "image",
       source: {

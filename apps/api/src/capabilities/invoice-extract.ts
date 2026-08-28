@@ -2,6 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { extractJsonObject, isEmptyExtraction } from "./lib/llm-json.js";
+import {
+  MAX_DECODED_DOCUMENT_BYTES,
+  checkedBase64,
+  readBodyWithLimit,
+} from "./lib/image-limits.js";
 
 const EXTRACTION_PROMPT = `You are an expert invoice data extraction system specializing in European invoices.
 
@@ -63,8 +68,10 @@ async function extractFromUrl(url: string): Promise<Anthropic.ImageBlockParam> {
   }
 
   const contentType = response.headers.get("content-type") || "";
-  const buffer = await response.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString("base64");
+  // #412: streamed with a cap, not arrayBuffer() — a post-buffer length check
+  // bounds nothing because the bytes are already resident.
+  const buffer = await readBodyWithLimit(response, MAX_DECODED_DOCUMENT_BYTES, "url");
+  const base64 = buffer.toString("base64");
 
   let mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp" = "image/png";
   if (contentType.includes("jpeg") || contentType.includes("jpg")) {
@@ -121,14 +128,9 @@ registerCapability("invoice-extract", async (input: CapabilityInput) => {
   if (url) {
     imageBlock = await extractFromUrl(url);
   } else {
-    // Clean base64 input (remove data URI prefix if present)
-    let cleanBase64 = base64Input!;
-    const dataUriMatch = cleanBase64.match(
-      /^data:([^;]+);base64,(.+)$/,
-    );
-    if (dataUriMatch) {
-      cleanBase64 = dataUriMatch[2];
-    }
+    // #412: normalised, measured, and refused-if-oversized in one step; the
+    // returned string is the one that was measured — sniffed and sent as-is.
+    const cleanBase64 = checkedBase64(base64Input!, MAX_DECODED_DOCUMENT_BYTES);
     const mediaType = detectMediaType(cleanBase64);
     imageBlock = {
       type: "image",

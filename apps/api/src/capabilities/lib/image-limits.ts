@@ -31,13 +31,28 @@ import { logError } from "../../lib/log.js";
 /**
  * Largest decoded image the platform accepts.
  *
- * 4 MiB, matching `image-to-text`'s existing `MAX_IMAGE_BYTES` rather than
- * inventing a second number. Note that image-to-text applies it only on its
- * URL path — its base64 path is unchecked — so this is the platform's stated
- * figure, not a uniformly enforced one. Enforcing the same value here keeps
- * the number singular while that asymmetry is closed separately.
+ * 4 MiB, matching `image-to-text`'s original `MAX_IMAGE_BYTES` rather than
+ * inventing a second number. Since #412 this is enforced uniformly — URL and
+ * base64 paths alike — on every image-input capability (`image-resize`,
+ * `image-to-text`, `receipt-categorize`).
  */
 export const MAX_DECODED_IMAGE_BYTES = 4 * 1024 * 1024;
+
+/**
+ * Largest decoded document (PDF or document-as-image) the platform accepts.
+ *
+ * 8 MiB, matching the `/x402/*` rail body cap. Note the two are aligned, not
+ * equal in effect: base64 wire overhead means an x402 request body can carry
+ * at most ~6 MiB decoded under the 8 MiB rail cap, while the URL path can use
+ * the full 8 MiB — the URL path is deliberately the not-stricter one, so no
+ * document that fits on the wire is refused here. Applies to `pdf-extract`,
+ * `invoice-extract`, `contract-extract`, `resume-parse` (#412).
+ *
+ * Lives in this module despite the name: image-limits.ts is the single
+ * authority for caller-input byte caps, and a second module holding a second
+ * 8 MiB constant is how six magic numbers happen.
+ */
+export const MAX_DECODED_DOCUMENT_BYTES = 8 * 1024 * 1024;
 
 /** No single output edge beyond this. 10,000 px is well past any real display or print need. */
 export const MAX_OUTPUT_DIMENSION = 10_000;
@@ -194,13 +209,34 @@ export function decodedLengthOfBase64(b64: string): number {
  * Checked, not assumed: the phrasings below were run through
  * `classifyTransactionFailure` before being written this way.
  */
+/**
+ * The ONE way to accept a caller's base64 payload: normalise, measure the
+ * normalised string, refuse if over `maxBytes`, and return THAT string for the
+ * caller to send/decode.
+ *
+ * Composed here (#412 review) so the measure-the-string-you-use invariant is
+ * unforgeable at call sites instead of being a three-call ritual upheld by
+ * comments — the whitespace, padding and data-URI bugs narrated above all came
+ * from callers composing the primitives divergently.
+ */
+export function checkedBase64(
+  raw: string,
+  maxBytes: number,
+  field = "base64",
+): string {
+  const b64 = normalizeBase64(raw);
+  assertDecodedSizeWithinLimit(decodedLengthOfBase64(b64), field, maxBytes);
+  return b64;
+}
+
 export function assertDecodedSizeWithinLimit(
   bytes: number,
   field = "base64",
+  maxBytes: number = MAX_DECODED_IMAGE_BYTES,
 ): void {
-  if (bytes > MAX_DECODED_IMAGE_BYTES) {
+  if (bytes > maxBytes) {
     throw new ImageLimitError(
-      `'${field}' must be ${mib(MAX_DECODED_IMAGE_BYTES)} or less once decoded (received ${mib(bytes)}).`,
+      `'${field}' must be ${mib(maxBytes)} or less once decoded (received ${mib(bytes)}).`,
     );
   }
 }
@@ -365,14 +401,27 @@ export async function readBodyWithLimit(
   // Trust a declared length enough to refuse early, never enough to accept.
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
+    // Cancel the unconsumed body before throwing — leaving it open pins the
+    // keep-alive connection until GC (same class as safe-fetch's review L-1
+    // fix for 3xx bodies; #412 review found it here).
+    await response.body
+      ?.cancel()
+      .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
     throw new ImageLimitError(
       `'${field}' must be ${mib(maxBytes)} or less (it declared ${mib(declared)}).`,
     );
   }
 
   if (!response.body) {
+    // Only reachable for bodyless responses (204/205/304, HEAD, or a test
+    // Response constructed with a null body) — a real 200 with content always
+    // exposes a stream under undici. The post-hoc check here is therefore a
+    // belt for synthetic Responses, not the enforcement path.
+    //
+    // #412: `maxBytes` is forwarded — this used to fall back to the helper's
+    // 4 MiB default, silently shrinking any caller that passed a larger cap.
     const buf = Buffer.from(await response.arrayBuffer());
-    assertDecodedSizeWithinLimit(buf.byteLength, field);
+    assertDecodedSizeWithinLimit(buf.byteLength, field, maxBytes);
     return buf;
   }
 

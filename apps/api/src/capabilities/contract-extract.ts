@@ -2,13 +2,18 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
+import {
+  MAX_DECODED_DOCUMENT_BYTES,
+  checkedBase64,
+  readBodyWithLimit,
+} from "./lib/image-limits.js";
 
 registerCapability("contract-extract", async (input: CapabilityInput) => {
   const pdfUrl = (input.pdf_url as string)?.trim() ?? (input.url as string)?.trim();
-  const base64 = (input.base64 as string)?.trim();
+  const rawBase64 = (input.base64 as string)?.trim();
   const text = (input.text as string)?.trim();
 
-  if (!pdfUrl && !base64 && !text) {
+  if (!pdfUrl && !rawBase64 && !text) {
     throw new Error("'pdf_url', 'base64', or 'text' is required.");
   }
 
@@ -18,7 +23,10 @@ registerCapability("contract-extract", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const messages: Anthropic.MessageParam[] = [];
 
-  if (base64) {
+  if (rawBase64) {
+    // #412: normalised, measured, and refused-if-oversized in one step; the
+    // returned string is the one that was measured — sniffed and sent as-is.
+    const base64 = checkedBase64(rawBase64, MAX_DECODED_DOCUMENT_BYTES);
     const mediaType = detectMediaType(base64);
     if (mediaType === "application/pdf") {
       messages.push({
@@ -41,7 +49,14 @@ registerCapability("contract-extract", async (input: CapabilityInput) => {
     // F-0-006: safeFetch validates + refuses DNS-rebinding and redirect-to-private.
     const res = await safeFetch(pdfUrl, { signal: AbortSignal.timeout(15000) });
     if (!res.ok) throw new Error(`Failed to fetch document: HTTP ${res.status}`);
-    const buf = Buffer.from(await res.arrayBuffer());
+    // #412: streamed with a cap, not arrayBuffer() — a post-buffer length
+    // check bounds nothing because the bytes are already resident. The refusal
+    // names the field the caller actually used.
+    const buf = await readBodyWithLimit(
+      res,
+      MAX_DECODED_DOCUMENT_BYTES,
+      input.pdf_url ? "pdf_url" : "url",
+    );
     const contentType = res.headers.get("content-type") ?? "";
 
     if (contentType.includes("pdf")) {
