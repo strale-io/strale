@@ -121,3 +121,9 @@ limitations:
     category: coverage
     severity: info
     workaround: For non-supported languages, use pdf-extract for raw text and process the output with a language-specific parser
+  - title: Report PDFs are limited to 8 MiB
+    text: >-
+      A filing larger than 8 MiB is not downloaded; extraction falls back to the
+      registry page's own summary text, which may carry fewer fields.
+    category: coverage
+    severity: info

@@ -77,7 +77,13 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
     // is the cheaper way in: it is not covered by the rail body limit at all,
     // so it would set the real ceiling and the base64 cap above would be
     // decorative.
-    imageBuffer = await readBodyWithLimit(response);
+    // #426: maxBytes is now required — the old bare call leaned on the 4 MiB
+    // default that also caused the #412 fallback bug. Same value, now stated.
+    imageBuffer = await readBodyWithLimit(
+      response,
+      MAX_DECODED_IMAGE_BYTES,
+      input.image_url ? "image_url" : "url",
+    );
   }
 
   // Process with Sharp

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { MAX_MEASURED_TRANSFER_BYTES, countBodyBytes } from "./lib/image-limits.js";
 
 // Constants from the Sustainable Web Design model / Website Carbon methodology
 const ENERGY_PER_GB_KWH = 0.81; // kWh per GB transferred
@@ -27,8 +28,19 @@ registerCapability("website-carbon-estimate", async (input: CapabilityInput) => 
 
   if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}.`);
 
-  const buffer = await resp.arrayBuffer();
-  const transferSizeBytes = buffer.byteLength;
+  // #426: counted, not buffered. This capability only ever needed the SIZE of
+  // the page, so retaining the body was pure exposure — a caller URL pointing
+  // at a huge file made the process hold all of it for the sake of one
+  // number. countBodyBytes drops each chunk after counting (O(1) memory), and
+  // deliberately does NOT use the 4/8 MiB input caps: heavy pages are exactly
+  // what a carbon estimator exists to measure, so the stop is a generous work
+  // bound, not an input limit.
+  const transferSizeBytes = await countBodyBytes(
+    resp,
+    MAX_MEASURED_TRANSFER_BYTES,
+    "url",
+    "a page transferring",
+  );
   const transferSizeKb = Math.round(transferSizeBytes / 1024);
 
   // Response headers

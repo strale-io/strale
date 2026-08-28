@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
+import { MAX_DECODED_DOCUMENT_BYTES } from "./capabilities/lib/image-limits.js";
 import { HTTPException } from "hono/http-exception";
 import { versionMiddleware } from "./lib/versioning.js";
 import { apiError } from "./lib/errors.js";
@@ -338,7 +339,11 @@ app.use("/mcp", bodyLimit({ maxSize: 512 * 1024 }));      // 512 KB for MCP
 // affect real traffic. Its job is not to be tight. It is to turn "unbounded"
 // into "bounded"; the tight limits belong in the capabilities, where the units
 // are decoded bytes and output pixels rather than wire bytes.
-app.use("/x402/*", bodyLimit({ maxSize: 8 * 1024 * 1024 }));  // 8 MiB for the x402 rail
+// #426: the cap IS the document-limit authority constant, imported rather
+// than restated — MAX_DECODED_DOCUMENT_BYTES was chosen (#412) to equal this
+// rail cap, and an import makes the alignment hold by construction (the
+// boundary tests in x402-body-limit.test.ts drive it as regression cover).
+app.use("/x402/*", bodyLimit({ maxSize: MAX_DECODED_DOCUMENT_BYTES }));
 
 // A2A: Link header pointing to Agent Card on all API responses
 app.use("*", async (c, next) => {

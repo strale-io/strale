@@ -109,3 +109,10 @@ limitations:
     category: performance
     severity: info
     workaround: Use the wait_for parameter to target a specific CSS selector if the page loads progressively
+  - title: Screenshots are limited to 32 MiB
+    text: >-
+      A page whose screenshot renders to more than 32 MiB is refused (streamed
+      enforcement; full_page renders of very long pages are the usual cause).
+      The refusal is caller_input and no charge is taken.
+    category: coverage
+    severity: info

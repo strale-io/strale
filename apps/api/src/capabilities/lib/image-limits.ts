@@ -54,6 +54,54 @@ export const MAX_DECODED_IMAGE_BYTES = 4 * 1024 * 1024;
  */
 export const MAX_DECODED_DOCUMENT_BYTES = 8 * 1024 * 1024;
 
+/**
+ * Largest Browserless-rendered screenshot the platform will buffer (#426).
+ *
+ * The response comes from OUR vendor, not the caller — but its size is still
+ * caller-shaped: `screenshot-url` defaults to full_page with caller-chosen
+ * viewport, so a long page renders a very large PNG. Evidence for 32 MiB:
+ * across 1,203 production test runs the largest screenshot ever produced was
+ * ~1.3 MiB decoded (p95 ≈ 20 KiB), and a pathological-but-legitimate
+ * full-page render of a very long page lands in the tens of MiB, not
+ * hundreds. 32 MiB is ~25x the largest observed real render, so it cannot
+ * refuse working traffic; its job is to turn "unbounded" into "bounded".
+ */
+export const MAX_RENDERED_SCREENSHOT_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Largest Browserless-rendered PDF the platform will buffer (#426).
+ *
+ * Named separately from the screenshot cap because /pdf and /screenshot are
+ * different products whose ceilings could legitimately diverge; today both
+ * are 32 MiB on the same evidence class (typical page PDFs are 0.05–5 MiB,
+ * image-heavy long pages reach the tens of MiB, largest observed real output
+ * is ~28 KB).
+ */
+export const MAX_RENDERED_PDF_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Largest media file `c2pa-inspect` fetches for provenance parsing (#426
+ * review — moved here from a local constant so the authority module holds
+ * every byte cap and the no-local-caps structural test needs no exemption).
+ *
+ * 15 MB, the capability's own product declaration since launch: C2PA media is
+ * commonly TIFF/DNG camera output, which legitimately dwarfs the 4 MiB
+ * decoded-image cap that governs images we SEND to a vision model — here the
+ * bytes go to a local metadata parser, not an LLM.
+ */
+export const MAX_C2PA_MEDIA_BYTES = 15 * 1024 * 1024;
+
+/**
+ * Hard stop for byte-COUNTING reads (#426), where the body is measured and
+ * discarded rather than kept (`website-carbon-estimate`). Counting is O(1)
+ * memory, so this is not a residency bound — it is a work bound that stops a
+ * deliberately endless stream inside the request timeout. 100 MiB is far past
+ * any real page weight (median ~2.3 MiB; the heaviest pages are tens of MiB),
+ * and a page bigger than this gets a refusal naming the cap rather than a
+ * measurement.
+ */
+export const MAX_MEASURED_TRANSFER_BYTES = 100 * 1024 * 1024;
+
 /** No single output edge beyond this. 10,000 px is well past any real display or print need. */
 export const MAX_OUTPUT_DIMENSION = 10_000;
 
@@ -157,7 +205,14 @@ export function stripDataUriPrefix(b64: string): string {
  * one: there is a single normalised string, and everything downstream uses it.
  */
 export function normalizeBase64(input: string): string {
-  return stripDataUriPrefix(input).replace(/\s/g, "");
+  // Whitespace FIRST, then the prefix (#426). The old order stripped the
+  // prefix first, so a payload with leading whitespace — " data:image/png…" —
+  // failed the `startsWith("data:")` test, kept its prefix, and was measured
+  // and decoded whole. Harmless (over-measuring is the safe direction, and
+  // the decode was garbage either way), but it silently turned a valid
+  // data-URI into a refused or garbage payload. Whitespace-stripping first
+  // means the prefix test sees the canonical string.
+  return stripDataUriPrefix(input.replace(/\s/g, ""));
 }
 
 /**
@@ -225,14 +280,23 @@ export function checkedBase64(
   field = "base64",
 ): string {
   const b64 = normalizeBase64(raw);
-  assertDecodedSizeWithinLimit(decodedLengthOfBase64(b64), field, maxBytes);
+  assertDecodedSizeWithinLimit(decodedLengthOfBase64(b64), maxBytes, field);
   return b64;
 }
 
+/**
+ * `maxBytes` is REQUIRED, second, and there is no default (#426 hardening).
+ * The old trailing `maxBytes = MAX_DECODED_IMAGE_BYTES` default is the exact
+ * mechanism behind the #412 fallback bug: a caller that forgot the argument
+ * silently shrank its cap to 4 MiB. With two media-class caps plus render
+ * caps there is no "obvious" default any more — omission should be a compile
+ * error, and the parameter reorder makes any stale `(bytes, "field", MAX)`
+ * call shape a type error rather than a silent misread.
+ */
 export function assertDecodedSizeWithinLimit(
   bytes: number,
+  maxBytes: number,
   field = "base64",
-  maxBytes: number = MAX_DECODED_IMAGE_BYTES,
 ): void {
   if (bytes > maxBytes) {
     throw new ImageLimitError(
@@ -392,12 +456,86 @@ export function assertEffectiveGeometryWithinLimit(
  * URL path have to agree, or the cheaper path decides the real limit.
  *
  * Falls back to buffering only when the response exposes no readable stream.
+ *
+ * `maxBytes` is REQUIRED (#426 hardening) — the old 4 MiB default is the
+ * mechanism behind the #412 fallback bug, and with image/document/render caps
+ * in play there is no defensible implicit choice.
+ *
+ * `entity` optionally describes WHAT must be within the limit when it is not
+ * the field's own bytes — a Browserless render of a caller URL passes
+ * "a page whose screenshot renders to", producing "'url' must be a page whose
+ * screenshot renders to 32.0MB or less" rather than implying the URL itself
+ * is 32 MB. The helper writes both the `'field' must be ` prefix (so the
+ * caller_input classification holds by construction) and the size figure (so
+ * the quoted number cannot drift from the cap — callers never format it).
  */
 export async function readBodyWithLimit(
   response: Response,
-  maxBytes: number = MAX_DECODED_IMAGE_BYTES,
+  maxBytes: number,
   field = "image_url",
+  entity?: string,
 ): Promise<Buffer> {
+  if (!response.body) {
+    // Only reachable for bodyless responses (204/205/304, HEAD, or a test
+    // Response constructed with a null body) — a real 200 with content always
+    // exposes a stream under undici. The post-hoc check here is therefore a
+    // belt for synthetic Responses, not the enforcement path.
+    //
+    // #412: `maxBytes` is forwarded — this used to fall back to the helper's
+    // 4 MiB default, silently shrinking any caller that passed a larger cap.
+    const buf = Buffer.from(await response.arrayBuffer());
+    assertDecodedSizeWithinLimit(buf.byteLength, maxBytes, field);
+    return buf;
+  }
+  const chunks: Uint8Array[] = [];
+  const total = await consumeBody(response, maxBytes, field, entity, (c) => chunks.push(c));
+  return Buffer.concat(chunks, total);
+}
+
+/**
+ * Count a response body's bytes WITHOUT keeping them (#426).
+ *
+ * For consumers that need the size and nothing else (`website-carbon-estimate`
+ * measures page weight), buffering is not just unbounded — it is unnecessary.
+ * Chunks are counted and dropped, so memory is O(one chunk) regardless of body
+ * size; `maxBytes` is a work bound (stop reading a deliberately endless
+ * stream), not a residency bound.
+ */
+export async function countBodyBytes(
+  response: Response,
+  maxBytes: number,
+  field = "url",
+  entity?: string,
+): Promise<number> {
+  if (!response.body) {
+    // Synthetic/bodyless responses only — see readBodyWithLimit's note.
+    const bytes = (await response.arrayBuffer()).byteLength;
+    if (bytes > maxBytes) {
+      throw new ImageLimitError(`'${field}' must be ${limitPhrase(entity, maxBytes)}.`);
+    }
+    return bytes;
+  }
+  return consumeBody(response, maxBytes, field, entity);
+}
+
+const limitPhrase = (entity: string | undefined, maxBytes: number) =>
+  `${entity ? `${entity} ` : ""}${mib(maxBytes)} or less`;
+
+/**
+ * The ONE streaming-enforcement core (#426 review): declared content-length
+ * refusal that never trusts a declaration to accept, actual-byte counting,
+ * cancel-at-cap, reader cleanup. `readBodyWithLimit` retains chunks through
+ * `onChunk`; `countBodyBytes` passes no sink. Two exports, one discipline —
+ * a fix to either lands in both by construction.
+ */
+async function consumeBody(
+  response: Response,
+  maxBytes: number,
+  field: string,
+  entity: string | undefined,
+  onChunk?: (chunk: Uint8Array) => void,
+): Promise<number> {
+  const phrase = limitPhrase(entity, maxBytes);
   // Trust a declared length enough to refuse early, never enough to accept.
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > maxBytes) {
@@ -408,25 +546,11 @@ export async function readBodyWithLimit(
       ?.cancel()
       .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
     throw new ImageLimitError(
-      `'${field}' must be ${mib(maxBytes)} or less (it declared ${mib(declared)}).`,
+      `'${field}' must be ${phrase} (it declared ${mib(declared)}).`,
     );
   }
 
-  if (!response.body) {
-    // Only reachable for bodyless responses (204/205/304, HEAD, or a test
-    // Response constructed with a null body) — a real 200 with content always
-    // exposes a stream under undici. The post-hoc check here is therefore a
-    // belt for synthetic Responses, not the enforcement path.
-    //
-    // #412: `maxBytes` is forwarded — this used to fall back to the helper's
-    // 4 MiB default, silently shrinking any caller that passed a larger cap.
-    const buf = Buffer.from(await response.arrayBuffer());
-    assertDecodedSizeWithinLimit(buf.byteLength, field, maxBytes);
-    return buf;
-  }
-
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+  const reader = response.body!.getReader();
   let total = 0;
   try {
     for (;;) {
@@ -445,14 +569,12 @@ export async function readBodyWithLimit(
         await reader
           .cancel()
           .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
-        throw new ImageLimitError(
-          `'${field}' must be ${mib(maxBytes)} or less.`,
-        );
+        throw new ImageLimitError(`'${field}' must be ${phrase}.`);
       }
-      chunks.push(value);
+      onChunk?.(value);
     }
   } finally {
     reader.releaseLock?.();
   }
-  return Buffer.concat(chunks, total);
+  return total;
 }

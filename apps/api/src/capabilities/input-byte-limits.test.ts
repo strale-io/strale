@@ -70,48 +70,15 @@ import {
   classifyTransactionFailure,
   countsAgainstCapability,
 } from "../lib/transaction-failure-taxonomy.js";
+import { streamingResponse } from "./lib/streaming-response-testutil.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const CHUNK = 64 * 1024;
 
-/**
- * A Response that streams exactly `totalBytes` (last chunk sliced, so the
- * byte count is precise), optionally declaring a content-length, and counting
- * how many chunks were actually pulled — the "refused before consuming the
- * body" assertions need that counter.
- */
-function streamingResponse(
-  totalBytes: number,
-  opts: { declare?: number; contentType?: string } = {},
-): { response: Response; pulls: () => number } {
-  let sent = 0;
-  let pulls = 0;
-  const body = new ReadableStream<Uint8Array>(
-    {
-      pull(ctrl) {
-        if (sent >= totalBytes) {
-          ctrl.close();
-          return;
-        }
-        pulls++;
-        const size = Math.min(CHUNK, totalBytes - sent);
-        ctrl.enqueue(new Uint8Array(size));
-        sent += size;
-      },
-    },
-    // highWaterMark 0: the default (1) makes the stream pull one chunk
-    // eagerly at construction, before any reader attaches — which would make
-    // the "refused without pulling the body" counter read 1 for a body nobody
-    // consumed.
-    { highWaterMark: 0 },
-  );
-  const headers = new Headers();
-  if (opts.declare !== undefined) headers.set("content-length", String(opts.declare));
-  if (opts.contentType) headers.set("content-type", opts.contentType);
-  return { response: new Response(body, { status: 200, headers }), pulls: () => pulls };
-}
+// streamingResponse hoisted to lib/streaming-response-testutil.ts (#426) —
+// three test files needed it and two copies had already diverged.
 
 interface CapSpec {
   slug: string;
