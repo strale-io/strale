@@ -122,10 +122,10 @@ const SCANNED: Scanned[] = walk(SRC).map((file) => {
  *
  * That last term is #432 round 1, and it found a real one. A capability may
  * hand a caller's URL to a FIXED vendor host — Google PageSpeed, Safe
- * Browsing, Browserless — and then the fetch is `fetch("https://www.google
- * apis.com/…")` with no safeFetch anywhere, because the host is ours and the
- * caller's URL travels as a query parameter. The response is still
- * caller-shaped. `assertTargetAllowed` is this codebase's own marker for
+ * Browsing, Browserless — and then the fetch names that vendor's host, with no
+ * safeFetch anywhere, because the host is ours and the caller's URL travels as
+ * a query parameter. The response is still caller-shaped.
+ * `assertTargetAllowed` is this codebase's own marker for
  * exactly that situation (the `unguarded-fetch-ok:` annotations on those
  * fetches say "caller URL gated by assertTargetAllowed above" in so many
  * words), so adopting it as a filter term is reading a convention that already
@@ -311,10 +311,19 @@ describe("class C — shared fetch layers are ledgered exactly", () => {
 // ─── Class D: the documented non-goal ────────────────────────────────────────
 
 /**
- * ~230 sites across ~130 capability executors, plus the `web3-assurance`
- * evaluators, read a JSON or XML response from a fixed registry or vendor
- * host. They are NOT ledgered, and that is a stated limit on this guard's
- * claim rather than an oversight.
+ * ~230 sites across ~130 capability executors read a JSON or XML response from
+ * a fixed registry or vendor host. They are NOT ledgered, and that is a stated
+ * limit on this guard's claim rather than an oversight.
+ *
+ * Precisely which directories no class watches, so the claim can be audited:
+ * `capabilities/*.ts` for a file that is not caller-facing (this paragraph),
+ * `web3-assurance/**` (evaluators against DefiLlama, Sourcify, Tenderly and
+ * peers — same fixed-vendor argument), `routes/**` (inbound request bodies,
+ * a different risk with a different control: the `/x402/*` rail cap and
+ * authentication), and `jobs/**` (scheduled ingests of registry bulk files on
+ * our own timetable). Classes A, B, B2 and C DO cover all four for
+ * `arrayBuffer`, `getReader` and piping, which are the shapes that cannot be
+ * bounded after the fact.
  *
  * The reason is the risk model the whole programme rests on: an unbounded read
  * matters when an untrusted party chooses the size. A response from Companies
