@@ -101,19 +101,31 @@ export const REFUSAL_MESSAGE_PATTERNS = [
   // (via isCapabilityRefusal) aligned with the taxonomy, the same three-consumer
   // guarantee this list already gives the registry-refusal patterns above.
   "Extraction result too large for one call",
-  // page-speed-test: Lighthouse could not load the page the caller named
-  // (FAILED_DOCUMENT_REQUEST). 138 of that capability's 363 failures over 90
-  // days, and before #434 it arrived as a raw Google 400 payload that no
-  // taxonomy rule claimed and the breaker did not recognise — so three
-  // unloadable target pages in a row would have suspended a capability that
-  // was working correctly. The target being down is not our ill health.
-  // Anchored WITH the field name because isRefusalMessage matches with
-  // startsWith while the breaker matches with includes — the same list,
-  // two matchers. A fragment that omits the opening quote satisfies the
-  // breaker and silently misses quality-capture, which is how this entry
-  // failed its own three-consumer test on the first attempt.
-  "'url' must be a page PageSpeed Insights can load",
 ] as const;
+
+/**
+ * The house style for caller-facing validation: a message that OPENS with a
+ * quoted field name and says what it must be. `'strategy' must be 'mobile' or
+ * 'desktop'.`, `'url' must be a page whose HTML is 16.0MB or less.`
+ *
+ * THE canonical definition (#436). `transaction-failure-taxonomy.ts` imports
+ * this exact source into `CALLER_INPUT_RE` rather than keeping its own copy,
+ * so the taxonomy and the refusal predicate cannot come to different answers
+ * about the same sentence.
+ *
+ * Deliberately narrow, and the narrowness is load-bearing. A bare `must be `
+ * was tried first in the taxonomy and excused "Response validation failed:
+ * output must be an object", "Internal assertion failed: result must be
+ * non-null" and "Config value must be set before use" — all our own defects.
+ * Requiring a quoted field at the START is what separates "the caller's input
+ * is wrong" from "our code is wrong".
+ *
+ * Its arrival here is what made #434's bespoke entry unnecessary: a message
+ * written in the house style is recognised because of its shape, not because
+ * somebody remembered to register its wording.
+ */
+export const CALLER_FIELD_REFUSAL_SOURCE = "^'[^']{1,40}'.{0,40}must be ";
+const CALLER_FIELD_REFUSAL_RE = new RegExp(CALLER_FIELD_REFUSAL_SOURCE, "i");
 
 /** Does this error — object or bare message — represent a refusal? */
 export function isCapabilityRefusal(err: unknown): boolean {
@@ -126,16 +138,33 @@ export function isCapabilityRefusal(err: unknown): boolean {
 }
 
 /**
- * Message-only form, for the paths that never see the error object.
+ * THE authority on "is this message a refusal?" (#436).
  *
- * Anchored at the start rather than matched anywhere in the string. Every
- * refusal site opens with one of these phrases, and several unrelated errors in
- * the same capabilities quote the caller's query back verbatim — `No French
- * company found matching "${query}"`. A company name beginning "Ambiguous" is
- * contrived but not impossible, and would otherwise file an ordinary not-found
- * as a refusal. Both outcomes happen to be caller-attributable, so nothing
- * breaks either way; anchoring just keeps the bucket meaning what it says.
+ * Every health consumer routes through this one function. Before, three of
+ * them answered the same question three ways: `isCapabilityRefusal` matched
+ * these patterns with `startsWith`, `circuit-breaker.ts` spread the same array
+ * into a list it matched with `includes`, and the taxonomy carried its own
+ * copy of the house-style rule. One list, three matchers — so a pattern could
+ * satisfy one consumer and silently miss another, which is what happened in
+ * #428 and again in #434. The array is no longer exported into a second
+ * matching implementation anywhere; consumers ask this function.
+ *
+ * Two ways to be a refusal, and the first is why registering wordings is now
+ * the exception rather than the rule:
+ *
+ *   1. The message is written in the house style — it opens with a quoted
+ *      field name and says what it must be. Recognised by SHAPE, so a new
+ *      refusal is covered the day it is written.
+ *   2. The message starts with a registered fragment, for refusals whose
+ *      wording predates the house style ("Ambiguous …", "No confident …").
+ *
+ * Fragments are anchored at the start rather than matched anywhere. Several
+ * unrelated errors in the same capabilities quote the caller's query back
+ * verbatim — `No French company found matching "${query}"` — and a company
+ * named "Ambiguous Holdings" would otherwise file an ordinary not-found as a
+ * refusal. Anchoring keeps the bucket meaning what it says.
  */
 export function isRefusalMessage(message: string): boolean {
+  if (CALLER_FIELD_REFUSAL_RE.test(message)) return true;
   return REFUSAL_MESSAGE_PATTERNS.some((p) => message.startsWith(p));
 }
