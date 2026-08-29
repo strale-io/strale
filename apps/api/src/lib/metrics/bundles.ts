@@ -208,6 +208,27 @@ export async function bundleSales(
 }
 
 /**
+ * Every bundle slug that took an external order in the last `days`.
+ *
+ * The cohort has to be read against the whole bundle line, not against one
+ * named control: "no bundle sold" is a claim about all of them and cannot be
+ * checked against a list of five. This lives here rather than in the calling
+ * script so that no operator script holds a database handle of its own — the
+ * rule `scripts/guard-production-write-access.mjs` enforces, and the reason the
+ * 2026-08-22 write happened.
+ */
+export async function activeBundleSlugs(days = 42): Promise<string[]> {
+  const since = new Date(Date.now() - days * 86_400_000);
+  const r = await rows<{ slug: string }>(sql`
+    SELECT DISTINCT t.solution_slug AS slug
+    FROM transactions t
+    WHERE t.status = 'completed' AND t.solution_slug IS NOT NULL
+      AND t.created_at >= ${iso(since)}
+      AND ${externalCustomers("t")}`);
+  return r.map((x) => x.slug).sort();
+}
+
+/**
  * The verdict E4 actually needs.
  *
  * `confounded` is not a failure of the measurement — it is the honest answer
