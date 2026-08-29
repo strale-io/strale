@@ -183,6 +183,29 @@ describe("existing failure behaviour is unchanged", () => {
     await expect(run()).rejects.toThrow(/did not return Lighthouse results/);
   });
 
+  it("an unloadable target page names the caller's field, not Google's JSON", async () => {
+    // 138 of 363 production failures over 90 days. It used to surface as a raw
+    // 400 payload, which no taxonomy rule claimed and the breaker did not
+    // recognise — so three unloadable pages in a row would have suspended a
+    // working capability.
+    fetchMock.mockResolvedValue(
+      new Response(
+        '{"error":{"code":400,"message":"Lighthouse returned error: FAILED_DOCUMENT_REQUEST. ' +
+          'Lighthouse was unable to reliably load the page you requested."}}',
+        { status: 400 },
+      ),
+    );
+    const err = (await run().catch((e: Error) => e)) as Error;
+    expect(err.message).toMatch(/'url' must be a page PageSpeed Insights can load/);
+    expect(err.message).not.toMatch(/FAILED_DOCUMENT_REQUEST/);
+    expect(classifyTransactionFailure(err.message)).toBe("caller_input");
+    expect(countsAgainstCapability(classifyTransactionFailure(err.message))).toBe(false);
+    // All three health consumers, per the #428 lesson — checking the taxonomy
+    // alone is what let that one through.
+    expect(isUserInputError(err.message), "breaker still counts it against the capability").toBe(true);
+    expect(isCapabilityRefusal(err), "quality capture still scores it as a defect").toBe(true);
+  });
+
   it("a non-2xx still reports the upstream status and a truncated body", async () => {
     fetchMock.mockResolvedValue(
       new Response('{"error":{"code":500,"message":"Lighthouse returned error: Something went wrong."}}', {

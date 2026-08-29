@@ -101,6 +101,18 @@ export const REFUSAL_MESSAGE_PATTERNS = [
   // (via isCapabilityRefusal) aligned with the taxonomy, the same three-consumer
   // guarantee this list already gives the registry-refusal patterns above.
   "Extraction result too large for one call",
+  // page-speed-test: Lighthouse could not load the page the caller named
+  // (FAILED_DOCUMENT_REQUEST). 138 of that capability's 363 failures over 90
+  // days, and before #434 it arrived as a raw Google 400 payload that no
+  // taxonomy rule claimed and the breaker did not recognise — so three
+  // unloadable target pages in a row would have suspended a capability that
+  // was working correctly. The target being down is not our ill health.
+  // Anchored WITH the field name because isRefusalMessage matches with
+  // startsWith while the breaker matches with includes — the same list,
+  // two matchers. A fragment that omits the opening quote satisfies the
+  // breaker and silently misses quality-capture, which is how this entry
+  // failed its own three-consumer test on the first attempt.
+  "'url' must be a page PageSpeed Insights can load",
 ] as const;
 
 /** Does this error — object or bare message — represent a refusal? */

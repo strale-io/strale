@@ -51,6 +51,24 @@ registerCapability("page-speed-test", async (input: CapabilityInput) => {
 
   if (!resp.ok) {
     const err = await readErrorTextTruncated(resp);
+    // FAILED_DOCUMENT_REQUEST is Lighthouse saying it could not load the page
+    // the CALLER named — the single largest real failure mode here (138 of 363
+    // failures over 90 days, #434 round 2). It arrived as a raw Google 400
+    // payload, which classified `unclassified` by falling through every
+    // taxonomy rule rather than by any rule recognising it. Floor-exempt by
+    // luck, but NOT recognised by the circuit breaker, so three unloadable
+    // target pages in a row would suspend a capability that was working
+    // correctly — the #428 shape exactly.
+    //
+    // Naming the caller's field fixes both halves: the breaker and the floor
+    // both read it as caller input, and the caller gets an actionable sentence
+    // instead of 300 characters of vendor JSON.
+    if (err.includes("FAILED_DOCUMENT_REQUEST")) {
+      throw new Error(
+        `'url' must be a page PageSpeed Insights can load. Lighthouse could not fetch ${url} — ` +
+          `it may be down, blocking automated visitors, behind authentication, or redirecting in a loop.`,
+      );
+    }
     throw new Error(`PageSpeed Insights returned HTTP ${resp.status}: ${err.slice(0, 300)}`);
   }
 
