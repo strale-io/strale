@@ -137,7 +137,19 @@ export const FIELD_CATEGORIES: Record<string, FieldAuthorityEntry> = {
   },
   avg_latency_ms: {
     category: "db",
-    reason: "Measured at runtime by test runner; not authored.",
+    reason:
+      "Measured at runtime by test runner; not authored. DB authority is right, " +
+      "but the measurement is not trustworthy for the one thing this column " +
+      "decides (#436): /v1/do routes sync-vs-async on it, while " +
+      "POST /v1/internal/onboarding/fix-latency medians test_results across ALL " +
+      "suites — including the negative and known_bad ones that fail validation " +
+      "in ~5 ms without executing. page-speed-test medians 6 ms over 1,592 " +
+      "results and 11,208 ms over the 617 that actually ran. So a routing-" +
+      "critical value here is operator-set from observed transaction " +
+      "percentiles (scripts/audit-execution-routing.ts), not left to the " +
+      "backfill. A manifest value is a create-time seed only — normalizeManifest" +
+      "ToRow strips db-authority fields on backfill, so editing the YAML to " +
+      "change routing does nothing.",
   },
   success_rate: {
     category: "db",
