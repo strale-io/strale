@@ -77,15 +77,18 @@
  * lib/errors.ts.
  *
  * Uncovered paths (documented per the task's instruction not to fake
- * coverage): executeAsync / executeInBackground (async execution,
- * DEC-22 — avgLatencyMs > 10s), the x402 unauthenticated payment path,
+ * coverage): the x402 unauthenticated payment path,
  * free-tier (unauthenticated and authenticated-free-tier) execution,
  * the postgres 25P03/55P03 timeout-code catch branch, and the
  * low-balance/zero-balance conversion-email fire-and-forget branch.
- * Each depends on either a second DB-shaped mock surface (async
- * background-worker semantics) or triggers not exercised by the core
- * paths this task scoped in. Flagged for a follow-up pass rather than
- * asserted on with a mock that would tautologically pass.
+ * Each depends on triggers not exercised by the core paths this task
+ * scoped in. Flagged for a follow-up pass rather than asserted on with a
+ * mock that would tautologically pass.
+ *
+ * executeAsync / executeInBackground came OFF this list in #438: the second
+ * DB-shaped mock surface it needed is `do.async.test.ts`, which drives the
+ * real route with a slow capability and settles the background work through
+ * the trackBackgroundTask seam.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -47,12 +47,30 @@ export const ASYNC_THRESHOLD_MS = 10_000;
 export const SYNC_TRANSACTION_WALL_MS = 15_000;
 
 /**
- * A null latency routes SYNC, which is the riskiest default: an unmeasured
- * capability is exactly the one whose duration nobody knows. Preserved as-is
- * because changing the default is a behaviour change for every unmeasured
- * capability at once; `capability-readiness.ts` already reports the null as an
- * issue, and `audit-execution-routing.ts` reports the ones whose measured tail
- * says they are in the wrong lane.
+ * A null latency routes SYNC. #436 flagged that as the riskiest possible
+ * default — an unmeasured capability is exactly the one whose duration nobody
+ * knows — and #438 measured it before deciding, rather than flipping it on the
+ * argument alone.
+ *
+ * All 39 active capabilities with a null `avg_latency_ms`, against their real
+ * completed executions (2026-08-29):
+ *
+ *     would get a measured value        38   (n from 236 to 4,860 each)
+ *     of those, p95 above the threshold  1   (company-news, p95 28,734 ms)
+ *     next highest p95                       us-product-recall-search, 9,232 ms
+ *     unmeasurable (zero executions)     1   (uk-gazette-notice-search)
+ *
+ * So the population is not "unmeasured and therefore dangerous"; it is
+ * "unmeasured and, bar one, demonstrably fast". Flipping the default to async
+ * would move 38 correctly-routed fast capabilities onto a 202-and-poll
+ * contract to fix one — changing the response shape for every caller of each,
+ * to solve a problem that populating the field solves exactly.
+ *
+ * Decision: keep sync, and populate. The residual is
+ * `uk-gazette-notice-search`, which has never executed, so nothing can be said
+ * about its duration — it stays null and stays sync, and if it is ever called
+ * and is slow, `audit-execution-routing.ts` is what surfaces it.
+ * `capability-readiness.ts` already reports a null as an issue.
  */
 export function shouldExecuteAsync(avgLatencyMs: number | null | undefined): boolean {
   return (avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
