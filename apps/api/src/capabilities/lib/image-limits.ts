@@ -26,7 +26,7 @@
  * There is no corresponding default for output geometry.
  */
 
-import { logError } from "../../lib/log.js";
+import { logError, logWarn } from "../../lib/log.js";
 
 /**
  * Largest decoded image the platform accepts.
@@ -101,6 +101,46 @@ export const MAX_C2PA_MEDIA_BYTES = 15 * 1024 * 1024;
  * measurement.
  */
 export const MAX_MEASURED_TRANSFER_BYTES = 100 * 1024 * 1024;
+
+/**
+ * Largest HTML document the shared web-provider layer will fetch, on any of
+ * its three tiers (#428).
+ *
+ * Measured, not assumed. Real HTML *documents* (not total page weight) fetched
+ * with a plain GET, 2026-08-28:
+ *
+ *     Hacker News front page                    34.6 KB
+ *     BBC News homepage                        401   KB
+ *     Wikipedia "S&P 500 list"                 568   KB
+ *     Wikipedia "List of Japanese films 2019"    1.08 MB
+ *     Wikipedia "Sweden"                         1.66 MB
+ *     Wikipedia "List of Latin phrases (full)"   1.80 MB
+ *     Wikipedia "COVID-19 pandemic"              3.18 MB
+ *     WHATWG HTML spec, single page             15.58 MB
+ *
+ * 16 MiB is 5.3x the heaviest ordinary content page in that sample, so no
+ * realistic extraction target is refused — and it still clears the single-page
+ * HTML spec, the canonical largest legitimate HTML document and a plausible
+ * `url-to-markdown` input. 8 MiB was considered and rejected: it refuses that
+ * document and sits only ~2.5x above a normal encyclopedia article.
+ *
+ * ONE number for all three tiers. The evidence does not show raw HTML, Jina's
+ * reformat, and Browserless's rendered DOM needing materially different
+ * ceilings, and three constants would be three things to drift.
+ */
+export const MAX_FETCHED_HTML_BYTES = 16 * 1024 * 1024;
+
+/**
+ * Cap for reading a vendor's ERROR body for diagnostics (#428).
+ *
+ * Deliberately paired with truncation rather than refusal: an error body is
+ * read to classify and log a failure that has already happened, so refusing it
+ * would discard the diagnostic instead of bounding it. 64 KiB is far past any
+ * real Browserless/vendor error payload (they are short JSON or plain text),
+ * and every consumer of these bodies already reads a prefix — regex-matching
+ * `net::ERR_*` markers or slicing the first 200 chars.
+ */
+export const MAX_ERROR_BODY_BYTES = 64 * 1024;
 
 /** No single output edge beyond this. 10,000 px is well past any real display or print need. */
 export const MAX_OUTPUT_DIMENSION = 10_000;
@@ -518,6 +558,65 @@ export async function countBodyBytes(
   return consumeBody(response, maxBytes, field, entity);
 }
 
+/**
+ * Read a response as TEXT, bounded (#428).
+ *
+ * The string sibling of `readBodyWithLimit`, for HTML/XML/plain-text bodies.
+ * `await response.text()` has the same defect `arrayBuffer()` had: by the time
+ * it resolves the whole body is resident, so a length check afterwards
+ * describes rather than bounds. Bytes are capped while streaming and only then
+ * decoded, so the decode never sees more than `maxBytes`.
+ *
+ * Decoding matches WHATWG `Response.text()` — UTF-8 with replacement
+ * characters for invalid sequences — plus the BOM strip that `text()` performs
+ * and `Buffer.toString("utf8")` does not. Without that strip, a BOM-prefixed
+ * page would gain a leading U+FEFF it never used to have, which would break
+ * markup checks that test the first character.
+ */
+export async function readTextWithLimit(
+  response: Response,
+  maxBytes: number,
+  field = "url",
+  entity?: string,
+): Promise<string> {
+  const buf = await readBodyWithLimit(response, maxBytes, field, entity);
+  const text = buf.toString("utf-8");
+  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+/**
+ * Read a vendor's ERROR body for diagnostics, TRUNCATING at the cap (#428).
+ *
+ * Truncation, not refusal, is the correct semantic here: the body is being
+ * read to explain a failure that already happened, so a refusal would throw
+ * away the diagnostic instead of bounding it — and would replace an accurate
+ * upstream error with a size error. Never throws: a transport fault mid-read
+ * yields whatever prefix arrived, exactly like the `.catch(() => "")` this
+ * replaces, but bounded.
+ */
+export async function readErrorTextTruncated(
+  response: Response,
+  maxBytes: number = MAX_ERROR_BODY_BYTES,
+): Promise<string> {
+  try {
+    if (!response.body) {
+      const buf = Buffer.from(await response.arrayBuffer());
+      return buf.subarray(0, maxBytes).toString("utf-8");
+    }
+    const chunks: Uint8Array[] = [];
+    // Length computed from the chunks themselves rather than passed in: in
+    // truncate mode the core's return value is the cap, and a mismatched
+    // explicit length would silently pad or clip.
+    await consumeBody(response, maxBytes, "error_body", undefined, (c) => chunks.push(c), "truncate");
+    return Buffer.concat(chunks).toString("utf-8");
+  } catch (err) {
+    logWarn("error-body-read-failed", "could not read vendor error body", {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return "";
+  }
+}
+
 const limitPhrase = (entity: string | undefined, maxBytes: number) =>
   `${entity ? `${entity} ` : ""}${mib(maxBytes)} or less`;
 
@@ -527,6 +626,12 @@ const limitPhrase = (entity: string | undefined, maxBytes: number) =>
  * cancel-at-cap, reader cleanup. `readBodyWithLimit` retains chunks through
  * `onChunk`; `countBodyBytes` passes no sink. Two exports, one discipline —
  * a fix to either lands in both by construction.
+ *
+ * `limitMode` (#428) decides what crossing the cap MEANS. "refuse" is the
+ * resource-safety default: the caller asked for something too big and gets a
+ * refusal. "truncate" stops reading and keeps the bounded prefix — for bodies
+ * read to diagnose a failure, where refusing would discard the diagnostic.
+ * Both stop pulling at the same point; only the outcome differs.
  */
 async function consumeBody(
   response: Response,
@@ -534,11 +639,14 @@ async function consumeBody(
   field: string,
   entity: string | undefined,
   onChunk?: (chunk: Uint8Array) => void,
+  limitMode: "refuse" | "truncate" = "refuse",
 ): Promise<number> {
   const phrase = limitPhrase(entity, maxBytes);
   // Trust a declared length enough to refuse early, never enough to accept.
+  // In truncate mode a large declaration is not a refusal — the prefix is
+  // still wanted — so the stream is read and cut at the cap below.
   const declared = Number(response.headers.get("content-length"));
-  if (Number.isFinite(declared) && declared > maxBytes) {
+  if (limitMode === "refuse" && Number.isFinite(declared) && declared > maxBytes) {
     // Cancel the unconsumed body before throwing — leaving it open pins the
     // keep-alive connection until GC (same class as safe-fetch's review L-1
     // fix for 3xx bodies; #412 review found it here).
@@ -556,8 +664,7 @@ async function consumeBody(
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      total += value.byteLength;
-      if (total > maxBytes) {
+      if (total + value.byteLength > maxBytes) {
         // Stop pulling. The bytes already read are bounded by maxBytes plus
         // one chunk, which is the point.
         //
@@ -569,8 +676,15 @@ async function consumeBody(
         await reader
           .cancel()
           .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
-        throw new ImageLimitError(`'${field}' must be ${phrase}.`);
+        if (limitMode === "refuse") {
+          throw new ImageLimitError(`'${field}' must be ${phrase}.`);
+        }
+        // Truncate: keep exactly the prefix that fits, then stop.
+        const remaining = maxBytes - total;
+        if (remaining > 0) onChunk?.(value.subarray(0, remaining));
+        return maxBytes;
       }
+      total += value.byteLength;
       onChunk?.(value);
     }
   } finally {

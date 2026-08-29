@@ -41,6 +41,29 @@ export function streamingResponse(
   totalBytes: number,
   opts: { declare?: number; contentType?: string } = {},
 ): StreamingResponseHandle {
+  return streamFrom(totalBytes, (offset, size) => ZERO_CHUNK.subarray(0, size), opts);
+}
+
+/**
+ * Same instrumentation, but streaming REAL bytes (#428).
+ *
+ * Zero-filled bodies are fine where only the byte count is under test, but
+ * web-provider's tiers gate on the CONTENT — a body needs `<body>` markup and
+ * enough visible text to be accepted, and a challenge page has to actually
+ * read like one. Those tests need the bytes to mean something.
+ */
+export function streamingResponseOf(
+  content: Buffer,
+  opts: { declare?: number; contentType?: string } = {},
+): StreamingResponseHandle {
+  return streamFrom(content.byteLength, (offset, size) => content.subarray(offset, offset + size), opts);
+}
+
+function streamFrom(
+  totalBytes: number,
+  chunkAt: (offset: number, size: number) => Uint8Array,
+  opts: { declare?: number; contentType?: string },
+): StreamingResponseHandle {
   let sent = 0;
   let pulls = 0;
   let cancelled = false;
@@ -53,7 +76,7 @@ export function streamingResponse(
         }
         pulls++;
         const size = Math.min(CHUNK, totalBytes - sent);
-        ctrl.enqueue(ZERO_CHUNK.subarray(0, size));
+        ctrl.enqueue(chunkAt(sent, size));
         sent += size;
       },
       cancel() {

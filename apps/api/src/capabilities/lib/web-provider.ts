@@ -18,12 +18,70 @@
  * Railway URL; the user URL is forwarded in the body but Browserless
  * fetches it from its own network. `validateUrl` at the top of
  * `fetchPage` is the only layer we own for tiers 2 and 3.
+ *
+ * ## Resource bounds (#428) — what is and is not bounded
+ *
+ * All three tiers read their body through `readHtml`, capped at
+ * `MAX_FETCHED_HTML_BYTES`; the cache carries a total byte budget as well as
+ * an entry count. Precisely:
+ *
+ *   BOUNDED — the bytes materialised from any ONE remote response (streamed
+ *   and cut at the cap, never `.text()`-then-measured), and the total payload
+ *   residency of the response cache.
+ *
+ *   NOT BOUNDED — the process's global footprint under concurrency. Tiers 1
+ *   and 2 sit outside `withBrowserLimit`, so N simultaneous requests can each
+ *   hold up to the cap; the real ceiling is (concurrent requests x cap) +
+ *   cache budget, plus transport chunk overhead, the Buffer→string copy, and
+ *   whatever a downstream parser allocates from the returned HTML. Turning
+ *   "unbounded" into "bounded per response and per cache" is the claim here;
+ *   global containment is not.
+ *
+ * Oversize is TERMINAL, not a fallback trigger: a page too large on one tier
+ * is not re-fetched by the next. See the ImageLimitError re-throws below.
  */
 
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { safeFetch } from "../../lib/safe-fetch.js";
 import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
+import { logWarn } from "../../lib/log.js";
+import {
+  ImageLimitError,
+  MAX_FETCHED_HTML_BYTES,
+  readErrorTextTruncated,
+  readTextWithLimit,
+} from "./image-limits.js";
+
+/**
+ * Read one tier's HTML body under the shared cap (#428).
+ *
+ * All three tiers funnel through here so the ceiling, the refusal wording and
+ * the streaming discipline cannot diverge between them. The refusal names
+ * `url` and reads as a statement about the PAGE, not about the URL string.
+ */
+function readHtml(response: Response): Promise<string> {
+  return readTextWithLimit(response, MAX_FETCHED_HTML_BYTES, "url", "a page whose HTML is");
+}
+
+/**
+ * Discard a response body we are NOT going to read (#428).
+ *
+ * Every fall-through path below abandons a response mid-flight — wrong
+ * content-type, bot-gating 4xx, a Jina miss. Leaving those bodies unconsumed
+ * pins the keep-alive connection until GC (the class fixed for 3xx bodies in
+ * safe-fetch and for refusals in image-limits). Logged, never swallowed.
+ */
+async function discardBody(response: Response, reason: string): Promise<void> {
+  await response.body
+    ?.cancel()
+    .catch((err) =>
+      logWarn("web-provider-body-cancel-failed", "could not cancel unread body", {
+        reason,
+        err: String(err),
+      }),
+    );
+}
 
 /**
  * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
@@ -94,12 +152,36 @@ export interface WebProviderResult {
 interface CacheEntry {
   html: string;
   createdAt: number;
+  /** UTF-8 payload size, recorded at insert so accounting never re-measures. */
+  bytes: number;
 }
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_ENTRIES = 200;
 
+/**
+ * Total cache payload budget (#428).
+ *
+ * The entry count alone bounded nothing: 200 entries x an unbounded per-entry
+ * size was an unbounded cache. Even with the new 16 MiB per-response cap the
+ * count limit alone would permit 3.2 GB on a 1 GB Railway box.
+ *
+ * 64 MiB, and BOTH limits bind in the traffic that actually occurs: registry
+ * pages run 1-30 KB, so 200 entries (~6 MB) is reached first and current
+ * behaviour is unchanged; heavy content pages run 0.4-3 MB, so the byte budget
+ * binds first and the cache stops at ~20-150 entries instead of hoarding
+ * gigabytes. Worst case is 6.25% of the box.
+ *
+ * Lives here rather than in the byte-limit authority module: this is the
+ * web-provider's own cache policy, not a limit on what any capability may
+ * fetch. `MAX_FETCHED_HTML_BYTES` (the fetch cap) is the authority's.
+ */
+const MAX_WEB_PROVIDER_CACHE_BYTES = 64 * 1024 * 1024;
+
 const cache = new Map<string, CacheEntry>();
+/** Running sum of `bytes` over live entries. Every mutation goes through
+ * dropEntry/setCache so this cannot drift from the map. */
+let cacheBytes = 0;
 
 /**
  * Cache-key namespace for a given call's rendering semantics.
@@ -132,12 +214,24 @@ function cacheKey(namespace: string, url: string): string {
   return `${namespace}::${url}`;
 }
 
+/**
+ * The ONLY way an entry leaves the cache (#428). Every removal — expiry,
+ * eviction, overwrite — goes through here, so the byte total is adjusted
+ * exactly once per entry and cannot drift or go negative.
+ */
+function dropEntry(key: string): void {
+  const entry = cache.get(key);
+  if (!entry) return;
+  cacheBytes -= entry.bytes;
+  cache.delete(key);
+}
+
 function getCached(namespace: string, url: string): string | null {
   const key = cacheKey(namespace, url);
   const entry = cache.get(key);
   if (!entry) return null;
   if (Date.now() - entry.createdAt > DEFAULT_TTL_MS) {
-    cache.delete(key);
+    dropEntry(key);
     return null;
   }
   return entry.html;
@@ -145,12 +239,49 @@ function getCached(namespace: string, url: string): string | null {
 
 function setCache(namespace: string, url: string, html: string): void {
   const key = cacheKey(namespace, url);
-  // Evict oldest entries if cache is full
-  if (cache.size >= MAX_CACHE_ENTRIES) {
+  // UTF-8 payload size — the same measure the fetch cap counts on the wire, so
+  // a value that passed MAX_FETCHED_HTML_BYTES is accounted the same way here.
+  // This bounds the PAYLOAD, not V8's heap footprint for the string; see the
+  // module header for what is and is not bounded.
+  const bytes = Buffer.byteLength(html, "utf8");
+
+  // Overwrite is drop-then-insert. Two reasons: the old entry's bytes must come
+  // off the total exactly once (a plain Map.set would leak them), and a
+  // refreshed entry earning a new position is the coherent reading of
+  // insertion-order eviction. It also fixes a pre-existing bug — the old code
+  // evicted an unrelated oldest entry whenever it wrote at size >= the cap,
+  // even when the write was an overwrite that grew the cache by nothing.
+  dropEntry(key);
+
+  // An entry that cannot fit the budget alone is not cached at all, rather
+  // than evicting the whole cache to make room for one page. Unreachable while
+  // MAX_FETCHED_HTML_BYTES < the budget; kept so the invariant holds if either
+  // number moves.
+  if (bytes > MAX_WEB_PROVIDER_CACHE_BYTES) return;
+
+  // Evict oldest-first until BOTH bounds admit the new entry.
+  while (
+    cache.size > 0 &&
+    (cache.size >= MAX_CACHE_ENTRIES || cacheBytes + bytes > MAX_WEB_PROVIDER_CACHE_BYTES)
+  ) {
     const oldest = cache.keys().next().value;
-    if (oldest !== undefined) cache.delete(oldest);
+    if (oldest === undefined) break;
+    dropEntry(oldest);
   }
-  cache.set(key, { html, createdAt: Date.now() });
+
+  cache.set(key, { html, createdAt: Date.now(), bytes });
+  cacheBytes += bytes;
+}
+
+/** Reset cache + byte accounting. Test seam only (`__…ForTests` convention). */
+export function __resetWebProviderCacheForTests(): void {
+  cache.clear();
+  cacheBytes = 0;
+}
+
+/** Observe cache accounting without exporting the map. Test seam only. */
+export function __webProviderCacheStatsForTests(): { entries: number; bytes: number } {
+  return { entries: cache.size, bytes: cacheBytes };
 }
 
 // ─── Retry with exponential backoff + jitter ────────────────────────────────
@@ -360,7 +491,10 @@ export async function fetchPage(
       if (plainResp.ok) {
         const contentType = plainResp.headers.get("content-type") ?? "";
         if (contentType.includes("text/html") || contentType.includes("xhtml")) {
-          const html = await plainResp.text();
+          // #428: bounded read, then decode. `plainResp.text()` resolved with
+          // the whole body resident, so the length heuristics below described
+          // the page instead of bounding it.
+          const html = await readHtml(plainResp);
           // Heuristic: if body has substantial text content, skip Browserless.
           // Style content is stripped like scripts — embedded CSS inflated
           // bodyText past the bar on EUR-Lex's 2KB challenge page.
@@ -381,21 +515,34 @@ export async function fetchPage(
             if (!skipCache) setCache(renderMode, targetUrl, html);
             return { html, cached: false, fetchTimeMs, attempt: 0 };
           }
+        } else {
+          // Not HTML at all — nothing here will be read, so release it (#428).
+          await discardBody(plainResp, `plain-fetch content-type ${contentType || "(none)"}`);
         }
         // HTTP response received but not usable HTML — fall through to Browserless
       } else if ([404, 410, 401, 407].includes(plainResp.status)) {
+        await discardBody(plainResp, `plain-fetch HTTP ${plainResp.status}`);
         // Genuinely permanent 4xx: missing (404/410) or auth-gated (401/407) —
         // don't waste a 30s+ Browserless render. Prefix with "URL returned
         // HTTP" so the catch block below recognizes it as fatal.
         throw new Error(`URL returned HTTP ${plainResp.status}. ${humanizeBrowserlessStatus(plainResp.status, targetUrl)}`);
+      } else {
+        // Other 4xx (400/403/429) are routinely BOT-GATING, not permanent:
+        // EUR-Lex serves HTTP 400 to datacenter IPs and a 202-empty challenge
+        // to residential ones (observed live, Railway US East vs Sweden,
+        // 2026-08-12) — a rendered browser still succeeds. Fall through to
+        // Jina/Browserless like 5xx, releasing the body we won't read (#428).
+        // 5xx errors: fall through too (server might render differently).
+        await discardBody(plainResp, `plain-fetch HTTP ${plainResp.status}`);
       }
-      // Other 4xx (400/403/429) are routinely BOT-GATING, not permanent:
-      // EUR-Lex serves HTTP 400 to datacenter IPs and a 202-empty challenge
-      // to residential ones (observed live, Railway US East vs Sweden,
-      // 2026-08-12) — a rendered browser still succeeds. Fall through to
-      // Jina/Browserless like 5xx.
-      // 5xx errors: fall through to Browserless (server might render differently)
     } catch (err) {
+      // #428: an oversized page is TERMINAL, never a reason to fall through.
+      // Letting it cascade would have Jina fetch the same huge resource and
+      // then Browserless render it — three transfers of a page already judged
+      // too big. A different tier is a different representation, not a smaller
+      // one: Jina reformats the same content and a rendered DOM is typically
+      // LARGER than the raw HTML.
+      if (err instanceof ImageLimitError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
       // Helpful 4xx message already constructed upstream — propagate as-is.
       if (msg.includes("URL returned HTTP 4")) {
@@ -440,15 +587,22 @@ export async function fetchPage(
       });
 
       if (jinaResp.ok) {
-        const html = await jinaResp.text();
+        // #428: bounded read under the same shared cap as the other tiers.
+        const html = await readHtml(jinaResp);
         if (html.length > 500 && !looksLikeJsChallenge(html)) {
           const fetchTimeMs = Date.now() - start;
           if (!skipCache) setCache(renderMode, targetUrl, html);
           return { html, cached: false, fetchTimeMs, attempt: 0 };
         }
+      } else {
+        await discardBody(jinaResp, `jina HTTP ${jinaResp.status}`);
       }
       // Jina returned empty/short content or error — fall through to Browserless
-    } catch {
+    } catch (err) {
+      // #428: oversize is terminal here too — see the tier-1 note. Jina's
+      // reformat of a 16 MiB+ page is not a smaller representation, and
+      // rendering it in Browserless afterwards is strictly more work.
+      if (err instanceof ImageLimitError) throw err;
       // Jina timeout or network error — fall through to Browserless
     }
   }
@@ -487,7 +641,12 @@ export async function fetchPage(
         });
 
         if (!response.ok) {
-          const errText = await response.text().catch(() => "");
+          // #428: bounded, and TRUNCATED rather than refused — this body
+          // exists to explain a failure that already happened, so a size
+          // refusal here would discard the diagnostic and replace an accurate
+          // upstream error with a size error. Never throws (same contract as
+          // the `.catch(() => "")` it replaces), but no longer unbounded.
+          const errText = await readErrorTextTruncated(response);
           // Six-lens review finding Medium (2026-08-16, round 3): a
           // Chrome/Browserless net-error (DNS doesn't resolve, connection
           // refused, bad cert) arrives wrapped in a 5xx/408/429 status that
@@ -517,7 +676,10 @@ export async function fetchPage(
           throw new Error(humanMsg);
         }
 
-        const html = await response.text();
+        // #428: bounded read, then decode — same cap as tiers 1 and 2, so a
+        // page too large to fetch plainly is not silently accepted when a
+        // rendered DOM (typically LARGER than the raw HTML) comes back here.
+        const html = await readHtml(response);
         const fetchTimeMs = Date.now() - start;
 
         if (!html || html.length < minHtmlLength) {
@@ -546,6 +708,10 @@ export async function fetchPage(
 
         return { html, cached: false, fetchTimeMs, attempt: attempt + 1 };
       } catch (err) {
+        // #428: an oversize refusal is deterministic — the page is the size it
+        // is — so it must not consume a retry. Re-rendering it would transfer
+        // 16 MiB+ again to reach the identical answer.
+        if (err instanceof ImageLimitError) throw err;
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < maxRetries - 1) {
           const msg = lastError.message.toLowerCase();
