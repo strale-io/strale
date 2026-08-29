@@ -6,7 +6,7 @@ import {
   MAX_DECODED_IMAGE_BYTES,
   checkedBase64,
   readBodyWithLimit,
-} from "./lib/image-limits.js";
+} from "../lib/resource-limits.js";
 
 registerCapability("receipt-categorize", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string)?.trim() ?? (input.url as string)?.trim();

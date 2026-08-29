@@ -5,7 +5,7 @@ import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { logWarn } from "../lib/log.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
+import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit, readErrorTextTruncated } from "../lib/resource-limits.js";
 
 /**
  * Normalize the `wait_for` input into a Browserless wait directive.
@@ -172,7 +172,7 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
 
     response = await shoot(shapeFor(dialect));
     if (!response.ok) {
-      const err = await response.text().catch(() => "");
+      const err = await readErrorTextTruncated(response);
       if (!isWaitKeyRejection(response.status, err)) throwBrowserlessError(response.status, err);
       // Endpoint speaks the other dialect (see toV1WaitFor) — retry with it.
       const rejected = dialect;
@@ -187,7 +187,7 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
       );
       response = await shoot(shapeFor(dialect));
       if (!response.ok) {
-        const retryErr = await response.text().catch(() => "");
+        const retryErr = await readErrorTextTruncated(response);
         throwBrowserlessError(
           response.status,
           retryErr,
@@ -201,7 +201,7 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   }
 
   if (!response.ok) {
-    const err = await response.text().catch(() => "");
+    const err = await readErrorTextTruncated(response);
     throwBrowserlessError(response.status, err);
   }
 

@@ -4,7 +4,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import { readPageHtml } from "./lib/image-limits.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 

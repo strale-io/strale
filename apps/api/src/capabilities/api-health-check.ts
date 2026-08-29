@@ -1,5 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch, type SafeFetchOptions } from "../lib/safe-fetch.js";
+import {
+  MAX_FETCHED_API_RESPONSE_BYTES,
+  readTextWithLimit,
+  ResourceLimitError,
+} from "../lib/resource-limits.js";
 
 registerCapability("api-health-check", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? "").trim();
@@ -45,11 +50,32 @@ registerCapability("api-health-check", async (input: CapabilityInput) => {
     contentType = response.headers.get("content-type");
     responseHeaders = Object.fromEntries(response.headers.entries());
 
-    const text = await response.text();
+    // Bounded (#432). The caller picks the URL, method, headers and body, so
+    // the response size is entirely caller-shaped — this was the ledger's
+    // most exposed read.
+    //
+    // The oversize case is handled HERE rather than by the outer catch on
+    // purpose: this capability answers "is this endpoint healthy?", and it
+    // already has the status code, headers and timing by this point. A body
+    // too large to echo back is not evidence of an unhealthy endpoint, so
+    // reporting `is_healthy: false` for it would be a wrong answer to the
+    // question actually asked. The body is dropped, the reason is stated in
+    // its place, and the health verdict is still computed from the status.
     try {
-      responseBody = JSON.parse(text);
-    } catch {
-      responseBody = text.slice(0, 5000);
+      const text = await readTextWithLimit(
+        response,
+        MAX_FETCHED_API_RESPONSE_BYTES,
+        "url",
+        "an endpoint whose response body is",
+      );
+      try {
+        responseBody = JSON.parse(text);
+      } catch {
+        responseBody = text.slice(0, 5000);
+      }
+    } catch (err) {
+      if (!(err instanceof ResourceLimitError)) throw err;
+      responseBody = { note: err.message };
     }
   } catch (err) {
     const responseTimeMs = Date.now() - start;

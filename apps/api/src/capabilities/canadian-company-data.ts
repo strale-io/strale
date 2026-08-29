@@ -1,4 +1,9 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import {
+  MAX_FETCHED_API_RESPONSE_BYTES,
+  readJsonWithLimit,
+  readPageHtml,
+} from "../lib/resource-limits.js";
 import { extractCompanyName } from "./lib/browserless-extract.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
@@ -82,7 +87,11 @@ async function fetchCorporationJson(registryNumber: string): Promise<Record<stri
   if (!response.ok) {
     throw new Error(`Corporations Canada API returned HTTP ${response.status}`);
   }
-  const data = (await response.json()) as unknown[];
+  const data = await readJsonWithLimit<unknown[]>(
+    response,
+    MAX_FETCHED_API_RESPONSE_BYTES,
+    "corporation_number",
+  );
   const first = Array.isArray(data) ? data[0] : null;
   if (typeof first === "string") {
     // Not-found shape: ["could not find corporation …", "… est inconnu."]
@@ -215,7 +224,7 @@ async function searchByName(query: string): Promise<CaNameCandidate[]> {
   if (!response.ok) {
     throw new Error(`Corporations Canada name search returned HTTP ${response.status}.`);
   }
-  const html = await response.text();
+  const html = await readPageHtml(response, "company_name");
   const candidates = parseNameSearchResults(html);
   if (candidates.length === 0) {
     throw new Error(`No Canadian company found matching "${query}".`);

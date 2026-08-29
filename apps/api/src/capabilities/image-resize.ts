@@ -12,7 +12,7 @@ import {
   checkedBase64,
   effectiveOutputGeometry,
   readBodyWithLimit,
-} from "./lib/image-limits.js";
+} from "../lib/resource-limits.js";
 
 registerCapability("image-resize", async (input: CapabilityInput) => {
   const imageUrl = (input.image_url as string) ?? (input.url as string) ?? undefined;
@@ -53,7 +53,7 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
   // cheap-request/expensive-work case: a 235-byte source with
   // target_width=100000 produced a 131 MB output over 96 seconds of CPU. The
   // rail body cap cannot see that — the request is tiny — so the check has to
-  // sit next to the parameter that does the amplifying. See lib/image-limits.ts.
+  // sit next to the parameter that does the amplifying. See lib/resource-limits.ts.
   assertOutputGeometryWithinLimit(targetWidth, targetHeight);
 
   // Get image buffer
@@ -63,7 +63,7 @@ registerCapability("image-resize", async (input: CapabilityInput) => {
     // refused-if-oversized in one step, and the RETURNED string is the one
     // that was measured, so it is safe to hand to Buffer.from. The history of
     // hand-composing these primitives (whitespace, padding, and data-URI bugs,
-    // all reviewer-found) is narrated in image-limits.ts.
+    // all reviewer-found) is narrated in resource-limits.ts.
     const data = checkedBase64(base64Input, MAX_DECODED_IMAGE_BYTES);
     imageBuffer = Buffer.from(data, "base64");
   } else {

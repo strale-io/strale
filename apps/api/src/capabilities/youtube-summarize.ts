@@ -1,4 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import {
+  MAX_FETCHED_API_RESPONSE_BYTES,
+  readJsonWithLimit,
+  readPageHtml,
+  readTextWithLimit,
+} from "../lib/resource-limits.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
@@ -25,7 +31,11 @@ registerCapability("youtube-summarize", async (input: CapabilityInput) => {
       { signal: AbortSignal.timeout(5000) },
     );
     if (oembedRes.ok) {
-      const meta = await oembedRes.json() as Record<string, string>;
+      const meta = await readJsonWithLimit<Record<string, string>>(
+        oembedRes,
+        MAX_FETCHED_API_RESPONSE_BYTES,
+        "url",
+      );
       title = meta.title ?? "";
       channel = meta.author_name ?? "";
     }
@@ -99,7 +109,7 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
       signal: AbortSignal.timeout(10000),
     });
     if (pageRes.ok) {
-      const html = await pageRes.text();
+      const html = await readPageHtml(pageRes);
       if (html.includes('"captions"')) pageHtml = html;
     }
   } catch { /* fall through to Browserless */ }
@@ -127,7 +137,12 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
   const captionRes = await fetch(captionUrl, { signal: AbortSignal.timeout(10000) });
   if (!captionRes.ok) return null;
 
-  const xml = await captionRes.text();
+  const xml = await readTextWithLimit(
+    captionRes,
+    MAX_FETCHED_API_RESPONSE_BYTES,
+    "url",
+    "a video whose caption track is",
+  );
   // Parse XML transcript — extract text content
   const textParts = xml.match(/<text[^>]*>([\s\S]*?)<\/text>/g) ?? [];
   const lines = textParts.map((t) => {

@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
-import { MAX_MEASURED_TRANSFER_BYTES, countBodyBytes } from "./lib/image-limits.js";
+import { MAX_MEASURED_TRANSFER_BYTES, countBodyBytes } from "../lib/resource-limits.js";
 
 // Constants from the Sustainable Web Design model / Website Carbon methodology
 const ENERGY_PER_GB_KWH = 0.81; // kWh per GB transferred

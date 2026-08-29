@@ -27,9 +27,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, resolve } from "node:path";
 
 const safeFetchMock = vi.fn();
 const browserlessFetchMock = vi.fn();
@@ -59,7 +59,7 @@ import {
   __resetWebProviderCacheForTests,
   __webProviderCacheStatsForTests,
 } from "./web-provider.js";
-import { MAX_FETCHED_HTML_BYTES, MAX_ERROR_BODY_BYTES, ImageLimitError } from "./image-limits.js";
+import { MAX_FETCHED_HTML_BYTES, MAX_ERROR_BODY_BYTES, ResourceLimitError } from "../../lib/resource-limits.js";
 import { streamingResponseOf } from "./streaming-response-testutil.js";
 import {
   classifyTransactionFailure,
@@ -324,7 +324,7 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
 describe("oversize does not cascade through the tiers", () => {
   it("an oversized plain fetch does NOT trigger Jina or Browserless", async () => {
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
-    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ImageLimitError);
+    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ResourceLimitError);
     expect(globalThis.fetch, "Jina re-fetched a page already judged too large").not.toHaveBeenCalled();
     expect(
       browserlessFetchMock,
@@ -337,7 +337,7 @@ describe("oversize does not cascade through the tiers", () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       streamingResponseOf(htmlOfBytes(LIMIT + 1)).response,
     );
-    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ImageLimitError);
+    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ResourceLimitError);
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
@@ -345,7 +345,7 @@ describe("oversize does not cascade through the tiers", () => {
     browserlessFetchMock.mockResolvedValue(streamingResponseOf(htmlOfBytes(LIMIT + 1)).response);
     await expect(
       fetchPage(URL_UNDER_TEST, { skipFallback: true, maxRetries: 3 }),
-    ).rejects.toThrow(ImageLimitError);
+    ).rejects.toThrow(ResourceLimitError);
     expect(browserlessFetchMock, "an oversize refusal consumed a retry").toHaveBeenCalledTimes(1);
   });
 
@@ -402,16 +402,44 @@ describe("response cache byte accounting", () => {
 
   const stats = __webProviderCacheStatsForTests;
 
-  it("accounts a single entry by its UTF-8 payload size", async () => {
+  /**
+   * What the cache charges for an ASCII page of `bytes` bytes.
+   *
+   * `length * 2` since #432: the budget accounts V8's worst-case residency for
+   * a JS string rather than its UTF-8 payload size, because a mostly-ASCII
+   * page carrying one non-Latin-1 character occupies two bytes per character
+   * in the heap while measuring one per character on the wire. These fixtures
+   * are ASCII, so `length === bytes` and the charge is exactly double.
+   */
+  const charged = (bytes: number) => bytes * 2;
+
+  it("accounts a single entry at V8's worst-case string residency", async () => {
     await cachePage("https://a.test/1", 10_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
+  });
+
+  it("charges by UTF-16 units, so one astral character costs four bytes not three", async () => {
+    // The shape the old UTF-8 measure got wrong. An emoji is 4 bytes in UTF-8
+    // and 2 UTF-16 code units in V8 — but its real cost is that it flips the
+    // WHOLE string to two bytes per character, which `length * 2` already
+    // accounts for and `Buffer.byteLength` did not.
+    await cachePage("https://a.test/ascii", 10_000);
+    const asciiCharge = stats().bytes;
+    __resetWebProviderCacheForTests();
+    plainTier(
+      streamingResponseOf(Buffer.from(`${htmlOfBytes(10_000).toString()}\u{1F600}`), {
+        contentType: "text/html",
+      }),
+    );
+    await fetchPage("https://a.test/emoji");
+    expect(stats().bytes).toBe(asciiCharge + 4);
   });
 
   it("evicts oldest-first on the ENTRY count, keeping bytes consistent", async () => {
     for (let i = 0; i < 205; i++) await cachePage(`https://a.test/${i}`, 3_000);
     const s = stats();
     expect(s.entries).toBe(200);
-    expect(s.bytes).toBe(200 * 3_000);
+    expect(s.bytes).toBe(charged(200 * 3_000));
   });
 
   it("evicts on the BYTE budget before the entry count is reached", async () => {
@@ -421,7 +449,7 @@ describe("response cache byte accounting", () => {
     const s = stats();
     expect(s.entries, "byte budget did not bind before the entry cap").toBeLessThan(40);
     expect(s.bytes).toBeLessThanOrEqual(CACHE_BUDGET);
-    expect(s.bytes).toBe(s.entries * twoMiB);
+    expect(s.bytes).toBe(charged(s.entries * twoMiB));
   });
 
   /**
@@ -441,49 +469,50 @@ describe("response cache byte accounting", () => {
   it("an overwrite replaces accounting rather than adding to it", async () => {
     await cachePage("https://c.test/x", 10_000);
     await overwriteCached("https://c.test/x", 10_000, 20_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
   });
 
   it("a SHRINKING overwrite lowers the total", async () => {
     await cachePage("https://c.test/y", 50_000);
     await overwriteCached("https://c.test/y", 5_000, 60_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 5_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(5_000) });
   });
 
   it("a GROWING overwrite raises the total by the difference only", async () => {
     await cachePage("https://c.test/z", 5_000);
     await overwriteCached("https://c.test/z", 50_000, 6_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 50_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(50_000) });
   });
 
   it("expiry removes the entry AND its bytes", async () => {
     await cachePage("https://d.test/1", 10_000);
-    expect(stats().bytes).toBe(10_000);
+    expect(stats().bytes).toBe(charged(10_000));
     const realNow = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(realNow + 6 * 60 * 1000);
     // A read past the TTL is what prunes the entry.
     plainTier(streamingResponseOf(htmlOfBytes(4_000), { contentType: "text/html" }));
     await fetchPage("https://d.test/1");
-    expect(stats()).toEqual({ entries: 1, bytes: 4_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(4_000) });
   });
 
   it("an oversize refusal caches nothing and leaks no bytes", async () => {
     await cachePage("https://e.test/keep", 10_000);
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
-    await expect(fetchPage("https://e.test/huge")).rejects.toThrow(ImageLimitError);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    await expect(fetchPage("https://e.test/huge")).rejects.toThrow(ResourceLimitError);
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
   });
 
   it("a failed fetch caches nothing and leaks no bytes", async () => {
     await cachePage("https://f.test/keep", 10_000);
     safeFetchMock.mockResolvedValue(new Response(null, { status: 404 }));
     await expect(fetchPage("https://f.test/gone")).rejects.toThrow(/HTTP 404/);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
   });
 
   it("INVARIANT: after every operation the total is non-negative and within budget", async () => {
-    // 12 x 6 MiB = 72 MiB written against a 64 MiB budget, so the byte bound
-    // MUST evict — sized deliberately past the budget so this test fails if
+    // 12 x 6 MiB written against a 64 MiB budget — 144 MiB accounted at the
+    // `length * 2` charge — so the byte bound MUST evict. Sized deliberately
+    // past the budget so this test fails if
     // byte-eviction is ever removed, rather than passing because the traffic
     // happened to stay small. (Every size also clears tier 1's own >2000-char
     // gate; a smaller page would fall through to the unmocked lower tiers.)
@@ -494,7 +523,7 @@ describe("response cache byte accounting", () => {
       expect(s.bytes).toBeGreaterThanOrEqual(0);
       expect(s.bytes, "cache exceeded its declared byte budget").toBeLessThanOrEqual(CACHE_BUDGET);
       expect(s.entries).toBeLessThanOrEqual(200);
-      expect(s.bytes, "byte total drifted from the live entries").toBe(s.entries * big);
+      expect(s.bytes, "byte total drifted from the live entries").toBe(charged(s.entries * big));
     }
   });
 
@@ -544,7 +573,7 @@ describe("failure taxonomy", () => {
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
     const err = (await fetchPage(URL_UNDER_TEST).catch((e: Error) => e)) as Error;
 
-    expect(err).toBeInstanceOf(ImageLimitError);
+    expect(err).toBeInstanceOf(ResourceLimitError);
     expect(isUserInputError(err.message), "breaker would count this as a fault").toBe(true);
     expect(isCapabilityRefusal(err), "not recognised as a refusal").toBe(true);
     expect(categorizeError(err), "trust surfaces would call this our defect").toBe(
@@ -570,114 +599,21 @@ describe("failure taxonomy", () => {
   });
 });
 
-// ─── Structural guard: unbounded reads on caller-URL fetch paths ─────────────
+// ─── Structural: web-provider reads only through the shared helpers ──────────
 
 /**
- * #426's sweep only caught `await x.arrayBuffer(` — which is why a whole
- * population of `await x.text()` reads on caller-supplied URLs was invisible
- * to it. This guard closes that axis.
- *
- * Scoped deliberately. A blanket ban on `.text()` across `src/capabilities`
- * would flag ~60 sites, most of them small JSON payloads from fixed vendor
- * hosts, and the noise would make it unmaintainable. The population that
- * actually matters is: a file that fetches remote content on a caller's
- * behalf — it calls `safeFetch`, or it POSTs Browserless `/content` to render
- * a page — and then reads that response with no ceiling.
- *
- * The `/content` half is a round-1 review finding: three capabilities
- * (annual-report-extract, company-enrich, estonian-company-data) rendered
- * pages through Browserless directly rather than through `fetchPage`, so the
- * shared layer's bound never applied to them and a `safeFetch`-only scope
- * would not have noticed.
- *
- * Every such file must appear in the ledger below with its exact count, so:
- *   - a NEW capability that safeFetches a caller URL and reads it unbounded
- *     fails immediately (not in the ledger);
- *   - an EXTRA unbounded read added to an already-listed file fails too (the
- *     count no longer matches);
- *   - a file that gets fixed fails until its entry is removed, so the ledger
- *     cannot rot into a list of things that were fixed years ago.
+ * The general guard against unbounded caller-URL reads moved to
+ * `lib/unbounded-body-reads.test.ts` in #432 — one AST-based scanner rooted at
+ * `apps/api/src`, replacing this file's regex sweep and #426's separate
+ * arrayBuffer sweep. What stays here is the part that is specific to this
+ * module: web-provider must read through the named helpers and take its cap
+ * from the authority module rather than a local number.
  */
-describe("structural guard: unbounded body reads on caller-URL fetch paths", () => {
-  const CAPS_DIR = resolve(__dirname, "..");
-  // `.json()` is in here for a round-2 review reason: lib/jina-reader.ts
-  // buffered a caller-URL response with `.json()`, which is strictly worse
-  // than `.text()` — the parse allocates again on top of the buffered body —
-  // and a text/arrayBuffer-only pattern was blind to it.
-  const UNBOUNDED_READ = /await\s+[A-Za-z_$][\w$]*\.(?:text|arrayBuffer|json)\s*\(\)/g;
-
-  /**
-   * Known-unbounded caller-URL reads, audited 2026-08-29 and tracked for a
-   * follow-up (see the issue linked from #428). Each needs its own limit
-   * judgement — a robots.txt is not a sitemap is not an HTML page — which is
-   * why they are recorded here rather than swept into #428's
-   * shared-infrastructure change. This ledger is the hole made visible, not
-   * permission for it.
-   */
-  const KNOWN_UNBOUNDED: Record<string, number> = {
-    "api-health-check.ts": 1,
-    "backlink-check.ts": 2,
-    "canadian-company-data.ts": 2,
-    "domain-contact-extract.ts": 1,
-    "email-finder.ts": 1,
-    "email-pattern-discover.ts": 1,
-    "gdpr-website-check.ts": 1,
-    "job-posting-analyze.ts": 1,
-    "link-extract.ts": 1,
-    "meta-extract.ts": 1,
-    "og-image-check.ts": 1,
-    "paid-api-preflight.ts": 1,
-    "robots-txt-parse.ts": 1,
-    "seo-audit.ts": 1,
-    "sitemap-parse.ts": 1,
-    "social-post-generate.ts": 1,
-    "tech-stack-detect.ts": 1,
-    "url-to-markdown.ts": 1,
-    "url-to-text.ts": 1,
-    "youtube-summarize.ts": 3,
-  };
-
-  /** Every non-test .ts under src/capabilities, recursively. */
-  function walk(dir: string, acc: string[] = []): string[] {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) walk(full, acc);
-      else if (entry.endsWith(".ts") && !entry.endsWith(".test.ts")) acc.push(full);
-    }
-    return acc;
-  }
-
-  /** file → count of unbounded body reads, for files that fetch caller URLs. */
-  function scan(): Map<string, number> {
-    const found = new Map<string, number>();
-    for (const file of walk(CAPS_DIR)) {
-      const src = readFileSync(file, "utf-8");
-      const fetchesRemoteForCaller =
-        /safeFetch\s*\(/.test(src) || /"\/content"/.test(src) || /r\.jina\.ai/.test(src);
-      if (!fetchesRemoteForCaller) continue;
-      const n = (src.match(UNBOUNDED_READ) ?? []).length;
-      if (n > 0) found.set(relative(CAPS_DIR, file).split(sep).join("/"), n);
-    }
-    return found;
-  }
-
-  it("the ledger matches reality exactly — no unrecorded, no drifted, no stale", () => {
-    // One assertion, one scan. Catches all three failure modes: a new file
-    // reading unbounded (unrecorded key), an extra read in a listed file
-    // (changed count), and a file that got fixed (stale key). vitest's object
-    // diff names the offending file better than an array of tuples would.
-    expect(
-      Object.fromEntries(scan()),
-      "bound the read with readPageHtml/readBodyWithLimit, or record it with a reason",
-    ).toEqual(KNOWN_UNBOUNDED);
-  });
-
-  it("web-provider itself reads only through the bounded helpers", () => {
+describe("web-provider is wired to the shared enforcement", () => {
+  it("reads only through the bounded helpers, with the authority's constant", () => {
     const src = readFileSync(resolve(__dirname, "web-provider.ts"), "utf-8");
-    expect(src).not.toMatch(UNBOUNDED_READ);
     expect(src).toMatch(/readPageHtml\(/);
     expect(src).toMatch(/readErrorTextTruncated\(/);
-    // The cap comes from the authority module, not a local number.
     expect(src).toContain("MAX_FETCHED_HTML_BYTES");
     expect(src).not.toMatch(/const\s+MAX_FETCHED[A-Z_]*\s*=\s*\d/);
   });

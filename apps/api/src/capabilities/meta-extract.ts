@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 
 // Extract metadata via HTTP GET — no Browserless needed
 registerCapability("meta-extract", async (input: CapabilityInput) => {
@@ -18,7 +19,7 @@ registerCapability("meta-extract", async (input: CapabilityInput) => {
   });
 
   if (!response.ok) throw new Error(`HTTP ${response.status} from ${fullUrl}.`);
-  const html = await response.text();
+  const html = await readPageHtml(response);
 
   const output: Record<string, unknown> = { url: fullUrl };
 

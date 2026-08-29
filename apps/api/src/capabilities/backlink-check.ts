@@ -1,5 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import {
+  MAX_FETCHED_API_RESPONSE_BYTES,
+  readJsonWithLimit,
+  readTextWithLimit,
+} from "../lib/resource-limits.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 
 // F-0-006 Bucket D (preemptive migration): user domain is embedded in the
@@ -42,7 +47,12 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
     });
 
     if (ccResp.ok) {
-      const text = await ccResp.text();
+      const text = await readTextWithLimit(
+        ccResp,
+        MAX_FETCHED_API_RESPONSE_BYTES,
+        "domain",
+        "a domain whose Common Crawl index response is",
+      );
       const lines = text.trim().split("\n").filter(Boolean);
       for (const line of lines) {
         try {
@@ -82,7 +92,11 @@ registerCapability("backlink-check", async (input: CapabilityInput) => {
 
         if (resp.ok) {
           source = "google.com";
-          const data = await resp.json();
+          const data = await readJsonWithLimit<Record<string, unknown>>(
+            resp,
+            MAX_FETCHED_API_RESPONSE_BYTES,
+            "domain",
+          );
           const organic = (data.organic as any[]) ?? [];
           for (const item of organic) {
             const sourceUrl = item.link ?? item.url ?? "";

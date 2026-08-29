@@ -6,7 +6,7 @@ import {
   MAX_DECODED_DOCUMENT_BYTES,
   checkedBase64,
   readBodyWithLimit,
-} from "./lib/image-limits.js";
+} from "../lib/resource-limits.js";
 
 registerCapability("contract-extract", async (input: CapabilityInput) => {
   const pdfUrl = (input.pdf_url as string)?.trim() ?? (input.url as string)?.trim();

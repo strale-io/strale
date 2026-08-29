@@ -1,7 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
-import { MAX_DECODED_DOCUMENT_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
+import { MAX_DECODED_DOCUMENT_BYTES, readBodyWithLimit } from "../lib/resource-limits.js";
 
 registerCapability("base64-encode-url", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();

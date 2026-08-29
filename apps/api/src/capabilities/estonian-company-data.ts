@@ -7,7 +7,11 @@ import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
 import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import { readPageHtml } from "./lib/image-limits.js";
+import {
+  MAX_FETCHED_API_RESPONSE_BYTES,
+  readJsonWithLimit,
+  readPageHtml,
+} from "../lib/resource-limits.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 import { classifyNameMatch } from "../lib/company-name-match.js";
@@ -162,7 +166,11 @@ async function fetchApi(path: string): Promise<unknown> {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(10000),
     });
-    if (resp.ok) return resp.json();
+    if (resp.ok) {
+      // Was `return resp.json()` — awaitless, and therefore invisible to
+      // #428's regex guard (#432).
+      return await readJsonWithLimit(resp, MAX_FETCHED_API_RESPONSE_BYTES, "query");
+    }
     if (resp.status === 403) throw new Error("IP blocked");
     throw new Error(`HTTP ${resp.status}`);
   } catch {

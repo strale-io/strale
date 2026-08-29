@@ -2,7 +2,8 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
 import { fetchViaJina } from "./lib/jina-reader.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 
 /** Thrown when the target responded definitively — no point trying Jina/Browserless. */
@@ -60,6 +61,9 @@ async function tryPlainFetch(url: string): Promise<string | null> {
     });
 
     if (!resp.ok) {
+      // Nothing below reads the body — cancel it rather than leaving it to
+      // pin the keep-alive connection until GC (#428's discardBody).
+      await discardBody(resp, "url-to-markdown: non-2xx response");
       if (resp.status >= 400 && resp.status < 500) {
         const hint = getBlockedSiteHint(url);
         if (hint) {
@@ -109,6 +113,7 @@ async function tryPlainFetch(url: string): Promise<string | null> {
     const contentType = resp.headers.get("content-type") ?? "";
 
     if (!contentType.includes("text/html") && !contentType.includes("xhtml")) {
+      await discardBody(resp, "url-to-markdown: non-HTML content type");
       if (contentType.includes("application/pdf")) {
         throw new DefinitiveFetchError("This URL points to a PDF file, not a web page. Use the 'pdf-extract' capability instead.");
       }
@@ -121,7 +126,7 @@ async function tryPlainFetch(url: string): Promise<string | null> {
       return null;
     }
 
-    const html = await resp.text();
+    const html = await readPageHtml(resp);
 
     let stripped = html;
     stripped = stripped.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
@@ -137,6 +142,14 @@ async function tryPlainFetch(url: string): Promise<string | null> {
     return null;
   } catch (err) {
     if (err instanceof DefinitiveFetchError) throw err;
+    // Oversize is TERMINAL, not a reason to fall through (#432). Layer 1 has
+    // already established the page is bigger than the platform will hold;
+    // Jina reformats the same document and Browserless renders a DOM that is
+    // typically larger still, so cascading would fetch the refused page two
+    // more times to reach the same refusal. Without this re-throw the
+    // function-wide `return null` below would swallow it — the exact
+    // amplification #428 made terminal inside web-provider.
+    if (err instanceof ResourceLimitError) throw err;
     if (err instanceof Error && (err.message.includes("SSRF") || err.message.includes("private"))) {
       throw err;
     }

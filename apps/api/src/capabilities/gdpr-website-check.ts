@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
@@ -17,7 +18,7 @@ registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
 
   if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
 
-  const html = await response.text();
+  const html = await readPageHtml(response);
   const htmlLower = html.toLowerCase();
   const headers: Record<string, string> = {};
   response.headers.forEach((v, k) => { headers[k] = v; });

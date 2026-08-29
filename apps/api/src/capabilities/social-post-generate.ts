@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("social-post-generate", async (input: CapabilityInput) => {
@@ -23,13 +24,21 @@ registerCapability("social-post-generate", async (input: CapabilityInput) => {
         signal: AbortSignal.timeout(10000),
       });
       if (res.ok) {
-        let html = await res.text();
+        let html = await readPageHtml(res);
         html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
         html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
         html = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
         sourceContent = html.trim().slice(0, 3000);
       }
-    } catch { /* fall through */ }
+    } catch (err) {
+      // Terminal, unlike the other fetch failures here (#432). The fallback
+      // below hands the model the URL string instead of the page, so
+      // swallowing a size refusal would return a confidently-written post
+      // about a page nobody read — worse than an error, because it looks
+      // like a success.
+      if (err instanceof ResourceLimitError) throw err;
+      /* fall through */
+    }
     if (!sourceContent) sourceContent = `Content from URL: ${url}`;
   }
 

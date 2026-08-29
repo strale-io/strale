@@ -1,4 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import {
+  MAX_FETCHED_API_RESPONSE_BYTES,
+  readJsonWithLimit,
+} from "../lib/resource-limits.js";
 
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 // F-0-006 Bucket D: the user URL is encoded into a query string and
@@ -36,7 +40,7 @@ registerCapability("phishing-site-check", async (input: CapabilityInput) => {
 
   if (!response.ok) throw new Error(`GoPlus API returned HTTP ${response.status}`);
 
-  const data = (await response.json()) as any;
+  const data = (await readJsonWithLimit<any>(response, MAX_FETCHED_API_RESPONSE_BYTES)) as any;
   const now = new Date().toISOString();
 
   if (data.code !== 1 && data.code !== "1") {

@@ -6,7 +6,7 @@ import {
   MAX_DECODED_DOCUMENT_BYTES,
   checkedBase64,
   readBodyWithLimit,
-} from "./lib/image-limits.js";
+} from "../lib/resource-limits.js";
 
 const EXTRACTION_PROMPT = `You are an expert invoice data extraction system specializing in European invoices.
 

@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readSitemapXml } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("sitemap-parse", async (input: CapabilityInput) => {
@@ -20,7 +21,7 @@ registerCapability("sitemap-parse", async (input: CapabilityInput) => {
   });
 
   if (!response.ok) throw new Error(`HTTP ${response.status} fetching sitemap from ${url}`);
-  const xml = await response.text();
+  const xml = await readSitemapXml(response);
 
   if (!xml.includes("<") || xml.length < 50) {
     throw new Error("Response does not appear to be valid XML.");

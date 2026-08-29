@@ -1,8 +1,20 @@
 /**
- * Resource limits for capabilities that hand caller-supplied bytes to a native
- * image decoder.
+ * The platform's single authority for byte limits on data it did not author:
+ * caller-supplied payloads, remote responses fetched on a caller's behalf, and
+ * renders produced from caller input.
  *
- * ## Why these exist
+ * ## Why it lives here, under this name (#432)
+ *
+ * It began as `capabilities/lib/image-limits.ts` and grew past both halves of
+ * that name. It now holds image, document, render, HTML, sitemap, robots,
+ * API-response, error-body and transfer caps plus the shared streaming readers
+ * — and `lib/metered-vendor-fetch.ts` imports it, which inverted the usual
+ * `capabilities -> lib` direction. Moving it to `lib/` restores that direction
+ * and stops the name from lying about the contents; `ImageLimitError` became
+ * `ResourceLimitError` for the same reason, since it is thrown for sitemaps and
+ * HTML pages that contain no image at all.
+ *
+ * ## Why the limits exist
  *
  * VERIFY-DEP / WP13 follow-up, 2026-08-25. The `/x402/*` rail had no body cap,
  * which is fixed at the rail in `app.ts`. But a rail cap only bounds the wire:
@@ -26,7 +38,7 @@
  * There is no corresponding default for output geometry.
  */
 
-import { logError, logWarn } from "../../lib/log.js";
+import { logError, logWarn } from "./log.js";
 
 /**
  * Largest decoded image the platform accepts.
@@ -48,9 +60,9 @@ export const MAX_DECODED_IMAGE_BYTES = 4 * 1024 * 1024;
  * document that fits on the wire is refused here. Applies to `pdf-extract`,
  * `invoice-extract`, `contract-extract`, `resume-parse` (#412).
  *
- * Lives in this module despite the name: image-limits.ts is the single
- * authority for caller-input byte caps, and a second module holding a second
- * 8 MiB constant is how six magic numbers happen.
+ * Lives in this module because it is the single authority for caller-input
+ * byte caps, and a second module holding a second 8 MiB constant is how six
+ * magic numbers happen.
  */
 export const MAX_DECODED_DOCUMENT_BYTES = 8 * 1024 * 1024;
 
@@ -131,6 +143,84 @@ export const MAX_MEASURED_TRANSFER_BYTES = 100 * 1024 * 1024;
 export const MAX_FETCHED_HTML_BYTES = 16 * 1024 * 1024;
 
 /**
+ * Largest robots.txt the platform will parse (#432).
+ *
+ * TRUNCATED, not refused — and that is the whole reason this is its own
+ * constant rather than a small number borrowed from somewhere else. RFC 9309
+ * §2.5 says a crawler "MAY impose a parse limit ... [which] MUST be at least
+ * 500 kibibytes", and Googlebot enforces exactly 500 KiB, ignoring everything
+ * past it. `robots-txt-parse` exists to answer "what do crawlers see here?",
+ * so parsing the first 500 KiB and dropping the rest IS the correct answer;
+ * refusing the file would make Strale disagree with the crawler it is
+ * describing.
+ *
+ * Measured 2026-08-29, plain GET: github.com 2.2 KiB, bbc.co.uk 4.8 KiB,
+ * google.com 6.5 KiB, amazon.com 7.7 KiB, nytimes.com 8.3 KiB,
+ * en.wikipedia.org 27.6 KiB. The standardised limit is ~18x the largest of
+ * those, so truncation is a theoretical path, not a routine one.
+ */
+export const MAX_FETCHED_ROBOTS_BYTES = 500 * 1024;
+
+/**
+ * Largest sitemap XML the platform will fetch (#432).
+ *
+ * The sitemaps.org protocol caps an uncompressed sitemap at 50 MB
+ * (52,428,800 bytes) and 50,000 URLs — raised from 10 MB in 2016 precisely
+ * because real sites exceeded the old figure. Taking the protocol's own
+ * number means this limit refuses nothing a sitemap is allowed to be, and a
+ * file above it is invalid by the spec rather than merely inconvenient for
+ * us, so the refusal cites a standard instead of a Strale preference.
+ *
+ * Measured 2026-08-29, decoded bytes (these arrive brotli-compressed and are
+ * counted after inflation, which is what the reader counts): apple.com
+ * 72 KiB, theguardian.com news sitemap 470 KiB, gov.uk leaf sitemaps
+ * 5.19–5.37 MiB each. Extrapolating the gov.uk shape to the protocol's
+ * 50,000-URL maximum lands near 11 MiB, so the 50 MB ceiling sits roughly 4x
+ * above the largest *legal* sitemap and ~9x above the largest measured one.
+ *
+ * Honest about the cost: a 50 MB XML string is bounded, not cheap. The
+ * regex-based parse downstream materialises per-URL substrings on top of it,
+ * so peak residency for a pathological-but-legal sitemap is a multiple of
+ * this number. Bounding the *fetch* is what #432 set out to do; bounding the
+ * parse is recorded as a follow-up rather than claimed here.
+ */
+export const MAX_FETCHED_SITEMAP_BYTES = 52_428_800;
+
+/**
+ * Largest structured API response the platform will buffer and parse (#432).
+ *
+ * Covers JSON legs (Serper, Corporations Canada, CommonCrawl's index,
+ * YouTube's oembed, an arbitrary endpoint under `api-health-check`) and the
+ * small XML documents API endpoints return alongside them (YouTube's
+ * timedtext caption track).
+ *
+ * Deliberately SMALLER than the 16 MiB HTML cap, for a parser reason rather
+ * than a transport one: HTML is scanned with linear regexes and stays one
+ * string, while JSON is materialised into an object graph that typically
+ * costs 2–6x the source bytes in V8. 4 MiB of JSON is therefore already in
+ * the same residency class as a 16 MiB page.
+ *
+ * Measured 2026-08-29: YouTube oembed 0.8 KiB, Corporations Canada 0.07 KiB
+ * (not-found shape), api.github.com repo 5.8 KiB, CommonCrawl index at the
+ * capability's own `limit=50` 20.0 KiB. 4 MiB is over 200x the largest of
+ * those — it exists to make an unbounded read bounded, not to police a size
+ * anyone is near.
+ */
+export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+/**
+ * How much of a page `email-finder` and `domain-contact-extract` scan (#432).
+ *
+ * Their pre-existing product behaviour, hoisted out of two identical local
+ * constants and two identical hand-rolled readers. TRUNCATE, because that is
+ * what those capabilities already did: they scan the first 300 KB of a
+ * homepage or contact page for `tel:`/`mailto:`/schema.org markup, which
+ * lives in the head and the first screenfuls. Refusing a long page instead of
+ * scanning its opening would turn a working answer into an error.
+ */
+export const MAX_SCRAPED_CONTACT_BYTES = 300_000;
+
+/**
  * Cap for reading a vendor's ERROR body for diagnostics (#428).
  *
  * Deliberately paired with truncation rather than refusal: an error body is
@@ -174,12 +264,12 @@ export const FIT_MODES = ["cover", "contain", "fill", "inside", "outside"] as co
  * The marker survives structured cloning and module-instance boundaries, which
  * `instanceof` alone does not.
  */
-export class ImageLimitError extends Error {
+export class ResourceLimitError extends Error {
   readonly isCapabilityRefusal = true;
 
   constructor(message: string) {
     super(message);
-    this.name = "ImageLimitError";
+    this.name = "ResourceLimitError";
   }
 }
 
@@ -212,11 +302,11 @@ export function assertEnum<T extends readonly string[]>(
 ): T[number] {
   if (raw === undefined || raw === null || raw === "") return fallback;
   if (typeof raw !== "string") {
-    throw new ImageLimitError(`'${field}' must be one of: ${allowed.join(", ")}.`);
+    throw new ResourceLimitError(`'${field}' must be one of: ${allowed.join(", ")}.`);
   }
   const normalised = raw.trim().toLowerCase();
   if ((allowed as readonly string[]).includes(normalised)) return normalised as T[number];
-  throw new ImageLimitError(
+  throw new ResourceLimitError(
     `'${field}' must be one of: ${allowed.join(", ")} (received ${JSON.stringify(raw)}).`,
   );
 }
@@ -229,7 +319,7 @@ export function assertQuality(raw: unknown, fallback = 80): number {
   if (raw === undefined || raw === null || raw === "") return fallback;
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isInteger(n) || n < 1 || n > 100) {
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'quality' must be a whole number between 1 and 100 (received ${JSON.stringify(raw)}).`,
     );
   }
@@ -354,7 +444,7 @@ export function assertDecodedSizeWithinLimit(
   field = "base64",
 ): void {
   if (bytes > maxBytes) {
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'${field}' must be ${mib(maxBytes)} or less once decoded (received ${mib(bytes)}).`,
     );
   }
@@ -377,10 +467,10 @@ export function assertOutputGeometryWithinLimit(
   ] as const) {
     if (value === undefined) continue;
     if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
-      throw new ImageLimitError(`'${name}' must be a positive whole number of pixels.`);
+      throw new ResourceLimitError(`'${name}' must be a positive whole number of pixels.`);
     }
     if (value > MAX_OUTPUT_DIMENSION) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `'${name}' must be ${MAX_OUTPUT_DIMENSION}px or less (received ${value}px).`,
       );
     }
@@ -391,7 +481,7 @@ export function assertOutputGeometryWithinLimit(
   if (width !== undefined && height !== undefined) {
     const pixels = width * height;
     if (pixels > MAX_OUTPUT_PIXELS) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `'target_width' x 'target_height' must be ${MAX_OUTPUT_PIXELS / 1_000_000} megapixels or less ` +
           `(received ${width}x${height}, ${(pixels / 1_000_000).toFixed(1)} megapixels).`,
       );
@@ -431,7 +521,7 @@ export function effectiveOutputGeometry(
     // computed at all, so the one thing that must not happen is proceeding as
     // though it had been checked. A guard that cannot evaluate its condition
     // refuses.
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       "'image_url'/'base64' must be an image whose dimensions can be read.",
     );
   }
@@ -480,12 +570,12 @@ export function assertEffectiveGeometryWithinLimit(
     ["height", height],
   ] as const) {
     if (!Number.isFinite(value) || value < 1) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `Resolved output ${name} is not a usable pixel count (${value}).`,
       );
     }
     if (value > MAX_OUTPUT_DIMENSION) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `'target_width'/'target_height' must be ${MAX_OUTPUT_DIMENSION}px or less per side once ` +
           `applied to this image's aspect ratio (resolved ${name} ${value}px).`,
       );
@@ -493,7 +583,7 @@ export function assertEffectiveGeometryWithinLimit(
   }
   const pixels = width * height;
   if (pixels > MAX_OUTPUT_PIXELS) {
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'target_width' x 'target_height' must be ${MAX_OUTPUT_PIXELS / 1_000_000} megapixels or less ` +
         `once applied to this image's aspect ratio (resolved ${width}x${height}, ` +
         `${(pixels / 1_000_000).toFixed(1)} megapixels).`,
@@ -591,6 +681,74 @@ export function readPageHtml(response: Response, field = "url"): Promise<string>
 }
 
 /**
+ * The shared sitemap read (#432). Refuses above the protocol's own maximum.
+ */
+export function readSitemapXml(response: Response, field = "url"): Promise<string> {
+  return readTextWithLimit(
+    response,
+    MAX_FETCHED_SITEMAP_BYTES,
+    field,
+    "a sitemap whose XML is",
+  );
+}
+
+/**
+ * Read a response as TEXT, keeping the bounded PREFIX instead of refusing
+ * (#432).
+ *
+ * The counterpart to `readTextWithLimit`, for the two places where cutting is
+ * the right answer rather than a compromise: a robots.txt past the crawler
+ * parse limit (RFC 9309 §2.5 — real crawlers ignore the tail, so refusing
+ * would answer a different question than the one asked), and the contact
+ * scrapers, which have always scanned a page prefix.
+ *
+ * Refusal remains the default everywhere else. A truncated *content* read is
+ * indistinguishable from a complete one at the API boundary, which is exactly
+ * why #412 chose refusal; the two callers here are the cases where the
+ * product semantics say otherwise, and both say so in their own constants.
+ */
+export function readTextTruncated(
+  response: Response,
+  maxBytes: number,
+  field = "url",
+): Promise<string> {
+  return decodeStreaming(response, maxBytes, field, undefined, "truncate");
+}
+
+/**
+ * The shared robots.txt read (#432). Truncates at the crawler parse limit.
+ */
+export function readRobotsTxt(response: Response, field = "url"): Promise<string> {
+  return readTextTruncated(response, MAX_FETCHED_ROBOTS_BYTES, field);
+}
+
+/**
+ * Read and parse a JSON API response, BOUNDED (#432).
+ *
+ * `await response.json()` cannot be capped: it buffers the whole body and then
+ * parses it, so a length check afterwards describes two allocations that have
+ * already happened. This reads bounded bytes, decodes them, and only then
+ * parses — the same "measure before you allocate" shape as every other reader
+ * in this module.
+ *
+ * `JSON.parse` throws the same `SyntaxError` class `response.json()` does, so
+ * malformed-payload handling at call sites is unchanged.
+ */
+export async function readJsonWithLimit<T = unknown>(
+  response: Response,
+  maxBytes: number = MAX_FETCHED_API_RESPONSE_BYTES,
+  field = "url",
+): Promise<T> {
+  const text = await readTextWithLimit(
+    response,
+    maxBytes,
+    field,
+    "an endpoint whose response is",
+  );
+  return JSON.parse(text) as T;
+}
+
+/**
  * Read a vendor's ERROR body for diagnostics, TRUNCATING at the cap (#428).
  *
  * Truncation, not refusal, is the correct semantic here: the body is being
@@ -605,7 +763,7 @@ export async function readErrorTextTruncated(
   maxBytes: number = MAX_ERROR_BODY_BYTES,
 ): Promise<string> {
   try {
-    return await decodeStreaming(response, maxBytes, "error_body", undefined, "truncate");
+    return await readTextTruncated(response, maxBytes, "error_body");
   } catch (err) {
     logWarn("error-body-read-failed", "could not read vendor error body", {
       err: err instanceof Error ? err.message : String(err),
@@ -684,7 +842,7 @@ async function consumeBody(
     await response.body
       ?.cancel()
       .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'${field}' must be ${phrase} (it declared ${mib(declared)}).`,
     );
   }
@@ -698,7 +856,7 @@ async function consumeBody(
     const buf = Buffer.from(await response.arrayBuffer());
     if (buf.byteLength > maxBytes) {
       if (limitMode === "refuse") {
-        throw new ImageLimitError(`'${field}' must be ${phrase}.`);
+        throw new ResourceLimitError(`'${field}' must be ${phrase}.`);
       }
       onChunk?.(buf.subarray(0, maxBytes));
       return maxBytes;
@@ -726,7 +884,7 @@ async function consumeBody(
           .cancel()
           .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
         if (limitMode === "refuse") {
-          throw new ImageLimitError(`'${field}' must be ${phrase}.`);
+          throw new ResourceLimitError(`'${field}' must be ${phrase}.`);
         }
         // Truncate: keep exactly the prefix that fits, then stop.
         const remaining = maxBytes - total;

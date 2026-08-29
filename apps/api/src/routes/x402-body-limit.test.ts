@@ -136,7 +136,7 @@ async function loadApp() {
  * the magnitude itself is pinned by the "8.0MB" refusal-message regexes in
  * bounded-fetch-residuals.test.ts.
  */
-import { MAX_DECODED_DOCUMENT_BYTES } from "../capabilities/lib/image-limits.js";
+import { MAX_DECODED_DOCUMENT_BYTES } from "../lib/resource-limits.js";
 const X402_LIMIT = MAX_DECODED_DOCUMENT_BYTES;
 
 /**

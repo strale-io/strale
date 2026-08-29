@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readErrorTextTruncated } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 
 // F-0-006 Bucket D: user URL is url-encoded and sent to the HARDCODED
@@ -32,10 +33,21 @@ registerCapability("page-speed-test", async (input: CapabilityInput) => {
   });
 
   if (!resp.ok) {
-    const err = await resp.text().catch(() => "");
+    const err = await readErrorTextTruncated(resp);
     throw new Error(`PageSpeed Insights returned HTTP ${resp.status}: ${err.slice(0, 300)}`);
   }
 
+  // NOT bounded, deliberately and reluctantly (#432). This is the one
+  // sanctioned entry in the caller-URL guard's ledger. PSI returns the full
+  // Lighthouse report, whose size scales with the page the CALLER chose —
+  // request count, DOM size, and base64 screenshot audits — so it is squarely
+  // the class this work package closed everywhere else. It is left open
+  // because a cap has to be sized against a measured distribution of real
+  // Lighthouse reports, and PSI refuses keyless traffic from this network
+  // (429) while the platform holds no PAGESPEED_API_KEY. Capping it on a
+  // guess would risk refusing working traffic on a capability with 433
+  // successful production calls in 90 days, which is the failure the byte
+  // limits exist to avoid causing. Tracked for measurement.
   const data = await resp.json();
   const lighthouse = data.lighthouseResult;
   if (!lighthouse) throw new Error("PageSpeed Insights did not return Lighthouse results.");

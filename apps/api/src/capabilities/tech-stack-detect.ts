@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 
 /**
@@ -111,7 +112,7 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
     throw new Error(`Could not fetch ${target} (HTTP ${resp.status}). Check the URL is correct and publicly accessible.`);
   }
 
-  const html = await resp.text();
+  const html = await readPageHtml(resp);
   const technologies: TechMatch[] = [];
   const seen = new Set<string>();
 

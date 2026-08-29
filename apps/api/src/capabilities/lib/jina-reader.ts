@@ -13,7 +13,7 @@
  */
 
 import { validateUrl } from "../../lib/url-validator.js";
-import { ImageLimitError, readPageHtml } from "./image-limits.js";
+import { ResourceLimitError, readPageHtml } from "../../lib/resource-limits.js";
 import { discardBody } from "../../lib/safe-fetch.js";
 
 export interface JinaResult {
@@ -87,12 +87,12 @@ export async function fetchViaJina(url: string): Promise<JinaResult | null> {
     };
   } catch (err) {
     // #428 six-lens review: oversize is TERMINAL here too. This catch used to
-    // swallow everything, so an ImageLimitError became "Jina failed" and
+    // swallow everything, so an ResourceLimitError became "Jina failed" and
     // url-to-markdown fell through to Browserless — re-rendering the very page
     // just judged too large, which is the cascade the whole change exists to
     // stop. Every other failure still returns null so the caller's remaining
     // strategies run.
-    if (err instanceof ImageLimitError) throw err;
+    if (err instanceof ResourceLimitError) throw err;
     return null;
   }
 }

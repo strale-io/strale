@@ -26,17 +26,19 @@
  * an entry count. Precisely:
  *
  *   BOUNDED — the bytes materialised from any ONE remote response (streamed
- *   and cut at the cap, never `.text()`-then-measured), and the total payload
- *   residency of the response cache.
+ *   and cut at the cap, never `.text()`-then-measured), and the heap residency
+ *   of the response cache. The cache accounts each entry at `length * 2`
+ *   (#432), V8's worst case for a JS string, rather than at its UTF-8 payload
+ *   size — the earlier measure could understate residency by 2x for a page
+ *   with a single non-Latin-1 character, which made this line optimistic.
  *
  *   NOT BOUNDED — the process's global footprint under concurrency. Tiers 1
  *   and 2 sit outside `withBrowserLimit`, so N simultaneous requests can each
  *   hold up to the cap; the real ceiling is (concurrent requests x cap) +
- *   cache budget, plus transport chunk overhead, the Buffer→string copy (the
- *   buffer and the decoded string are both live during the decode), and
- *   whatever a downstream parser allocates from the returned HTML. Turning
- *   "unbounded" into "bounded per response and per cache" is the claim here;
- *   global containment is not.
+ *   cache budget, plus transport chunk overhead, the string built by the
+ *   streaming decoder as it grows, and whatever a downstream parser allocates
+ *   from the returned HTML. Turning "unbounded" into "bounded per response and
+ *   per cache" is the claim here; global containment is not.
  *
  *   NOT BOUNDED, per request — a request that falls through all three tiers
  *   can transiently hold up to three capped bodies before GC reclaims the
@@ -52,14 +54,14 @@
  * rather than its wire size.
  *
  * Oversize is TERMINAL, not a fallback trigger: a page too large on one tier
- * is not re-fetched by the next. See the ImageLimitError re-throws below.
+ * is not re-fetched by the next. See the ResourceLimitError re-throws below.
  */
 
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { discardBody, safeFetch } from "../../lib/safe-fetch.js";
 import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
-import { ImageLimitError, readErrorTextTruncated, readPageHtml } from "./image-limits.js";
+import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
 
 /**
  * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
@@ -144,11 +146,14 @@ const MAX_CACHE_ENTRIES = 200;
  * size was an unbounded cache. Even with the new 16 MiB per-response cap the
  * count limit alone would permit 3.2 GB on a 1 GB Railway box.
  *
- * 64 MiB, and BOTH limits bind in the traffic that actually occurs: registry
- * pages run 1-30 KB, so 200 entries (~6 MB) is reached first and current
- * behaviour is unchanged; heavy content pages run 0.4-3 MB, so the byte budget
- * binds first and the cache stops at ~20-150 entries instead of hoarding
- * gigabytes. Worst case is 6.25% of the box.
+ * 64 MiB of ACCOUNTED bytes, which since #432 is `length * 2` per entry —
+ * V8's worst case for a JS string rather than its UTF-8 payload size (see
+ * `setCache`). BOTH limits still bind in the traffic that actually occurs:
+ * registry pages run 1-30 KB, so 200 entries (~12 MB accounted) is reached
+ * first and current behaviour is unchanged; heavy content pages run 0.4-3 MB,
+ * so the byte budget binds first and the cache stops at ~10-75 entries instead
+ * of hoarding gigabytes. Worst case is 6.25% of the box, and now that figure
+ * is a heap number rather than a wire number.
  *
  * Lives here rather than in the byte-limit authority module: this is the
  * web-provider's own cache policy, not a limit on what any capability may
@@ -217,11 +222,22 @@ function getCached(namespace: string, url: string): string | null {
 
 function setCache(namespace: string, url: string, html: string): void {
   const key = cacheKey(namespace, url);
-  // UTF-8 payload size — the same measure the fetch cap counts on the wire, so
-  // a value that passed MAX_FETCHED_HTML_BYTES is accounted the same way here.
-  // This bounds the PAYLOAD, not V8's heap footprint for the string; see the
-  // module header for what is and is not bounded.
-  const bytes = Buffer.byteLength(html, "utf8");
+  // V8's worst-case residency for the string, not its UTF-8 payload size
+  // (#432, closing a #428 review note).
+  //
+  // The old measure was `Buffer.byteLength(html, "utf8")`, which describes the
+  // wire and understates the heap. V8 stores a string as one byte per
+  // character while every character is Latin-1, and switches the WHOLE string
+  // to two bytes per character the moment one is not — so a mostly-ASCII page
+  // containing a single emoji or CJK character measures ~N on the wire and
+  // occupies ~2N in the heap. A 64 MiB budget accounted that way could hold
+  // 128 MiB, and the module header said the cache payload was bounded.
+  //
+  // `length * 2` is the ceiling for any JS string, so the budget now means
+  // what it says. It over-charges pure-ASCII pages by 2x, which costs
+  // approximately nothing in practice: at typical page sizes the 200-entry cap
+  // binds long before the byte budget does.
+  const bytes = html.length * 2;
 
   // Overwrite is delete-then-insert. Two reasons: the eviction loop below is
   // measured after the removal, and a refreshed entry earning a new position
@@ -525,7 +541,7 @@ export async function fetchPage(
       // too big. A different tier is a different representation, not a smaller
       // one: Jina reformats the same content and a rendered DOM is typically
       // LARGER than the raw HTML.
-      if (err instanceof ImageLimitError) throw err;
+      if (err instanceof ResourceLimitError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
       // Helpful 4xx message already constructed upstream — propagate as-is.
       if (msg.includes("URL returned HTTP 4")) {
@@ -585,7 +601,7 @@ export async function fetchPage(
       // #428: oversize is terminal here too — see the tier-1 note. Jina's
       // reformat of a 16 MiB+ page is not a smaller representation, and
       // rendering it in Browserless afterwards is strictly more work.
-      if (err instanceof ImageLimitError) throw err;
+      if (err instanceof ResourceLimitError) throw err;
       // Jina timeout or network error — fall through to Browserless
     }
   }
@@ -694,7 +710,7 @@ export async function fetchPage(
         // #428: an oversize refusal is deterministic — the page is the size it
         // is — so it must not consume a retry. Re-rendering it would transfer
         // 16 MiB+ again to reach the identical answer.
-        if (err instanceof ImageLimitError) throw err;
+        if (err instanceof ResourceLimitError) throw err;
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < maxRetries - 1) {
           const msg = lastError.message.toLowerCase();

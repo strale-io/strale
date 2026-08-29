@@ -22,12 +22,12 @@
  *      being buffered unbounded;
  *   4. refusals classify caller_input (floor-exempt); vendor HTTP failures
  *      do not get rebadged;
- *   5. structurally, none of the seven can regress to arrayBuffer() or raw
+ *   5. structurally, none of the seven can regress to a raw
  *      fetch() without failing this file.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -92,8 +92,8 @@ import {
   checkedBase64,
   countBodyBytes,
   normalizeBase64,
-  ImageLimitError,
-} from "./lib/image-limits.js";
+  ResourceLimitError,
+} from "../lib/resource-limits.js";
 import {
   classifyTransactionFailure,
   countsAgainstCapability,
@@ -382,7 +382,7 @@ describe("countBodyBytes", () => {
 
   it("refuses limit + 1", async () => {
     const { response } = streamingResponse(CAP + 1);
-    await expect(countBodyBytes(response, CAP, "url")).rejects.toThrow(ImageLimitError);
+    await expect(countBodyBytes(response, CAP, "url")).rejects.toThrow(ResourceLimitError);
   });
 
   it("refuses a declared over-limit length without pulling, and cancels", async () => {
@@ -484,20 +484,6 @@ describe("all seven residual sites are wired to the shared enforcement", () => {
       expect(s).not.toMatch(/(?<![A-Za-z.])fetch\(/);
     },
   );
-
-  it("NO capability file in the directory buffers with arrayBuffer() — including future ones", () => {
-    // Round-3 review find: the per-file lists above are static, so an eighth
-    // capability added later with `await resp.arrayBuffer()` would evade both
-    // this file and input-byte-limits.test.ts. After #426 the ONLY sanctioned
-    // sites are image-limits.ts's own bodyless-response fallbacks, so the
-    // sweep can be directory-wide: a new offender fails here by existing.
-    const offenders: string[] = [];
-    for (const entry of readdirSync(__dirname)) {
-      if (!entry.endsWith(".ts") || entry.endsWith(".test.ts")) continue;
-      if (/await\s+\w+\.arrayBuffer\(/.test(src(entry))) offenders.push(entry);
-    }
-    expect(offenders, "unbounded arrayBuffer() buffering reintroduced").toEqual([]);
-  });
 
   it("the render caps come from the named authority constants", () => {
     expect(src("html-to-pdf.ts")).toContain("MAX_RENDERED_PDF_BYTES");

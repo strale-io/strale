@@ -6,7 +6,7 @@ import {
   MAX_DECODED_DOCUMENT_BYTES,
   checkedBase64,
   readBodyWithLimit,
-} from "./lib/image-limits.js";
+} from "../lib/resource-limits.js";
 
 registerCapability("pdf-extract", async (input: CapabilityInput) => {
   const url = input.url as string | undefined;

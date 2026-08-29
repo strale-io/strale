@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-limits.js";
 import { checkMx, ROLE_PREFIXES } from "./email-validate.js";
 
 /**
@@ -37,7 +38,6 @@ import { checkMx, ROLE_PREFIXES } from "./email-validate.js";
 const USER_AGENT =
   "StraleBot/1.0 (+https://strale.dev/capabilities/email-finder; work-email pattern inference)";
 const FETCH_TIMEOUT_MS = 10_000;
-const MAX_BODY_BYTES = 300_000; // cap parsed HTML per request to 300KB
 const MAX_FETCHES = 2; // homepage + at most one contact page
 
 // ReDoS-safe — see the long rationale on the identical constant in
@@ -96,35 +96,6 @@ const PATTERN_TEMPLATES: PatternTemplate[] = [
   { pattern: "{first}", build: (f) => f },
   { pattern: "{last}.{first}", build: (f, l) => `${l}.${f}` },
 ];
-
-/**
- * Read a fetch Response body capped at `maxBytes`, streaming so an
- * oversized response never gets fully buffered in memory first.
- */
-async function readCapped(resp: Response, maxBytes = MAX_BODY_BYTES): Promise<string> {
-  if (!resp.body) {
-    const text = await resp.text();
-    return text.slice(0, maxBytes);
-  }
-  const reader = resp.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-  while (received < maxBytes) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      received += value.byteLength;
-    }
-  }
-  try {
-    await reader.cancel();
-  } catch {
-    // Best-effort cancel — response is already consumed enough for our needs.
-  }
-  const buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)));
-  return buffer.subarray(0, maxBytes).toString("utf8");
-}
 
 /** Strip accents/diacritics to ASCII, lowercase, drop apostrophes. Hyphens are left intact — callers decide how to branch on them. */
 function normalizeToken(raw: string): string {
@@ -310,7 +281,7 @@ registerCapability("email-finder", async (input: CapabilityInput) => {
     });
     fetchCount++;
     if (resp.ok) {
-      homepageHtml = await readCapped(resp);
+      homepageHtml = await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES);
     }
   } catch {
     // Homepage fetch failed — proceed with generic-pattern candidates only.
@@ -341,7 +312,7 @@ registerCapability("email-finder", async (input: CapabilityInput) => {
         });
         fetchCount++;
         if (resp.ok) {
-          contactHtml = await readCapped(resp);
+          contactHtml = await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES);
         }
       } catch {
         // Contact-page fetch is best-effort.

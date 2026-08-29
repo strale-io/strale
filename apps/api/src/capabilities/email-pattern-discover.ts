@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { promises as dns } from "node:dns";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 
 /**
  * Email Pattern Discovery — detect email format for a domain.
@@ -129,7 +130,7 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
       signal: AbortSignal.timeout(10000),
     });
     if (resp.ok) {
-      const html = await resp.text();
+      const html = await readPageHtml(resp);
       // Find email addresses in HTML (first 200KB)
       const emailRe = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
       const htmlSlice = html.slice(0, 200000);
@@ -139,7 +140,10 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
       publicEmails = Array.from(new Set(domainEmails)).slice(0, 10);
     }
   } catch {
-    // Website fetch failed — not critical
+    // Website fetch failed — not critical. A size refusal is swallowed here
+    // too, deliberately (#432): this leg is an optional enrichment whose
+    // existing design already degrades silently on DNS/5xx/timeout, and it
+    // never reaches the caller as an error, so it cannot trip the breaker.
   }
 
   // Infer pattern from public emails if found

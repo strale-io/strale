@@ -112,3 +112,12 @@ limitations:
     category: coverage
     severity: info
     workaround: For JavaScript-rendered OG tags, use meta-extract which renders the page via headless browser
+  - title: Pages are limited to 16 MiB of HTML
+    text: >-
+      The fetch refuses a page whose HTML exceeds 16 MiB, enforced while streaming
+      rather than after buffering. That is ~5x the heaviest ordinary web page, so
+      normal targets are unaffected. An oversized page returns a caller_input
+      refusal naming the field, and is not retried through another fetch path; no
+      charge is taken.
+    category: coverage
+    severity: info

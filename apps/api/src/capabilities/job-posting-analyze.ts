@@ -1,6 +1,7 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
 registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
@@ -20,13 +21,20 @@ registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
         signal: AbortSignal.timeout(10000),
       });
       if (res.ok) {
-        let html = await res.text();
+        let html = await readPageHtml(res);
         html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
         html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
         html = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
         text = html.trim().slice(0, 10000);
       }
-    } catch { /* fall through */ }
+    } catch (err) {
+      // A size refusal must not become "Could not fetch job posting from URL"
+      // (#432). That message is inaccurate — the fetch succeeded — and it is
+      // not a recognised refusal, so three oversized pages in a row would
+      // open the circuit breaker on a capability that is working correctly.
+      if (err instanceof ResourceLimitError) throw err;
+      /* fall through */
+    }
     if (!text) throw new Error("Could not fetch job posting from URL.");
   }
 

@@ -9,7 +9,7 @@ import {
   MAX_DECODED_DOCUMENT_BYTES,
   readBodyWithLimit,
   readPageHtml,
-} from "./lib/image-limits.js";
+} from "../lib/resource-limits.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
 const ORG_NUMBER_RE = /^(\d{6})-?(\d{4})$/;

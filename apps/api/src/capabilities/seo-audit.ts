@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readRobotsTxt } from "../lib/resource-limits.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 
 registerCapability("seo-audit", async (input: CapabilityInput) => {
@@ -90,7 +91,7 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
   try {
     const robotsRes = await safeFetch(`${baseUrl}/robots.txt`, { signal: AbortSignal.timeout(5000) });
     if (robotsRes.ok) {
-      robotsTxt = await robotsRes.text();
+      robotsTxt = await readRobotsTxt(robotsRes);
       sitemapFound = robotsTxt.toLowerCase().includes("sitemap:");
     }
   } catch { /* robots.txt not available */ }

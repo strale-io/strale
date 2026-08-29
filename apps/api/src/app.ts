@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bodyLimit } from "hono/body-limit";
-import { MAX_DECODED_DOCUMENT_BYTES } from "./capabilities/lib/image-limits.js";
+import { MAX_DECODED_DOCUMENT_BYTES } from "./lib/resource-limits.js";
 import { HTTPException } from "hono/http-exception";
 import { versionMiddleware } from "./lib/versioning.js";
 import { apiError } from "./lib/errors.js";

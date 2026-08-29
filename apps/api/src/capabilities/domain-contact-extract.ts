@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { ROLE_PREFIXES } from "./email-validate.js";
 
@@ -31,7 +32,6 @@ import { ROLE_PREFIXES } from "./email-validate.js";
 const USER_AGENT =
   "StraleBot/1.0 (+https://strale.dev/capabilities/domain-contact-extract; organisation contact lookup)";
 const FETCH_TIMEOUT_MS = 10_000;
-const MAX_BODY_BYTES = 300_000; // cap parsed HTML per request to 300KB
 
 // ReDoS-safe. The previous form was
 //   /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
@@ -41,7 +41,7 @@ const MAX_BODY_BYTES = 300_000; // cap parsed HTML per request to 300KB
 // for a dot — and the /g scan restarts that walk at every offset in the
 // local-part. Cost is quadratic in body length: measured 28ms at 2KB,
 // 479ms at 8KB, 1.9s at 16KB, 7.9s at 32KB — and this capability parses up
-// to ~600KB (homepage + contact page, each capped at MAX_BODY_BYTES).
+// to ~600KB (homepage + contact page, each capped at MAX_SCRAPED_CONTACT_BYTES).
 //
 // That is a remote DoS, not a slow path: the regex is synchronous, Node is
 // single-threaded, and the executeWithHardTimeout guard in routes/do.ts is a
@@ -102,35 +102,6 @@ export function decodeJsonUnicodeEscapes(s: string): string {
 }
 
 /**
- * Read a fetch Response body capped at `maxBytes`, streaming so an
- * oversized response never gets fully buffered in memory first.
- */
-async function readCapped(resp: Response, maxBytes = MAX_BODY_BYTES): Promise<string> {
-  if (!resp.body) {
-    const text = await resp.text();
-    return text.slice(0, maxBytes);
-  }
-  const reader = resp.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let received = 0;
-  while (received < maxBytes) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      received += value.byteLength;
-    }
-  }
-  try {
-    await reader.cancel();
-  } catch {
-    // Best-effort cancel — response is already consumed enough for our needs.
-  }
-  const buffer = Buffer.concat(chunks.map((c) => Buffer.from(c)));
-  return buffer.subarray(0, maxBytes).toString("utf8");
-}
-
-/**
  * Phone-number extraction from AUTHORITATIVE MARKUP ONLY.
  *
  * Two sources, both of which are the page author explicitly declaring "this
@@ -172,7 +143,7 @@ export function extractPhones(html: string): string[] {
   // "24155-3298-4"; neither digit sequence appears anywhere on the page.
   //
   // The mechanism: under our bot User-Agent the site serves different markup
-  // than a browser, `readCapped` truncates it at MAX_BODY_BYTES mid-document,
+  // than a browser, the read truncates at MAX_SCRAPED_CONTACT_BYTES mid-document,
   // and the heuristic reads the resulting fragment as numbers. No amount of
   // additional shape-tightening fixes that, because the input itself is
   // garbage — the heuristic is being asked to distinguish a phone number from
@@ -345,7 +316,7 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
     }
     // Decode at the boundary so every extractor below sees one canonical
     // form, whichever variant the origin served this region.
-    homepageHtml = decodeJsonUnicodeEscapes(await readCapped(resp));
+    homepageHtml = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
     fetchedUrls.push(homepageUrl);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -377,7 +348,7 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
         timeoutMs: FETCH_TIMEOUT_MS,
       });
       if (resp.ok) {
-        contactHtml = decodeJsonUnicodeEscapes(await readCapped(resp));
+        contactHtml = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
         fetchedUrls.push(contactPageUrl);
       }
     } catch {

@@ -5,7 +5,7 @@ import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import { MAX_DECODED_IMAGE_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
+import { MAX_DECODED_IMAGE_BYTES, readBodyWithLimit } from "../lib/resource-limits.js";
 
 registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   const url = ((input.url as string) ?? (input.task as string) ?? "").trim();
