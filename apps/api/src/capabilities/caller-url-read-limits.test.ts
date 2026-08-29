@@ -436,11 +436,14 @@ describe("sitemap-parse survives malformed XML in linear time", () => {
     expect(out.output.sample_urls[1].changefreq).toBe("weekly");
   });
 
-  it("a sitemap index still lists its children", async () => {
+  it("a sitemap index still lists its children, whitespace trimmed", async () => {
+    // The pretty-printed form real sitemap indexes ship in — the old
+    // `/<loc>\s*(.*?)\s*<\/loc>/` trimmed via its own `\s*` guards, so the
+    // replacement has to trim too or every child URL gains newlines.
     const xml =
-      "<sitemapindex>" +
-      "<sitemap><loc>https://a.test/s1.xml</loc></sitemap>" +
-      "<sitemap><loc>https://a.test/s2.xml</loc></sitemap>" +
+      "<sitemapindex>\n" +
+      "  <sitemap>\n    <loc>\n      https://a.test/s1.xml\n    </loc>\n  </sitemap>\n" +
+      "  <sitemap><loc>https://a.test/s2.xml</loc></sitemap>\n" +
       "</sitemapindex>";
     safeFetchMock.mockResolvedValue(streamingResponseOf(Buffer.from(xml)).response);
     const out = (await getDirectExecutor("sitemap-parse")!({
