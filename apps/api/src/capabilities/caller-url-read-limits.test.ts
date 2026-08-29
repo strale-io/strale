@@ -64,8 +64,6 @@ import "./og-image-check.js";
 import "./gdpr-website-check.js";
 import "./job-posting-analyze.js";
 import "./domain-contact-extract.js";
-import "./email-finder.js";
-import "./email-pattern-discover.js";
 import "./social-post-generate.js";
 import "./robots-txt-parse.js";
 import "./sitemap-parse.js";
