@@ -66,7 +66,7 @@ async function main(): Promise<void> {
      GROUP BY c.slug, c.avg_latency_ms
     HAVING COUNT(*) >= ${MIN_SAMPLES}
      ORDER BY percentile_disc(0.95) WITHIN GROUP (ORDER BY t.latency_ms) DESC
-  `)) as unknown as { rows: Row[] };
+  `)) as unknown as Row[];
 
   const mismatched = rows.filter(
     (r) => !shouldExecuteAsync(r.avg_latency_ms) && Number(r.p95) > SYNC_TRANSACTION_WALL_MS,
