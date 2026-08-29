@@ -11,6 +11,10 @@
  *   - the last chunk is sliced, so `totalBytes` is exact and ±1-byte boundary
  *     tests actually test the boundary.
  *
+ * `status` (#434) makes a non-2xx response observable: the drain-on-error
+ * paths cancel a body they never read, and a plain `new Response(...)` gives
+ * no way to see that it happened.
+ *
  * `pulls()` reports how many chunks were pulled by a consumer; `cancelled()`
  * reports whether the body was cancelled (reader.cancel() or body.cancel()),
  * which the early content-length refusal is required to do so the keep-alive
@@ -39,7 +43,7 @@ export interface StreamingResponseHandle {
 
 export function streamingResponse(
   totalBytes: number,
-  opts: { declare?: number; contentType?: string } = {},
+  opts: { declare?: number; contentType?: string; status?: number } = {},
 ): StreamingResponseHandle {
   return streamFrom(totalBytes, (offset, size) => ZERO_CHUNK.subarray(0, size), opts);
 }
@@ -54,7 +58,7 @@ export function streamingResponse(
  */
 export function streamingResponseOf(
   content: Buffer,
-  opts: { declare?: number; contentType?: string } = {},
+  opts: { declare?: number; contentType?: string; status?: number } = {},
 ): StreamingResponseHandle {
   return streamFrom(content.byteLength, (offset, size) => content.subarray(offset, offset + size), opts);
 }
@@ -62,7 +66,7 @@ export function streamingResponseOf(
 function streamFrom(
   totalBytes: number,
   chunkAt: (offset: number, size: number) => Uint8Array,
-  opts: { declare?: number; contentType?: string },
+  opts: { declare?: number; contentType?: string; status?: number },
 ): StreamingResponseHandle {
   let sent = 0;
   let pulls = 0;
@@ -89,7 +93,7 @@ function streamFrom(
   if (opts.declare !== undefined) headers.set("content-length", String(opts.declare));
   if (opts.contentType) headers.set("content-type", opts.contentType);
   return {
-    response: new Response(body, { status: 200, headers }),
+    response: new Response(body, { status: opts.status ?? 200, headers }),
     pulls: () => pulls,
     cancelled: () => cancelled,
   };

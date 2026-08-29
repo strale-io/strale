@@ -110,3 +110,14 @@ limitations:
     workaround: >-
       Run tests at multiple times and average the scores, or use the lab data breakdown to identify bottlenecks
       independent of location
+  - title: Pages Lighthouse cannot load are refused, not scored
+    text: >-
+      PageSpeed Insights runs Lighthouse against the URL from Google's own
+      network. When Lighthouse cannot load the page — the site is down,
+      blocks automated visitors, sits behind authentication, or redirects in a
+      loop — the call is refused rather than returning a zero score, and no
+      charge is taken. This is the most common reason a request fails: 138 of
+      363 failures over the 90 days to 2026-08-29.
+    category: coverage
+    severity: info
+    workaround: Check the URL loads in a browser from a clean session, and that it is reachable without a login

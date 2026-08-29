@@ -5,7 +5,7 @@ import {
   readPageHtml,
 } from "../lib/resource-limits.js";
 import { extractCompanyName } from "./lib/browserless-extract.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { pickByName as pickByNameShared } from "../lib/company-name-match.js";
 
 // Canada — Corporations Canada (ISED)
@@ -85,6 +85,9 @@ async function fetchCorporationJson(registryNumber: string): Promise<Record<stri
     signal: AbortSignal.timeout(10000),
   });
   if (!response.ok) {
+    // Nothing below reads the body (#434). Cancel it rather than leaving
+    // it to pin the keep-alive connection until GC.
+    await discardBody(response, "canadian-company-data: non-2xx");
     throw new Error(`Corporations Canada API returned HTTP ${response.status}`);
   }
   const data = await readJsonWithLimit<unknown[]>(
@@ -222,6 +225,7 @@ async function searchByName(query: string): Promise<CaNameCandidate[]> {
     timeoutMs: 15000,
   });
   if (!response.ok) {
+    await discardBody(response, "canadian-company-data: name search non-2xx");
     throw new Error(`Corporations Canada name search returned HTTP ${response.status}.`);
   }
   const html = await readPageHtml(response, "company_name");

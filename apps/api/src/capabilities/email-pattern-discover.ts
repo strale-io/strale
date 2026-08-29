@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { promises as dns } from "node:dns";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 
 /**
@@ -138,6 +138,9 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
       // Filter to same domain and deduplicate
       const domainEmails = found.filter(e => e.endsWith(`@${targetDomain}`));
       publicEmails = Array.from(new Set(domainEmails)).slice(0, 10);
+    } else {
+      // Body unread on the non-2xx path (#434) — cancel it.
+      await discardBody(resp, "email-pattern-discover: non-2xx");
     }
   } catch {
     // Website fetch failed — not critical. A size refusal is swallowed here

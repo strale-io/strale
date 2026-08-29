@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 
 // Extract links via HTTP GET (no Browserless — fast and cheap)
@@ -21,7 +21,12 @@ registerCapability("link-extract", async (input: CapabilityInput) => {
     signal: AbortSignal.timeout(15000),
   });
 
-  if (!response.ok) throw new Error(`HTTP ${response.status} from ${fullUrl}.`);
+  if (!response.ok) {
+    // Nothing below reads the body (#434). Cancel it rather than leaving
+    // it to pin the keep-alive connection until GC.
+    await discardBody(response, "link-extract: non-2xx");
+    throw new Error(`HTTP ${response.status} from ${fullUrl}.`);
+  }
   const html = await readPageHtml(response);
 
   // Parse all <a> tags
