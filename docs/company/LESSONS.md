@@ -503,7 +503,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 5.** A capability recorded as switched off that served errors for two
+**Count: 6.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -522,6 +522,48 @@ against the system, in the same breath as the claim.** The 2026-08-23 sweep
 re-verified every deletion against `git ls-remote` after executing it, and
 carries the resulting count (24 → 7) as a measured number rather than a
 described one.
+
+**Incident 6 (2026-08-29) — the instrument goes stale exactly when the thing it
+measures does.** The primary checkout sat on a feature branch 68 commits behind
+main. `session-close-check.ts` inspects whichever checkout it is installed in —
+DAILY-RUN.md requires running it from the primary checkout for that reason — but
+it is also *implemented by* that checkout. The branch predates
+`handoff-preservation.ts` entirely, so the morning run executed the pre-repair
+orphaned-handoff test and reported five session records as one directory
+deletion from oblivion. Three of the five were byte-identical to copies already
+on `origin/main` and were never at risk. The repair for that exact false alarm
+had been on main since 2026-08-27 (PR #407).
+
+**This corrects a misdiagnosis, and the correction is the point.** The three
+preceding mornings each read the same symptom as a fresh defect in the check and
+repaired it again; the 2026-08-28 brief concluded the check itself could not be
+trusted and should be "treated as a pattern rather than repaired again". The
+check was never the problem — it was correct on main on every one of those
+mornings. Recording the wrong cause is itself a state drift: the ledger held a
+diagnosis that re-measurement contradicts, which is this family's own defining
+shape applied to this family's own record.
+
+The general form, and why it belongs here rather than in F5: **an instrument
+that lives inside the state it measures degrades precisely when that state goes
+wrong, and cannot report its own degradation unless it is built to look.** A
+hollow test (F5) is one that never had teeth; this one has teeth and loses them
+under exactly the conditions that call for them.
+
+*Repair, shipped 2026-08-29:* `src/lib/check-self-staleness.ts`. The close-check
+now compares its own file against `origin/main` before printing anything and
+labels the whole run when they differ. Three arms rather than two, because the
+two obvious ones are both traps: a failed comparison reports `unknown`, never
+silent agreement, and a difference with zero commits behind reports `diverged`
+(local work), never `stale` — a warning that misdescribes itself is how this
+family started. The comparison is on file content, not commit distance, because
+squash merges make distance meaningless. Verified by running the predicate
+against the real evidence from the stale checkout, which returns `stale` with
+the 68-commit distance named.
+
+*Owed:* the underlying condition is not repaired. The primary checkout is still
+parked on `remediation/wp9-artifacts` with another session's uncommitted work in
+it, and moving it is the operation that corrupted the tree three times. The
+guard makes the consequence visible; it does not remove the cause.
 
 **State: INVESTIGATION DUE.**
 The pattern in all four: the record was written by the actor who *intended* the

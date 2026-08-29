@@ -44,6 +44,7 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import postgres from "postgres";
 import { handoffIsAtRisk } from "../src/lib/handoff-preservation.js";
+import { selfStaleness } from "../src/lib/check-self-staleness.js";
 
 type Finding = { level: "red" | "yellow" | "green"; section: string; detail: string };
 const findings: Finding[] = [];
@@ -491,10 +492,43 @@ function checkRepoHygiene(): void {
 // ────────────────────────────────────────────────────────────────
 // Main
 // ────────────────────────────────────────────────────────────────
+/**
+ * Warn when this run's own logic is not the version on main.
+ *
+ * Placed first, and printed before any finding, because it is a statement
+ * about how much the findings are worth rather than a finding of its own. See
+ * `src/lib/check-self-staleness.ts` for why a checkout that is behind makes
+ * this check behave as it did before its own repairs.
+ */
+function checkSelfStaleness(): void {
+  sh("git fetch origin main --quiet", { cwd: REPO_ROOT, allowFail: true });
+  const relSelf = "apps/api/scripts/session-close-check.ts";
+  const selfPath = resolve(REPO_ROOT, relSelf);
+  const v = selfStaleness({
+    localBlob: sh(`git hash-object "${selfPath}"`, { cwd: REPO_ROOT, allowFail: true }) || null,
+    mainBlob: sh(`git rev-parse --verify --quiet "origin/main:${relSelf}"`, { cwd: REPO_ROOT, allowFail: true }) || null,
+    commitsBehind: parseInt(sh("git rev-list --count HEAD..origin/main", { cwd: REPO_ROOT, allowFail: true }) || "0", 10),
+    branch: sh("git branch --show-current", { cwd: REPO_ROOT, allowFail: true }) || "(detached)",
+  });
+  if (v.kind === "current") return;
+  findings.push({
+    level: "yellow",
+    section:
+      v.kind === "stale"
+        ? "This check is running stale logic"
+        : v.kind === "diverged"
+          ? "This check differs from main (local work)"
+          : "This check could not verify itself",
+    detail: v.why,
+  });
+}
+
 async function main() {
   console.log("Session close-out check");
   console.log(`Session window: last ${SESSION_WINDOW_HOURS}h (since ${SESSION_START_ISO})`);
   console.log("=".repeat(60));
+
+  checkSelfStaleness();
 
   checkDanglingCommits();
   checkUnpushed();
