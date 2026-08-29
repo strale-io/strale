@@ -13,6 +13,7 @@
  */
 
 import { validateUrl } from "../../lib/url-validator.js";
+import { MAX_FETCHED_HTML_BYTES, readTextWithLimit } from "./image-limits.js";
 
 export interface JinaResult {
   markdown: string;
@@ -54,7 +55,25 @@ export async function fetchViaJina(url: string): Promise<JinaResult | null> {
 
     if (!response.ok) return null;
 
-    const data = (await response.json()) as Record<string, unknown>;
+    // #428 round-2 review: this is a SECOND Jina path, parallel to
+    // web-provider's tier 2 and reached with a caller-supplied URL, and it
+    // buffered the whole response with `.json()` — worse than `.text()`, since
+    // the parse allocates again on top of the buffered body. Bound the bytes
+    // first, then parse the bounded string.
+    const raw = await readTextWithLimit(
+      response,
+      MAX_FETCHED_HTML_BYTES,
+      "url",
+      "a page whose reader output is",
+    );
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      // Same outcome the old `.json()` rejection produced: fall through to the
+      // caller's other strategies rather than failing the whole capability.
+      return null;
+    }
 
     const nested = data?.data as Record<string, unknown> | undefined;
     const content = ((nested?.content ?? data?.content) as string) ?? "";

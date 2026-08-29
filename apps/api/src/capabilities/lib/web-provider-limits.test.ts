@@ -524,9 +524,15 @@ describe("failure taxonomy", () => {
  * Scoped deliberately. A blanket ban on `.text()` across `src/capabilities`
  * would flag ~60 sites, most of them small JSON payloads from fixed vendor
  * hosts, and the noise would make it unmaintainable. The population that
- * actually matters is: a file that fetches a CALLER-INFLUENCED URL (it calls
- * `safeFetch`) and then reads that response with no ceiling. Those are the
- * amplifiable ones.
+ * actually matters is: a file that fetches remote content on a caller's
+ * behalf — it calls `safeFetch`, or it POSTs Browserless `/content` to render
+ * a page — and then reads that response with no ceiling.
+ *
+ * The `/content` half is a round-1 review finding: three capabilities
+ * (annual-report-extract, company-enrich, estonian-company-data) rendered
+ * pages through Browserless directly rather than through `fetchPage`, so the
+ * shared layer's bound never applied to them and a `safeFetch`-only scope
+ * would not have noticed.
  *
  * Every such file must appear in the ledger below with its exact count, so:
  *   - a NEW capability that safeFetches a caller URL and reads it unbounded
@@ -538,7 +544,11 @@ describe("failure taxonomy", () => {
  */
 describe("structural guard: unbounded body reads on caller-URL fetch paths", () => {
   const CAPS_DIR = resolve(__dirname, "..");
-  const UNBOUNDED_READ = /await\s+[A-Za-z_$][\w$]*\.(?:text|arrayBuffer)\s*\(\)/g;
+  // `.json()` is in here for a round-2 review reason: lib/jina-reader.ts
+  // buffered a caller-URL response with `.json()`, which is strictly worse
+  // than `.text()` — the parse allocates again on top of the buffered body —
+  // and a text/arrayBuffer-only pattern was blind to it.
+  const UNBOUNDED_READ = /await\s+[A-Za-z_$][\w$]*\.(?:text|arrayBuffer|json)\s*\(\)/g;
 
   /**
    * Known-unbounded caller-URL reads, audited 2026-08-29 and tracked for a
@@ -550,8 +560,8 @@ describe("structural guard: unbounded body reads on caller-URL fetch paths", () 
    */
   const KNOWN_UNBOUNDED: Record<string, number> = {
     "api-health-check.ts": 1,
-    "backlink-check.ts": 1,
-    "canadian-company-data.ts": 1,
+    "backlink-check.ts": 2,
+    "canadian-company-data.ts": 2,
     "domain-contact-extract.ts": 1,
     "email-finder.ts": 1,
     "email-pattern-discover.ts": 1,
@@ -568,7 +578,7 @@ describe("structural guard: unbounded body reads on caller-URL fetch paths", () 
     "tech-stack-detect.ts": 1,
     "url-to-markdown.ts": 1,
     "url-to-text.ts": 1,
-    "youtube-summarize.ts": 2,
+    "youtube-summarize.ts": 3,
   };
 
   /** Every non-test .ts under src/capabilities, recursively. */
@@ -586,7 +596,9 @@ describe("structural guard: unbounded body reads on caller-URL fetch paths", () 
     const found = new Map<string, number>();
     for (const file of walk(CAPS_DIR)) {
       const src = readFileSync(file, "utf-8");
-      if (!/safeFetch\s*\(/.test(src)) continue;
+      const fetchesRemoteForCaller =
+        /safeFetch\s*\(/.test(src) || /"\/content"/.test(src) || /r\.jina\.ai/.test(src);
+      if (!fetchesRemoteForCaller) continue;
       const n = (src.match(UNBOUNDED_READ) ?? []).length;
       if (n > 0) found.set(relative(CAPS_DIR, file).split(sep).join("/"), n);
     }

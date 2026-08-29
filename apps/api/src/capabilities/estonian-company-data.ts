@@ -7,6 +7,7 @@ import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
 import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
+import { MAX_FETCHED_HTML_BYTES, readTextWithLimit } from "./lib/image-limits.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 import { classifyNameMatch } from "../lib/company-name-match.js";
@@ -140,7 +141,16 @@ async function fetchApiViaProxy(apiUrl: string): Promise<unknown> {
     signal: AbortSignal.timeout(15000),
   });
   if (!resp.ok) throw new Error(`Proxy fetch failed: HTTP ${resp.status}`);
-  const html = await resp.text();
+  // #428 round-1 review: direct Browserless /content POST, so the shared
+  // web-provider bound never applied here. The target is the fixed ariregister
+  // host rather than a caller URL, but an unbounded remote read is unbounded
+  // either way.
+  const html = await readTextWithLimit(
+    resp,
+    MAX_FETCHED_HTML_BYTES,
+    "registry_code",
+    "a registry response whose body is",
+  );
   // Chrome renders JSON APIs in a <pre> tag; extract and parse
   const text = htmlToText(html);
   const parsedResponse = extractJsonObject(text);

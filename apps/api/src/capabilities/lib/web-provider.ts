@@ -32,10 +32,24 @@
  *   NOT BOUNDED — the process's global footprint under concurrency. Tiers 1
  *   and 2 sit outside `withBrowserLimit`, so N simultaneous requests can each
  *   hold up to the cap; the real ceiling is (concurrent requests x cap) +
- *   cache budget, plus transport chunk overhead, the Buffer→string copy, and
+ *   cache budget, plus transport chunk overhead, the Buffer→string copy (the
+ *   buffer and the decoded string are both live during the decode), and
  *   whatever a downstream parser allocates from the returned HTML. Turning
  *   "unbounded" into "bounded per response and per cache" is the claim here;
  *   global containment is not.
+ *
+ *   NOT BOUNDED, per request — a request that falls through all three tiers
+ *   can transiently hold up to three capped bodies before GC reclaims the
+ *   earlier ones. The realistic shape of that is narrow: a large body is
+ *   ACCEPTED at tier 1, so falling through means the page was short, a
+ *   challenge, or an error — all small. The exception is a huge script-only
+ *   SPA shell (over the accept bar on length, under it on visible text),
+ *   which is genuinely large and genuinely falls through. Bounded per
+ *   response, not per request-chain.
+ *
+ * Compressed responses are counted AFTER decompression: undici inflates
+ * before `response.body` yields, so a gzip bomb is measured at its real size
+ * rather than its wire size.
  *
  * Oversize is TERMINAL, not a fallback trigger: a page too large on one tier
  * is not re-fetched by the next. See the ImageLimitError re-throws below.
