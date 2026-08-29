@@ -22,7 +22,10 @@
  * Ordering matters and is pinned by tests both directions.
  */
 import { TOS_REFUSAL_MARKER } from "./tos-blocklist.js";
-import { REFUSAL_MESSAGE_PATTERNS } from "./capability-refusal.js";
+import {
+  CALLER_FIELD_REFUSAL_SOURCE,
+  isRefusalMessage,
+} from "./capability-refusal.js";
 
 export type TransactionFailureClass =
   | "caller_input"   // bad/missing input, wrong identifier, unresolvable name
@@ -237,7 +240,7 @@ const CALLER_INPUT_RE = new RegExp(
     // is our own defect. Found by probing the patterns against invented
     // internal-error shapes rather than only against the strings they were
     // written from; the tests did not catch it.
-    "^'[^']{1,40}'.{0,40}must be ",
+    CALLER_FIELD_REFUSAL_SOURCE,
     // NOT matched: "CSV must have at least a header row and one data row."
     // (schema-infer, 5 calls). There is no shape separating it from "Result
     // must have at least one row", which would be ours, so it stays counted.
@@ -342,18 +345,12 @@ const CALLER_INPUT_RE = new RegExp(
     // it — it is a diagnosis of the target, not a shrug.
     "returned almost no readable text",
 
-    // Registry name-search refusals. Sourced from capability-refusal.ts so
-    // this list, the circuit breaker's and the throw sites cannot drift apart
-    // — they are three consumers of one definition.
-    //
-    // These were partly here already, but "distinct .* entities match" never
-    // fired: the message reads "N distinct registered entities are exact
-    // matches", so there is no literal "entities match" for it to hit. Every
-    // ambiguity refusal was therefore classified `internal` — "OUR bug until
-    // proven otherwise" — and counted against the capability's completion
-    // rate, which is what the quality floor quarantines on. Verified against
-    // the real strings, not the intent.
-    ...REFUSAL_MESSAGE_PATTERNS.map((p) => p.trim()),
+    // Registry name-search refusals used to be spread into this regex as
+    // trimmed pattern SOURCES — a third matching implementation over the same
+    // array, unanchored and case-insensitive where `isRefusalMessage` is
+    // anchored and case-sensitive (#436). They are now claimed by that one
+    // authority, called at this rule's precedence in classifyTransactionFailure
+    // below, so there is nothing left here to drift from it.
   ].join("|"),
   "i",
 );
@@ -377,7 +374,9 @@ export function classifyTransactionFailure(error: string | null | undefined): Tr
   if (INTERNAL_RE.test(msg)) return "internal";
   if (TIMEOUT_RE.test(msg)) return "timeout";
   if (UPSTREAM_RE.test(msg)) return "upstream";
-  if (CALLER_INPUT_RE.test(msg)) return "caller_input";
+  // Same precedence the spread patterns had — after the fault signatures
+  // that quote raw third-party text, before the unclassified default.
+  if (CALLER_INPUT_RE.test(msg) || isRefusalMessage(msg)) return "caller_input";
   // The default. NOT `internal` — see UNATTRIBUTED above. Reaching this line
   // means no rule in this module recognised the string, which is a statement
   // about this module, not about the capability.

@@ -143,12 +143,22 @@ export function categorizeError(
   if (msg.includes("rate limit") || msg.includes("429") || msg.includes("too many requests")) {
     return "rate_limited";
   }
+  // #436 round 3: this listed 502/503/504 and not 500, so a plain vendor 500
+  // — "PageSpeed Insights returned HTTP 500" — fell through to
+  // `internal_error` and was counted against us on the trust surfaces, while
+  // transaction-failure-taxonomy.ts classified the very same string
+  // `upstream`. 34 real production failures over 90 days on that one
+  // capability alone. The whole 5xx range is the upstream's, so match it the
+  // way the taxonomy does (UPSTREAM_RE's `HTTP 5\d\d`) rather than by
+  // enumerating three of the six codes.
+  //
+  // Anchored to the "http 5xx" phrasing rather than a bare three-digit match,
+  // which would also claim "responded in 1500ms".
   if (
     msg.includes("econnrefused") ||
     msg.includes("enotfound") ||
-    msg.includes("502") ||
-    msg.includes("503") ||
-    msg.includes("504") ||
+    /\bhttp[ _-]?5\d\d\b/.test(msg) ||
+    /\b5\d\d\b.*\b(?:server error|bad gateway|unavailable|gateway timeout)\b/.test(msg) ||
     msg.includes("upstream") ||
     msg.includes("fetch failed")
   ) {

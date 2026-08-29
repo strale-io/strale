@@ -58,6 +58,7 @@ import { isX402PayableCapability } from "../lib/x402-eligibility.js";
 import { getFreeTierSlugs } from "../lib/free-tier.js";
 import * as walletService from "../lib/wallet-service.js";
 import * as reservations from "../lib/wallet-reservations.js";
+import { shouldExecuteAsync } from "../lib/execution-routing.js";
 import { recoverValuesFromTask, recoveredValuesHint, unsatisfiedGroupFields } from "../lib/task-value-hints.js";
 import { logError, logWarn } from "../lib/log.js";
 import { fireAndForget } from "../lib/fire-and-forget.js";
@@ -539,8 +540,8 @@ const MAX_TIMEOUT_SECONDS = 60;
 const DEFAULT_TIMEOUT_SECONDS = 30;
 const MAX_PRICE_CAP_CENTS = 2000; // €20 absolute cap per request
 
-// DEC-22: Capabilities with avg latency above this threshold execute async
-const ASYNC_THRESHOLD_MS = 10_000;
+// DEC-22 routing policy now lives in lib/execution-routing.ts (#436), so the
+// route, the audit script and the tests read one definition.
 
 // Cert-audit C7 follow-up: hard wall-clock timeout for the async executor
 // path. Even if a capability skips AbortSignal on its fetch (or hangs in a
@@ -1358,7 +1359,7 @@ doRoute.post(
   }
 
   // Paid execution: sync or async (DEC-22)
-  const isAsync = (capability.avgLatencyMs ?? 0) > ASYNC_THRESHOLD_MS;
+  const isAsync = shouldExecuteAsync(capability.avgLatencyMs);
   if (isAsync) {
     return executeAsync(c, db, user, capability, executor, executionInput, idempotencyKey, idempotencyFingerprint, outputSchema, freshness);
   } else {

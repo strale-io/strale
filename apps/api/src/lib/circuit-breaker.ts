@@ -5,7 +5,7 @@ import { logHealthEvent } from "./health-monitor.js";
 import { categorizeFailureReason, isRetryableFailure } from "./trust-helpers.js";
 import { fireAndForget } from "./fire-and-forget.js";
 import { log } from "./log.js";
-import { REFUSAL_MESSAGE_PATTERNS } from "./capability-refusal.js";
+import { isRefusalMessage } from "./capability-refusal.js";
 
 // Circuit breaker states
 type CircuitState = "closed" | "open" | "half_open";
@@ -176,11 +176,6 @@ const USER_INPUT_ERROR_PATTERNS = [
   // (28 arrived in 16 days) would take the capability down for everyone.
   // Kept in sync with TOS_REFUSAL_MARKER by tos-blocklist.test.ts.
   "Terms of Service prohibit automated access",
-  // Registry name-search refusals: the capability reached the upstream and
-  // understood the answer well enough to know it was ambiguous or unmatched.
-  // Kept in sync with the throw sites by capability-refusal.test.ts, which
-  // builds real errors from the real primitives rather than restating strings.
-  ...REFUSAL_MESSAGE_PATTERNS,
 ];
 
 /**
@@ -219,7 +214,13 @@ export function isPlatformRefusal(reason: string): boolean {
 
 /** Exported so tests can assert the pattern list stays in sync with its producers. */
 export function isUserInputError(reason: string): boolean {
-  return USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p));
+  // Refusals come from the ONE authority (#436), not from a second copy of
+  // its pattern list matched by a different rule. This list keeps only the
+  // target-attributable strings that are genuinely this module's own concern
+  // — a 404 on the caller's URL is not a "refusal", but it is still not the
+  // capability's ill health — and those legitimately appear mid-message, so
+  // they keep substring matching.
+  return isRefusalMessage(reason) || USER_INPUT_ERROR_PATTERNS.some((p) => reason.includes(p));
 }
 
 /**
