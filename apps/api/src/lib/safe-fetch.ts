@@ -191,6 +191,26 @@ export async function safeFetch(
 }
 
 /**
+ * Cancel a response body we are not going to read (#428 review).
+ *
+ * Abandoning a response mid-flight without cancelling pins the keep-alive
+ * connection until GC. This module already held two hand-rolled copies of the
+ * idiom (the 3xx paths below) and the wording every other copy borrows, so the
+ * shared one lives here — `capabilities/lib` could not host it without
+ * inverting the import direction.
+ */
+export async function discardBody(response: Response, reason: string): Promise<void> {
+  await response.body
+    ?.cancel()
+    .catch((err) =>
+      logWarn("response-body-cancel-failed", "could not cancel unread body", {
+        reason,
+        err: String(err),
+      }),
+    );
+}
+
+/**
  * Exported for test coverage (F-0-006). Runs the redirect-follow loop with
  * an injectable `validate` function so tests can exercise loop mechanics
  * (cap, Location parsing, per-hop re-validation) against loopback servers

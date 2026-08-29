@@ -5,6 +5,7 @@ import {
   recordVendorUsage,
 } from "./vendor-control-tower.js";
 import { logWarn } from "./log.js";
+import { readErrorTextTruncated } from "../capabilities/lib/image-limits.js";
 
 export async function meteredVendorFetch(
   providerName: string,
@@ -30,7 +31,10 @@ export async function meteredVendorFetch(
     if (response.ok) await recordVendorUsage(providerName, units);
     else if (classifyHttpFailures) {
       if (providerName === "esortcode" && response.status === 403) {
-        const detail = await response.clone().text().catch(() => "");
+        // #428 review: bounded + truncated. A vendor error body read for
+        // diagnostics should never be unbounded, and this one is a clone —
+        // it holds a second full copy of whatever the vendor sent.
+        const detail = await readErrorTextTruncated(response.clone());
         await recordVendorHttpFailure(providerName, response.status, detail);
       } else {
         await recordVendorHttpFailure(providerName, response.status);

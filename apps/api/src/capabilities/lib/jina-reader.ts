@@ -13,6 +13,8 @@
  */
 
 import { validateUrl } from "../../lib/url-validator.js";
+import { ImageLimitError, readPageHtml } from "./image-limits.js";
+import { discardBody } from "../../lib/safe-fetch.js";
 
 export interface JinaResult {
   markdown: string;
@@ -52,9 +54,25 @@ export async function fetchViaJina(url: string): Promise<JinaResult | null> {
 
     const fetchTimeMs = Date.now() - start;
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      await discardBody(response, `jina HTTP ${response.status}`);
+      return null;
+    }
 
-    const data = (await response.json()) as Record<string, unknown>;
+    // #428 round-2 review: this is a SECOND Jina path, parallel to
+    // web-provider's tier 2 and reached with a caller-supplied URL, and it
+    // buffered the whole response with `.json()` — worse than `.text()`, since
+    // the parse allocates again on top of the buffered body. Bound the bytes
+    // first, then parse the bounded string.
+    const raw = await readPageHtml(response, "url");
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      // Same outcome the old `.json()` rejection produced: fall through to the
+      // caller's other strategies rather than failing the whole capability.
+      return null;
+    }
 
     const nested = data?.data as Record<string, unknown> | undefined;
     const content = ((nested?.content ?? data?.content) as string) ?? "";
@@ -67,7 +85,14 @@ export async function fetchViaJina(url: string): Promise<JinaResult | null> {
       title,
       fetchTimeMs,
     };
-  } catch {
+  } catch (err) {
+    // #428 six-lens review: oversize is TERMINAL here too. This catch used to
+    // swallow everything, so an ImageLimitError became "Jina failed" and
+    // url-to-markdown fell through to Browserless — re-rendering the very page
+    // just judged too large, which is the cascade the whole change exists to
+    // stop. Every other failure still returns null so the caller's remaining
+    // strategies run.
+    if (err instanceof ImageLimitError) throw err;
     return null;
   }
 }
