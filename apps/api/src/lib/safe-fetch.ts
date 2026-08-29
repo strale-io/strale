@@ -191,16 +191,6 @@ export async function safeFetch(
 }
 
 /**
- * Exported for test coverage (F-0-006). Runs the redirect-follow loop with
- * an injectable `validate` function so tests can exercise loop mechanics
- * (cap, Location parsing, per-hop re-validation) against loopback servers
- * without fighting the real `validateUrl`'s private-IP refusal.
- *
- * Production callers use `safeFetch`, which always passes the real
- * `validateUrl`. Don't call `followRedirects` directly from application
- * code — its `validate` parameter is a test seam, not a policy hook.
- */
-/**
  * Cancel a response body we are not going to read (#428 review).
  *
  * Abandoning a response mid-flight without cancelling pins the keep-alive
@@ -220,6 +210,16 @@ export async function discardBody(response: Response, reason: string): Promise<v
     );
 }
 
+/**
+ * Exported for test coverage (F-0-006). Runs the redirect-follow loop with
+ * an injectable `validate` function so tests can exercise loop mechanics
+ * (cap, Location parsing, per-hop re-validation) against loopback servers
+ * without fighting the real `validateUrl`'s private-IP refusal.
+ *
+ * Production callers use `safeFetch`, which always passes the real
+ * `validateUrl`. Don't call `followRedirects` directly from application
+ * code — its `validate` parameter is a test seam, not a policy hook.
+ */
 export async function followRedirects(
   url: string,
   init: Omit<RequestInit, "redirect">,

@@ -294,14 +294,21 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
     await expect(render()).rejects.toThrow(/returned a server error \(HTTP 503\)/);
   });
 
-  it("a huge error body is TRUNCATED, not refused — the upstream error still surfaces", async () => {
+  it("a huge error body is TRUNCATED, not refused — and reading actually STOPS at the cap", async () => {
     // An error body is read to explain a failure; refusing it on size would
-    // replace an accurate upstream message with a size error.
-    const giant = Buffer.alloc(MAX_ERROR_BODY_BYTES * 3, 0x41);
-    browserlessFetchMock.mockResolvedValue(
-      new Response(streamingResponseOf(giant).response.body, { status: 503 }),
-    );
+    // replace an accurate upstream message with a size error. But asserting
+    // only that the 503 message survives is satisfied by an unbounded
+    // `.text()` too — the six-lens review's point. So assert the read stopped:
+    // the body is cancelled and the pull count is bounded by the cap, not by
+    // the body's real size.
+    const giant = Buffer.alloc(MAX_ERROR_BODY_BYTES * 4, 0x41);
+    const handle = streamingResponseOf(giant);
+    browserlessFetchMock.mockResolvedValue(new Response(handle.response.body, { status: 503 }));
     await expect(render()).rejects.toThrow(/returned a server error \(HTTP 503\)/);
+    expect(handle.cancelled(), "the oversized error body was read to completion").toBe(true);
+    // 64 KiB cap over 64 KiB chunks: one pull crosses it. An unbounded read
+    // would have pulled four.
+    expect(handle.pulls()).toBeLessThanOrEqual(2);
   });
 
   it("a net-error marker inside a bounded error body is still classified permanent", async () => {
@@ -520,6 +527,37 @@ describe("failure taxonomy", () => {
     browserlessFetchMock.mockResolvedValue(new Response("boom", { status: 503 }));
     const err = await fetchPage(URL_UNDER_TEST, { skipFallback: true }).catch((e: Error) => e);
     expect(classifyTransactionFailure((err as Error).message)).not.toBe("caller_input");
+  });
+
+  it("a refusal does not trip the circuit breaker or read as an internal error", async () => {
+    // The six-lens review caught this: the taxonomy was the ONLY one of three
+    // health consumers being checked. `circuit-breaker.isUserInputError`
+    // returned false for every byte-limit refusal, so three oversized pages in
+    // a row would open the breaker and hand every caller
+    // `capability_unavailable` — the 2026-08-14 french-company-data incident,
+    // now on a path 37 capabilities share. Verified against the real
+    // predicates, not a restatement of the message.
+    const { isUserInputError } = await import("../../lib/circuit-breaker.js");
+    const { isCapabilityRefusal } = await import("../../lib/capability-refusal.js");
+    const { categorizeError } = await import("../../lib/quality-capture.js");
+
+    plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
+    const err = (await fetchPage(URL_UNDER_TEST).catch((e: Error) => e)) as Error;
+
+    expect(err).toBeInstanceOf(ImageLimitError);
+    expect(isUserInputError(err.message), "breaker would count this as a fault").toBe(true);
+    expect(isCapabilityRefusal(err), "not recognised as a refusal").toBe(true);
+    expect(categorizeError(err), "trust surfaces would call this our defect").toBe(
+      "capability_refusal",
+    );
+  });
+
+  it("NEGATIVE CONTROL: a genuine upstream failure is still NOT a refusal", async () => {
+    const { isCapabilityRefusal } = await import("../../lib/capability-refusal.js");
+    const { categorizeError } = await import("../../lib/quality-capture.js");
+    const err = new Error("Browserless returned empty or too-short HTML response.");
+    expect(isCapabilityRefusal(err)).toBe(false);
+    expect(categorizeError(err)).not.toBe("capability_refusal");
   });
 
   it("NEGATIVE CONTROL: an anti-bot challenge at tier 3 is not rebadged caller_input", async () => {

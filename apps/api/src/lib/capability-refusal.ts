@@ -71,6 +71,18 @@ export class CapabilityRefusalError extends Error {
  * arrangement `tos-blocklist.test.ts` uses for the ToS refusal marker.
  */
 export const REFUSAL_MESSAGE_PATTERNS = [
+  // Resource-limit refusals from capabilities/lib/image-limits.ts (#412, #426,
+  // #428). The capability fetched, measured, and declined to hold an input
+  // larger than its declared ceiling — the ask has to change, nothing is
+  // unhealthy. Verified against the real predicates during the #428 review:
+  // before these entries `isUserInputError` returned false for every one of
+  // them, so three oversized pages in a row would have opened the breaker on a
+  // path 37 capabilities share. Fragments are the tail of the message rather
+  // than "must be ", which over-matches internal assertions (see the
+  // transaction-failure-taxonomy note on that exact trap).
+  "MB or less", // byte caps: image, document, render, HTML, media
+  "px or less", // image-resize output edge
+  "megapixels or less", // image-resize output area
   "Ambiguous ", // pickByName: several equally-good registry matches
   "No confident ", // pickByName / assertSingleResultMatch: nothing matched well enough
   "Could not identify a specific ", // extractCompanyName: input names no company

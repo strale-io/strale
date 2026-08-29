@@ -160,8 +160,23 @@ export type ImageFormat = (typeof IMAGE_FORMATS)[number];
 /** The resize strategies sharp supports, and the only ones this capability accepts. */
 export const FIT_MODES = ["cover", "contain", "fill", "inside", "outside"] as const;
 
-/** Thrown for a refusal that is the caller's fault, so it maps to a 4xx rather than a 500. */
+/**
+ * Thrown for a refusal that is the caller's fault, so it maps to a 4xx rather
+ * than a 500.
+ *
+ * Carries `isCapabilityRefusal` (#428 six-lens review). A byte-limit refusal is
+ * the capability working: it fetched, measured, and declined an input it is not
+ * willing to hold. Three of those in a row must not suspend the capability for
+ * everyone — which is exactly what happened before this marker existed, because
+ * `circuit-breaker.ts` and `quality-capture.ts` both key off
+ * `lib/capability-refusal.ts` and neither recognised this class. That is the
+ * 2026-08-14 `french-company-data` incident's shape, documented in that module.
+ * The marker survives structured cloning and module-instance boundaries, which
+ * `instanceof` alone does not.
+ */
 export class ImageLimitError extends Error {
+  readonly isCapabilityRefusal = true;
+
   constructor(message: string) {
     super(message);
     this.name = "ImageLimitError";
