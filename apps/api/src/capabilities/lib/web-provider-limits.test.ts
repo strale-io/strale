@@ -135,7 +135,10 @@ describe("tier 1 (plain fetch) HTML is stream-bounded", () => {
   });
 
   it("refuses a declared over-limit content-length WITHOUT pulling, and cancels the body", async () => {
-    const handle = streamingResponseOf(htmlOfBytes(LIMIT + CHUNK), {
+    // Deliberately a SMALL body with a huge declaration: the refusal must come
+    // from the header alone, before a byte is pulled. If the early check were
+    // removed this body would read fine and no error would be thrown at all.
+    const handle = streamingResponseOf(htmlOfBytes(10_000), {
       declare: LIMIT + 1,
       contentType: "text/html",
     });
@@ -216,7 +219,7 @@ describe("tier 2 (Jina) HTML is stream-bounded", () => {
   });
 
   it("refuses a declared over-limit length without pulling, and cancels", async () => {
-    const handle = streamingResponseOf(jinaBody(LIMIT + CHUNK), { declare: LIMIT + 1 });
+    const handle = streamingResponseOf(jinaBody(10_000), { declare: LIMIT + 1 });
     jinaFetch().mockResolvedValue(handle.response);
     await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(/it declared/);
     expect(handle.pulls()).toBe(0);
@@ -252,7 +255,7 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
   });
 
   it("refuses a declared over-limit length without pulling, and cancels", async () => {
-    const handle = streamingResponseOf(htmlOfBytes(LIMIT + CHUNK), { declare: LIMIT + 1 });
+    const handle = streamingResponseOf(htmlOfBytes(10_000), { declare: LIMIT + 1 });
     browserlessFetchMock.mockResolvedValue(handle.response);
     await expect(render()).rejects.toThrow(/it declared/);
     expect(handle.pulls()).toBe(0);
