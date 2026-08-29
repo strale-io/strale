@@ -1,6 +1,23 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { readErrorTextTruncated } from "../lib/resource-limits.js";
+import {
+  MAX_PAGESPEED_REPORT_BYTES,
+  readErrorTextTruncated,
+  readJsonWithLimit,
+  ResourceLimitError,
+} from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
+
+/**
+ * Only what this capability reads. PSI's report has hundreds of other fields;
+ * naming the handful we consume keeps the `any` casts below honest about the
+ * fact that everything past `audits` is vendor-shaped.
+ */
+interface PageSpeedResponse {
+  lighthouseResult?: {
+    categories?: { performance?: { score?: number | null } };
+    audits?: Record<string, any>;
+  };
+}
 
 // F-0-006 Bucket D: user URL is url-encoded and sent to the HARDCODED
 // Google PageSpeed API endpoint. We never fetch the user's URL directly —
@@ -37,18 +54,32 @@ registerCapability("page-speed-test", async (input: CapabilityInput) => {
     throw new Error(`PageSpeed Insights returned HTTP ${resp.status}: ${err.slice(0, 300)}`);
   }
 
-  // NOT bounded, deliberately and reluctantly (#432). This is the one
-  // sanctioned entry in the caller-URL guard's ledger. PSI returns the full
-  // Lighthouse report, whose size scales with the page the CALLER chose —
-  // request count, DOM size, and base64 screenshot audits — so it is squarely
-  // the class this work package closed everywhere else. It is left open
-  // because a cap has to be sized against a measured distribution of real
-  // Lighthouse reports, and PSI refuses keyless traffic from this network
-  // (429) while the platform holds no PAGESPEED_API_KEY. Capping it on a
-  // guess would risk refusing working traffic on a capability with 433
-  // successful production calls in 90 days, which is the failure the byte
-  // limits exist to avoid causing. Tracked for measurement.
-  const data = await resp.json();
+  // Bounded (#434), closing the last sanctioned unbounded read in the
+  // caller-URL guard's ledger. PSI returns the whole Lighthouse report, of
+  // which this capability keeps about 2 KB — the largest output ever stored
+  // for it in production is 2,306 bytes.
+  //
+  // An oversize here is classified UPSTREAM, not caller_input, and that is a
+  // deliberate departure from every other cap in this family. The cap sits
+  // 1.8x above the mathematical ceiling of the report format (see
+  // MAX_PAGESPEED_REPORT_BYTES for the derivation), so no page a caller can
+  // name will reach it. A response above it means Google emitted something
+  // outside its own documented structure, which is a vendor anomaly and
+  // *should* count against the capability's health — blaming the caller here
+  // would be both inaccurate and a way of hiding a real upstream problem.
+  //
+  // Hence the plain Error rather than letting ResourceLimitError through: that
+  // class carries `isCapabilityRefusal`, which is exactly what this is not.
+  let data: PageSpeedResponse;
+  try {
+    data = await readJsonWithLimit<PageSpeedResponse>(resp, MAX_PAGESPEED_REPORT_BYTES);
+  } catch (err) {
+    if (!(err instanceof ResourceLimitError)) throw err;
+    throw new Error(
+      `PageSpeed Insights returned a report larger than ${MAX_PAGESPEED_REPORT_BYTES / 1024 / 1024}MB, ` +
+        `beyond what Lighthouse can produce for any page — treating it as an upstream fault.`,
+    );
+  }
   const lighthouse = data.lighthouseResult;
   if (!lighthouse) throw new Error("PageSpeed Insights did not return Lighthouse results.");
 

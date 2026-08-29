@@ -209,6 +209,57 @@ export const MAX_FETCHED_SITEMAP_BYTES = 52_428_800;
 export const MAX_FETCHED_API_RESPONSE_BYTES = 4 * 1024 * 1024;
 
 /**
+ * Largest PageSpeed Insights report the platform will buffer (#434).
+ *
+ * This is the read #432 left open rather than guess at. The number is now
+ * derived from the format's own ceiling instead of from a distribution we
+ * could not obtain — PSI answers keyless traffic from CI/dev with 429 (the
+ * anonymous quota is a shared per-day consumer project, exhausted globally),
+ * and the platform holds no API key. So the report was bounded from above by
+ * measuring what Lighthouse is *capable of emitting*, which turns out to be a
+ * stronger argument than a sample of what it usually emits.
+ *
+ * ### The dominant term is bounded by Lighthouse itself
+ *
+ * `core/gather/gatherers/full-page-screenshot.js` (read 2026-08-29) clamps the
+ * capture to `MAX_WEBP_SIZE = 16383` px tall, format `webp`, quality 30, and
+ * embeds it as a base64 data URI. That is a bounded object, so its ceiling can
+ * be measured directly. Encoded locally with this repo's sharp at exactly
+ * those parameters, at both emulated viewport widths:
+ *
+ *     content at 16,383px tall        mobile 412px    desktop 1350px
+ *     page-like (text + blocks)          0.08 MB          0.24 MB
+ *     photographic gradient              0.04 MB          0.08 MB
+ *     dense photographic detail          1.30 MB          4.10 MB
+ *     incompressible noise               3.90 MB         12.61 MB
+ *
+ * (base64 sizes, which is what the JSON actually carries.) The bottom row is
+ * the mathematical ceiling: a page rendering as pure static for 16,383 px.
+ *
+ * ### The rest of the report, measured
+ *
+ * Five real published Lighthouse reports (GoogleChrome/lighthouse
+ * `report/test-assets/lhr-*.json` and `core/test/results/sample_v2.json`):
+ * 0.15, 0.26, 0.28, 0.33 and 0.53 MB whole. The largest is LH 13.4.1 with all
+ * 160 audits — more than we request, since this capability asks for
+ * `category=performance` only. Within them, `screenshot-thumbnails` runs
+ * 28–107 KB and `network-requests` 1–16 KB, scaling to ~170 KB at 500 requests.
+ *
+ * ### The cap
+ *
+ *     realistic heavy page   ~1.0 MB   (0.53 base + 0.24 screenshot + 0.17 net)
+ *     realistic worst case   ~4.9 MB   (photo-heavy full-height desktop page)
+ *     absolute ceiling      ~13.4 MB   (0.8 + the noise row above)
+ *
+ * 24 MiB is 1.8x the absolute ceiling, ~5x the realistic worst case, and ~24x a
+ * heavy real page. It cannot refuse anything Lighthouse is able to produce,
+ * which is the property #432 declined to guess at; its job is to turn
+ * "unbounded" into "bounded". Deliberately its own constant rather than a reuse
+ * of 4/16/50 MiB — those were derived from other evidence about other formats.
+ */
+export const MAX_PAGESPEED_REPORT_BYTES = 24 * 1024 * 1024;
+
+/**
  * How much of a page `email-finder` and `domain-contact-extract` scan (#432).
  *
  * Their pre-existing product behaviour, hoisted out of two identical local

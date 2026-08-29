@@ -151,24 +151,20 @@ const tally = (files: Scanned[]): Record<string, number> =>
 
 describe("class A — a caller's URL is never read unbounded", () => {
   /**
-   * ONE entry, and it is the honest one. #412, #426, #428 and #432 between
-   * them routed every other caller-shaped read through the readers in
+   * EMPTY since #434, and that is the assertion. #412, #426, #428, #432 and
+   * #434 between them routed every caller-shaped read through the readers in
    * `lib/resource-limits.ts`.
    *
-   * An entry may be added only with a written reason for why a caller-shaped
-   * body may be materialized without a ceiling. "It is probably small" is not
-   * one — every capability in the 20-file ledger this replaces was probably
-   * small too. The reason below is the opposite claim: the body is probably
-   * LARGE, and the cap cannot be sized without evidence this environment
-   * cannot obtain, so guessing at one would risk breaking a working
-   * capability. See the note at the read itself.
+   * `page-speed-test` was the last entry and the only one ever sanctioned. It
+   * came out by measuring the ceiling of what Lighthouse can emit rather than
+   * a sample of what it usually emits — see `MAX_PAGESPEED_REPORT_BYTES`.
+   *
+   * An entry may be added back only with a written reason for why a
+   * caller-shaped body may be materialized without a ceiling. "It is probably
+   * small" is not one — every capability in the 20-file ledger this replaced
+   * was probably small too.
    */
-  const SANCTIONED: Record<string, number> = {
-    // Google PageSpeed Insights returns the full Lighthouse report. Sizing a
-    // cap needs a measured distribution of real reports; PSI answers keyless
-    // traffic from CI/dev with 429 and the platform holds no API key.
-    "capabilities/page-speed-test.ts": 1,
-  };
+  const SANCTIONED: Record<string, number> = {};
 
   it("no unbounded body read in any file that fetches on a caller's behalf", () => {
     expect(
