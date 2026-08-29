@@ -5,7 +5,7 @@ import {
   recordVendorUsage,
 } from "./vendor-control-tower.js";
 import { logWarn } from "./log.js";
-import { readErrorTextTruncated } from "../capabilities/lib/image-limits.js";
+import { readErrorTextTruncated } from "./resource-limits.js";
 
 export async function meteredVendorFetch(
   providerName: string,

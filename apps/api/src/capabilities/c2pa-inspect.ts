@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
-import { MAX_C2PA_MEDIA_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
+import { MAX_C2PA_MEDIA_BYTES, readBodyWithLimit } from "../lib/resource-limits.js";
 import { logWarn } from "../lib/log.js";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ registerCapability("c2pa-inspect", async (input: CapabilityInput) => {
     // #426 review: cancel the unconsumed body before refusing — throwing with
     // it open pins the keep-alive connection until GC, and a wrong
     // content-type is attacker-cheap to serve (same class as the
-    // declared-length refusal fix in image-limits.ts).
+    // declared-length refusal fix in resource-limits.ts).
     await resp.body?.cancel().catch((err) =>
       logWarn("c2pa-body-cancel-failed", "unsupported-type body cancel failed", {
         err: String(err),

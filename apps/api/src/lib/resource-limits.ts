@@ -1,8 +1,20 @@
 /**
- * Resource limits for capabilities that hand caller-supplied bytes to a native
- * image decoder.
+ * The platform's single authority for byte limits on data it did not author:
+ * caller-supplied payloads, remote responses fetched on a caller's behalf, and
+ * renders produced from caller input.
  *
- * ## Why these exist
+ * ## Why it lives here, under this name (#432)
+ *
+ * It began as `capabilities/lib/image-limits.ts` and grew past both halves of
+ * that name. It now holds image, document, render, HTML, sitemap, robots,
+ * API-response, error-body and transfer caps plus the shared streaming readers
+ * — and `lib/metered-vendor-fetch.ts` imports it, which inverted the usual
+ * `capabilities -> lib` direction. Moving it to `lib/` restores that direction
+ * and stops the name from lying about the contents; `ImageLimitError` became
+ * `ResourceLimitError` for the same reason, since it is thrown for sitemaps and
+ * HTML pages that contain no image at all.
+ *
+ * ## Why the limits exist
  *
  * VERIFY-DEP / WP13 follow-up, 2026-08-25. The `/x402/*` rail had no body cap,
  * which is fixed at the rail in `app.ts`. But a rail cap only bounds the wire:
@@ -26,7 +38,7 @@
  * There is no corresponding default for output geometry.
  */
 
-import { logError, logWarn } from "../../lib/log.js";
+import { logError, logWarn } from "./log.js";
 
 /**
  * Largest decoded image the platform accepts.
@@ -48,9 +60,9 @@ export const MAX_DECODED_IMAGE_BYTES = 4 * 1024 * 1024;
  * document that fits on the wire is refused here. Applies to `pdf-extract`,
  * `invoice-extract`, `contract-extract`, `resume-parse` (#412).
  *
- * Lives in this module despite the name: image-limits.ts is the single
- * authority for caller-input byte caps, and a second module holding a second
- * 8 MiB constant is how six magic numbers happen.
+ * Lives in this module because it is the single authority for caller-input
+ * byte caps, and a second module holding a second 8 MiB constant is how six
+ * magic numbers happen.
  */
 export const MAX_DECODED_DOCUMENT_BYTES = 8 * 1024 * 1024;
 
@@ -174,12 +186,12 @@ export const FIT_MODES = ["cover", "contain", "fill", "inside", "outside"] as co
  * The marker survives structured cloning and module-instance boundaries, which
  * `instanceof` alone does not.
  */
-export class ImageLimitError extends Error {
+export class ResourceLimitError extends Error {
   readonly isCapabilityRefusal = true;
 
   constructor(message: string) {
     super(message);
-    this.name = "ImageLimitError";
+    this.name = "ResourceLimitError";
   }
 }
 
@@ -212,11 +224,11 @@ export function assertEnum<T extends readonly string[]>(
 ): T[number] {
   if (raw === undefined || raw === null || raw === "") return fallback;
   if (typeof raw !== "string") {
-    throw new ImageLimitError(`'${field}' must be one of: ${allowed.join(", ")}.`);
+    throw new ResourceLimitError(`'${field}' must be one of: ${allowed.join(", ")}.`);
   }
   const normalised = raw.trim().toLowerCase();
   if ((allowed as readonly string[]).includes(normalised)) return normalised as T[number];
-  throw new ImageLimitError(
+  throw new ResourceLimitError(
     `'${field}' must be one of: ${allowed.join(", ")} (received ${JSON.stringify(raw)}).`,
   );
 }
@@ -229,7 +241,7 @@ export function assertQuality(raw: unknown, fallback = 80): number {
   if (raw === undefined || raw === null || raw === "") return fallback;
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isInteger(n) || n < 1 || n > 100) {
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'quality' must be a whole number between 1 and 100 (received ${JSON.stringify(raw)}).`,
     );
   }
@@ -354,7 +366,7 @@ export function assertDecodedSizeWithinLimit(
   field = "base64",
 ): void {
   if (bytes > maxBytes) {
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'${field}' must be ${mib(maxBytes)} or less once decoded (received ${mib(bytes)}).`,
     );
   }
@@ -377,10 +389,10 @@ export function assertOutputGeometryWithinLimit(
   ] as const) {
     if (value === undefined) continue;
     if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
-      throw new ImageLimitError(`'${name}' must be a positive whole number of pixels.`);
+      throw new ResourceLimitError(`'${name}' must be a positive whole number of pixels.`);
     }
     if (value > MAX_OUTPUT_DIMENSION) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `'${name}' must be ${MAX_OUTPUT_DIMENSION}px or less (received ${value}px).`,
       );
     }
@@ -391,7 +403,7 @@ export function assertOutputGeometryWithinLimit(
   if (width !== undefined && height !== undefined) {
     const pixels = width * height;
     if (pixels > MAX_OUTPUT_PIXELS) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `'target_width' x 'target_height' must be ${MAX_OUTPUT_PIXELS / 1_000_000} megapixels or less ` +
           `(received ${width}x${height}, ${(pixels / 1_000_000).toFixed(1)} megapixels).`,
       );
@@ -431,7 +443,7 @@ export function effectiveOutputGeometry(
     // computed at all, so the one thing that must not happen is proceeding as
     // though it had been checked. A guard that cannot evaluate its condition
     // refuses.
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       "'image_url'/'base64' must be an image whose dimensions can be read.",
     );
   }
@@ -480,12 +492,12 @@ export function assertEffectiveGeometryWithinLimit(
     ["height", height],
   ] as const) {
     if (!Number.isFinite(value) || value < 1) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `Resolved output ${name} is not a usable pixel count (${value}).`,
       );
     }
     if (value > MAX_OUTPUT_DIMENSION) {
-      throw new ImageLimitError(
+      throw new ResourceLimitError(
         `'target_width'/'target_height' must be ${MAX_OUTPUT_DIMENSION}px or less per side once ` +
           `applied to this image's aspect ratio (resolved ${name} ${value}px).`,
       );
@@ -493,7 +505,7 @@ export function assertEffectiveGeometryWithinLimit(
   }
   const pixels = width * height;
   if (pixels > MAX_OUTPUT_PIXELS) {
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'target_width' x 'target_height' must be ${MAX_OUTPUT_PIXELS / 1_000_000} megapixels or less ` +
         `once applied to this image's aspect ratio (resolved ${width}x${height}, ` +
         `${(pixels / 1_000_000).toFixed(1)} megapixels).`,
@@ -684,7 +696,7 @@ async function consumeBody(
     await response.body
       ?.cancel()
       .catch((err) => logError("image-limit-declared-cancel", err, { maxBytes, declared }));
-    throw new ImageLimitError(
+    throw new ResourceLimitError(
       `'${field}' must be ${phrase} (it declared ${mib(declared)}).`,
     );
   }
@@ -698,7 +710,7 @@ async function consumeBody(
     const buf = Buffer.from(await response.arrayBuffer());
     if (buf.byteLength > maxBytes) {
       if (limitMode === "refuse") {
-        throw new ImageLimitError(`'${field}' must be ${phrase}.`);
+        throw new ResourceLimitError(`'${field}' must be ${phrase}.`);
       }
       onChunk?.(buf.subarray(0, maxBytes));
       return maxBytes;
@@ -726,7 +738,7 @@ async function consumeBody(
           .cancel()
           .catch((err) => logError("image-limit-reader-cancel", err, { maxBytes }));
         if (limitMode === "refuse") {
-          throw new ImageLimitError(`'${field}' must be ${phrase}.`);
+          throw new ResourceLimitError(`'${field}' must be ${phrase}.`);
         }
         // Truncate: keep exactly the prefix that fits, then stop.
         const remaining = maxBytes - total;

@@ -71,7 +71,7 @@ export class CapabilityRefusalError extends Error {
  * arrangement `tos-blocklist.test.ts` uses for the ToS refusal marker.
  */
 export const REFUSAL_MESSAGE_PATTERNS = [
-  // Resource-limit refusals from capabilities/lib/image-limits.ts (#412, #426,
+  // Resource-limit refusals from lib/resource-limits.ts (#412, #426,
   // #428). The capability fetched, measured, and declined to hold an input
   // larger than its declared ceiling — the ask has to change, nothing is
   // unhealthy. Verified against the real predicates during the #428 review:

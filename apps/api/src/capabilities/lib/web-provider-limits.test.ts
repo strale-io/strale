@@ -59,7 +59,7 @@ import {
   __resetWebProviderCacheForTests,
   __webProviderCacheStatsForTests,
 } from "./web-provider.js";
-import { MAX_FETCHED_HTML_BYTES, MAX_ERROR_BODY_BYTES, ImageLimitError } from "./image-limits.js";
+import { MAX_FETCHED_HTML_BYTES, MAX_ERROR_BODY_BYTES, ResourceLimitError } from "../../lib/resource-limits.js";
 import { streamingResponseOf } from "./streaming-response-testutil.js";
 import {
   classifyTransactionFailure,
@@ -324,7 +324,7 @@ describe("tier 3 (Browserless) HTML is stream-bounded", () => {
 describe("oversize does not cascade through the tiers", () => {
   it("an oversized plain fetch does NOT trigger Jina or Browserless", async () => {
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
-    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ImageLimitError);
+    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ResourceLimitError);
     expect(globalThis.fetch, "Jina re-fetched a page already judged too large").not.toHaveBeenCalled();
     expect(
       browserlessFetchMock,
@@ -337,7 +337,7 @@ describe("oversize does not cascade through the tiers", () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
       streamingResponseOf(htmlOfBytes(LIMIT + 1)).response,
     );
-    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ImageLimitError);
+    await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ResourceLimitError);
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
@@ -345,7 +345,7 @@ describe("oversize does not cascade through the tiers", () => {
     browserlessFetchMock.mockResolvedValue(streamingResponseOf(htmlOfBytes(LIMIT + 1)).response);
     await expect(
       fetchPage(URL_UNDER_TEST, { skipFallback: true, maxRetries: 3 }),
-    ).rejects.toThrow(ImageLimitError);
+    ).rejects.toThrow(ResourceLimitError);
     expect(browserlessFetchMock, "an oversize refusal consumed a retry").toHaveBeenCalledTimes(1);
   });
 
@@ -470,7 +470,7 @@ describe("response cache byte accounting", () => {
   it("an oversize refusal caches nothing and leaks no bytes", async () => {
     await cachePage("https://e.test/keep", 10_000);
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
-    await expect(fetchPage("https://e.test/huge")).rejects.toThrow(ImageLimitError);
+    await expect(fetchPage("https://e.test/huge")).rejects.toThrow(ResourceLimitError);
     expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
   });
 
@@ -544,7 +544,7 @@ describe("failure taxonomy", () => {
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
     const err = (await fetchPage(URL_UNDER_TEST).catch((e: Error) => e)) as Error;
 
-    expect(err).toBeInstanceOf(ImageLimitError);
+    expect(err).toBeInstanceOf(ResourceLimitError);
     expect(isUserInputError(err.message), "breaker would count this as a fault").toBe(true);
     expect(isCapabilityRefusal(err), "not recognised as a refusal").toBe(true);
     expect(categorizeError(err), "trust surfaces would call this our defect").toBe(

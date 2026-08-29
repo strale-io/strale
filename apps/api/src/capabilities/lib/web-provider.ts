@@ -52,14 +52,14 @@
  * rather than its wire size.
  *
  * Oversize is TERMINAL, not a fallback trigger: a page too large on one tier
- * is not re-fetched by the next. See the ImageLimitError re-throws below.
+ * is not re-fetched by the next. See the ResourceLimitError re-throws below.
  */
 
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { discardBody, safeFetch } from "../../lib/safe-fetch.js";
 import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
-import { ImageLimitError, readErrorTextTruncated, readPageHtml } from "./image-limits.js";
+import { ResourceLimitError, readErrorTextTruncated, readPageHtml } from "../../lib/resource-limits.js";
 
 /**
  * Detect JS-challenge / anti-bot interstitials that come back with HTTP 200
@@ -525,7 +525,7 @@ export async function fetchPage(
       // too big. A different tier is a different representation, not a smaller
       // one: Jina reformats the same content and a rendered DOM is typically
       // LARGER than the raw HTML.
-      if (err instanceof ImageLimitError) throw err;
+      if (err instanceof ResourceLimitError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
       // Helpful 4xx message already constructed upstream — propagate as-is.
       if (msg.includes("URL returned HTTP 4")) {
@@ -585,7 +585,7 @@ export async function fetchPage(
       // #428: oversize is terminal here too — see the tier-1 note. Jina's
       // reformat of a 16 MiB+ page is not a smaller representation, and
       // rendering it in Browserless afterwards is strictly more work.
-      if (err instanceof ImageLimitError) throw err;
+      if (err instanceof ResourceLimitError) throw err;
       // Jina timeout or network error — fall through to Browserless
     }
   }
@@ -694,7 +694,7 @@ export async function fetchPage(
         // #428: an oversize refusal is deterministic — the page is the size it
         // is — so it must not consume a retry. Re-rendering it would transfer
         // 16 MiB+ again to reach the identical answer.
-        if (err instanceof ImageLimitError) throw err;
+        if (err instanceof ResourceLimitError) throw err;
         lastError = err instanceof Error ? err : new Error(String(err));
         if (attempt < maxRetries - 1) {
           const msg = lastError.message.toLowerCase();

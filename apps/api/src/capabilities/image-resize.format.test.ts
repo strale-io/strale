@@ -44,8 +44,8 @@ import {
   FIT_MODES,
   assertEnum,
   assertQuality,
-  ImageLimitError,
-} from "./lib/image-limits.js";
+  ResourceLimitError,
+} from "../lib/resource-limits.js";
 import {
   classifyTransactionFailure,
   countsAgainstCapability,
@@ -80,7 +80,7 @@ describe("an unsupported format is refused, not silently re-encoded", () => {
       await expect(
         run()({ base64, target_width: 20, target_height: 20, format }),
         `accepted format=${format}`,
-      ).rejects.toThrow(ImageLimitError);
+      ).rejects.toThrow(ResourceLimitError);
     }
   });
 
@@ -190,7 +190,7 @@ describe("the validator itself", () => {
     expect(assertEnum(undefined, IMAGE_FORMATS, "format", "png")).toBe("png");
     expect(assertEnum(null, IMAGE_FORMATS, "format", "png")).toBe("png");
     expect(assertEnum("", IMAGE_FORMATS, "format", "png")).toBe("png");
-    expect(() => assertEnum("gif", IMAGE_FORMATS, "format", "png")).toThrow(ImageLimitError);
+    expect(() => assertEnum("gif", IMAGE_FORMATS, "format", "png")).toThrow(ResourceLimitError);
   });
 
   it("normalises case and surrounding whitespace", () => {
@@ -203,7 +203,7 @@ describe("the validator itself", () => {
 
   it("accepts an absent quality and rejects a non-numeric one", () => {
     expect(assertQuality(undefined)).toBe(80);
-    expect(() => assertQuality("high")).toThrow(ImageLimitError);
+    expect(() => assertQuality("high")).toThrow(ResourceLimitError);
   });
 });
 

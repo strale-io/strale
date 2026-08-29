@@ -7,7 +7,7 @@ import { getBrowserlessConfig, htmlToText } from "./lib/browserless-extract.js";
 import { getDb } from "../db/index.js";
 import { eeDirectors, eeDirectorsSync } from "../db/schema.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import { readPageHtml } from "./lib/image-limits.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 
 // Estonian company data via ariregister.rik.ee — FREE, no auth
 import { classifyNameMatch } from "../lib/company-name-match.js";

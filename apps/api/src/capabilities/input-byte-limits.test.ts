@@ -64,8 +64,8 @@ import {
   MAX_DECODED_DOCUMENT_BYTES,
   normalizeBase64,
   readBodyWithLimit,
-  ImageLimitError,
-} from "./lib/image-limits.js";
+  ResourceLimitError,
+} from "../lib/resource-limits.js";
 import {
   classifyTransactionFailure,
   countsAgainstCapability,
@@ -359,7 +359,7 @@ describe("base64 boundary semantics", () => {
 
   it("DOCUMENTED CONSERVATISM: a padded payload decoding to exactly the limit is refused", async () => {
     // 8 MiB is not divisible by 3, so its canonical base64 carries padding and
-    // the deliberate upper-bound measure (image-limits.ts: "may over-estimate
+    // the deliberate upper-bound measure (resource-limits.ts: "may over-estimate
     // by two bytes; may never under-estimate by one") lands at limit + 1.
     // Same shipped semantics as image-resize; recorded here so a future
     // "fix" that makes the measure exact-but-underestimating fails this file.
@@ -397,7 +397,7 @@ describe("readBodyWithLimit maxBytes parameterisation", () => {
       body: null,
       arrayBuffer: async () => new ArrayBuffer(DOC + 1),
     } as unknown as Response;
-    await expect(readBodyWithLimit(fakeOver, DOC, "url")).rejects.toThrow(ImageLimitError);
+    await expect(readBodyWithLimit(fakeOver, DOC, "url")).rejects.toThrow(ResourceLimitError);
   });
 });
 
@@ -443,7 +443,7 @@ describe("failure taxonomy", () => {
     // would leave the actual floor junction untested.
     const { outcomeFromError } = await import("../lib/execution-outcome.js");
     const outcome = outcomeFromError(
-      new ImageLimitError("'url' must be 8.0MB or less (it declared 9.5MB)."),
+      new ResourceLimitError("'url' must be 8.0MB or less (it declared 9.5MB)."),
     );
     expect(outcome.counts_against_capability).toBe(false);
     expect(outcome.billable).toBe(false);

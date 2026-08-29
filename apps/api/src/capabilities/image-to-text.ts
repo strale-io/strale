@@ -6,7 +6,7 @@ import {
   MAX_DECODED_IMAGE_BYTES,
   checkedBase64,
   readBodyWithLimit,
-} from "./lib/image-limits.js";
+} from "../lib/resource-limits.js";
 
 // URL inputs are fetched by US via safeFetch and sent to Anthropic as base64.
 // Two reasons (P1, 2026-08-12): (a) Anthropic's own URL fetcher fails on

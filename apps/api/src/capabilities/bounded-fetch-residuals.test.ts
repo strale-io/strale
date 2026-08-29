@@ -92,8 +92,8 @@ import {
   checkedBase64,
   countBodyBytes,
   normalizeBase64,
-  ImageLimitError,
-} from "./lib/image-limits.js";
+  ResourceLimitError,
+} from "../lib/resource-limits.js";
 import {
   classifyTransactionFailure,
   countsAgainstCapability,
@@ -382,7 +382,7 @@ describe("countBodyBytes", () => {
 
   it("refuses limit + 1", async () => {
     const { response } = streamingResponse(CAP + 1);
-    await expect(countBodyBytes(response, CAP, "url")).rejects.toThrow(ImageLimitError);
+    await expect(countBodyBytes(response, CAP, "url")).rejects.toThrow(ResourceLimitError);
   });
 
   it("refuses a declared over-limit length without pulling, and cancels", async () => {
@@ -489,7 +489,7 @@ describe("all seven residual sites are wired to the shared enforcement", () => {
     // Round-3 review find: the per-file lists above are static, so an eighth
     // capability added later with `await resp.arrayBuffer()` would evade both
     // this file and input-byte-limits.test.ts. After #426 the ONLY sanctioned
-    // sites are image-limits.ts's own bodyless-response fallbacks, so the
+    // sites are resource-limits.ts's own bodyless-response fallbacks, so the
     // sweep can be directory-wide: a new offender fails here by existing.
     const offenders: string[] = [];
     for (const entry of readdirSync(__dirname)) {

@@ -68,8 +68,8 @@ import {
   decodedLengthOfBase64,
   assertOutputGeometryWithinLimit,
   readBodyWithLimit,
-  ImageLimitError,
-} from "./lib/image-limits.js";
+  ResourceLimitError,
+} from "../lib/resource-limits.js";
 import { classifyTransactionFailure, countsAgainstCapability } from "../lib/transaction-failure-taxonomy.js";
 import { streamingResponse as sharedStreamingResponse } from "./lib/streaming-response-testutil.js";
 
@@ -170,7 +170,7 @@ describe("output geometry is bounded before anything is decoded", () => {
   it("refuses negative, fractional and non-finite dimensions", () => {
     for (const bad of [-1, 0, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(() => assertOutputGeometryWithinLimit(bad, 10), `accepted ${bad}`).toThrow(
-        ImageLimitError,
+        ResourceLimitError,
       );
     }
   });
@@ -204,7 +204,7 @@ describe("the geometry cap survives an omitted dimension and fit=outside", () =>
     // caller supplied is inside its own cap.
     const g = effectiveOutputGeometry(100, 4000, 10_000, undefined, "cover");
     expect(g).toEqual({ width: 10_000, height: 400_000 });
-    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ResourceLimitError);
   });
 
   /** A very wide, short source: 4000 x 100. */
@@ -221,7 +221,7 @@ describe("the geometry cap survives an omitted dimension and fit=outside", () =>
     // that stopped deriving the width left every test green.
     const g = effectiveOutputGeometry(4000, 100, undefined, 10_000, "cover");
     expect(g).toEqual({ width: 400_000, height: 10_000 });
-    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ResourceLimitError);
   });
 
   it("the EXECUTOR refuses height-only on a wide source", async () => {
@@ -243,7 +243,7 @@ describe("the geometry cap survives an omitted dimension and fit=outside", () =>
     // than both requested edges.
     const g = effectiveOutputGeometry(100, 4000, 10_000, 10_000, "outside");
     expect(g.height).toBeGreaterThan(10_000);
-    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ImageLimitError);
+    expect(() => assertEffectiveGeometryWithinLimit(g.width, g.height)).toThrow(ResourceLimitError);
   });
 
   it("the EXECUTOR refuses fit=outside that resolves past the caps", async () => {
@@ -299,9 +299,9 @@ describe("the geometry cap survives an omitted dimension and fit=outside", () =>
   it("refuses when the source dimensions cannot be read", () => {
     // Used to fall back to the REQUESTED dimensions, which fails open: the
     // derived side is exactly what could not be computed. Reviewer-found.
-    expect(() => effectiveOutputGeometry(0, 0, 100, 100, "cover")).toThrow(ImageLimitError);
+    expect(() => effectiveOutputGeometry(0, 0, 100, 100, "cover")).toThrow(ResourceLimitError);
     expect(() => effectiveOutputGeometry(Number.NaN, 100, 100, 100, "cover")).toThrow(
-      ImageLimitError,
+      ResourceLimitError,
     );
   });
 
@@ -354,7 +354,7 @@ describe("data-URI prefixes are stripped once, by one function", () => {
     const uri = `data:image/svg+xml;base64,${oversized}`;
     const stripped = stripDataUriPrefix(uri);
     expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped), MAX_DECODED_IMAGE_BYTES)).toThrow(
-      ImageLimitError,
+      ResourceLimitError,
     );
   });
 
@@ -436,7 +436,7 @@ describe("data-URI prefixes are stripped once, by one function", () => {
     const oversized = "AAAA," + "B".repeat(Math.ceil(((MAX_DECODED_IMAGE_BYTES + 1024 * 1024) * 4) / 3));
     const stripped = stripDataUriPrefix(oversized);
     expect(() => assertDecodedSizeWithinLimit(decodedLengthOfBase64(stripped), MAX_DECODED_IMAGE_BYTES)).toThrow(
-      ImageLimitError,
+      ResourceLimitError,
     );
   });
 
@@ -559,7 +559,7 @@ describe("a refusal is the caller's fault, not the capability's", () => {
       try {
         await f();
       } catch (e) {
-        if (e instanceof ImageLimitError || (e as Error)?.message) {
+        if (e instanceof ResourceLimitError || (e as Error)?.message) {
           messages.push((e as Error).message);
         }
       }
@@ -612,6 +612,6 @@ describe("a refusal is the caller's fault, not the capability's", () => {
     // (x402-gateway-v2 verifies, executes, then settles; do.ts is
     // verify -> execute -> settle per DEC-14). A refusal cannot produce a
     // charge because it cannot produce a success.
-    expect(() => assertOutputGeometryWithinLimit(100_000, 100_000)).toThrow(ImageLimitError);
+    expect(() => assertOutputGeometryWithinLimit(100_000, 100_000)).toThrow(ResourceLimitError);
   });
 });

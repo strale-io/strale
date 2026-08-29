@@ -5,7 +5,7 @@ import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { logWarn } from "../lib/log.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit } from "./lib/image-limits.js";
+import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit } from "../lib/resource-limits.js";
 
 /**
  * Normalize the `wait_for` input into a Browserless wait directive.
