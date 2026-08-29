@@ -14,7 +14,16 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { safeFetchMock } = vi.hoisted(() => ({ safeFetchMock: vi.fn() }));
+const { safeFetchMock, fetchViaJina, fetchRenderedHtml } = vi.hoisted(() => ({
+  safeFetchMock: vi.fn(),
+  fetchViaJina: vi.fn(),
+  fetchRenderedHtml: vi.fn(),
+}));
+
+// url-to-markdown's tiers 2 and 3. Mocked so "layer 1 refused and stopped" is
+// observable — see the cascade test below.
+vi.mock("./lib/jina-reader.js", () => ({ fetchViaJina }));
+vi.mock("./lib/browserless-extract.js", () => ({ fetchRenderedHtml }));
 
 vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
   // Keep discardBody real — paid-api-preflight's whole fix is that it cancels
@@ -68,6 +77,10 @@ const HTML = (bytes: number) =>
 
 beforeEach(() => {
   safeFetchMock.mockReset();
+  fetchViaJina.mockReset();
+  fetchRenderedHtml.mockReset();
+  fetchViaJina.mockResolvedValue(null);
+  fetchRenderedHtml.mockResolvedValue(HTML(20_000).toString());
   process.env.ANTHROPIC_API_KEY = "test-key";
 });
 
@@ -229,6 +242,49 @@ describe("HTML capabilities refuse an oversized page", () => {
     );
     expect(err, `${slug} did not refuse an oversized page`).toBeInstanceOf(Error);
     expect((err as Error).message).toMatch(/must be a page whose HTML is 16\.0MB or less/);
+  });
+});
+
+describe("url-to-markdown — the priority path", () => {
+  /**
+   * The reason this capability was named first in the work package: it is
+   * free-tier and anonymous-reachable, and after #428 its Jina and Browserless
+   * legs were bounded while its own layer-1 read was not. Same request, same
+   * page, opposite postures depending on which tier answered.
+   */
+  it("bounds the layer-1 static read", async () => {
+    safeFetchMock.mockResolvedValue(
+      streamingResponse(MAX_FETCHED_HTML_BYTES + 65_536, { contentType: "text/html" }).response,
+    );
+    await expect(getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a" })).rejects.toThrow(
+      /must be a page whose HTML is 16\.0MB or less/,
+    );
+  });
+
+  it("does not re-fetch the refused page through Jina or Browserless", async () => {
+    // Oversize is TERMINAL. Without the re-throw in tryPlainFetch's catch, the
+    // refusal is swallowed as "layer 1 found nothing" and the same oversized
+    // page is fetched twice more — and the final error message is identical,
+    // which is why this asserts on the tiers rather than on the message.
+    safeFetchMock.mockResolvedValue(
+      streamingResponse(MAX_FETCHED_HTML_BYTES + 65_536, { contentType: "text/html" }).response,
+    );
+    await getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a" }).catch(() => undefined);
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchViaJina).not.toHaveBeenCalled();
+    expect(fetchRenderedHtml).not.toHaveBeenCalled();
+  });
+
+  it("still falls through to the next tier for a page that is merely thin", async () => {
+    // The positive control for the test above: a short page is a legitimate
+    // reason to escalate, and must remain one.
+    safeFetchMock.mockResolvedValue(
+      streamingResponseOf(Buffer.from("<html><body>hi</body></html>"), {
+        contentType: "text/html",
+      }).response,
+    );
+    await getDirectExecutor("url-to-markdown")!({ url: "https://example.test/a" }).catch(() => undefined);
+    expect(fetchViaJina).toHaveBeenCalled();
   });
 });
 
