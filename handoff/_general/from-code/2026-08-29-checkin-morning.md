@@ -162,8 +162,8 @@ local one still names the write-credential variable in prose, which
 `guard-production-write-access.mjs` refuses. Only two were genuinely unpreserved.
 
 **And those two were not neglected either — a gate was holding them.** Committing
-them failed CI on the same guard, for the same reason: both name
-`DATABASE_URL_WRITE` in prose while describing a pending operator step. So the
+them failed CI on the same guard, for the same reason: both named the production
+write-credential variable in prose while describing a pending operator step. So the
 warning "exist only on disk — losing this directory loses them" was, for every
 one of the five files, describing something other than what was happening. Three
 were stored, one was superseded, and two were blocked by a control working
@@ -180,6 +180,12 @@ route is "author it, fail CI, redact, retry". The check cannot distinguish
 the first. Not fixed today — it needs a decision about whether operator-step
 prose gets a sanctioned phrasing rather than a per-file exemption, and that is
 a design question, not a defect.
+
+*And I walked into it myself:* the first push of this record named the variable
+in the paragraph above, because I ran the guard locally **before** writing that
+paragraph and treated the earlier pass as covering the later text. Verifying a
+gate against a state you then change is not verifying it. Caught by CI, which is
+where it should have been caught last rather than first.
 
 ### The cause is not the check
 
