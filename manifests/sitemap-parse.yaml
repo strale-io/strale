@@ -190,3 +190,12 @@ limitations:
     category: coverage
     severity: info
     workaround: If the sitemap is an index, extract the child sitemap URLs and process each one separately
+  - title: Sitemaps above the 50 MB protocol maximum are refused
+    text: >-
+      The sitemaps.org protocol caps an uncompressed sitemap at 50 MB and 50,000
+      URLs. A file above that is invalid by the specification and is refused with a
+      caller_input error rather than partially parsed; no charge is taken. Sitemap
+      index files pointing at multiple child sitemaps are unaffected, and each child
+      is subject to the same ceiling when fetched separately.
+    category: coverage
+    severity: info

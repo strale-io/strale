@@ -235,3 +235,11 @@ limitations:
       using a maiden-name variant) are not modeled.
     category: coverage
     severity: info
+  - title: Only the first 300 KB of each page is scanned
+    text: >-
+      Each fetched page is scanned up to 300 KB and the remainder ignored. Contact
+      markup (tel: links, mailto: links, schema.org properties) lives near the top of
+      a document, so this rarely changes the result — but a contact detail placed
+      only in the tail of a very long page will not be found.
+    category: coverage
+    severity: info

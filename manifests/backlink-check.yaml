@@ -103,3 +103,12 @@ limitations:
     category: coverage
     severity: info
     workaround: Combine with google-search using 'link:domain.com' queries for additional backlink discovery
+  - title: API responses are limited to 4 MiB
+    text: >-
+      A response body above 4 MiB from the upstream endpoint is refused rather than
+      parsed, enforced while streaming. The limit sits below the 16 MiB page limit
+      deliberately: JSON is materialised into an object graph costing several times
+      its source bytes. Observed real responses for this source are well under
+      100 KiB.
+    category: coverage
+    severity: info

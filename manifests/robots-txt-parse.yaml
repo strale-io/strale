@@ -127,3 +127,13 @@ limitations:
     category: coverage
     severity: info
     workaround: Check the raw text in the response for non-standard directives that may affect your specific crawler
+  - title: Only the first 500 KiB of robots.txt is parsed
+    text: >-
+      A robots.txt larger than 500 KiB is parsed up to that point and the remainder
+      ignored, which is what real crawlers do — RFC 9309 section 2.5 sets 500 KiB as
+      the minimum a crawler must parse, and Googlebot enforces exactly that.
+      Directives beyond the limit therefore do not appear in the result, and neither
+      do they affect the crawlers this capability describes. Real robots.txt files
+      measure 2-30 KiB.
+    category: coverage
+    severity: info

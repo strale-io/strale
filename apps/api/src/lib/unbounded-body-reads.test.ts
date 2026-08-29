@@ -25,11 +25,29 @@
  * were the other two.
  *
  * The TypeScript compiler is already a dependency, so parsing is cheap and the
- * receiver shape stops mattering. What this does NOT do — and must not be
- * described as doing — is prove the receiver is a `Response`. There is no type
- * resolution here: `someLibraryObject.json()` looks identical to
- * `httpResponse.json()`. It is a syntactic sweep with a good filter, which is
- * why the classes below carry ledgers instead of a single verdict.
+ * receiver shape stops mattering.
+ *
+ * ## What it does NOT do
+ *
+ * Syntax, not semantics. Stated here so the guard's claim can be checked
+ * against its implementation rather than against its name:
+ *
+ *   - It cannot prove a receiver is a `Response`. There is no type resolution:
+ *     `someLibraryObject.json()` parses identically to `httpResponse.json()`.
+ *     False positives are therefore possible, which is why the classes below
+ *     carry ledgers rather than one verdict.
+ *   - A dynamically named call — `resp["text"]()`, or a bound alias — is
+ *     invisible. Nobody writes that here, and a guard that tried to catch it
+ *     would have to become a type checker.
+ *   - It scans `apps/api/src` only. `apps/api/scripts/**` (operator tools, not
+ *     on the request path) and `packages/**` (published SDKs, which run in the
+ *     caller's process) are out of scope.
+ *   - Buffering that happens INSIDE a dependency — a vendor SDK materialising
+ *     a response before handing it over — is not visible to any source sweep.
+ *
+ * The two routes that bypass accessor names entirely, `getReader()` and
+ * `pipeTo()`, are covered by class B2 rather than left to that list: they are
+ * the ones that actually occurred.
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
@@ -210,6 +228,23 @@ describe("class B2 — reading a body by hand is reserved to the core", () => {
       (f) => /\.getReader\s*\(/.test(f.source) && !SANCTIONED.includes(f.path),
     ).map((f) => f.path);
     expect(offenders, "read through readTextWithLimit / readTextTruncated instead").toEqual([]);
+  });
+
+  /**
+   * The other way to drain a stream without naming an accessor. Piping is not
+   * itself unbounded — it is bounded by whatever sink receives it — so this is
+   * a ledger, not a ban: an accumulating sink would be, and nothing else in
+   * the sweep would notice.
+   */
+  const PIPE_SANCTIONED: Record<string, string> = {
+    // Proxies an upstream SSE stream straight to the client. Pass-through
+    // under backpressure; nothing accumulates.
+    "routes/mcp.ts": "SSE pass-through to the caller",
+  };
+
+  it("piping a body anywhere new is a review prompt", () => {
+    const piping = SCANNED.filter((f) => /\.(pipeTo|pipeThrough)\s*\(/.test(f.source)).map((f) => f.path);
+    expect(piping.sort()).toEqual(Object.keys(PIPE_SANCTIONED).sort());
   });
 });
 

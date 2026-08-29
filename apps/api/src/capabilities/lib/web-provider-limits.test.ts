@@ -402,16 +402,44 @@ describe("response cache byte accounting", () => {
 
   const stats = __webProviderCacheStatsForTests;
 
-  it("accounts a single entry by its UTF-8 payload size", async () => {
+  /**
+   * What the cache charges for an ASCII page of `bytes` bytes.
+   *
+   * `length * 2` since #432: the budget accounts V8's worst-case residency for
+   * a JS string rather than its UTF-8 payload size, because a mostly-ASCII
+   * page carrying one non-Latin-1 character occupies two bytes per character
+   * in the heap while measuring one per character on the wire. These fixtures
+   * are ASCII, so `length === bytes` and the charge is exactly double.
+   */
+  const charged = (bytes: number) => bytes * 2;
+
+  it("accounts a single entry at V8's worst-case string residency", async () => {
     await cachePage("https://a.test/1", 10_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
+  });
+
+  it("charges by UTF-16 units, so one astral character costs four bytes not three", async () => {
+    // The shape the old UTF-8 measure got wrong. An emoji is 4 bytes in UTF-8
+    // and 2 UTF-16 code units in V8 — but its real cost is that it flips the
+    // WHOLE string to two bytes per character, which `length * 2` already
+    // accounts for and `Buffer.byteLength` did not.
+    await cachePage("https://a.test/ascii", 10_000);
+    const asciiCharge = stats().bytes;
+    __resetWebProviderCacheForTests();
+    plainTier(
+      streamingResponseOf(Buffer.from(`${htmlOfBytes(10_000).toString()}\u{1F600}`), {
+        contentType: "text/html",
+      }),
+    );
+    await fetchPage("https://a.test/emoji");
+    expect(stats().bytes).toBe(asciiCharge + 4);
   });
 
   it("evicts oldest-first on the ENTRY count, keeping bytes consistent", async () => {
     for (let i = 0; i < 205; i++) await cachePage(`https://a.test/${i}`, 3_000);
     const s = stats();
     expect(s.entries).toBe(200);
-    expect(s.bytes).toBe(200 * 3_000);
+    expect(s.bytes).toBe(charged(200 * 3_000));
   });
 
   it("evicts on the BYTE budget before the entry count is reached", async () => {
@@ -421,7 +449,7 @@ describe("response cache byte accounting", () => {
     const s = stats();
     expect(s.entries, "byte budget did not bind before the entry cap").toBeLessThan(40);
     expect(s.bytes).toBeLessThanOrEqual(CACHE_BUDGET);
-    expect(s.bytes).toBe(s.entries * twoMiB);
+    expect(s.bytes).toBe(charged(s.entries * twoMiB));
   });
 
   /**
@@ -441,49 +469,50 @@ describe("response cache byte accounting", () => {
   it("an overwrite replaces accounting rather than adding to it", async () => {
     await cachePage("https://c.test/x", 10_000);
     await overwriteCached("https://c.test/x", 10_000, 20_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
   });
 
   it("a SHRINKING overwrite lowers the total", async () => {
     await cachePage("https://c.test/y", 50_000);
     await overwriteCached("https://c.test/y", 5_000, 60_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 5_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(5_000) });
   });
 
   it("a GROWING overwrite raises the total by the difference only", async () => {
     await cachePage("https://c.test/z", 5_000);
     await overwriteCached("https://c.test/z", 50_000, 6_000);
-    expect(stats()).toEqual({ entries: 1, bytes: 50_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(50_000) });
   });
 
   it("expiry removes the entry AND its bytes", async () => {
     await cachePage("https://d.test/1", 10_000);
-    expect(stats().bytes).toBe(10_000);
+    expect(stats().bytes).toBe(charged(10_000));
     const realNow = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(realNow + 6 * 60 * 1000);
     // A read past the TTL is what prunes the entry.
     plainTier(streamingResponseOf(htmlOfBytes(4_000), { contentType: "text/html" }));
     await fetchPage("https://d.test/1");
-    expect(stats()).toEqual({ entries: 1, bytes: 4_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(4_000) });
   });
 
   it("an oversize refusal caches nothing and leaks no bytes", async () => {
     await cachePage("https://e.test/keep", 10_000);
     plainTier(streamingResponseOf(htmlOfBytes(LIMIT + 1), { contentType: "text/html" }));
     await expect(fetchPage("https://e.test/huge")).rejects.toThrow(ResourceLimitError);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
   });
 
   it("a failed fetch caches nothing and leaks no bytes", async () => {
     await cachePage("https://f.test/keep", 10_000);
     safeFetchMock.mockResolvedValue(new Response(null, { status: 404 }));
     await expect(fetchPage("https://f.test/gone")).rejects.toThrow(/HTTP 404/);
-    expect(stats()).toEqual({ entries: 1, bytes: 10_000 });
+    expect(stats()).toEqual({ entries: 1, bytes: charged(10_000) });
   });
 
   it("INVARIANT: after every operation the total is non-negative and within budget", async () => {
-    // 12 x 6 MiB = 72 MiB written against a 64 MiB budget, so the byte bound
-    // MUST evict — sized deliberately past the budget so this test fails if
+    // 12 x 6 MiB written against a 64 MiB budget — 144 MiB accounted at the
+    // `length * 2` charge — so the byte bound MUST evict. Sized deliberately
+    // past the budget so this test fails if
     // byte-eviction is ever removed, rather than passing because the traffic
     // happened to stay small. (Every size also clears tier 1's own >2000-char
     // gate; a smaller page would fall through to the unmocked lower tiers.)
@@ -494,7 +523,7 @@ describe("response cache byte accounting", () => {
       expect(s.bytes).toBeGreaterThanOrEqual(0);
       expect(s.bytes, "cache exceeded its declared byte budget").toBeLessThanOrEqual(CACHE_BUDGET);
       expect(s.entries).toBeLessThanOrEqual(200);
-      expect(s.bytes, "byte total drifted from the live entries").toBe(s.entries * big);
+      expect(s.bytes, "byte total drifted from the live entries").toBe(charged(s.entries * big));
     }
   });
 
