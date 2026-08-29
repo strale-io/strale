@@ -27,6 +27,9 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 const safeFetchMock = vi.fn();
 const browserlessFetchMock = vi.fn();
@@ -57,6 +60,7 @@ import {
   countsAgainstCapability,
 } from "../../lib/transaction-failure-taxonomy.js";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const CHUNK = 64 * 1024;
 const LIMIT = MAX_FETCHED_HTML_BYTES;
 /** The cache budget, restated so a change to it fails these tests loudly. */
@@ -453,16 +457,19 @@ describe("response cache byte accounting", () => {
   });
 
   it("INVARIANT: after every operation the total is non-negative and within budget", async () => {
-    // Every size clears tier 1's own >2000-char content gate; a smaller one
-    // would fall through to the unmocked lower tiers and test nothing here.
-    const sizes = [5_000, 1024 * 1024, 20_000, 5 * 1024 * 1024, 3_000, 2 * 1024 * 1024];
-    for (let i = 0; i < 60; i++) {
-      // Deliberately reuses keys so overwrite paths are exercised too.
-      await cachePage(`https://g.test/${i % 25}`, sizes[i % sizes.length]);
+    // 12 x 6 MiB = 72 MiB written against a 64 MiB budget, so the byte bound
+    // MUST evict — sized deliberately past the budget so this test fails if
+    // byte-eviction is ever removed, rather than passing because the traffic
+    // happened to stay small. (Every size also clears tier 1's own >2000-char
+    // gate; a smaller page would fall through to the unmocked lower tiers.)
+    const big = 6 * 1024 * 1024;
+    for (let i = 0; i < 12; i++) {
+      await cachePage(`https://g.test/${i}`, big);
       const s = stats();
       expect(s.bytes).toBeGreaterThanOrEqual(0);
-      expect(s.bytes).toBeLessThanOrEqual(CACHE_BUDGET);
+      expect(s.bytes, "cache exceeded its declared byte budget").toBeLessThanOrEqual(CACHE_BUDGET);
       expect(s.entries).toBeLessThanOrEqual(200);
+      expect(s.bytes, "byte total drifted from the live entries").toBe(s.entries * big);
     }
   });
 
@@ -504,5 +511,126 @@ describe("failure taxonomy", () => {
     browserlessFetchMock.mockResolvedValue(streamingResponseOf(challenge).response);
     const err = await fetchPage(URL_UNDER_TEST, { skipFallback: true }).catch((e: Error) => e);
     expect(classifyTransactionFailure((err as Error).message)).not.toBe("caller_input");
+  });
+});
+
+// ─── Structural guard: unbounded reads on caller-URL fetch paths ─────────────
+
+/**
+ * #426's sweep only caught `await x.arrayBuffer(` — which is why a whole
+ * population of `await x.text()` reads on caller-supplied URLs was invisible
+ * to it. This guard closes that axis.
+ *
+ * Scoped deliberately. A blanket ban on `.text()` across `src/capabilities`
+ * would flag ~60 sites, most of them small JSON payloads from fixed vendor
+ * hosts, and the noise would make it unmaintainable. The population that
+ * actually matters is: a file that fetches a CALLER-INFLUENCED URL (it calls
+ * `safeFetch`) and then reads that response with no ceiling. Those are the
+ * amplifiable ones.
+ *
+ * Every such file must appear in the ledger below with its exact count, so:
+ *   - a NEW capability that safeFetches a caller URL and reads it unbounded
+ *     fails immediately (not in the ledger);
+ *   - an EXTRA unbounded read added to an already-listed file fails too (the
+ *     count no longer matches);
+ *   - a file that gets fixed fails until its entry is removed, so the ledger
+ *     cannot rot into a list of things that were fixed years ago.
+ */
+describe("structural guard: unbounded body reads on caller-URL fetch paths", () => {
+  const CAPS_DIR = resolve(__dirname, "..");
+  const UNBOUNDED_READ = /await\s+[A-Za-z_$][\w$]*\.(?:text|arrayBuffer)\s*\(\)/g;
+
+  /**
+   * Known-unbounded caller-URL reads, audited 2026-08-29 and tracked for a
+   * follow-up (see the issue linked from #428). Each needs its own limit
+   * judgement — a robots.txt is not a sitemap is not an HTML page — which is
+   * why they are recorded here rather than swept into #428's
+   * shared-infrastructure change. This ledger is the hole made visible, not
+   * permission for it.
+   */
+  const KNOWN_UNBOUNDED: Record<string, number> = {
+    "api-health-check.ts": 1,
+    "backlink-check.ts": 1,
+    "canadian-company-data.ts": 1,
+    "domain-contact-extract.ts": 1,
+    "email-finder.ts": 1,
+    "email-pattern-discover.ts": 1,
+    "gdpr-website-check.ts": 1,
+    "job-posting-analyze.ts": 1,
+    "link-extract.ts": 1,
+    "meta-extract.ts": 1,
+    "og-image-check.ts": 1,
+    "paid-api-preflight.ts": 1,
+    "robots-txt-parse.ts": 1,
+    "seo-audit.ts": 1,
+    "sitemap-parse.ts": 1,
+    "social-post-generate.ts": 1,
+    "tech-stack-detect.ts": 1,
+    "url-to-markdown.ts": 1,
+    "url-to-text.ts": 1,
+    "youtube-summarize.ts": 2,
+  };
+
+  /** Every non-test .ts under src/capabilities, recursively. */
+  function walk(dir: string, acc: string[] = []): string[] {
+    for (const entry of readdirSync(dir)) {
+      const full = join(dir, entry);
+      if (statSync(full).isDirectory()) walk(full, acc);
+      else if (entry.endsWith(".ts") && !entry.endsWith(".test.ts")) acc.push(full);
+    }
+    return acc;
+  }
+
+  /** file → count of unbounded body reads, for files that fetch caller URLs. */
+  function scan(): Map<string, number> {
+    const found = new Map<string, number>();
+    for (const file of walk(CAPS_DIR)) {
+      const src = readFileSync(file, "utf-8");
+      if (!/safeFetch\s*\(/.test(src)) continue;
+      const n = (src.match(UNBOUNDED_READ) ?? []).length;
+      if (n > 0) found.set(relative(CAPS_DIR, file).split(sep).join("/"), n);
+    }
+    return found;
+  }
+
+  it("no caller-URL fetch file reads a body unbounded outside the recorded ledger", () => {
+    const found = scan();
+    const unrecorded = [...found].filter(([f, n]) => KNOWN_UNBOUNDED[f] !== n);
+    expect(
+      unrecorded,
+      "an unbounded body read on a caller-supplied URL is not in the ledger — bound it with " +
+        "readTextWithLimit/readBodyWithLimit, or add it with a reason",
+    ).toEqual([]);
+  });
+
+  it("the ledger has no stale entries — a fixed file must be removed from it", () => {
+    const found = scan();
+    const stale = Object.keys(KNOWN_UNBOUNDED).filter((f) => !found.has(f));
+    expect(stale, "these files no longer read unbounded; drop them from the ledger").toEqual([]);
+  });
+
+  it("web-provider itself reads only through the bounded helpers", () => {
+    const src = readFileSync(resolve(__dirname, "web-provider.ts"), "utf-8");
+    expect(src).not.toMatch(UNBOUNDED_READ);
+    expect(src).toMatch(/readTextWithLimit\(/);
+    expect(src).toMatch(/readErrorTextTruncated\(/);
+    // The cap comes from the authority module, not a local number.
+    expect(src).toContain("MAX_FETCHED_HTML_BYTES");
+    expect(src).not.toMatch(/const\s+MAX_FETCHED[A-Z_]*\s*=\s*\d/);
+  });
+
+  it("annual-report-extract's registry HTML read is bounded too", () => {
+    const src = readFileSync(resolve(__dirname, "..", "annual-report-extract.ts"), "utf-8");
+    expect(src).not.toMatch(UNBOUNDED_READ);
+    expect(src).toMatch(/readTextWithLimit\(/);
+  });
+
+  it("oversize is terminal in every tier — each fall-through re-throws the limit error", () => {
+    // Behavioural tests above prove this for the paths they drive; this pins
+    // the shape so a new catch block cannot quietly swallow a limit refusal
+    // back into a fallback.
+    const src = readFileSync(resolve(__dirname, "web-provider.ts"), "utf-8");
+    const rethrows = src.match(/if\s*\(err instanceof ImageLimitError\)\s*throw err;/g) ?? [];
+    expect(rethrows.length, "a tier lost its oversize-is-terminal re-throw").toBe(3);
   });
 });
