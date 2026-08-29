@@ -23,8 +23,12 @@ Intent: audit and contain the seven remaining `arrayBuffer()` fetch sites record
 
 ## Pending operator step (unchanged from #412)
 
-Manifest `limitations` sync into the prod DB needs a `DATABASE_URL_WRITE`-granted `onboard.ts --backfill` run — now covers the #412 six plus these seven. Low urgency (the public capability endpoint doesn't serve limitations today).
+Manifest `limitations` sync into the prod DB needs an `onboard.ts --backfill` run granted the production write credential — now covers the #412 six plus these seven. Low urgency (the public capability endpoint doesn't serve limitations today).
 
 ## Process
 
 Dedicated worktree `strale-wt-wp14` (removed at session end); /go in full (typecheck, validate ×7 PASS, readiness ×7 true, smoke 5/7 full live PASS with documented exceptions, /simplify 4 agents, six-lens no HIGH); adversarial review 4 rounds (2 findings found and fixed). No paid production calls manufactured.
+
+---
+
+*Redaction note (2026-08-29): this record originally named the production write-credential environment variable in prose. `scripts/guard-production-write-access.mjs` refuses any reference outside the single authority module, and its allowlist is deliberately a per-file decision rather than a standing exemption for documentation. The literal is replaced by the phrase "the production write credential"; nothing else is changed, and no credential value ever appeared here. Same precedent as the 2026-08-27 Austria record. **This is why the file could not be committed on the day it was authored** — the hygiene check reported it as an orphaned handoff without being able to say that a gate, not neglect, was holding it.*

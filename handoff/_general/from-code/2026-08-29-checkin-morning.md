@@ -161,6 +161,26 @@ directions). A fourth, `2026-08-27-at-firmenbuch-migration.md`, is the
 local one still names the write-credential variable in prose, which
 `guard-production-write-access.mjs` refuses. Only two were genuinely unpreserved.
 
+**And those two were not neglected either — a gate was holding them.** Committing
+them failed CI on the same guard, for the same reason: both name
+`DATABASE_URL_WRITE` in prose while describing a pending operator step. So the
+warning "exist only on disk — losing this directory loses them" was, for every
+one of the five files, describing something other than what was happening. Three
+were stored, one was superseded, and two were blocked by a control working
+exactly as designed. Resolved by applying the precedent the 2026-08-27 Austria
+record set on 08-28 — the literal replaced by "the production write credential",
+with a dated redaction note in each file saying why it could not be committed as
+written.
+
+**Worth a future session's attention:** the guard's allowlist is deliberately a
+per-file decision, and this is now the third handoff to hit it. A record that
+names a pending write step is a normal thing to want to write, and the current
+route is "author it, fail CI, redact, retry". The check cannot distinguish
+"nobody committed this" from "a gate refuses this", and reports the second as
+the first. Not fixed today — it needs a decision about whether operator-step
+prose gets a sanctioned phrasing rather than a per-file exemption, and that is
+a design question, not a defect.
+
 ### The cause is not the check
 
 The primary checkout sits on `remediation/wp9-artifacts`, **68 commits behind

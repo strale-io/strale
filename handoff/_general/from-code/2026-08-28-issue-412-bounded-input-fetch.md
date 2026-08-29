@@ -18,7 +18,7 @@ Intent: implement GitHub issue #412 — eliminate unbounded buffering of caller-
 
 ## Pending operator step (needs write grant)
 
-The prod `capability_limitations` rows for the six slugs need `onboard.ts --backfill` run with `DATABASE_URL_WRITE` (this session's credentials are read-only by design — `openOperatorWriteDb` refused correctly). Enforcement itself is code and live; this only affects catalog discoverability of the limit text. Note: the public `GET /v1/capabilities/:slug` currently doesn't serve limitations at all, so urgency is low.
+The prod `capability_limitations` rows for the six slugs need `onboard.ts --backfill` run with the production write credential (this session's credentials are read-only by design — `openOperatorWriteDb` refused correctly). Enforcement itself is code and live; this only affects catalog discoverability of the limit text. Note: the public `GET /v1/capabilities/:slug` currently doesn't serve limitations at all, so urgency is low.
 
 ## Follow-up issue
 
@@ -29,3 +29,7 @@ The prod `capability_limitations` rows for the six slugs need `onboard.ts --back
 - Worked in dedicated worktree `strale-wt-wp13` (removed at session end); shared checkout untouched.
 - /go ran in full: typecheck, validate-capability ×6 PASS, checkReadiness ×6 ready, smoke-test (all steps pass except Step 2 live-execution, which is the pre-existing ALLOW_MATRIX paid-capability refusal from `internal_test` context — by design, PR #403), /simplify (4 agents), six-lens review (no HIGH). Adversarial review 4 rounds → PASS.
 - No paid production calls were made.
+
+---
+
+*Redaction note (2026-08-29): this record originally named the production write-credential environment variable in prose. `scripts/guard-production-write-access.mjs` refuses any reference outside the single authority module, and its allowlist is deliberately a per-file decision rather than a standing exemption for documentation. The literal is replaced by the phrase "the production write credential"; nothing else is changed, and no credential value ever appeared here. Same precedent as the 2026-08-27 Austria record. **This is why the file could not be committed on the day it was authored** — the hygiene check reported it as an orphaned handoff without being able to say that a gate, not neglect, was holding it.*
