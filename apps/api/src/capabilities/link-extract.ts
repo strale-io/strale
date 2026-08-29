@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 
 // Extract links via HTTP GET (no Browserless — fast and cheap)
 registerCapability("link-extract", async (input: CapabilityInput) => {
@@ -21,7 +22,7 @@ registerCapability("link-extract", async (input: CapabilityInput) => {
   });
 
   if (!response.ok) throw new Error(`HTTP ${response.status} from ${fullUrl}.`);
-  const html = await response.text();
+  const html = await readPageHtml(response);
 
   // Parse all <a> tags
   const linkRegex = /<a\s[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;

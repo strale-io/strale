@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 
 registerCapability("og-image-check", async (input: CapabilityInput) => {
   const rawUrl = ((input.url as string) ?? (input.task as string) ?? "").trim();
@@ -17,7 +18,7 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
   });
 
   if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}.`);
-  const html = await resp.text();
+  const html = await readPageHtml(resp);
 
   // Extract Open Graph meta tags
   const ogImageUrl = extractMeta(html, "og:image", "property");

@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
@@ -36,10 +36,13 @@ registerCapability("paid-api-preflight", async (input: CapabilityInput) => {
     responseHeaders = Object.fromEntries(res.headers.entries());
     server = res.headers.get("server");
 
-    // Consume body to release the socket. Errors here are benign —
-    // the only recoverable state is that the body was never materialized,
-    // which is exactly the outcome we want for a preflight probe.
-    await res.text().catch(() => undefined);
+    // Release the socket WITHOUT materializing the body (#432). A
+    // preflight reads status, headers and timing only, so nothing here
+    // wants the bytes — reading them to throw them away was the one site
+    // in the ledger where the fix is a drain, not a cap. discardBody
+    // cancels the stream and logs a cancel failure rather than
+    // swallowing it.
+    await discardBody(res, "paid-api-preflight: status and headers only");
   } catch (err) {
     const responseTimeMs = Date.now() - start;
     const msg = err instanceof Error ? err.message : String(err);

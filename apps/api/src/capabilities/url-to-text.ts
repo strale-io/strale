@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readPageHtml } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 // Lightweight text extraction — HTTP GET only, no Browserless
@@ -20,7 +21,7 @@ registerCapability("url-to-text", async (input: CapabilityInput) => {
   });
 
   if (!response.ok) throw new Error(`HTTP ${response.status} from ${fullUrl}.`);
-  const html = await response.text();
+  const html = await readPageHtml(response);
 
   // Extract metadata from HTML
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);

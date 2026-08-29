@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { readRobotsTxt } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
 
 registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
@@ -25,7 +26,7 @@ registerCapability("robots-txt-parse", async (input: CapabilityInput) => {
   }
   if (!response.ok) throw new Error(`HTTP ${response.status} fetching robots.txt`);
 
-  const text = await response.text();
+  const text = await readRobotsTxt(response);
   const lines = text.split("\n").map(l => l.trim());
 
   interface Rule { user_agent: string; allow: string[]; disallow: string[]; crawl_delay?: number }
