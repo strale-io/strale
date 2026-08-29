@@ -60,6 +60,7 @@ describe("vendor suspension serving-state integrity", () => {
     const suspensionInserts = seen.filter((sql) => sql.includes("INSERT INTO vendor_") && sql.includes("_suspensions"));
     expect(suspensionInserts).toHaveLength(2);
     expect(suspensionInserts.every((sql) => sql.includes("deactivation_reason IS NULL") && sql.includes("LIKE 'vendor:%'"))).toBe(true);
+    expect(suspensionInserts.every((sql) => sql.includes("::timestamptz"))).toBe(true);
     expect(suspensionInserts.find((sql) => sql.includes("vendor_solution_suspensions")))
       .toContain("OR s.deactivation_reason LIKE 'vendor:%'");
   });
