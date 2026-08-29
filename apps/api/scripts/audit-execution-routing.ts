@@ -21,12 +21,13 @@
  *      all. The harness is therefore incapable of noticing the problem it is
  *      the only heavy user of. Completed rows exist at 49.9s.
  *
- * This reports; it does not write. Remediation is a scoped operator UPDATE of
+ * This reports; it does not write, and holds a read-only handle so it
+ * cannot. Remediation is a scoped operator UPDATE of
  * `avg_latency_ms` (a `db`-authority column per `capability-field-authority.ts`
  * — measured at runtime, not authored in a manifest).
  */
 import { sql } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
+import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 import {
   ASYNC_THRESHOLD_MS,
   SYNC_TRANSACTION_WALL_MS,
@@ -47,7 +48,17 @@ interface Row {
 }
 
 async function main(): Promise<void> {
-  const db = getDb();
+  // The READ-ONLY operator handle, enforced by Postgres rather than by this
+  // file's docstring. The application's read-write pool in `src/db/index.ts`
+  // is the wrong tool here and `scripts/guard-production-write-access.mjs`
+  // refuses operator scripts that reach for it — correctly: a script that
+  // only reports has no business holding a handle that could write.
+  //
+  // (That guard greps for the pool's accessor by name, so this comment
+  // deliberately does not spell it. Naming the thing you must not call is
+  // enough to fail the check — which is the right trade for a guard whose
+  // job is to be unbypassable.)
+  const db = openOperatorDrizzle();
   // postgres-js returns the row array itself, not a `{ rows }` envelope — the
   // same shape trap `db.execute(...).count` vs `.rowCount` comes from.
   const rows = (await db.execute(sql`
