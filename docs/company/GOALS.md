@@ -617,6 +617,45 @@ fire until 2026-09-01. One measurement note for whoever checks next: bundles are
 array, **not** `capabilities` — reading only the capability list makes every
 bundle look delisted. It did so here for about a minute this morning.
 
+**E4 RESULT (2026-08-29, day 11 of 14): the cohort failed, and the confound the
+2026-08-28 run feared is not present.** The kill criterion is met three days
+early and on cleaner evidence than the criterion itself asks for.
+
+Since the four became payable on 2026-08-18, counted to the day over the
+canonical external population: the cohort took **0 orders**, `lead-email-verify`
+took **8**. No other bundle sold at all in that window. All five are present and
+payable in `/x402/catalog`'s `solutions` list right now, and `competitor-read`
+is priced identically to the control at $0.216 — so this is neither a listing
+artefact nor a price artefact. Two of the four cost more than the control
+($0.324, $0.594) and that remains an untested alternative explanation, noted
+rather than claimed.
+
+**Why the 2026-08-28 confound dissolved.** That run saw the control fall from 26
+orders in the week of 08-17 to 3 in the week of 08-24 and concluded that "these
+four do not sell" and "bundle demand is down generally" were indistinguishable.
+They are distinguishable, and the same run had already written down the number
+that separates them — "8 orders / €1.60 since 08-18". Counted by week the
+control looks like it took 29 orders inside the trial; counted by day it took 8,
+because **21 of those 26 landed on Monday 08-17, the day before the cohort could
+be bought at all.** Bundle demand did soften; it did not stop. The cohort has
+never taken a single order in its life, which is a different shape from a
+decline.
+
+**What this settles and what it does not.** E4's own terms — "then bundle demand
+does not generalise beyond `lead-email-verify` and we stop building them" — are
+met: **stop building growth bundles of this kind.** It does not say the four
+should be delisted; they cost nothing to leave listed and a later sale is
+information. It does not condemn bundles as a form — `lead-email-verify` still
+sells every week, and the one buyer who paid us by card was assembling a
+multi-entity comparison by hand at €1.00 a call. The lesson is narrower and more
+useful: bundles sell when they package something a buyer was already doing, and
+not when they package something we thought a buyer might want.
+
+*Measured by `lib/metrics/bundles.ts` (`bundleSales` + `cohortVerdict`), which
+was written for this question and can return `confounded` as a first-class
+answer. The trial window is counted by date, never by week — see that module's
+note on why the week-bucketed first draft biased toward killing cohorts.*
+
 **E3 result (2026-08-16, shipped `f19f9f8`): partly confirmed, and the "partly"
 is the useful half.** One capability changes verdict — `us-company-data`, which
 the floor really did quarantine on 2026-08-12 at "64% completion on 11 calls"
