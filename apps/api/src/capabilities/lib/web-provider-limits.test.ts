@@ -34,7 +34,13 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 const safeFetchMock = vi.fn();
 const browserlessFetchMock = vi.fn();
 
-vi.mock("../../lib/safe-fetch.js", () => ({
+// Only `safeFetch` is stubbed — `discardBody` and everything else stay real,
+// so the body-cancellation assertions exercise the shipped helper rather than
+// a stand-in. (A factory returning just `{ safeFetch }` silently made
+// `discardBody` undefined, which is how the cancellation tests started
+// throwing instead of asserting.)
+vi.mock("../../lib/safe-fetch.js", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   safeFetch: (...args: unknown[]) => safeFetchMock(...args),
 }));
 
@@ -54,7 +60,7 @@ import {
   __webProviderCacheStatsForTests,
 } from "./web-provider.js";
 import { MAX_FETCHED_HTML_BYTES, MAX_ERROR_BODY_BYTES, ImageLimitError } from "./image-limits.js";
-import { streamingResponse, streamingResponseOf } from "./streaming-response-testutil.js";
+import { streamingResponseOf } from "./streaming-response-testutil.js";
 import {
   classifyTransactionFailure,
   countsAgainstCapability,
@@ -71,19 +77,28 @@ const CACHE_BUDGET = 64 * 1024 * 1024;
  * (has a <body>, >2000 chars, >200 chars of visible text). All ASCII, so byte
  * length and string length coincide and boundary arithmetic stays honest.
  */
+const htmlCache = new Map<number, Buffer>();
 function htmlOfBytes(bytes: number): Buffer {
+  // Built straight into a Buffer and memoised by size. The string-concat
+  // version allocated ~4 transient copies per call and rebuilt byte-identical
+  // multi-MiB bodies for every boundary case, which made this suite heavy
+  // enough to destabilise neighbours under parallel CPU load. Consumers only
+  // read: streamingResponseOf hands out subarray views, and the one other use
+  // copies via Buffer.concat.
+  const memo = htmlCache.get(bytes);
+  if (memo) return memo;
   const head = "<html><head><title>t</title></head><body><p>";
   const tail = "</p></body></html>";
-  const fillLen = bytes - head.length - tail.length;
-  if (fillLen < 0) throw new Error(`htmlOfBytes: ${bytes} is smaller than the markup`);
-  const html = head + "Real page content. ".repeat(Math.ceil(fillLen / 19)).slice(0, fillLen) + tail;
-  const buf = Buffer.from(html, "utf8");
-  if (buf.byteLength !== bytes) throw new Error(`htmlOfBytes: got ${buf.byteLength}, want ${bytes}`);
+  if (bytes < head.length + tail.length) {
+    throw new Error(`htmlOfBytes: ${bytes} is smaller than the markup`);
+  }
+  const buf = Buffer.alloc(bytes);
+  buf.write(head, 0, "utf8");
+  buf.fill("Real page content. ", head.length, bytes - tail.length, "utf8");
+  buf.write(tail, bytes - tail.length, "utf8");
+  htmlCache.set(bytes, buf);
   return buf;
 }
-
-/** A Jina-style body: no markup gate, just needs >500 chars. */
-const jinaBody = (bytes: number) => htmlOfBytes(bytes);
 
 const URL_UNDER_TEST = "https://example.test/page";
 
@@ -159,7 +174,7 @@ describe("tier 1 (plain fetch) HTML is stream-bounded", () => {
     // Empty is not oversize — it is "no usable HTML", the pre-existing
     // fall-through condition. Tier 2 must therefore still run.
     plainTier(streamingResponseOf(Buffer.alloc(0), { contentType: "text/html" }));
-    const jina = streamingResponseOf(jinaBody(5_000));
+    const jina = streamingResponseOf(htmlOfBytes(5_000));
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(jina.response);
     const r = await fetchPage(URL_UNDER_TEST);
     expect(r.html.length).toBe(5_000);
@@ -187,7 +202,7 @@ describe("tier 1 (plain fetch) HTML is stream-bounded", () => {
   it("a non-HTML content-type releases the body and falls through", async () => {
     const handle = streamingResponseOf(htmlOfBytes(10_000), { contentType: "application/json" });
     plainTier(handle);
-    const jina = streamingResponseOf(jinaBody(5_000));
+    const jina = streamingResponseOf(htmlOfBytes(5_000));
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(jina.response);
     await fetchPage(URL_UNDER_TEST);
     expect(handle.cancelled(), "unread non-HTML body was left open").toBe(true);
@@ -206,20 +221,20 @@ describe("tier 2 (Jina) HTML is stream-bounded", () => {
   const jinaFetch = () => globalThis.fetch as ReturnType<typeof vi.fn>;
 
   it("accepts a body of exactly the limit", async () => {
-    jinaFetch().mockResolvedValue(streamingResponseOf(jinaBody(LIMIT)).response);
+    jinaFetch().mockResolvedValue(streamingResponseOf(htmlOfBytes(LIMIT)).response);
     const r = await fetchPage(URL_UNDER_TEST);
     expect(r.html.length).toBe(LIMIT);
   });
 
   it("refuses limit + 1", async () => {
-    jinaFetch().mockResolvedValue(streamingResponseOf(jinaBody(LIMIT + 1)).response);
+    jinaFetch().mockResolvedValue(streamingResponseOf(htmlOfBytes(LIMIT + 1)).response);
     await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(
       /'url' must be a page whose HTML is 16\.0MB or less/,
     );
   });
 
   it("refuses a declared over-limit length without pulling, and cancels", async () => {
-    const handle = streamingResponseOf(jinaBody(10_000), { declare: LIMIT + 1 });
+    const handle = streamingResponseOf(htmlOfBytes(10_000), { declare: LIMIT + 1 });
     jinaFetch().mockResolvedValue(handle.response);
     await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(/it declared/);
     expect(handle.pulls()).toBe(0);
@@ -313,7 +328,7 @@ describe("oversize does not cascade through the tiers", () => {
   it("an oversized Jina response does NOT trigger Browserless", async () => {
     plainTierFallsThrough();
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(jinaBody(LIMIT + 1)).response,
+      streamingResponseOf(htmlOfBytes(LIMIT + 1)).response,
     );
     await expect(fetchPage(URL_UNDER_TEST)).rejects.toThrow(ImageLimitError);
     expect(browserlessFetchMock).not.toHaveBeenCalled();
@@ -333,7 +348,7 @@ describe("oversize does not cascade through the tiers", () => {
       contentType: "text/html",
     }));
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(jinaBody(6_000)).response,
+      streamingResponseOf(htmlOfBytes(6_000)).response,
     );
     const r = await fetchPage(URL_UNDER_TEST);
     expect(r.html.length).toBe(6_000);
@@ -346,7 +361,7 @@ describe("oversize does not cascade through the tiers", () => {
     );
     plainTier(streamingResponseOf(challenge, { contentType: "text/html" }));
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(jinaBody(6_000)).response,
+      streamingResponseOf(htmlOfBytes(6_000)).response,
     );
     const r = await fetchPage(URL_UNDER_TEST);
     expect(r.html.length).toBe(6_000);
@@ -355,7 +370,7 @@ describe("oversize does not cascade through the tiers", () => {
   it("POSITIVE CONTROL: a bot-gating 403 still falls through to Jina", async () => {
     safeFetchMock.mockResolvedValue(new Response("denied", { status: 403 }));
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      streamingResponseOf(jinaBody(6_000)).response,
+      streamingResponseOf(htmlOfBytes(6_000)).response,
     );
     const r = await fetchPage(URL_UNDER_TEST);
     expect(r.html.length).toBe(6_000);
@@ -608,44 +623,30 @@ describe("structural guard: unbounded body reads on caller-URL fetch paths", () 
     return found;
   }
 
-  it("no caller-URL fetch file reads a body unbounded outside the recorded ledger", () => {
-    const found = scan();
-    const unrecorded = [...found].filter(([f, n]) => KNOWN_UNBOUNDED[f] !== n);
+  it("the ledger matches reality exactly — no unrecorded, no drifted, no stale", () => {
+    // One assertion, one scan. Catches all three failure modes: a new file
+    // reading unbounded (unrecorded key), an extra read in a listed file
+    // (changed count), and a file that got fixed (stale key). vitest's object
+    // diff names the offending file better than an array of tuples would.
     expect(
-      unrecorded,
-      "an unbounded body read on a caller-supplied URL is not in the ledger — bound it with " +
-        "readTextWithLimit/readBodyWithLimit, or add it with a reason",
-    ).toEqual([]);
-  });
-
-  it("the ledger has no stale entries — a fixed file must be removed from it", () => {
-    const found = scan();
-    const stale = Object.keys(KNOWN_UNBOUNDED).filter((f) => !found.has(f));
-    expect(stale, "these files no longer read unbounded; drop them from the ledger").toEqual([]);
+      Object.fromEntries(scan()),
+      "bound the read with readPageHtml/readBodyWithLimit, or record it with a reason",
+    ).toEqual(KNOWN_UNBOUNDED);
   });
 
   it("web-provider itself reads only through the bounded helpers", () => {
     const src = readFileSync(resolve(__dirname, "web-provider.ts"), "utf-8");
     expect(src).not.toMatch(UNBOUNDED_READ);
-    expect(src).toMatch(/readTextWithLimit\(/);
+    expect(src).toMatch(/readPageHtml\(/);
     expect(src).toMatch(/readErrorTextTruncated\(/);
     // The cap comes from the authority module, not a local number.
     expect(src).toContain("MAX_FETCHED_HTML_BYTES");
     expect(src).not.toMatch(/const\s+MAX_FETCHED[A-Z_]*\s*=\s*\d/);
   });
 
-  it("annual-report-extract's registry HTML read is bounded too", () => {
-    const src = readFileSync(resolve(__dirname, "..", "annual-report-extract.ts"), "utf-8");
-    expect(src).not.toMatch(UNBOUNDED_READ);
-    expect(src).toMatch(/readTextWithLimit\(/);
-  });
-
-  it("oversize is terminal in every tier — each fall-through re-throws the limit error", () => {
-    // Behavioural tests above prove this for the paths they drive; this pins
-    // the shape so a new catch block cannot quietly swallow a limit refusal
-    // back into a fallback.
-    const src = readFileSync(resolve(__dirname, "web-provider.ts"), "utf-8");
-    const rethrows = src.match(/if\s*\(err instanceof ImageLimitError\)\s*throw err;/g) ?? [];
-    expect(rethrows.length, "a tier lost its oversize-is-terminal re-throw").toBe(3);
-  });
+  // NOTE: there is deliberately no "count the re-throws" test here. Matching
+  // the literal source line would break on reformatting while proving less
+  // than it appears to — a NEW tier added without a re-throw leaves the count
+  // unchanged. The three behavioural tests in "oversize does not cascade
+  // through the tiers" drive each tier and are what actually pin the property.
 });

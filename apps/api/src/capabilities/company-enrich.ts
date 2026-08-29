@@ -4,7 +4,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
-import { MAX_FETCHED_HTML_BYTES, readTextWithLimit } from "./lib/image-limits.js";
+import { readPageHtml } from "./lib/image-limits.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 
@@ -94,12 +94,7 @@ async function scrapeUrl(url: string): Promise<string> {
   // #428 round-1 review: this POSTs Browserless /content directly instead of
   // going through the shared web-provider, so it bypassed that layer's bound
   // entirely. Same HTML class, same shared cap.
-  let html = await readTextWithLimit(
-    response,
-    MAX_FETCHED_HTML_BYTES,
-    "url",
-    "a page whose HTML is",
-  );
+  let html = await readPageHtml(response, "url");
   // Strip to text
   html = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
   html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");

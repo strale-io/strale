@@ -13,7 +13,7 @@
  */
 
 import { validateUrl } from "../../lib/url-validator.js";
-import { MAX_FETCHED_HTML_BYTES, readTextWithLimit } from "./image-limits.js";
+import { readPageHtml } from "./image-limits.js";
 
 export interface JinaResult {
   markdown: string;
@@ -60,12 +60,7 @@ export async function fetchViaJina(url: string): Promise<JinaResult | null> {
     // buffered the whole response with `.json()` — worse than `.text()`, since
     // the parse allocates again on top of the buffered body. Bound the bytes
     // first, then parse the bounded string.
-    const raw = await readTextWithLimit(
-      response,
-      MAX_FETCHED_HTML_BYTES,
-      "url",
-      "a page whose reader output is",
-    );
+    const raw = await readPageHtml(response, "url");
     let data: Record<string, unknown>;
     try {
       data = JSON.parse(raw) as Record<string, unknown>;

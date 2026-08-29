@@ -515,18 +515,6 @@ export async function readBodyWithLimit(
   field = "image_url",
   entity?: string,
 ): Promise<Buffer> {
-  if (!response.body) {
-    // Only reachable for bodyless responses (204/205/304, HEAD, or a test
-    // Response constructed with a null body) — a real 200 with content always
-    // exposes a stream under undici. The post-hoc check here is therefore a
-    // belt for synthetic Responses, not the enforcement path.
-    //
-    // #412: `maxBytes` is forwarded — this used to fall back to the helper's
-    // 4 MiB default, silently shrinking any caller that passed a larger cap.
-    const buf = Buffer.from(await response.arrayBuffer());
-    assertDecodedSizeWithinLimit(buf.byteLength, maxBytes, field);
-    return buf;
-  }
   const chunks: Uint8Array[] = [];
   const total = await consumeBody(response, maxBytes, field, entity, (c) => chunks.push(c));
   return Buffer.concat(chunks, total);
@@ -547,14 +535,6 @@ export async function countBodyBytes(
   field = "url",
   entity?: string,
 ): Promise<number> {
-  if (!response.body) {
-    // Synthetic/bodyless responses only — see readBodyWithLimit's note.
-    const bytes = (await response.arrayBuffer()).byteLength;
-    if (bytes > maxBytes) {
-      throw new ImageLimitError(`'${field}' must be ${limitPhrase(entity, maxBytes)}.`);
-    }
-    return bytes;
-  }
   return consumeBody(response, maxBytes, field, entity);
 }
 
@@ -579,9 +559,20 @@ export async function readTextWithLimit(
   field = "url",
   entity?: string,
 ): Promise<string> {
-  const buf = await readBodyWithLimit(response, maxBytes, field, entity);
-  const text = buf.toString("utf-8");
-  return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+  return decodeStreaming(response, maxBytes, field, entity, "refuse");
+}
+
+/**
+ * The shared page-HTML read (#428).
+ *
+ * One cap, one field default, one phrase for every place the platform fetches
+ * a page on a caller's behalf — the web-provider's three tiers and the four
+ * capabilities that render through Browserless themselves. Five hand-written
+ * variants of the same call was five spellings of one policy, which is the
+ * drift hazard this module's own header warns about.
+ */
+export function readPageHtml(response: Response, field = "url"): Promise<string> {
+  return readTextWithLimit(response, MAX_FETCHED_HTML_BYTES, field, "a page whose HTML is");
 }
 
 /**
@@ -599,22 +590,47 @@ export async function readErrorTextTruncated(
   maxBytes: number = MAX_ERROR_BODY_BYTES,
 ): Promise<string> {
   try {
-    if (!response.body) {
-      const buf = Buffer.from(await response.arrayBuffer());
-      return buf.subarray(0, maxBytes).toString("utf-8");
-    }
-    const chunks: Uint8Array[] = [];
-    // Length computed from the chunks themselves rather than passed in: in
-    // truncate mode the core's return value is the cap, and a mismatched
-    // explicit length would silently pad or clip.
-    await consumeBody(response, maxBytes, "error_body", undefined, (c) => chunks.push(c), "truncate");
-    return Buffer.concat(chunks).toString("utf-8");
+    return await decodeStreaming(response, maxBytes, "error_body", undefined, "truncate");
   } catch (err) {
     logWarn("error-body-read-failed", "could not read vendor error body", {
       err: err instanceof Error ? err.message : String(err),
     });
     return "";
   }
+}
+
+/**
+ * Decode a bounded body to text WITHOUT ever holding a second full copy.
+ *
+ * Chunks feed a streaming `TextDecoder` and are dropped as they arrive, so the
+ * peak is the decoded string rather than (chunks + concatenated Buffer +
+ * string) — three copies of a 16 MiB page on a path 37 capabilities share.
+ * Using WHATWG's decoder also removes a hand-rolled BOM strip: it is the same
+ * UTF-8-with-replacement decoder `Response.text()` uses, and it drops a
+ * leading BOM itself.
+ */
+async function decodeStreaming(
+  response: Response,
+  maxBytes: number,
+  field: string,
+  entity: string | undefined,
+  limitMode: "refuse" | "truncate",
+): Promise<string> {
+  const decoder = new TextDecoder("utf-8");
+  let out = "";
+  await consumeBody(
+    response,
+    maxBytes,
+    field,
+    entity,
+    (chunk) => {
+      out += decoder.decode(chunk, { stream: true });
+    },
+    limitMode,
+  );
+  // Flush any trailing partial sequence (a multi-byte character split across
+  // the final chunk boundary, or cut mid-character by the cap).
+  return out + decoder.decode();
 }
 
 const limitPhrase = (entity: string | undefined, maxBytes: number) =>
@@ -658,7 +674,25 @@ async function consumeBody(
     );
   }
 
-  const reader = response.body!.getReader();
+  if (!response.body) {
+    // Bodyless responses (204/205/304, HEAD, or a synthetic test Response) —
+    // a real 200 with content always exposes a stream under undici, so this is
+    // a belt, not the enforcement path. Folded into the core (#428 /simplify)
+    // so there is ONE bodyless branch instead of one per export, which is
+    // where the three copies had already begun to differ.
+    const buf = Buffer.from(await response.arrayBuffer());
+    if (buf.byteLength > maxBytes) {
+      if (limitMode === "refuse") {
+        throw new ImageLimitError(`'${field}' must be ${phrase}.`);
+      }
+      onChunk?.(buf.subarray(0, maxBytes));
+      return maxBytes;
+    }
+    onChunk?.(buf);
+    return buf.byteLength;
+  }
+
+  const reader = response.body.getReader();
   let total = 0;
   try {
     for (;;) {

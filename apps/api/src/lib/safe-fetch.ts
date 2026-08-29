@@ -200,6 +200,26 @@ export async function safeFetch(
  * `validateUrl`. Don't call `followRedirects` directly from application
  * code — its `validate` parameter is a test seam, not a policy hook.
  */
+/**
+ * Cancel a response body we are not going to read (#428 review).
+ *
+ * Abandoning a response mid-flight without cancelling pins the keep-alive
+ * connection until GC. This module already held two hand-rolled copies of the
+ * idiom (the 3xx paths below) and the wording every other copy borrows, so the
+ * shared one lives here — `capabilities/lib` could not host it without
+ * inverting the import direction.
+ */
+export async function discardBody(response: Response, reason: string): Promise<void> {
+  await response.body
+    ?.cancel()
+    .catch((err) =>
+      logWarn("response-body-cancel-failed", "could not cancel unread body", {
+        reason,
+        err: String(err),
+      }),
+    );
+}
+
 export async function followRedirects(
   url: string,
   init: Omit<RequestInit, "redirect">,

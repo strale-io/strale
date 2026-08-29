@@ -7,9 +7,8 @@ import { safeFetch } from "../lib/safe-fetch.js";
 import { logWarn } from "../lib/log.js";
 import {
   MAX_DECODED_DOCUMENT_BYTES,
-  MAX_FETCHED_HTML_BYTES,
   readBodyWithLimit,
-  readTextWithLimit,
+  readPageHtml,
 } from "./lib/image-limits.js";
 
 // Swedish org numbers: 10 digits, optionally with hyphen after 6th digit
@@ -103,12 +102,7 @@ async function findAnnualReportPdf(
   // same shared cap rather than an unbounded `.text()`. (Hardening a dormant
   // path — the capability stays DEACTIVATED per DEC-20260421-SE-B; this is
   // not a reactivation signal.)
-  const html = await readTextWithLimit(
-    pageResponse,
-    MAX_FETCHED_HTML_BYTES,
-    "org_number",
-    "a registry page whose HTML is",
-  );
+  const html = await readPageHtml(pageResponse, "org_number");
 
   // Look for PDF download links
   // Allabolag often has links to Bolagsverket PDFs or their own hosted versions
