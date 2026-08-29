@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 
 registerCapability("og-image-check", async (input: CapabilityInput) => {
@@ -17,7 +17,12 @@ registerCapability("og-image-check", async (input: CapabilityInput) => {
     signal: AbortSignal.timeout(15000),
   });
 
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${url}.`);
+  if (!resp.ok) {
+    // Nothing below reads the body (#434). Cancel it rather than leaving
+    // it to pin the keep-alive connection until GC.
+    await discardBody(resp, "og-image-check: non-2xx");
+    throw new Error(`HTTP ${resp.status} fetching ${url}.`);
+  }
   const html = await readPageHtml(resp);
 
   // Extract Open Graph meta tags

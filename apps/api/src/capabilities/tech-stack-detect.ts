@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 
@@ -109,6 +109,9 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
   });
 
   if (!resp.ok) {
+    // Nothing below reads the body (#434). Cancel it rather than leaving
+    // it to pin the keep-alive connection until GC.
+    await discardBody(resp, "tech-stack-detect: non-2xx");
     throw new Error(`Could not fetch ${target} (HTTP ${resp.status}). Check the URL is correct and publicly accessible.`);
   }
 

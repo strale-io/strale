@@ -370,6 +370,87 @@ describe("sitemap-parse refuses above the protocol maximum", () => {
   });
 });
 
+describe("sitemap-parse survives malformed XML in linear time", () => {
+  /**
+   * #434. The old `/<url>([\s\S]*?)<\/url>/g` and
+   * `/<loc>\s*(.*?)\s*<\/loc>/g` were quadratic on unclosed tags: 100,000
+   * unclosed `<url>` tags — 488 KB, nothing near the 50 MB fetch cap — took
+   * 59.9 s of synchronous CPU, blocking the whole event loop. The caller's
+   * server chooses this input freely.
+   *
+   * The budget below is deliberately loose (2 s against a linear time of a few
+   * ms) so the test measures the ALGORITHM rather than the machine. The old
+   * code fails it by more than an order of magnitude on a slow CI box.
+   */
+  const BUDGET_MS = 2_000;
+
+  it.each([
+    ["100,000 unclosed <url> tags", `<urlset>${"<url>".repeat(100_000)}</urlset>`],
+    ["50,000 unclosed <loc> tags in an index", `<sitemapindex>${"<loc>".repeat(50_000)}</sitemapindex>`],
+    ["nested and interleaved openers", `<urlset>${"<url><loc>".repeat(50_000)}</urlset>`],
+  ])("%s", async (_label, xml) => {
+    safeFetchMock.mockResolvedValue(streamingResponseOf(Buffer.from(xml)).response);
+    const started = Date.now();
+    await getDirectExecutor("sitemap-parse")!({ url: "https://example.test/sitemap.xml" }).catch(
+      () => undefined,
+    );
+    expect(Date.now() - started, "parser is super-linear on unclosed tags again").toBeLessThan(
+      BUDGET_MS,
+    );
+  });
+
+  it("a well-formed sitemap at the protocol's 50,000-URL cap still parses", async () => {
+    const entry = "<url><loc>https://example.test/p</loc><lastmod>2026-08-29</lastmod></url>";
+    safeFetchMock.mockResolvedValue(
+      streamingResponseOf(Buffer.from(`<urlset>${entry.repeat(50_000)}</urlset>`)).response,
+    );
+    const started = Date.now();
+    const out = (await getDirectExecutor("sitemap-parse")!({
+      url: "https://example.test/sitemap.xml",
+    })) as { output: Record<string, unknown> };
+    expect(out.output.total_urls).toBe(50_000);
+    expect(out.output.has_lastmod).toBe(true);
+    expect(Date.now() - started).toBeLessThan(BUDGET_MS);
+  });
+
+  it("keeps the old extraction semantics on a mixed document", async () => {
+    // Whitespace trimmed, nearest closing tag wins, an unclosed tail is
+    // dropped rather than swallowing the rest — all as the regexes behaved.
+    const xml =
+      "<urlset>" +
+      "<url><loc>  https://a.test/1  </loc><priority>0.7</priority></url>" +
+      "<url><loc>https://a.test/2</loc><changefreq>weekly</changefreq></url>" +
+      "<url><loc>https://a.test/3</loc>" + // unclosed <url>
+      "</urlset>";
+    safeFetchMock.mockResolvedValue(streamingResponseOf(Buffer.from(xml)).response);
+    const out = (await getDirectExecutor("sitemap-parse")!({
+      url: "https://example.test/sitemap.xml",
+    })) as { output: Record<string, any> };
+    expect(out.output.total_urls).toBe(2);
+    expect(out.output.sample_urls[0]).toEqual({
+      loc: "https://a.test/1",
+      lastmod: undefined,
+      changefreq: undefined,
+      priority: "0.7",
+    });
+    expect(out.output.sample_urls[1].changefreq).toBe("weekly");
+  });
+
+  it("a sitemap index still lists its children", async () => {
+    const xml =
+      "<sitemapindex>" +
+      "<sitemap><loc>https://a.test/s1.xml</loc></sitemap>" +
+      "<sitemap><loc>https://a.test/s2.xml</loc></sitemap>" +
+      "</sitemapindex>";
+    safeFetchMock.mockResolvedValue(streamingResponseOf(Buffer.from(xml)).response);
+    const out = (await getDirectExecutor("sitemap-parse")!({
+      url: "https://example.test/sitemap.xml",
+    })) as { output: Record<string, unknown> };
+    expect(out.output.type).toBe("sitemap_index");
+    expect(out.output.child_sitemaps).toEqual(["https://a.test/s1.xml", "https://a.test/s2.xml"]);
+  });
+});
+
 describe("api-health-check", () => {
   it("refuses to buffer an oversized body but still answers the health question", async () => {
     safeFetchMock.mockResolvedValue(
@@ -437,6 +518,52 @@ describe("page-exists keeps its 20 KB scan window", () => {
     // ~7 MB body, 20 KB read: the stream is abandoned, not drained.
     expect(handle.cancelled()).toBe(true);
     expect(handle.pulls()).toBeLessThan(5);
+  });
+});
+
+// ─── Non-2xx bodies are cancelled, not left to GC ────────────────────────────
+
+/**
+ * #434's cheap residual. These paths throw (or fall through) on a non-2xx
+ * without ever reading the body, which leaves the keep-alive connection pinned
+ * until the response is collected. `discardBody` cancels it.
+ *
+ * Behaviour is deliberately unchanged: the same error, the same message, the
+ * same fall-through — the only difference is a cancelled stream. The
+ * `cancelled()` assertion is what makes that observable; without it the whole
+ * change would be untestable and therefore not worth making.
+ */
+describe("a non-2xx response has its body cancelled", () => {
+  const CASES: Array<{ slug: string; inputs: Record<string, unknown>; status: number }> = [
+    { slug: "url-to-text", inputs: { url: "https://example.test/a" }, status: 503 },
+    { slug: "meta-extract", inputs: { url: "https://example.test/a" }, status: 503 },
+    { slug: "link-extract", inputs: { url: "https://example.test/a" }, status: 503 },
+    { slug: "og-image-check", inputs: { url: "https://example.test/a" }, status: 503 },
+    { slug: "gdpr-website-check", inputs: { url: "https://example.test/a" }, status: 503 },
+    { slug: "tech-stack-detect", inputs: { url: "https://example.test/a" }, status: 503 },
+    { slug: "sitemap-parse", inputs: { url: "https://example.test/sitemap.xml" }, status: 503 },
+    { slug: "robots-txt-parse", inputs: { url: "https://example.test" }, status: 503 },
+    // The 404 branch RETURNS rather than throwing, so the response lives
+    // longer — the case most worth draining.
+    { slug: "robots-txt-parse", inputs: { url: "https://example.test" }, status: 404 },
+    { slug: "job-posting-analyze", inputs: { url: "https://example.test/a" }, status: 503 },
+    { slug: "social-post-generate", inputs: { url: "https://example.test/a" }, status: 503 },
+  ];
+
+  it.each(CASES)("$slug (HTTP $status)", async ({ slug, inputs, status }) => {
+    const handle = streamingResponseOf(HTML(5_000), { contentType: "text/html", status });
+    safeFetchMock.mockResolvedValue(handle.response);
+    await getDirectExecutor(slug)!(inputs).catch(() => undefined);
+    expect(handle.cancelled(), `${slug} left a ${status} body unread and uncancelled`).toBe(true);
+    expect(handle.pulls(), `${slug} read a body it does not use`).toBe(0);
+  });
+
+  it("a 2xx body is still READ, not cancelled unread", async () => {
+    // The control: draining must not have been wired onto the success path.
+    const handle = streamingResponseOf(HTML(20_000), { contentType: "text/html" });
+    safeFetchMock.mockResolvedValue(handle.response);
+    await getDirectExecutor("url-to-text")!({ url: "https://example.test/a" });
+    expect(handle.pulls()).toBeGreaterThan(0);
   });
 });
 

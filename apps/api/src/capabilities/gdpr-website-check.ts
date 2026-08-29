@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
 
@@ -16,7 +16,12 @@ registerCapability("gdpr-website-check", async (input: CapabilityInput) => {
     // redirect handling: safeFetch follows up to 3 hops with per-hop re-validation
   });
 
-  if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
+  if (!response.ok) {
+    // Nothing below reads the body (#434). Cancel it rather than leaving
+    // it to pin the keep-alive connection until GC.
+    await discardBody(response, "gdpr-website-check: non-2xx");
+    throw new Error(`HTTP ${response.status} fetching ${url}`);
+  }
 
   const html = await readPageHtml(response);
   const htmlLower = html.toLowerCase();

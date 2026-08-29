@@ -1,7 +1,63 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readSitemapXml } from "../lib/resource-limits.js";
 import { validateUrl } from "../lib/url-validator.js";
+
+/**
+ * Extract the contents of every `<tag>…</tag>` pair, LINEARLY (#434).
+ *
+ * These replace `/<url>([\s\S]*?)<\/url>/g` and `/<loc>\s*(.*?)\s*<\/loc>/g`,
+ * which were quadratic on unclosed tags and remotely triggerable — the fetch
+ * cap bounds the bytes but said nothing about the CPU spent on them. Measured
+ * on this machine, with input the caller's server chooses freely:
+ *
+ *     "<url>" x 10,000   (49 KB)     0.26 s
+ *     "<url>" x 100,000  (488 KB)   59.9 s
+ *     "<loc>" x 10,000   (49 KB)     4.05 s
+ *     "<loc>" x 50,000   (244 KB)   66.0 s
+ *
+ * Ten times the input for two hundred times the work. The mechanism is the
+ * lazy `[\s\S]*?` between literal delimiters: with no closing tag the engine
+ * retries from every opening position, each time scanning to the end. A
+ * half-megabyte response — far under the 50 MB fetch cap — burns a minute of
+ * CPU, and because the regex is synchronous it blocks the whole event loop,
+ * so one 5-cent call stalls every other request in the process. Larger inputs
+ * scale without limit.
+ *
+ * `indexOf` cannot backtrack. Same semantics — non-overlapping pairs, nearest
+ * closing tag, contents trimmed — at 5 ms for a 50,000-URL sitemap.
+ *
+ * Deliberately NOT a general XML parser: this file's contract is "parse a
+ * sitemap minimally without external deps", and swapping in a real parser is
+ * a larger change with its own failure modes. Filed separately.
+ */
+function tagContents(xml: string, tag: string): string[] {
+  const open = `<${tag}>`;
+  const close = `</${tag}>`;
+  const out: string[] = [];
+  let at = 0;
+  for (;;) {
+    const start = xml.indexOf(open, at);
+    if (start === -1) break;
+    const from = start + open.length;
+    const end = xml.indexOf(close, from);
+    if (end === -1) break; // unclosed tail — stop, exactly as the regex did
+    out.push(xml.slice(from, end).trim());
+    at = end + close.length;
+  }
+  return out;
+}
+
+/** The first `<tag>…</tag>` content, or undefined. Linear, same as above. */
+function firstTag(xml: string, tag: string): string | undefined {
+  const open = `<${tag}>`;
+  const start = xml.indexOf(open);
+  if (start === -1) return undefined;
+  const from = start + open.length;
+  const end = xml.indexOf(`</${tag}>`, from);
+  if (end === -1) return undefined;
+  return xml.slice(from, end).trim();
+}
 
 registerCapability("sitemap-parse", async (input: CapabilityInput) => {
   let url = ((input.url as string) ?? (input.domain as string) ?? (input.task as string) ?? "").trim();
@@ -20,7 +76,12 @@ registerCapability("sitemap-parse", async (input: CapabilityInput) => {
     headers: { "User-Agent": "StraleBot/1.0", Accept: "application/xml, text/xml, */*" },
   });
 
-  if (!response.ok) throw new Error(`HTTP ${response.status} fetching sitemap from ${url}`);
+  if (!response.ok) {
+    // Nothing below reads the body (#434). Cancel it rather than leaving
+    // it to pin the keep-alive connection until GC.
+    await discardBody(response, "sitemap-parse: non-2xx");
+    throw new Error(`HTTP ${response.status} fetching sitemap from ${url}`);
+  }
   const xml = await readSitemapXml(response);
 
   if (!xml.includes("<") || xml.length < 50) {
@@ -32,12 +93,7 @@ registerCapability("sitemap-parse", async (input: CapabilityInput) => {
 
   if (isSitemapIndex) {
     // Sitemap index — extract child sitemap URLs
-    const sitemapUrls: string[] = [];
-    const locRegex = /<loc>\s*(.*?)\s*<\/loc>/g;
-    let match;
-    while ((match = locRegex.exec(xml)) !== null) {
-      sitemapUrls.push(match[1]);
-    }
+    const sitemapUrls = tagContents(xml, "loc");
     return {
       output: {
         url,
@@ -52,18 +108,15 @@ registerCapability("sitemap-parse", async (input: CapabilityInput) => {
   // Regular sitemap — extract URLs
   interface SitemapEntry { loc: string; lastmod?: string; changefreq?: string; priority?: string }
   const entries: SitemapEntry[] = [];
-  const urlRegex = /<url>([\s\S]*?)<\/url>/g;
-  let urlMatch;
 
-  while ((urlMatch = urlRegex.exec(xml)) !== null) {
-    const block = urlMatch[1];
-    const loc = block.match(/<loc>\s*(.*?)\s*<\/loc>/)?.[1];
+  for (const block of tagContents(xml, "url")) {
+    const loc = firstTag(block, "loc");
     if (!loc) continue;
     entries.push({
       loc,
-      lastmod: block.match(/<lastmod>\s*(.*?)\s*<\/lastmod>/)?.[1],
-      changefreq: block.match(/<changefreq>\s*(.*?)\s*<\/changefreq>/)?.[1],
-      priority: block.match(/<priority>\s*(.*?)\s*<\/priority>/)?.[1],
+      lastmod: firstTag(block, "lastmod"),
+      changefreq: firstTag(block, "changefreq"),
+      priority: firstTag(block, "priority"),
     });
   }
 

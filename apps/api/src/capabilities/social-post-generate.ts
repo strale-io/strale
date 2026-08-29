@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
@@ -29,6 +29,9 @@ registerCapability("social-post-generate", async (input: CapabilityInput) => {
         html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
         html = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
         sourceContent = html.trim().slice(0, 3000);
+      } else {
+        // Body unread on the non-2xx path (#434) — cancel it.
+        await discardBody(res, "social-post-generate: non-2xx");
       }
     } catch (err) {
       // Terminal, unlike the other fetch failures here (#432). The fallback

@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 
@@ -26,6 +26,9 @@ registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
         html = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
         html = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
         text = html.trim().slice(0, 10000);
+      } else {
+        // Body unread on the non-2xx path (#434) — cancel it.
+        await discardBody(res, "job-posting-analyze: non-2xx");
       }
     } catch (err) {
       // A size refusal must not become "Could not fetch job posting from URL"
