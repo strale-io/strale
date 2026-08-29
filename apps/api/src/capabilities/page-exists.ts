@@ -2,6 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { logWarn } from "../lib/log.js";
+import { readTextTruncated } from "../lib/resource-limits.js";
 
 /**
  * page-exists — content-aware existence check.
@@ -84,38 +85,6 @@ function containsSoft404Phrase(text: string): boolean {
 // deep pages like /homes/for-sale/123 or /searchable-archive/x.
 function isGenericPath(pathname: string): boolean {
   return /^\/(?:home|index(?:\.html?)?|search)?\/?$/i.test(pathname);
-}
-
-/**
- * Read at most `cap` bytes of the body, then cancel the stream. The scan
- * window only needs the first 20KB — buffering a multi-megabyte SPA bundle
- * via response.text() would download and decode 100x more than needed for
- * a 2-cent call.
- */
-async function readBodyCapped(
-  response: Response,
-  cap: number,
-): Promise<{ text: string; bytesRead: number }> {
-  const body = response.body;
-  if (!body) return { text: "", bytesRead: 0 };
-
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let text = "";
-  let bytesRead = 0;
-  try {
-    while (bytesRead < cap) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      bytesRead += value.byteLength;
-      text += decoder.decode(value, { stream: true });
-    }
-    text += decoder.decode();
-  } finally {
-    // Cancel instead of draining — closes the connection early.
-    reader.cancel().catch((err) => logWarn("page-exists-reader-cancel-failed", "reader cancel failed (connection may pin until GC)", { err: String(err) }));
-  }
-  return { text: text.slice(0, cap), bytesRead };
 }
 
 interface PageExistsOutput {
@@ -234,14 +203,21 @@ registerCapability("page-exists", async (input: CapabilityInput) => {
     }
 
     // ── 200-family HTML: run soft-404 heuristics on the content. ──
-    const { text: rawWindow, bytesRead } = await readBodyCapped(response, BODY_SCAN_LIMIT);
+    // Truncating read from the shared authority (#432). This capability held
+    // the third hand-rolled copy of the same loop, and it was written with
+    // `getReader()` rather than `.text()`, so no accessor sweep could see it.
+    // The scan window is a deliberate prefix, so `readTextTruncated` is the
+    // same semantic with one implementation behind it.
+    const rawWindow = await readTextTruncated(response, BODY_SCAN_LIMIT);
+    const bytesRead = Buffer.byteLength(rawWindow, "utf8");
     const title = extractTitle(rawWindow);
     const bodyText = visibleText(rawWindow);
     // Decoded bytes actually fetched, capped at BODY_SCAN_LIMIT — a lower
     // bound for large pages, exact for small ones. (The Content-Length
     // header measures *compressed* bytes and would misfire the thin check.)
-    // The read loop can overshoot the cap by one chunk; clamp so the
-    // reported value honors the documented "capped at 20000" contract.
+    // The shared reader cuts at exactly the cap, so the clamp is now a
+    // belt rather than a correction — kept because the output contract
+    // documents the ceiling.
     const contentLength = Math.min(bytesRead, BODY_SCAN_LIMIT);
 
     const signals: string[] = [];

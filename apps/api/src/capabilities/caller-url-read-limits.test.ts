@@ -71,6 +71,8 @@ import "./robots-txt-parse.js";
 import "./sitemap-parse.js";
 import "./api-health-check.js";
 import "./paid-api-preflight.js";
+import "./page-exists.js";
+import "./phishing-site-check.js";
 
 const HTML = (bytes: number) =>
   Buffer.from(`<html><head><title>t</title></head><body>${"word ".repeat(bytes / 5)}</body></html>`);
@@ -420,6 +422,23 @@ describe("the contact scrapers keep scanning a prefix", () => {
       output: Record<string, unknown>;
     };
     expect(out.output.phones).toEqual(["+46812345678"]);
+  });
+});
+
+describe("page-exists keeps its 20 KB scan window", () => {
+  it("scans only the prefix of a multi-megabyte page and reports the capped length", async () => {
+    const head = "<html><head><title>Real page</title></head><body>Genuine article content here. ";
+    const body = Buffer.from(head + "filler ".repeat(1_000_000) + "</body></html>");
+    const handle = streamingResponseOf(body, { contentType: "text/html" });
+    safeFetchMock.mockResolvedValue(handle.response);
+    const out = (await getDirectExecutor("page-exists")!({ url: "https://example.test/a" })) as {
+      output: Record<string, unknown>;
+    };
+    expect(out.output.exists).toBe(true);
+    expect(out.output.content_length).toBe(20_000);
+    // ~7 MB body, 20 KB read: the stream is abandoned, not drained.
+    expect(handle.cancelled()).toBe(true);
+    expect(handle.pulls()).toBeLessThan(5);
   });
 });
 

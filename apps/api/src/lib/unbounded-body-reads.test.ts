@@ -99,7 +99,20 @@ const SCANNED: Scanned[] = walk(SRC).map((file) => {
 /**
  * A file fetches remote content on a caller's behalf if it reaches the network
  * through `safeFetch` (the SSRF-validating path a caller URL must take), POSTs
- * Browserless `/content` to render a page, or hits Jina's reader.
+ * Browserless `/content` to render a page, hits Jina's reader, or calls
+ * `assertTargetAllowed`.
+ *
+ * That last term is #432 round 1, and it found a real one. A capability may
+ * hand a caller's URL to a FIXED vendor host — Google PageSpeed, Safe
+ * Browsing, Browserless — and then the fetch is `fetch("https://www.google
+ * apis.com/…")` with no safeFetch anywhere, because the host is ours and the
+ * caller's URL travels as a query parameter. The response is still
+ * caller-shaped. `assertTargetAllowed` is this codebase's own marker for
+ * exactly that situation (the `unguarded-fetch-ok:` annotations on those
+ * fetches say "caller URL gated by assertTargetAllowed above" in so many
+ * words), so adopting it as a filter term is reading a convention that already
+ * exists rather than inventing one. Without it, `page-speed-test`'s unbounded
+ * read of a full Lighthouse report sat outside every class.
  *
  * The completeness of this filter is INHERITED, not independent: it holds
  * because a raw `fetch()` of a caller-supplied URL is already a failure of the
@@ -108,7 +121,10 @@ const SCANNED: Scanned[] = walk(SRC).map((file) => {
  * silently — so the two are load-bearing together.
  */
 const fetchesForCaller = (source: string) =>
-  /safeFetch\s*\(/.test(source) || /"\/content"/.test(source) || /r\.jina\.ai/.test(source);
+  /safeFetch\s*\(/.test(source) ||
+  /"\/content"/.test(source) ||
+  /r\.jina\.ai/.test(source) ||
+  /assertTargetAllowed\s*\(/.test(source);
 
 const tally = (files: Scanned[]): Record<string, number> =>
   Object.fromEntries(files.filter((f) => f.sites.length > 0).map((f) => [f.path, f.sites.length]));
@@ -117,15 +133,24 @@ const tally = (files: Scanned[]): Record<string, number> =>
 
 describe("class A — a caller's URL is never read unbounded", () => {
   /**
-   * EMPTY, and that is the assertion. #412, #426, #428 and #432 between them
-   * routed every one of these through the readers in `lib/resource-limits.ts`.
+   * ONE entry, and it is the honest one. #412, #426, #428 and #432 between
+   * them routed every other caller-shaped read through the readers in
+   * `lib/resource-limits.ts`.
    *
    * An entry may be added only with a written reason for why a caller-shaped
    * body may be materialized without a ceiling. "It is probably small" is not
    * one — every capability in the 20-file ledger this replaces was probably
-   * small too.
+   * small too. The reason below is the opposite claim: the body is probably
+   * LARGE, and the cap cannot be sized without evidence this environment
+   * cannot obtain, so guessing at one would risk breaking a working
+   * capability. See the note at the read itself.
    */
-  const SANCTIONED: Record<string, number> = {};
+  const SANCTIONED: Record<string, number> = {
+    // Google PageSpeed Insights returns the full Lighthouse report. Sizing a
+    // cap needs a measured distribution of real reports; PSI answers keyless
+    // traffic from CI/dev with 429 and the platform holds no API key.
+    "capabilities/page-speed-test.ts": 1,
+  };
 
   it("no unbounded body read in any file that fetches on a caller's behalf", () => {
     expect(
@@ -157,6 +182,34 @@ describe("class B — arrayBuffer() is reserved to the enforcement core", () => 
       sites: f.sites.filter((s) => s.method === "arrayBuffer"),
     }));
     expect(tally(offenders), "use readBodyWithLimit instead").toEqual(SANCTIONED);
+  });
+});
+
+// ─── Class B2: manual stream reads ───────────────────────────────────────────
+
+describe("class B2 — reading a body by hand is reserved to the core", () => {
+  /**
+   * #432 round 2, and the reason this class exists: `page-exists.ts` read its
+   * body with `response.body.getReader()` and a `while` loop, which no
+   * accessor-name sweep can see. It happened to be correctly bounded — it was
+   * the THIRD hand-rolled copy of the truncating read, after
+   * `domain-contact-extract` and `email-finder` — but "we got lucky three
+   * times" is not a property, and a fourth copy would have been invisible to
+   * classes A, B and C alike.
+   *
+   * With all three folded into `readTextTruncated`, `getReader()` outside the
+   * enforcement core has no remaining use, so this is zero tolerance rather
+   * than a ledger. Together with class B it makes the claim a strong one:
+   * `lib/resource-limits.ts` is the only place in `apps/api/src` that touches
+   * a response body directly.
+   */
+  const SANCTIONED = ["lib/resource-limits.ts"];
+
+  it("no file outside resource-limits.ts calls getReader() on a body", () => {
+    const offenders = SCANNED.filter(
+      (f) => /\.getReader\s*\(/.test(f.source) && !SANCTIONED.includes(f.path),
+    ).map((f) => f.path);
+    expect(offenders, "read through readTextWithLimit / readTextTruncated instead").toEqual([]);
   });
 });
 
