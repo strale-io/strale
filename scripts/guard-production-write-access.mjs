@@ -60,6 +60,14 @@ const AUTHORISED_MENTIONS = [
   "docs/security/2026-08-22-starve-set-1-provenance.md",
   "docs/security/2026-08-22-operator-script-migration.md",
   "docs/security/2026-08-22-founder-grant-runbook.md",
+  // The decision queue names it when recording that a settled production
+  // change has no route to production (DQ-27, 2026-08-30). One long-lived
+  // governance file, appended to over time — which is exactly what this
+  // explicit list is for. Deliberately NOT covered by the handoff/ prose rule:
+  // that rule exists because handoff/ is one file per session and an allowlist
+  // entry per journal entry is unworkable. This is a single file, so naming it
+  // here keeps the decision visible in a diff.
+  "docs/company/DECISION-QUEUE.md",
   // Names the variable in prose only; `operator-db.ts` obtains the value via
   // productionWriteUrl(authority) and never reads the environment itself.
   "apps/api/src/lib/operator-db.ts",
