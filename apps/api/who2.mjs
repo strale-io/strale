@@ -1,0 +1,11 @@
+import dotenv from 'dotenv'; dotenv.config({ path: '../../.env' });
+import postgres from 'postgres';
+const sql = postgres(process.env.DATABASE_URL, { ssl: false, max: 2 });
+const U = 'e3c68534-4d7b-4387-9156-a1913f3bc52b';
+const cols = await sql`SELECT column_name FROM information_schema.columns WHERE table_name='transactions' ORDER BY 1`;
+console.log('## tx cols:', cols.map(c=>c.column_name).join(','));
+const w = await sql`SELECT * FROM wallets WHERE user_id = ${U}`;
+console.log('## wallet:', JSON.stringify(w));
+const led = await sql`SELECT type, amount_cents, description, created_at FROM wallet_transactions WHERE user_id=${U} ORDER BY created_at LIMIT 20`;
+console.log('## ledger:', JSON.stringify(led, null, 1));
+await sql.end();
