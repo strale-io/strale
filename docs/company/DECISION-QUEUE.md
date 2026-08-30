@@ -14,6 +14,43 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-27** · `your_call` · owner Petter · raised 2026-08-30T07:00Z · no deadline — **two settled production settings I have no way to apply**
+Two services are recorded as answering faster than they really do, so requests
+to them are routed as if they will return instantly when they often cannot. The
+correct figures are settled by measurement, not judgement — there is nothing
+here to decide about *what* should happen.
+*What was measured (production, read-only, this morning):* `company-news` has no
+recorded latency at all and is therefore routed instantly by default, while
+36 of its 69 completed calls (52.2%) exceed the 15-second ceiling.
+`page-speed-test` is recorded at 8000 ms against a p95 of 19,029 ms, with 54 of
+436 (12.4%) over the ceiling. The two statements that fix it:
+`UPDATE capabilities SET avg_latency_ms = 28734 WHERE slug = 'company-news';`
+and `UPDATE capabilities SET avg_latency_ms = 20000 WHERE slug =
+'page-speed-test';`
+*Sized before escalating, because it changes the urgency:* over 90 days these
+two earned **€0.65 from 13 external calls** and **nothing at all**,
+respectively. Our own harness calls capabilities directly and never meets the
+sync ceiling, so only real callers are exposed and there have been almost none.
+Nothing is burning, and I am not dressing this up as a customer problem.
+*Why it is here and not done:* `.env` contains no `DATABASE_URL_WRITE` and
+`FOUNDER_GRANT_PUBLIC_KEY_PEM` is empty — both verified absent this morning,
+both deliberately so. The 2026-08-22 runbook destroyed the `strale_rw` password
+and the founder signing key after establishing that a session can read any file
+its own user can read. **I am not proposing to reverse that.** Step 1 of that
+runbook — set the `strale_rw` password, keep it in a password manager, paste it
+per command — has never been done, and until it is, this whole class of settled
+adjustment has no route to production.
+*The part that actually worries me:* `page-speed-test` was already agreed as
+part of #436's closeout and **was never applied** — verified against production
+rather than assumed from the issue state. That is the second instance of a
+settled adjustment recorded as done without happening (DQ-11 was "DQ-4 finally
+executed"). A third makes it a family under the three-strike rule.
+*If you do nothing:* the two stay mis-routed and the slowest calls to them keep
+dying unanswered. At current volumes that is worth well under a euro a quarter.
+The reason to act is the pattern, not the loss.
+*How you'd reverse it:* nothing to reverse — this is a request for a route, not
+a change already made.
+
 **DQ-21** · `answered` · owner Petter · raised 2026-08-27 · answered 2026-08-28 — **we do not contact the card-paying customer**
 *Answered:* Petter, in chat: "we will not reach out to the buyer." Clear and
 final on the specific case. Marked `answered` rather than `decided` because he

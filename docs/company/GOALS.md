@@ -135,6 +135,45 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-08-30. "Twelve payers" is four payers and eight trials — and
+  the two genuinely new ones did not come through the compliance wedge.**
+  Rolling 7d, canonical population via `lib/metrics`: €75.84 across 12 paying
+  identities, 100% attributed. The distribution is the finding, not the count:
+  `x402:e9e672ef71` €56.55 (74.6%), the card customer `user:e3c68534` €11.09,
+  `x402:35f8dfc00f` €5.44, `x402:6bfcaec686` €2.05 — and **eight further
+  wallets that spent €0.62 combined**, one day and one or two calls each. Any
+  plan built on "twelve customers" is built on eight trials. Real buyers: four,
+  up from one.
+
+  **Do not quote a week-over-week concentration movement.** `concentration()`
+  returns `comparable = false` for this window (`partialWindow = true`), which
+  is precisely the guard that exists because the module's first production run
+  read 99.3% against a prior 19.0% where the prior figure was an artefact of
+  identity coverage. The within-week distribution above needs no cross-window
+  comparison and is what should be cited.
+
+  **The strategic part: entry capabilities.** The card customer entered through
+  `competitor-compare` — confirming the multi-entity comparison as *the*
+  experiment, exactly as the DQ-21 consequence below predicted. But the two new
+  non-trivial wallets entered through **`address-geocode` (€5.44)** and
+  **`image-to-text` (€2.05)** — general-purpose utilities, not company-data or
+  compliance. Corroborated by the 90-day external top sellers, which are led by
+  `email-validate`, `google-search`, `serp-analyze`, `brand-mention-search` and
+  `image-to-text`; `competitor-compare` is the only company-data-adjacent slug
+  in the top eight, at €10.00 on 10 calls.
+
+  **What this does and does not license.** Two buyers in one week is a hint, not
+  a verdict, and it is *not* grounds to retire the compliance wedge — that is a
+  DEC-level change. It is grounds to stop treating further KYB country
+  build-out as automatically the highest-value next capability. If a third and
+  fourth non-trivial buyer also arrive through general utilities, the ranking
+  in this document should change explicitly rather than by drift.
+
+  **Also confirmed: the card customer's return is a habit.** Four separate
+  buying days in the window, €11.09 — not the single episode the 08-29 brief
+  could only call "the beginning of". A fifth and sixth buying day makes
+  `competitor-compare` the clearest build signal we have.
+
 - **We will not be asking the card customer why they stopped — Petter declined
   the outreach on 2026-08-28 (DQ-21), and that decision reranks the work.** The
   08-28 recommendation was to write one short note on 04-09 if they were still
