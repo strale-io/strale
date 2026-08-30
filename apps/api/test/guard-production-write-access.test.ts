@@ -8,10 +8,17 @@
  * it, a writable connection can be opened with no authority attached.
  */
 
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 
 const REPO = resolve(import.meta.dirname, "..", "..", "..");
 const SCRIPT = resolve(REPO, "scripts", "guard-production-write-access.mjs");
@@ -133,5 +140,89 @@ describe("the production write credential has one door", () => {
       refuseAt,
       "the authority check must run before the credential is read",
     ).toBeLessThan(readAt);
+  });
+});
+
+/**
+ * The `handoff/` prose exemption, tested against a throwaway repository.
+ *
+ * Why a fixture and not an import: the guard is a top-level script that calls
+ * `exit(1)` while loading, so importing it to unit-test the predicate would
+ * kill the test worker the first time the real tree had an offender. It
+ * resolves its own root from the working directory, so pointing it at a
+ * scratch repository exercises the real code path — the same `git grep`, the
+ * same allowlists — with a tree we control.
+ *
+ * Added 2026-08-30. Two session records that named the variable in prose, while
+ * correctly describing an operator action that is genuinely outstanding, failed
+ * CI. The fix that must NOT be made is editing the records; see the predicate's
+ * comment in the guard.
+ */
+describe("session records may name the credential; scripts beside them may not", () => {
+  const needle = ["DATABASE", "URL", "WRITE"].join("_");
+  let dir: string;
+  let result: { code: number; out: string };
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), "guard-prose-"));
+    const git = (...args: string[]) =>
+      execFileSync("git", args, { cwd: dir, encoding: "utf8", stdio: "pipe" });
+
+    git("init", "-q");
+    git("config", "user.email", "t@t.invalid");
+    git("config", "user.name", "t");
+
+    const write = (rel: string, body: string) => {
+      mkdirSync(dirname(join(dir, rel)), { recursive: true });
+      writeFileSync(join(dir, rel), body);
+    };
+
+    // Prose in a session record — legitimate, must be allowed.
+    write(
+      "handoff/_general/from-code/2026-08-30-record.md",
+      `Manifest limitations still need a \`${needle}\`-granted backfill.\n`,
+    );
+    // A SCRIPT in the same directory — a script can actually read the
+    // variable, so the exemption must not follow the directory alone.
+    write("handoff/_general/from-code/helper.ts", `const u = process.env.${needle};\n`);
+    // Markdown outside handoff/ — still requires an explicit allowlist entry.
+    write("docs/notes/stray.md", `We should use ${needle} here.\n`);
+
+    git("add", "-A");
+    git("commit", "-qm", "fixture");
+
+    try {
+      const out = execFileSync(process.execPath, [SCRIPT, "--report"], {
+        cwd: dir,
+        encoding: "utf8",
+        stdio: "pipe",
+      });
+      result = { code: 0, out };
+    } catch (err) {
+      const e = err as { status?: number; stdout?: string; stderr?: string };
+      result = { code: e.status ?? -1, out: (e.stdout ?? "") + (e.stderr ?? "") };
+    }
+  }, 60_000);
+
+  afterAll(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("does not flag prose in a handoff record", () => {
+    expect(result.out).not.toContain("2026-08-30-record.md");
+  });
+
+  it("still flags a script sitting in the same handoff directory", () => {
+    // This is what makes the exemption narrow rather than a directory hole.
+    expect(result.out).toContain("handoff/_general/from-code/helper.ts");
+  });
+
+  it("still flags markdown outside handoff/", () => {
+    expect(result.out).toContain("docs/notes/stray.md");
+  });
+
+  it("refuses overall, on the two real offenders only", () => {
+    expect(result.code).toBe(1);
+    expect(result.out).toContain("offenders          : 2");
   });
 });

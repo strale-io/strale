@@ -70,6 +70,34 @@ const AUTHORISED_MENTIONS = [
   "apps/api/src/lib/operator-db.test.ts",
 ];
 
+/**
+ * Session records under `handoff/` are an append-only journal, not code.
+ *
+ * The property this guard protects is that no CODE PATH but the authority
+ * module can obtain the credential — the test re-derives it independently over
+ * `*.ts` and `*.mjs` alone, which is the honest statement of the subject. A
+ * markdown file cannot read an environment variable.
+ *
+ * So why not just add each record to AUTHORISED_MENTIONS? Because that list
+ * exists to make "it's just a doc" a deliberate decision, and that reasoning
+ * holds for the handful of long-lived policy documents in `docs/security/`.
+ * `handoff/` is a different shape: one append-only file per session, and any
+ * session that writes down the outstanding `--backfill` operator action names
+ * the variable in passing. Requiring an allowlist edit per journal entry does
+ * not make the decision more deliberate — it prices the sentence, and the
+ * cheapest way to a green build becomes deleting the explanation. That exact
+ * pressure is recorded in the #436 session notes: "a check that forbids
+ * mentioning a removed mistake pressures the next author to drop the
+ * explanation." Two records tripped it on 2026-08-30 and both were correct
+ * prose describing work that genuinely is outstanding.
+ *
+ * Deliberately scoped to `.md`. A script dropped into `handoff/` is still an
+ * offender, because a script can read the variable and a record cannot.
+ */
+export function isProseRecord(path) {
+  return path.startsWith("handoff/") && path.endsWith(".md");
+}
+
 const NEEDLE = ["DATABASE", "URL", "WRITE"].join("_");
 
 /**
@@ -139,7 +167,11 @@ for (const hit of grepHits(NEEDLE)) {
   const secondColon = hit.indexOf(":", firstColon + 1);
   const path = hit.slice(0, firstColon);
   const line = hit.slice(firstColon + 1, secondColon);
-  if (AUTHORISED_READERS.includes(path) || AUTHORISED_MENTIONS.includes(path)) {
+  if (
+    AUTHORISED_READERS.includes(path) ||
+    AUTHORISED_MENTIONS.includes(path) ||
+    isProseRecord(path)
+  ) {
     continue;
   }
   offenders.push(`${path}:${line}`);
