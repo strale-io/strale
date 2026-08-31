@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** M0 COMPLETE — M1 Foundation merged; M2 reconciliation is next
+**Status:** M0 COMPLETE — M1 merged; M2 reconciliation unblocked and starting
 **Date:** 2026-08-31
 **Owner:** Codex
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -30,9 +30,10 @@ rule.
   final archive-wide scan reports zero findings.
 - Independent Claude review returned `PASS` and
   `SAFE_TO_MARK_M0_COMPLETE: YES`.
-- The preservation prerequisite for M2 is therefore satisfied. M2 still waits
-  for the bounded M1 Foundation to land and for the separate product/decision
-  audit to be available; no authority has changed yet.
+- The preservation prerequisite for M2 is therefore satisfied. M1 has landed,
+  and the founder confirmed on 2026-09-01 that the supplied context pack is the
+  complete founder input. M2 owns the remaining evidence audit and
+  reconciliation; no additional founder-authored audit is required.
 - The clean M1 extraction received an independent Claude `PASS` with zero high,
   medium, or low findings and `SAFE_TO_OPEN_AND_MERGE_PR: YES`. The review is
   recorded at
@@ -45,10 +46,13 @@ rule.
 - GitHub validation, repository checks, and database integration all passed.
 - The merged layer remains inert and non-authoritative: no root entrypoint,
   hook, CI workflow, skill, command, or application consumer was activated.
-- The next milestone is M2 truth reconciliation. It should consume the separate
-  product/decision audit, classify the legacy-authority inventory, populate the
-  canonical candidates, and receive a fresh independent Claude review before
-  any M4 cutover or Notion retirement action.
+- The next milestone is M2 truth reconciliation. It should audit the context
+  pack against current repo, decision, frontend, and production evidence,
+  classify the legacy-authority inventory, populate the canonical candidates,
+  and receive a fresh independent Claude review before any M4 cutover or Notion
+  retirement action.
+- `DEC-20260901-A` supersedes `DEC-20260831-A` and records the founder's
+  clarification that no additional founder-provided audit artifact is missing.
 
 ## Execution dependency amendment — 2026-08-31
 
@@ -93,9 +97,10 @@ This changes sequencing, not scope or authority:
   milestone verdict. No root hook, CI gate, skill, command, `AGENTS.md`, or
   `CLAUDE.md` consumer may consult the new router or skeletons yet.
 - **M2 and every authority-changing step remain gated** on a complete M0 export,
-  regenerated manifest, and focused Claude milestone PASS. The parallel
-  product/decision audit may continue independently but cannot be promoted into
-  the canonical layer before that gate.
+  regenerated manifest, and focused Claude milestone PASS. Those prerequisites
+  are satisfied. The context pack may now be audited inside M2 but cannot be
+  promoted into the canonical layer without claim-level reconciliation and a
+  fresh milestone review.
 - Existing `AGENTS.md`, `CLAUDE.md`, Notion workflows, and authority rules remain
   fully in force throughout parallel M1 work.
 
@@ -122,8 +127,9 @@ documentation layer.
 
 ## 2. Non-goals
 
-- Do not re-audit the product, production, or all historical decisions inside
-  this workstream. A parallel product/decision audit supplies reconciled truth.
+- Do not ask the founder to produce another product/decision audit. M2 performs
+  the required product, production, and decision reconciliation from the
+  supplied pack and current evidence in bounded review batches.
 - Do not merge, deploy, publish, or otherwise accept the active frontend redesign
   merely to preserve it.
 - Do not duplicate implementation-specific frontend design-system mechanics in
@@ -599,12 +605,13 @@ and preservation of mandatory engineering protocols.
 
 ### M2 — Reconcile and populate project truth
 
-Precondition: parallel product/decision audit is available.
+Preconditions: M0 and M1 are complete, and the founder input pack is available.
+All are satisfied. The evidence audit and reconciliation are M2 work.
 
 Changes:
 
-1. Reconcile product audit, context pack, repo evidence, formal decisions, code,
-   frontend state, and live production facts by question.
+1. Audit and reconcile the context pack against repo evidence, formal decisions,
+   code, frontend state, and live production facts by question.
 2. Populate `PRODUCT.md`, `STATE.md`, `ROADMAP.md`, and product domain files in
    a bounded product/state change.
 3. Migrate active and load-bearing global decisions first, with separate review
