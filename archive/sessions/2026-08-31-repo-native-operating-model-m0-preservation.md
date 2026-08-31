@@ -49,8 +49,9 @@ than silently resolved during M0.
 The repo-side export is sanitized evidence, not a secret backup. Push protection
 identified three live-secret occurrences representing two distinct provider
 credentials in Journal page 2; those occurrences were replaced with a
-documented marker before the commit reached the remote. The affected credentials
-should be rotated by the account owner.
+documented marker before the commit reached the remote. The founder deferred
+rotation after reachability checks and independent review; the documented
+immediate-rotation triggers remain in force.
 
 The code repository is public. The founder approved a private companion
 repository for raw project-memory evidence and reconstruction of the affected
@@ -96,7 +97,11 @@ mirror of that gate is `docs/project/private-archive-status.json`.
 - Rotation of the two distinct credentials is deferred by the founder because
   the rejected commit and blob were never publicly reachable. Rotate immediately
   on unrecognized use, a provider alert, or any accidental publication.
-- Complete reconstruction of affected public branch refs. GitHub-retained PR
-  and fork objects may require a separate support-removal decision. The approved
-  `codex/repo-native-operating-model` branch is clean at `f37b57cd`; the sibling
-  `codex/repo-native-foundation-m1` branch and PR #446 ref remain.
+- Git branch and tag cleanup is complete: the approved
+  `codex/repo-native-operating-model` branch has a verified raw-export-removal
+  checkpoint at `37f8e76a`, the sibling `codex/repo-native-foundation-m1` branch
+  was deleted with an exact lease, and all 42 current branches plus 5 tags
+  contain zero raw Notion paths.
+- GitHub-retained PR, cache, and fork-network objects remain pending under open
+  sensitive-data removal ticket
+  [#4715462](https://support.github.com/ticket/personal/0/4715462).

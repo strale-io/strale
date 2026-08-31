@@ -33,9 +33,13 @@ Intent: Use the restored Notion query window to advance the M0 preservation expo
   `strale-io/strale-context-archive` repository. The public code repository keeps
   only `docs/project/private-archive-status.json`.
 - Public-ref cleanup found a second affected branch and PR #446's retained head
-  ref. The approved migration branch was reconstructed from a fresh clone and
-  force-updated to `f37b57cd`; its remote tree now contains zero raw Notion paths.
-  The additional branch and retained GitHub objects require explicit follow-up.
+  ref. The approved migration branch has a verified raw-export-removal checkpoint
+  at `37f8e76a`; the sibling branch was deleted with an exact lease, and all 42
+  current branches plus 5 tags now contain zero raw Notion paths. GitHub-retained
+  PR, cache, and fork-network objects remain pending under open sensitive-data
+  removal ticket
+  [#4715462](https://support.github.com/ticket/personal/0/4715462), whose URL was
+  verified from the authenticated ticket portal.
 
 ## Non-obvious learnings
 
