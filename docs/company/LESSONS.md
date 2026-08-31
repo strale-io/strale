@@ -630,6 +630,21 @@ manifest entry for this repo says in its own words that it "backs branches up
 (push + rescue snapshots)"; and the push itself is visible in its source. Nine
 `rescue/wip-*` branches on our remote are the same job's other output.
 
+*The evidence was in plain sight for twelve days, and this is the sharpest thing
+in the entry.* The 08-19, 08-21 and 08-23 runs all met `rescue/wip-*` branches,
+triaged them at length, and deleted several — as **debris left behind by past
+sessions**. Not one asked what creates a branch named for a date that keeps
+being today. Each read a recurring output as a one-off residue, which is exactly
+the misreading F7 is about, applied to F7's own evidence. A negative check
+closes it: nothing in this repository's scripts or `.claude/` creates a
+`rescue/wip-*` ref, so the name was never ours to explain away.
+
+*The supply side is growing.* The janitor pushes one branch per local branch, and
+local branches track worktrees. The 08-23 run took worktrees from 8 down to 2;
+there are **24** today. Whatever this costs, it scales with a number nobody is
+watching, and the two branches this morning could not delete are both held by
+worktrees.
+
 *Neither system is malfunctioning.* The janitor's doctrine — committed work that
 exists locally belongs on the remote as backup — is correct, and a local branch
 with no remote counterpart is exactly what it is built to rescue. **Our operation
