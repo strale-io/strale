@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "3c267c87-082c-81c5-84c3-f46cfbba7af1",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"Website redesign — Company Research use-case world ready for review\",\"url\":\"https://app.notion.com/p/3c267c87082c81c584c3f46cfbba7af1?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/3c267c87082c81c584c3f46cfbba7af1 as of 2026-08-20T11:42:25.626Z:\\n<page url=\\\"https://app.notion.com/p/3c267c87082c81c584c3f46cfbba7af1\\\">\\n<ancestor-path>\\n<parent-data-source url=\\\"collection://8f54383b-3227-42c2-bee4-77a091027f8f\\\" name=\\\"Journal\\\"/>\\n<ancestor-2-database url=\\\"https://app.notion.com/p/f275be62b85b421da1375a1d7d7c0059\\\" title=\\\"Journal\\\"/>\\n<ancestor-3-page url=\\\"https://app.notion.com/p/33c67c87082c81889876ff3e9b175f1d\\\" title=\\\"Journal\\\"/>\\n<ancestor-4-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"Action Required\\\":\\\"yes\\\",\\\"Actor\\\":\\\"claude-code\\\",\\\"Content\\\":\\\"Recorded approval of the integration-burden section, then built truth-safe desktop and mobile keyframes for the first use-case world. The chapter uses one verified registry example and two separate current tool records; generated imagery contains atmosphere only. Commit 25a0be9 on isolated branch codex/website-redesign.\\\",\\\"Related Decisions\\\":[\\\"https://app.notion.com/p/3c267c87082c81ee9e7cc995b11f12d6\\\"],\\\"Reviewed\\\":\\\"__NO__\\\",\\\"Session\\\":\\\"Codex website redesign / company research use-case world\\\",\\\"Source\\\":\\\"code\\\",\\\"Title\\\":\\\"Website redesign — Company Research use-case world ready for review\\\",\\\"Type\\\":\\\"session\\\",\\\"url\\\":\\\"https://app.notion.com/p/3c267c87082c81c584c3f46cfbba7af1\\\"}\\n</properties>\\n<content>\\n## Outcome\\nThe first use-case world—Company Research in Discovery Blue—is ready for Petter's review.\\n- Reuses the Spotify AB registry example as the recurring proof object.\\n- Shows Company News and Country Economic Indicators only as separate possible next calls.\\n- Removes the unsupported funding implication from the original working copy.\\n- Uses a generated atmosphere with no text, UI, logos, values or claims.\\n- Reconstructs all product evidence deterministically from a dated live-catalog audit.\\n## Decision recorded\\n`DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN` records Petter's approval of the preceding integration-burden section.\\n## Boundary\\nThe Company Research chapter is review-ready, not approved. No website implementation, deployment, push or merge occurred.\\n## Source\\nCommit `25a0be9` on `codex/website-redesign`.\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

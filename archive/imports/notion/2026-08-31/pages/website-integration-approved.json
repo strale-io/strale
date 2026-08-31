@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "3c267c87-082c-81ee-9e7c-c995b11f12d6",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"Website homepage integration-burden section approved\",\"url\":\"https://app.notion.com/p/3c267c87082c81ee9e7cc995b11f12d6?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/3c267c87082c81ee9e7cc995b11f12d6 as of 2026-08-20T11:37:12.717Z:\\n<page url=\\\"https://app.notion.com/p/3c267c87082c81ee9e7cc995b11f12d6\\\">\\n<ancestor-path>\\n<parent-data-source url=\\\"collection://5e1a81ee-7b9f-4d3c-b58d-c8d97ae6386c\\\" name=\\\"Decisions\\\"/>\\n<ancestor-2-database url=\\\"https://app.notion.com/p/ea57671f716744e4a254c0a1de79e7f9\\\" title=\\\"Decisions\\\"/>\\n<ancestor-3-page url=\\\"https://app.notion.com/p/33c67c87082c81438b9bf07447bcf1b8\\\" title=\\\"How we work\\\"/>\\n<ancestor-4-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"Confidence\\\":\\\"high\\\",\\\"Decision\\\":\\\"Website homepage integration-burden section approved\\\",\\\"Outcome\\\":\\\"The design direction is approved for later implementation. No implementation, deployment, merge, or release is authorized.\\\",\\\"Rationale\\\":\\\"Petter approved the high-fidelity desktop and mobile design. It explains repeated provider setup collapsing into a shared Strale execution contract while explicitly preserving tool-specific inputs, outputs, coverage, and limitations.\\\",\\\"Reviewed\\\":\\\"__YES__\\\",\\\"Scope\\\":\\\"feature\\\",\\\"Source\\\":\\\"\\\",\\\"Status\\\":\\\"active\\\",\\\"date:Date:is_datetime\\\":0,\\\"date:Date:start\\\":\\\"2026-08-20\\\",\\\"date:Expiry Date:is_datetime\\\":0,\\\"url\\\":\\\"https://app.notion.com/p/3c267c87082c81ee9e7cc995b11f12d6\\\",\\\"userDefined:ID\\\":\\\"DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN\\\"}\\n</properties>\\n<content>\\n## Decision\\nAdopt **The burden collapses** as the second homepage proof section.\\n## Approved characteristics\\n- Direct integrations show repeated credentials, billing, schema handling, and error handling.\\n- The Strale route shows a shared outer execution contract using real request/result field names.\\n- Tool-specific inputs, outputs, coverage, and limitations remain explicitly distinct.\\n- The section is a code-native systems diagram rather than generated imagery or a provider map.\\n- No universal-schema, fixed-tool-count, or provider-uniformity claim is made.\\n## Boundary\\nThis decision approves the design direction only. It does not authorize website implementation or any outward release.\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

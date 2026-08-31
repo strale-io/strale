@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-31",
+  "complete": false,
+  "known_gap": "Decisions, Journal, To-do, and Vendor Roster row queries are first-page-only (100 rows, has_more=true); pagination blocked by Notion workspace query quota.",
+  "purpose": "Immutable raw Notion evidence export; content is not canonical until reconciled.",
+  "entries": [
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/decisions-rows.json",
+      "bytes": 114385,
+      "sha256": "93144817528a4832adafb2d927440e58fee1065303594409e92f8f16ccea6268"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/decisions-schema.json",
+      "bytes": 7928,
+      "sha256": "615fed3a701fe6c659fcb0186304a872956a291c1d17dbd87cc8cc673f7f477c"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/deferred-rows.json",
+      "bytes": 21375,
+      "sha256": "6562328cfc566e8566136db078204ad7b9af8368654c6ab03c338e9397d401f7"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/deferred-schema.json",
+      "bytes": 4496,
+      "sha256": "57b4f97734a2ec1c71d4792dc5ac36f89de5f6a85b08a3c43f3f5bf160594923"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/distribution-registry-rows.json",
+      "bytes": 41529,
+      "sha256": "df00ef49084bb9af20c10c9d6283c8abf7e3eca1472efdebd7a535aa30260fff"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/distribution-registry-schema.json",
+      "bytes": 6900,
+      "sha256": "253a7f29aa13c55587c77e52ae8ee0636541c7811ceb5bc8286fca50571934f3"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/feature-registry-rows.json",
+      "bytes": 7804,
+      "sha256": "9f788cd1d53bc88e0d102c97ec954d84d53b2711b8ba974dbde77dedfda754ad"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/feature-registry-schema.json",
+      "bytes": 3513,
+      "sha256": "0e4bbe3a7ae05c4f52d65b631aa0dcf13af30de8df1e34a362b471eb4dd307c3"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/glossary-rows.json",
+      "bytes": 1775,
+      "sha256": "41b8a776beaea50371023e7b5eff87a72dd452f5b77327bb98f45b00c48385bc"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/glossary-schema.json",
+      "bytes": 3588,
+      "sha256": "1a9ab5e01651e7c949f49a6b168f4d54091b55f1be71a064c07aeca97fdd51cb"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/journal-rows.json",
+      "bytes": 156538,
+      "sha256": "d1b34e3d5a4bfba0a92cbe8d53e5e5e22e556a4d8f20a7d7ef53a2397a75f534"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/journal-schema.json",
+      "bytes": 6976,
+      "sha256": "255e8a2511a7f963dc42a64313d2391c049beb8f492fd98fec7199f988cb7519"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/social-media-posts-rows.json",
+      "bytes": 55233,
+      "sha256": "cb0a790f96af40e94ac876dcc53e8db7494257b4875d861cf9402b008fb809cb"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/social-media-posts-schema.json",
+      "bytes": 7511,
+      "sha256": "6f00473d56a6ec239dea56077ea0480ba3876156c112df5d15684f177ef3fa7a"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/todo-rows.json",
+      "bytes": 120949,
+      "sha256": "c1408a9fcfdf0d47b1f1ec68c06ba6ac42cc888b60e3c5186212fe9a692abc32"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/todo-schema.json",
+      "bytes": 9159,
+      "sha256": "2c3884995c2c7d7b2a915d1d6adefbd45d1c028a289f745727e43d774a2284a9"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/vendor-roster-rows.json",
+      "bytes": 98847,
+      "sha256": "b8d646b2bd5299ed99713028ec1ed5c7babeb7d0dcab405ab850d2af995e6fb7"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/data-sources/vendor-roster-schema.json",
+      "bytes": 11753,
+      "sha256": "b6d3068d0b2f4ddbdc36e0c8e9b09155a2330db1bb5fa4b4d3960c33f6975fe2"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/active-vendor-stack.json",
+      "bytes": 55418,
+      "sha256": "3c6f59c041517f6fd652389e203257aacd0c8cc8d5f7852b1ea6719c592c4bec"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/capability-onboarding-spec.json",
+      "bytes": 31774,
+      "sha256": "91ec61310c81905afe05d4c7769cc966222d85708d4f51f0727665273a8c75d8"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/completed-todos-archive.json",
+      "bytes": 16462,
+      "sha256": "6fbebb1a0b3057ae2904c4dcf4bb5f2b872dc97ade22b2d63ed23d20efffb765"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/current-state-2ff.json",
+      "bytes": 1743,
+      "sha256": "1014048db4b117a75093aadb554a8da9c33bce25237d123e6d54a38e5fbac8b3"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/current-state-311-a.json",
+      "bytes": 14003,
+      "sha256": "5db26b45e4f51f0fb8e8fff9a8b82cc0722a978498438523d260684228d2430d"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/current-state-311-b.json",
+      "bytes": 2566,
+      "sha256": "6f8a82b470a682f90ef97bb004e5b8fa7cebc90530bc1b656d57fc09b21090d7"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/distribution-registry.json",
+      "bytes": 31298,
+      "sha256": "85376bcbf052cd9b98a817bbcba64c730af2ecd1b2d1a78734b46a2d83dd369d"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/distribution-surfaces.json",
+      "bytes": 11621,
+      "sha256": "e0733f4e1a52fde309a82208a61b96f3ee26272d125821fc3d0963dc3aeb8d7c"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/go-to-market.json",
+      "bytes": 1799,
+      "sha256": "bb195273133d509378db668bfdcf272e109aa2e31d0ee6f184b44ef181e78418"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/how-we-work.json",
+      "bytes": 1574,
+      "sha256": "85710d677670855ac3a4aac656f267894e92edb4ed5222a13d9fcb8b8894e917"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/infrastructure.json",
+      "bytes": 6460,
+      "sha256": "fbca489ed61a4805dc76bf6814132f79664f5a0d7be97699930de6824c68de58"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/internals.json",
+      "bytes": 1547,
+      "sha256": "44662a54a32aa8fd3a5289c8d03c1f4b1cd9a1888fd8066b1fef8e60c42b782f"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/journal.json",
+      "bytes": 2503,
+      "sha256": "df730c6493d4cf07f385629bb5ffb4a3936da7ee08df5e86f81ed6f7568d44d6"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/notion-governance.json",
+      "bytes": 23542,
+      "sha256": "d6df065879ba86cbbd19a1611371fa19b99a0fede564d713fb11711d83c284de"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/product-strategy-2ff.json",
+      "bytes": 2286,
+      "sha256": "eef635df6ab3133a4531ef95d56fa8d165657aab19fee26e395a365767bc8371"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/product-strategy-311-a.json",
+      "bytes": 22059,
+      "sha256": "3300a19e08172362204cef276296256d1984e8b55c8e306ccd8d0df67ce377c2"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/product-strategy-311-b.json",
+      "bytes": 13356,
+      "sha256": "f76bdce0ad807abeddfa13d08fa852b549485481a0414e0ff41ed8a6400d811e"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/products.json",
+      "bytes": 2162,
+      "sha256": "c348b9116332e529b2161b90ef6da746fb1182d6521c4225838552aa20562690"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/project-home.json",
+      "bytes": 3335,
+      "sha256": "d889249f5b3711e41e3423b67c29bcb32e2e2a448354401b98fa32957311ca52"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/start-here.json",
+      "bytes": 5093,
+      "sha256": "56e431f491d50c5909640a088c87d9a46bf26b9af6dd6949d2de819366f7585b"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/strategy.json",
+      "bytes": 1608,
+      "sha256": "c25b316f4d4822926d82916eb835b4c4dbb1d0b2cc773460cfef4c600a74ae2b"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/todo-build-plan.json",
+      "bytes": 2565,
+      "sha256": "302581f6dfdf1ab927c781bea6e80b4b4810822e41851186ba0d9b350e228006"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-company-research-approved.json",
+      "bytes": 2858,
+      "sha256": "c37f9b3c8d9eac06337bc08d059260af2a7c64db9f4d61d4ed7de8391db1545d"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-company-research-review.json",
+      "bytes": 2932,
+      "sha256": "0b0b9666855c71c1e8bc72b118cb74b19c3e3b093fdebc70a72644be23b20e25"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-enrichment-approved.json",
+      "bytes": 2984,
+      "sha256": "ce7306701871e90ba676588375814da908f46cc48a93ad82a5f14c6787e7f399"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-enrichment-review.json",
+      "bytes": 2980,
+      "sha256": "8c354ab261fbca400ea9f0e650086a85e75b018b93f42eba5abaaebf1348fdc7"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-integration-approved.json",
+      "bytes": 2828,
+      "sha256": "f01bb0fc7fb3d4b064e530cf35037119d460705b16746e1151bf981c7a40b48b"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-integration-proof-review.json",
+      "bytes": 2604,
+      "sha256": "870147f5e46cfaa52f496d9ee50b87071ea0d384e27d838c480dd6896fea9e61"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-optical-reach.json",
+      "bytes": 4163,
+      "sha256": "69492df19bb3caadbcb7672d01bde258ab39c57d0f2e28acb65cbc47226de3ce"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-search-approved.json",
+      "bytes": 3090,
+      "sha256": "982541155072198542afcc5cd677a48ef4075fea4e19317740270fffab7efe5b"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/website-search-review.json",
+      "bytes": 3054,
+      "sha256": "905f8147b8d3e37b7644e93ec1eb2f69165e6cd8de385eefd7b91d7aa221667d"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/pages/what-strale-is.json",
+      "bytes": 10476,
+      "sha256": "21cd2238947e34e81c20e4fbb4d90a2dfcc40deb47c432b0ccd7574045adff51"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/README.md",
+      "bytes": 1889,
+      "sha256": "1a0dc1de4c221cccb337e43487df64625e4db311aeae9671da7ce84359484029"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/searches/current-state-summary.json",
+      "bytes": 9605,
+      "sha256": "bdf712cf3bdeebb14e145eb3674886e2c35bae5da3c471ff35d48676c58e61b4"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/searches/distribution-registry.json",
+      "bytes": 9874,
+      "sha256": "f02cb2e002da82e7485e9cc9cadf13b6be9f19d8dba7ff5a3f6c38207e97bc11"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/searches/product-strategy.json",
+      "bytes": 9560,
+      "sha256": "2365c0fdb2feaefc79339b5880beb44e7f4dfee0a4a473db0a57a049e37404f1"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/searches/strale-product-strategy.json",
+      "bytes": 10851,
+      "sha256": "cb0ab257a9be2181f2bbc4b22256d561fd8f6fa211c188a88d7ab18676834f7e"
+    },
+    {
+      "archived_path": "archive/imports/notion/2026-08-31/searches/website-design.json",
+      "bytes": 9523,
+      "sha256": "3b395cc3c1f38e8fe85815f18061c372461941566992f536a4b705b803097473"
+    }
+  ]
+}

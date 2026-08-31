@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "33c67c87-082c-8140-bacd-ed624389d09f",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"🛠️ Products\",\"url\":\"https://app.notion.com/p/33c67c87082c8140bacded624389d09f?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/33c67c87082c8140bacded624389d09f as of 2026-05-18T08:14:29.785Z:\\n<page url=\\\"https://app.notion.com/p/33c67c87082c8140bacded624389d09f\\\" icon=\\\"🛠️\\\">\\n<ancestor-path>\\n<parent-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"title\\\":\\\"Products\\\"}\\n</properties>\\n<content>\\n*This section holds Strale's customer-facing vertical products. Each subpage is a distinct product with its own scope, coverage, and pricing. Underlying infrastructure (SQS, Audit Trail engine, Routing, Entity resolution, Decision-readiness, Discovery, Orchestration, Capabilities catalog, **`apps/api/coverage-matrix/`** in repo) lives in the Infrastructure section.*\\n**Counterparty Assurance is Strale's first vertical product.** (Renamed from Payee Assurance per DEC-20260502-A.) Future vertical products will be added as subpages here, earned through customer pull and strategic opportunity (per DEC-20260420-E's decision-adjacency expansion rule). The seven-vertical framework from DEC-20260413-A is now treated as a descriptive map of existing capability clusters, not a commitment to build out each one.\\n# Subpages\\n<page url=\\\"https://app.notion.com/p/34867c87082c814999e5c668d7383fa7\\\">Counterparty Assurance</page>\\n---\\n*Section restructured 2026-04-20 under DEC-20260420-E/H. SQS, Audit Trail, Discovery, and Capabilities & solutions moved to Infrastructure as they are substrate, not products.*\\n<page url=\\\"https://app.notion.com/p/36367c87082c8146870eee51af40d886\\\">Counterparty Assurance — Tier frameworks (Evidence Tier + Use-case Tier)</page>\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

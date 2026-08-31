@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "33c67c87-082c-81a2-b04c-cd762132ea91",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"📣 Go-to-market\",\"url\":\"https://app.notion.com/p/33c67c87082c81a2b04ccd762132ea91?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/33c67c87082c81a2b04ccd762132ea91 as of 2026-05-07T10:50:14.572Z:\\n<page url=\\\"https://app.notion.com/p/33c67c87082c81a2b04ccd762132ea91\\\" icon=\\\"📣\\\">\\n<ancestor-path>\\n<parent-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"title\\\":\\\"Go-to-market\\\"}\\n</properties>\\n<content>\\n*How customers find Strale.*\\n<page url=\\\"https://app.notion.com/p/33c67c87082c818e897ef7f2c2c5d6ec\\\">Distribution surfaces</page>\\n<page url=\\\"https://app.notion.com/p/33c67c87082c81a1baf2f960a61c18db\\\">Activation funnel</page>\\n<page url=\\\"https://app.notion.com/p/33c67c87082c815e8122cf5e47ee1091\\\">Brand & voice</page>\\n<page url=\\\"https://app.notion.com/p/33c67c87082c81cfb1a1e886b7ff7cf8\\\">Social media</page>\\n<database url=\\\"https://app.notion.com/p/7d0819c85dad4fb8942a45c71b550129\\\" inline=\\\"false\\\" data-source-url=\\\"collection://2797085b-f32b-4092-81e9-e1b0dd4eaf4b\\\">Social Media Posts</database>\\n<page url=\\\"https://app.notion.com/p/34467c87082c81fba27fd794fb780566\\\">⚠️ RETRACTED — Growth Recovery Plan — Apr 16–30, 2026</page>\\n<page url=\\\"https://app.notion.com/p/34467c87082c8181a08cf0ee37397e41\\\">Growth Plan v2 — Apr 16–30, 2026</page>\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

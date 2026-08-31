@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "3c267c87-082c-819d-89af-dd257de4a15f",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"Website Company Research use-case world approved\",\"url\":\"https://app.notion.com/p/3c267c87082c819d89afdd257de4a15f?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/3c267c87082c819d89afdd257de4a15f as of 2026-08-20T11:48:05.310Z:\\n<page url=\\\"https://app.notion.com/p/3c267c87082c819d89afdd257de4a15f\\\">\\n<ancestor-path>\\n<parent-data-source url=\\\"collection://5e1a81ee-7b9f-4d3c-b58d-c8d97ae6386c\\\" name=\\\"Decisions\\\"/>\\n<ancestor-2-database url=\\\"https://app.notion.com/p/ea57671f716744e4a254c0a1de79e7f9\\\" title=\\\"Decisions\\\"/>\\n<ancestor-3-page url=\\\"https://app.notion.com/p/33c67c87082c81438b9bf07447bcf1b8\\\" title=\\\"How we work\\\"/>\\n<ancestor-4-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"Confidence\\\":\\\"high\\\",\\\"Decision\\\":\\\"Website Company Research use-case world approved\\\",\\\"Outcome\\\":\\\"The design grammar is approved for extension to later use-case worlds. No implementation, deployment, merge or release is authorized.\\\",\\\"Rationale\\\":\\\"Petter approved the high-fidelity desktop and mobile Company Research chapter. The chapter establishes Separate Lenses: one contract-backed example result plus additional real tool records that remain visibly separate calls.\\\",\\\"Reviewed\\\":\\\"__YES__\\\",\\\"Scope\\\":\\\"feature\\\",\\\"Source\\\":\\\"\\\",\\\"Status\\\":\\\"active\\\",\\\"date:Date:is_datetime\\\":0,\\\"date:Date:start\\\":\\\"2026-08-20\\\",\\\"date:Expiry Date:is_datetime\\\":0,\\\"url\\\":\\\"https://app.notion.com/p/3c267c87082c819d89afdd257de4a15f\\\",\\\"userDefined:ID\\\":\\\"DEC-20260820-C-WEBSITE-COMPANY-RESEARCH\\\"}\\n</properties>\\n<content>\\n## Decision\\nAdopt the Company Research chapter and **Separate Lenses** as the governing grammar for the homepage use-case worlds.\\n## Approved characteristics\\n- Discovery Blue atmosphere with deterministic copy and product proof.\\n- One example Spotify AB registry result as the recurring proof object.\\n- Company News and Country Economic Indicators shown only as separate possible next calls.\\n- Tool-specific inputs, outputs and sources remain distinct.\\n- Generated imagery contains no UI, values, text, logos or product claims.\\n- The unsupported funding implication is removed from this composition.\\n## Boundary\\nThis decision approves the design direction only. It does not authorize website implementation or any outward release.\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

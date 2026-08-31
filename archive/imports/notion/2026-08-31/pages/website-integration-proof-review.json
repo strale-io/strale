@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "3c267c87-082c-81ff-b319-ee5d6ab9a57e",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"Website redesign — integration-burden proof section ready for review\",\"url\":\"https://app.notion.com/p/3c267c87082c81ffb319ee5d6ab9a57e?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/3c267c87082c81ffb319ee5d6ab9a57e as of 2026-08-20T11:31:48.820Z:\\n<page url=\\\"https://app.notion.com/p/3c267c87082c81ffb319ee5d6ab9a57e\\\">\\n<ancestor-path>\\n<parent-data-source url=\\\"collection://8f54383b-3227-42c2-bee4-77a091027f8f\\\" name=\\\"Journal\\\"/>\\n<ancestor-2-database url=\\\"https://app.notion.com/p/f275be62b85b421da1375a1d7d7c0059\\\" title=\\\"Journal\\\"/>\\n<ancestor-3-page url=\\\"https://app.notion.com/p/33c67c87082c81889876ff3e9b175f1d\\\" title=\\\"Journal\\\"/>\\n<ancestor-4-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"Action Required\\\":\\\"yes\\\",\\\"Actor\\\":\\\"claude-code\\\",\\\"Content\\\":\\\"Built truth-safe desktop and mobile keyframes showing repeated direct-integration work collapsing into a shared Strale execution contract. Current SDK/API fields were audited; no universal-schema or provider-uniformity claim is made. Commit e59f539 on isolated branch codex/website-redesign.\\\",\\\"Reviewed\\\":\\\"__NO__\\\",\\\"Session\\\":\\\"Codex website redesign / integration burden section\\\",\\\"Source\\\":\\\"code\\\",\\\"Title\\\":\\\"Website redesign — integration-burden proof section ready for review\\\",\\\"Type\\\":\\\"session\\\",\\\"url\\\":\\\"https://app.notion.com/p/3c267c87082c81ffb319ee5d6ab9a57e\\\"}\\n</properties>\\n<content>\\n## Outcome\\nThe second proof step in the approved homepage journey is ready for Petter's review.\\n- Built deterministic desktop and mobile keyframes.\\n- Used current contract fields: `task`, `capability_slug`, `max_price_cents`, `status`, `output`, and `provenance`.\\n- Kept each tool's inputs, outputs, coverage, and limitations explicitly tool-specific.\\n- Used a code-native systems diagram; no generated imagery or provider roster was used.\\n## Boundary\\nThis is a review-ready design artifact, not an approved decision. No website implementation, deployment, push, or merge occurred.\\n## Source\\nCommit `e59f539` on `codex/website-redesign`.\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

@@ -1,0 +1,15 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "collection://4d021a66-c323-4782-924f-c5faf3ca7fb5",
+  "query": "SELECT * FROM \"collection://4d021a66-c323-4782-924f-c5faf3ca7fb5\"",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"results\":[{\"id\":\"31167c87-082c-81f5-bf9a-eb069bb7b38f\",\"url\":\"https://app.notion.com/31167c87082c81f5bf9aeb069bb7b38f\",\"createdTime\":\"2026-02-24 21:17:50Z\",\"Aliases\":\"strale.io\",\"date:First Used:start\":\"2026-02-24\",\"date:First Used:end\":null,\"date:First Used:is_datetime\":0,\"Status\":\"accepted\",\"Definition\":\"The platform and company name. A marketplace where B2B companies buy outcomes delivered by specialized agent operators. Swedish for beam/ray, Italian for arrow.\",\"Term\":\"Strale\"},{\"id\":\"35f67c87-082c-810b-8af7-ec16ffc44076\",\"url\":\"https://app.notion.com/35f67c87082c810b8af7ec16ffc44076\",\"createdTime\":\"2026-05-13 06:53:57Z\",\"Aliases\":\"aspirational-architecture, plan-as-fact, DEC-as-lie, past-tense plan, BODS-pattern\",\"date:First Used:start\":\"2026-05-01\",\"date:First Used:end\":null,\"date:First Used:is_datetime\":0,\"Status\":\"accepted\",\"Definition\":\"A failure mode where a plan is documented as if it has already shipped, when in fact the implementation never completed or completed only partially. Future readers take the documentation as truth and propagate the lie into adjacent surfaces. Distinct from generic stale-doc drift because the original text was forward-looking but written in past tense; no later edit was needed for the lie to take hold.\",\"Term\":\"Aspirational-architecture-as-fact\"}],\"has_more\":false,\"data_source_ids\":[\"4d021a66-c323-4782-924f-c5faf3ca7fb5\"]}"
+      }
+    ],
+    "isError": false
+  }
+}
+

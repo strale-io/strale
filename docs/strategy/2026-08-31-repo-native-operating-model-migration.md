@@ -1,14 +1,14 @@
 # Repo-native operating model migration
 
-**Status:** AGREED — independent confirmation PASS; execution may begin at M0  
+**Status:** AGREED — M0 in progress, blocked on complete Notion row export
 **Date:** 2026-08-31  
 **Owner:** Codex  
-**Independent reviewer:** Claude Code, Opus, high effort  
+**Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
 **Base audited:** `origin/main@1f222c6ae43e87fc47ea07ef4a6c708b142a2144`  
 **Decision state:** Petter confirmed the direction on 2026-08-31: the Strale repo
 becomes the active project system of record; Notion is retired as an active
-authority. The final repo decision ID must be collision-checked against the
-Notion export before assignment.
+authority. The migration decision was collision-checked and recorded as
+`DEC-20260831-A`.
 
 > This is the durable implementation plan, not a new source of product truth.
 > Until the cutover milestone passes, existing authorities remain in force.

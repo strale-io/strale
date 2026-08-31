@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "31167c87-082c-8128-8f03-f5e3d7741f8b",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"Current State Summary\",\"url\":\"https://app.notion.com/p/31167c87082c81288f03f5e3d7741f8b?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/31167c87082c81288f03f5e3d7741f8b as of 2026-02-27T00:31:03.487Z:\\n<page url=\\\"https://app.notion.com/p/31167c87082c81288f03f5e3d7741f8b\\\">\\n<ancestor-path>\\n<parent-page url=\\\"https://app.notion.com/p/31967c87082c81779e83df33e58a3803\\\" title=\\\"Archive — Pre-consolidation (Feb 2026)\\\"/>\\n<ancestor-2-page url=\\\"https://app.notion.com/p/33c67c87082c815ea458cfb1c37377c1\\\" title=\\\"Archive — pre-cleanup April 2026\\\"/>\\n<ancestor-3-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"title\\\":\\\"Current State Summary\\\"}\\n</properties>\\n<content>\\n*Derived / Cached — not authoritative. See Product Strategy for source of truth.*\\n**Last regenerated:** 2026-02-24\\n**Stale:** yes — Product Strategy updated 2026-02-27 (composable architecture, spinnable units, ride-the-giants positioning). Needs full regeneration.\\n## Current Vision\\nBuild the economic infrastructure for autonomous agents — starting with a marketplace where agents deliver outcomes for businesses (Phase 1: Delegation Economy), evolving into the trust layer (Phase 2: Agent Identity & Reputation) and commerce network (Phase 3: Agent-to-Agent Commerce) that powers the entire agent economy.\\n## Active Focus Areas\\n- Defining Phase 1 MVP scope and first vertical\\n- Choosing between market research, competitive intelligence, or compliance monitoring as launch vertical\\n- Scoping the minimum product for the Delegation Economy marketplace\\n## Key Active Bets\\n- Outcomes-as-a-service is a viable market category\\n- Agent operators are a new, emergent economic actor\\n- We can bootstrap supply by being the first agent operator ourselves\\n- Trust infrastructure (Phase 2) will become the defensible moat\\n- Three-phase sequencing (marketplace → trust layer → commerce protocol) is the right build order\\n## Recent Changes\\n- 2026-02-24: Project initiated. Vision and three-phase strategy documented. Competitive landscape and market sizing researched.\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

@@ -185,7 +185,7 @@ as the `strale` service — only the start command and schedule differ.
    - `DATABASE_URL`
    - `RESEND_API_KEY`
    - `ANTHROPIC_API_KEY` (used by `analyzeDigest`)
-   - `NOTION_TOKEN` (for ship-log / Notion activity)
+   - `NOTION_API_KEY` (for ship-log / Notion activity)
    - `GITHUB_TOKEN` (for shiplog commit fetching, if configured)
    Any missing variable causes that section to fall back to its default;
    the email still sends.

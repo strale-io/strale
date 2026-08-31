@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-31",
+  "purpose": "Byte-for-byte preservation checkpoint; inclusion does not imply product or design acceptance.",
+  "entries": [
+    {
+      "source_path": "C:/Users/pette/Projects/strale-website-design-handoff-2026-08-25/CURRENT_PROTOTYPE_REFERENCE.md",
+      "archived_path": "archive/imports/design/2026-08-31/website-design-handoff/CURRENT_PROTOTYPE_REFERENCE.md",
+      "bytes": 5637,
+      "sha256": "65a73f23f38138ed1df7f0456b3c4e32f8b8803bd68ac40c86328c6c74af77db"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-website-design-handoff-2026-08-25/NEW_CHAT_HANDOFF.md",
+      "archived_path": "archive/imports/design/2026-08-31/website-design-handoff/NEW_CHAT_HANDOFF.md",
+      "bytes": 4986,
+      "sha256": "d773446e519cb33e292e90324aaa2a143e247b33959f84f6b0d402e57ce40c6e"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-website-design-handoff-2026-08-25/README_START_HERE.md",
+      "archived_path": "archive/imports/design/2026-08-31/website-design-handoff/README_START_HERE.md",
+      "bytes": 2345,
+      "sha256": "0734067a84459d424f82996614bbafe209f69f7c8111473a459616926377b1e9"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-website-design-handoff-2026-08-25/STRALE_WEB_DESIGN_SYSTEM.md",
+      "archived_path": "archive/imports/design/2026-08-31/website-design-handoff/STRALE_WEB_DESIGN_SYSTEM.md",
+      "bytes": 16526,
+      "sha256": "aa642c8e0957d4685d14355e9485fa5f420f23aef1cd31f6df31954ec8b64de0"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1.zip",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1.zip",
+      "bytes": 20648754,
+      "sha256": "4f51b95986d004b39e316e923a455636a05aa2010e8ef425b20aba407365f8a8"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/ADAPTIVE-LAYOUT.md",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/ADAPTIVE-LAYOUT.md",
+      "bytes": 10835,
+      "sha256": "72075b83fc0573c16ca1abc28bf834add3d37b52456ea930750294bbe966d6bd"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/beneficial-ownership-lookup.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/beneficial-ownership-lookup.webp",
+      "bytes": 19472,
+      "sha256": "8c269b4ba19f8b5eae6f057d02405bff9c4e343ae74ec3c267f17d832ab84cc5"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/company-enrich.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/company-enrich.webp",
+      "bytes": 20456,
+      "sha256": "5748c8d4907488cbf08eafba16d0ce22dff52a9ad8698748d345a19715c21af7"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/company-news.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/company-news.webp",
+      "bytes": 12626,
+      "sha256": "f1a8feeebdd87a4a78b94a5991b91a2c2e68361e81bebfae62c7363a237eda21"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/email-validate.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/email-validate.webp",
+      "bytes": 17670,
+      "sha256": "d8e90ccbaa17568d51ae770c6945040e68b7e1460ead2c43a472e9b218a3fcd4"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/eu-regulation-search.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/eu-regulation-search.webp",
+      "bytes": 18028,
+      "sha256": "e08397551713ffaf88c90c218cd3a61ddc5ce394b7e08fa3d898dc3a7b06d41b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/google-news-search.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/google-news-search.webp",
+      "bytes": 16012,
+      "sha256": "bad7c43e1df4c9ecdaf58c8641a3e200d207dc52f2254730c737b1f97563d9e9"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/google-search.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/google-search.webp",
+      "bytes": 20716,
+      "sha256": "2b808b164e6a1e6670b09f89505c7da1f084cea184580d1f955736b8f5622dea"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/job-board-search.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/job-board-search.webp",
+      "bytes": 16390,
+      "sha256": "df4fa66205ec1e486945a2cb67c9a4631a0ea8daca1e8f69e89138e4ee462f3a"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/officer-search.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/officer-search.webp",
+      "bytes": 14292,
+      "sha256": "4802fdcb5de85b86aed626c2fbfc6900650e5f1d0bd8a1f3f046eae6c5808ca2"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/patent-search.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/patent-search.webp",
+      "bytes": 16544,
+      "sha256": "58d69cdb7b52e86432e442c8da8e1e2a24487fdbb349a4279667349300f80c44"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/phone-validate.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/phone-validate.webp",
+      "bytes": 15206,
+      "sha256": "fa51ba518bab7a17fdbe81271d907d36fc58e84c5c96a7e8d8f3042daa721f15"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/swedish-company-data.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/swedish-company-data.webp",
+      "bytes": 17606,
+      "sha256": "395ec33f39abb8bdaed36b3756c115599af025798dab0acea4e495bc68e772ec"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/uk-company-data.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/uk-company-data.webp",
+      "bytes": 19536,
+      "sha256": "b20c2e09b0ead5a864f68f30a9e687f973df9ed173f2a4e195b4308fd5f6c988"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/us-company-data.webp",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/us-company-data.webp",
+      "bytes": 23420,
+      "sha256": "83105033b0b6a5a1f14f55ab9361e6b659c5139463bb7cd0c5ea2bbe68786eff"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/v2/company-news.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/v2/company-news.png",
+      "bytes": 448355,
+      "sha256": "fc1091c3ea14ccff9b75a8e2f9631c4c085d986e662c44072cb53ddee4370118"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/v2/google-news-search.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/v2/google-news-search.png",
+      "bytes": 353705,
+      "sha256": "e91997c76411efe6f3f3465f29feb62badddad1efd07c8d2d17813acd98c0775"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/v2/google-search.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/v2/google-search.png",
+      "bytes": 440610,
+      "sha256": "12a219c5479a4a5d9429108f96e94278ab56d701be4698629df6cfd766ce4bf3"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/v2/job-board-search.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/v2/job-board-search.png",
+      "bytes": 468235,
+      "sha256": "282b20d90829c00f9e1f0b03c11683a92d1b0afa6b033dc13fd5c3196b78869c"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/v2/patent-search.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/v2/patent-search.png",
+      "bytes": 387294,
+      "sha256": "e25620ba26661ef1f66cddbc2a626fd1ee445c02ddff0b22e939001ec02ca562"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-illustrations/v2/us-company-data.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-illustrations/v2/us-company-data.png",
+      "bytes": 483621,
+      "sha256": "9c77a67dd0f3de639ea704bb528edc037e44c5ae3ff4fa261bb26f2053d5fb7a"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/capability-rail.js",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/capability-rail.js",
+      "bytes": 25071,
+      "sha256": "6f0c64e17b5fd72693234c2b33627d6d84ce70a800e7fa9dc0cf6a5cae2a18ba"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/design-tokens.css",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/design-tokens.css",
+      "bytes": 8545,
+      "sha256": "4fdfc00ec9f8f3b6a6b6ddd5282294c497a8c25394d2c70c3eaca9341865e097"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/hero-folded-light-background-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/hero-folded-light-background-v1.png",
+      "bytes": 1055860,
+      "sha256": "2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/hero-motion.js",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/hero-motion.js",
+      "bytes": 10354,
+      "sha256": "9d2b9948ad1064c9fed541ea640396d5e49de64b12bfc7d5f19e1f7c64653788"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/how-strale-ask-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/how-strale-ask-v1.png",
+      "bytes": 1453211,
+      "sha256": "b6604e6dd910fd6227cfa4aee4cb49755b1b45dfefbeb93b7b97ca3e7cc3eaa3"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/how-strale-return-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/how-strale-return-v1.png",
+      "bytes": 1537799,
+      "sha256": "082ee412b6506afe1296a27a1aa135f2ff9c3ccc76a45e773c2dc88456722a8b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/how-strale-route-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/how-strale-route-v1.png",
+      "bytes": 1517486,
+      "sha256": "522c4b044e13550d601d810f9863fe3a35af548f7879f7c2cd8e3830bc3ab0ca"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/how-strale-run-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/how-strale-run-v1.png",
+      "bytes": 1476567,
+      "sha256": "de647ac51aa8664cd6cbbd0f72607da1aa1ca4444f65cf057acc538b2b275f4b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/pattern-folded-balanced-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/pattern-folded-balanced-v1.png",
+      "bytes": 1518133,
+      "sha256": "bdfaa7a1f5673fe7d369f0afcf627fec4740aa209746597e145cba4bc256030e"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/pattern-folded-cobalt-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/pattern-folded-cobalt-v1.png",
+      "bytes": 1543505,
+      "sha256": "cff9ae5cb32eca15966091ab7c2465089069f8dfbbd7045ffa89a4b6b173ef86"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/pattern-folded-mineral-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/pattern-folded-mineral-v1.png",
+      "bytes": 1622605,
+      "sha256": "83c78da37771c1699834fd5a3990ad7fe2ea6a40ad326a1282a914155a4c3406"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/pattern-folded-warm-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/pattern-folded-warm-v1.png",
+      "bytes": 1467276,
+      "sha256": "1ea4dfb038a2d3c603b5fdf024614b337ca98ddce5b9aa71dea172d7956c6c9b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/assets/strale-lockup.svg",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/assets/strale-lockup.svg",
+      "bytes": 8928,
+      "sha256": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/design-system.html",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/design-system.html",
+      "bytes": 52677,
+      "sha256": "271002279acd9963b94a128a2b3125adfd37419ed9f9a60b94606c91a294a741"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/DESIGN-SYSTEM.md",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/DESIGN-SYSTEM.md",
+      "bytes": 47999,
+      "sha256": "4d2c9cf621dc7559dd2bbbfcf607a8569905a1deae4ab2b5a5e1c5cfaf38d5b2"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/index.html",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/index.html",
+      "bytes": 228602,
+      "sha256": "8dcaa3a903e300dc58ce893ce4da5fb552ede37de2d2d15195db77ef7ae90aec"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/references/atmospheric-surfaces-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/references/atmospheric-surfaces-v1.png",
+      "bytes": 1514401,
+      "sha256": "1567d7827be3260a52dc60062923db8d8953033cce4ec3cd631f64005efc8bbe"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/references/green-extension-v2.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/references/green-extension-v2.png",
+      "bytes": 1341195,
+      "sha256": "115f5af2b743fe86a94e0dcb1b1fe388ff364fda0489e0dcd9d5869b55b3fa41"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/references/quiet-material-direction-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/references/quiet-material-direction-v1.png",
+      "bytes": 1143894,
+      "sha256": "9325ebcb52805d2ce08d5ab1b7ba111b383a20348cad2d5f7cf385cd5eccbdb3"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/balanced-desktop-1440.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/balanced-desktop-1440.png",
+      "bytes": 75706,
+      "sha256": "3592baccc687536c82a52f7c8e58a03d33518afc2078e777fae8d411ea8e9ee6"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/balanced-reference-1318x853.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/balanced-reference-1318x853.png",
+      "bytes": 75300,
+      "sha256": "25826cb1b36b4c5bf744c41ffdcca81cee96cedaf66ca7c3df70dcdf744fdd2c"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/compact-card-1318x853.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/compact-card-1318x853.png",
+      "bytes": 73903,
+      "sha256": "340c5a217c7f92bb9b6b4ce468298c5ea73783969dad88c09c058c252e8ad45d"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/desktop-1440.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/desktop-1440.png",
+      "bytes": 81393,
+      "sha256": "da21c1dd99a7fb8740431a35ca149ded6e6fa969188b33cb85c99ced385ede17"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/mobile-390.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/mobile-390.png",
+      "bytes": 34967,
+      "sha256": "1dfa26697c6ea4f635bed73ea198819dc00f8a81349e303b2fa48b69b4f8a598"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/near-white-readable-labels-1280x720.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/near-white-readable-labels-1280x720.png",
+      "bytes": 74041,
+      "sha256": "a27af0eb15f3cca3ec7a1b3059fc43081c6e88e3f8627425dd4a19c77ed8d7c1"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/reference-match-1318.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/reference-match-1318.png",
+      "bytes": 235914,
+      "sha256": "56ba59729310f68770dddfed84b9c90c92faf19d4376334f0d3f5f0c22ce4c8b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/reference-server.err.log",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/reference-server.err.log",
+      "bytes": 1930,
+      "sha256": "6ba2b86e150be31a66dbbb08670d48b3ab60a5a407c75b6b7d0f9f48c94565d7"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/reference-server.out.log",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/reference-server.out.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/short-desktop-1318x760.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/short-desktop-1318x760.png",
+      "bytes": 69638,
+      "sha256": "04ee960016ec5a6a8e4fe1c4433c73cff1ae7830796564abda1379ffc7be2712"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/brandkit-lab-strale-design/experiments/strale-website/hero-v1/review/white-canvas-matched-eyebrow-1280x720.png",
+      "archived_path": "archive/imports/design/2026-08-31/brandkit-strale-website/hero-v1/review/white-canvas-matched-eyebrow-1280x720.png",
+      "bytes": 74401,
+      "sha256": "d604a2dedfa89706b38dbe4b83e3ee938f9419d5680de4c24f0b1ce150589012"
+    }
+  ]
+}

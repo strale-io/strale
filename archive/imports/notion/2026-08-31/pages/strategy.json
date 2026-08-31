@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "33c67c87-082c-81ea-9e1f-d7edf317405b",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"🎯 Strategy\",\"url\":\"https://app.notion.com/p/33c67c87082c81ea9e1fd7edf317405b?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/33c67c87082c81ea9e1fd7edf317405b as of 2026-05-03T23:54:24.667Z:\\n<page url=\\\"https://app.notion.com/p/33c67c87082c81ea9e1fd7edf317405b\\\" icon=\\\"🎯\\\">\\n<ancestor-path>\\n<parent-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"title\\\":\\\"Strategy\\\"}\\n</properties>\\n<content>\\n*The slow-moving strategic stuff. The VC-pitch shelf.*\\n<page url=\\\"https://app.notion.com/p/33c67c87082c81debabed0a10eb35499\\\">What Strale is</page>\\n<page url=\\\"https://app.notion.com/p/33c67c87082c816f8c97ecdcc81c4dc2\\\">The problem</page>\\n<page url=\\\"https://app.notion.com/p/33c67c87082c8130b44edb57f3df797e\\\">The opportunity</page>\\n<page url=\\\"https://app.notion.com/p/33c67c87082c817fac7cd9d7b6c44e40\\\">Business model</page>\\n<page url=\\\"https://app.notion.com/p/35567c87082c81088894c4f5f521c8d9\\\">[strale.dev](http://strale.dev) — what it is and why</page>\\n<page url=\\\"https://app.notion.com/p/35567c87082c8168ad67e62e7a187944\\\">[strale.io](http://strale.io) — what it is and why</page>\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

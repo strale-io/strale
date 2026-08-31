@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-31",
+  "frontend_head": "998964716c8601be67d4e71a508a803160434517",
+  "purpose": "Point-in-time preservation of active frontend work that continued after the remote checkpoint; not acceptance or a claim that the owning worktree is complete.",
+  "source_status": [
+    " M .gitignore",
+    " M docs/website-redesign/CURRENT-DESIGN-SYSTEM.md",
+    " M src/components/marketing/HomepageUseCases.tsx",
+    " M src/styles/homepage-use-cases.css",
+    "?? docs/website-redesign/homepage/prospect-enrichment-v2.0.md",
+    "?? public/strale-site/design-system/"
+  ],
+  "entries": [
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/.gitignore",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/.gitignore",
+      "bytes": 996,
+      "sha256": "838403bc22bd95e396ba2f4d588ae1eda49027d282476759634e1baaf4ee8c3b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/docs/website-redesign/CURRENT-DESIGN-SYSTEM.md",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/docs/website-redesign/CURRENT-DESIGN-SYSTEM.md",
+      "bytes": 3004,
+      "sha256": "b6eab94d9a1d7d38a7c42a3413d94017c4255087b9a798008578729665a56c3d"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/docs/website-redesign/homepage/prospect-enrichment-v2.0.md",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/docs/website-redesign/homepage/prospect-enrichment-v2.0.md",
+      "bytes": 2523,
+      "sha256": "e8fdda56a798b9c3df9dd81196b8eae1618de97eea5e45dd023cafcd5deac40d"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/ADAPTIVE-LAYOUT.md",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/ADAPTIVE-LAYOUT.md",
+      "bytes": 10835,
+      "sha256": "72075b83fc0573c16ca1abc28bf834add3d37b52456ea930750294bbe966d6bd"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/design-tokens.css",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/design-tokens.css",
+      "bytes": 10014,
+      "sha256": "e3ffe7357a5646791a1262e1055d9fcb1ccf023defdcab8040c52502919c2807"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/hero-folded-light-background-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/hero-folded-light-background-v1.png",
+      "bytes": 1055860,
+      "sha256": "2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-balanced-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-balanced-v1.png",
+      "bytes": 1518133,
+      "sha256": "bdfaa7a1f5673fe7d369f0afcf627fec4740aa209746597e145cba4bc256030e"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-cobalt-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-cobalt-v1.png",
+      "bytes": 1543505,
+      "sha256": "cff9ae5cb32eca15966091ab7c2465089069f8dfbbd7045ffa89a4b6b173ef86"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-cobalt-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-cobalt-v1.png",
+      "bytes": 1500677,
+      "sha256": "3c02d2bf79cb1cd36570095c307a4f76c8d698b0be705eec27656fe1f18fb898"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-cobalt-v2.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-cobalt-v2.png",
+      "bytes": 1218774,
+      "sha256": "5d1f912b7b27bc842188341bd020a8b371ff2ef591153aa47755360b6e8fda13"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-dusk-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-dusk-v1.png",
+      "bytes": 1519153,
+      "sha256": "f3c13e380485bb3db9b62a9afad8cba879a5aec09126ce3eed729897b0c76d22"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-dusk-v2.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-dusk-v2.png",
+      "bytes": 1250367,
+      "sha256": "146cd1fd813fdef3f8ed3787e7ffaf94e63203567865e792af93f698e7f658e7"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-ember-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-ember-v1.png",
+      "bytes": 1620394,
+      "sha256": "208e33e358b95b950df1d53c4c5d1e711618b39218c0004e14c6b8f730607aca"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-ember-v2.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-ember-v2.png",
+      "bytes": 1210931,
+      "sha256": "17aff86bef40976f6d74039db1ca9395b4a460159fffffaef2ce730dda10697e"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-midnight-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-midnight-v1.png",
+      "bytes": 1446755,
+      "sha256": "950108a7ccdaf3a310527799057c01cef064d251adef66369f30117ab91593d7"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-midnight-v2.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-midnight-v2.png",
+      "bytes": 1544621,
+      "sha256": "5aeef908cdf77ccd50b6e37da40d09443185a8fe9bc3742e6b70128a76289295"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-mineral-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-mineral-v1.png",
+      "bytes": 1660077,
+      "sha256": "d0702cd410185d4995ea64d49a76add42c5f8f0c30df090a5b27278fa1fb1b26"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-mineral-v2.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-mineral-v2.png",
+      "bytes": 1232443,
+      "sha256": "3fb6ccdee57fcf3813d16018e6f5109581b3ae51a9c87b90e3a2bf17dab01e24"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-mulberry-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-mulberry-v1.png",
+      "bytes": 1389562,
+      "sha256": "6305717e4885fc2f274f2aac3abaa02244c82b56fafa33934e3dcca364614161"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-dark-spectrum-v2.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-dark-spectrum-v2.png",
+      "bytes": 1551120,
+      "sha256": "a36057d1413fe8a22f69a5abb2e3a2907800cc83f56eff20c2058f1e6fc3a997"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-mineral-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-mineral-v1.png",
+      "bytes": 1622605,
+      "sha256": "83c78da37771c1699834fd5a3990ad7fe2ea6a40ad326a1282a914155a4c3406"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/pattern-folded-warm-v1.png",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/pattern-folded-warm-v1.png",
+      "bytes": 1467276,
+      "sha256": "1ea4dfb038a2d3c603b5fdf024614b337ca98ddce5b9aa71dea172d7956c6c9b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/assets/strale-lockup.svg",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/assets/strale-lockup.svg",
+      "bytes": 8928,
+      "sha256": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/design-system.html",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/design-system.html",
+      "bytes": 58978,
+      "sha256": "bb6a6e2d94979f7886fa496e2bc7f8e7717debe695fb7962bfd44a97b759d77b"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/DESIGN-SYSTEM.md",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/DESIGN-SYSTEM.md",
+      "bytes": 50177,
+      "sha256": "84d23bbe3203dff6f5fbee726af88377d0fd9461d2c7f5a03e12b6498a66b506"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/public/strale-site/design-system/README.md",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/public/strale-site/design-system/README.md",
+      "bytes": 2689,
+      "sha256": "8a7d0cfe0b1641c17f9e571bb234213caafc27a9d0be5a0fc9843196b3ac3cdd"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/src/components/marketing/HomepageUseCases.tsx",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/src/components/marketing/HomepageUseCases.tsx",
+      "bytes": 8913,
+      "sha256": "5397e2c35a5a8e0c92d0e7da5e25fdd6d56721a5de60e4d029a1f3b84b8cecfb"
+    },
+    {
+      "source_path": "C:/Users/pette/Projects/strale-frontend-codex-homepage-a/src/styles/homepage-use-cases.css",
+      "archived_path": "archive/imports/design/2026-08-31/frontend-live-delta-after-9989647/src/styles/homepage-use-cases.css",
+      "bytes": 16211,
+      "sha256": "1870529aacc6599ac6480e93856fb83fc1463fc2f77161f3b73c265687c822e5"
+    }
+  ]
+}

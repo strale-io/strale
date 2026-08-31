@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "2ff67c87-082c-81f1-82d5-db5506a97535",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"Product Strategy\",\"url\":\"https://app.notion.com/p/2ff67c87082c81f182d5db5506a97535?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/2ff67c87082c81f182d5db5506a97535 as of 2026-02-06T21:26:25.671Z:\\n<page url=\\\"https://app.notion.com/p/2ff67c87082c81f182d5db5506a97535\\\">\\n<ancestor-path>\\n<parent-page url=\\\"https://app.notion.com/p/2ff67c87082c81aca469f50070d91bf0\\\" title=\\\"Blueprint - Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"title\\\":\\\"Product Strategy\\\"}\\n</properties>\\n<content>\\n*Append-only document. New sections are added at the top; old sections are never edited.*\\n---\\n## 2026-02-06 - Initial Strategy\\n### Vision\\nBlueprint is the system of record for design systems - where design decisions are created, reviewed, versioned, and referenced with confidence over time.\\n### Current Focus\\n**Phase 1: Token Management Foundation**\\n- Core token CRUD with hierarchical groups\\n- Theme system (Light/Dark value switching)\\n- Release versioning for production snapshots\\n### Key Bets\\n1. **Governance matters** - Teams need approval workflows, not just storage\\n2. **Tokens are the atomic unit** - Everything else (components, patterns) derives from tokens\\n3. **Reference library differentiates** - Peer comparison and best practices add unique value\\n4. **AI assists, humans decide** - Recommendations surface options; designers choose\\n### Not Doing (v1)\\n- Real-time collaboration (live cursors, presence)\\n- Offline-first mode\\n- Mobile native apps\\n- Dark mode UI (light-only for v1)\\n- Theme inheritance resolution\\n- Audit logging\\n- Natural language editing\\n- Design system Q&A chat\\n---\\n## Change Log\\n<table header-row=\\\"true\\\">\\n<tr>\\n<td>Version</td>\\n<td>Date</td>\\n<td>What Changed</td>\\n<td>Why</td>\\n</tr>\\n<tr>\\n<td>v1</td>\\n<td>2026-02-06</td>\\n<td>Initial strategy</td>\\n<td>Bootstrap Mode initialization</td>\\n</tr>\\n</table>\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

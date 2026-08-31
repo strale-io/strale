@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "33c67c87-082c-81c3-a72b-cc59b10ff4ac",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"✅ To-do & Build Plan\",\"url\":\"https://app.notion.com/p/33c67c87082c81c3a72bcc59b10ff4ac?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/33c67c87082c81c3a72bcc59b10ff4ac as of 2026-04-13T11:48:49.497Z:\\n<page url=\\\"https://app.notion.com/p/33c67c87082c81c3a72bcc59b10ff4ac\\\" icon=\\\"✅\\\">\\n<ancestor-path>\\n<parent-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"title\\\":\\\"To-do & Build Plan\\\"}\\n</properties>\\n<content>\\n*Last updated: 2026-04-10.*\\n**The single source of truth for what Strale-the-company is working on.** Not just product features — anything that needs to be done. Categories as inline tags: product / gtm / ops / content / infra / personal. Status: now / next / later / done.\\n**Rule:** action items from sessions go here. Not inline in canonical pages. Not in memory. Not in session summaries. The To-do DB is the only place where active work accumulates.\\n**Done = move to archive.** When a to-do is completed, move it to Archive \\\\> Completed To-dos. The To-do DB is a live work queue, not an archive. Session history lives in the Journal; completed work lives in git. The goal is zero outstanding items.\\n---\\n# Ideas Under Evaluation\\nIdeas that have passed the \\\"interesting\\\" threshold but aren't ready to become To-do items. Each needs evaluation before it earns a spot on the build plan. Not brainstorms (those go to Journal DB). Not committed work (that goes to To-do DB). The middle ground.\\n---\\n# To-do\\n<database url=\\\"https://app.notion.com/p/33a67c87082c80228c50d529aac6ba6f\\\" inline=\\\"true\\\" data-source-url=\\\"collection://33a67c87-082c-8033-8ac5-000ba9922392\\\">To-do</database>\\n<page url=\\\"https://app.notion.com/p/34167c87082c8186be2bcc34a67f2f34\\\">Ideas Under Evaluation</page>\\n---\\n# Deferred\\nItems explicitly parked with a reason. When a To-do item is parked, it moves here with the \\\"Why\\\" field populated.\\n<database url=\\\"https://app.notion.com/p/a2adb9b77dc04b8c89520d142b7abae3\\\" inline=\\\"false\\\" data-source-url=\\\"collection://95d1b8b0-52d0-4a6a-9233-1773057f6a81\\\">Deferred</database>\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+

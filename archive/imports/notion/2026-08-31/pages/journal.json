@@ -1,0 +1,14 @@
+{
+  "retrieved_on": "2026-08-31",
+  "source_id": "33c67c87-082c-8188-9876-ff3e9b175f1d",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"metadata\":{\"type\":\"page\"},\"title\":\"📓 Journal\",\"url\":\"https://app.notion.com/p/33c67c87082c81889876ff3e9b175f1d?pvs=204\",\"text\":\"Here is the result of \\\"fetch\\\" for the Page with URL https://app.notion.com/p/33c67c87082c81889876ff3e9b175f1d as of 2026-04-20T10:12:18.948Z:\\n<page url=\\\"https://app.notion.com/p/33c67c87082c81889876ff3e9b175f1d\\\" icon=\\\"📓\\\">\\n<ancestor-path>\\n<parent-page url=\\\"https://app.notion.com/p/31167c87082c81fb96dad3188d34aa72\\\" title=\\\"Strale — Project Home\\\"/>\\n</ancestor-path>\\n<properties>\\n{\\\"title\\\":\\\"Journal\\\"}\\n</properties>\\n<content>\\n*Last updated: 2026-04-10.*\\n**Day-to-day thinking. Brainstorms, session logs, analyses, post drafts, half-formed ideas. Allowed to be messy.**\\nThe Journal is the accumulation layer. When a session ends, it gets logged here. When a brainstorm happens, it goes here. When a lesson is learned, it goes here. Research that might eventually influence a section page starts here as a brainstorm and gets merged into the section page when it crystallises.\\n---\\n# Entry types\\n<table header-row=\\\"true\\\">\\n<tr>\\n<td>Type</td>\\n<td>When to use</td>\\n</tr>\\n<tr>\\n<td>**session**</td>\\n<td>End of a working session (Claude Code or Claude chat)</td>\\n</tr>\\n<tr>\\n<td>**session-checkpoint**</td>\\n<td>Mid-session save point for long sessions</td>\\n</tr>\\n<tr>\\n<td>**brainstorm**</td>\\n<td>Exploratory thinking, research, analysis</td>\\n</tr>\\n<tr>\\n<td>**course-correction**</td>\\n<td>Lesson learned, mistake documented</td>\\n</tr>\\n<tr>\\n<td>**risk**</td>\\n<td>Risk or concern to track</td>\\n</tr>\\n<tr>\\n<td>**decision-context**</td>\\n<td>Background context that explains a decision in the Decisions DB</td>\\n</tr>\\n</table>\\n---\\n# Views\\n- **Active** — open entries only (Reviewed = unchecked)\\n- **Needs Review** — entries older than 7 days that haven't been reviewed\\n- **By Feature** — grouped by Related Feature\\n- **Full Log** — everything, sorted by date\\n---\\n# The Journal\\n<database url=\\\"https://app.notion.com/p/f275be62b85b421da1375a1d7d7c0059\\\" inline=\\\"false\\\" data-source-url=\\\"collection://8f54383b-3227-42c2-bee4-77a091027f8f\\\">Journal</database>\\n</content>\\n</page>\"}"
+      }
+    ],
+    "isError": false
+  }
+}
+
