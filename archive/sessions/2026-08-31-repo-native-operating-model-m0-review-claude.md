@@ -74,3 +74,20 @@ It found one additional issue before commit: the preservation payload and review
 records were still untracked, so they were not yet durable. This finding was
 accepted. The payload must be committed and pushed before the only remaining M0
 blocker can be described as the Notion pagination gap.
+
+## Post-commit durability confirmation
+
+After commit `61f303debefbd2123ff6a65e9439cb33fae2900e` was pushed, Claude
+Code returned `PASS` on the final read-only durability check. It confirmed:
+
+- the migration worktree is clean;
+- local and remote migration refs equal the named commit;
+- the imports, decision, consumer inventory, and review evidence are tracked;
+- all three top-level import manifests replay with zero missing or mismatched
+  entries;
+- the Notion manifest is explicitly `complete: false`;
+- no M1 or authority-cutover claim exists.
+
+Claude confirmed that the sole remaining M0 blocker is full pagination of the
+four quota-truncated Notion databases, followed by manifest regeneration and a
+focused milestone PASS.
