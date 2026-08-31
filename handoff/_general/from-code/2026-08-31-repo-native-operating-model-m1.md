@@ -25,9 +25,11 @@ authority boundary.
 
 ## Open
 
-- M2 truth reconciliation is now the next milestone. Every authority-changing
-  or cutover action remains blocked until the separate product/decision audit
-  is available, M2 is reconciled, and Claude gives a fresh milestone verdict.
+- M2 truth reconciliation is now the next milestone. On 2026-09-01 the founder
+  confirmed that the supplied context pack is all founder input; Codex and
+  Claude own the remaining audit inside M2. Every authority-changing or cutover
+  action remains blocked until M2 is reconciled and Claude gives a fresh
+  milestone verdict.
 - The Railway environment-variable documentation mismatch is a real but
   unrelated docs fix; handle it in a separate follow-up rather than widening
   M1.

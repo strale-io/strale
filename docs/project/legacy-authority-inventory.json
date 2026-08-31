@@ -295,7 +295,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "953af82324519cc5b44f25fedec813b6972f3b97ca129aaced828280a0a34b3e",
+      "sha256": "c8ae1e3374c70d422b0861763e3c8527bf8b66709720412851700cd473d38904",
       "detected_references": [
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
@@ -308,6 +308,7 @@
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md",
         "docs/decisions/records/DEC-20260831-A.md",
+        "docs/decisions/records/DEC-20260901-A.md",
         "handoff/_general/from-code/2026-08-12-readiness-p0-baseline.md",
         "handoff/_general/from-code/2026-08-16-quality-program-phase0-phase1.md",
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
@@ -341,7 +342,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "e04ffa33c67441e8b7e4315f9e02a927bf0017df7cb3bd87350acab86d60c1b9",
+      "sha256": "9a10b41f08bfc30c01c0d7d5ba1ed78e784f1a0c7279d979ac8337d48c887d74",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

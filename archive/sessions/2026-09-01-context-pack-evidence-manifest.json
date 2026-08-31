@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-01",
+  "authority": "evidence-only",
+  "source_commit": "b29510949500ade9c00c4a61912baeb9dc98389a",
+  "purpose": "Keep durable checksums for the founder-supplied context pack without committing the raw pack to main.",
+  "archive_zip": {
+    "name": "strale-repo-context-pack.zip",
+    "bytes": 24962,
+    "sha256": "2a029bf7b6ae2a31bb62779b1806af2add02ba784bf63b08902cd2d973d37d19"
+  },
+  "entries": [
+    {
+      "path": "00-START-HERE.md",
+      "bytes": 2642,
+      "sha256": "c1e05cddd2bcaf4680dd214279c6b71386069f76e0dcb00ff77d2c552802ac31"
+    },
+    {
+      "path": "01-PRODUCT-STRATEGY.md",
+      "bytes": 4964,
+      "sha256": "cdea6fc12836c5b05285848a7aff9cd4989189b325c9b9460f17b73d85226b31"
+    },
+    {
+      "path": "02-CURRENT-STATE-AND-ROADMAP.md",
+      "bytes": 10368,
+      "sha256": "d20959d42d60e7f8edd7349f1f5845822f464d5f6114f979d10d55fce834db82"
+    },
+    {
+      "path": "03-DECISIONS.md",
+      "bytes": 6164,
+      "sha256": "38227e1f62db370a665487078f39ddc1f114c1a3d808cbb3b31890f5968b50bd"
+    },
+    {
+      "path": "04-GTM-WEBSITE.md",
+      "bytes": 7758,
+      "sha256": "cec1e17c0102ea57b531bfbb82ae92ffdce4d97e3c30b048aa4070f2ced8ebae"
+    },
+    {
+      "path": "05-TECHNICAL-PROGRAM.md",
+      "bytes": 6455,
+      "sha256": "ffba9785c2339a3395d27025cc8b8b45b91451030cf18e937f893a0de3a2e933"
+    },
+    {
+      "path": "06-WORKING-METHOD-AND-REPO-REDESIGN.md",
+      "bytes": 10254,
+      "sha256": "f502985185b2026b3388d8bcc6af5659d88b670c92d5f3ce4e26f5aa8ac76e12"
+    },
+    {
+      "path": "AGENTS-PROPOSED.md",
+      "bytes": 717,
+      "sha256": "85de70ee24cf5a953a2b9495258c1e26a050006895106ae9959a7eb0ecd86401"
+    },
+    {
+      "path": "CLAUDE-PROPOSED.md",
+      "bytes": 723,
+      "sha256": "4ffdb898cd90792a95d1a5ee61a82eaf22ac61282467bc1e2aa0bb870715a193"
+    },
+    {
+      "path": "README.md",
+      "bytes": 577,
+      "sha256": "0e5157ee1a33a640e043fc1e619cb5db7cc10fd0bc9f57800aff75170d34ed71"
+    }
+  ]
+}
