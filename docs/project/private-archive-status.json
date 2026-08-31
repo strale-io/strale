@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-31",
+  "repository": "strale-io/strale-context-archive",
+  "visibility": "private",
+  "export_path": "archive/imports/notion/2026-08-31",
+  "complete": false,
+  "public_copy_allowed": false,
+  "pagination": {
+    "decisions": {
+      "rows_preserved": 318,
+      "terminal_page_observed": true,
+      "source_count_verified": false,
+      "next_offset": null
+    },
+    "journal": {
+      "rows_preserved": 400,
+      "terminal_page_observed": false,
+      "source_count_verified": false,
+      "next_offset": 400
+    },
+    "todo": {
+      "rows_preserved": 300,
+      "terminal_page_observed": false,
+      "source_count_verified": false,
+      "next_offset": 300
+    },
+    "vendor_roster": {
+      "rows_preserved": 166,
+      "terminal_page_observed": true,
+      "source_count_verified": false,
+      "next_offset": null
+    }
+  },
+  "completion_gate": "Journal and To-do must reach short terminal pages; all four source counts must match captured unique IDs; independent Claude review must pass."
+}

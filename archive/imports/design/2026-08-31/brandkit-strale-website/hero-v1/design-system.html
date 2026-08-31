@@ -1,0 +1,1500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Approved Strale website design-system foundation">
+  <title>Strale — Website design system</title>
+  <link rel="icon" href="assets/strale-lockup.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/design-tokens.css?v=20260828-quiet-material-v1">
+  <style>
+    * { box-sizing: border-box; }
+
+    html { background: var(--canvas); }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; }
+
+    a:focus-visible {
+      outline: 0;
+      box-shadow: var(--focus);
+    }
+
+    .header {
+      min-height: 82px;
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.94);
+    }
+
+    .header-inner,
+    main {
+      width: var(--hero-content);
+      margin: 0 auto;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-6);
+    }
+
+    .brand {
+      width: 108px;
+      display: inline-flex;
+    }
+
+    .brand img {
+      width: 100%;
+      display: block;
+    }
+
+    .back-link {
+      color: var(--ink-secondary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    main { padding: 96px 0 120px; }
+
+    .intro {
+      max-width: 830px;
+      margin-bottom: 112px;
+    }
+
+    .eyebrow {
+      margin: 0 0 24px;
+      color: var(--signal-red);
+      font: var(--type-eyebrow-weight) var(--type-eyebrow-size)/var(--type-eyebrow-line) var(--mono);
+      text-transform: uppercase;
+      letter-spacing: var(--type-eyebrow-tracking);
+    }
+
+    h1,
+    h2,
+    h3,
+    p { margin-top: 0; }
+
+    h1 {
+      max-width: 780px;
+      margin-bottom: 32px;
+      font-size: var(--type-hero-size);
+      line-height: var(--type-hero-line);
+      font-weight: var(--type-hero-weight);
+      letter-spacing: var(--type-hero-tracking);
+    }
+
+    .intro-copy {
+      max-width: 680px;
+      margin-bottom: 0;
+      color: var(--ink-secondary);
+      font-size: var(--type-lead-size);
+      line-height: var(--type-lead-line);
+    }
+
+    .status-line {
+      margin-top: 38px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--ink-secondary);
+      font: 500 11px/18px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .status-line::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--signal-red);
+    }
+
+    section {
+      margin-top: 112px;
+    }
+
+    .section-heading {
+      max-width: 760px;
+      margin-bottom: 48px;
+    }
+
+    .section-heading h2 {
+      margin-bottom: 16px;
+      font-size: 38px;
+      line-height: 1.12;
+      font-weight: 400;
+      letter-spacing: -0.04em;
+    }
+
+    .section-heading p {
+      max-width: 650px;
+      margin-bottom: 0;
+      color: var(--ink-secondary);
+      font-size: 17px;
+      line-height: 1.6;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .principle {
+      min-height: 190px;
+      padding: 26px;
+      border-radius: var(--radius-route);
+      background: var(--surface);
+    }
+
+    .principle-index {
+      display: block;
+      margin-bottom: 36px;
+      color: var(--signal-red);
+      font: 500 11px/18px var(--mono);
+    }
+
+    .principle h3 {
+      margin-bottom: 10px;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .principle p {
+      margin-bottom: 0;
+      color: var(--ink-secondary);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .swatch {
+      overflow: hidden;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-route);
+      background: var(--canvas);
+    }
+
+    .swatch-color { height: 112px; }
+
+    .swatch-label { padding: 16px; }
+
+    .swatch-label strong,
+    .swatch-label code { display: block; }
+
+    .swatch-label strong {
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .swatch-label code {
+      color: var(--ink-secondary);
+      font: 500 11px/17px var(--mono);
+    }
+
+    .surface-grid {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .surface-sample {
+      min-height: 170px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: var(--radius-card);
+      color: var(--canvas);
+      box-shadow: var(--shadow-atmosphere);
+    }
+
+    .surface-sample.is-light {
+      color: var(--ink);
+      border: 1px solid rgba(221, 221, 215, 0.72);
+      box-shadow: none;
+    }
+
+    .surface-sample strong,
+    .surface-sample span {
+      display: block;
+      font: 500 11px/18px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .surface-sample span { opacity: 0.72; }
+
+    .pattern-family {
+      margin-top: 28px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .pattern-hero {
+      min-height: 300px;
+      padding: clamp(24px, 4vw, 48px);
+      display: flex;
+      align-items: flex-end;
+      border: 1px solid rgba(221, 221, 215, 0.72);
+      border-radius: var(--radius-stage);
+      background: var(--hero-folded-light-background) center / cover no-repeat;
+      box-shadow: var(--shadow-atmosphere);
+    }
+
+    .pattern-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .pattern-card {
+      min-height: 0;
+      padding: 0;
+      display: grid;
+      grid-template-rows: minmax(210px, 1fr) auto;
+      overflow: hidden;
+      border: 1px solid rgba(221, 221, 215, 0.72);
+      border-radius: var(--radius-stage);
+      background: var(--surface);
+      box-shadow: var(--shadow-atmosphere);
+    }
+
+    .pattern-card::before {
+      content: "";
+      display: block;
+      min-height: 210px;
+      background-image: var(--pattern-folded-scrim), var(--pattern-image);
+      background-position: center;
+      background-size: cover;
+      background-repeat: no-repeat;
+    }
+
+    .pattern-card--balanced { --pattern-image: var(--pattern-folded-balanced); }
+    .pattern-card--mineral { --pattern-image: var(--pattern-folded-mineral); }
+    .pattern-card--cobalt { --pattern-image: var(--pattern-folded-cobalt); }
+    .pattern-card--warm { --pattern-image: var(--pattern-folded-warm); }
+
+    .pattern-label {
+      width: 100%;
+      min-height: 142px;
+      padding: 19px 20px 20px;
+      border-top: 1px solid var(--hairline);
+      background: var(--surface);
+    }
+
+    .pattern-label strong,
+    .pattern-label span,
+    .pattern-label code {
+      display: block;
+    }
+
+    .pattern-label strong {
+      margin-bottom: 5px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .pattern-label span {
+      color: var(--ink-secondary);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .pattern-label code {
+      margin-top: 10px;
+      color: var(--mineral);
+      font: 500 10px/16px var(--mono);
+    }
+
+    .direction-reference {
+      padding: clamp(18px, 2.5vw, 30px);
+      border: 1px solid var(--border-stage-soft);
+      border-radius: var(--radius-stage);
+      background: var(--surface-stage-soft);
+      box-shadow: var(--shadow-stage-float);
+    }
+
+    .direction-reference img {
+      width: 100%;
+      display: block;
+      border: 1px solid rgba(17, 17, 15, 0.07);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-product-float);
+    }
+
+    .direction-reference-meta {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: minmax(150px, 0.32fr) minmax(0, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .direction-reference-meta code {
+      color: var(--mineral);
+      font: 500 11px/18px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .direction-reference-meta p {
+      margin: 0;
+      color: var(--ink-secondary);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .surface-stack {
+      margin-bottom: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-card);
+      background: var(--hairline);
+    }
+
+    .surface-stack-demo {
+      height: clamp(350px, 35vw, 430px);
+      margin-bottom: 18px;
+      padding: clamp(14px, 2.2vw, 24px);
+      overflow: hidden;
+      border: 1px solid var(--border-stage-soft);
+      border-radius: var(--radius-stage);
+      background: var(--surface-stage-soft);
+      box-shadow: var(--shadow-stage-float);
+    }
+
+    .stack-demo-layer {
+      position: relative;
+      height: 100%;
+      padding: clamp(34px, 4vw, 46px) clamp(10px, 1.8vw, 20px) clamp(10px, 1.8vw, 20px);
+      display: flex;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: clamp(14px, 2vw, 24px);
+    }
+
+    .stack-demo-layer::before {
+      content: attr(data-layer);
+      position: absolute;
+      top: clamp(10px, 1.4vw, 15px);
+      left: clamp(12px, 1.7vw, 20px);
+      z-index: 2;
+      font: 600 clamp(9px, 0.9vw, 11px)/1 var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.065em;
+    }
+
+    .stack-demo-layer > .stack-demo-layer {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .stack-demo-canvas {
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 12px 34px rgba(11, 24, 43, 0.08);
+    }
+
+    .stack-demo-canvas::before,
+    .stack-demo-material::before { color: var(--ink-secondary); }
+
+    .stack-demo-material {
+      background-image: var(--pattern-folded-scrim), var(--pattern-folded-balanced);
+      background-position: center;
+      background-size: cover;
+      box-shadow: var(--shadow-atmosphere);
+    }
+
+    .stack-demo-frame {
+      color: white;
+      background: var(--atmosphere-cobalt);
+      box-shadow: var(--shadow-atmosphere-float);
+    }
+
+    .stack-demo-frame::before { color: rgba(255, 255, 255, 0.72); }
+
+    .stack-demo-product {
+      flex-direction: column;
+      color: var(--ink);
+      border-color: var(--border-glass);
+      background: var(--surface-glass);
+      box-shadow: var(--shadow-glass);
+      backdrop-filter: var(--filter-glass);
+      -webkit-backdrop-filter: var(--filter-glass);
+    }
+
+    .stack-demo-product::before { color: var(--mineral); }
+
+    .stack-proof {
+      margin: auto 0 0;
+      overflow: hidden;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-route);
+      background: rgba(255, 255, 255, 0.74);
+    }
+
+    .stack-proof-row {
+      min-height: 42px;
+      padding: 10px 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--ink-secondary);
+      font-size: 12px;
+    }
+
+    .stack-proof-row + .stack-proof-row { border-top: 1px solid var(--hairline); }
+
+    .stack-proof-row code {
+      color: var(--ink);
+      font: 600 10px/1.4 var(--mono);
+    }
+
+    .stack-proof-row strong {
+      color: var(--mineral);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .surface-stack-layer {
+      min-height: 150px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--canvas);
+    }
+
+    .surface-stack-layer span,
+    .surface-stack-layer code {
+      display: block;
+      font: 500 10px/16px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .surface-stack-layer span { color: var(--signal-red); }
+    .surface-stack-layer code { color: var(--ink-secondary); }
+
+    .surface-stack-layer strong {
+      display: block;
+      margin: 18px 0 8px;
+      font-size: 17px;
+      font-weight: 500;
+    }
+
+    .surface-stack-layer p {
+      margin: 0;
+      color: var(--ink-secondary);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .surface-map {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .surface-recipe {
+      overflow: hidden;
+      border: 1px solid rgba(17, 17, 15, 0.08);
+      border-radius: var(--radius-stage);
+      background: var(--canvas);
+      box-shadow: var(--shadow-stage-float);
+    }
+
+    .surface-recipe-visual {
+      min-height: 320px;
+      padding: clamp(20px, 2.8vw, 34px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--canvas);
+    }
+
+    .surface-recipe-visual--folded {
+      justify-content: flex-end;
+      background: var(--hero-folded-light-background) center / cover no-repeat;
+    }
+
+    .recipe-frame {
+      width: 100%;
+      min-height: 246px;
+      padding: 22px;
+      display: grid;
+      align-items: center;
+      border: 1px solid var(--border-stage-atmosphere);
+      border-radius: 20px;
+      box-shadow: var(--shadow-atmosphere-float);
+    }
+
+    .surface-recipe-visual--folded .recipe-frame { width: min(62%, 330px); }
+    .recipe-frame--spectrum { background: var(--atmosphere-spectrum); }
+    .recipe-frame--cobalt { background: var(--atmosphere-cobalt); }
+    .recipe-frame--mineral { background: var(--atmosphere-mineral); }
+    .recipe-frame--midnight { background: var(--atmosphere-midnight); }
+    .recipe-frame--dusk { background: var(--atmosphere-dusk); }
+
+    .recipe-product {
+      overflow: hidden;
+      border: 1px solid var(--border-product-float);
+      border-radius: var(--radius-product-tile);
+      background: var(--surface-product-float);
+      box-shadow: var(--shadow-product-float);
+      backdrop-filter: blur(10px) saturate(1.04);
+      -webkit-backdrop-filter: blur(10px) saturate(1.04);
+    }
+
+    .recipe-product-head,
+    .recipe-product-row {
+      min-height: 54px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .recipe-product-head {
+      border-bottom: 1px solid var(--hairline);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .recipe-product-head i,
+    .recipe-product-row strong::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      display: inline-block;
+      border-radius: 50%;
+      background: var(--signal-red);
+    }
+
+    .recipe-product-row {
+      color: var(--ink-secondary);
+      font-size: 13px;
+    }
+
+    .recipe-product-row + .recipe-product-row { border-top: 1px solid var(--hairline); }
+
+    .recipe-product-row code,
+    .recipe-product-row strong {
+      color: var(--ink);
+      font: 500 11px/17px var(--mono);
+    }
+
+    .recipe-product-row strong::before {
+      margin-right: 7px;
+      background: var(--success);
+    }
+
+    .recipe-catalogue {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .recipe-catalogue-item {
+      min-height: 76px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 8px 20px rgba(11, 24, 43, 0.1);
+    }
+
+    .recipe-catalogue-item span {
+      width: 58%;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--hairline);
+    }
+
+    .recipe-catalogue-item code {
+      color: var(--ink-secondary);
+      font: 500 9px/14px var(--mono);
+    }
+
+    .recipe-code {
+      display: grid;
+      gap: 10px;
+    }
+
+    .recipe-code-line {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(174, 189, 205, 0.28);
+    }
+
+    .recipe-code-line:nth-child(2),
+    .recipe-code-line:nth-child(5) { width: 72%; background: rgba(155, 201, 245, 0.52); }
+    .recipe-code-line:nth-child(3) { width: 54%; background: rgba(239, 140, 82, 0.58); }
+    .recipe-code-line:nth-child(4) { width: 86%; }
+    .recipe-code-line:nth-child(6) { width: 64%; background: rgba(184, 223, 123, 0.42); }
+
+    .recipe-glass {
+      width: 100%;
+      min-height: 66px;
+      padding: 0 18px;
+      display: grid;
+      grid-template-columns: 84px 1fr 110px;
+      align-items: center;
+      gap: 18px;
+      border: 1px solid var(--border-glass);
+      border-radius: 18px;
+      background: var(--surface-glass);
+      box-shadow: var(--shadow-glass);
+      backdrop-filter: var(--filter-glass);
+      -webkit-backdrop-filter: var(--filter-glass);
+    }
+
+    .recipe-glass-mark,
+    .recipe-glass-action {
+      height: 30px;
+      border-radius: var(--radius-control);
+      background: var(--ink);
+    }
+
+    .recipe-glass-mark { width: 30px; }
+
+    .recipe-glass-links {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .recipe-glass-links i {
+      width: 34px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(17, 17, 15, 0.35);
+    }
+
+    .recipe-cta {
+      color: var(--ink-inverse);
+    }
+
+    .recipe-cta strong {
+      display: block;
+      margin-bottom: 18px;
+      font-size: 24px;
+      line-height: 1.1;
+      font-weight: 400;
+      letter-spacing: -0.04em;
+    }
+
+    .recipe-cta p {
+      max-width: 290px;
+      margin: 0 0 26px;
+      color: var(--ink-inverse-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .recipe-cta span {
+      min-height: 40px;
+      padding: 0 18px;
+      display: inline-flex;
+      align-items: center;
+      border-radius: var(--radius-control);
+      color: var(--ink);
+      background: var(--canvas);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .surface-recipe-copy {
+      min-height: 164px;
+      padding: 22px 24px 24px;
+      border-top: 1px solid var(--hairline);
+    }
+
+    .surface-recipe-copy code {
+      color: var(--signal-red);
+      font: 500 10px/16px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .surface-recipe-copy h3 {
+      margin: 9px 0 7px;
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    .surface-recipe-copy p {
+      margin: 0;
+      color: var(--ink-secondary);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .type-board {
+      display: grid;
+      gap: 1px;
+      overflow: hidden;
+      border-radius: var(--radius-card);
+      background: var(--hairline);
+    }
+
+    .type-row {
+      min-height: 140px;
+      padding: 28px 30px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      align-items: center;
+      gap: 32px;
+      background: var(--canvas);
+    }
+
+    .type-meta {
+      color: var(--ink-secondary);
+      font: 500 11px/18px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .hero-sample {
+      font-size: var(--type-hero-size);
+      line-height: var(--type-hero-line);
+      font-weight: var(--type-hero-weight);
+      letter-spacing: var(--type-hero-tracking);
+    }
+
+    .lead-sample {
+      color: var(--ink-secondary);
+      font-size: var(--type-lead-size);
+      line-height: var(--type-lead-line);
+    }
+
+    .mono-sample {
+      color: var(--signal-red);
+      font: var(--type-eyebrow-weight) var(--type-eyebrow-size)/var(--type-eyebrow-line) var(--mono);
+      text-transform: uppercase;
+      letter-spacing: var(--type-eyebrow-tracking);
+    }
+
+    .component-board {
+      padding: 48px;
+      display: grid;
+      grid-template-columns: minmax(0, 0.85fr) minmax(360px, 1.15fr);
+      align-items: center;
+      gap: 56px;
+      border-radius: var(--radius-atmosphere);
+      background: var(--surface);
+    }
+
+    .button-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .button {
+      min-height: 52px;
+      padding: 0 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 11px;
+      border: 1px solid var(--hairline);
+      border-radius: var(--radius-control);
+      color: var(--ink);
+      background: var(--canvas);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .button-primary {
+      border-color: var(--ink);
+      color: var(--canvas);
+      background: var(--ink);
+    }
+
+    .atmosphere {
+      padding: 36px;
+      border-radius: var(--radius-atmosphere);
+      background: var(--atmosphere-spectrum);
+      box-shadow: var(--shadow-atmosphere);
+    }
+
+    .proof-card {
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.68);
+      border-radius: var(--radius-card);
+      background: rgba(254, 254, 252, 0.97);
+      box-shadow: var(--shadow-product);
+    }
+
+    .depth-board {
+      padding: clamp(28px, 4vw, 52px);
+      display: grid;
+      grid-template-columns: minmax(0, 0.72fr) minmax(420px, 1.28fr);
+      align-items: center;
+      gap: clamp(36px, 5vw, 72px);
+      border: 1px solid var(--border-stage-soft);
+      border-radius: var(--radius-stage);
+      background: var(--surface-stage-soft);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        var(--shadow-stage-float);
+    }
+
+    .depth-notes {
+      display: grid;
+      gap: 1px;
+      overflow: hidden;
+      border-radius: var(--radius-route);
+      background: var(--hairline);
+    }
+
+    .depth-note {
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 18px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .depth-note code {
+      color: var(--mineral);
+      font: 500 11px/18px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .depth-note span {
+      color: var(--ink-secondary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .depth-product {
+      min-height: 280px;
+      padding: 26px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 24px;
+      border: 1px solid var(--border-product-float);
+      border-radius: var(--radius-product-tile);
+      background: var(--surface-product-float);
+      box-shadow: var(--shadow-product-float);
+      backdrop-filter: blur(10px) saturate(1.04);
+      -webkit-backdrop-filter: blur(10px) saturate(1.04);
+    }
+
+    .depth-product-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .depth-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border-icon-well);
+      border-radius: var(--radius-icon-well);
+      color: #173d31;
+      background: var(--surface-icon-well);
+      box-shadow: var(--shadow-icon-well);
+    }
+
+    .depth-icon svg {
+      width: 21px;
+      height: 21px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .depth-rows {
+      display: grid;
+      align-content: center;
+      gap: 8px;
+    }
+
+    .depth-row {
+      min-height: 52px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid rgba(17, 17, 15, 0.07);
+      border-radius: var(--radius-route);
+      background: rgba(255, 255, 255, 0.68);
+      color: var(--ink-secondary);
+      font-size: 14px;
+    }
+
+    .depth-row strong {
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .proof-header,
+    .proof-row,
+    .route {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .proof-header,
+    .proof-row { padding: 17px 20px; }
+
+    .proof-header,
+    .proof-row + .proof-row { border-top: 1px solid var(--hairline); }
+
+    .proof-header strong,
+    .proof-row strong { font-weight: 500; }
+
+    .route {
+      margin: 18px 20px;
+      padding: 13px 14px;
+      border: 1px solid #b8cee4;
+      border-radius: var(--radius-route);
+      background: var(--blue-mist);
+    }
+
+    .route span { color: var(--ink-secondary); }
+
+    .route code {
+      padding: 5px 9px;
+      border-radius: 7px;
+      color: #263b52;
+      background: rgba(64, 83, 107, 0.14);
+      font: 500 13px/18px var(--mono);
+    }
+
+    .proof-row span {
+      color: var(--ink-secondary);
+      font-size: 14px;
+    }
+
+    .proof-row strong::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      margin-right: 8px;
+      display: inline-block;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .lock-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+
+    .lock-table th,
+    .lock-table td {
+      padding: 18px 0;
+      border-bottom: 1px solid var(--hairline);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .lock-table th {
+      width: 25%;
+      font-weight: 500;
+    }
+
+    .lock-table td { color: var(--ink-secondary); }
+
+    .locked,
+    .provisional {
+      font: 500 11px/18px var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.055em;
+    }
+
+    .locked { color: var(--success); }
+    .provisional { color: var(--signal-red); }
+
+    @media (max-width: 900px) {
+      :root {
+        --content: min(100% - 48px, 760px);
+        --hero-content: min(100% - 48px, 760px);
+      }
+
+      .principles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .swatches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .surface-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pattern-grid { grid-template-columns: 1fr; }
+      .surface-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .surface-map { grid-template-columns: 1fr; }
+      .component-board { grid-template-columns: 1fr; }
+      .depth-board { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      :root {
+        --content: calc(100% - 40px);
+        --hero-content: calc(100% - 40px);
+      }
+
+      .header { min-height: 70px; }
+      .brand { width: 96px; }
+      main { padding: 64px 0 80px; }
+      .intro,
+      section { margin-bottom: 0; }
+      .intro { margin-bottom: 80px; }
+      section { margin-top: 80px; }
+      h1 { font-size: 40px; letter-spacing: -0.047em; }
+      .section-heading h2 { font-size: 32px; }
+      .principles,
+      .swatches,
+      .surface-grid,
+      .pattern-grid,
+      .surface-stack { grid-template-columns: 1fr; }
+      .pattern-hero { min-height: 230px; }
+      .pattern-card { grid-template-rows: minmax(190px, 1fr) auto; }
+      .pattern-card::before { min-height: 190px; }
+      .direction-reference { padding: 14px; }
+      .direction-reference-meta { grid-template-columns: 1fr; gap: 8px; }
+      .surface-stack-demo {
+        height: 360px;
+        padding: 10px;
+      }
+      .stack-demo-layer {
+        padding: 30px 8px 8px;
+        border-radius: 14px;
+      }
+      .stack-demo-layer::before {
+        top: 10px;
+        left: 11px;
+        font-size: 8px;
+      }
+      .stack-proof-row {
+        min-height: 36px;
+        padding: 8px 9px;
+        font-size: 10px;
+      }
+      .surface-recipe-visual { min-height: 270px; padding: 18px; }
+      .surface-recipe-visual--folded .recipe-frame { width: 100%; }
+      .recipe-catalogue { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .recipe-glass { grid-template-columns: 40px 1fr 76px; gap: 10px; }
+      .type-row { grid-template-columns: 1fr; gap: 20px; }
+      .hero-sample { font-size: 40px; letter-spacing: -0.047em; }
+      .component-board { padding: 24px; }
+      .depth-board { padding: 22px; }
+      .depth-note { grid-template-columns: 72px 1fr; padding: 16px; }
+      .depth-product { min-height: 250px; padding: 20px; }
+      .atmosphere { padding: 22px; }
+      .lock-table th,
+      .lock-table td { display: block; width: 100%; }
+      .lock-table th { padding-bottom: 4px; border-bottom: 0; }
+      .lock-table td { padding-top: 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-inner">
+      <a class="brand" href="index.html" aria-label="Strale hero reference">
+        <img src="assets/strale-lockup.svg" alt="Strale">
+      </a>
+      <a class="back-link" href="index.html">View approved hero →</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="intro">
+      <p class="eyebrow">Website foundation v0.5</p>
+      <h1>The Strale website system.</h1>
+      <p class="intro-copy">A quiet white canvas, direct product language, restrained technical typography, and concentrated moments of atmospheric color.</p>
+      <div class="status-line">Approved from the current homepage system</div>
+    </div>
+
+    <section aria-labelledby="principles-title">
+      <div class="section-heading">
+        <h2 id="principles-title">The principles we keep.</h2>
+        <p>These are the rules to carry into every new section. They define the system more strongly than any single component.</p>
+      </div>
+      <div class="principles">
+        <article class="principle"><span class="principle-index">01</span><h3>Clarity first</h3><p>Explain the product in ordinary language before asking the visitor to interpret a graphic.</p></article>
+        <article class="principle"><span class="principle-index">02</span><h3>Quiet canvas</h3><p>Keep the page white and concentrate expressive color inside purposeful visual moments.</p></article>
+        <article class="principle"><span class="principle-index">03</span><h3>Product proof</h3><p>Show legible product behavior instead of relying on abstract illustration or generic decoration.</p></article>
+        <article class="principle"><span class="principle-index">04</span><h3>Depth with purpose</h3><p>Use spacing and tone first, then one shared elevation hierarchy for stages, product tiles, and icon wells.</p></article>
+        <article class="principle"><span class="principle-index">05</span><h3>Measured scale</h3><p>Whitespace creates confidence, but content still fits a typical laptop viewport. The hero is 52px.</p></article>
+        <article class="principle"><span class="principle-index">06</span><h3>Technical register</h3><p>Use mono selectively for routing, tools, protocols, and traceability—not for ordinary body copy.</p></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="direction-title">
+      <div class="section-heading">
+        <h2 id="direction-title">Quiet Material is the selected direction.</h2>
+        <p>This board is a visual target, not a production asset sheet. It extends the approved folded atmosphere into light and dark material while keeping the product interface flat, sparse, and credible.</p>
+      </div>
+      <figure class="direction-reference">
+        <img src="references/quiet-material-direction-v1.png" alt="Quiet Material direction board showing folded light and dark backgrounds, glass navigation, flat product cards, code panels, workflow cards, and compact response snippets">
+        <figcaption class="direction-reference-meta">
+          <code>Direction reference · v1</code>
+          <p>Use this board to judge family resemblance, material restraint, light-to-dark balance, and component hierarchy. Rebuild cards, boards, navigation, and product snippets as live HTML and CSS; only atmospheric fields and textures become raster assets.</p>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section aria-labelledby="color-title">
+      <div class="section-heading">
+        <h2 id="color-title">Color has a job.</h2>
+        <p>White dominates. Orange signals. Pale blue structures selected states. Midnight technical surfaces always use inverse text.</p>
+      </div>
+      <div class="swatches">
+        <div class="swatch"><div class="swatch-color" style="background: var(--canvas)"></div><div class="swatch-label"><strong>Canvas</strong><code>#FFFFFF</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--ink)"></div><div class="swatch-label"><strong>Ink</strong><code>#11110F</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--signal-red)"></div><div class="swatch-label"><strong>Signal red</strong><code>#F2381B</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--signal-blue)"></div><div class="swatch-label"><strong>Signal blue</strong><code>#164076</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--blue-mist)"></div><div class="swatch-label"><strong>Blue mist</strong><code>#E5EFF9</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--surface-strong)"></div><div class="swatch-label"><strong>Surface strong</strong><code>#F1F1ED</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--midnight)"></div><div class="swatch-label"><strong>Midnight</strong><code>#0D223B</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--ink-inverse)"></div><div class="swatch-label"><strong>Inverse ink</strong><code>#F3F6F9</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--mineral)"></div><div class="swatch-label"><strong>Mineral</strong><code>#246B5A</code></div></div>
+        <div class="swatch"><div class="swatch-color" style="background: var(--mint-whisper)"></div><div class="swatch-label"><strong>Mint whisper</strong><code>#EDF6F2</code></div></div>
+      </div>
+      <div class="surface-grid" aria-label="Approved atmospheric surface expressions">
+        <div class="surface-sample" style="background: var(--atmosphere-spectrum)"><strong>Spectrum</strong><span>Hero · product proof</span></div>
+        <div class="surface-sample" style="background: var(--atmosphere-mulberry)"><strong>Mulberry</strong><span>Capability stories</span></div>
+        <div class="surface-sample" style="background: var(--atmosphere-ember)"><strong>Ember</strong><span>Action · customer stories</span></div>
+        <div class="surface-sample" style="background: var(--atmosphere-cobalt)"><strong>Cobalt</strong><span>Tools · infrastructure</span></div>
+        <div class="surface-sample" style="background: var(--atmosphere-dusk)"><strong>Dusk</strong><span>Orchestration · final CTA</span></div>
+        <div class="surface-sample is-light" style="background: var(--atmosphere-frost)"><strong>Frost</strong><span>Explanation · support</span></div>
+        <div class="surface-sample" style="background: var(--atmosphere-midnight)"><strong>Midnight</strong><span>Compact CTA · framing</span></div>
+        <div class="surface-sample" style="background: var(--atmosphere-mineral)"><strong>Mineral</strong><span>Trust · validation</span></div>
+        <div class="surface-sample is-light" style="background: var(--atmosphere-mint)"><strong>Mint</strong><span>Quality · reliability</span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="pattern-title">
+      <div class="section-heading">
+        <h2 id="pattern-title">Folded atmospheres form one family.</h2>
+        <p>The hero sweep and the faceted process plates share pearl, mineral, warm neutral, and cobalt material. Use the family to create continuity while varying the emphasis from one story to the next.</p>
+      </div>
+      <div class="pattern-family">
+        <article class="pattern-hero">
+          <div class="pattern-label">
+            <strong>Hero sweep</strong>
+            <span>Broad, directional, and copy-safe. Reserved for major page openings and rare full-width transitions.</span>
+            <code>--hero-folded-light-background</code>
+          </div>
+        </article>
+        <div class="pattern-grid" aria-label="Approved folded process pattern variants">
+          <article class="pattern-card pattern-card--balanced">
+            <div class="pattern-label">
+              <strong>Balanced</strong>
+              <span>The default process stage: pearl field, mineral base, and cobalt edge with no single tone dominating.</span>
+              <code>--pattern-folded-balanced</code>
+            </div>
+          </article>
+          <article class="pattern-card pattern-card--mineral">
+            <div class="pattern-label">
+              <strong>Mineral</strong>
+              <span>For trust, matching, validation, and provider selection where calm assurance should lead.</span>
+              <code>--pattern-folded-mineral</code>
+            </div>
+          </article>
+          <article class="pattern-card pattern-card--cobalt">
+            <div class="pattern-label">
+              <strong>Cobalt</strong>
+              <span>For infrastructure, routing, execution, and technical depth without becoming a dark section.</span>
+              <code>--pattern-folded-cobalt</code>
+            </div>
+          </article>
+          <article class="pattern-card pattern-card--warm">
+            <div class="pattern-label">
+              <strong>Warm pearl</strong>
+              <span>For requests, human-facing actions, outcomes, and moments that need a little narrative warmth.</span>
+              <code>--pattern-folded-warm</code>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="surface-map-title">
+      <div class="section-heading">
+        <h2 id="surface-map-title">The surface stack controls the expression.</h2>
+        <p>Quiet Material and the approved gradients are complementary layers. Compose them in this order, stop when the story is clear, and never add expression merely to alternate colors.</p>
+      </div>
+
+      <div class="surface-stack-demo" aria-label="Nested visual demonstration of the four-layer surface composition model">
+        <div class="stack-demo-layer stack-demo-canvas" data-layer="01 · Canvas">
+          <div class="stack-demo-layer stack-demo-material" data-layer="02 · Material">
+            <div class="stack-demo-layer stack-demo-frame" data-layer="03 · Semantic frame">
+              <div class="stack-demo-layer stack-demo-product" data-layer="04 · Product proof">
+                <div class="stack-proof" aria-hidden="true">
+                  <div class="stack-proof-row"><span>Capability</span><code>company-match</code></div>
+                  <div class="stack-proof-row"><span>Source</span><strong>Traceable</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="surface-stack" aria-label="Four-layer surface composition legend">
+        <article class="surface-stack-layer">
+          <span>Layer 01</span>
+          <div><strong>Canvas</strong><p>White or a quiet structural surface carries ordinary copy and spacing.</p></div>
+          <code>--canvas · --surface</code>
+        </article>
+        <article class="surface-stack-layer">
+          <span>Layer 02</span>
+          <div><strong>Material</strong><p>A folded field creates atmosphere only when the composition needs spatial depth.</p></div>
+          <code>folded image tokens</code>
+        </article>
+        <article class="surface-stack-layer">
+          <span>Layer 03</span>
+          <div><strong>Semantic frame</strong><p>One gradient identifies the narrative role: tools, trust, action, or orchestration.</p></div>
+          <code>--atmosphere-*</code>
+        </article>
+        <article class="surface-stack-layer">
+          <span>Layer 04</span>
+          <div><strong>Product proof</strong><p>Flat or glass UI sits above the atmosphere and remains legible, live, and reusable.</p></div>
+          <code>product · glass tokens</code>
+        </article>
+      </div>
+
+      <div class="surface-map" aria-label="Approved Quiet Material surface recipes">
+        <article class="surface-recipe">
+          <div class="surface-recipe-visual surface-recipe-visual--folded">
+            <div class="recipe-frame recipe-frame--spectrum">
+              <div class="recipe-product">
+                <div class="recipe-product-head"><span>Strale request</span><i aria-hidden="true"></i></div>
+                <div class="recipe-product-row"><span>Matched tool</span><code>google-search</code></div>
+                <div class="recipe-product-row"><span>Status</span><strong>Routed</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="surface-recipe-copy">
+            <code>Opening · primary proof</code>
+            <h3>Folded light + Spectrum + product card</h3>
+            <p>Reserved for the hero, a major product proof, or another rare opening where the complete Strale palette earns the emphasis.</p>
+          </div>
+        </article>
+
+        <article class="surface-recipe">
+          <div class="surface-recipe-visual">
+            <div class="recipe-frame recipe-frame--cobalt">
+              <div class="recipe-catalogue" aria-hidden="true">
+                <div class="recipe-catalogue-item"><span></span><code>search</code></div>
+                <div class="recipe-catalogue-item"><span></span><code>company</code></div>
+                <div class="recipe-catalogue-item"><span></span><code>validate</code></div>
+                <div class="recipe-catalogue-item"><span></span><code>risk</code></div>
+                <div class="recipe-catalogue-item"><span></span><code>research</code></div>
+                <div class="recipe-catalogue-item"><span></span><code>web</code></div>
+              </div>
+            </div>
+          </div>
+          <div class="surface-recipe-copy">
+            <code>Tools · infrastructure</code>
+            <h3>White canvas + Cobalt + catalogue board</h3>
+            <p>Use Cobalt for breadth, routing, infrastructure, and catalogue moments. The board is expressive; its tool cells stay flat.</p>
+          </div>
+        </article>
+
+        <article class="surface-recipe">
+          <div class="surface-recipe-visual">
+            <div class="recipe-frame recipe-frame--mineral">
+              <div class="recipe-product">
+                <div class="recipe-product-head"><span>Validation result</span><i aria-hidden="true"></i></div>
+                <div class="recipe-product-row"><span>Source</span><code>registry</code></div>
+                <div class="recipe-product-row"><span>Audit</span><strong>Attached</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="surface-recipe-copy">
+            <code>Trust · validation</code>
+            <h3>White canvas + Mineral + response card</h3>
+            <p>Mineral is concentrated assurance, not generic success. Use it around evidence for matching, validation, provenance, and reliability.</p>
+          </div>
+        </article>
+
+        <article class="surface-recipe">
+          <div class="surface-recipe-visual">
+            <div class="recipe-frame recipe-frame--midnight">
+              <div class="recipe-code" aria-label="Abstract code specimen">
+                <div class="recipe-code-line"></div>
+                <div class="recipe-code-line"></div>
+                <div class="recipe-code-line"></div>
+                <div class="recipe-code-line"></div>
+                <div class="recipe-code-line"></div>
+                <div class="recipe-code-line"></div>
+              </div>
+            </div>
+          </div>
+          <div class="surface-recipe-copy">
+            <code>Integration · execution</code>
+            <h3>White canvas + Midnight + code panel</h3>
+            <p>Dark technical surfaces are earned by real code, execution, or orchestration. They should never become generic decorative cards.</p>
+          </div>
+        </article>
+
+        <article class="surface-recipe">
+          <div class="surface-recipe-visual surface-recipe-visual--folded">
+            <div class="recipe-glass" aria-label="Glass navigation specimen">
+              <span class="recipe-glass-mark" aria-hidden="true"></span>
+              <span class="recipe-glass-links" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="recipe-glass-action" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="surface-recipe-copy">
+            <code>Navigation · overlay</code>
+            <h3>Folded light + shared glass tray</h3>
+            <p>Glass is a functional overlay for navigation and compact controls. It reuses one fill, border, filter, and shadow recipe across the site.</p>
+          </div>
+        </article>
+
+        <article class="surface-recipe">
+          <div class="surface-recipe-visual">
+            <div class="recipe-frame recipe-frame--dusk">
+              <div class="recipe-cta">
+                <strong>One final, concentrated moment.</strong>
+                <p>Dusk closes a sequence without introducing another product card or decorative scene.</p>
+                <span>Primary action →</span>
+              </div>
+            </div>
+          </div>
+          <div class="surface-recipe-copy">
+            <code>Orchestration · closing</code>
+            <h3>White canvas + Dusk + compact CTA</h3>
+            <p>Use Dusk for orchestration or a closing transition. Preserve a white-canvas break before the footer or the next major dark surface.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="type-title">
+      <div class="section-heading">
+        <h2 id="type-title">One voice, two registers.</h2>
+        <p>Instrument Sans carries the message. IBM Plex Mono marks the technical details that make Strale credible.</p>
+      </div>
+      <div class="type-board">
+        <div class="type-row"><div class="type-meta">Hero · 52 / 1.06</div><div class="hero-sample">Give your agent the tools they need.</div></div>
+        <div class="type-row"><div class="type-meta">Lead · 20 / 1.65</div><div class="lead-sample">Search the web, research companies, enrich leads and validate data—without integrating every provider separately.</div></div>
+        <div class="type-row"><div class="type-meta">Eyebrow · 16 / 20</div><div class="mono-sample">Data infrastructure for AI agents</div></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="rhythm-title">
+      <div class="section-heading">
+        <h2 id="rhythm-title">Whitespace follows one rhythm.</h2>
+        <p>Section spacing is semantic and reusable. It creates clear transitions without stacking oversized gaps between adjacent stories.</p>
+      </div>
+      <div class="principles">
+        <article class="principle"><span class="principle-index">SECTION</span><h3>One responsive edge token</h3><p>Standard sections use 48px on phone, 64px on tablet, 72px on desktop, and 92px on expansive displays. Short laptops compact to 48–56px.</p></article>
+        <article class="principle"><span class="principle-index">EMPHASIS</span><h3>88px desktop edge</h3><p>Reserved for the entry or exit of a major sequence; it reduces to 80px on tablet and 64px on phone.</p></article>
+        <article class="principle"><span class="principle-index">INTRO</span><h3>24px + 24px</h3><p>Eyebrow to heading, then heading to supporting copy.</p></article>
+        <article class="principle"><span class="principle-index">CONTENT</span><h3>52px</h3><p>Introduction to primary proof, cards, diagram, or code surface.</p></article>
+        <article class="principle"><span class="principle-index">PAYOFF</span><h3>28px</h3><p>Main content to the quiet mono summary or metadata strip.</p></article>
+        <article class="principle"><span class="principle-index">PRODUCT UI</span><h3>28px / 52px</h3><p>Standard card padding and compact product-row height.</p></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="components-title">
+      <div class="section-heading">
+        <h2 id="components-title">Components stay calm.</h2>
+        <p>Controls are direct and product proof is orderly. Expressive color belongs around the evidence, not inside every row.</p>
+      </div>
+      <div class="component-board">
+        <div>
+          <p class="eyebrow">Action hierarchy</p>
+          <div class="button-row">
+            <a class="button button-primary" href="#">Explore tools <span aria-hidden="true">→</span></a>
+            <a class="button" href="#">Read the docs</a>
+          </div>
+        </div>
+        <div class="atmosphere">
+          <div class="proof-card">
+            <div class="proof-header"><strong>Strale request</strong><span class="type-meta">Example call</span></div>
+            <div class="route"><span>Matched tool</span><code>google-search</code></div>
+            <div class="proof-row"><span>Results</span><strong>7 results</strong></div>
+            <div class="proof-row"><span>Source</span><strong>Serper.dev</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="depth-title">
+      <div class="section-heading">
+        <h2 id="depth-title">One elevation language.</h2>
+        <p>How Strale Works, the hero atmosphere, and capability stories share one elevation model. Depth communicates nesting—not decoration.</p>
+      </div>
+      <div class="depth-board">
+        <div class="depth-notes">
+          <div class="depth-note"><code>Stage</code><span>Match perceived elevation rather than reusing identical numbers. Quiet mineral stages use <code>--shadow-stage-float</code>. Saturated or patterned stages use <code>--shadow-atmosphere-float</code> with <code>--halo-atmosphere-float</code> and the light-catching <code>--border-stage-atmosphere</code>.</span></div>
+          <div class="depth-note"><code>Product</code><span>Translucent white tile with layered blue-black elevation. Use <code>--shadow-product-float</code> for nested interface fragments. Capability-carousel cards are repeated soft stages: their rail aliases reuse <code>--surface-stage-soft</code>, <code>--border-stage-soft</code>, and <code>--shadow-stage-float</code>, with enough scrollport clearance to preserve both shadow layers.</span></div>
+          <div class="depth-note"><code>Icon</code><span>Rounded mineral well using the shared line-icon family.</span></div>
+          <div class="depth-note"><code>Artwork</code><span>Use one transparent 3:2 canvas inside a fixed central visual bay. Normalize by visible bounds, keep artwork centred, and never add a baked-in card-coloured plate or inset shadow.</span></div>
+        </div>
+        <div class="depth-product">
+          <div class="depth-product-header">
+            <span class="depth-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3.5 19 6v5.1c0 4.3-2.8 7.8-7 9.4-4.2-1.6-7-5.1-7-9.4V6l7-2.5Z"/><path d="m9.2 12 1.8 1.8 3.9-4"/></svg>
+            </span>
+            <span>Adverse media check</span>
+          </div>
+          <div class="depth-rows">
+            <div class="depth-row"><span>Sources</span><strong>128</strong></div>
+            <div class="depth-row"><span>Mentions</span><strong>3 for review</strong></div>
+            <div class="depth-row"><span>Context</span><strong>Returned</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="status-title">
+      <div class="section-heading">
+        <h2 id="status-title">What is fixed—and what is not.</h2>
+        <p>The foundation and reviewed homepage patterns are stable. New patterns are added only after they have been reviewed in context.</p>
+      </div>
+      <table class="lock-table">
+        <tbody>
+          <tr><th>Locked</th><td><span class="locked">Approved</span><br>Core palette, accessible contrast roles, type families, hero scale, editorial rhythm, mono register, action hierarchy, borderless header, Quiet Material surface stack, shared glass recipe, and homepage patterns through pricing, closing CTA, and footer.</td></tr>
+          <tr><th>Provisional</th><td><span class="provisional">Review in context</span><br>Clean dark folded raster masters, application component library, customer-proof pattern, illustration, photography, data visualisation, and complete application dark mode.</td></tr>
+          <tr><th>Change rule</th><td>Reuse an existing token first. Add a new token only for a new reusable role. Never change a locked token to solve one isolated composition.</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

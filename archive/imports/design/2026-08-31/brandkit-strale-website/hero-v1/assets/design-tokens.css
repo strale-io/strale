@@ -1,0 +1,228 @@
+:root {
+  color-scheme: light;
+
+  /* Color */
+  --canvas: #ffffff;
+  --surface: #f8f8f5;
+  --surface-strong: #f1f1ed;
+  --surface-warm: #f2f0ec;
+  --surface-stage-soft:
+    linear-gradient(135deg, rgba(247, 251, 248, 0.96), rgba(252, 252, 250, 0.9));
+  --surface-product-float: rgba(255, 255, 255, 0.86);
+  --surface-glass: rgba(247, 250, 252, 0.74);
+  --surface-icon-well:
+    linear-gradient(145deg, rgba(232, 245, 237, 0.96), rgba(244, 249, 246, 0.94));
+  --ink: #11110f;
+  --ink-secondary: #5f605c;
+  --hairline: #ddddd7;
+  --signal-red: #f2381b;
+  --signal-red-inverse: #ff7658;
+  --hero-folded-light-background: url("./hero-folded-light-background-v1.png");
+  /* Folded atmosphere family
+   *
+   * These are image tokens, not generic gradients. The balanced plate is the
+   * canonical How Strale Works treatment; mineral, cobalt, and warm are
+   * approved tonal relatives for narrative variation across the site.
+   */
+  --pattern-folded-balanced: url("./pattern-folded-balanced-v1.png");
+  --pattern-folded-mineral: url("./pattern-folded-mineral-v1.png");
+  --pattern-folded-cobalt: url("./pattern-folded-cobalt-v1.png");
+  --pattern-folded-warm: url("./pattern-folded-warm-v1.png");
+  --pattern-folded-size: cover;
+  --pattern-folded-position: center;
+  --pattern-folded-scrim: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06));
+  --deep-ember: #25100d;
+  --signal-blue: #164076;
+  --atmospheric-blue: #315e8b;
+  --midnight: #0d223b;
+  --blue-mist: #e5eff9;
+  --blue-whisper: #f0f6fc;
+  --border-blue: #b8cee4;
+  --mineral: #246b5a;
+  --mineral-light: #8fd5a6;
+  --deep-pine: #12382f;
+  --mint-whisper: #edf6f2;
+  --border-mint: #d7e6df;
+  --success: #17795d;
+
+  /* Technical surfaces */
+  --ink-inverse: #f3f6f9;
+  --ink-inverse-secondary: #aebdcd;
+  --accent-blue-inverse: #9bc9f5;
+  --border-midnight: #1d3958;
+  --hairline-inverse: rgba(229, 239, 249, 0.24);
+  --surface-midnight-elevated: rgba(22, 64, 118, 0.18);
+  --success-bright: #23a77e;
+  --code-keyword: #66aaff;
+  --code-method: #ef8c52;
+  --code-string: #b8df7b;
+  --code-muted: #96a9bd;
+
+  /* Expressive surfaces */
+  --atmosphere-spectrum:
+    linear-gradient(138deg, #b6321c 0%, #65231e 34%, #253047 66%, #12345c 100%);
+  --atmosphere-mulberry:
+    linear-gradient(145deg, #6f3046 0%, #51263a 50%, #301d2d 100%);
+  --atmosphere-ember:
+    radial-gradient(circle at 10% 8%, rgba(240, 68, 29, 0.92), transparent 38%),
+    linear-gradient(138deg, #6b2118, var(--deep-ember) 64%, #160806);
+  --atmosphere-cobalt:
+    linear-gradient(138deg, #3b6d9c 0%, #235486 44%, #143c6c 70%, #0d2b52 100%);
+  --atmosphere-dusk:
+    linear-gradient(138deg, #431d18 0%, #251a1d 36%, #151b24 64%, #091d31 100%);
+  --atmosphere-frost:
+    radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.98), transparent 46%),
+    linear-gradient(138deg, #fcfcfb, #f1f6fb 60%, #e4edf7);
+  --atmosphere-midnight:
+    linear-gradient(138deg, #263a4a 0%, #162c3c 42%, #0d2231 70%, #061721 100%);
+  --atmosphere-mineral:
+    linear-gradient(138deg, #2d8d73 0%, #1d7159 42%, #10513f 72%, #08392f 100%);
+  --atmosphere-mint:
+    radial-gradient(circle at 86% 80%, rgba(36, 107, 90, 0.1), transparent 38%),
+    linear-gradient(138deg, var(--canvas), var(--mint-whisper));
+
+  /* Typography */
+  --sans: "Instrument Sans", Arial, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+  --type-hero-size: 52px;
+  --type-hero-line: 1.06;
+  --type-hero-weight: 400;
+  --type-hero-tracking: -0.052em;
+  --type-lead-size: 20px;
+  --type-lead-line: 1.65;
+  --type-eyebrow-size: 16px;
+  --type-eyebrow-line: 20px;
+  --type-eyebrow-weight: 500;
+  --type-eyebrow-tracking: 0.085em;
+  --type-section-size: 44px;
+  --type-section-line: 1.12;
+  --type-section-weight: 400;
+  --type-section-tracking: -0.04em;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-11: 44px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-18: 72px;
+
+  /* Editorial rhythm */
+  --section-space-phone: 48px;
+  --section-space-tablet: 64px;
+  --section-space-desktop: 72px;
+  --section-space-expansive: 92px;
+  --section-space-compact: 48px;
+  --section-space-compact-roomy: 56px;
+  --section-space-y: 72px;
+  --section-space-y-emphasis: 88px;
+  --section-eyebrow-gap-phone: 21px;
+  --section-eyebrow-gap: 24px;
+  --section-lead-gap: 24px;
+  --section-lead-max: 820px;
+  --section-content-gap-phone: 32px;
+  --section-content-gap-tablet: 40px;
+  --section-content-gap: 52px;
+  --section-payoff-gap: 28px;
+  --card-padding: 28px;
+  --row-height: 52px;
+
+  /* Adaptive composition
+   *
+   * Width decides the layout structure; height decides its density. These
+   * values are intentionally shared by every primary section so a large
+   * screen produces a larger composition rather than merely wider margins.
+   */
+  --composition-section-space: var(--section-space-desktop);
+  --composition-heading-size: clamp(44px, 2.7vw, 52px);
+  --composition-lead-size: clamp(20px, 1.15vw, 22px);
+  --composition-eyebrow-gap: var(--section-eyebrow-gap);
+  --composition-stage-gap: var(--section-content-gap);
+  --composition-grid-gap: clamp(20px, 1.7vw, 30px);
+  --composition-card-padding: clamp(24px, 1.7vw, 32px);
+  --composition-technical-size: clamp(11px, 0.68vw, 13px);
+  --composition-compact-row-height: clamp(48px, 3.125vw, 60px);
+
+  /* Shape and elevation */
+  --radius-control: 999px;
+  --radius-route: 12px;
+  --radius-card: 18px;
+  --radius-atmosphere: 24px;
+  --radius-stage: 26px;
+  --radius-product-tile: 16px;
+  --radius-icon-well: 11px;
+  --border-stage-soft: rgba(39, 83, 65, 0.12);
+  --border-stage-atmosphere: rgba(255, 255, 255, 0.46);
+  --border-product-float: rgba(255, 255, 255, 0.88);
+  --border-glass: rgba(255, 255, 255, 0.72);
+  --border-icon-well: rgba(39, 105, 77, 0.13);
+  --shadow-product: 0 18px 48px rgba(11, 24, 43, 0.18);
+  --shadow-atmosphere: 0 18px 44px rgba(22, 64, 118, 0.08);
+  --shadow-stage-float:
+    0 4px 10px rgba(11, 24, 43, 0.12),
+    0 18px 40px rgba(11, 24, 43, 0.16);
+  --shadow-atmosphere-float:
+    0 6px 14px rgba(11, 24, 43, 0.16),
+    0 24px 54px rgba(11, 24, 43, 0.22),
+    0 42px 88px rgba(31, 65, 102, 0.1);
+  --halo-atmosphere-float:
+    radial-gradient(
+      ellipse at 50% 62%,
+      rgba(239, 242, 238, 0.92) 0%,
+      rgba(246, 245, 240, 0.68) 42%,
+      rgba(255, 255, 255, 0) 74%
+    );
+  --shadow-product-float:
+    0 2px 5px rgba(11, 24, 43, 0.08),
+    0 14px 30px rgba(11, 24, 43, 0.14),
+    0 30px 64px rgba(11, 24, 43, 0.08);
+  --shadow-glass:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    inset 0 -1px 0 rgba(76, 100, 128, 0.1),
+    0 10px 30px rgba(31, 55, 82, 0.13);
+  --filter-glass: blur(24px) saturate(1.28);
+  /* Capability cards are repeated soft stages, not flat product tiles. */
+  --surface-rail-card: var(--surface-stage-soft);
+  --border-rail-card: var(--border-stage-soft);
+  --shadow-rail-card: var(--shadow-stage-float);
+  --shadow-rail-card-hover:
+    0 6px 14px rgba(11, 24, 43, 0.14),
+    0 24px 48px rgba(11, 24, 43, 0.19);
+  --shadow-icon-well:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 4px 12px rgba(39, 83, 65, 0.05);
+
+  /* Layout */
+  /*
+   * Adaptive shells
+   *
+   * Screen width changes continuously, so the page gutter and hero measure do
+   * too. Breakpoints are reserved for structural changes (for example, a
+   * two-column hero becoming one column), never for making the whole site jump
+   * to a different scale.
+   */
+  --layout-gutter: clamp(20px, 3.65vw, 64px);
+  --layout-section-max: clamp(1180px, 83.333vw, 1440px);
+  --layout-hero-max: clamp(1163px, 80vw, 1408px);
+  --layout-nav-max: 1504px;
+  --layout-available: calc(100% - var(--layout-gutter) - var(--layout-gutter));
+  --content: min(var(--layout-section-max), var(--layout-available));
+  --section-content: var(--content);
+  --hero-content: min(var(--layout-hero-max), var(--layout-available));
+  --nav-content: min(var(--layout-nav-max), var(--layout-available));
+  --hero-visual-width: clamp(570px, 33.85vw, 650px);
+  --hero-column-gap: clamp(72px, 5vw, 96px);
+  /* The visible process stage grows with the viewport while each story step
+   * gets enough scroll travel to remain readable before the next transition. */
+  --process-stage-min-height: clamp(460px, calc(100svh - 300px), 680px);
+  --story-scroll-runway: clamp(640px, 72svh, 840px);
+  --scroll-story-height: min(calc(100svh + var(--story-scroll-runway)), 2280px);
+  --focus: 0 0 0 2px var(--canvas), 0 0 0 4px var(--signal-blue);
+}

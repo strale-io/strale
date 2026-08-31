@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M1 project document front matter",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "doc_type",
+    "authority_scope",
+    "status",
+    "complete",
+    "phase",
+    "m1_template"
+  ],
+  "properties": {
+    "doc_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_scope": {
+      "const": "none"
+    },
+    "status": {
+      "const": "skeleton"
+    },
+    "complete": {
+      "const": false
+    },
+    "phase": {
+      "const": "M1"
+    },
+    "m1_template": {
+      "const": true
+    }
+  }
+}

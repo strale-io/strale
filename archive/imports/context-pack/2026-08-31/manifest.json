@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-31",
+  "purpose": "Preserve user-supplied migration inputs as evidence; contents are not canonical until reconciled.",
+  "entries": [
+    {
+      "source_path": "C:/Users/pette/Downloads/strale-repo-context-pack.zip",
+      "archived_path": "archive/imports/context-pack/2026-08-31/strale-repo-context-pack.zip",
+      "bytes": 24962,
+      "sha256": "2a029bf7b6ae2a31bb62779b1806af2add02ba784bf63b08902cd2d973d37d19"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/00-START-HERE.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/00-START-HERE.md",
+      "bytes": 2642,
+      "sha256": "c1e05cddd2bcaf4680dd214279c6b71386069f76e0dcb00ff77d2c552802ac31"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/01-PRODUCT-STRATEGY.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/01-PRODUCT-STRATEGY.md",
+      "bytes": 4964,
+      "sha256": "cdea6fc12836c5b05285848a7aff9cd4989189b325c9b9460f17b73d85226b31"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/02-CURRENT-STATE-AND-ROADMAP.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/02-CURRENT-STATE-AND-ROADMAP.md",
+      "bytes": 10368,
+      "sha256": "d20959d42d60e7f8edd7349f1f5845822f464d5f6114f979d10d55fce834db82"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/03-DECISIONS.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/03-DECISIONS.md",
+      "bytes": 6164,
+      "sha256": "38227e1f62db370a665487078f39ddc1f114c1a3d808cbb3b31890f5968b50bd"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/04-GTM-WEBSITE.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/04-GTM-WEBSITE.md",
+      "bytes": 7758,
+      "sha256": "cec1e17c0102ea57b531bfbb82ae92ffdce4d97e3c30b048aa4070f2ced8ebae"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/05-TECHNICAL-PROGRAM.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/05-TECHNICAL-PROGRAM.md",
+      "bytes": 6455,
+      "sha256": "ffba9785c2339a3395d27025cc8b8b45b91451030cf18e937f893a0de3a2e933"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/06-WORKING-METHOD-AND-REPO-REDESIGN.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/06-WORKING-METHOD-AND-REPO-REDESIGN.md",
+      "bytes": 10254,
+      "sha256": "f502985185b2026b3388d8bcc6af5659d88b670c92d5f3ce4e26f5aa8ac76e12"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/AGENTS-PROPOSED.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/AGENTS-PROPOSED.md",
+      "bytes": 717,
+      "sha256": "85de70ee24cf5a953a2b9495258c1e26a050006895106ae9959a7eb0ecd86401"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/CLAUDE-PROPOSED.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/CLAUDE-PROPOSED.md",
+      "bytes": 723,
+      "sha256": "4ffdb898cd90792a95d1a5ee61a82eaf22ac61282467bc1e2aa0bb870715a193"
+    },
+    {
+      "source_path": "zip://strale-repo-context-pack.zip/README.md",
+      "archived_path": "archive/imports/context-pack/2026-08-31/expanded/README.md",
+      "bytes": 577,
+      "sha256": "0e5157ee1a33a640e043fc1e619cb5db7cc10fd0bc9f57800aff75170d34ed71"
+    }
+  ]
+}
