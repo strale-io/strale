@@ -1,0 +1,51 @@
+---
+doc_type: review-backlog
+authority_scope: none
+status: pending
+created_at: 2026-09-01
+reason: claude-temporarily-unavailable
+---
+
+# M2 Claude verification backlog
+
+## Why this exists
+
+The founder instructed the work to continue with a separate Codex review if
+Claude was unavailable, and to preserve a backlog for cross-provider review
+when Claude returns.
+
+Three Claude review attempts were made on 2026-09-01:
+
+1. Opus, high effort, repository-walking review — invocation timed out after
+   five minutes with no output.
+2. Sonnet, high effort, repository-walking review — invocation timed out after
+   five minutes with no output.
+3. Sonnet, high effort, constrained evidence packet with tools disabled —
+   stopped after the founder instructed the session to continue without Claude.
+
+No Claude verdict or finding was returned. A separate Codex session therefore
+provides an interim review. That same-provider review must not be represented as
+satisfying the normal cross-provider independence gate.
+
+## Pending cross-provider checks
+
+| Priority | Artifact/topic | Required Claude check | Closure evidence |
+|---|---|---|---|
+| P0 | `2026-09-01-m2-product-state-reconciliation.md` | Verify claim dispositions against repo, frontend, production evidence, and formal decisions | Stored Claude verdict with all high/medium findings resolved or explicitly adjudicated |
+| P0 | `2026-09-01-m2-product-state-claim-matrix.json` | Check status classification and canonical destinations claim by claim | Stored Claude attestation naming the reviewed matrix hash/ref |
+| P0 | First canonical `PRODUCT.md`, `STATE.md`, and `ROADMAP.md` population | Review exact authority-bearing wording, omissions, and contradiction handling before M4 activation | Cross-provider review report on the exact commit |
+| P0 | Formal product/decision migration batches | Verify that synthesized context-pack `D-*` entries were not silently converted into formal decisions and that supersession is correct | Topic-batch review reports on exact commits |
+| P1 | WP10 formal acceptance review | Independently assess whether the dated observation evidence is sufficient and whether an acceptance record is accurate | Claude review of the acceptance record and production-evidence summary |
+| P1 | WP13 status reconciliation | Reconcile delivered dependency/publishing work with the still-open formal package and VERIFY-DEP status | Claude disposition identifying the correct package status and remaining scope |
+| P1 | Website/design canonical wording | Recheck after the redesign working tree is committed/reconciled, especially Quiet Material v0.7 and section implementation status | Review against a stable frontend commit rather than an uncommitted worktree |
+| P1 | #438 operator-action lifecycle and script guard | Review the ineffective unrelated-row digest proof, then confirm prepared/executed/reconciled state after any production write; do not infer from script or issue state | Claude review of corrected script plus production reconciliation evidence |
+| P2 | M4 entrypoint/cutover batch | Adversarially verify that Notion consumers are replaced, peer entrypoints are safe, and no mutable facts remain duplicated | Exact-head cross-provider cutover review |
+
+## Operating rule until cleared
+
+- These items do not erase or invalidate the evidence audit.
+- Any unreviewed canonical batch remains explicitly subject to this backlog.
+- Live facts must be re-queried when used; the backlog does not freeze their
+  2026-09-01 values.
+- When Claude returns, review the then-current exact commit rather than merely
+  approving this dated report in isolation.

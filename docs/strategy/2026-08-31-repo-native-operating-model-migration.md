@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** M0 COMPLETE — M1 merged; M2 reconciliation unblocked and starting
+**Status:** M0 COMPLETE — M1 merged; M2 evidence reconciliation complete, canonical population next
 **Date:** 2026-08-31
 **Owner:** Codex
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -53,6 +53,29 @@ rule.
   retirement action.
 - `DEC-20260901-A` supersedes `DEC-20260831-A` and records the founder's
   clarification that no additional founder-provided audit artifact is missing.
+
+## M2 evidence reconciliation update — 2026-09-01
+
+- The context pack was reconciled claim by claim against the current backend,
+  formal project records, frontend main/redesign state, completed-window
+  commercial evidence, and read-only production facts.
+- The evidence report and 37-claim matrix live in
+  `archive/sessions/2026-09-01-m2-product-state-reconciliation.md` and
+  `archive/sessions/2026-09-01-m2-product-state-claim-matrix.json`.
+- Exact sanitized production evidence was stored for WP10 cadence and the two
+  still-unapplied #438 routing-latency rows.
+- The audit corrected three state collapses before promotion: frontend source
+  presence is not build/merge/deployment; Quiet Material v0.5 is durably
+  preserved while v0.7 is an uncommitted candidate; WP17 executed-change
+  attribution is separate from the operator-action lifecycle.
+- Claude Opus and Sonnet review invocations returned no verdict. Per founder
+  instruction, a separate high-effort Codex session reviewed the evidence,
+  initially failed it, and returned final PASS after the findings were fixed.
+  The same-provider limitation and ranked cross-provider follow-ups are stored
+  in `archive/sessions/2026-09-01-m2-claude-verification-backlog.md`.
+- Next: populate the inert canonical PRODUCT/STATE/ROADMAP candidates from the
+  accepted/qualified claims. This evidence update does not activate them and
+  does not authorize M4 cutover or Notion retirement.
 
 ## Execution dependency amendment — 2026-08-31
 
