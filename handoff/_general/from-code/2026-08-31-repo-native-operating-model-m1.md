@@ -20,12 +20,14 @@ authority boundary.
   foundation.
 - Independent Claude review of the clean extraction returned `PASS`, with zero
   high, medium, or low findings and `SAFE_TO_OPEN_AND_MERGE_PR: YES`.
+- PR #447 passed all GitHub checks and was squash-merged to `main` at
+  `072b54a38ad8c6c68a82628c5031721f219f481e`.
 
 ## Open
 
-- M2 and every authority-changing or cutover action remain blocked until this
-  bounded M1 branch lands, receives its final Claude milestone verdict, and the
-  separate product/decision audit is available.
+- M2 truth reconciliation is now the next milestone. Every authority-changing
+  or cutover action remains blocked until the separate product/decision audit
+  is available, M2 is reconciled, and Claude gives a fresh milestone verdict.
 - The Railway environment-variable documentation mismatch is a real but
   unrelated docs fix; handle it in a separate follow-up rather than widening
   M1.
