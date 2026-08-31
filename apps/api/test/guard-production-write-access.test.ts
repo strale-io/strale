@@ -158,7 +158,7 @@ describe("the production write credential has one door", () => {
  * CI. The fix that must NOT be made is editing the records; see the predicate's
  * comment in the guard.
  */
-describe("session records may name the credential; scripts beside them may not", () => {
+describe("prose exceptions stay narrow", () => {
   const needle = ["DATABASE", "URL", "WRITE"].join("_");
   let dir: string;
   let result: { code: number; out: string };
@@ -187,6 +187,16 @@ describe("session records may name the credential; scripts beside them may not",
     write("handoff/_general/from-code/helper.ts", `const u = process.env.${needle};\n`);
     // Markdown outside handoff/ — still requires an explicit allowlist entry.
     write("docs/notes/stray.md", `We should use ${needle} here.\n`);
+    // One immutable imported record has an exact-path exception. A sibling in
+    // the same evidence directory must not inherit it.
+    write(
+      "archive/imports/context-pack/2026-08-31/expanded/02-CURRENT-STATE-AND-ROADMAP.md",
+      `Operator writes require an ephemeral \`${needle}\`.\n`,
+    );
+    write(
+      "archive/imports/context-pack/2026-08-31/expanded/NOT-ALLOWLISTED.md",
+      `A copied note names \`${needle}\`.\n`,
+    );
 
     git("add", "-A");
     git("commit", "-qm", "fixture");
@@ -221,8 +231,13 @@ describe("session records may name the credential; scripts beside them may not",
     expect(result.out).toContain("docs/notes/stray.md");
   });
 
-  it("refuses overall, on the two real offenders only", () => {
+  it("allows only the exact imported evidence path", () => {
+    expect(result.out).not.toContain("02-CURRENT-STATE-AND-ROADMAP.md");
+    expect(result.out).toContain("NOT-ALLOWLISTED.md");
+  });
+
+  it("refuses overall, on the three real offenders only", () => {
     expect(result.code).toBe(1);
-    expect(result.out).toContain("offenders          : 2");
+    expect(result.out).toContain("offenders          : 3");
   });
 });

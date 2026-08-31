@@ -60,6 +60,12 @@ const AUTHORISED_MENTIONS = [
   "docs/security/2026-08-22-starve-set-1-provenance.md",
   "docs/security/2026-08-22-operator-script-migration.md",
   "docs/security/2026-08-22-founder-grant-runbook.md",
+  // Immutable source-evidence imports preserve these credential-boundary
+  // statements verbatim. Keep the exception file-specific: archive/imports
+  // is evidence, but it is not a blanket prose exemption.
+  "archive/imports/context-pack/2026-08-31/expanded/02-CURRENT-STATE-AND-ROADMAP.md",
+  "archive/imports/context-pack/2026-08-31/expanded/03-DECISIONS.md",
+  "archive/imports/context-pack/2026-08-31/expanded/05-TECHNICAL-PROGRAM.md",
   // The decision queue names it when recording that a settled production
   // change has no route to production (DQ-27, 2026-08-30). One long-lived
   // governance file, appended to over time — which is exactly what this
