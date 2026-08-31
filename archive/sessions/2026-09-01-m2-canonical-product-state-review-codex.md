@@ -75,3 +75,20 @@ cross-check every STATE ref/status/timestamp against the dated evidence manifest
 add a discriminating fabricated-ref test, and guard the entire `docs/project`
 path before cutover. Final exact-head re-review is required on the correction
 commit before the PR opens.
+
+## Exact-head re-review — PASS
+
+The separate Codex task re-reviewed immutable correction commit `48144067` and
+reported no remaining findings. It independently confirmed:
+
+- all three first-pass findings are resolved;
+- 12/12 focused tests pass and context validation has zero findings;
+- the 15-entry inventory exactly matches an independent reconstruction;
+- all three candidates remain inactive and generator-excluded;
+- root entrypoints remain unactivated;
+- all 22 local evidence links resolve;
+- no mutable platform values were copied into authored project truth; and
+- the evidence snapshot is internally consistent and whitespace is clean.
+
+This clears the same-provider pre-PR fallback gate. It does not clear the Claude
+cross-provider backlog or authorize M4.

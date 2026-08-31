@@ -17,8 +17,11 @@ ROADMAP candidates from the merged 37-claim M2 evidence reconciliation.
 
 Separate Codex product and technical reviewers examined the working diff. All
 high/medium/low findings were resolved; the technical closing verdict was
-`PASS — SHIP`. This is same-provider interim evidence. The exact commit and M4
-cutover remain queued for Claude cross-provider review.
+`PASS — SHIP`. A separate Codex desktop task then failed the first exact commit,
+the three findings were corrected, and exact correction commit `48144067`
+received `PASS` with no remaining findings. This is same-provider interim
+evidence. The candidate batch and M4 cutover remain queued for Claude
+cross-provider review.
 
 ## Verification
 
@@ -31,10 +34,8 @@ cutover remain queued for Claude cross-provider review.
 
 ## Next
 
-Commit the exact-head corrections and dispatch a fresh separate Codex re-review.
-After that, open/merge the PR if the verdict and CI are green. Continue M2 with
-operator-action and pending-decision candidates; do not activate M4 or retire
-Notion.
+Open and merge the PR if CI is green. Continue M2 with operator-action and
+pending-decision candidates; do not activate M4 or retire Notion.
 
 Legacy Journal record:
 https://app.notion.com/p/3cd67c87082c815f8911c34ea12a948d?pvs=204

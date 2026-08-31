@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** M0 COMPLETE — M1 merged; M2 product/state candidates populated, exact-head review next
+**Status:** M0 COMPLETE — M1 merged; M2 product/state candidates exact-head reviewed, merge-ready
 **Date:** 2026-08-31
 **Owner:** Codex
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -940,11 +940,14 @@ agreed implementation sequence.
   required after commit, and Claude cross-provider review remains required before
   M4. Evidence:
   `archive/sessions/2026-09-01-m2-canonical-product-state-review-codex.md`.
-- **M2 PRODUCT/STATE/ROADMAP exact head — correction in progress.** A separate
+- **M2 PRODUCT/STATE/ROADMAP exact head — PASS.** A separate
   Codex task failed immutable commit `b3ba42c9` on WP16 sequencing language,
   evidence-shape-only STATE validation, and incomplete broad-path activation
-  guarding. All three findings were corrected; a new immutable re-review is the
-  remaining pre-PR gate.
+  guarding. All three findings were corrected. The same task re-reviewed exact
+  correction commit `48144067` and returned `PASS` with no remaining findings:
+  12/12 tests, zero context findings, exact inventory reconstruction, 22/22
+  local evidence links, and clean whitespace. This is same-provider interim
+  evidence; Claude remains required before M4.
 
 ## 14. Completion definition
 
