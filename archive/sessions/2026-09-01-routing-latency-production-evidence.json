@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "evidence_id": "ROUTING-LATENCY-PROD-PREFLIGHT-2026-09-01",
+  "source": "production PostgreSQL through the configured read-only DATABASE_URL",
+  "queried_at": "2026-08-31T23:08:20.394Z",
+  "contains_secrets_or_customer_data": false,
+  "query": "select slug, avg_latency_ms, updated_at from capabilities where slug in ('page-speed-test','company-news') order by slug",
+  "rows": [
+    {
+      "slug": "company-news",
+      "avg_latency_ms": null,
+      "updated_at": "2026-08-30T23:52:55.761Z"
+    },
+    {
+      "slug": "page-speed-test",
+      "avg_latency_ms": 8000,
+      "updated_at": "2026-08-31T21:06:28.888Z"
+    }
+  ],
+  "interpretation": "The prepared target values 28734 and 20000 were not applied at query time.",
+  "limitations": [
+    "This is a read-only point-in-time preflight, not execution or reconciliation evidence.",
+    "The query does not authorize a production write.",
+    "After any write, a new independent read-only reconciliation artifact is required."
+  ]
+}

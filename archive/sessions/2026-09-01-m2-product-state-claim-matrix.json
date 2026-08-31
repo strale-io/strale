@@ -1,0 +1,486 @@
+{
+  "schema_version": 1,
+  "audit_id": "M2-PRODUCT-STATE-2026-09-01",
+  "audited_at": "2026-09-01",
+  "backend_ref": "c36b8799bd363e034f8f82b4095e875cc5b404ec",
+  "frontend_main_ref": "4be8d251b05e0abf6e23a195913c188ae318056e",
+  "frontend_redesign_ref": "998964716c8601be67d4e71a508a803160434517",
+  "context_pack_evidence_ref": "b29510949500ade9c00c4a61912baeb9dc98389a",
+  "status_definitions": {
+    "accept": "Supported strongly enough to migrate into the stated canonical destination.",
+    "accept_with_qualification": "Supported only with the qualification recorded here.",
+    "stale": "Was once useful or directionally right, but newer evidence must replace its state wording.",
+    "conflict": "Contradicted by a stronger authority and must not be promoted as written.",
+    "unverified": "Evidence is insufficient for canonical promotion.",
+    "proposal_only": "A future design choice, not current project truth."
+  },
+  "claims": [
+    {
+      "id": "PS-001",
+      "domain": "product",
+      "claim": "Strale is a machine-native data and capability layer for AI agents, offering a broad external-tool surface through one integration.",
+      "status": "accept_with_qualification",
+      "qualification": "Use the repo mission as the durable product identity; 'one connection' is a compatible product/website expression, not proof that every discovery and payment promise is complete today.",
+      "destination": "docs/project/PRODUCT.md",
+      "evidence": [
+        "docs/company/GOALS.md#Mission",
+        "context-pack:01-PRODUCT-STRATEGY.md",
+        "live:/v1/platform/facts@2026-08-31T22:39:16.372Z"
+      ]
+    },
+    {
+      "id": "PS-002",
+      "domain": "product",
+      "claim": "The working acquisition wedge is builders or operators of recurring agent workflows that need multiple external commercial, research, enrichment, or utility capabilities.",
+      "status": "accept_with_qualification",
+      "qualification": "This is an evidence-sensitive ICP hypothesis, not PMF and not a mandate to become a single vertical product.",
+      "destination": "docs/project/PRODUCT.md",
+      "evidence": [
+        "CLAUDE.md#DEC-20260812-A",
+        "docs/strategy/2026-08-05-direction-plan.md",
+        "docs/company/GOALS.md",
+        "context-pack:01-PRODUCT-STRATEGY.md",
+        "context-pack:04-GTM-WEBSITE.md"
+      ]
+    },
+    {
+      "id": "PS-003",
+      "domain": "product",
+      "claim": "Strale remains vertical-agnostic and should follow demonstrated demand rather than defaulting to further KYB expansion.",
+      "status": "accept_with_qualification",
+      "qualification": "The evidence changes priority, not the existence of the compliance wedge. Retiring that wedge would require an explicit later decision.",
+      "destination": "docs/project/PRODUCT.md",
+      "evidence": [
+        "docs/company/GOALS.md#What-we-currently-know",
+        "docs/company/briefs/2026-08-31.md",
+        "context-pack:01-PRODUCT-STRATEGY.md"
+      ]
+    },
+    {
+      "id": "PS-004",
+      "domain": "product",
+      "claim": "x402 is strategically central to machine-paid access; prepaid/API access remains a supported secondary path.",
+      "status": "accept",
+      "qualification": null,
+      "destination": "docs/project/PRODUCT.md",
+      "evidence": [
+        "CLAUDE.md#DEC-20260812-A",
+        "docs/strategy/2026-08-12-platform-readiness-program.md",
+        "docs/company/GOALS.md",
+        "apps/api/src/routes/x402-gateway-v2.ts",
+        "live:/x402/catalog"
+      ]
+    },
+    {
+      "id": "PS-005",
+      "domain": "commercial",
+      "claim": "The medium-term gross-revenue target is $2,000 per week.",
+      "status": "accept",
+      "qualification": "Operational milestone accounting remains denominated in EUR, with M4 recorded as EUR 1,850 per week.",
+      "destination": "docs/project/PRODUCT.md and docs/product/GTM-REVENUE.md",
+      "evidence": [
+        "docs/company/GOALS.md#The-goal-that-ranks-everything"
+      ]
+    },
+    {
+      "id": "PS-006",
+      "domain": "architecture",
+      "claim": "One authority per business fact, with many thin consumers, is the governing product-operations and architecture principle.",
+      "status": "accept",
+      "qualification": null,
+      "destination": "docs/project/PRODUCT.md and docs/project/PROTOCOL-ROUTER.md",
+      "evidence": [
+        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "context-pack:05-TECHNICAL-PROGRAM.md",
+        "apps/api/src/lib/execution-routing.ts",
+        "apps/api/src/lib/capability-refusal.ts",
+        "apps/api/src/lib/platform-facts.ts"
+      ]
+    },
+    {
+      "id": "PS-007",
+      "domain": "trust",
+      "claim": "Execution receipts use strale.execution.v1 and are internal/chained; Strale must not claim a customer-facing signed verification product.",
+      "status": "accept",
+      "qualification": null,
+      "destination": "docs/project/STATE.md and docs/product/TECHNICAL-PROGRAM.md",
+      "evidence": [
+        "docs/design/execution-receipt/README.md",
+        "context-pack:05-TECHNICAL-PROGRAM.md"
+      ]
+    },
+    {
+      "id": "PS-008",
+      "domain": "product",
+      "claim": "The capability library itself is the product and x402 is the primary machine-payment rail.",
+      "status": "accept_with_qualification",
+      "qualification": "This is the adopted DEC-20260812-A strategy. Prepaid/API access remains supported, and the canonical product summary must not restate mutable catalogue counts.",
+      "destination": "docs/project/PRODUCT.md",
+      "evidence": [
+        "CLAUDE.md#DEC-20260812-A",
+        "docs/strategy/2026-08-05-direction-plan.md",
+        "docs/strategy/2026-08-12-platform-readiness-program.md"
+      ]
+    },
+    {
+      "id": "PS-009",
+      "domain": "product",
+      "claim": "Strale's standing product principle is to charge for successful work, not refusals or failed work.",
+      "status": "accept_with_qualification",
+      "qualification": "Product wording may state the principle; exact billing guarantees remain governed by money-path code, tests, and formal Decisions.",
+      "destination": "docs/project/PRODUCT.md and docs/product/TECHNICAL-PROGRAM.md",
+      "evidence": [
+        "context-pack:01-PRODUCT-STRATEGY.md#Product-principles",
+        "CLAUDE.md#Active-Decisions",
+        "apps/api/src/routes/do.ts"
+      ]
+    },
+    {
+      "id": "CS-001",
+      "domain": "commercial",
+      "claim": "Revenue and buyer concentration improved in the latest completed week, but Strale remains far below its goal and highly concentrated.",
+      "status": "accept_with_qualification",
+      "qualification": "Use the completed 2026-08-24 ISO week: EUR 73.03, 1,295 calls, 13 payer identities but four material buyers, 76.0% largest-buyer share, and three returning non-top buyers. Never substitute the partial current week.",
+      "destination": "docs/project/STATE.md and docs/product/GTM-REVENUE.md",
+      "evidence": [
+        "docs/company/GOALS.md@measured-2026-08-31",
+        "docs/company/briefs/2026-08-31.md",
+        "d1e00703"
+      ]
+    },
+    {
+      "id": "CS-002",
+      "domain": "commercial",
+      "claim": "The business is no longer literally one customer, but payer-identity counts overstate the number of material buyers.",
+      "status": "accept_with_qualification",
+      "qualification": "Say four material buyers in the latest completed week, not thirteen customers; nine identities spent less than one euro combined.",
+      "destination": "docs/product/GTM-REVENUE.md",
+      "evidence": [
+        "docs/company/GOALS.md@measured-2026-08-31"
+      ]
+    },
+    {
+      "id": "CS-003",
+      "domain": "commercial",
+      "claim": "Do not contact the specific card buyer inferred from transaction evidence.",
+      "status": "accept",
+      "qualification": "This also follows the charter's customer-data boundary; it must not be reopened as a technical question.",
+      "destination": "formal decision migration and docs/product/GTM-REVENUE.md",
+      "evidence": [
+        "docs/company/GOALS.md@2026-08-28-card-customer-outreach",
+        "docs/company/CHARTER.md"
+      ]
+    },
+    {
+      "id": "CS-004",
+      "domain": "commercial",
+      "claim": "Strale is a live production system with externally paid usage.",
+      "status": "accept_with_qualification",
+      "qualification": "The completed commercial window proves paid production use, not product-market fit or broad customer adoption.",
+      "destination": "docs/project/STATE.md",
+      "evidence": [
+        "docs/company/GOALS.md@measured-2026-08-31",
+        "docs/company/briefs/2026-08-31.md",
+        "live:/health@2026-09-01"
+      ]
+    },
+    {
+      "id": "CS-005",
+      "domain": "commercial",
+      "claim": "Near-term distribution should emphasize task-oriented machine discovery, accurate x402 catalogue metadata, high-quality contracts, targeted marketplace corrections, and repeat-buyer measurement rather than broad directory submission.",
+      "status": "accept_with_qualification",
+      "qualification": "This is a current operating program inferred from measured demand and existing strategy, not a permanent ban on other distribution channels.",
+      "destination": "docs/product/GTM-REVENUE.md and docs/project/ROADMAP.md",
+      "evidence": [
+        "docs/company/GOALS.md",
+        "context-pack:04-GTM-WEBSITE.md#Distribution-diagnosis"
+      ]
+    },
+    {
+      "id": "WS-001",
+      "domain": "website",
+      "claim": "Homepage v2 source is checkpointed on a separate frontend redesign branch.",
+      "status": "accept_with_qualification",
+      "qualification": "Exact evidenced state: source-present, committed, and pushed at 9989647; explicitly unreviewed, unmerged, not build-verified by this audit, undeployed, and non-live. The working tree contains newer uncommitted work.",
+      "destination": "docs/project/STATE.md and docs/product/WEBSITE-BRAND.md",
+      "evidence": [
+        "strale-frontend@4be8d251b05e0abf6e23a195913c188ae318056e",
+        "strale-frontend:codex/homepage-redesign-batch-a@998964716c8601be67d4e71a508a803160434517",
+        "frontend:docs/website-redesign/PRESERVATION-CHECKPOINT-2026-08-31.md"
+      ]
+    },
+    {
+      "id": "WS-002",
+      "domain": "website",
+      "claim": "Only Header, Hero, and How Strale Works are implemented in Homepage v2.",
+      "status": "stale",
+      "qualification": "The preserved 9989647 source already renders Use Cases in addition to Header, Hero, and How Strale Works. Featured Tools, Developers/x402, Reliability, Pricing/Access, closing CTA, and footer are not present in that committed HomepageV2.tsx.",
+      "destination": "docs/project/STATE.md",
+      "evidence": [
+        "strale-frontend@998964716c8601be67d4e71a508a803160434517:src/pages/HomepageV2.tsx",
+        "strale-frontend@998964716c8601be67d4e71a508a803160434517:src/components/marketing/HomepageUseCases.tsx"
+      ]
+    },
+    {
+      "id": "WS-003",
+      "domain": "website",
+      "claim": "Quiet Material is the selected marketing-website design direction.",
+      "status": "accept_with_qualification",
+      "qualification": "The durable preservation commit identifies Quiet Material v0.5. The local v0.7 files are an uncommitted candidate, not authority. The backend repo's docs/company/DESIGN-SYSTEM.md is a different internal operational-report system.",
+      "destination": "docs/product/WEBSITE-BRAND.md",
+      "evidence": [
+        "strale-frontend@998964716c8601be67d4e71a508a803160434517:docs/website-redesign/CURRENT-DESIGN-SYSTEM.md",
+        "docs/company/DESIGN-SYSTEM.md"
+      ]
+    },
+    {
+      "id": "WS-004",
+      "domain": "website",
+      "claim": "The definitive public brand domain should be encoded as strale.io now.",
+      "status": "unverified",
+      "qualification": "Both strale.dev and strale.io are recorded as owned; irreversible infrastructure or public-brand migration remains founder-reserved and needs an explicit later decision.",
+      "destination": "docs/decisions/PENDING.md only if still unresolved at cutover",
+      "evidence": [
+        "context-pack:03-DECISIONS.md#D-027",
+        "context-pack:04-GTM-WEBSITE.md#Domain"
+      ]
+    },
+    {
+      "id": "WS-005",
+      "domain": "website",
+      "claim": "Quiet Material foundation v0.7 is the durable current website-design authority.",
+      "status": "unverified",
+      "qualification": "v0.7 exists only in modified/untracked working-tree material with no stable ref, hash manifest, review, merge, build, or deployment evidence. Preserve and review it before versioned canonical citation.",
+      "destination": "frontend preservation/review work before docs/product/WEBSITE-BRAND.md",
+      "evidence": [
+        "frontend-working-tree:docs/website-redesign/CURRENT-DESIGN-SYSTEM.md",
+        "frontend-working-tree:docs/website-redesign/DIRECTION-INDEX.md",
+        "strale-frontend@998964716c8601be67d4e71a508a803160434517:docs/website-redesign/CURRENT-DESIGN-SYSTEM.md"
+      ]
+    },
+    {
+      "id": "TS-001",
+      "domain": "production",
+      "claim": "The guarded #438 routing-latency corrections are merged but not applied in production.",
+      "status": "accept",
+      "qualification": "Read-only verification on 2026-09-01 found company-news.avg_latency_ms=NULL and page-speed-test.avg_latency_ms=8000. Desired values remain 28734 and 20000. The script's global unrelated-row digest check is ineffective because it computes the expectation from the post-write table; keep the action prepared until the guard and an independent post-write reconciliation are reviewed.",
+      "destination": "docs/project/STATE.md and docs/project/operator-actions.yaml",
+      "evidence": [
+        "apps/api/scripts/reconcile-438-routing-latency.ts",
+        "archive/sessions/2026-09-01-routing-latency-production-evidence.json",
+        "docs/company/DECISION-QUEUE.md#DQ-27"
+      ]
+    },
+    {
+      "id": "TS-002",
+      "domain": "remediation",
+      "claim": "WP10 formally remains under observation even though its dated 2026-08-30 cadence gate now has fresh evidence.",
+      "status": "accept_with_qualification",
+      "qualification": "Stored production evidence shows one daily heartbeat for each daily job from 2026-08-24 through 2026-08-31 and weekly-sweep scheduled from 2026-08-30 to 2026-09-06. It does not establish all historical overlap or recovery/watchdog conditions. Only the unevaluated dated gate wording is stale; formal status remains under observation pending a separate acceptance review.",
+      "destination": "docs/project/STATE.md and a separate WP10 acceptance record",
+      "evidence": [
+        "docs/remediation/packages/WP10-RECONCILIATION.md",
+        "archive/sessions/2026-09-01-wp10-production-evidence.json"
+      ]
+    },
+    {
+      "id": "TS-003",
+      "domain": "remediation",
+      "claim": "WP12 is blocked on VERIFY-IP and Railway trusted-hop semantics must not be guessed.",
+      "status": "accept",
+      "qualification": null,
+      "destination": "docs/project/STATE.md and docs/project/ROADMAP.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP12",
+        "docs/remediation/CURRENT-STATE.md"
+      ]
+    },
+    {
+      "id": "TS-004",
+      "domain": "remediation",
+      "claim": "WP14 remains founder/legal blocked.",
+      "status": "accept",
+      "qualification": "Some privacy/sanitisation work has shipped, but legal text, vendor/DPA, assent, publication approval, and VERIFY-LEGAL remain outside autonomous technical authority.",
+      "destination": "docs/project/STATE.md and docs/decisions/PENDING.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP14",
+        "docs/company/CHARTER.md"
+      ]
+    },
+    {
+      "id": "TS-005",
+      "domain": "remediation",
+      "claim": "WP9 has a non-blocking historical transaction-linkage residual and remains under an evidence-condition observation period.",
+      "status": "accept",
+      "qualification": "Do not rewrite historical facts to manufacture non-null linkage.",
+      "destination": "docs/project/STATE.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP9",
+        "docs/remediation/packages/WP9.yaml"
+      ]
+    },
+    {
+      "id": "TS-006",
+      "domain": "remediation",
+      "claim": "WP15 has a bounded CI residual: the integration lane should create and drop a uniquely named database.",
+      "status": "accept",
+      "qualification": null,
+      "destination": "docs/project/ROADMAP.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP15"
+      ]
+    },
+    {
+      "id": "TS-007",
+      "domain": "remediation",
+      "claim": "WP17 should remain narrow: attribute who changed executed capability state, when, and under what authority.",
+      "status": "accept",
+      "qualification": "WP17 does not own actions that are merely prepared and have produced no database change.",
+      "destination": "docs/project/ROADMAP.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP17",
+        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md"
+      ]
+    },
+    {
+      "id": "TS-008",
+      "domain": "remediation",
+      "claim": "The entire supply-chain package WP13 is closed and accepted.",
+      "status": "conflict",
+      "qualification": "Reachable js-yaml and sharp/libvips paths were fixed and trusted publishing shipped, but PACKAGE-GRAPH still records WP13 NOT_STARTED with VERIFY-DEP PARTIAL and remaining dependency/CI scope. Canonical state must describe the delivered sub-work without declaring the whole package accepted.",
+      "destination": "docs/project/STATE.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP13",
+        "5da32514",
+        "3909dc1e",
+        "a9e8d1f4"
+      ]
+    },
+    {
+      "id": "TS-009",
+      "domain": "remediation",
+      "claim": "The bounded resource-safety workstream is complete enough to exit open-ended sweeping.",
+      "status": "accept_with_qualification",
+      "qualification": "Maintain existing guards and fix concrete regressions; do not overclaim that arbitrary decoder behavior or global concurrent memory is bounded.",
+      "destination": "docs/product/TECHNICAL-PROGRAM.md",
+      "evidence": [
+        "ae49ca08",
+        "111bf54d",
+        "ed605206",
+        "context-pack:05-TECHNICAL-PROGRAM.md"
+      ]
+    },
+    {
+      "id": "TS-010",
+      "domain": "roadmap",
+      "claim": "WP16 Discovery & Retrieval Authority is the next major forward-looking product/technical program.",
+      "status": "accept_with_qualification",
+      "qualification": "It follows bounded operating-model/governance and outstanding reconciliation work. Start with discovery containment and a frozen approximately 200-query benchmark before ranking changes.",
+      "destination": "docs/project/ROADMAP.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP16",
+        "CLAUDE.md#DEC-20260812-A",
+        "context-pack:01-PRODUCT-STRATEGY.md"
+      ]
+    },
+    {
+      "id": "TS-011",
+      "domain": "production-authority",
+      "claim": "Autonomous/local production access remains read-only; operator writes require the restricted write role and an ephemeral per-command credential, with no standing write secret in repo or .env.",
+      "status": "accept",
+      "qualification": "A prepared script does not create authority to execute it, and the absent founder signing key remains absent unless explicitly activated.",
+      "destination": "docs/product/TECHNICAL-PROGRAM.md and docs/project/PROTOCOL-ROUTER.md",
+      "evidence": [
+        "CLAUDE.md#Production-authorization",
+        "docs/company/CHARTER.md",
+        "apps/api/src/lib/production-authority.ts",
+        "apps/api/src/lib/operator-db.ts"
+      ]
+    },
+    {
+      "id": "TS-012",
+      "domain": "distribution",
+      "claim": "npm trusted publishing is established and external package changes require a post-publish production-contract smoke on the actual published artifact.",
+      "status": "accept_with_qualification",
+      "qualification": "This delivered package-integrity work does not by itself close the whole WP13 supply-chain package.",
+      "destination": "docs/product/TECHNICAL-PROGRAM.md and docs/project/PROTOCOL-ROUTER.md",
+      "evidence": [
+        "a9e8d1f4",
+        "CLAUDE.md#Distribution-PR-Integrity-Protocol",
+        "docs/remediation/PACKAGE-GRAPH.yaml#WP13"
+      ]
+    },
+    {
+      "id": "TS-013",
+      "domain": "remediation",
+      "claim": "Canonical state may summarize accepted remediation work only when each summarized item resolves to its package or acceptance authority.",
+      "status": "accept",
+      "qualification": "The context pack's broad accepted-program sentence is navigation evidence, not an independent acceptance authority.",
+      "destination": "docs/project/STATE.md",
+      "evidence": [
+        "docs/remediation/PACKAGE-GRAPH.yaml",
+        "docs/remediation/packages/",
+        "docs/remediation/REMEDIATION-LEDGER.md"
+      ]
+    },
+    {
+      "id": "OS-001",
+      "domain": "operating-model",
+      "claim": "The repository will become the project system of record and Notion will be retired as an active authority after consumers are replaced.",
+      "status": "accept",
+      "qualification": "M4 cutover has not happened. Existing Notion workflows remain active until replacement, verification, and cutover.",
+      "destination": "docs/project/STATE.md",
+      "evidence": [
+        "docs/decisions/records/DEC-20260901-A.md",
+        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md"
+      ]
+    },
+    {
+      "id": "OS-002",
+      "domain": "operating-model",
+      "claim": "The context pack's proposed thin AGENTS.md and CLAUDE.md should be installed verbatim.",
+      "status": "conflict",
+      "qualification": "The reviewed migration plan rejected verbatim adoption because the proposed files omit safety and protocol routing. Peer entrypoints remain the destination, but only after M2/M3 content and guards exist.",
+      "destination": "M4 cutover implementation",
+      "evidence": [
+        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md#Entrypoint-design"
+      ]
+    },
+    {
+      "id": "OS-003",
+      "domain": "operating-model",
+      "claim": "Operator actions have a prepared, executed, reconciled, or cancelled lifecycle distinct from the executed-change attribution owned by WP17.",
+      "status": "accept",
+      "qualification": "Anything listed as blocking acceptance cannot be represented as accepted while merely prepared or executed-but-unreconciled.",
+      "destination": "docs/project/operator-actions.yaml and docs/project/STATE.md",
+      "evidence": [
+        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md#operator-actionsyaml"
+      ]
+    },
+    {
+      "id": "PF-001",
+      "domain": "production",
+      "claim": "Static capability and solution counts from the context pack are current product facts.",
+      "status": "stale",
+      "qualification": "Counts are runtime snapshots and must be generated from /v1/platform/facts. At 2026-08-31T22:39:16.372Z production reported 297 active-visible capabilities, 304 active-total, 320 catalogued, and 107 active solutions.",
+      "destination": "generated state view only",
+      "evidence": [
+        "live:/v1/platform/facts@2026-08-31T22:39:16.372Z",
+        "apps/api/src/lib/platform-facts.ts"
+      ]
+    },
+    {
+      "id": "OS-004",
+      "domain": "operating-model",
+      "claim": "Canonical current state must record both the reviewed repository ref and the independently observed live production ref.",
+      "status": "accept",
+      "qualification": "A local branch alone cannot establish deployment. /health reported c36b8799bd36 at audit time.",
+      "destination": "docs/project/STATE.md",
+      "evidence": [
+        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md#STATEmd",
+        "live:/health@2026-09-01",
+        "origin/main@c36b8799bd363e034f8f82b4095e875cc5b404ec"
+      ]
+    }
+  ]
+}

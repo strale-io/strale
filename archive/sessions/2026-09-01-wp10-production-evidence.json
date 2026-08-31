@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "evidence_id": "WP10-PROD-OBSERVATION-2026-09-01",
+  "source": "production PostgreSQL through the configured read-only DATABASE_URL",
+  "queried_at": "2026-08-31T23:02:36.287Z",
+  "contains_secrets_or_customer_data": false,
+  "limitations": [
+    "The bounded heartbeat query establishes recorded cadence, not the absence of overlapping historical executions.",
+    "Coordinator recovery and watchdog signals are application logs, not health_monitor_events rows, so their absence is not asserted here.",
+    "weekly-sweep uses the legacy shouldRun compatibility path; null last_finished_at and last_outcome are expected for that row shape and are not treated as failure evidence.",
+    "This evidence does not change WP10's formal status or constitute its acceptance record."
+  ],
+  "queries": [
+    {
+      "id": "daily-heartbeats",
+      "window": {
+        "start_inclusive": "2026-08-24T00:00:00Z",
+        "end_exclusive": "2026-09-01T00:00:00Z"
+      },
+      "sql": "select to_char(created_at at time zone 'UTC','YYYY-MM-DD') as day_utc, event_type, count(*)::int as tick_count, min(created_at) as first_at, max(created_at) as last_at from health_monitor_events where created_at >= timestamptz '2026-08-24 00:00:00+00' and created_at < timestamptz '2026-09-01 00:00:00+00' and action_taken='tick_complete' and event_type in ('quality_floor','capability_promotion') group by 1,2 order by 1,2",
+      "rows": [
+        { "day_utc": "2026-08-24", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-24T09:30:33.995Z", "last_at": "2026-08-24T09:30:33.995Z" },
+        { "day_utc": "2026-08-24", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-24T09:27:36.439Z", "last_at": "2026-08-24T09:27:36.439Z" },
+        { "day_utc": "2026-08-25", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-25T09:30:57.155Z", "last_at": "2026-08-25T09:30:57.155Z" },
+        { "day_utc": "2026-08-25", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-25T09:28:57.260Z", "last_at": "2026-08-25T09:28:57.260Z" },
+        { "day_utc": "2026-08-26", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-26T09:31:02.715Z", "last_at": "2026-08-26T09:31:02.715Z" },
+        { "day_utc": "2026-08-26", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-26T09:30:07.657Z", "last_at": "2026-08-26T09:30:07.657Z" },
+        { "day_utc": "2026-08-27", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-27T09:32:19.057Z", "last_at": "2026-08-27T09:32:19.057Z" },
+        { "day_utc": "2026-08-27", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-27T09:32:16.474Z", "last_at": "2026-08-27T09:32:16.474Z" },
+        { "day_utc": "2026-08-28", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-28T09:33:49.211Z", "last_at": "2026-08-28T09:33:49.211Z" },
+        { "day_utc": "2026-08-28", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-28T09:33:46.750Z", "last_at": "2026-08-28T09:33:46.750Z" },
+        { "day_utc": "2026-08-29", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-29T09:35:12.286Z", "last_at": "2026-08-29T09:35:12.286Z" },
+        { "day_utc": "2026-08-29", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-29T09:35:09.306Z", "last_at": "2026-08-29T09:35:09.306Z" },
+        { "day_utc": "2026-08-30", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-30T09:36:31.668Z", "last_at": "2026-08-30T09:36:31.668Z" },
+        { "day_utc": "2026-08-30", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-30T09:36:28.971Z", "last_at": "2026-08-30T09:36:28.971Z" },
+        { "day_utc": "2026-08-31", "event_type": "capability_promotion", "tick_count": 1, "first_at": "2026-08-31T09:38:14.404Z", "last_at": "2026-08-31T09:38:14.404Z" },
+        { "day_utc": "2026-08-31", "event_type": "quality_floor", "tick_count": 1, "first_at": "2026-08-31T09:38:11.505Z", "last_at": "2026-08-31T09:38:11.505Z" }
+      ]
+    },
+    {
+      "id": "critical-job-schedule",
+      "sql": "select job_name, interval_ms, next_run_at, lease_owner, lease_expires_at, last_started_at, last_finished_at, last_outcome, consecutive_failures from job_schedule where job_name in ('quality-floor','capability-promotion','weekly-sweep') order by job_name",
+      "rows": [
+        {
+          "job_name": "capability-promotion",
+          "interval_ms": 86400000,
+          "next_run_at": "2026-09-01T09:38:14.428Z",
+          "lease_owner": null,
+          "lease_expires_at": null,
+          "last_started_at": "2026-08-31T09:38:11.551Z",
+          "last_finished_at": "2026-08-31T09:38:14.428Z",
+          "last_outcome": "ok",
+          "consecutive_failures": 0
+        },
+        {
+          "job_name": "quality-floor",
+          "interval_ms": 86400000,
+          "next_run_at": "2026-09-01T09:38:11.539Z",
+          "lease_owner": null,
+          "lease_expires_at": null,
+          "last_started_at": "2026-08-31T09:36:44.527Z",
+          "last_finished_at": "2026-08-31T09:38:11.539Z",
+          "last_outcome": "ok",
+          "consecutive_failures": 0
+        },
+        {
+          "job_name": "weekly-sweep",
+          "interval_ms": 604800000,
+          "next_run_at": "2026-09-06T09:11:21.593Z",
+          "lease_owner": null,
+          "lease_expires_at": null,
+          "last_started_at": "2026-08-30T09:11:21.593Z",
+          "last_finished_at": null,
+          "last_outcome": null,
+          "consecutive_failures": 0
+        }
+      ]
+    }
+  ]
+}
