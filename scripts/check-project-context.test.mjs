@@ -15,6 +15,7 @@ import {
   generatedFiles,
   validateInventory,
   validateCandidateDocument,
+  validateStateEvidence,
   validateSkeletonDocument,
 } from "./project-context-lib.mjs";
 import {
@@ -49,7 +50,7 @@ test("all authored M2 candidates are marked inactive and excluded from generatio
   const generated = generatedFiles(process.cwd());
   for (const [file, docType] of Object.entries(M2_CANDIDATE_DOCUMENTS)) {
     const stateVerification = docType === "project-state"
-      ? "backend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\n"
+      ? "backend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\nstate_evidence_ref: archive/sessions/state.json\n"
       : "";
     const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n${stateVerification}---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\nReconciled content.\n`;
     assert.deepEqual(validateCandidateDocument(file, content, docType), []);
@@ -82,7 +83,7 @@ test("candidate document word budgets are enforced", () => {
 
 test("state candidate requires exact repository and production verification refs", () => {
   const file = "docs/project/STATE.md";
-  const base = `---\ndoc_type: project-state\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\nbackend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n`;
+  const base = `---\ndoc_type: project-state\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\nbackend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\nstate_evidence_ref: archive/sessions/state.json\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n`;
   assert.deepEqual(validateCandidateDocument(file, base, "project-state"), []);
   for (const field of [
     "backend_reviewed_ref",
@@ -91,6 +92,7 @@ test("state candidate requires exact repository and production verification refs
     "production_status",
     "frontend_main_ref",
     "frontend_redesign_ref",
+    "state_evidence_ref",
   ]) {
     const invalid = base.replace(new RegExp(`^${field}:.*\\n`, "m"), "");
     assert.ok(
@@ -101,10 +103,41 @@ test("state candidate requires exact repository and production verification refs
   }
 });
 
+test("state candidate refs must match their dated evidence manifest", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-state-evidence-"));
+  try {
+    const evidencePath = join(root, "archive/sessions/state.json");
+    mkdirSync(dirname(evidencePath), { recursive: true });
+    const expected = {
+      backend_reviewed_ref: "596e9c7f6dbe474f89d31e035bd47dd81673cb0b",
+      production_observed_ref: "596e9c7f6dbe",
+      production_observed_at: "2026-08-31T23:31:38.346Z",
+      production_status: "ok",
+      frontend_main_ref: "4be8d251b05e0abf6e23a195913c188ae318056e",
+      frontend_redesign_ref: "998964716c8601be67d4e71a508a803160434517",
+    };
+    writeFileSync(evidencePath, JSON.stringify({ state_frontmatter: expected }), "utf8");
+    const frontmatter = Object.entries(expected).map(([key, value]) => `${key}: ${value}`).join("\n");
+    const content = `---\n${frontmatter}\nstate_evidence_ref: archive/sessions/state.json\n---\n`;
+    assert.deepEqual(validateStateEvidence(root, "docs/project/STATE.md", content), []);
+    const fabricated = content.replace(expected.backend_reviewed_ref, "a".repeat(40));
+    assert.deepEqual(validateStateEvidence(root, "docs/project/STATE.md", fabricated), [
+      {
+        code: "STATE_EVIDENCE_MISMATCH",
+        path: "docs/project/STATE.md",
+        detail: "backend_reviewed_ref",
+      },
+    ]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("pre-cutover entrypoint guard covers every authored M2 candidate", () => {
   for (const file of Object.keys(M2_CANDIDATE_DOCUMENTS)) {
     assert.equal(checkPrecutoverEntrypoint("AGENTS.md", `Read ${file}.`).length, 1);
   }
+  assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.").length, 1);
   assert.deepEqual(checkPrecutoverEntrypoint("AGENTS.md", "No inactive context links."), []);
 });
 

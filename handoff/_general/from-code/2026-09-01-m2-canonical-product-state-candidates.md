@@ -22,7 +22,7 @@ cutover remain queued for Claude cross-provider review.
 
 ## Verification
 
-- `npm run context:test` — 11/11 pass.
+- `npm run context:test` — 12/12 pass after exact-head findings were corrected.
 - `node scripts/check-project-context.mjs` — zero findings before final staging.
 - `npx tsc --noEmit --project tsconfig.json` from `apps/api` — pass.
 - Ajv 2020 strict schema compilation and all candidate validations — pass in
@@ -31,10 +31,10 @@ cutover remain queued for Claude cross-provider review.
 
 ## Next
 
-Run the final stage → regenerate inventory → restage → recheck sequence, commit,
-and dispatch a separate Codex exact-head review. After that, open/merge the PR if
-CI is green. Continue M2 with operator-action and pending-decision candidates;
-do not activate M4 or retire Notion.
+Commit the exact-head corrections and dispatch a fresh separate Codex re-review.
+After that, open/merge the PR if the verdict and CI are green. Continue M2 with
+operator-action and pending-decision candidates; do not activate M4 or retire
+Notion.
 
 Legacy Journal record:
 https://app.notion.com/p/3cd67c87082c815f8911c34ea12a948d?pvs=204

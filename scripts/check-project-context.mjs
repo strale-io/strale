@@ -11,6 +11,7 @@ import {
   repoRootFrom,
   validateInventory,
   validateCandidateDocument,
+  validateStateEvidence,
   validateSkeletonDocument,
 } from "./project-context-lib.mjs";
 
@@ -43,12 +44,7 @@ export function checkPrivateArchiveStatus(root) {
 }
 
 export function checkPrecutoverEntrypoint(entrypoint, content) {
-  const inactivePaths = [
-    "docs/project/START-HERE.md",
-    "docs/project/PROTOCOL-ROUTER.md",
-    ...Object.keys(M2_CANDIDATE_DOCUMENTS),
-  ];
-  return inactivePaths.some((path) => content.includes(path))
+  return /docs[\\/]project(?:[\\/]|\b)/.test(content)
     ? [finding("M1_ENTRYPOINT_ACTIVATED", entrypoint)]
     : [];
 }
@@ -90,6 +86,14 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
         ...item,
       })),
     );
+    if (expectedDocType === "project-state") {
+      findings.push(
+        ...validateStateEvidence(root, file, actual).map((item) => ({
+          severity: "warning",
+          ...item,
+        })),
+      );
+    }
   }
 
   for (const file of [

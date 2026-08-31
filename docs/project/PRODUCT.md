@@ -105,11 +105,12 @@ largest-buyer concentration matter at least as much at the present scale.
 
 ## Current strategic horizon
 
-After the bounded operating-model and remediation residuals, the next major
-forward-looking product/technical program is
+After the current bounded operating-model batch, the next major forward-looking
+product/technical program is
 [WP16 Discovery & Retrieval Authority](../remediation/ORCHESTRATOR.md#wp16--discovery--retrieval-authority):
-contain the current discovery surface, freeze an approximately
-200-query benchmark, and only then change retrieval or ranking.
+start containment and freeze an approximately 200-query benchmark while
+non-blocking remediation residuals continue in parallel, and only then change
+retrieval or ranking.
 
 ## Evidence basis
 

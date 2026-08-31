@@ -60,3 +60,18 @@ Safe to commit and merge only as explicitly inactive M2 candidates. No root
 entrypoint, project authority, Notion cutover, or M4 activation is authorized by
 this review. A separate exact-head Codex check will verify the committed diff;
 Claude cross-provider review remains required before activation.
+
+## Exact-head review — first pass FAIL
+
+A separate Codex desktop task reviewed immutable commit `b3ba42c9` and returned
+`FAIL` with two medium and one low issue:
+
+- PRODUCT implied that non-blocking remediation residuals delay WP16;
+- STATE verification accepted fabricated but correctly shaped refs/timestamps;
+- the entrypoint guard did not catch broad `docs/project/*.md` activation.
+
+The follow-up changes make WP16.0/WP16.1 parallel to non-blocking residuals,
+cross-check every STATE ref/status/timestamp against the dated evidence manifest,
+add a discriminating fabricated-ref test, and guard the entire `docs/project`
+path before cutover. Final exact-head re-review is required on the correction
+commit before the PR opens.

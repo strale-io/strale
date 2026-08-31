@@ -940,6 +940,11 @@ agreed implementation sequence.
   required after commit, and Claude cross-provider review remains required before
   M4. Evidence:
   `archive/sessions/2026-09-01-m2-canonical-product-state-review-codex.md`.
+- **M2 PRODUCT/STATE/ROADMAP exact head — correction in progress.** A separate
+  Codex task failed immutable commit `b3ba42c9` on WP16 sequencing language,
+  evidence-shape-only STATE validation, and incomplete broad-path activation
+  guarding. All three findings were corrected; a new immutable re-review is the
+  remaining pre-PR gate.
 
 ## 14. Completion definition
 

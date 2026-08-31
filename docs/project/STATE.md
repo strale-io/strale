@@ -13,6 +13,7 @@ production_observed_at: 2026-08-31T23:31:38.346Z
 production_status: ok
 frontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e
 frontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517
+state_evidence_ref: archive/sessions/2026-09-01-m2-canonical-state-production-snapshot.json
 ---
 
 # Current State

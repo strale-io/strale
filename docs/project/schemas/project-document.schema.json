@@ -106,7 +106,8 @@
           "production_observed_at",
           "production_status",
           "frontend_main_ref",
-          "frontend_redesign_ref"
+          "frontend_redesign_ref",
+          "state_evidence_ref"
         ],
         "properties": {
           "backend_reviewed_ref": {
@@ -131,6 +132,10 @@
           "frontend_redesign_ref": {
             "type": "string",
             "pattern": "^[a-f0-9]{40}$"
+          },
+          "state_evidence_ref": {
+            "type": "string",
+            "pattern": "^archive/sessions/[a-zA-Z0-9._/-]+\\.json$"
           }
         }
       }

@@ -2,6 +2,14 @@
   "schema_version": 1,
   "observed_at": "2026-08-31T23:31:38.346Z",
   "source": "read-only GET requests to https://api.strale.io/health and https://api.strale.io/v1/platform/facts",
+  "state_frontmatter": {
+    "backend_reviewed_ref": "596e9c7f6dbe474f89d31e035bd47dd81673cb0b",
+    "production_observed_ref": "596e9c7f6dbe",
+    "production_observed_at": "2026-08-31T23:31:38.346Z",
+    "production_status": "ok",
+    "frontend_main_ref": "4be8d251b05e0abf6e23a195913c188ae318056e",
+    "frontend_redesign_ref": "998964716c8601be67d4e71a508a803160434517"
+  },
   "health": {
     "status": "ok",
     "commit": "596e9c7f6dbe"

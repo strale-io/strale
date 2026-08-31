@@ -185,6 +185,7 @@ export const PROJECT_DOCUMENT_SCHEMA = {
           "production_status",
           "frontend_main_ref",
           "frontend_redesign_ref",
+          "state_evidence_ref",
         ],
         properties: {
           backend_reviewed_ref: { type: "string", pattern: "^[a-f0-9]{40}$" },
@@ -196,6 +197,10 @@ export const PROJECT_DOCUMENT_SCHEMA = {
           production_status: { const: "ok" },
           frontend_main_ref: { type: "string", pattern: "^[a-f0-9]{40}$" },
           frontend_redesign_ref: { type: "string", pattern: "^[a-f0-9]{40}$" },
+          state_evidence_ref: {
+            type: "string",
+            pattern: "^archive/sessions/[a-zA-Z0-9._/-]+\\.json$",
+          },
         },
       },
     },
@@ -463,6 +468,7 @@ export function validateCandidateDocument(file, actual, expectedDocType) {
       production_status: /^ok$/,
       frontend_main_ref: /^[a-f0-9]{40}$/,
       frontend_redesign_ref: /^[a-f0-9]{40}$/,
+      state_evidence_ref: /^archive\/sessions\/[a-zA-Z0-9._/-]+\.json$/,
     };
     for (const [field, pattern] of Object.entries(stateFields)) {
       if (!pattern.test(String(meta[field] ?? ""))) {
@@ -484,6 +490,38 @@ export function validateCandidateDocument(file, actual, expectedDocType) {
       path: file,
       detail: `${wordCount}/${wordLimit}`,
     });
+  }
+  return findings;
+}
+
+export function validateStateEvidence(root, file, actual) {
+  const findings = [];
+  const meta = parseFrontmatter(actual);
+  const evidenceRef = String(meta?.state_evidence_ref ?? "");
+  if (!/^archive\/sessions\/[a-zA-Z0-9._/-]+\.json$/.test(evidenceRef)) {
+    return [{ code: "STATE_EVIDENCE_REF_INVALID", path: file }];
+  }
+  const evidencePath = resolve(root, evidenceRef);
+  if (!existsSync(evidencePath)) {
+    return [{ code: "STATE_EVIDENCE_MISSING", path: file, detail: evidenceRef }];
+  }
+  let evidence;
+  try {
+    evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+  } catch (error) {
+    return [{ code: "STATE_EVIDENCE_INVALID", path: file, detail: error.message }];
+  }
+  for (const field of [
+    "backend_reviewed_ref",
+    "production_observed_ref",
+    "production_observed_at",
+    "production_status",
+    "frontend_main_ref",
+    "frontend_redesign_ref",
+  ]) {
+    if (meta?.[field] !== evidence.state_frontmatter?.[field]) {
+      findings.push({ code: "STATE_EVIDENCE_MISMATCH", path: file, detail: field });
+    }
   }
   return findings;
 }
