@@ -203,7 +203,7 @@ over time is the honest measure of whether the taxonomy is catching up.
 > total labelled weekly, a one-day-old instrument read as a 30-day fact, funnel
 > steps compared over different periods, a population defined by hand.
 
-**Count: 8.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
+**Count: 9.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
 (a hand-rolled filter that inner-joined `users` and therefore silently measured
 ~nothing, because nearly all revenue arrives with no user attached); a seventh
 on 2026-08-22 — a largest-buyer share compared across two windows of different
@@ -255,6 +255,44 @@ metric: **a comparison is only as trustworthy as its behaviour on the inputs
 that make it fail silently.** `git rev-parse <rev>:<path>` has a
 path-interpretation rule that differs from every other path argument in git,
 and a comparison built on it needs `./`-prefixing or `git diff` instead.
+
+**Incident 9, 2026-08-31 — the module's own guard was computed, documented, and
+never read.** The commercial pack answered every payer question on the *week in
+progress*. Run on a Monday for the first time, it reported one payer at a 100%
+share off EUR 0.72 and 17 calls, and emitted as its headline conclusion — the
+sentence DAILY-RUN.md instructs the brief to carry — "the business currently has
+one customer and one point of failure", alongside "nobody bought on more than
+one day". The last completed week had 13 payers, a 76.0% top share, and three
+non-top buyers returning. **Every one of those readings was the inverse of the
+truth**, and the pessimistic direction is why it was caught: it contradicted the
+prior morning's record loudly enough to be chased.
+
+The remarkable part is that nothing here was unforeseen. `concentration()` has
+computed `partialWindow` since it was written, and its own comment says a
+partial window "on a Monday reads as a jump to 100% concentration every single
+time". `Concentration.comparable` folds `!partialWindow` in correctly. A test
+named "refuses to compare when the window is a week still in progress" passes.
+Two things defeated all of it: `interpret()` never read the field, and the
+shipped caller never *set* it, so `partialWindow` took its `false` default and
+`comparable` came back true on day 1 of 7.
+
+Generalisation, and it is not the same as this family's existing rules: **a
+guard that a caller must opt into is not a guard, it is a convention.** Both
+prior F2 repairs added a field carrying a judgement alongside a value; both
+assumed the consumer would consult it. `comparable` had one consumer doing so
+(the prior-share gate) and one ignoring it, in the same file. Where the safe
+value is also the default, an optional flag defaults to unsafe — the option
+should have been "declare this window complete", not "declare it partial".
+
+*Repaired 2026-08-31.* `interpret()` refuses the whole concentration section on
+a partial window rather than one sentence of it, because dependency, acquisition
+and repeat all read the same corrupted denominator. And — the half that matters,
+per F1 step 4's transferable lesson about what a removed default used to carry —
+silence alone would have traded a false statement for a blindness on the single
+most important commercial fact we produce, so the payer questions now run on the
+last completed week, exactly as `growth()` has always done for revenue. Five
+tests, verified failing against the un-repaired code in both directions: four
+fail if the guard is removed, and seven fail if the guard is made unconditional.
 
 Two standing rules already in force — any business number computed outside that
 module is a new instance of this family, whoever computes it and however careful
@@ -503,7 +541,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 6.** A capability recorded as switched off that served errors for two
+**Count: 7. Root cause of the branch-deletion arm found 2026-08-31 (incident 7).** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -564,6 +602,62 @@ the 68-commit distance named.
 parked on `remediation/wp9-artifacts` with another session's uncommitted work in
 it, and moving it is the operation that corrupted the tree three times. The
 guard makes the consequence visible; it does not remove the cause.
+
+**Incident 7 (2026-08-31) — the deletions were real, correctly verified, and
+undone overnight by a second automated system. Root cause found.**
+
+This is the third morning in a row that branches recorded as deleted were back
+on the remote (2026-08-22 into 08-23, 08-29 into 08-30, 08-30 into 08-31), and
+every prior diagnosis in this family assumed the same two candidates: the
+deletion never executed, or it was verified against the local ref cache instead
+of the remote. **Both were wrong.** The 08-30 run deleted the refs, verified
+them gone with `git ls-remote` against the remote in the same breath, and was
+telling the truth when it wrote "43 → 36". All seven were present again the
+next morning at byte-identical SHAs.
+
+*What actually happens.* A separate scheduled job — the idea-lab studio's git
+janitor, which carries this repository in its own multi-repo manifest with
+`push_policy: "always"` — runs at about 04:03Z daily and pushes every local
+branch that has no matching remote branch back to the remote
+(`tools/git-janitor.mjs`, the `git push origin refs/heads/<br>:refs/heads/<br>`
+call). Strale's B3 sweep deletes at about 06:12Z. The two have been undoing each
+other for at least nine days.
+
+Confirmed four independent ways, not inferred from one: the recreated remote
+SHAs equal the surviving *local* SHAs exactly; GitHub's event stream shows
+automated CreateEvents at 04:02–04:05Z on three separate mornings; the janitor's
+manifest entry for this repo says in its own words that it "backs branches up
+(push + rescue snapshots)"; and the push itself is visible in its source. Nine
+`rescue/wip-*` branches on our remote are the same job's other output.
+
+*Neither system is malfunctioning.* The janitor's doctrine — committed work that
+exists locally belongs on the remote as backup — is correct, and a local branch
+with no remote counterpart is exactly what it is built to rescue. **Our operation
+was the incomplete one: B3 deleted one of the branch's two halves.** Deleting the
+remote ref while the local ref survives does not delete a branch; it creates the
+precise condition a backup job exists to reverse.
+
+*The repair is an invariant rather than a case*, per step 5 of the root-cause
+workflow: **a branch is not deleted until both its local ref and its remote ref
+are gone, and the local one goes first** — deleting the remote first leaves a
+window in which any backup pass restores it. DAILY-RUN.md B3 now says so.
+Executed the same morning for the five branches not held by a worktree: local
+ref deleted, then remote ref, then both halves re-verified. The two still held by
+worktrees (`docs/receipt-phases-1-3-accepted`, `docs/receipt-phase4-reconciliation`)
+need `git worktree remove` first, which is not an unattended-run operation with
+23 live worktrees on the machine.
+
+*Why the previous repair could not have caught this, and the transferable part.*
+"Verify against the system, in the same breath as the claim" is still right, and
+it was followed. It is not sufficient, because **it establishes the claim's
+truth at an instant, and says nothing about its lifetime.** Where an external
+actor can reverse the state, a verification is only as durable as the interval
+before that actor next runs — here about 22 hours, comfortably shorter than the
+gap between daily runs. The general form: *when a verified state is reversible
+by something other than us, the check is not "is it true now" but "what would
+have to happen for this to stop being true, and does that thing run".* The same
+question is owed anywhere the daily run records a durable outcome — deleted
+branches, deactivated capabilities, revoked credentials.
 
 **State: INVESTIGATION DUE.**
 The pattern in all four: the record was written by the actor who *intended* the
