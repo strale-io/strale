@@ -14,6 +14,11 @@ export const M1_BANNER =
   "> **M1 NON-AUTHORITATIVE SKELETON — DO NOT USE AS PROJECT TRUTH.**\n" +
   "> Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force.";
 
+export const M2_CANDIDATE_BANNER =
+  "> [!CAUTION]\n" +
+  "> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**\n" +
+  "> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.";
+
 const TEMPLATE_SENTINEL = "<!-- M1-TEMPLATE: no project truth -->";
 
 function frontmatter(docType, extra = {}) {
@@ -45,21 +50,6 @@ export const SKELETON_DOCUMENTS = Object.freeze({
 
 Future clean-session order (not active): PRODUCT → STATE → ROADMAP → generated
 decision/recent-work views → protocol router.`,
-  ),
-  "docs/project/PRODUCT.md": skeleton(
-    "project-product",
-    "Product",
-    "Product identity, ICP, positioning, principles, and durable targets will be reconciled in M2.",
-  ),
-  "docs/project/STATE.md": skeleton(
-    "project-state",
-    "Current State",
-    "Current facts, active work, blockers, and verification refs will be reconciled in M2.",
-  ),
-  "docs/project/ROADMAP.md": skeleton(
-    "project-roadmap",
-    "Roadmap",
-    "Ordered outcomes and execution links will be reconciled in M2.",
   ),
   "docs/project/DECISIONS.md": skeleton(
     "generated-decision-index",
@@ -112,6 +102,21 @@ coverage-checked in later milestones.`,
   ),
 });
 
+// These files become authored candidates during M2. They are deliberately not
+// returned by generatedFiles(): running context:generate must never overwrite
+// reconciled project truth with the old M1 placeholders.
+export const M2_CANDIDATE_DOCUMENTS = Object.freeze({
+  "docs/project/PRODUCT.md": "project-product",
+  "docs/project/STATE.md": "project-state",
+  "docs/project/ROADMAP.md": "project-roadmap",
+});
+
+export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
+  "docs/project/PRODUCT.md": 1_200,
+  "docs/project/STATE.md": 2_000,
+  "docs/project/ROADMAP.md": 1_500,
+});
+
 export const INVENTORY_TARGETS = Object.freeze([
   { path: "AGENTS.md", owner_area: "root-agent-entrypoint" },
   { path: "CLAUDE.md", owner_area: "root-agent-entrypoint" },
@@ -132,25 +137,74 @@ export const INVENTORY_TARGETS = Object.freeze([
 
 export const PROJECT_DOCUMENT_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
-  title: "M1 project document front matter",
+  title: "Project document front matter",
   type: "object",
   additionalProperties: true,
-  required: [
-    "doc_type",
-    "authority_scope",
-    "status",
-    "complete",
-    "phase",
-    "m1_template",
-  ],
+  required: ["doc_type", "authority_scope", "status", "complete", "phase"],
   properties: {
     doc_type: { type: "string", minLength: 1 },
     authority_scope: { const: "none" },
-    status: { const: "skeleton" },
+    status: { enum: ["skeleton", "candidate"] },
     complete: { const: false },
-    phase: { const: "M1" },
-    m1_template: { const: true },
+    phase: { enum: ["M1", "M2"] },
+    m1_template: { type: "boolean" },
+    authority_active: { type: "boolean" },
+    verified_at: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
   },
+  oneOf: [
+    {
+      required: ["m1_template"],
+      properties: {
+        status: { const: "skeleton" },
+        phase: { const: "M1" },
+        m1_template: { const: true },
+      },
+    },
+    {
+      required: ["m1_template", "authority_active", "verified_at"],
+      properties: {
+        status: { const: "candidate" },
+        phase: { const: "M2" },
+        m1_template: { const: false },
+        authority_active: { const: false },
+        verified_at: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+      },
+    },
+  ],
+  allOf: [
+    {
+      if: {
+        required: ["doc_type"],
+        properties: { doc_type: { const: "project-state" } },
+      },
+      then: {
+        required: [
+          "backend_reviewed_ref",
+          "production_observed_ref",
+          "production_observed_at",
+          "production_status",
+          "frontend_main_ref",
+          "frontend_redesign_ref",
+          "state_evidence_ref",
+        ],
+        properties: {
+          backend_reviewed_ref: { type: "string", pattern: "^[a-f0-9]{40}$" },
+          production_observed_ref: { type: "string", pattern: "^[a-f0-9]{7,40}$" },
+          production_observed_at: {
+            type: "string",
+            pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          },
+          production_status: { const: "ok" },
+          frontend_main_ref: { type: "string", pattern: "^[a-f0-9]{40}$" },
+          frontend_redesign_ref: { type: "string", pattern: "^[a-f0-9]{40}$" },
+          state_evidence_ref: {
+            type: "string",
+            pattern: "^archive/sessions/[a-zA-Z0-9._/-]+\\.json$",
+          },
+        },
+      },
+    },
+  ],
 };
 
 export const INVENTORY_SCHEMA = {
@@ -379,6 +433,95 @@ export function validateSkeletonDocument(file, actual, expected) {
   }
   if (actual !== expected) {
     findings.push({ code: "SKELETON_TEMPLATE_DRIFT", path: file });
+  }
+  return findings;
+}
+
+export function validateCandidateDocument(file, actual, expectedDocType) {
+  const findings = [];
+  const meta = parseFrontmatter(actual);
+  if (!meta) {
+    findings.push({ code: "CANDIDATE_FRONTMATTER_MISSING", path: file });
+    return findings;
+  }
+  for (const [key, value] of Object.entries({
+    doc_type: expectedDocType,
+    authority_scope: "none",
+    status: "candidate",
+    complete: false,
+    phase: "M2",
+    m1_template: false,
+    authority_active: false,
+  })) {
+    if (meta[key] !== value) {
+      findings.push({ code: "CANDIDATE_MARKER_INVALID", path: file, detail: key });
+    }
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(meta.verified_at ?? ""))) {
+    findings.push({ code: "CANDIDATE_VERIFIED_AT_INVALID", path: file });
+  }
+  if (expectedDocType === "project-state") {
+    const stateFields = {
+      backend_reviewed_ref: /^[a-f0-9]{40}$/,
+      production_observed_ref: /^[a-f0-9]{7,40}$/,
+      production_observed_at: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/,
+      production_status: /^ok$/,
+      frontend_main_ref: /^[a-f0-9]{40}$/,
+      frontend_redesign_ref: /^[a-f0-9]{40}$/,
+      state_evidence_ref: /^archive\/sessions\/[a-zA-Z0-9._/-]+\.json$/,
+    };
+    for (const [field, pattern] of Object.entries(stateFields)) {
+      if (!pattern.test(String(meta[field] ?? ""))) {
+        findings.push({ code: "STATE_VERIFICATION_REF_INVALID", path: file, detail: field });
+      }
+    }
+  }
+  if (!actual.includes(M2_CANDIDATE_BANNER)) {
+    findings.push({ code: "CANDIDATE_BANNER_MISSING", path: file });
+  }
+  if (actual.includes(TEMPLATE_SENTINEL) || actual.includes(M1_BANNER)) {
+    findings.push({ code: "CANDIDATE_CONTAINS_M1_TEMPLATE", path: file });
+  }
+  const wordLimit = M2_CANDIDATE_WORD_LIMITS[file];
+  const wordCount = actual.trim().split(/\s+/).filter(Boolean).length;
+  if (wordLimit && wordCount > wordLimit) {
+    findings.push({
+      code: "CANDIDATE_WORD_BUDGET_EXCEEDED",
+      path: file,
+      detail: `${wordCount}/${wordLimit}`,
+    });
+  }
+  return findings;
+}
+
+export function validateStateEvidence(root, file, actual) {
+  const findings = [];
+  const meta = parseFrontmatter(actual);
+  const evidenceRef = String(meta?.state_evidence_ref ?? "");
+  if (!/^archive\/sessions\/[a-zA-Z0-9._/-]+\.json$/.test(evidenceRef)) {
+    return [{ code: "STATE_EVIDENCE_REF_INVALID", path: file }];
+  }
+  const evidencePath = resolve(root, evidenceRef);
+  if (!existsSync(evidencePath)) {
+    return [{ code: "STATE_EVIDENCE_MISSING", path: file, detail: evidenceRef }];
+  }
+  let evidence;
+  try {
+    evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+  } catch (error) {
+    return [{ code: "STATE_EVIDENCE_INVALID", path: file, detail: error.message }];
+  }
+  for (const field of [
+    "backend_reviewed_ref",
+    "production_observed_ref",
+    "production_observed_at",
+    "production_status",
+    "frontend_main_ref",
+    "frontend_redesign_ref",
+  ]) {
+    if (meta?.[field] !== evidence.state_frontmatter?.[field]) {
+      findings.push({ code: "STATE_EVIDENCE_MISMATCH", path: file, detail: field });
+    }
   }
   return findings;
 }

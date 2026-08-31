@@ -33,7 +33,7 @@ satisfying the normal cross-provider independence gate.
 |---|---|---|---|
 | P0 | `2026-09-01-m2-product-state-reconciliation.md` | Verify claim dispositions against repo, frontend, production evidence, and formal decisions | Stored Claude verdict with all high/medium findings resolved or explicitly adjudicated |
 | P0 | `2026-09-01-m2-product-state-claim-matrix.json` | Check status classification and canonical destinations claim by claim | Stored Claude attestation naming the reviewed matrix hash/ref |
-| P0 | First canonical `PRODUCT.md`, `STATE.md`, and `ROADMAP.md` population | Review exact authority-bearing wording, omissions, and contradiction handling before M4 activation | Cross-provider review report on the exact commit |
+| P0 | First canonical `PRODUCT.md`, `STATE.md`, and `ROADMAP.md` population (interim exact-head Codex PASS at `48144067`) | Review exact authority-bearing wording, omissions, and contradiction handling before M4 activation | Cross-provider review report on the then-current exact commit |
 | P0 | Formal product/decision migration batches | Verify that synthesized context-pack `D-*` entries were not silently converted into formal decisions and that supersession is correct | Topic-batch review reports on exact commits |
 | P1 | WP10 formal acceptance review | Independently assess whether the dated observation evidence is sufficient and whether an acceptance record is accurate | Claude review of the acceptance record and production-evidence summary |
 | P1 | WP13 status reconciliation | Reconcile delivered dependency/publishing work with the still-open formal package and VERIFY-DEP status | Claude disposition identifying the correct package status and remaining scope |

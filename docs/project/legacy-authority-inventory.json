@@ -301,7 +301,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "e9284dc74b5986d89773b3eecc5889344102ab11c52cd17f82ed0d561d649af5",
+      "sha256": "cf8fa1aeda64acc01c2917b604c81106160a9db618c472e8256e95b491e97085",
       "detected_references": [
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
@@ -350,7 +350,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "10b102a4ca1dacebba43f12fb6dee20dba3e24ed498570cdd90b9ed97773d8e8",
+      "sha256": "44198c356a9aaddeb89f42292716444985891dd2d3b3d60330328ca7a1041fa4",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

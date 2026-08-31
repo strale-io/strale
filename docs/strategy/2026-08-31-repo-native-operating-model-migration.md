@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** M0 COMPLETE — M1 merged; M2 evidence reconciliation complete, canonical population next
+**Status:** M0 COMPLETE — M1 merged; M2 product/state candidates exact-head reviewed, merge-ready
 **Date:** 2026-08-31
 **Owner:** Codex
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -76,6 +76,23 @@ rule.
 - Next: populate the inert canonical PRODUCT/STATE/ROADMAP candidates from the
   accepted/qualified claims. This evidence update does not activate them and
   does not authorize M4 cutover or Notion retirement.
+
+## M2 product/state candidate update — 2026-09-01
+
+- `docs/project/PRODUCT.md`, `STATE.md`, and `ROADMAP.md` are now authored M2
+  candidates populated from the 37 reconciled claims.
+- They remain explicitly non-authoritative: `authority_scope: none`,
+  `status: candidate`, `complete: false`, and `authority_active: false`. Root
+  entrypoints still do not load them.
+- The context generator no longer owns or overwrites those three paths. The
+  checker validates their inactive markers, visible banner, verification date,
+  and per-document word budget; focused tests cover the transition.
+- `STATE.md` separately records reviewed backend, observed production, frontend
+  main, and frontend preservation refs. Branch source, merge, build,
+  deployment, and formal acceptance remain distinct.
+- Next M2 batches: exact-head review of these candidates, operator-action and
+  pending-decision candidates, then contradiction-checked formal decision
+  migration. M4 cutover remains out of scope.
 
 ## Execution dependency amendment — 2026-08-31
 
@@ -911,6 +928,26 @@ agreed implementation sequence.
 - **M1 Foundation — PASS.** Zero high, medium, or low findings; safe to open and
   merge. Evidence:
   `archive/sessions/2026-08-31-m1-clean-extraction-review-claude.md`.
+- **M2 evidence reconciliation — interim PASS.** Claude Opus and Sonnet returned
+  no verdict. A separate high-effort Codex review initially failed the evidence
+  and passed it after corrections. Same-provider limitation and Claude follow-up
+  are explicit in
+  `archive/sessions/2026-09-01-m2-product-state-review-codex.md`.
+- **M2 PRODUCT/STATE/ROADMAP working diff — PASS.** Separate Codex product and
+  technical reviews found evidence precision, traceability, execution-lane,
+  state-contract, generator, and accidental-activation gaps. All were corrected;
+  the final technical verdict was `PASS — SHIP`. Exact-head verification remains
+  required after commit, and Claude cross-provider review remains required before
+  M4. Evidence:
+  `archive/sessions/2026-09-01-m2-canonical-product-state-review-codex.md`.
+- **M2 PRODUCT/STATE/ROADMAP exact head — PASS.** A separate
+  Codex task failed immutable commit `b3ba42c9` on WP16 sequencing language,
+  evidence-shape-only STATE validation, and incomplete broad-path activation
+  guarding. All three findings were corrected. The same task re-reviewed exact
+  correction commit `48144067` and returned `PASS` with no remaining findings:
+  12/12 tests, zero context findings, exact inventory reconstruction, 22/22
+  local evidence links, and clean whitespace. This is same-provider interim
+  evidence; Claude remains required before M4.
 
 ## 14. Completion definition
 
