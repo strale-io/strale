@@ -7,3 +7,11 @@
 apps/api/coverage-matrix/COVERAGE.md text eol=lf
 apps/api/src/jobs/*.ts text eol=lf
 apps/api/src/jobs/__fixtures__/*.sql text eol=lf
+docs/project/** text eol=lf
+docs/decisions/README.md text eol=lf
+docs/decisions/PENDING.md text eol=lf
+docs/governance/** text eol=lf
+scripts/project-context-lib.mjs text eol=lf
+scripts/generate-project-context.mjs text eol=lf
+scripts/check-project-context.mjs text eol=lf
+scripts/check-project-context.test.mjs text eol=lf
