@@ -39,24 +39,50 @@ async function main() {
   const weeks = weeksM.status === "unavailable" ? [] : weeksM.value;
   const g = growth(weeks);
 
-  // The window for payer questions is the current ISO week, so concentration
-  // and revenue describe the same period. Comparing a rolling 7 days against a
-  // discrete week is the failure this whole module exists to avoid.
-  const thisWeek = { from: startOfIsoWeek(now), to: now, label: "this week so far" };
-  const priorWeekStart = new Date(startOfIsoWeek(now).getTime() - 7 * 86_400_000);
-  const priorWeek = { from: priorWeekStart, to: startOfIsoWeek(now), label: "last week" };
+  // The payer questions are answered on the LAST COMPLETED ISO week, for the
+  // same reason growth() refuses a partial week for revenue: on a Monday the
+  // week in progress is one buyer and a handful of calls, and every reading
+  // derived from it -- dependency, repeat, acquisition -- is then a statement
+  // about the calendar. Before 2026-08-31 this script asked them of the week in
+  // progress and never passed `partialWindow`, so `comparable` came back true
+  // on day 1 of 7 and the pack's headline read "the business currently has one
+  // customer and one point of failure" off EUR 0.72 across 17 calls.
+  //
+  // Silencing the false verdict is only half the repair. LESSONS.md F1's
+  // transferable lesson is that removing a default asks "what did the old
+  // default carry that nothing else now does" -- here, the concentration read
+  // itself, which is the most important commercial fact this pack produces. So
+  // the headline population moves to the last completed week rather than
+  // vanishing every Monday, and the week in progress is still printed, plainly
+  // labelled, with no verdict attached.
+  const weekStart = startOfIsoWeek(now);
+  const lastFullStart = new Date(weekStart.getTime() - 7 * 86_400_000);
+  const priorFullStart = new Date(weekStart.getTime() - 14 * 86_400_000);
+  const soFar = { from: weekStart, to: now, label: "this week so far" };
+  const lastFull = { from: lastFullStart, to: weekStart, label: "last completed week" };
+  const priorFull = { from: priorFullStart, to: lastFullStart, label: "the week before that" };
 
-  const factsM = await payerFacts(thisWeek);
+  const factsM = await payerFacts(lastFull);
   const facts = factsM.status === "unavailable" ? [] : factsM.value.payers;
   const unattributed = factsM.status === "unavailable" ? 0 : factsM.value.unattributedCents;
-  const conc = facts.length > 0 ? await concentration(thisWeek, facts, unattributed) : null;
+  const conc = facts.length > 0 ? await concentration(lastFull, facts, unattributed) : null;
 
-  const priorFactsM = await payerFacts(priorWeek);
+  // Printed for visibility only. `partialWindow: true` is what stops a verdict
+  // being drawn from it, and it is passed explicitly rather than left to the
+  // default, because the default is false and that is what produced the
+  // 2026-08-31 reading.
+  const soFarFactsM = await payerFacts(soFar);
+  const soFarConc = soFarFactsM.status === "unavailable" || soFarFactsM.value.payers.length === 0
+    ? null
+    : await concentration(soFar, soFarFactsM.value.payers, soFarFactsM.value.unattributedCents,
+        { partialWindow: true });
+
+  const priorFactsM = await payerFacts(priorFull);
   const priorConc = priorFactsM.status === "unavailable" || priorFactsM.value.payers.length === 0
     ? null
-    : await concentration(priorWeek, priorFactsM.value.payers, priorFactsM.value.unattributedCents);
+    : await concentration(priorFull, priorFactsM.value.payers, priorFactsM.value.unattributedCents);
 
-  const quietM = await quietPayers(thisWeek);
+  const quietM = await quietPayers(lastFull);
   const quiet = quietM.status === "unavailable" ? null : quietM.value;
 
   const slugs = conc ? activatingSlugs(facts, conc.newPayerKeys) : [];
@@ -90,7 +116,7 @@ async function main() {
   }
   console.log(`\nGrowth: ${g.kind}${g.kind === "not_comparable" ? ` — ${g.why}` : ""}`);
 
-  console.log("\nPayers, this week so far");
+  console.log("\nPayers, last completed week (the week in progress cannot answer these)");
   if (!conc) {
     console.log("  unavailable — no attributable payer in the window");
   } else {
@@ -103,9 +129,19 @@ async function main() {
     console.log(`  days anyone paid us        ${conc.activePayingDays}`);
     console.log(`  revenue traced to a payer  ${pct(conc.attributedShare)}${conc.comparable ? "" : "  (window not comparable — see below)"}`);
     if (priorConc) {
-      console.log(`  last week's top share      ${pct(priorConc.topShare)} across ${priorConc.payers} payers` +
+      console.log(`  the week before that       ${pct(priorConc.topShare)} across ${priorConc.payers} payers` +
         (priorConc.comparable ? "" : `  ← NOT COMPARABLE: only ${pct(priorConc.attributedShare)} of that week was traceable`));
     }
+  }
+
+  // Deliberately after the verdict block, and deliberately without a verdict.
+  // This is the number a reader reaches for on a Monday, so it is shown; the
+  // whole point of the 2026-08-31 repair is that nothing is concluded from it.
+  if (soFarConc) {
+    const w = weeks.find((x) => x.partial);
+    console.log(`\nWeek in progress (day ${w?.daysElapsed ?? "?"} of 7 - no conclusion is drawn from this)`);
+    console.log(`  payers so far              ${soFarConc.payers}`);
+    console.log(`  largest share so far       ${pct(soFarConc.topShare)}  (${eur(soFarConc.topCents)} vs ${eur(soFarConc.othersCents)})`);
   }
 
   console.log("\nFirst purchase of a new payer");

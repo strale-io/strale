@@ -111,6 +111,19 @@ deletion is restorable. Revive real unfinished work into a PR you then own to
 completion. Verify the sweep against the remote branch list, not the local ref
 cache: a deletion written down is not a deletion executed.
 
+> **Delete both halves, local first.** A branch is not deleted until its local
+> ref and its remote ref are both gone. Deleting only `origin/<branch>` leaves a
+> local branch with no remote counterpart, which is precisely what a backup job
+> is built to rescue — and one runs against this repository every night at about
+> 04:03Z, pushing every such branch straight back. B3's deletions were silently
+> reverted for at least nine days before anyone compared two consecutive
+> mornings; each morning's `git ls-remote` verification was correct and had a
+> lifetime of roughly 22 hours. Order matters: local ref first, then remote, then
+> re-verify both. A branch checked out in a worktree cannot be deleted at all
+> until the worktree goes (`git worktree remove`, never `rm -rf`) — and removing
+> another session's worktree is not an unattended-run operation, so record it
+> with an owner and a deadline instead. See LESSONS.md F7 incident 7.
+
 **C. Decision queue.** Process [DECISION-QUEUE.md](DECISION-QUEUE.md).
 `preauthorized_notice` items whose window has matured execute on their stated
 default. `approval_required` items hold indefinitely — check whether the work

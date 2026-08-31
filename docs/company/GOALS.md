@@ -135,6 +135,47 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-08-31 — the first honest week-over-week concentration
+  comparison the company has ever been able to make, and dependence fell.**
+  Two consecutive *completed* ISO weeks now sit entirely after the payer-identity
+  instrument switched on (2026-08-15), which is the condition this file has been
+  waiting on since 08-22. Both are 100% attributed and both return
+  `comparable = true`:
+
+  | completed week | revenue | payers | largest share | non-top buyers who returned |
+  |---|---|---|---|---|
+  | 2026-08-24 | €73.03 / 1,295 calls | 13 | **76.0%** (€55.49 vs €17.54) | **3** |
+  | 2026-08-17 | €66.31 / 1,000 calls | 5 | **96.4%** | 0 |
+
+  Revenue is rising for the fourth completed week running. **The share reading
+  is the more important one:** 96.4% → 76.0% is a real movement between two
+  comparable windows, not the coverage artefact this file rejected twice before.
+  The M1 concentration bar (no payer above 60%) is still not cleared, but it has
+  moved for the first time.
+
+  *The count still overstates the customer base, in the same way as yesterday.*
+  Thirteen payers is four buyers and nine trials: €55.49 / €9.09 / €5.44 / €2.05
+  account for €72.07 of the €73.03, and the remaining nine wallets spent €0.96
+  between them, one day each. Quote four.
+
+  *The signal worth acting on:* three buyers other than the largest bought on
+  more than one day — up from zero the week before. That is the first evidence
+  of a second habit forming, and it is what a second payer looks like at the
+  start. New-vs-returning remains `unavailable` and must still not be guessed.
+
+- **The instrument that produced the above was itself wrong on 2026-08-31, and
+  the failure direction was pessimistic.** The commercial pack answered the
+  payer questions on the *week in progress*. Run on a Monday it read one buyer,
+  100% share, and emitted as its headline "the business currently has one
+  customer and one point of failure" — from €0.72 across 17 calls — while also
+  reporting that nobody had bought on more than one day. Both statements are the
+  exact inverse of the truth above. `concentration()` had computed
+  `partialWindow` all along and its own comment predicted this outcome word for
+  word; nothing read the field and the caller never set it. Repaired: the payer
+  questions now run on the last completed week, as `growth()` already does for
+  revenue, and a partial window states no verdict at all. Logged as
+  [LESSONS.md](LESSONS.md) F2.
+
 - **Measured 2026-08-30. "Twelve payers" is four payers and eight trials — and
   the two genuinely new ones did not come through the compliance wedge.**
   Rolling 7d, canonical population via `lib/metrics`: €75.84 across 12 paying
