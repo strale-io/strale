@@ -544,6 +544,33 @@ export function interpret(input: {
     });
     return out;
   }
+  // A partial window cannot carry a concentration verdict, and until 2026-08-31
+  // nothing enforced that. On day 1 of an ISO week whoever bought first is the
+  // entire week by construction, so the single-customer sentence below fires
+  // every Monday regardless of the business. `concentration()` has recorded
+  // this in `partialWindow` since it was written — its own comment says "on a
+  // Monday it reads as a jump to 100% concentration every single time" — but
+  // the field was never read here, and the shipped caller never set it.
+  //
+  // Observed rather than hypothesised: on 2026-08-31 the pack's headline
+  // conclusion was "the business currently has one customer and one point of
+  // failure", computed from EUR 0.72 across 17 calls, while the last completed
+  // week had 13 payers with the largest at 76.0%.
+  //
+  // Everything below this point — dependency, acquisition, repeat — reads the
+  // same corrupted window ("nobody bought on more than one day" is trivially
+  // true on a Monday), so the refusal covers the section rather than one
+  // sentence.
+  if (c.partialWindow) {
+    out.push({
+      topic: "concentration",
+      text: `Too little of this period has elapsed to say how concentrated our income is: ${
+        c.payers === 1 ? "one buyer has" : `${c.payers} buyers have`
+      } bought so far, which describes the calendar rather than the business.`,
+    });
+    return out;
+  }
+
   if (c.payers === 1) {
     out.push({
       topic: "concentration",

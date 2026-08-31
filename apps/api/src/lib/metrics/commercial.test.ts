@@ -182,6 +182,86 @@ describe("a concentration move is never reported across incomparable windows", (
   });
 });
 
+describe("a partial window states no verdict about the business", () => {
+  // 2026-08-31, the first Monday the pack ran. `concentration()` has always
+  // computed `partialWindow`, and its own comment says a partial window "on a
+  // Monday reads as a jump to 100% concentration every single time" -- but
+  // `interpret()` never read the field, and the shipped caller never set it.
+  // The pack's headline conclusion that morning was "the business currently has
+  // one customer and one point of failure", drawn from EUR 0.72 across 17 calls
+  // on day 1 of 7, while the last completed week had 13 payers at 76.0%.
+  //
+  // The existing sibling test only pins that no MOVEMENT is reported across a
+  // partial window. Every case here is about the LEVEL, which is what actually
+  // shipped a false statement about the company.
+  const rising = growth([week("2026-08-24", 7303), week("2026-08-17", 6631), week("2026-08-10", 3924)]);
+
+  it("does not call a single first buyer of the week the whole customer base", () => {
+    const cs = interpret({
+      weeks: [], growth: rising,
+      concentration: conc({ payers: 1, topShare: 1, topCents: 72, othersCents: 0, partialWindow: true, comparable: false }),
+      quiet: null, activatingSlugs: [], priorTopShare: null,
+    });
+    const t = textOf(cs);
+    expect(t, "the sentence that shipped on 2026-08-31").not.toMatch(/one customer and one point of failure/);
+    expect(t, "and no reworded equivalent").not.toMatch(/single buyer/);
+    expect(t, "it says why instead").toMatch(/describes the calendar rather than the business/);
+  });
+
+  it("does not report a dependency level from a partial window either", () => {
+    // The other verdict branch. A partial window that happens to sit above the
+    // 60% bar would otherwise print "losing them would remove most of the
+    // income" off two days of data.
+    const cs = interpret({
+      weeks: [], growth: rising,
+      concentration: conc({ payers: 3, topShare: 0.82, topCents: 410, othersCents: 90, partialWindow: true, comparable: false }),
+      quiet: null, activatingSlugs: [], priorTopShare: null,
+    });
+    const t = textOf(cs);
+    expect(t, "no dependency verdict").not.toMatch(/remove most of the income|accounts for/);
+    expect(t, "no reassurance either -- silence must not read as health").not.toMatch(/no single customer can take/);
+  });
+
+  it("draws no acquisition or repeat conclusion from a partial window", () => {
+    // "Nobody bought on more than one day" is trivially true on a Monday, and
+    // it is the sentence that would tell Petter a returning customer's habit
+    // had stopped. The refusal has to cover the whole section, not one line.
+    const cs = interpret({
+      weeks: [], growth: rising,
+      concentration: conc({ payers: 1, topShare: 1, repeatPayers: 0, repeatPayersExcludingTop: 0, activePayingDays: 1, partialWindow: true, comparable: false }),
+      quiet: null, activatingSlugs: [], priorTopShare: null,
+    });
+    const t = textOf(cs);
+    expect(t, "no repeat verdict").not.toMatch(/bought on more than one day/);
+    expect(t, "no acquisition verdict").not.toMatch(/bought for the first time|No new buyer/);
+  });
+
+  it("emits no headline at all from a partial window", () => {
+    // A headline is what the brief is instructed to carry. A partial window may
+    // contribute a caveat; it may never contribute the most important sentence
+    // on the page.
+    const cs = interpret({
+      weeks: [], growth: rising,
+      concentration: conc({ payers: 1, topShare: 1, partialWindow: true, comparable: false }),
+      quiet: null, activatingSlugs: [], priorTopShare: null,
+    });
+    expect(cs.filter((c) => c.headline), "no headline from an unfinished week").toHaveLength(0);
+  });
+
+  it("still states the verdict when the window is complete", () => {
+    // The guard must not buy silence at the price of blindness -- the mistake
+    // LESSONS.md F1 step 4 names as the one that nearly shipped with the
+    // taxonomy repair. Same shape, complete window: the verdict returns.
+    const cs = interpret({
+      weeks: [], growth: rising,
+      concentration: conc({ payers: 1, topShare: 1, partialWindow: false }),
+      quiet: null, activatingSlugs: [], priorTopShare: null,
+    });
+    expect(textOf(cs)).toMatch(/one customer and one point of failure/);
+    expect(cs.filter((c) => c.headline).length).toBeGreaterThan(0);
+  });
+});
+
 describe("new payers are weighed, not just counted", () => {
   const rising = growth([week("2026-08-17", 5689), week("2026-08-10", 3924), week("2026-08-03", 2738)]);
 
