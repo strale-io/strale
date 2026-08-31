@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** AGREED — M0 in progress, blocked on complete Notion row export
+**Status:** AGREED — M0 export lane open; additive M1 foundation authorized in parallel
 **Date:** 2026-08-31  
 **Owner:** Codex  
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -14,6 +14,52 @@ authority. The migration decision was collision-checked and recorded as
 > Until the cutover milestone passes, existing authorities remain in force.
 > After cutover, archive this plan under `archive/sessions/` with its review and
 > acceptance evidence.
+
+## Execution dependency amendment — 2026-08-31
+
+Notion's workspace query quota prevents full pagination of Decisions, Journal,
+To-do, and Vendor Roster. The user cannot obtain a complete workspace export and
+directed the implementation to continue trying through the connected agents.
+
+This changes sequencing, not scope or authority:
+
+- **M0 preservation/export lane remains open.** The four first-page-only exports
+  stay machine-marked incomplete. Retry pagination at most once per new working
+  session while the quota is exhausted; do not treat repeated limit responses
+  as progress.
+- **M1 may proceed in parallel** because it is additive, non-authoritative, and
+  rollback-safe. It may add directory skeletons, document contracts and schemas,
+  a navigation/router shell, generated-view tooling, classification inventory,
+  and warning/report-mode guards.
+- This sequencing exception is authorized by Claude Code's independent
+  `PASS_WITH_FOLLOWUPS` review recorded at
+  `archive/sessions/2026-08-31-m1-parallel-sequencing-review-claude.md`; it
+  supersedes the earlier review's temporary "M1 must not start" gate while
+  leaving its M0 completeness finding unresolved.
+- **M1 must not** activate new root entrypoints, label new project documents
+  canonical, migrate decision substance, change current product truth, move or
+  archive legacy authorities, remove a Notion read/write/secret, or enable a
+  blocking cutover guard.
+- M1's legacy inventory is **bare enumeration only**: path, content hash,
+  owning area, and detected references. Disposition labels such as `migrated`,
+  `evidence-only`, `archive`, `obsolete`, or `unclear` remain M2 work.
+- Every project-document skeleton and generated view must carry a machine-
+  parseable `status: skeleton`/`complete: false` marker plus a visible
+  non-authoritative/partial banner. The checker must report if either is absent.
+- M1 lands as one bounded Foundation branch/PR and receives an explicit Claude
+  milestone verdict. No root hook, CI gate, skill, command, `AGENTS.md`, or
+  `CLAUDE.md` consumer may consult the new router or skeletons yet.
+- **M2 and every authority-changing step remain gated** on a complete M0 export,
+  regenerated manifest, and focused Claude milestone PASS. The parallel
+  product/decision audit may continue independently but cannot be promoted into
+  the canonical layer before that gate.
+- Existing `AGENTS.md`, `CLAUDE.md`, Notion workflows, and authority rules remain
+  fully in force throughout parallel M1 work.
+
+Reasoning: an incomplete historical export creates risk when choosing or
+retiring truth, not when building an inert container and tests for the future
+model. Keeping the boundary mechanical avoids turning a vendor quota into idle
+time without weakening the no-dual-authority cutover rule.
 
 ## 1. Objective
 
@@ -484,14 +530,17 @@ Changes:
 2. Add `START-HERE.md` and `PROTOCOL-ROUTER.md`.
 3. Add checker in warning/report mode with discriminating tests.
 4. Add generated-view tooling for decisions and recent work.
-5. Add a machine-readable inventory/classification manifest for legacy
-   authority-bearing areas.
+5. Add a machine-readable bare-enumeration manifest for legacy
+   authority-bearing areas. M1 records paths/hashes/owners/references only; M2
+   owns every disposition/classification label.
 
 Exit:
 
 - schemas and guards pass on the new skeleton;
 - existing entrypoints still govern sessions;
 - no file falsely claims canonical status.
+- generated views are visibly partial and machine-marked `complete: false`;
+- the foundation exists as one bounded, independently reviewed change.
 
 Rollback: revert the additive foundation PR.
 
