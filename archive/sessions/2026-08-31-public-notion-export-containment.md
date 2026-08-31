@@ -1,7 +1,8 @@
 # Public Notion-export containment summary
 
 Date: 2026-08-31
-Status: branch reconstruction in progress; retained-object decision pending
+Status: approved migration branch reconstructed; sibling/retained-object
+remediation pending
 
 ## Decision
 
@@ -16,6 +17,11 @@ The founder approved three actions:
 The private boundary is `strale-io/strale-context-archive`. Its initial sanitized
 archive commit is `c584249` and the repository was verified private before and
 after the push.
+
+The approved public migration branch was force-updated with an exact lease from
+`a2beba08` to clean commit `f37b57cd`. GitHub's remote tree contains zero paths
+under `archive/imports/notion/`, and the active isolated migration worktree was
+realigned to that commit.
 
 ## Credential finding
 
@@ -44,6 +50,10 @@ commit through the fork. Rewriting branch refs cannot guarantee deletion of PR,
 fork, cache, mirror, or archival copies. A separate founder decision is required
 before contacting GitHub support or making any legal/privacy notification.
 
+Only `codex/repo-native-operating-model` was within the approved force-update
+scope and has been cleaned. `codex/repo-native-foundation-m1` and
+`refs/pull/446/head` remain reachable and must not be described as remediated.
+
 ## Data classes
 
 The export contains internal operating history, commercial and product strategy,
@@ -57,4 +67,20 @@ a legal classification.
 Raw Notion pages, database rows, search responses, manifests, and secret-bearing
 history must not be committed to this repository. Public automation reads only
 `docs/project/private-archive-status.json`; detailed evidence remains private.
+
+## Final verification of the approved branch
+
+- Claude Opus: `PASS_WITH_FOLLOWUPS`, high 0, medium 2, low 3,
+  `SAFE_TO_FORCE_UPDATE_MIGRATION_BRANCH: YES`.
+- Context tests: 6/6 passed; the only context finding is the intentional M0
+  incomplete warning sourced from the public status pointer.
+- API TypeScript: passed.
+- Production-write guard test: 11/11 passed; live guard reported zero offenders.
+- Outgoing Notion objects and clean-tree Notion paths: zero.
+- High-confidence scan of 74 changed text files: zero credential findings.
+- Design/context preservation: 85/85 and 12/12 Git blob entries matched.
+
+Claude's two medium findings are the unresolved sibling/PR refs and the fact that
+force-updating refs does not purge GitHub-retained objects. Both remain explicit
+follow-ups rather than hidden residual risk.
 

@@ -3,6 +3,7 @@
   "updated_at": "2026-08-31",
   "repository": "strale-io/strale-context-archive",
   "visibility": "private",
+  "archive_commit": "c584249041ded24e3ca920ad83079e9376c1bd59",
   "export_path": "archive/imports/notion/2026-08-31",
   "complete": false,
   "public_copy_allowed": false,
@@ -32,5 +33,15 @@
       "next_offset": null
     }
   },
-  "completion_gate": "Journal and To-do must reach short terminal pages; all four source counts must match captured unique IDs; independent Claude review must pass."
+  "completion_gate": "Journal and To-do must reach short terminal pages; all four source counts must match captured unique IDs; independent Claude review must pass.",
+  "public_containment": {
+    "migration_branch": "codex/repo-native-operating-model",
+    "clean_commit": "f37b57cdf874c44bf4aa24e6e32eeeb25ccb5827",
+    "raw_notion_paths_in_clean_tree": 0,
+    "remaining_public_refs": [
+      "codex/repo-native-foundation-m1",
+      "refs/pull/446/head"
+    ],
+    "retained_object_removal_requires_separate_approval": true
+  }
 }

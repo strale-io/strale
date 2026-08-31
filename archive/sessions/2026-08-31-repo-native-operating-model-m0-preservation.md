@@ -97,4 +97,6 @@ mirror of that gate is `docs/project/private-archive-status.json`.
   the rejected commit and blob were never publicly reachable. Rotate immediately
   on unrecognized use, a provider alert, or any accidental publication.
 - Complete reconstruction of affected public branch refs. GitHub-retained PR
-  and fork objects may require a separate support-removal decision.
+  and fork objects may require a separate support-removal decision. The approved
+  `codex/repo-native-operating-model` branch is clean at `f37b57cd`; the sibling
+  `codex/repo-native-foundation-m1` branch and PR #446 ref remain.
