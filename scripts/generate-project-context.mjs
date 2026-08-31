@@ -14,6 +14,6 @@ export function generate(root = repoRootFrom(import.meta.url)) {
 
 if (isDirectInvocation(import.meta.url)) {
   const files = generate();
-  console.log(`generated ${files.length} non-authoritative M1 foundation files`);
+  console.log(`generated ${files.length} non-authoritative project-context files`);
   for (const file of files) console.log(`  ${file}`);
 }

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-08-31T23:31:38.346Z",
+  "source": "read-only GET requests to https://api.strale.io/health and https://api.strale.io/v1/platform/facts",
+  "health": {
+    "status": "ok",
+    "commit": "596e9c7f6dbe"
+  },
+  "platform_facts": {
+    "capability_counts": {
+      "active_visible": 297,
+      "active_total": 304,
+      "catalogued": 320,
+      "free_tier_slug_count": 11
+    },
+    "solution_count_active": 107,
+    "processing_region": "us-east4-eqdc4a",
+    "processing_jurisdiction": "US",
+    "as_of": "2026-08-31T23:31:38.346Z"
+  },
+  "limitations": [
+    "This is a dated evidence snapshot, not a static authority for mutable platform facts.",
+    "Consumers must re-query /v1/platform/facts before presenting current values."
+  ]
+}

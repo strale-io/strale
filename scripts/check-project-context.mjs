@@ -3,12 +3,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  M2_CANDIDATE_DOCUMENTS,
   SKELETON_DOCUMENTS,
   buildInventory,
   generatedFiles,
   isDirectInvocation,
   repoRootFrom,
   validateInventory,
+  validateCandidateDocument,
   validateSkeletonDocument,
 } from "./project-context-lib.mjs";
 
@@ -40,6 +42,17 @@ export function checkPrivateArchiveStatus(root) {
   }
 }
 
+export function checkPrecutoverEntrypoint(entrypoint, content) {
+  const inactivePaths = [
+    "docs/project/START-HERE.md",
+    "docs/project/PROTOCOL-ROUTER.md",
+    ...Object.keys(M2_CANDIDATE_DOCUMENTS),
+  ];
+  return inactivePaths.some((path) => content.includes(path))
+    ? [finding("M1_ENTRYPOINT_ACTIVATED", entrypoint)]
+    : [];
+}
+
 export function runChecks(root = repoRootFrom(import.meta.url)) {
   const findings = [];
   let expected;
@@ -58,6 +71,21 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     const actual = readFileSync(absolute, "utf8");
     findings.push(
       ...validateSkeletonDocument(file, actual, expectedContent).map((item) => ({
+        severity: "warning",
+        ...item,
+      })),
+    );
+  }
+
+  for (const [file, expectedDocType] of Object.entries(M2_CANDIDATE_DOCUMENTS)) {
+    const absolute = resolve(root, file);
+    if (!existsSync(absolute)) {
+      findings.push(finding("CANDIDATE_FILE_MISSING", file));
+      continue;
+    }
+    const actual = readFileSync(absolute, "utf8");
+    findings.push(
+      ...validateCandidateDocument(file, actual, expectedDocType).map((item) => ({
         severity: "warning",
         ...item,
       })),
@@ -97,12 +125,7 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
 
   for (const entrypoint of ["AGENTS.md", "CLAUDE.md"]) {
     const content = readFileSync(resolve(root, entrypoint), "utf8");
-    if (
-      content.includes("docs/project/START-HERE.md") ||
-      content.includes("docs/project/PROTOCOL-ROUTER.md")
-    ) {
-      findings.push(finding("M1_ENTRYPOINT_ACTIVATED", entrypoint));
-    }
+    findings.push(...checkPrecutoverEntrypoint(entrypoint, content));
   }
 
   findings.push(...checkPrivateArchiveStatus(root));
@@ -116,7 +139,7 @@ function main() {
   if (json) {
     console.log(JSON.stringify({ mode: "warning-only", findings }, null, 2));
   } else {
-    console.log("project context check: warning-only (M1 foundation)");
+    console.log("project context check: warning-only (M2 candidate foundation)");
     if (findings.length === 0) console.log("  no warnings");
     for (const item of findings) {
       console.log(`  WARN ${item.code} ${item.path}${item.detail ? ` — ${item.detail}` : ""}`);
