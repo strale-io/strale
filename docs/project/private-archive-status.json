@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-31",
+  "repository": "strale-io/strale-context-archive",
+  "visibility": "private",
+  "archive_commit": "24713c48f0b10e1399a72a37a55d30f2dd8fff9f",
+  "export_path": "archive/imports/notion/2026-08-31",
+  "complete": true,
+  "public_copy_allowed": false,
+  "pagination": {
+    "decisions": {
+      "rows_preserved": 318,
+      "terminal_page_observed": true,
+      "source_count_verified": true,
+      "next_offset": null
+    },
+    "journal": {
+      "rows_preserved": 467,
+      "terminal_page_observed": true,
+      "source_count_verified": true,
+      "next_offset": null
+    },
+    "todo": {
+      "rows_preserved": 432,
+      "terminal_page_observed": true,
+      "source_count_verified": true,
+      "next_offset": null
+    },
+    "vendor_roster": {
+      "rows_preserved": 166,
+      "terminal_page_observed": true,
+      "source_count_verified": true,
+      "next_offset": null
+    }
+  },
+  "completion_gate": "Passed: all four oversized sources have terminal pages and exact captured-unique-ID/source-count parity; independent Claude review returned PASS.",
+  "review": {
+    "verdict": "PASS",
+    "safe_to_mark_m0_complete": true,
+    "route": "Claude Sonnet, high effort (wanted Opus; Opus exhausted bounded review turns)",
+    "evidence_repository": "strale-io/strale-context-archive",
+    "evidence_commit": "24713c48f0b10e1399a72a37a55d30f2dd8fff9f"
+  },
+  "public_containment": {
+    "migration_branch": "codex/repo-native-operating-model",
+    "clean_commit": "37f8e76abe65a74421aed183aaa6018280394051",
+    "clean_commit_semantics": "Verified raw-export-removal checkpoint; later docs-only commits may follow.",
+    "raw_notion_paths_in_clean_tree": 0,
+    "remaining_public_refs": [
+      "refs/pull/446/head"
+    ],
+    "ordinary_branches_checked": 42,
+    "tags_checked": 5,
+    "known_fork_network_object_access": "epistemedeus/strale",
+    "retained_object_removal_requires_separate_approval": false,
+    "support_removal_authorized": true,
+    "support_ticket": {
+      "number": 4715462,
+      "url": "https://support.github.com/ticket/personal/0/4715462",
+      "url_verified_from_authenticated_portal": true,
+      "status": "open",
+      "submitted_at": "2026-08-31"
+    }
+  }
+}
