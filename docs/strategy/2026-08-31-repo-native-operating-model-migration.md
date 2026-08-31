@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** M0 COMPLETE — bounded M1 Foundation reviewed and ready to merge
+**Status:** M0 COMPLETE — M1 Foundation merged; M2 reconciliation is next
 **Date:** 2026-08-31
 **Owner:** Codex
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -37,6 +37,18 @@ rule.
   medium, or low findings and `SAFE_TO_OPEN_AND_MERGE_PR: YES`. The review is
   recorded at
   `archive/sessions/2026-08-31-m1-clean-extraction-review-claude.md`.
+
+## M1 completion update — 2026-08-31
+
+- The bounded Foundation landed through PR #447 and was squash-merged to
+  `main` at `072b54a38ad8c6c68a82628c5031721f219f481e`.
+- GitHub validation, repository checks, and database integration all passed.
+- The merged layer remains inert and non-authoritative: no root entrypoint,
+  hook, CI workflow, skill, command, or application consumer was activated.
+- The next milestone is M2 truth reconciliation. It should consume the separate
+  product/decision audit, classify the legacy-authority inventory, populate the
+  canonical candidates, and receive a fresh independent Claude review before
+  any M4 cutover or Notion retirement action.
 
 ## Execution dependency amendment — 2026-08-31
 
@@ -862,7 +874,13 @@ agreed implementation sequence.
 
 ### Milestone reviews
 
-None yet.
+- **M0 preservation — PASS.** Terminal capture/count parity, sanitized private
+  history, and zero final scanner findings. Evidence is summarized in
+  `docs/project/private-archive-status.json` and preserved in the private
+  archive review record.
+- **M1 Foundation — PASS.** Zero high, medium, or low findings; safe to open and
+  merge. Evidence:
+  `archive/sessions/2026-08-31-m1-clean-extraction-review-claude.md`.
 
 ## 14. Completion definition
 
