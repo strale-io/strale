@@ -218,3 +218,21 @@ retired mechanisms, not only the superseded decision label. The plan now
 requires M4 to replace both dependencies while preserving the M2 no-change
 boundary. The same verifier re-reviewed the amendment, returned PASS with no
 remaining finding, and completed after its verdict.
+
+## Implementation outcome
+
+The agreed batch was implemented in exact commit
+`1e64efdd384dc030439e29474e391b08ade9058f`. A fresh
+`gpt-5.6-sol`/xhigh verifier independently checked the exact commit against the
+live Notion rows, the five historical implementation commits, the current
+repository, and the generated decision graph. It returned PASS with no
+material findings and completed after its verdict.
+
+PR [#467](https://github.com/strale-io/strale/pull/467) passed the required
+`check` and `integration-db` jobs and merged as
+`6e1c28194e906f062aaef48e1f18e95f05b0872d`. The completion Journal entry is
+[M2 capability-onboarding decision chain migrated](https://app.notion.com/p/3ce67c87082c8130bc0cf2918a1b694f?pvs=204).
+
+The implementation did not edit the source Decisions, entrypoints, historical
+design spec, runtime, database, or production state. All four records remain
+inactive candidates. Cross-provider verification remains required before M4.

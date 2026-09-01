@@ -71,8 +71,14 @@ limit before returning a verdict. A fresh `gpt-5.6-sol`/xhigh verifier found
 that the entrypoint gap included both the stale `DEC-20260320-B` label and
 `CLAUDE.md`'s stale authority pointer to the historical design spec. After the
 plan made both dependencies explicit M4 replacement conditions, the verifier
-returned PASS and completed. Exact-commit Claude review remains required
-below.
+returned PASS and completed. Fresh Opus/high and Sonnet/high exact-commit
+attempts were rejected by the same weekly limit. A separate
+`gpt-5.6-sol`/xhigh verifier passed exact implementation commit
+`1e64efdd384dc030439e29474e391b08ade9058f` with no material findings after
+checking the live Notion rows, historical Git provenance, current enforcement
+surfaces, generated graph, preserved gaps, and inactive-authority boundary.
+PR #467 passed both required CI jobs and merged as
+`6e1c28194e906f062aaef48e1f18e95f05b0872d`.
 
 ## Pending cross-provider checks
 
@@ -91,7 +97,7 @@ below.
 | P1 | x402 AgentCash discovery contract (plan and implementation dated 2026-09-01; Codex plan, technical, and product PASS) | Review the then-current exact commit, real `@agentcash/discovery@1.7.5` fail-before/pass-after evidence, canonical `protocols: [{ x402: {} }]` wire shape, exact-price preservation, dependency pin, and no-change boundary around challenge/verification/settlement | Claude exact-commit PASS plus production AgentCash parse evidence after the OpenAPI cache window, with all high/medium findings resolved |
 | P1 | Inactive deploy-safety decision batch (`DEC-20260504-B` and `DEC-20260504-C`; interim exact-commit Codex PASS at `87f47f08`, merged by PR #463 as `ceb7c24a`) | Verify source fidelity, corrected incident-evidence wording, the non-retiring C → B `related_to` edge, and inactive authority at the then-current exact commit | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
 | P1 | Inactive governance/reference-data batch (`DEC-20260424-A`, Git-native `DEC-20260504-A`, `DEC-20260517-A`) plus enforcement-protocol source-gap report (interim exact-commit Codex PASS at `5ab19ff0`, merged by PR #465 as `e02355aa`) | Verify Git-only formal-decision provenance, the block on cross-surface `DEC-20260422-A`, exclusion of stale `DEC-20260517-B`, non-executable historical deletion instruction, and inactive authority | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
-| P1 | Inactive capability-onboarding chain (`DEC-20260320-B`, `DEC-20260422-C`, `DEC-20260423-A`, `DEC-20260423-B`) plus authority/enforcement-gap report | Verify both supersession chains, the A/B non-retiring relation, the stale entrypoint ID and historical-spec pointer, missing fresh-database trigger DDL, later-retired mechanics boundary, and inactive authority | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
+| P1 | Inactive capability-onboarding chain (`DEC-20260320-B`, `DEC-20260422-C`, `DEC-20260423-A`, `DEC-20260423-B`) plus authority/enforcement-gap report (interim exact-commit Codex PASS at `1e64efdd`, merged by PR #467 as `6e1c2819`) | Verify both supersession chains, the A/B non-retiring relation, the stale entrypoint ID and historical-spec pointer, missing fresh-database trigger DDL, later-retired mechanics boundary, and inactive authority | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
 | P2 | M4 entrypoint/cutover batch | Adversarially verify that Notion consumers are replaced, peer entrypoints are safe, and no mutable facts remain duplicated | Exact-head cross-provider cutover review |
 
 ## Operating rule until cleared
