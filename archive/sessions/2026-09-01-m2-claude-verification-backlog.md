@@ -45,7 +45,12 @@ The deploy-safety decision batch made fresh Opus/high and Sonnet/high plan
 review attempts. Both invocations were rejected by Claude Code's weekly
 subscription limit, reported to reset on 2026-09-03 at 17:00 Europe/Stockholm;
 neither produced a verdict. A fresh `gpt-5.6-sol`/xhigh Codex verifier was used
-for the interim plan review under the founder-authorized fallback.
+for the interim plan review under the founder-authorized fallback. Fresh
+Opus/high and Sonnet/high checks at the exact-commit gate were rejected by the
+same limit. A separate `gpt-5.6-sol`/xhigh verifier passed exact implementation
+commit `87f47f087876fe45ed1c08b7b72acf3804c7e5b1` with no findings. PR #463 then
+passed both required CI jobs and merged as
+`ceb7c24a3527da10f5b764d8abd1d0fa88cc4c51`.
 
 ## Pending cross-provider checks
 
@@ -62,7 +67,7 @@ for the interim plan review under the founder-authorized fallback.
 | P1 | Website/design canonical wording | Recheck after the redesign working tree is committed/reconciled, especially Quiet Material v0.7 and section implementation status | Review against a stable frontend commit rather than an uncommitted worktree |
 | P1 | #438 operator-action execution and reconciliation | Recheck the corrected founder-gated script and pre-write digest proof, then confirm executed/reconciled state after any production write; do not infer execution from script or issue state | Claude review of exact prepared script plus independent production reconciliation evidence |
 | P1 | x402 AgentCash discovery contract (plan and implementation dated 2026-09-01; Codex plan, technical, and product PASS) | Review the then-current exact commit, real `@agentcash/discovery@1.7.5` fail-before/pass-after evidence, canonical `protocols: [{ x402: {} }]` wire shape, exact-price preservation, dependency pin, and no-change boundary around challenge/verification/settlement | Claude exact-commit PASS plus production AgentCash parse evidence after the OpenAPI cache window, with all high/medium findings resolved |
-| P1 | Inactive deploy-safety decision batch (`DEC-20260504-B` and `DEC-20260504-C`) | Verify source fidelity, corrected incident-evidence wording, protocol coexistence without invented graph edges, and inactive authority at the then-current exact commit | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
+| P1 | Inactive deploy-safety decision batch (`DEC-20260504-B` and `DEC-20260504-C`; interim exact-commit Codex PASS at `87f47f08`, merged by PR #463 as `ceb7c24a`) | Verify source fidelity, corrected incident-evidence wording, the non-retiring C → B `related_to` edge, and inactive authority at the then-current exact commit | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
 | P2 | M4 entrypoint/cutover batch | Adversarially verify that Notion consumers are replaced, peer entrypoints are safe, and no mutable facts remain duplicated | Exact-head cross-provider cutover review |
 
 ## Operating rule until cleared

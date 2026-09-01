@@ -18,6 +18,7 @@
         "archive/sessions/2026-09-01-decision-collision-identity-plan.md",
         "archive/sessions/2026-09-01-decision-collision-resolution-plan-DEC-20260502-A.md",
         "archive/sessions/2026-09-01-m2-deploy-safety-decision-plan.md",
+        "archive/sessions/2026-09-01-m2-deploy-safety-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
@@ -35,6 +36,7 @@
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
         "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md",
         "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md",
+        "handoff/_general/from-code/2026-09-01-m2-deploy-safety-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md"
       ]
     },
@@ -81,6 +83,7 @@
         "archive/sessions/2026-09-01-decision-collision-identity-plan.md",
         "archive/sessions/2026-09-01-decision-collision-resolution-plan-DEC-20260502-A.md",
         "archive/sessions/2026-09-01-m2-deploy-safety-decision-plan.md",
+        "archive/sessions/2026-09-01-m2-deploy-safety-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-doctrine-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
@@ -172,6 +175,7 @@
         "handoff/_general/from-code/2026-08-23-checkin-morning.md",
         "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md",
         "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md",
+        "handoff/_general/from-code/2026-09-01-m2-deploy-safety-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
@@ -359,7 +363,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "8f67b95e2eb634468f1f8cf9b2f1077c26046476830d6ba06e1f849341b75c54",
+      "sha256": "8255772ff885d1e16696d7829a50e540c60f190ee624b68a49a5868abbd97d67",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
