@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -26,8 +32,10 @@ import {
   validateSkeletonDocument,
 } from "./project-context-lib.mjs";
 import {
+  checkGeneratedFileState,
   checkPrecutoverEntrypoint,
   checkPrivateArchiveStatus,
+  runChecks,
 } from "./check-project-context.mjs";
 
 test("generated M1 skeleton satisfies its exact contract", () => {
@@ -499,6 +507,22 @@ test("private archive status preserves the M0 gate without public raw data", () 
 
     writeFileSync(statusPath, '{"complete":true}\n', "utf8");
     assert.deepEqual(checkPrivateArchiveStatus(root), []);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the checked-in repository context is warning-clean", () => {
+  assert.deepEqual(runChecks(process.cwd()), []);
+});
+
+test("a missing generated decision schema is reported", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-generated-schema-missing-"));
+  try {
+    const file = "docs/project/schemas/decision-record.schema.json";
+    assert.deepEqual(checkGeneratedFileState(root, { [file]: "{}\n" }, [file]), [
+      { severity: "warning", code: "GENERATED_FILE_MISSING", path: file },
+    ]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

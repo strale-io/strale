@@ -10,6 +10,7 @@ import {
 import { dirname, extname, resolve, sep } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
+import { decisionGeneratedFiles } from "./decision-records-lib.mjs";
 
 export const M1_BANNER =
   "> [!CAUTION]\n" +
@@ -53,14 +54,6 @@ export const SKELETON_DOCUMENTS = Object.freeze({
 Future clean-session order (not active): PRODUCT → STATE → ROADMAP → generated
 decision/recent-work views → protocol router.`,
   ),
-  "docs/project/DECISIONS.md": skeleton(
-    "generated-decision-index",
-    "Active Decisions",
-    `**PARTIAL GENERATED VIEW — ` + "`complete: false`" + `.**
-
-No authoritative decision index is published during M1.`,
-    { generated: true },
-  ),
   "docs/project/RECENT.md": skeleton(
     "generated-recent-work",
     "Recent Material Work",
@@ -82,11 +75,6 @@ truth, update duties, and session-close behavior after cutover review.`,
 existing entrypoints and Claude workflow files until it is extracted and
 coverage-checked in later milestones.`,
   ),
-  "docs/decisions/README.md": skeleton(
-    "decision-system-readme",
-    "Decision Records",
-    "The record contract and generated inverse views will be activated after M0 and M2 review.",
-  ),
   "docs/governance/README.md": skeleton(
     "governance-navigation",
     "Governance",
@@ -106,14 +94,21 @@ export const M2_CANDIDATE_DOCUMENTS = Object.freeze({
   "docs/project/PRODUCT.md": "project-product",
   "docs/project/STATE.md": "project-state",
   "docs/project/ROADMAP.md": "project-roadmap",
+  "docs/decisions/README.md": "decision-system-readme",
   "docs/decisions/PENDING.md": "pending-founder-decisions",
+});
+
+export const M2_GENERATED_DOCUMENTS = Object.freeze({
+  "docs/project/DECISIONS.md": "generated-decision-index",
 });
 
 export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
   "docs/project/PRODUCT.md": 1_200,
   "docs/project/STATE.md": 2_000,
   "docs/project/ROADMAP.md": 1_500,
+  "docs/decisions/README.md": 1_000,
   "docs/decisions/PENDING.md": 1_000,
+  "docs/project/DECISIONS.md": 1_500,
 });
 
 export const INVENTORY_TARGETS = Object.freeze([
@@ -507,13 +502,13 @@ function searchableFiles(root, allTracked) {
   return allTracked.filter((file) => {
     if (
       file.startsWith("docs/project/") ||
-      file === "docs/decisions/README.md" ||
-      file === "docs/decisions/PENDING.md" ||
+      file.startsWith("docs/decisions/") ||
       file.startsWith("docs/governance/") ||
       file === "scripts/project-context-lib.mjs" ||
       file === "scripts/generate-project-context.mjs" ||
       file === "scripts/check-project-context.mjs" ||
-      file === "scripts/check-project-context.test.mjs"
+      file === "scripts/check-project-context.test.mjs" ||
+      file.startsWith("scripts/decision-records")
     ) {
       return false;
     }
@@ -560,6 +555,7 @@ export function buildInventory(root) {
 export function generatedFiles(root) {
   return {
     ...SKELETON_DOCUMENTS,
+    ...decisionGeneratedFiles(root),
     "docs/project/schemas/project-document.schema.json":
       `${JSON.stringify(PROJECT_DOCUMENT_SCHEMA, null, 2)}\n`,
     "docs/project/schemas/operator-actions.schema.json":

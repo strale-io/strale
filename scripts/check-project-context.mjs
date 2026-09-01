@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   M2_CANDIDATE_DOCUMENTS,
+  M2_GENERATED_DOCUMENTS,
   SKELETON_DOCUMENTS,
   buildInventory,
   generatedFiles,
@@ -18,9 +19,39 @@ import {
   validateStateEvidence,
   validateSkeletonDocument,
 } from "./project-context-lib.mjs";
+import {
+  readDecisionRecords,
+  validateDecisionRepository,
+} from "./decision-records-lib.mjs";
 
 function finding(code, path, detail) {
   return { severity: "warning", code, path, ...(detail ? { detail } : {}) };
+}
+
+const GENERATED_CONTEXT_FILES = [
+  "docs/project/DECISIONS.md",
+  "docs/project/RECENT.md",
+  "docs/project/legacy-authority-inventory.json",
+  "docs/project/schemas/project-document.schema.json",
+  "docs/project/schemas/operator-actions.schema.json",
+  "docs/project/schemas/decision-record.schema.json",
+  "docs/project/schemas/decision-id-collisions.schema.json",
+  "docs/project/schemas/legacy-authority-inventory.schema.json",
+];
+
+export function checkGeneratedFileState(root, expected, files = GENERATED_CONTEXT_FILES) {
+  const findings = [];
+  for (const file of files) {
+    const absolute = resolve(root, file);
+    if (!existsSync(absolute)) {
+      findings.push(finding("GENERATED_FILE_MISSING", file));
+      continue;
+    }
+    if (readFileSync(absolute, "utf8") !== expected[file]) {
+      findings.push(finding("GENERATED_FILE_DRIFT", file));
+    }
+  }
+  return findings;
 }
 
 export function checkPrivateArchiveStatus(root) {
@@ -77,7 +108,10 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     );
   }
 
-  for (const [file, expectedDocType] of Object.entries(M2_CANDIDATE_DOCUMENTS)) {
+  for (const [file, expectedDocType] of Object.entries({
+    ...M2_CANDIDATE_DOCUMENTS,
+    ...M2_GENERATED_DOCUMENTS,
+  })) {
     const absolute = resolve(root, file);
     if (!existsSync(absolute)) {
       findings.push(finding("CANDIDATE_FILE_MISSING", file));
@@ -108,6 +142,17 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     }
   }
 
+  try {
+    findings.push(
+      ...validateDecisionRepository(root, readDecisionRecords(root)).map((item) => ({
+        severity: "warning",
+        ...item,
+      })),
+    );
+  } catch (error) {
+    findings.push(finding("DECISION_RECORD_CHECK_FAILED", "docs/decisions/records", error.message));
+  }
+
   const operatorActionsFile = "docs/operations/operator-actions.yaml";
   const operatorActionsPath = resolve(root, operatorActionsFile);
   if (!existsSync(operatorActionsPath)) {
@@ -131,21 +176,7 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     );
   }
 
-  for (const file of [
-    "docs/project/DECISIONS.md",
-    "docs/project/RECENT.md",
-    "docs/project/legacy-authority-inventory.json",
-    "docs/project/schemas/project-document.schema.json",
-    "docs/project/schemas/operator-actions.schema.json",
-    "docs/project/schemas/legacy-authority-inventory.schema.json",
-  ]) {
-    const absolute = resolve(root, file);
-    if (!existsSync(absolute)) continue;
-    const actual = readFileSync(absolute, "utf8");
-    if (actual !== expected[file]) {
-      findings.push(finding("GENERATED_FILE_DRIFT", file));
-    }
-  }
+  findings.push(...checkGeneratedFileState(root, expected));
 
   const inventoryPath = resolve(root, "docs/project/legacy-authority-inventory.json");
   if (existsSync(inventoryPath)) {

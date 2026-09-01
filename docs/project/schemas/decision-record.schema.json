@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Repo-native decision record candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "status",
+    "topic",
+    "scope",
+    "owner",
+    "decided_at",
+    "relations",
+    "evidence",
+    "migration_status",
+    "authority_scope",
+    "authority_active",
+    "phase"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^DEC-[0-9]{8}-[A-Z]$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "active",
+        "superseded",
+        "rejected",
+        "retired"
+      ]
+    },
+    "topic": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "scope": {
+      "enum": [
+        "global",
+        "product",
+        "technical",
+        "operational",
+        "design"
+      ]
+    },
+    "owner": {
+      "enum": [
+        "petter",
+        "codex",
+        "claude"
+      ]
+    },
+    "decided_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "target"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "supersedes",
+              "amends",
+              "interprets",
+              "affirms",
+              "related_to"
+            ]
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^DEC-[0-9]{8}-[A-Z]$"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "migration_status": {
+      "const": "candidate"
+    },
+    "authority_scope": {
+      "const": "none"
+    },
+    "authority_active": {
+      "const": false
+    },
+    "phase": {
+      "const": "M2"
+    }
+  }
+}

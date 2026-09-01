@@ -1,0 +1,364 @@
+schema_version: 1
+authority_scope: none
+status: candidate
+complete: false
+phase: M2
+authority_active: false
+source_data_source: collection://5e1a81ee-7b9f-4d3c-b58d-c8d97ae6386c
+observed_at: 2026-09-01
+collision_count: 35
+source_row_count: 71
+collisions:
+  - id: "DEC-20260225-P-c5d6"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Add failed_requests table to MVP schema. Log every no_matching_capability response with task, category, max_price_cents, user_id. Turns failures into provider recruitment data for Phase 2."
+        historical_status: active
+        source_url: https://app.notion.com/31267c87082c81279b14f3859f6f2038
+      - title: "GTM strategy: Demo-first, no community credibility required. Three launch outputs in week 4-5: demo video (Twitter/YouTube), tutorial post (dev.to/Hashnode), 5 targeted developer outreach messages. Framework integrations (LangChain, CrewAI) as primary distribution in weeks 5-8. HN Show post with real transaction data in week 6-7."
+        historical_status: active
+        source_url: https://app.notion.com/31267c87082c818e9d46cd25ac0236a8
+  - id: "DEC-20260303-A"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Problem→Solution section uses SVG diagrams + bullet lists, no code blocks"
+        historical_status: active
+        source_url: https://app.notion.com/31867c87082c813198e2da8e3d02b531
+      - title: "Solution discovery UX: smart input with AI recommendation card (not chat, not traditional search)"
+        historical_status: active
+        source_url: https://app.notion.com/31867c87082c812dba47c52f4f36ca33
+  - id: "DEC-20260304-A"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Hide component prices in discovery UI"
+        historical_status: active
+        source_url: https://app.notion.com/31967c87082c8185b0a6c33de2293215
+      - title: "Homepage v2.1 polish: comparison back to #2, remove Built for Agents, compact three-steps, tabbed integrations, static discovery"
+        historical_status: active
+        source_url: https://app.notion.com/31867c87082c812c9ccef7f58256f40a
+  - id: "DEC-20260304-B"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Kill 'Compare with DIY' cost calculator feature"
+        historical_status: active
+        source_url: https://app.notion.com/31967c87082c81dda9c4f43b5b7674b3
+      - title: "Stats bar: swap 27 Countries for 15 Solutions"
+        historical_status: active
+        source_url: https://app.notion.com/31867c87082c81a4b2f7ccdd52b99b1e
+  - id: "DEC-20260304-C"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Trust data must never be displayed with false confidence"
+        historical_status: active
+        source_url: https://app.notion.com/31967c87082c815cb440e586e783df0a
+      - title: "Trust verification card redesigned as monitoring dashboard panel, not product card"
+        historical_status: active
+        source_url: https://app.notion.com/31867c87082c810197f9efa520332024
+  - id: "DEC-20260320-C"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "au-company-data capability onboarded via ABR API (Australian Business Register)"
+        historical_status: active
+        source_url: https://app.notion.com/32967c87082c81bfa5d1ee04b7d753dc
+      - title: "Hotfix: auto-register must filter .d.ts declaration files + startup health gate (MIN_EXPECTED_EXECUTORS = 200)"
+        historical_status: active
+        source_url: https://app.notion.com/32967c87082c81178c7acc8b5c396aa3
+  - id: "DEC-20260320-J"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Dynamic methodology text: capability counts, solution counts, and test suite counts must never be hardcoded. Always query live data."
+        historical_status: active
+        source_url: https://app.notion.com/32967c87082c8177a82be21d48f57411
+      - title: "pep-check uses transparency tag mixed instead of commercial_data"
+        historical_status: active
+        source_url: https://app.notion.com/32967c87082c8192b920f8d8cfb40aa7
+  - id: "DEC-20260320-K"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Free-tier showcase protection: 5 free-tier capabilities get dedicated meta-monitor alerting on any quality degradation. These are the front door."
+        historical_status: active
+        source_url: https://app.notion.com/32967c87082c81e890bfe564a3c2e917
+      - title: "KYB + Invoice Verify implementation complete — 60 solutions, 3 capabilities, all docs updated"
+        historical_status: active
+        source_url: https://app.notion.com/32967c87082c818e8cbbc29a3a0c1bed
+  - id: "DEC-20260405-B"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Deactivate credit-report-summary; no free source for Swedish credit ratings exists"
+        historical_status: active
+        source_url: https://app.notion.com/34a67c87082c810692c8dd4374a6f9ac
+      - title: "DEC-20260405-B: Solution execution transaction storage model and Phase 1.4 migration tooling workaround"
+        historical_status: active
+        source_url: https://app.notion.com/33967c87082c810c920dd09d78aa06b6
+  - id: "DEC-20260406-A"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Consolidate working rules for Claude (chat), CC, and Notion governance into single source-of-truth page"
+        historical_status: active
+        source_url: https://app.notion.com/33a67c87082c81bdb38fd9eeaa556d98
+      - title: "DEC-20260406-A: Fix missing per-step latencyMs capture in solution audit_trail"
+        historical_status: active
+        source_url: https://app.notion.com/33967c87082c816b825cdf812ef006b8
+  - id: "DEC-20260406-B"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "DEC-20260406-B: Fix nested field reference resolution in solution input mapping"
+        historical_status: active
+        source_url: https://app.notion.com/33967c87082c8103becfe4900a1ff319
+      - title: "Restructure Notion workspace around Operating Manual as single entry point and four-layer model"
+        historical_status: active
+        source_url: https://app.notion.com/33a67c87082c81629339d9f208f65f52
+  - id: "DEC-20260406-C"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Project Home physical tidy — canonical set at top level, ~90 pages archived to Archive — Q1 2026"
+        historical_status: active
+        source_url: https://app.notion.com/33a67c87082c814b8afafb2e1c6ca317
+      - title: "Rule E added to Working Rules: brand voice is institutional and human, no em dashes"
+        historical_status: active
+        source_url: https://app.notion.com/33a67c87082c819cabf6d47331d695ce
+  - id: "DEC-20260409-C"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Gate 4: Solution-level smoke tests in scheduler"
+        historical_status: active
+        source_url: https://app.notion.com/33d67c87082c81c19655cb04fb7d3ecf
+      - title: "Gate 4: Solution-level smoke tests in scheduler"
+        historical_status: superseded
+        source_url: https://app.notion.com/33d67c87082c81f4a3ffcb774b1d84e4
+  - id: "DEC-20260420-D"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "SA.2b per-capability PII classification: manifest-declared field + 12-value category enum + heuristic fallback during backfill + blocking gate for new capabilities + 15/15 top backfill shipped"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81409ee0d6c992ce3d43
+      - title: "SA.2b per-capability PII classification: manifest-declared field + 12-value category enum + heuristic fallback during backfill + blocking gate for new capabilities + 15/15 top backfill shipped"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81f0827eedf29d133600
+  - id: "DEC-20260420-E"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "F-A-005 free-tier transaction lookup redaction: always-redact (path a), asymmetric marker (unauth-only), single commit, 200 + body_redacted envelope, verify endpoint untouched"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81b590b4e8bee4b59228
+      - title: "Product architecture and first wedge"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81d5a898f48cc1554086
+  - id: "DEC-20260420-F"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Capability rationalization and site rebuild"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c810b8df1e8e459039d35
+      - title: "F-A-006 + F-A-007 HMAC audit token lifecycle: 90-day bounded expiry, two-key rotation ring, separate query params encoding, 180-day legacy grace, auth-gated re-issue endpoint. Two commits shipped."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c810b8547fccb3e75c61b
+  - id: "DEC-20260420-G"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Entity resolution as priority engineering investment"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81dcafe3dea59cc119b1
+      - title: "F-A-012 verify endpoint DoS hardening: MAX_DEPTH 200→50, DEFAULT_DEPTH 50→20, rate limit 30→10/min per IP, explicit truncated marker. Single commit shipped."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81c38c3acaca5d01d6ef
+  - id: "DEC-20260420-H"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Option C for 238-slug manifest drift: fix Class 5.2 mapping + add backfill safety banner, defer full Class 4 cleanup to Session 1 onboarding engine rewrite. SA.2b.c will use direct-SQL backfill to avoid the pipeline entirely."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81c6a58dfbc5f46ed3f6
+      - title: "Strale positioning and ICP clarification"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81b58b36de5f71c0937f
+  - id: "DEC-20260420-I"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Adopt split-by-data-source-type as the operable form of the \"direct connections only\" doctrine. Amends DEC-20260420-H."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81c8b9d4c6b5568bbcef
+      - title: "SA.2b.c direct-SQL backfill of 260 remaining capabilities with PII classification + 2 Class 2 fixture fixes. Complete."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c8172a41ac4c9d52904de
+  - id: "DEC-20260420-J"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "SA.2b.d closes Session A: 32 orphans classified (15 TRUE/17 FALSE), processes_personal_data flipped to NOT NULL with default false, heuristic fallback deleted from audit-helpers.ts + all three call sites in do.ts. Session A formally complete."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81478c15cb6985d10137
+      - title: "SUPERSEDED 2026-04-20 by DEC-20260420-K. Original decision (defer bank verification to v1.1) was incorrect — the v1 vision has not changed, bank verification is a launch gate, not a descope."
+        historical_status: superseded
+        source_url: https://app.notion.com/34867c87082c81dc803bc3709bd5fdd6
+  - id: "DEC-20260420-K"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Payee Assurance v1 launch is conditional on resolving the bank verification (IBAN/name match) source. No source contracted, no launch. Supersedes DEC-20260420-J."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81e3a62bf051cc0575c4
+      - title: "Session B Open Questions resolved: OQ-1 hybrid split ownership, OQ-2 5-second countdown + CI=1 skip, OQ-3 defer solutions YAML pathway, OQ-4 auto-derive solution PII from step union, OQ-5 delete env-var kill switch + add --skip-gates=<reason> CLI flag, OQ-6 delete transparency-tag heuristic default (same pattern as SA.2b.d). OQ-7 already being fixed in three-hotfix prompt."
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c8198b6ecf3569a68a9b4
+  - id: "DEC-20260421-A"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "DEC-20260421-A — Cluster 2 Phase 3 split into C1 and C2"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81babd35eba5856ded79
+      - title: "Payee Assurance input spec is single-field (company name only); entity resolution engine is a v1 launch blocker"
+        historical_status: active
+        source_url: https://app.notion.com/34967c87082c813c825cc3e4dca30a98
+  - id: "DEC-20260421-B"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "DEC-20260421-B — Hook placement correction: onCapabilityCreated moved outside db.transaction"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81dab702f98b2034aa5d
+      - title: "Landing page H1 is product-led (\"Counterparty verification for AI agents, in one call.\"), not platform-led. Amends Brand & Voice Section 7.1."
+        historical_status: active
+        source_url: https://app.notion.com/34967c87082c81828e3fe183dd5e8072
+  - id: "DEC-20260421-C"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "\"No scraping\" positioning commitment promoted to v1 launch blocker. All 9 EU countries currently using Browserless+LLM scraping must be migrated to direct APIs or licensed aggregator contracts before launch."
+        historical_status: active
+        source_url: https://app.notion.com/34967c87082c81bd8c6bf8e92e901711
+      - title: "DEC-20260421-C — Replace Phase 4 7-day traffic soak with evidence-based validation gates"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81a6bb52ca8dbd61dc25
+  - id: "DEC-20260421-D"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "DEC-20260421-D — Phase 4 split into 4a (authority enforcement) and 4b (manifest completeness + bulk regen)"
+        historical_status: active
+        source_url: https://app.notion.com/34867c87082c81a2a12cc95010bf25bf
+      - title: "Landing page Section 2 is a full-quality agent-in-use animation, not a static problem statement. Ships in v1."
+        historical_status: active
+        source_url: https://app.notion.com/34967c87082c810695c2e365deb8f2c8
+  - id: "DEC-20260502-A"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Strale v1 product narrowed to Counterparty Assurance; Payee Assurance renamed; lighter Payment-shape product deferred"
+        historical_status: superseded
+        source_url: https://app.notion.com/35467c87082c81ca99efdca389eb77b9
+      - title: "x402 uses the catalog (EUR) price converted at a single EUR_USD_RATE — no separate USD price tier"
+        historical_status: active
+        source_url: https://app.notion.com/35467c87082c8124bcc5e2c2597c76c6
+  - id: "DEC-20260505-D"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "DEC-20260505-D — InfoCamere route: pursue Distributore Ufficiale program, not Telemaco Pay"
+        historical_status: active
+        source_url: https://app.notion.com/35767c87082c81059f67e756f5c5eefa
+      - title: "v1 launch scope expanded from 6-fixed to as-close-to-full-EU-coverage-as-possible"
+        historical_status: active
+        source_url: https://app.notion.com/35767c87082c81d3897fe47a2ec7a4c1
+  - id: "DEC-20260505-E"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "DEC-20260505-E — HMRC VAT Checker: surface redistribution model proactively, force compliance review now"
+        historical_status: active
+        source_url: https://app.notion.com/35767c87082c813481a8efa27ea37438
+      - title: "Topograph downgraded to customer-funded or fee-waived only; not v1 default"
+        historical_status: active
+        source_url: https://app.notion.com/35767c87082c81e2ba50d630d0b95f9d
+  - id: "DEC-20260507-A"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Drift-check substrate moves to platform-facts.ts; static maps in CI scripts deprecated"
+        historical_status: active
+        source_url: https://app.notion.com/35967c87082c81b0ad02d69148811b57
+      - title: "Gap-8 reclassified to Gap-7: SK misclassification corrected, SI/SK/RO confirmed buildable, MT remains genuine gap pending MBR outreach"
+        historical_status: active
+        source_url: https://app.notion.com/35967c87082c81a9abc3da329b92a0f9
+  - id: "DEC-20260507-B"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Closing-steps Rule 16 — CC self-merges feature-branch PRs after session-end verification passes"
+        historical_status: active
+        source_url: https://app.notion.com/35967c87082c81ec9db7cba5b6fecb76
+      - title: "NL dutch-company-data defaults to KVK direct API (Basisprofiel + Zoeken), replacing Company.info as primary mid-rebuild target"
+        historical_status: superseded
+        source_url: https://app.notion.com/35967c87082c81f38091f6afba337a8a
+  - id: "DEC-20260507-C"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Branch protection enabled on main (required PR, required status checks, strict base, enforce on admins)"
+        historical_status: active
+        source_url: https://app.notion.com/35967c87082c81f187e7f1881a6d74c4
+      - title: "IT/ES/PT/AT cohort defaults to Openapi PAYG for v1; self-build / Compass / InfoCamere / publicacoes.mj.pt parser deferred until revenue triggers"
+        historical_status: active
+        source_url: https://app.notion.com/35967c87082c817cad56ec58c707d895
+  - id: "DEC-20260508-B"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Canonical local-development worktree structure locked: trunk always on main; daily work in strale-work (detached HEAD); research/exploratory in strale-research (detached HEAD). WORKTREES.md at repo root is the operational doc."
+        historical_status: active
+        source_url: https://app.notion.com/35a67c87082c814bbb8df7036fccf8e1
+      - title: "Provenance posture for aggregator-sourced data: pointer-to-register where Strale calls registers directly; pointer-to-aggregator-plus-legal-basis where Strale calls aggregators operating under their own legal authority"
+        historical_status: active
+        source_url: https://app.notion.com/35a67c87082c8119a22bf1414e307e5f
+  - id: "DEC-20260508-C"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Audit-first template extended at point 1: adds Files I will modify sub-list and cross-worktree write-conflict check. Halts on file modified <1h ago in another worktree; warns on stale ≥1h modifications."
+        historical_status: active
+        source_url: https://app.notion.com/35a67c87082c81dd8477cdb92d1403f2
+      - title: "Closing-steps Rule 17 — CC verifies worktree HEAD state at session start; adds Worktree branch-collision tripwire to stop-conditions.md"
+        historical_status: active
+        source_url: https://app.notion.com/35a67c87082c8170a19af278e67abd46
+      - title: "KVK direct M2M ineligible for Swedish AB; NL primary intent reverts to Company.info as KVK recognised partner pending eligibility validation. Supersedes DEC-20260507-B for the eligibility question."
+        historical_status: active
+        source_url: https://app.notion.com/35a67c87082c817eb9b5d491786dc67b
+  - id: "DEC-20260512-A"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "KVK Option B (Strale-applies-for-KVK-recognised-partner-status) closed — all KVK channels confirmed closed to foreign EU entities"
+        historical_status: active
+        source_url: https://app.notion.com/35e67c87082c8122a29ef35f256d5958
+      - title: "Scheduler and internal callers must respect vendor cost class + quota windows"
+        historical_status: active
+        source_url: https://app.notion.com/35e67c87082c8188a014f4b1f963cf77
+  - id: "DEC-20260513-F"
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: "Classify guaranteed_field_missing:* as manifest_drift non-tripping in categorizeFailureReason"
+        historical_status: active
+        source_url: https://app.notion.com/35f67c87082c81269b79cb7d0367dc46
+      - title: "v1 Identity coverage verdict — 20 of 20 audited capabilities v1-ready"
+        historical_status: active
+        source_url: https://app.notion.com/35f67c87082c81c09fbfc2253cf4e24c
