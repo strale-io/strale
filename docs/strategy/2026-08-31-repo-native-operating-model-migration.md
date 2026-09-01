@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** M0 COMPLETE — M1 and product/state M2 merged; operator/pending candidates populated, inactive review next
+**Status:** M0/M1 COMPLETE — M2 product/state and operator/pending merged; formal decision candidate implemented and reviewed; all M2 surfaces remain inactive
 **Date:** 2026-08-31
 **Owner:** Codex
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -109,6 +109,30 @@ rule.
   Notion workflow or project authority has been cut over.
 - Next: independent review, then contradiction-checked formal decision batches.
   M4 remains out of scope.
+
+## M2 formal decision candidate update — 2026-09-01
+
+- `docs/decisions/records/` now holds the unambiguous formal decision candidates
+  needed for the current operating-authority chain. The generated candidate
+  index supplies status and inverse relationship views.
+- A complete collision registry preserves all 35 historical IDs reused across
+  71 source rows. Unresolved IDs are mechanically excluded from both formal
+  records and relationship targets; the two incompatible meanings of
+  `DEC-20260502-A` therefore remain explicit rather than being silently merged.
+- Merge-base checks preserve every historical record, enforce forward-only
+  lifecycle transitions, and protect the body, stable metadata, provenance,
+  and relationships of active, superseded, and retired records.
+- CommonMark-aware parsing enforces exactly five visible top-level sections and
+  rejects hidden, malformed, nested, raw-HTML, setext, fence, and line-break
+  heading bypasses. Directional decision relationships are acyclic, and
+  generated files must exist and match byte-for-byte.
+- Independent Codex authority review passed clean. Technical reviews found and
+  drove fixes for lifecycle, provenance, graph, generated-file, and Markdown
+  bypasses; final exact-head review passed at `e5631231` with 43/43 tests and no
+  context findings. Every verification task was archived after its verdict.
+- This remains an inactive M2 candidate. The exact-head batch stays on the
+  Claude cross-provider backlog, and M4 is blocked until that review and the
+  unresolved decision-ID collisions are cleared.
 
 ## Execution dependency amendment — 2026-08-31
 
