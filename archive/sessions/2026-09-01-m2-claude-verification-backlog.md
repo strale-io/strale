@@ -27,6 +27,12 @@ No Claude verdict or finding was returned. A separate Codex session therefore
 provides an interim review. That same-provider review must not be represented as
 satisfying the normal cross-provider independence gate.
 
+The sourcing-doctrine decision batch made two further bounded attempts after a
+successful Opus availability probe: wanted Opus/high effort, but the review
+timed out after 124 seconds with no verdict; fell to Sonnet/high effort, which
+also timed out after 124 seconds with no verdict. The exact amended commit was
+therefore reviewed by separate Codex tasks and remains queued below.
+
 ## Pending cross-provider checks
 
 | Priority | Artifact/topic | Required Claude check | Closure evidence |
@@ -36,6 +42,7 @@ satisfying the normal cross-provider independence gate.
 | P0 | First canonical `PRODUCT.md`, `STATE.md`, and `ROADMAP.md` population (interim exact-head Codex PASS at `48144067`) | Review exact authority-bearing wording, omissions, and contradiction handling before M4 activation | Cross-provider review report on the then-current exact commit |
 | P0 | Inactive `operator-actions.yaml` and `PENDING.md` batch (interim exact-head Codex PASS at `dd6268f`) | Review the then-current exact commit, especially authority binding, lifecycle history/evidence, acceptance blocking, and founder-only classification | Claude exact-head PASS with all findings resolved before M4 activation |
 | P0 | Inactive formal decision graph (interim authority PASS at `452dbf1f`; final technical PASS at `e5631231`) | Verify the then-current exact commit, especially that synthesized context-pack `D-*` entries were not converted into formal decisions; all 35 reused IDs/71 rows remain complete and excluded while unresolved; the authority chain, founder-reserved gates, lifecycle/provenance immutability, and CommonMark section contract remain correct | Claude exact-head PASS with all high/medium findings resolved before M4 activation |
+| P0 | Inactive sourcing-doctrine decision batch (`DEC-20260428-A`, `DEC-20260428-B`, `DEC-20260518-F`, `DEC-20260813-A`; interim exact-head Codex PASS at `88338518`) | Verify source fidelity, relation semantics, inactive authority boundary, and especially the preserved but unresolved five-year match-result retention versus ninety-day content-redaction overlap | Claude exact-head PASS on the then-current commit with all high/medium findings resolved before M4 activation |
 | P1 | WP10 formal acceptance review | Independently assess whether the dated observation evidence is sufficient and whether an acceptance record is accurate | Claude review of the acceptance record and production-evidence summary |
 | P1 | WP13 status reconciliation | Reconcile delivered dependency/publishing work with the still-open formal package and VERIFY-DEP status | Claude disposition identifying the correct package status and remaining scope |
 | P1 | Website/design canonical wording | Recheck after the redesign working tree is committed/reconciled, especially Quiet Material v0.7 and section implementation status | Review against a stable frontend commit rather than an uncommitted worktree |
