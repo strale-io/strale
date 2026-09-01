@@ -137,6 +137,15 @@ the marketing website design system.
   WP10, WP13, WP17, and #438 distinctions reflected above.
 - These PRODUCT/STATE/ROADMAP files are now authored review candidates, but no
   root entrypoint, authority, or Notion workflow has been cut over.
+- Subsequent reviewed M2 batches added the protected decision/collision graph
+  and migrated sourcing doctrine, deploy/enforcement protocols, capability
+  onboarding, source enumeration, vendor-evaluation methodology, and the April
+  vendor-stack chain. Those records remain inactive candidates; their
+  historical status must not be confused with current runtime vendor state.
+- The vendor-stack closeout identified an M3 need: a shadow, refreshable
+  separation of runtime vendor facts, operator-only account readiness, and
+  historical Decisions/research. That work remains queued behind the M2 exit
+  gate; it is not the immediate continuation task.
 
 The [Operating Charter](../company/CHARTER.md) remains the authority for the
 division of decisions. Codex/Claude decide technical execution and ordinary

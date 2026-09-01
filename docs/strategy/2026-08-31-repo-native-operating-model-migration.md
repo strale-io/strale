@@ -1,9 +1,9 @@
 # Repo-native operating model migration
 
-**Status:** M0/M1 COMPLETE — M2 product/state and operator/pending merged; formal decision candidate implemented and reviewed; all M2 surfaces remain inactive
+**Status:** M0/M1 COMPLETE — M2 canonical state, operator/pending, decision graph, and first load-bearing topic batches merged; M2 closure audit is next; M3/M4 are not authorized
 **Date:** 2026-08-31
 **Owner:** Codex
-**Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
+**Active review route:** fresh separate Codex task, `gpt-5.6-sol`/xhigh (founder override 2026-09-01)
 **Base audited:** `origin/main@1f222c6ae43e87fc47ea07ef4a6c708b142a2144`
 **Decision state:** Petter confirmed the direction on 2026-08-31: the Strale repo
 becomes the active project system of record; Notion is retired as an active
@@ -24,6 +24,57 @@ Critical plan, exact-commit, closeout, and cutover reviews use a fresh separate
 Codex task pinned to `gpt-5.6-sol` at `xhigh`. Historical Claude reviews and
 timeouts below remain evidence of what occurred; they are not queued work and
 must not cause a future session to invoke Claude again.
+
+## Current continuation checkpoint — 2026-09-02
+
+This section supersedes older `Next:` sentences elsewhere in this dated plan.
+Those sentences remain historical progress notes; they are not the current
+resume instruction.
+
+**Start safely:** use a new isolated worktree from current `origin/main`. The
+shared checkout is intentionally not a safe resume surface because other
+sessions own dirty work there.
+
+**Completed and merged:** M0 preservation, M1 inert foundation, the 37-claim M2
+product/state reconciliation, populated PRODUCT/STATE/ROADMAP candidates,
+operator-action and pending-founder candidates, the protected decision graph
+and collision identity layer, and reviewed decision batches covering sourcing
+doctrine, deploy/enforcement protocols, capability onboarding, source
+enumeration, vendor-evaluation methodology, and the April vendor-stack chain.
+The candidate surfaces remain `authority_scope: none` and
+`authority_active: false`. The x402 price/discovery compatibility fixes are
+also merged, but are product work rather than authority cutover evidence.
+
+**Latest handoff:**
+`handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md`.
+
+**Next bounded task:** complete an M2 closure audit before starting M3. Build a
+reviewable remaining-work/disposition register without changing the M1 bare
+inventory's contract. Reconcile:
+
+1. every entry in `docs/project/legacy-authority-inventory.json` against the M2
+   disposition set (`migrated`, `evidence-only`, `archive`, `obsolete`, or
+   `unclear`), with source and rationale;
+2. every preserved Decision identity/source row against the formal record set,
+   distinguishing migrated, unresolved collision, intentionally historical,
+   and not-yet-reconciled work; and
+3. every older `Next:` statement in this plan against merged evidence so the
+   closure register—not chronology or memory—determines what remains.
+
+The audit must produce counts, machine-checkable provenance, an explicit M2
+exit-gap list, and the next collision-free Decision batch. If the register
+shows that a classification cannot be made from repo/private-preservation
+evidence, mark it unclear rather than guessing. Do not bulk-promote Decision
+content or alter existing protected records during the inventory pass.
+
+The M3 vendor-current-state replacement identified by the vendor-stack
+closeout remains the first queued M3 task after the M2 exit gate. Its future
+scope must keep runtime facts, operator-only account readiness, and historical
+Decisions/research separate. It is not authorized by this checkpoint.
+
+**Review:** use fresh separate Codex tasks for the plan, exact commit, and
+closeout. Do not invoke Claude as a reviewer; Claude Code is the primary author
+environment for the next session.
 
 ## M0 completion update — 2026-08-31
 
@@ -140,9 +191,11 @@ rule.
   drove fixes for lifecycle, provenance, graph, generated-file, and Markdown
   bypasses; final exact-head review passed at `e5631231` with 43/43 tests and no
   context findings. Every verification task was archived after its verdict.
-- This remains an inactive M2 candidate. The exact-head batch stays on the
-  Claude cross-provider backlog, and M4 is blocked until that review and the
-  unresolved decision-ID collisions are cleared.
+- This remains an inactive M2 candidate. The former Claude cross-provider
+  backlog was retired by founder direction. Subsequent exact-commit and topic
+  batch reviews use fresh separate Codex tasks; unresolved decision-ID
+  collisions remain mechanically blocked from migration and relationship
+  targets.
 
 ## Execution dependency amendment — 2026-08-31
 

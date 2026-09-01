@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "1523eacb45bf58a9d2723b0e7a092b4c3790b4031de80743a1bd153f9dababd1",
+      "sha256": "b718c012963df727635ca6d8f9fe01c27d998e72317f05ad6891ff96ce00ceab",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -34,6 +34,7 @@
         "archive/sessions/2026-09-01-m2-vendor-evaluation-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
+        "archive/sessions/2026-09-02-fresh-session-readiness-plan.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
@@ -60,7 +61,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "8f548aaebcd347255c6bd5824b56edf06d418dbe1f1bf27690f936ee119890cf",
+      "sha256": "7d238f47c1fa8cc4d18fb9bd8fd3acaba86239149729bc1bce6e453b5872303d",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -118,6 +119,7 @@
         "archive/sessions/2026-09-01-m2-vendor-evaluation-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
+        "archive/sessions/2026-09-02-fresh-session-readiness-plan.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -212,6 +214,7 @@
         "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
+        "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
         "manifests/c2pa-inspect.yaml",
@@ -352,8 +355,9 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "07157a8232d910dd67f304eb242d7d51d32a0e791f10d2d2f98b81ab996f794c",
+      "sha256": "3e3ab5010590b48673346f4dcfb642c6938374dcd2e2a527d929dc7ce75857e2",
       "detected_references": [
+        "AGENTS.md",
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/src/lib/attribution.ts",
@@ -368,6 +372,7 @@
         "handoff/_general/from-code/2026-08-12-readiness-p0-baseline.md",
         "handoff/_general/from-code/2026-08-16-quality-program-phase0-phase1.md",
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
+        "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
         "manifests-drafts/README.md",
         "manifests-drafts/company-name-resolve.yaml",
         "manifests-drafts/domain-email-provider-detect.yaml",
@@ -399,7 +404,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "6b9e76c763481b0cf93cb70aed90cb28e87a9ea39fa188ee0215a18a3f2c63f0",
+      "sha256": "316ade0915542840ba068a407f8baf65f215ee6d100cb2d167164bdad81a3102",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -445,6 +450,7 @@
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
         "archive/sessions/2026-09-01-x402-agentcash-discovery-contract-plan.md",
         "archive/sessions/2026-09-01-x402-price-representation-parity-plan.md",
+        "archive/sessions/2026-09-02-fresh-session-readiness-plan.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",

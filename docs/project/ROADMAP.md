@@ -40,13 +40,19 @@ small repo-native read path.
 
 Next bounded work:
 
-1. review the inactive operator-action and pending-founder candidates on their
-   exact commit;
-2. migrate formal product/project decisions in contradiction-checked topic
-   batches—never convert context-pack `D-*` labels into formal IDs silently;
-3. extract protocol routing without weakening existing mandatory gates;
-4. prove entrypoint symmetry, replace active Notion consumers, and only then
-   perform M4 cutover and retire Notion as an active authority.
+1. complete the M2 closure audit: add a machine-checkable disposition register
+   for every legacy-authority inventory entry and preserved Decision source;
+2. close the resulting M2 exit gaps through contradiction-checked Decision
+   batches while collision-blocked identities stay excluded;
+3. after the M2 exit gate, prepare the M3 vendor-current-state shadow
+   replacement, followed by Journal/activity and daily-priority replacements;
+4. complete protocol coverage and shadow session/start/end command paths; and
+5. prove entrypoint symmetry and replacement parity before one atomic M4
+   cutover retires active Notion consumers.
+
+The exact resume scope and safety boundary are maintained in the **Current
+continuation checkpoint** of the
+[migration plan](../strategy/2026-08-31-repo-native-operating-model-migration.md).
 
 The current candidate documents remain `authority_scope: none` until that gate.
 Execution source: the

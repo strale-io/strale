@@ -21,6 +21,20 @@ See .claude/PROTOCOL.md for full criteria and protocol definitions.
   verdicts remain valid historical evidence, but no new Claude-review backlog is
   created.
 
+### Repo-native migration continuation — pre-cutover
+
+When a session is asked to continue the repo-native operating-model migration,
+start in an isolated worktree from current `origin/main` and read the
+**Current continuation checkpoint** in
+`docs/strategy/2026-08-31-repo-native-operating-model-migration.md` before
+choosing work. Follow the exact handoff and next bounded task named there. Do
+not work from the dirty shared checkout or infer the next step from an older
+dated handoff.
+
+This is a navigation pointer, not M4 cutover. Candidate project documents
+remain inactive and Notion-backed workflows remain authoritative until the
+explicit atomic cutover.
+
 ### Notion Access (REQUIRED)
 - Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
 - To-do & Build Plan: https://www.notion.so/33c67c87-082c-81c3-a72b-cc59b10ff4ac

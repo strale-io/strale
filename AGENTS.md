@@ -32,6 +32,16 @@ section of CLAUDE.md for the history.)
   outward transitions use a fresh Codex reviewer. Historical Claude verdicts
   remain evidence, but no new Claude-review backlog is created.
 
+## Repo-native migration continuation — pre-cutover
+
+For continuation of the repo-native operating-model migration, create an
+isolated worktree from current `origin/main`, then read the **Current
+continuation checkpoint** in
+`docs/strategy/2026-08-31-repo-native-operating-model-migration.md` and the
+handoff it names. Never choose the next migration task from the dirty shared
+checkout or an older dated handoff. This pointer does not activate candidate
+project documents or retire Notion before M4.
+
 ## Notion & GitHub Access
 
 - Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
