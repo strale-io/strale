@@ -27,6 +27,8 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) — Adopt a three-tier doctrine for third-party scraping | `DEC-20260428-A` | active | `third-party-scraping-doctrine` | global | petter | 2026-04-28 |
 | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) — Set the engineering bar for Strale-built regulatory data services | `DEC-20260428-B` | active | `regulatory-data-service-engineering-bar` | global | petter | 2026-04-28 |
 | [`DEC-20260502-A`](../decisions/records/DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6.md) — x402 uses the catalog (EUR) price converted at a single EUR_USD_RATE — no separate USD price tier | `DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6` | active | `x402-catalog-price-parity` | global | petter | 2026-05-02 |
+| [`DEC-20260504-B`](../decisions/records/DEC-20260504-B.md) — Require a controlled workload-resumption plan for long-silent bulk operations | `DEC-20260504-B` | active | `deploy-safety` | global | petter | 2026-05-04 |
+| [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) — Verify deploy-pipeline reachability and the resulting production effect | `DEC-20260504-C` | active | `deploy-safety` | global | petter | 2026-05-04 |
 | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) — Clarify data sourcing to permit constrained per-call public-registry parsing | `DEC-20260518-F` | active | `data-sourcing-principles` | global | petter | 2026-05-18 |
 | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) — Adopt the Platform Readiness and Self-Operation program | `DEC-20260812-A` | active | `autonomous-operating-model` | global | petter | 2026-08-12 |
 | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) — Affirm constrained per-call parsing as the scraping doctrine interpretation | `DEC-20260813-A` | active | `scraping-doctrine-interpretation` | global | petter | 2026-08-13 |
@@ -49,6 +51,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `interpreted_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) | `DEC-20260813-A` |
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `related_from` | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` |
 | [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) | `DEC-20260503-A` | `superseded_by` | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` |
+| [`DEC-20260504-B`](../decisions/records/DEC-20260504-B.md) | `DEC-20260504-B` | `related_from` | [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) | `DEC-20260504-C` |
 | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) | `DEC-20260518-F` | `affirmed_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) | `DEC-20260813-A` |
 | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` | `amended_by` | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `DEC-20260815-A` |
 | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `DEC-20260815-A` | `amended_by` | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) | `DEC-20260822-A` |
