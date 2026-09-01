@@ -1,8 +1,8 @@
 ---
 doc_type: implementation-verification
 topic: x402-price-representation-parity
-status: local-verification-complete
-complete: false
+status: complete
+complete: true
 phase: M2
 authority_scope: none
 authority_active: false
@@ -156,13 +156,26 @@ Their sessions are complete. The product review's final low note about inherited
 exchange-rate state was also fixed and verified by running the focused suite
 with the parent shell set to `EUR_USD_RATE=1.10`; all 39 tests still passed.
 
-## Remaining gates
+## Production verification
 
-- repository `go` skill and full relevant suite;
-- independent exact-commit review;
-- GitHub CI and merge;
-- deployed-SHA and post-cache public parity checks without submitting payment;
-- repo handoff and Notion Journal entry.
+- PR `#459` merged to `main` as
+  `74117c51ded7fae809a6430a797b46fb52243b2a` after both GitHub `check` and
+  `integration-db` passed.
+- Production `/health` reported merge SHA prefix `74117c51ded7` throughout the
+  full five-minute discovery-cache window.
+- A pre-window snapshot and a post-window snapshot of live `csv-clean` both
+  returned catalog `0.0216`, manifest `"0.021600"`, OpenAPI `"0.021600"`, and
+  decoded `PAYMENT-REQUIRED` atomic amount `"21600"`.
+- The endpoint returned the expected HTTP 402 challenge. No payment was
+  submitted and no production settlement was triggered.
+- At the merge tip, the protected decision record and collision-resolution
+  report retain their recorded blob IDs unchanged.
+
+The x402 price-representation drift identified by the historical collision
+resolution is closed. Repo-native decision authority remains inactive.
+
+Closeout Journal:
+`https://app.notion.com/p/3ce67c87082c815cb2f0cfae11d56906?pvs=204`.
 
 Linear connectivity is unavailable in this Codex environment. No Linear issue
 is in scope, and this degraded connection does not block implementation.

@@ -357,7 +357,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "119c902d29b54131fe0a18a09f48a242ac82eb0e8e960afcc0ba1322c4d33258",
+      "sha256": "d523677433e11d00375c5142c5a8348970ea751e7beb777b43b0ccaa580b9ec5",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -395,7 +395,6 @@
         "archive/sessions/2026-08-31-m1-foundation-extraction-boundary.md",
         "archive/sessions/2026-08-31-repo-native-operating-model-m1-review-claude.md",
         "archive/sessions/2026-09-01-x402-price-representation-parity-plan.md",
-        "archive/sessions/2026-09-01-x402-price-representation-parity.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",
