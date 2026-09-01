@@ -13,22 +13,27 @@ import {
   readDecisionRecords,
   validateActiveBodyChange,
   validateActiveDecisionImmutability,
+  validateDecisionCollisionImmutability,
   validateDecisionIdCollisions,
   validateDecisionRecords,
 } from "./decision-records-lib.mjs";
 
 function record({
   id,
+  recordKey = id,
+  title = `Test ${id}`,
   status = "active",
   topic = "operating-model",
   relations = [],
+  evidence = [`https://example.com/${id}`],
   decision = "Use the recorded operating model.",
 }) {
   const relationYaml = relations.length === 0
     ? "[]"
     : `\n${relations.map((relation) => `  - type: ${relation.type}\n    target: ${relation.target}`).join("\n")}`;
-  const content = `---\nid: ${id}\ntitle: Test ${id}\nstatus: ${status}\ntopic: ${topic}\nscope: global\nowner: petter\ndecided_at: 2026-08-22\nrelations: ${relationYaml}\nevidence:\n  - https://example.com/${id}\nmigration_status: candidate\nauthority_scope: none\nauthority_active: false\nphase: M2\n---\n\n${DECISION_CANDIDATE_BANNER}\n\n## Decision\n\n${decision}\n\n## Context\n\nContext.\n\n## Rationale\n\nRationale.\n\n## Consequences\n\nConsequences.\n\n## Reversal conditions\n\nReversal conditions.\n`;
-  return parseDecisionRecord(`docs/decisions/records/${id}.md`, content);
+  const evidenceYaml = evidence.map((item) => `  - ${item}`).join("\n");
+  const content = `---\nrecord_key: ${recordKey}\nid: ${id}\ntitle: ${title}\nstatus: ${status}\ntopic: ${topic}\nscope: global\nowner: petter\ndecided_at: 2026-08-22\nrelations: ${relationYaml}\nevidence:\n${evidenceYaml}\nmigration_status: candidate\nauthority_scope: none\nauthority_active: false\nphase: M2\n---\n\n${DECISION_CANDIDATE_BANNER}\n\n## Decision\n\n${decision}\n\n## Context\n\nContext.\n\n## Rationale\n\nRationale.\n\n## Consequences\n\nConsequences.\n\n## Reversal conditions\n\nReversal conditions.\n`;
+  return parseDecisionRecord(`docs/decisions/records/${recordKey}.md`, content);
 }
 
 test("the readiness, charter, and daily-run amendment chain stays active", () => {
@@ -114,7 +119,7 @@ test("missing and invented relation targets fail", () => {
 
 test("an unresolved historical ID collision blocks records and relation targets", () => {
   const registry = {
-    schema_version: 1,
+    schema_version: 2,
     authority_scope: "none",
     status: "candidate",
     complete: false,
@@ -133,12 +138,16 @@ test("an unresolved historical ID collision blocks records and relation targets"
           {
             title: "Product decision",
             historical_status: "superseded",
-            source_url: "https://app.notion.com/one",
+            source_url: "https://app.notion.com/11111111111111111111111111111111",
+            source_page_id: "11111111111111111111111111111111",
+            disposition: "unresolved",
           },
           {
             title: "Pricing decision",
             historical_status: "active",
-            source_url: "https://app.notion.com/two",
+            source_url: "https://app.notion.com/22222222222222222222222222222222",
+            source_page_id: "22222222222222222222222222222222",
+            disposition: "unresolved",
           },
         ],
       },
@@ -158,6 +167,269 @@ test("an unresolved historical ID collision blocks records and relation targets"
         relations: [{ type: "supersedes", target: "DEC-20260502-A" }],
       }),
     ], registry).some((item) => item.code === "DECISION_RELATION_TARGET_COLLIDED"),
+  );
+});
+
+function resolvedCollisionRegistry() {
+  return {
+    schema_version: 2,
+    authority_scope: "none",
+    status: "candidate",
+    complete: false,
+    phase: "M2",
+    authority_active: false,
+    source_data_source: "collection://decisions",
+    observed_at: "2026-09-01",
+    collision_count: 1,
+    source_row_count: 2,
+    collisions: [
+      {
+        id: "DEC-20260502-A",
+        resolution_status: "resolved",
+        resolution_evidence: "archive/sessions/collision-resolution.md",
+        records: [
+          {
+            title: "Product decision",
+            historical_status: "rejected",
+            source_url: "https://app.notion.com/11111111111111111111111111111111",
+            source_page_id: "11111111111111111111111111111111",
+            disposition: "formal_record",
+            record_key:
+              "DEC-20260502-A--notion-11111111111111111111111111111111",
+          },
+          {
+            title: "Pricing decision",
+            historical_status: "active",
+            source_url: "https://app.notion.com/22222222222222222222222222222222",
+            source_page_id: "22222222222222222222222222222222",
+            disposition: "formal_record",
+            record_key:
+              "DEC-20260502-A--notion-22222222222222222222222222222222",
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function resolvedCollisionRecords() {
+  return [
+    record({
+      id: "DEC-20260502-A",
+      recordKey: "DEC-20260502-A--notion-11111111111111111111111111111111",
+      title: "Product decision",
+      status: "rejected",
+      topic: "product-shape",
+      evidence: ["https://app.notion.com/11111111111111111111111111111111"],
+    }),
+    record({
+      id: "DEC-20260502-A",
+      recordKey: "DEC-20260502-A--notion-22222222222222222222222222222222",
+      title: "Pricing decision",
+      topic: "x402-pricing",
+      evidence: ["https://app.notion.com/22222222222222222222222222222222"],
+    }),
+  ];
+}
+
+test("resolved collisions map duplicate display IDs bidirectionally by record key", () => {
+  const registry = resolvedCollisionRegistry();
+  const records = resolvedCollisionRecords();
+  assert.deepEqual(validateDecisionIdCollisions("collisions.yaml", registry), []);
+  assert.deepEqual(validateDecisionRecords(records, registry), []);
+  const index = generateDecisionIndex(records, registry);
+  assert.match(index, /The Decision column shows the historical display ID/);
+  assert.match(index, /\| Decision \| Internal record key \|/);
+  assert.match(index, /`DEC-20260502-A--notion-11111111111111111111111111111111`/);
+  assert.match(
+    index,
+    /records\/DEC-20260502-A--notion-22222222222222222222222222222222\.md/,
+  );
+});
+
+test("qualified-key relationships resolve, invert, and participate in cycles", () => {
+  const registry = resolvedCollisionRegistry();
+  const records = [
+    ...resolvedCollisionRecords(),
+    record({
+      id: "DEC-20260812-A",
+      topic: "readiness",
+      relations: [
+        {
+          type: "related_to",
+          target: "DEC-20260502-A--notion-22222222222222222222222222222222",
+        },
+      ],
+    }),
+  ];
+  assert.deepEqual(validateDecisionRecords(records, registry), []);
+  const index = generateDecisionIndex(records, registry);
+  assert.match(index, /`related_from`/);
+  assert.match(
+    index,
+    /`DEC-20260502-A--notion-22222222222222222222222222222222`/,
+  );
+  assert.match(index, /`DEC-20260812-A`/);
+
+  const cyclicRecords = resolvedCollisionRecords();
+  cyclicRecords[0].metadata.status = "active";
+  registry.collisions[0].records[0].historical_status = "active";
+  cyclicRecords[0].metadata.relations = [
+    {
+      type: "amends",
+      target: "DEC-20260502-A--notion-22222222222222222222222222222222",
+    },
+  ];
+  cyclicRecords[1].metadata.relations = [
+    {
+      type: "amends",
+      target: "DEC-20260502-A--notion-11111111111111111111111111111111",
+    },
+  ];
+  assert.ok(
+    validateDecisionRecords(cyclicRecords, registry).some(
+      (item) => item.code === "DECISION_RELATION_CYCLE",
+    ),
+  );
+});
+
+test("resolved collision validation fails closed for incomplete or false mappings", () => {
+  const registry = resolvedCollisionRegistry();
+  const records = resolvedCollisionRecords();
+
+  assert.ok(
+    validateDecisionRecords(records.slice(0, 1), registry).some(
+      (item) => item.code === "DECISION_ID_COLLISION_FORMAL_RECORD_MISSING",
+    ),
+  );
+
+  const statusMismatch = structuredClone(registry);
+  statusMismatch.collisions[0].records[1].historical_status = "retired";
+  assert.ok(
+    validateDecisionRecords(records, statusMismatch).some(
+      (item) => item.code === "DECISION_ID_COLLISION_FORMAL_RECORD_MISMATCH",
+    ),
+  );
+
+  const duplicateKey = structuredClone(registry);
+  duplicateKey.collisions[0].records[1].record_key =
+    duplicateKey.collisions[0].records[0].record_key;
+  assert.ok(
+    validateDecisionIdCollisions("collisions.yaml", duplicateKey).some(
+      (item) => item.code === "DECISION_ID_COLLISION_RECORD_KEY_DUPLICATE",
+    ),
+  );
+
+  const wrongSourceKey = structuredClone(registry);
+  wrongSourceKey.collisions[0].records[0].record_key =
+    "DEC-20260502-A--notion-33333333333333333333333333333333";
+  assert.ok(
+    validateDecisionIdCollisions("collisions.yaml", wrongSourceKey).some(
+      (item) => item.code === "DECISION_ID_COLLISION_RECORD_KEY_SOURCE_MISMATCH",
+    ),
+  );
+
+  const missingEvidence = resolvedCollisionRecords();
+  missingEvidence[1].metadata.evidence = ["https://example.com/wrong-source"];
+  assert.ok(
+    validateDecisionRecords(missingEvidence, registry).some(
+      (item) => item.code === "DECISION_ID_COLLISION_SOURCE_EVIDENCE_MISSING",
+    ),
+  );
+});
+
+test("a bare collided display ID is never a relation target after resolution", () => {
+  const registry = resolvedCollisionRegistry();
+  const records = [
+    ...resolvedCollisionRecords(),
+    record({
+      id: "DEC-20260812-A",
+      relations: [{ type: "related_to", target: "DEC-20260502-A" }],
+    }),
+  ];
+  assert.ok(
+    validateDecisionRecords(records, registry).some(
+      (item) => item.code === "DECISION_RELATION_TARGET_COLLIDED",
+    ),
+  );
+});
+
+test("documented-only collision rows require rationale and do not create records", () => {
+  const registry = resolvedCollisionRegistry();
+  registry.collisions[0].records[0] = {
+    ...registry.collisions[0].records[0],
+    disposition: "documented_only",
+    rationale: "The later decision carries this superseded history.",
+  };
+  delete registry.collisions[0].records[0].record_key;
+  assert.deepEqual(validateDecisionIdCollisions("collisions.yaml", registry), []);
+  assert.deepEqual(validateDecisionRecords(resolvedCollisionRecords().slice(1), registry), []);
+
+  delete registry.collisions[0].records[0].rationale;
+  assert.ok(
+    validateDecisionIdCollisions("collisions.yaml", registry).some(
+      (item) => item.code === "DECISION_ID_COLLISION_SCHEMA_INVALID",
+    ),
+  );
+});
+
+test("unambiguous record keys and filenames cannot diverge from display IDs", () => {
+  const qualified = record({
+    id: "DEC-20260812-A",
+    recordKey: "DEC-20260812-A--notion-11111111111111111111111111111111",
+  });
+  assert.ok(
+    validateDecisionRecords([qualified]).some(
+      (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
+    ),
+  );
+
+  const wrongFile = record({ id: "DEC-20260812-A" });
+  wrongFile.file = "docs/decisions/records/DEC-20260812-A--wrong.md";
+  assert.ok(
+    validateDecisionRecords([wrongFile]).some(
+      (item) => item.code === "DECISION_FILENAME_MISMATCH",
+    ),
+  );
+});
+
+test("record keys are portable across case-insensitive filesystems", () => {
+  const caseConflict = [
+    record({ id: "DEC-CASE-A", topic: "upper-case" }),
+    record({ id: "DEC-case-A", topic: "lower-case" }),
+  ];
+  assert.ok(
+    validateDecisionRecords(caseConflict).some(
+      (item) => item.code === "DECISION_RECORD_KEY_CASE_CONFLICT",
+    ),
+  );
+
+  const tooLong = record({ id: "DEC-LENGTH-A" });
+  tooLong.metadata.record_key = `DEC-${"A".repeat(121)}`;
+  assert.ok(
+    validateDecisionRecords([tooLong]).some(
+      (item) => item.code === "DECISION_SCHEMA_INVALID" && /more than 120/.test(item.detail),
+    ),
+  );
+});
+
+test("source pages and URLs cannot be reused by different collision IDs", () => {
+  const registry = resolvedCollisionRegistry();
+  const duplicate = structuredClone(registry.collisions[0]);
+  duplicate.id = "DEC-20260503-A";
+  duplicate.records[0].record_key =
+    "DEC-20260503-A--notion-11111111111111111111111111111111";
+  duplicate.records[1].record_key =
+    "DEC-20260503-A--notion-22222222222222222222222222222222";
+  registry.collisions.push(duplicate);
+  registry.collision_count = 2;
+  registry.source_row_count = 4;
+  const findings = validateDecisionIdCollisions("collisions.yaml", registry);
+  assert.ok(
+    findings.some((item) => item.code === "DECISION_ID_COLLISION_SOURCE_DUPLICATE"),
+  );
+  assert.ok(
+    findings.some((item) => item.code === "DECISION_ID_COLLISION_PAGE_ID_DUPLICATE"),
   );
 });
 
@@ -330,6 +602,37 @@ test("an active decision body is immutable while metadata may transition", () =>
     ),
   );
 
+  const keyRewritten = record({
+    id: "DEC-20260812-A",
+    recordKey: "DEC-20260812-A--notion-11111111111111111111111111111111",
+  });
+  assert.ok(
+    validateActiveBodyChange(previous, keyRewritten, previous.file).some(
+      (item) =>
+        item.code === "DECISION_ACTIVE_METADATA_CHANGED" &&
+        item.detail === "record_key",
+    ),
+  );
+
+  const preKeyMigration = record({ id: "DEC-20260812-A" });
+  delete preKeyMigration.metadata.record_key;
+  assert.deepEqual(
+    validateActiveBodyChange(preKeyMigration, previous, previous.file),
+    [],
+  );
+
+  const invalidBackfill = record({
+    id: "DEC-20260812-A",
+    recordKey: "DEC-20260812-A--notion-11111111111111111111111111111111",
+  });
+  assert.ok(
+    validateActiveBodyChange(preKeyMigration, invalidBackfill, previous.file).some(
+      (item) =>
+        item.code === "DECISION_ACTIVE_METADATA_CHANGED" &&
+        item.detail === "record_key",
+    ),
+  );
+
   const regressed = record({ id: "DEC-20260812-A", status: "proposed" });
   assert.ok(
     validateActiveBodyChange(previous, regressed, previous.file).some(
@@ -479,6 +782,174 @@ test("rejected history cannot reactivate at a later merge base", () => {
       validateActiveDecisionImmutability(root, [next], "HEAD").some(
         (item) => item.code === "DECISION_ACTIVE_STATUS_REGRESSION" &&
           item.detail === "rejected->active",
+      ),
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function initializeCollisionHistoryRepo(root, registryYaml) {
+  const file = "docs/decisions/id-collisions.yaml";
+  const absolute = join(root, file);
+  mkdirSync(dirname(absolute), { recursive: true });
+  writeFileSync(absolute, registryYaml, "utf8");
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: root });
+  execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
+  execFileSync("git", ["add", file], { cwd: root });
+  execFileSync("git", ["commit", "-m", "base"], { cwd: root });
+}
+
+test("collision history permits exact v1 provenance backfill but rejects source changes", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-collision-history-"));
+  const base = `schema_version: 1
+authority_scope: none
+status: candidate
+complete: false
+phase: M2
+authority_active: false
+source_data_source: collection://decisions
+observed_at: 2026-09-01
+collision_count: 1
+source_row_count: 2
+collisions:
+  - id: DEC-20260502-A
+    resolution_status: unresolved
+    resolution_evidence: null
+    records:
+      - title: Product decision
+        historical_status: rejected
+        source_url: https://app.notion.com/11111111111111111111111111111111
+      - title: Pricing decision
+        historical_status: active
+        source_url: https://app.notion.com/22222222222222222222222222222222
+`;
+  try {
+    initializeCollisionHistoryRepo(root, base);
+    const current = resolvedCollisionRegistry();
+    current.collisions[0].resolution_status = "unresolved";
+    current.collisions[0].resolution_evidence = null;
+    for (const source of current.collisions[0].records) {
+      source.disposition = "unresolved";
+      delete source.record_key;
+    }
+    assert.deepEqual(validateDecisionCollisionImmutability(root, current, "HEAD"), []);
+
+    const changed = structuredClone(current);
+    changed.collisions[0].records[0].title = "Rewritten source";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, changed, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_SOURCE_CHANGED",
+      ),
+    );
+
+    const wrongPage = structuredClone(current);
+    wrongPage.collisions[0].records[0].source_page_id =
+      "33333333333333333333333333333333";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, wrongPage, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_PAGE_ID_BACKFILL_INVALID",
+      ),
+    );
+
+    const removedCollision = structuredClone(current);
+    removedCollision.collisions = [];
+    assert.ok(
+      validateDecisionCollisionImmutability(root, removedCollision, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_REMOVED",
+      ),
+    );
+
+    const removedSource = structuredClone(current);
+    removedSource.collisions[0].records.shift();
+    assert.ok(
+      validateDecisionCollisionImmutability(root, removedSource, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_SOURCE_REMOVED",
+      ),
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("resolved collision bindings cannot regress or be rewritten", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-resolved-collision-history-"));
+  const base = `schema_version: 2
+authority_scope: none
+status: candidate
+complete: false
+phase: M2
+authority_active: false
+source_data_source: collection://decisions
+observed_at: 2026-09-01
+collision_count: 1
+source_row_count: 2
+collisions:
+  - id: DEC-20260502-A
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/collision-resolution.md
+    records:
+      - title: Product decision
+        historical_status: rejected
+        source_url: https://app.notion.com/11111111111111111111111111111111
+        source_page_id: "11111111111111111111111111111111"
+        disposition: formal_record
+        record_key: DEC-20260502-A--notion-11111111111111111111111111111111
+      - title: Pricing decision
+        historical_status: active
+        source_url: https://app.notion.com/22222222222222222222222222222222
+        source_page_id: "22222222222222222222222222222222"
+        disposition: formal_record
+        record_key: DEC-20260502-A--notion-22222222222222222222222222222222
+`;
+  try {
+    initializeCollisionHistoryRepo(root, base);
+    const current = resolvedCollisionRegistry();
+    assert.deepEqual(validateDecisionCollisionImmutability(root, current, "HEAD"), []);
+
+    const regressed = structuredClone(current);
+    regressed.collisions[0].resolution_status = "unresolved";
+    regressed.collisions[0].resolution_evidence = null;
+    assert.ok(
+      validateDecisionCollisionImmutability(root, regressed, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_RESOLUTION_REGRESSION",
+      ),
+    );
+
+    const rebound = structuredClone(current);
+    rebound.collisions[0].records[0].record_key =
+      "DEC-20260502-A--notion-33333333333333333333333333333333";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, rebound, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_RECORD_KEY_CHANGED",
+      ),
+    );
+
+    const changedDisposition = structuredClone(current);
+    changedDisposition.collisions[0].records[0].disposition = "documented_only";
+    delete changedDisposition.collisions[0].records[0].record_key;
+    changedDisposition.collisions[0].records[0].rationale = "Changed later.";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, changedDisposition, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_DISPOSITION_CHANGED",
+      ),
+    );
+
+    const changedEvidence = structuredClone(current);
+    changedEvidence.collisions[0].resolution_evidence =
+      "archive/sessions/replacement-resolution.md";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, changedEvidence, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_RESOLUTION_EVIDENCE_CHANGED",
+      ),
+    );
+
+    const changedSource = structuredClone(current);
+    changedSource.collisions[0].records[0].historical_status = "retired";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, changedSource, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_SOURCE_CHANGED",
       ),
     );
   } finally {
