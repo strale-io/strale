@@ -22,7 +22,11 @@ generated: true
 
 | Decision | Status | Topic | Scope | Owner | Decided |
 |---|---|---|---|---|---|
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) — Adopt a three-tier doctrine for third-party scraping | active | `third-party-scraping-doctrine` | global | petter | 2026-04-28 |
+| [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) — Set the engineering bar for Strale-built regulatory data services | active | `regulatory-data-service-engineering-bar` | global | petter | 2026-04-28 |
+| [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) — Clarify data sourcing to permit constrained per-call public-registry parsing | active | `data-sourcing-principles` | global | petter | 2026-05-18 |
 | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) — Adopt the Platform Readiness and Self-Operation program | active | `autonomous-operating-model` | global | petter | 2026-08-12 |
+| [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) — Affirm constrained per-call parsing as the scraping doctrine interpretation | active | `scraping-doctrine-interpretation` | global | petter | 2026-08-13 |
 | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) — Adopt the operating charter and delegate day-to-day technical operations | active | `autonomous-operating-model` | global | petter | 2026-08-15 |
 | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) — Reform daily operations with two artifacts, wider autonomy, and failure families | active | `autonomous-operating-model` | global | petter | 2026-08-22 |
 | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) — Treat the context pack as complete founder input and make reconciliation M2 work | active | `project-memory-system-of-record` | global | petter | 2026-09-01 |
@@ -38,7 +42,11 @@ generated: true
 
 | Target | Generated inverse | Source |
 |---|---|---|
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `interpreted_by` | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) |
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `interpreted_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) |
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `related_from` | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) |
 | [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) | `superseded_by` | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) |
+| [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) | `affirmed_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) |
 | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `amended_by` | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) |
 | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `amended_by` | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) |
 | [`DEC-20260831-A`](../decisions/records/DEC-20260831-A.md) | `superseded_by` | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) |

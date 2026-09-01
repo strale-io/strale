@@ -1005,6 +1005,17 @@ agreed implementation sequence.
   22/22 tests plus checker/typecheck/diff verification, and found no remaining
   high, medium, or low issue. Candidates remain inactive; Claude cross-provider
   review remains required before M4.
+- **M2 sourcing-doctrine decision batch exact head — interim PASS.** Four
+  collision-free active source decisions were migrated as inactive candidates,
+  including `DEC-20260518-F` so the `DEC-20260813-A` affirmation has a real
+  target. Initial Codex source review failed compressed contractual,
+  engineering, privacy, retention, operating, and named-exclusion controls; all
+  were restored. Separate source and graph reviews passed exact commit
+  `88338518`: 43/43 tests, zero context findings, deterministic index, clean
+  relations, and no authority activation. Wanted Claude Opus and fell to Sonnet
+  after a real timeout; both review invocations timed out without a verdict, so
+  cross-provider review remains required before M4. Evidence:
+  `archive/sessions/2026-09-01-m2-doctrine-decision-review-codex.md`.
 
 ## 14. Completion definition
 
