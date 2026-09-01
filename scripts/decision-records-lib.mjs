@@ -160,6 +160,19 @@ const NON_RETIRING_RELATIONS = new Set([
 ]);
 const PROTECTED_HISTORICAL_STATUSES = new Set(["active", "superseded", "retired"]);
 const EFFECTIVE_SUPERSEDER_STATUSES = new Set(["active", "superseded", "retired"]);
+const ALLOWED_STATUS_TRANSITIONS = Object.freeze({
+  proposed: new Set(["proposed", "active", "rejected"]),
+  active: new Set(["active", "superseded", "retired"]),
+  superseded: new Set(["superseded"]),
+  rejected: new Set(["rejected"]),
+  retired: new Set(["retired"]),
+});
+const ACYCLIC_RELATIONS = new Set([
+  "supersedes",
+  "amends",
+  "interprets",
+  "affirms",
+]);
 const INVERSE_RELATION = Object.freeze({
   supersedes: "superseded_by",
   amends: "amended_by",
@@ -198,9 +211,9 @@ function maskHiddenMarkdown(body) {
   let offset = 0;
   let fence = null;
   for (const line of text.split(/(?<=\n)/)) {
-    const marker = line.match(/^\s*(`{3,}|~{3,})/);
+    const marker = line.match(/^ {0,3}(`{3,}|~{3,})([^\n]*)/);
     if (!fence && marker) {
-      fence = marker[1][0];
+      fence = { character: marker[1][0], length: marker[1].length };
       for (let index = offset; index < offset + line.length; index += 1) {
         hidden[index] = true;
       }
@@ -210,8 +223,9 @@ function maskHiddenMarkdown(body) {
       }
       if (
         marker &&
-        marker[1][0] === fence &&
-        !line.slice(marker[0].length).trim()
+        marker[1][0] === fence.character &&
+        marker[1].length >= fence.length &&
+        !marker[2].trim()
       ) {
         fence = null;
       }
@@ -226,8 +240,12 @@ function maskHiddenMarkdown(body) {
 export function protectedDecisionSections(body) {
   const normalized = normalizeNewlines(body);
   const visible = maskHiddenMarkdown(normalized);
-  const matches = [...visible.matchAll(/^## (Decision|Context|Rationale|Consequences|Reversal conditions)\s*$/gm)];
+  const allLevelTwoHeadings = [...visible.matchAll(/^##[ \t]+(.+?)[ \t]*#*[ \t]*$/gm)];
+  const matches = allLevelTwoHeadings.filter((match) =>
+    PROTECTED_HEADINGS.includes(match[1]),
+  );
   if (
+    allLevelTwoHeadings.length !== PROTECTED_HEADINGS.length ||
     matches.length !== PROTECTED_HEADINGS.length ||
     matches.some((match, index) => match[1] !== PROTECTED_HEADINGS[index])
   ) {
@@ -472,14 +490,14 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
   const visited = new Set();
   function visit(id, trail) {
     if (visiting.has(id)) {
-      findings.push(finding("DECISION_SUPERSESSION_CYCLE", recordsById.get(id)?.file ?? id, [...trail, id].join(" -> ")));
+      findings.push(finding("DECISION_RELATION_CYCLE", recordsById.get(id)?.file ?? id, [...trail, id].join(" -> ")));
       return;
     }
     if (visited.has(id)) return;
     visiting.add(id);
     const record = recordsById.get(id);
     for (const relation of record?.metadata.relations ?? []) {
-      if (relation.type === "supersedes" && recordsById.has(relation.target)) {
+      if (ACYCLIC_RELATIONS.has(relation.type) && recordsById.has(relation.target)) {
         visit(relation.target, [...trail, id]);
       }
     }
@@ -516,14 +534,9 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
 }
 
 export function validateProtectedDecisionChange(previous, next, file) {
-  if (!PROTECTED_HISTORICAL_STATUSES.has(previous.metadata.status)) return [];
   const findings = [];
-  const allowedStatuses = {
-    active: new Set(["active", "superseded", "retired"]),
-    superseded: new Set(["superseded"]),
-    retired: new Set(["retired"]),
-  };
-  if (!allowedStatuses[previous.metadata.status].has(next.metadata.status)) {
+  const allowedStatuses = ALLOWED_STATUS_TRANSITIONS[previous.metadata.status];
+  if (!allowedStatuses?.has(next.metadata.status)) {
     findings.push(
       finding(
         "DECISION_ACTIVE_STATUS_REGRESSION",
@@ -532,8 +545,18 @@ export function validateProtectedDecisionChange(previous, next, file) {
       ),
     );
   }
-  for (const field of ["id", "title", "topic", "scope", "owner", "decided_at"]) {
-    if (previous.metadata[field] !== next.metadata[field]) {
+  if (!PROTECTED_HISTORICAL_STATUSES.has(previous.metadata.status)) return findings;
+  for (const field of [
+    "id",
+    "title",
+    "topic",
+    "scope",
+    "owner",
+    "decided_at",
+    "relations",
+    "evidence",
+  ]) {
+    if (JSON.stringify(previous.metadata[field]) !== JSON.stringify(next.metadata[field])) {
       findings.push(finding("DECISION_ACTIVE_METADATA_CHANGED", file, field));
     }
   }
@@ -578,10 +601,16 @@ export function validateActiveDecisionImmutability(root, records, baseRef = "ori
       findings.push(finding("DECISION_BASE_RECORD_INVALID", file, error.message));
       continue;
     }
-    if (!PROTECTED_HISTORICAL_STATUSES.has(previous.metadata.status)) continue;
     const next = currentByFile.get(file);
     if (!next) {
-      findings.push(finding("DECISION_ACTIVE_RECORD_REMOVED", file));
+      findings.push(
+        finding(
+          PROTECTED_HISTORICAL_STATUSES.has(previous.metadata.status)
+            ? "DECISION_ACTIVE_RECORD_REMOVED"
+            : "DECISION_RECORD_REMOVED",
+          file,
+        ),
+      );
       continue;
     }
     findings.push(...validateProtectedDecisionChange(previous, next, file));

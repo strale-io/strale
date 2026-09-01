@@ -28,6 +28,32 @@ function finding(code, path, detail) {
   return { severity: "warning", code, path, ...(detail ? { detail } : {}) };
 }
 
+const GENERATED_CONTEXT_FILES = [
+  "docs/project/DECISIONS.md",
+  "docs/project/RECENT.md",
+  "docs/project/legacy-authority-inventory.json",
+  "docs/project/schemas/project-document.schema.json",
+  "docs/project/schemas/operator-actions.schema.json",
+  "docs/project/schemas/decision-record.schema.json",
+  "docs/project/schemas/decision-id-collisions.schema.json",
+  "docs/project/schemas/legacy-authority-inventory.schema.json",
+];
+
+export function checkGeneratedFileState(root, expected, files = GENERATED_CONTEXT_FILES) {
+  const findings = [];
+  for (const file of files) {
+    const absolute = resolve(root, file);
+    if (!existsSync(absolute)) {
+      findings.push(finding("GENERATED_FILE_MISSING", file));
+      continue;
+    }
+    if (readFileSync(absolute, "utf8") !== expected[file]) {
+      findings.push(finding("GENERATED_FILE_DRIFT", file));
+    }
+  }
+  return findings;
+}
+
 export function checkPrivateArchiveStatus(root) {
   const relativePath = "docs/project/private-archive-status.json";
   const statusPath = resolve(root, relativePath);
@@ -150,23 +176,7 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     );
   }
 
-  for (const file of [
-    "docs/project/DECISIONS.md",
-    "docs/project/RECENT.md",
-    "docs/project/legacy-authority-inventory.json",
-    "docs/project/schemas/project-document.schema.json",
-    "docs/project/schemas/operator-actions.schema.json",
-    "docs/project/schemas/decision-record.schema.json",
-    "docs/project/schemas/decision-id-collisions.schema.json",
-    "docs/project/schemas/legacy-authority-inventory.schema.json",
-  ]) {
-    const absolute = resolve(root, file);
-    if (!existsSync(absolute)) continue;
-    const actual = readFileSync(absolute, "utf8");
-    if (actual !== expected[file]) {
-      findings.push(finding("GENERATED_FILE_DRIFT", file));
-    }
-  }
+  findings.push(...checkGeneratedFileState(root, expected));
 
   const inventoryPath = resolve(root, "docs/project/legacy-authority-inventory.json");
   if (existsSync(inventoryPath)) {

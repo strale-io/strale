@@ -208,6 +208,29 @@ test("hidden headings and a commented banner do not satisfy the document contrac
       (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
     ),
   );
+
+  const longFence = parseDecisionRecord(
+    visible.file,
+    visible.content.replace(
+      /## Decision[\s\S]*$/,
+      "````md\n## Decision\nHidden.\n## Context\nHidden.\n## Rationale\nHidden.\n## Consequences\nHidden.\n## Reversal conditions\nHidden.\n```\n",
+    ),
+  );
+  assert.ok(
+    validateDecisionRecords([longFence]).some(
+      (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
+    ),
+  );
+
+  const extraSection = parseDecisionRecord(
+    visible.file,
+    `${visible.content}\n## Implementation notes\n\nThis is a sixth section.\n`,
+  );
+  assert.ok(
+    validateDecisionRecords([extraSection]).some(
+      (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
+    ),
+  );
 });
 
 test("an active decision body is immutable while metadata may transition", () => {
@@ -233,12 +256,82 @@ test("an active decision body is immutable while metadata may transition", () =>
     ),
   );
 
+  const relationRewritten = record({ id: "DEC-20260812-A" });
+  relationRewritten.metadata.relations = [{
+    type: "related_to",
+    target: "DEC-20260815-A",
+  }];
+  assert.ok(
+    validateActiveBodyChange(previous, relationRewritten, previous.file).some(
+      (item) => item.code === "DECISION_ACTIVE_METADATA_CHANGED" && item.detail === "relations",
+    ),
+  );
+
+  const evidenceRewritten = record({ id: "DEC-20260812-A" });
+  evidenceRewritten.metadata.evidence = ["https://example.com/replacement"];
+  assert.ok(
+    validateActiveBodyChange(previous, evidenceRewritten, previous.file).some(
+      (item) => item.code === "DECISION_ACTIVE_METADATA_CHANGED" && item.detail === "evidence",
+    ),
+  );
+
   const regressed = record({ id: "DEC-20260812-A", status: "proposed" });
   assert.ok(
     validateActiveBodyChange(previous, regressed, previous.file).some(
       (item) => item.code === "DECISION_ACTIVE_STATUS_REGRESSION",
     ),
   );
+});
+
+test("proposed and rejected status history only moves forward", () => {
+  const proposed = record({ id: "DEC-20260812-A", status: "proposed" });
+  for (const allowed of ["proposed", "active", "rejected"]) {
+    assert.deepEqual(
+      validateActiveBodyChange(
+        proposed,
+        record({ id: "DEC-20260812-A", status: allowed }),
+        proposed.file,
+      ),
+      [],
+    );
+  }
+  assert.ok(
+    validateActiveBodyChange(
+      proposed,
+      record({ id: "DEC-20260812-A", status: "superseded" }),
+      proposed.file,
+    ).some((item) => item.code === "DECISION_ACTIVE_STATUS_REGRESSION"),
+  );
+
+  const rejected = record({ id: "DEC-20260812-A", status: "rejected" });
+  assert.ok(
+    validateActiveBodyChange(
+      rejected,
+      record({ id: "DEC-20260812-A", status: "active" }),
+      rejected.file,
+    ).some((item) => item.code === "DECISION_ACTIVE_STATUS_REGRESSION"),
+  );
+});
+
+test("directional decision relationships cannot form a cycle", () => {
+  for (const type of ["supersedes", "amends", "interprets", "affirms"]) {
+    const status = type === "supersedes" ? "superseded" : "active";
+    const findings = validateDecisionRecords([
+      record({
+        id: "DEC-20260812-A",
+        status,
+        topic: "left",
+        relations: [{ type, target: "DEC-20260815-A" }],
+      }),
+      record({
+        id: "DEC-20260815-A",
+        status,
+        topic: "right",
+        relations: [{ type, target: "DEC-20260812-A" }],
+      }),
+    ]);
+    assert.ok(findings.some((item) => item.code === "DECISION_RELATION_CYCLE"), type);
+  }
 });
 
 test("superseded and retired history stays protected permanently", () => {
@@ -280,6 +373,57 @@ test("removing superseded history is detected against a later merge base", () =>
     assert.ok(
       validateActiveDecisionImmutability(root, [], "HEAD").some(
         (item) => item.code === "DECISION_ACTIVE_RECORD_REMOVED",
+      ),
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("removing proposed or rejected history is detected against a later merge base", () => {
+  for (const status of ["proposed", "rejected"]) {
+    const root = mkdtempSync(join(tmpdir(), `strale-decision-${status}-history-`));
+    try {
+      const previous = record({ id: "DEC-20260812-A", status });
+      const absolute = join(root, previous.file);
+      mkdirSync(dirname(absolute), { recursive: true });
+      writeFileSync(absolute, previous.content, "utf8");
+      execFileSync("git", ["init", "-q"], { cwd: root });
+      execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: root });
+      execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
+      execFileSync("git", ["add", previous.file], { cwd: root });
+      execFileSync("git", ["commit", "-m", "base"], { cwd: root });
+      assert.ok(
+        validateActiveDecisionImmutability(root, [], "HEAD").some(
+          (item) => item.code === "DECISION_RECORD_REMOVED",
+        ),
+        status,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
+
+test("rejected history cannot reactivate at a later merge base", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-decision-rejected-reactivation-"));
+  try {
+    const previous = record({ id: "DEC-20260812-A", status: "rejected" });
+    const absolute = join(root, previous.file);
+    mkdirSync(dirname(absolute), { recursive: true });
+    writeFileSync(absolute, previous.content, "utf8");
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: root });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
+    execFileSync("git", ["add", previous.file], { cwd: root });
+    execFileSync("git", ["commit", "-m", "base"], { cwd: root });
+
+    const next = record({ id: "DEC-20260812-A", status: "active" });
+    writeFileSync(absolute, next.content, "utf8");
+    assert.ok(
+      validateActiveDecisionImmutability(root, [next], "HEAD").some(
+        (item) => item.code === "DECISION_ACTIVE_STATUS_REGRESSION" &&
+          item.detail === "rejected->active",
       ),
     );
   } finally {
