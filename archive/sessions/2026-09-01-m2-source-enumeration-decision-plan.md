@@ -254,3 +254,24 @@ LOW scope broadening:
 The plan was amended on all three points. The same verifier re-reviewed it,
 returned PASS with no remaining material finding, and completed after its
 verdict.
+
+## Implementation outcome
+
+The agreed batch was implemented in exact commit
+`4a63773f7688478c7cbd8254ac15a9a6c4a102c6`. Fresh Claude Opus/high and
+Sonnet/high exact-commit attempts were rejected by the weekly subscription
+limit. A separate `gpt-5.6-sol`/xhigh verifier then checked the exact commit
+against both live Notion rows and bodies, the cited Git history, current EE/CY
+references, later sourcing doctrine, the operating charter, generated graph,
+and inactive-authority boundary. It returned PASS with no HIGH, MEDIUM, or LOW
+findings and completed after its verdict.
+
+PR [#469](https://github.com/strale-io/strale/pull/469) passed the required
+`check` and `integration-db` jobs and merged as
+`063be00a56c1c6880427d6695fe1aa67a9925fa5`. The completion Journal entry is
+[M2 source-enumeration decision chain migrated](https://app.notion.com/p/3ce67c87082c8199a2eee92eddcf5043?pvs=204).
+
+The implementation did not edit source Decisions, entrypoints, product
+behavior, vendor state, database state, or production. Both records remain
+inactive candidates, and cross-provider verification remains required before
+M4.
