@@ -21,6 +21,7 @@
         "archive/sessions/2026-09-01-m2-deploy-safety-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md",
         "archive/sessions/2026-09-01-m2-governance-reference-data-decision-plan.md",
+        "archive/sessions/2026-09-01-m2-governance-reference-data-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
@@ -39,7 +40,8 @@
         "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md",
         "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md",
         "handoff/_general/from-code/2026-09-01-m2-deploy-safety-decision-batch.md",
-        "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md"
+        "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md",
+        "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md"
       ]
     },
     {
@@ -89,6 +91,7 @@
         "archive/sessions/2026-09-01-m2-doctrine-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md",
         "archive/sessions/2026-09-01-m2-governance-reference-data-decision-plan.md",
+        "archive/sessions/2026-09-01-m2-governance-reference-data-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
@@ -181,6 +184,7 @@
         "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md",
         "handoff/_general/from-code/2026-09-01-m2-deploy-safety-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md",
+        "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
         "manifests/c2pa-inspect.yaml",
@@ -367,7 +371,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "8255772ff885d1e16696d7829a50e540c60f190ee624b68a49a5868abbd97d67",
+      "sha256": "30693e7dff6b037f0b8b3c10442cd2e685dcee537ac586773db51c2dda2d95ff",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
