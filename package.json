@@ -31,5 +31,9 @@
     "bs58check": "^4.0.0",
     "esbuild": "^0.27.4",
     "ripple-address-codec": "^5.0.0"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "yaml": "^2.8.1"
   }
 }

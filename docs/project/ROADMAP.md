@@ -40,12 +40,12 @@ small repo-native read path.
 
 Next bounded work:
 
-1. review the inactive PRODUCT/STATE/ROADMAP candidates on their exact commit;
+1. review the inactive operator-action and pending-founder candidates on their
+   exact commit;
 2. migrate formal product/project decisions in contradiction-checked topic
    batches—never convert context-pack `D-*` labels into formal IDs silently;
-3. add the operator-action registry and pending-founder view;
-4. extract protocol routing without weakening existing mandatory gates;
-5. prove entrypoint symmetry, replace active Notion consumers, and only then
+3. extract protocol routing without weakening existing mandatory gates;
+4. prove entrypoint symmetry, replace active Notion consumers, and only then
    perform M4 cutover and retire Notion as an active authority.
 
 The current candidate documents remain `authority_scope: none` until that gate.
@@ -54,8 +54,13 @@ Execution source: the
 
 ## 2. Close prepared versus reconciled production state
 
-**[#438 routing metadata](https://github.com/strale-io/strale/issues/438):** correct the prepared script's ineffective global
-digest proof, re-review it, execute only through the established ephemeral-write
+### #438 routing metadata
+
+<!-- acceptance-blocked: OA-20260830-ROUTING-LATENCY-438 -->
+
+For [issue #438](https://github.com/strale-io/strale/issues/438), independently
+review the corrected founder-gated script and its pre-write global digest guard,
+obtain the exact authority, execute only through the established ephemeral-write
 boundary, and store an independent read-only post-write result. Prepared,
 executed, and reconciled remain distinct states.
 

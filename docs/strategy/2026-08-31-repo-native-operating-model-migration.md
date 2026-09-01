@@ -1,6 +1,6 @@
 # Repo-native operating model migration
 
-**Status:** M0 COMPLETE — M1 merged; M2 product/state candidates exact-head reviewed, merge-ready
+**Status:** M0 COMPLETE — M1 and product/state M2 merged; operator/pending candidates populated, inactive review next
 **Date:** 2026-08-31
 **Owner:** Codex
 **Independent reviewer:** Claude Code, Sonnet, high effort (wanted Opus; Opus timed out)
@@ -93,6 +93,22 @@ rule.
 - Next M2 batches: exact-head review of these candidates, operator-action and
   pending-decision candidates, then contradiction-checked formal decision
   migration. M4 cutover remains out of scope.
+
+## M2 operator-action and pending-founder candidate update — 2026-09-01
+
+- `docs/operations/operator-actions.yaml` now represents the one known
+  acceptance-critical action: #438's two routing-latency settings remain one
+  `prepared` action under `approval_required` authority.
+- The registry binds its before-state to the dated read-only production evidence
+  and preserves prepared, executed, and reconciled as different lifecycle facts.
+- `docs/decisions/PENDING.md` now excludes settled work and technical tasks. It
+  says no decision is ready today while keeping the domain migration and WP14
+  legal/commitment tracks visible as founder-reserved topics awaiting evidence.
+- Both files remain inactive M2 candidates. The generator cannot overwrite the
+  pending view, root entrypoints cannot load either candidate directory, and no
+  Notion workflow or project authority has been cut over.
+- Next: independent review, then contradiction-checked formal decision batches.
+  M4 remains out of scope.
 
 ## Execution dependency amendment — 2026-08-31
 
@@ -948,6 +964,23 @@ agreed implementation sequence.
   12/12 tests, zero context findings, exact inventory reconstruction, 22/22
   local evidence links, and clean whitespace. This is same-provider interim
   evidence; Claude remains required before M4.
+- **M2 operator actions / pending founder decisions working diff — PASS.** The
+  first Codex technical review failed the batch on a real authority mismatch:
+  #438 was labelled approval-required while its executable minted autonomous
+  authority. The executable now requires the exact founder grant and its digest
+  expectation is captured before writing. Schema application, fail-closed
+  history, typed evidence, target/artifact binding, acceptance blockers, and
+  founder-reserved classification were mutation-tested through successive
+  review rounds. Final product and technical verdicts are `PASS`; 22/22 context
+  tests and the API typecheck pass. Exact-head Codex verification is still
+  required before merge, and Claude remains required before M4. Evidence:
+  `archive/sessions/2026-09-01-m2-operator-actions-pending-review-codex.md`.
+- **M2 operator actions / pending founder decisions exact head — PASS.** A
+  separate Codex task reviewed immutable commit `dd6268f` against
+  `origin/main@46e53f8`, reconstructed all 15 inventory entries exactly, ran
+  22/22 tests plus checker/typecheck/diff verification, and found no remaining
+  high, medium, or low issue. Candidates remain inactive; Claude cross-provider
+  review remains required before M4.
 
 ## 14. Completion definition
 

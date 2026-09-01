@@ -102,14 +102,18 @@ the marketing website design system.
 ## Active reconciliation and residuals
 
 - **Repo operating model:** M0 preservation and M1 foundation are complete. The
-  37-claim M2 evidence audit is merged. PRODUCT/STATE/ROADMAP are populated as
-  inactive candidates and are now under review; no entrypoint or Notion
-  cutover has occurred.
+  37-claim M2 evidence audit and PRODUCT/STATE/ROADMAP candidate batch are
+  merged. The operator-action and pending-founder views are populated as
+  inactive candidates; no entrypoint or Notion cutover has occurred.
 - **#438 routing latency:** the script is prepared, but production still records
   `company-news = NULL` and `page-speed-test = 8000`; desired values are 28734
-  and 20000. The script's unrelated-row digest proof is ineffective and must be
-  corrected/reviewed before execution. A new independent read-only query is
-  required after any write before reconciliation can close.
+  and 20000. The corrected script requires an exact founder grant and captures
+  its expected all-row digest before writing. It still needs independent review,
+  explicit authority, controlled execution, and a new read-only query before
+  reconciliation can close.
+  The candidate lifecycle record is
+  [`operator-actions.yaml`](../operations/operator-actions.yaml); it does not grant execution
+  authority.
 - **WP10:** formally merged and deployed, but still under observation. Stored evidence shows
   daily cadence and a weekly sweep scheduled a week apart, but not every
   historical overlap/recovery/watchdog condition. Acceptance needs a separate

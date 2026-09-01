@@ -11,6 +11,10 @@ import {
   repoRootFrom,
   validateInventory,
   validateCandidateDocument,
+  validateOperatorActions,
+  validateOperatorActionEvidence,
+  validateOperatorActionHistoryAgainstGit,
+  validatePendingFounderDecisions,
   validateStateEvidence,
   validateSkeletonDocument,
 } from "./project-context-lib.mjs";
@@ -44,7 +48,7 @@ export function checkPrivateArchiveStatus(root) {
 }
 
 export function checkPrecutoverEntrypoint(entrypoint, content) {
-  return /docs[\\/]project(?:[\\/]|\b)/.test(content)
+  return /docs[\\/](?:project|decisions)(?:[\\/]|\b)/.test(content)
     ? [finding("M1_ENTRYPOINT_ACTIVATED", entrypoint)]
     : [];
 }
@@ -94,6 +98,37 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
         })),
       );
     }
+    if (expectedDocType === "pending-founder-decisions") {
+      findings.push(
+        ...validatePendingFounderDecisions(file, actual).map((item) => ({
+          severity: "warning",
+          ...item,
+        })),
+      );
+    }
+  }
+
+  const operatorActionsFile = "docs/operations/operator-actions.yaml";
+  const operatorActionsPath = resolve(root, operatorActionsFile);
+  if (!existsSync(operatorActionsPath)) {
+    findings.push(finding("OPERATOR_ACTIONS_FILE_MISSING", operatorActionsFile));
+  } else {
+    findings.push(
+      ...validateOperatorActions(
+        operatorActionsFile,
+        readFileSync(operatorActionsPath, "utf8"),
+      ).map((item) => ({ severity: "warning", ...item })),
+      ...validateOperatorActionEvidence(
+        root,
+        operatorActionsFile,
+        readFileSync(operatorActionsPath, "utf8"),
+      ).map((item) => ({ severity: "warning", ...item })),
+      ...validateOperatorActionHistoryAgainstGit(
+        root,
+        operatorActionsFile,
+        readFileSync(operatorActionsPath, "utf8"),
+      ).map((item) => ({ severity: "warning", ...item })),
+    );
   }
 
   for (const file of [
@@ -101,6 +136,7 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     "docs/project/RECENT.md",
     "docs/project/legacy-authority-inventory.json",
     "docs/project/schemas/project-document.schema.json",
+    "docs/project/schemas/operator-actions.schema.json",
     "docs/project/schemas/legacy-authority-inventory.schema.json",
   ]) {
     const absolute = resolve(root, file);

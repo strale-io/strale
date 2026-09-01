@@ -20,6 +20,7 @@
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/decisions/records/DEC-20260831-A.md",
+        "docs/operations/operator-actions.yaml",
         "docs/strategy/2026-08-16-codebase-quality-program.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
@@ -111,6 +112,7 @@
         "context7.json",
         "docs/company/CHARTER.md",
         "docs/decisions/records/DEC-20260831-A.md",
+        "docs/operations/operator-actions.yaml",
         "docs/remediation/FABLE-REAUDIT.md",
         "docs/remediation/REMEDIATION-LEDGER.md",
         "docs/remediation/packages/WP10.yaml",
@@ -301,7 +303,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "cf8fa1aeda64acc01c2917b604c81106160a9db618c472e8256e95b491e97085",
+      "sha256": "e8b10a874351921e23dd5bf30383675f50baef1cc59166f4fbd3d9e43b51349f",
       "detected_references": [
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
@@ -350,7 +352,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "44198c356a9aaddeb89f42292716444985891dd2d3b3d60330328ca7a1041fa4",
+      "sha256": "0227196321dfce4a33e6c46662bb7e0d8288b296639f203172c2ea788b551106",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
