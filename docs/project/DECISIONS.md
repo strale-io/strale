@@ -24,6 +24,8 @@ The Decision column shows the historical display ID. Internal record keys are th
 
 | Decision | Internal record key | Status | Topic | Scope | Owner | Decided |
 |---|---|---|---|---|---|---|
+| [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) — Close capability-onboarding bypasses with staged structural remediation | `DEC-20260423-A` | active | `capability-onboarding` | global | petter | 2026-04-23 |
+| [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) — Use the revised manifest-driven capability onboarding pipeline | `DEC-20260423-B` | active | `capability-onboarding` | global | petter | 2026-04-23 |
 | [`DEC-20260424-A`](../decisions/records/DEC-20260424-A.md) — Require structural enforcement and read-back for always-enforce decisions | `DEC-20260424-A` | active | `structural-rule-enforcement` | global | petter | 2026-04-24 |
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) — Adopt a three-tier doctrine for third-party scraping | `DEC-20260428-A` | active | `third-party-scraping-doctrine` | global | petter | 2026-04-28 |
 | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) — Set the engineering bar for Strale-built regulatory data services | `DEC-20260428-B` | active | `regulatory-data-service-engineering-bar` | global | petter | 2026-04-28 |
@@ -43,6 +45,8 @@ The Decision column shows the historical display ID. Internal record keys are th
 
 | Decision | Internal record key | Status | Topic | Scope | Owner | Decided |
 |---|---|---|---|---|---|---|
+| [`DEC-20260320-B`](../decisions/records/DEC-20260320-B.md) — Require the onboarding pipeline for every capability change | `DEC-20260320-B` | superseded | `capability-onboarding` | global | petter | 2026-03-20 |
+| [`DEC-20260422-C`](../decisions/records/DEC-20260422-C.md) — Investigate capability creation paths after discovering pipeline gaps | `DEC-20260422-C` | superseded | `capability-onboarding` | global | petter | 2026-04-22 |
 | [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) — Split the public product and capability surfaces while keeping one backend | `DEC-20260503-A` | superseded | `public-surface-architecture` | global | petter | 2026-05-03 |
 | [`DEC-20260831-A`](../decisions/records/DEC-20260831-A.md) — Adopt a staged repo-native operating model for Strale | `DEC-20260831-A` | superseded | `project-memory-system-of-record` | operational | petter | 2026-08-31 |
 
@@ -50,6 +54,9 @@ The Decision column shows the historical display ID. Internal record keys are th
 
 | Target | Target key | Generated inverse | Source | Source key |
 |---|---|---|---|---|
+| [`DEC-20260320-B`](../decisions/records/DEC-20260320-B.md) | `DEC-20260320-B` | `superseded_by` | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) | `DEC-20260423-B` |
+| [`DEC-20260422-C`](../decisions/records/DEC-20260422-C.md) | `DEC-20260422-C` | `superseded_by` | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) | `DEC-20260423-A` |
+| [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) | `DEC-20260423-A` | `related_from` | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) | `DEC-20260423-B` |
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `interpreted_by` | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) | `DEC-20260518-F` |
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `interpreted_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) | `DEC-20260813-A` |
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `related_from` | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` |
