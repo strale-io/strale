@@ -5,9 +5,12 @@
 # Exactly one track is `active` at any time. A `blocked` or `founder_gated`
 # track must name its blocker. A `done` track must list evidence paths that are
 # tracked regular files on main. A `rehomed` track must name where it went.
-# Only `done` satisfies a dependency.
+# Only `done` satisfies a dependency. `program_status` is active (exactly one
+# active track), paused (no active track; at least one founder_gated or blocked
+# track and nothing runnable), or complete (every track done or rehomed).
 schema_version: 1
 program: cto-readiness
+program_status: active
 updated: 2026-09-02
 tracks:
   - id: T1
@@ -37,11 +40,12 @@ tracks:
     depends_on: []
     owner: session
     next_action: >
-      Recount at start, then classify every remote branch (50 unmerged on
-      2026-09-02, 11 of them janitor rescue snapshots), every linked worktree
-      (30 on 2026-09-02, plus the shared checkout), the unregistered
-      strale-work directory, and the dirty shared checkout. Delete what is
-      verified landed; list what must stay and why.
+      Recount at start (branches and worktrees change daily; the 2026-09-02
+      snapshot was 50 unmerged remote branches, 11 of them janitor rescue
+      snapshots, plus roughly thirty linked worktrees), then classify every
+      remote branch, every linked worktree, the unregistered strale-work
+      directory, and the dirty shared checkout. Delete what is verified
+      landed; list what must stay and why.
     resume_file: null
     exit:
       - every remote and local branch either deleted with landed-evidence or listed with a reason
@@ -128,11 +132,12 @@ tracks:
     title: M4 atomic authority cutover
     status: queued
     depends_on: [T3, T6]
-    owner: petter
+    owner: session
     next_action: >
-      Per migration plan section 10 M4. Prepare the single cutover PR; request
-      one founder yes on the exact reviewed commit; merge; verify both
-      entrypoints load the same truth.
+      Per migration plan section 10 M4. Prepare the single cutover PR, then
+      set this track to founder_gated with the exact reviewed commit named as
+      the blocker; on the founder's yes, merge and verify both entrypoints
+      load the same truth.
     resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
     exit:
       - both tools load the same project truth and pass entrypoint parity

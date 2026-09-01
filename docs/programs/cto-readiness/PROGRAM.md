@@ -78,6 +78,13 @@ register is enforced: T2 and T4 do not depend on T1, so either may become the
 active track while T1 waits on review, provided T1 is marked `blocked` with the
 review named as its blocker. Nothing in T6 or later starts before T1 is done.
 
+The register carries a `program_status`. While it is `active`, exactly one
+track is active. It becomes `paused` only when every runnable track is done
+and the remaining work waits on a founder gate (T7 becomes `founder_gated`
+with the approval named as its blocker; the technical preparation of the
+cutover is session work and stays session-owned). It becomes `complete` when
+every track is done or rehomed.
+
 ## The batch loop
 
 Every batch, on either tool, runs this loop. A batch that skips a step is not
@@ -87,23 +94,29 @@ done.
 2. **Plan.** A short stored plan in `archive/sessions/<date>-<track>-plan.md`:
    scope, files, exit test, what is explicitly out of scope.
 3. **Implement**, with tests that fail before the change and pass after.
-4. **Self-verify in the author's own environment.** A fresh read-only agent of
+4. **Record on the branch.** Update `tracks.yaml` (status, evidence,
+   `resume_file`) and write the handoff to
+   `handoff/_general/from-code/<date>-<track>.md` as commits on the same
+   branch, so the reviewed commit already carries the register change.
+5. **Self-verify in the author's own environment.** A fresh read-only agent of
    the same tool that authored the batch (a Claude sub-agent for Claude Code
    work, a Codex sub-task for Codex work) is told the exit criteria and asked
    to break the work, not to praise it. Findings are fixed or explicitly
-   carried. Claude is never invoked to review Codex-authored work; that is the
-   founder's 2026-09-01 review-routing rule recorded in `AGENTS.md` and
-   `CLAUDE.md`, and it stands until a recorded supersession says otherwise.
-5. **Independent review.** A fresh, separate Codex task (`gpt-5.6-sol`,
-   `xhigh`, read-only, closed after its verdict) reviews the exact commit.
-   Blocking findings are fixed and re-reviewed; nothing ships on a FAIL.
-6. **Ship.** Open PR, wait for CI, merge, verify `origin/main` carries the
+   carried. Claude is never invoked as the independent reviewer of
+   Codex-authored work; that is the founder's 2026-09-01 review-routing rule
+   recorded in `AGENTS.md` and `CLAUDE.md`, and it stands until a recorded
+   supersession says otherwise. Where an older handoff says "do not invoke
+   Claude for review" without qualification, it means this independent
+   review; same-tool self-verification of Claude-authored work is permitted.
+6. **Independent review.** A fresh, separate Codex task (`gpt-5.6-sol`,
+   `xhigh`, read-only, closed after its verdict) reviews the exact final
+   commit, register change included. Blocking findings are fixed and
+   re-reviewed; nothing ships on a FAIL.
+7. **Ship.** Open PR, wait for CI, merge, verify `origin/main` carries the
    commit.
-7. **Record.** Update `tracks.yaml` in the same PR, write the handoff to
-   `handoff/_general/from-code/<date>-<track>.md`, add a Journal entry while
-   Notion remains authoritative.
-8. **Clean.** Delete the branch, `git worktree remove` the worktree. The
-   session that merges is the session that cleans.
+8. **After merge.** Add a Journal entry while Notion remains authoritative,
+   delete the branch, `git worktree remove` the worktree. The session that
+   merges is the session that cleans.
 
 ## What needs Petter, and nothing else does
 

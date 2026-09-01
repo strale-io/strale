@@ -16,7 +16,10 @@ Rules:
 - One register per program, `docs/programs/<program>/tracks.yaml`, validated
   against the shared `docs/programs/tracks.schema.json` by
   `npm run programs:check` (the checker's own tests: `npm run programs:test`).
-- A track's `status` changes only in the same PR that lands the evidence for it.
+- A track's `status` changes only on the same branch, and therefore in the
+  same reviewed PR, that lands the evidence for it.
+- Every program directory holds both `PROGRAM.md` and `tracks.yaml`, and the
+  register's `program` equals the directory name; the checker enforces this.
 - Any session, Claude Code or Codex, resumes a program by starting at its
   `PROGRAM.md` **Resume here** section and following its pointers: the register,
   then the active track's `resume_file`. Chat history is never required.

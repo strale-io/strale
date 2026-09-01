@@ -1,11 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   checkAllRegisters,
   classifyRepoPath,
+  isCalendarDate,
+  isVisiblyNonEmpty,
   loadRegister,
   loadSchema,
   repoRootFrom,
@@ -18,11 +21,16 @@ const REL = "docs/programs/cto-readiness/tracks.yaml";
 const schema = loadSchema(root);
 const tracked = trackedFiles(root);
 const base = () => loadRegister(root, REL);
-const codes = (register) =>
-  validateRegister(register, { root, relativePath: REL, schema, tracked }).map((f) => f.code);
+const codes = (register, extra = {}) =>
+  validateRegister(register, { root, relativePath: REL, schema, tracked, programDir: "cto-readiness", ...extra }).map((f) => f.code);
 const activate = (r, index) => {
   for (const t of r.tracks) if (t.status === "active") t.status = "queued";
   r.tracks[index].status = "active";
+};
+const finish = (t) => {
+  t.status = "done";
+  t.evidence = ["README.md"];
+  delete t.blocker;
 };
 
 test("the committed registers are valid", () => {
@@ -44,10 +52,79 @@ test("two active tracks are rejected", () => {
   assert.ok(codes(r).includes("ACTIVE_COUNT"));
 });
 
-test("zero active tracks are rejected", () => {
+test("zero active tracks are rejected while the program is active", () => {
   const r = base();
   r.tracks[0].status = "queued";
   assert.ok(codes(r).includes("ACTIVE_COUNT"));
+});
+
+test("program_status paused: no active track, a gate must exist, nothing runnable", () => {
+  const r = base();
+  r.program_status = "paused";
+  assert.ok(codes(r).includes("PAUSED_WITH_ACTIVE_TRACK"));
+  for (const t of r.tracks) finish(t);
+  r.tracks[6].status = "founder_gated";
+  r.tracks[6].blocker = "founder yes on the exact reviewed commit";
+  r.tracks[6].evidence = [];
+  r.tracks[7].status = "queued";
+  r.tracks[7].evidence = [];
+  r.tracks[8].status = "queued";
+  r.tracks[8].evidence = [];
+  assert.deepEqual(codes(r), [], "a correctly paused program is valid");
+  r.tracks[6].status = "queued";
+  delete r.tracks[6].blocker;
+  const c = codes(r);
+  assert.ok(c.includes("PAUSED_WITHOUT_GATE"));
+  assert.ok(c.includes("PAUSED_WITH_RUNNABLE_TRACK"), "T7's dependencies are done, so it is runnable");
+});
+
+test("program_status complete requires every track terminal", () => {
+  const r = base();
+  r.program_status = "complete";
+  assert.ok(codes(r).includes("COMPLETE_WITH_OPEN_TRACK"));
+  for (const t of r.tracks) finish(t);
+  assert.deepEqual(codes(r), []);
+});
+
+test("an unsupported program_status is rejected", () => {
+  const r = base();
+  r.program_status = "running";
+  assert.ok(codes(r).includes("SCHEMA"));
+});
+
+test("the program slug must equal its directory name", () => {
+  const r = base();
+  assert.ok(codes(r, { programDir: "other-program" }).includes("PROGRAM_SLUG_MISMATCH"));
+});
+
+test("updated must be a real calendar date", () => {
+  assert.equal(isCalendarDate("2026-99-99"), false);
+  assert.equal(isCalendarDate("2026-02-30"), false);
+  assert.equal(isCalendarDate("2026-09-02"), true);
+  const r = base();
+  r.updated = "2026-99-99";
+  assert.ok(codes(r).includes("UPDATED_NOT_A_DATE"));
+});
+
+test("duplicate dependency edges are rejected", () => {
+  const r = base();
+  r.tracks[2].depends_on = ["T2", "T2"];
+  assert.ok(codes(r).includes("SCHEMA"));
+});
+
+test("invisible text is rejected wherever text is required", () => {
+  assert.equal(isVisiblyNonEmpty("\u200b\u200b\u200b"), false);
+  assert.equal(isVisiblyNonEmpty("   "), false);
+  assert.equal(isVisiblyNonEmpty(" a "), true);
+  const r = base();
+  r.tracks[0].status = "blocked";
+  r.tracks[0].blocker = "\u200b\u200b\u200b";
+  activate(r, 1);
+  r.tracks[1].resume_file = "README.md";
+  assert.ok(codes(r).includes("TEXT_NOT_VISIBLE"));
+  const r2 = base();
+  r2.tracks[0].title = "\u200b\u200b\u200b";
+  assert.ok(codes(r2).includes("TEXT_NOT_VISIBLE"));
 });
 
 test("duplicate ids are rejected", () => {
@@ -84,8 +161,7 @@ test("an active track whose dependency is not done is rejected", () => {
 
 test("a done track whose dependency is not done is rejected", () => {
   const r = base();
-  r.tracks[5].status = "done";
-  r.tracks[5].evidence = ["README.md"];
+  finish(r.tracks[5]);
   assert.ok(codes(r).includes("DONE_WITH_OPEN_DEPENDENCY"));
 });
 
@@ -93,14 +169,9 @@ test("a rehomed dependency does not satisfy an active track", () => {
   const r = base();
   r.tracks[0].status = "rehomed";
   r.tracks[0].rehomed_to = "docs/programs/README.md";
+  for (const i of [1, 3, 4]) finish(r.tracks[i]);
   activate(r, 5);
   r.tracks[5].resume_file = "README.md";
-  r.tracks[4].status = "done";
-  r.tracks[4].evidence = ["README.md"];
-  r.tracks[1].status = "done";
-  r.tracks[1].evidence = ["README.md"];
-  r.tracks[3].status = "done";
-  r.tracks[3].evidence = ["README.md"];
   assert.ok(codes(r).includes("ACTIVE_WITH_OPEN_DEPENDENCY"));
 });
 
@@ -113,9 +184,9 @@ for (const status of ["blocked", "founder_gated"]) {
     delete r.tracks[0].blocker;
     assert.ok(codes(r).includes("SCHEMA"));
     r.tracks[0].blocker = "   ";
-    assert.ok(codes(r).includes("SCHEMA"), "whitespace-only blocker");
+    assert.ok(codes(r).includes("TEXT_NOT_VISIBLE"), "whitespace-only blocker");
     r.tracks[0].blocker = "waiting on independent review";
-    assert.ok(!codes(r).includes("SCHEMA"));
+    assert.deepEqual(codes(r), []);
   });
 }
 
@@ -130,7 +201,7 @@ test("rehomed requires rehomed_to, and rehomed_to is rejected elsewhere", () => 
   r.tracks[1].status = "rehomed";
   assert.ok(codes(r).includes("SCHEMA"));
   r.tracks[1].rehomed_to = "docs/programs/README.md";
-  assert.ok(!codes(r).includes("SCHEMA"));
+  assert.deepEqual(codes(r), []);
   const r2 = base();
   r2.tracks[1].rehomed_to = "docs/programs/README.md";
   assert.ok(codes(r2).includes("SCHEMA"));
@@ -145,17 +216,53 @@ test("done requires evidence, and evidence must be a tracked regular file", () =
     assert.ok(codes(r).includes("EVIDENCE_INVALID"), `evidence ${bad} should be rejected`);
   }
   r.tracks[1].evidence = ["README.md"];
-  assert.ok(!codes(r).includes("EVIDENCE_INVALID"));
+  assert.deepEqual(codes(r), []);
 });
 
-test("untracked evidence is rejected when a tracked set is supplied", () => {
-  const dir = mkdtempSync(join(tmpdir(), "tracks-"));
+test("each path check rejects on its own, with competing checks unable to fire", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tracks-paths-"));
   try {
     mkdirSync(join(dir, "docs"), { recursive: true });
-    writeFileSync(join(dir, "docs/untracked.md"), "x");
-    assert.equal(classifyRepoPath(dir, "docs/untracked.md", new Set()), "UNTRACKED");
-    assert.equal(classifyRepoPath(dir, "docs/untracked.md", new Set(["docs/untracked.md"])), "OK");
-    assert.equal(classifyRepoPath(dir, "docs/untracked.md"), "OK", "no tracked set means disk checks only");
+    writeFileSync(join(dir, "docs/a.md"), "x");
+    writeFileSync(join(dir, "outside.md"), "x");
+    const inner = join(dir, "docs");
+    // A directory that is "tracked" (as a prefix) and exists: only the regular-file check can reject it.
+    assert.equal(classifyRepoPath(dir, "docs", new Set(["docs", "docs/a.md"])), "NOT_A_FILE");
+    // A traversal path whose target exists and is "tracked": only traversal detection can reject it.
+    assert.equal(classifyRepoPath(inner, "../outside.md", new Set(["../outside.md"])), "ESCAPES_ROOT");
+    // An existing regular file that is not tracked: only the tracked check can reject it.
+    assert.equal(classifyRepoPath(dir, "docs/a.md", new Set()), "UNTRACKED");
+    assert.equal(classifyRepoPath(dir, "docs/a.md", new Set(["docs/a.md"])), "OK");
+    assert.equal(classifyRepoPath(dir, "docs/a.md"), "OK", "no tracked set means disk checks only");
+    assert.equal(classifyRepoPath(dir, "\u200b", new Set()), "EMPTY");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("validateRegister applies the tracked set to resume files, evidence, and rehome targets", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tracks-tracked-"));
+  try {
+    writeFileSync(join(dir, "resume.md"), "x");
+    writeFileSync(join(dir, "evidence.md"), "x");
+    writeFileSync(join(dir, "home.md"), "x");
+    const register = {
+      schema_version: 1,
+      program: "p",
+      program_status: "active",
+      updated: "2026-09-02",
+      tracks: [
+        { id: "T1", title: "one", status: "active", depends_on: [], owner: "session", next_action: "do the thing", resume_file: "resume.md", exit: ["done when"], evidence: [] },
+        { id: "T2", title: "two", status: "done", depends_on: [], owner: "session", next_action: "did the thing", resume_file: null, exit: ["done when"], evidence: ["evidence.md"] },
+        { id: "T3", title: "three", status: "rehomed", rehomed_to: "home.md", depends_on: [], owner: "session", next_action: "moved the thing", resume_file: null, exit: ["done when"], evidence: [] },
+      ],
+    };
+    const detail = validateRegister(register, { root: dir, relativePath: "tracks.yaml", schema, tracked: new Set(), programDir: "p" });
+    const found = detail.map((f) => f.code).sort();
+    assert.deepEqual(found, ["EVIDENCE_INVALID", "REHOMED_TARGET_INVALID", "RESUME_FILE_INVALID"]);
+    assert.ok(detail.every((f) => f.detail.includes("UNTRACKED")));
+    const ok = validateRegister(register, { root: dir, relativePath: "tracks.yaml", schema, tracked: new Set(["resume.md", "evidence.md", "home.md"]), programDir: "p" });
+    assert.deepEqual(ok, []);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -170,7 +277,7 @@ test("an active track must have a resume file that is a tracked regular file", (
     assert.ok(codes(r).includes("RESUME_FILE_INVALID"), `resume file ${bad} should be rejected`);
   }
   r.tracks[0].resume_file = "   ";
-  assert.ok(codes(r).includes("SCHEMA"), "whitespace resume file");
+  assert.ok(codes(r).includes("ACTIVE_WITHOUT_RESUME_FILE"), "whitespace resume file");
 });
 
 test("a rehomed_to target must be a tracked regular file", () => {
@@ -187,4 +294,31 @@ test("an unknown field is rejected at both levels", () => {
   const r2 = base();
   r2.extra = true;
   assert.ok(codes(r2).includes("SCHEMA"), "top-level");
+});
+
+test("program directories must hold both files and a matching slug", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tracks-topology-"));
+  try {
+    execFileSync("git", ["-C", dir, "init", "-q"]);
+    mkdirSync(join(dir, "docs/programs/alpha"), { recursive: true });
+    mkdirSync(join(dir, "docs/programs/beta"), { recursive: true });
+    mkdirSync(join(dir, "docs/programs/gamma"), { recursive: true });
+    writeFileSync(join(dir, "docs/programs/tracks.schema.json"), JSON.stringify(schema));
+    writeFileSync(join(dir, "docs/programs/alpha/PROGRAM.md"), "# alpha\n");
+    // alpha: PROGRAM.md only
+    // beta: register only, slug mismatch
+    const reg = `schema_version: 1\nprogram: not-beta\nprogram_status: active\nupdated: 2026-09-02\ntracks:\n  - id: T1\n    title: one\n    status: active\n    depends_on: []\n    owner: session\n    next_action: do the thing\n    resume_file: README.md\n    exit: [done when]\n    evidence: []\n`;
+    writeFileSync(join(dir, "docs/programs/beta/tracks.yaml"), reg);
+    writeFileSync(join(dir, "README.md"), "x");
+    // gamma: both files, valid
+    writeFileSync(join(dir, "docs/programs/gamma/PROGRAM.md"), "# gamma\n");
+    writeFileSync(join(dir, "docs/programs/gamma/tracks.yaml"), reg.replace("not-beta", "gamma"));
+    execFileSync("git", ["-C", dir, "add", "-A"]);
+    const results = Object.fromEntries(checkAllRegisters(dir).map((r) => [r.path, r.findings.map((f) => f.code)]));
+    assert.deepEqual(results["docs/programs/alpha/tracks.yaml"], ["REGISTER_MISSING"]);
+    assert.deepEqual(results["docs/programs/beta/tracks.yaml"], ["PROGRAM_FILE_MISSING", "PROGRAM_SLUG_MISMATCH"]);
+    assert.deepEqual(results["docs/programs/gamma/tracks.yaml"], []);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
