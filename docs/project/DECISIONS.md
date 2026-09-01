@@ -34,7 +34,9 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260504-B`](../decisions/records/DEC-20260504-B.md) — Require a controlled workload-resumption plan for long-silent bulk operations | `DEC-20260504-B` | active | `deploy-safety` | global | petter | 2026-05-04 |
 | [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) — Verify deploy-pipeline reachability and the resulting production effect | `DEC-20260504-C` | active | `deploy-safety` | global | petter | 2026-05-04 |
 | [`DEC-20260517-A`](../decisions/records/DEC-20260517-A.md) — Make repository YAML canonical for structured Provider-Coverage reference data | `DEC-20260517-A` | active | `reference-data-authority` | global | petter | 2026-05-17 |
+| [`DEC-20260518-E`](../decisions/records/DEC-20260518-E.md) — Require exhaustive source enumeration before declaring a country path blocked | `DEC-20260518-E` | active | `source-enumeration` | global | petter | 2026-05-18 |
 | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) — Clarify data sourcing to permit constrained per-call public-registry parsing | `DEC-20260518-F` | active | `data-sourcing-principles` | global | petter | 2026-05-18 |
+| [`DEC-20260518-G`](../decisions/records/DEC-20260518-G.md) — Probe hidden fixed-cost commitments before treating RFQ pricing as viable | `DEC-20260518-G` | active | `source-enumeration` | global | petter | 2026-05-18 |
 | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) — Adopt the Platform Readiness and Self-Operation program | `DEC-20260812-A` | active | `autonomous-operating-model` | global | petter | 2026-08-12 |
 | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) — Affirm constrained per-call parsing as the scraping doctrine interpretation | `DEC-20260813-A` | active | `scraping-doctrine-interpretation` | global | petter | 2026-08-13 |
 | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) — Adopt the operating charter and delegate day-to-day technical operations | `DEC-20260815-A` | active | `autonomous-operating-model` | global | petter | 2026-08-15 |
@@ -62,6 +64,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `related_from` | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` |
 | [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) | `DEC-20260503-A` | `superseded_by` | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` |
 | [`DEC-20260504-B`](../decisions/records/DEC-20260504-B.md) | `DEC-20260504-B` | `related_from` | [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) | `DEC-20260504-C` |
+| [`DEC-20260518-E`](../decisions/records/DEC-20260518-E.md) | `DEC-20260518-E` | `amended_by` | [`DEC-20260518-G`](../decisions/records/DEC-20260518-G.md) | `DEC-20260518-G` |
 | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) | `DEC-20260518-F` | `affirmed_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) | `DEC-20260813-A` |
 | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` | `amended_by` | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `DEC-20260815-A` |
 | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `DEC-20260815-A` | `amended_by` | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) | `DEC-20260822-A` |
