@@ -97,6 +97,18 @@ later doctrine, charter boundaries, missing enforcement, generated context,
 and inactive authority. PR #469 passed both required CI jobs and merged as
 `063be00a56c1c6880427d6695fe1aa67a9925fa5`.
 
+The vendor-evaluation decision/methodology plan made fresh Claude Opus/high and
+Sonnet/high attempts. Opus timed out after 134 seconds and Sonnet after 104
+seconds without returning a verdict. A fresh `gpt-5.6-sol`/xhigh Codex reviewer
+found that the first draft improperly froze mutable methodology rules into the
+immutable pointer Decision and assumed fail-closed call detection without a
+controlled launcher or credential boundary. The amended plan keeps the formal
+record narrow, requires M3 to establish or designate the execution boundary
+before enforcement claims, makes partial paths explicit, lists exact evidence,
+preserves the five-versus-six example inconsistency, and treats `owner: petter`
+as migration attribution. The same reviewer then returned PASS with no residual
+findings. Exact-commit Claude review remains required below.
+
 ## Pending cross-provider checks
 
 | Priority | Artifact/topic | Required Claude check | Closure evidence |
@@ -116,6 +128,7 @@ and inactive authority. PR #469 passed both required CI jobs and merged as
 | P1 | Inactive governance/reference-data batch (`DEC-20260424-A`, Git-native `DEC-20260504-A`, `DEC-20260517-A`) plus enforcement-protocol source-gap report (interim exact-commit Codex PASS at `5ab19ff0`, merged by PR #465 as `e02355aa`) | Verify Git-only formal-decision provenance, the block on cross-surface `DEC-20260422-A`, exclusion of stale `DEC-20260517-B`, non-executable historical deletion instruction, and inactive authority | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
 | P1 | Inactive capability-onboarding chain (`DEC-20260320-B`, `DEC-20260422-C`, `DEC-20260423-A`, `DEC-20260423-B`) plus authority/enforcement-gap report (interim exact-commit Codex PASS at `1e64efdd`, merged by PR #467 as `6e1c2819`) | Verify both supersession chains, the A/B non-retiring relation, the stale entrypoint ID and historical-spec pointer, missing fresh-database trigger DDL, later-retired mechanics boundary, and inactive authority | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
 | P1 | Inactive source-enumeration chain (`DEC-20260518-E`, `DEC-20260518-G`) plus authority-gap report (interim exact-commit Codex PASS at `4a63773f`, merged by PR #469 as `063be00a`) | Verify the eight-path and per-path evidence contract, G → E non-retiring amendment, six-fee/signed-attestation rule, PR #137 source qualification, Path 6 reconciliation, historical-vocabulary boundary, founder-reserved vendor contact, missing enforcement, and inactive authority | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
+| P1 | Inactive vendor-evaluation pointer Decision (`DEC-20260511-D`) plus separate methodology source/gap evidence (Codex plan PASS; implementation pending) | Verify the narrow immutable pointer contract, no invented E/G relation, separate evolving methodology preservation, five-versus-six count handling, Charter preflight/authority reconciliation, historical budgets, missing controlled call boundary, partial-enforcement wording, and inactive authority | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
 | P2 | M4 entrypoint/cutover batch | Adversarially verify that Notion consumers are replaced, peer entrypoints are safe, and no mutable facts remain duplicated | Exact-head cross-provider cutover review |
 
 ## Operating rule until cleared
