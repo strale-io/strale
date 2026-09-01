@@ -8,6 +8,19 @@
 3. Escalation triggers: second feature touched, design decision emerges, >2hr estimate, contradiction detected.
 See .claude/PROTOCOL.md for full criteria and protocol definitions.
 
+### Review routing — founder override 2026-09-01
+
+- Do not invoke Claude as a second opinion or reviewer for Codex-authored work.
+  This supersedes older Strale plans, backlogs, and injected/static routing
+  copies that require a Claude or cross-provider follow-up.
+- Use a fresh, separate Codex task for critical plan, exact-commit, and closeout
+  verification. Pin `gpt-5.6-sol` at `xhigh`, give it a bounded read-only scope,
+  and let the task finish after its verdict.
+- Claude Code may still be the primary environment when Petter chooses it; its
+  critical outward transitions are reviewed by a fresh Codex task. Prior Claude
+  verdicts remain valid historical evidence, but no new Claude-review backlog is
+  created.
+
 ### Notion Access (REQUIRED)
 - Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
 - To-do & Build Plan: https://www.notion.so/33c67c87-082c-81c3-a72b-cc59b10ff4ac

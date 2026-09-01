@@ -15,6 +15,16 @@ authority. The migration decision was collision-checked and recorded as
 > After cutover, archive this plan under `archive/sessions/` with its review and
 > acceptance evidence.
 
+## Review-route override — 2026-09-01
+
+Petter ended automatic Claude check-ins. From this date, every instruction in
+this plan that says to invoke Claude, obtain a Claude milestone verdict, retain
+work for later Claude review, or block M4 on Claude availability is superseded.
+Critical plan, exact-commit, closeout, and cutover reviews use a fresh separate
+Codex task pinned to `gpt-5.6-sol` at `xhigh`. Historical Claude reviews and
+timeouts below remain evidence of what occurred; they are not queued work and
+must not cause a future session to invoke Claude again.
+
 ## M0 completion update — 2026-08-31
 
 This update supersedes the quota/completeness gates in the historical execution

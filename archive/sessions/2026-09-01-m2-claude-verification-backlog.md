@@ -1,12 +1,21 @@
 ---
 doc_type: review-backlog
 authority_scope: none
-status: pending
+status: retired
 created_at: 2026-09-01
 reason: claude-temporarily-unavailable
+retired_at: 2026-09-01
+retired_reason: founder-ended-claude-check-ins
 ---
 
 # M2 Claude verification backlog
+
+> [!NOTE]
+> **RETIRED 2026-09-01.** Petter ended further Claude check-ins. Preserve this
+> file as historical evidence of earlier review attempts and then-pending debt,
+> but do not invoke Claude or add new entries. Critical future reviews use a
+> fresh separate `gpt-5.6-sol`/xhigh Codex task against the then-current exact
+> commit.
 
 ## Why this exists
 
