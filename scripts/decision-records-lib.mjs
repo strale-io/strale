@@ -202,6 +202,7 @@ export function parseDecisionRecord(file, content) {
 }
 
 function semanticText(node) {
+  if (node.type === "softbreak" || node.type === "linebreak") return "\n";
   let value = node.literal ?? "";
   for (let child = node.firstChild; child; child = child.next) {
     value += semanticText(child);

@@ -269,6 +269,23 @@ test("hidden headings and a commented banner do not satisfy the document contrac
       (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
     ),
   );
+
+  for (const multilineHeading of [
+    "Con\ntext\n-------",
+    "Con  \ntext\n-------",
+    "Con\\\ntext\n-------",
+  ]) {
+    const joinedHeading = parseDecisionRecord(
+      visible.file,
+      visible.content.replace("## Context", multilineHeading),
+    );
+    assert.ok(
+      validateDecisionRecords([joinedHeading]).some(
+        (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
+      ),
+      multilineHeading,
+    );
+  }
 });
 
 test("an active decision body is immutable while metadata may transition", () => {
