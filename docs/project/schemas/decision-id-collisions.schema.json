@@ -18,7 +18,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "authority_scope": {
       "const": "none"
@@ -64,7 +64,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^DEC-.+"
+            "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+            "maxLength": 80
           },
           "resolution_status": {
             "enum": [
@@ -87,7 +88,9 @@
               "required": [
                 "title",
                 "historical_status",
-                "source_url"
+                "source_url",
+                "source_page_id",
+                "disposition"
               ],
               "properties": {
                 "title": {
@@ -106,8 +109,64 @@
                 "source_url": {
                   "type": "string",
                   "pattern": "^https://app\\.notion\\.com/"
+                },
+                "source_page_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{32}$"
+                },
+                "disposition": {
+                  "enum": [
+                    "unresolved",
+                    "formal_record",
+                    "documented_only"
+                  ]
+                },
+                "record_key": {
+                  "type": "string",
+                  "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$",
+                  "maxLength": 120
+                },
+                "rationale": {
+                  "type": "string",
+                  "minLength": 1
                 }
-              }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "required": [
+                      "disposition"
+                    ],
+                    "properties": {
+                      "disposition": {
+                        "const": "formal_record"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "record_key"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "required": [
+                      "disposition"
+                    ],
+                    "properties": {
+                      "disposition": {
+                        "const": "documented_only"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "rationale"
+                    ]
+                  }
+                }
+              ]
             }
           }
         },

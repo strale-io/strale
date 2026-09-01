@@ -15,12 +15,18 @@ export const DECISION_INDEX_CANDIDATE_BANNER =
   "> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**\n" +
   "> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.";
 
+const DECISION_ID_PATTERN = "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$";
+const DECISION_RECORD_KEY_PATTERN =
+  "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$";
+const NOTION_PAGE_ID_PATTERN = "^[0-9a-f]{32}$";
+
 export const DECISION_RECORD_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   title: "Repo-native decision record candidate",
   type: "object",
   additionalProperties: false,
   required: [
+    "record_key",
     "id",
     "title",
     "status",
@@ -36,7 +42,12 @@ export const DECISION_RECORD_SCHEMA = {
     "phase",
   ],
   properties: {
-    id: { type: "string", pattern: "^DEC-[0-9]{8}-[A-Z]$" },
+    record_key: {
+      type: "string",
+      pattern: DECISION_RECORD_KEY_PATTERN,
+      maxLength: 120,
+    },
+    id: { type: "string", pattern: DECISION_ID_PATTERN, maxLength: 80 },
     title: { type: "string", minLength: 1 },
     status: {
       enum: ["proposed", "active", "superseded", "rejected", "retired"],
@@ -57,7 +68,11 @@ export const DECISION_RECORD_SCHEMA = {
           type: {
             enum: ["supersedes", "amends", "interprets", "affirms", "related_to"],
           },
-          target: { type: "string", pattern: "^DEC-[0-9]{8}-[A-Z]$" },
+          target: {
+            type: "string",
+            pattern: DECISION_RECORD_KEY_PATTERN,
+            maxLength: 120,
+          },
         },
       },
     },
@@ -92,7 +107,7 @@ export const DECISION_ID_COLLISION_SCHEMA = {
     "collisions",
   ],
   properties: {
-    schema_version: { const: 1 },
+    schema_version: { const: 2 },
     authority_scope: { const: "none" },
     status: { const: "candidate" },
     complete: { const: false },
@@ -109,7 +124,7 @@ export const DECISION_ID_COLLISION_SCHEMA = {
         additionalProperties: false,
         required: ["id", "resolution_status", "records"],
         properties: {
-          id: { type: "string", pattern: "^DEC-.+" },
+          id: { type: "string", pattern: DECISION_ID_PATTERN, maxLength: 80 },
           resolution_status: { enum: ["unresolved", "resolved"] },
           resolution_evidence: { type: ["string", "null"] },
           records: {
@@ -118,14 +133,46 @@ export const DECISION_ID_COLLISION_SCHEMA = {
             items: {
               type: "object",
               additionalProperties: false,
-              required: ["title", "historical_status", "source_url"],
+              required: [
+                "title",
+                "historical_status",
+                "source_url",
+                "source_page_id",
+                "disposition",
+              ],
               properties: {
                 title: { type: "string", minLength: 1 },
                 historical_status: {
                   enum: ["proposed", "active", "superseded", "rejected", "retired"],
                 },
                 source_url: { type: "string", pattern: "^https://app\\.notion\\.com/" },
+                source_page_id: { type: "string", pattern: NOTION_PAGE_ID_PATTERN },
+                disposition: {
+                  enum: ["unresolved", "formal_record", "documented_only"],
+                },
+                record_key: {
+                  type: "string",
+                  pattern: DECISION_RECORD_KEY_PATTERN,
+                  maxLength: 120,
+                },
+                rationale: { type: "string", minLength: 1 },
               },
+              allOf: [
+                {
+                  if: {
+                    required: ["disposition"],
+                    properties: { disposition: { const: "formal_record" } },
+                  },
+                  then: { required: ["record_key"] },
+                },
+                {
+                  if: {
+                    required: ["disposition"],
+                    properties: { disposition: { const: "documented_only" } },
+                  },
+                  then: { required: ["rationale"] },
+                },
+              ],
             },
           },
         },
@@ -270,20 +317,28 @@ function finding(code, path, detail) {
   return { code, path, ...(detail ? { detail } : {}) };
 }
 
-function relationConnectsActivePair(recordsById, left, right) {
-  const queue = [left.metadata.id];
+function recordKey(record) {
+  return record.metadata.record_key;
+}
+
+function sourcePageId(sourceUrl) {
+  return sourceUrl.match(/([0-9a-f]{32})(?:\?.*)?$/)?.[1] ?? null;
+}
+
+function relationConnectsActivePair(recordsByKey, left, right) {
+  const queue = [recordKey(left)];
   const visited = new Set(queue);
   while (queue.length > 0) {
-    const id = queue.shift();
-    if (id === right.metadata.id) return true;
-    const record = recordsById.get(id);
+    const key = queue.shift();
+    if (key === recordKey(right)) return true;
+    const record = recordsByKey.get(key);
     if (!record) continue;
     const neighbours = [];
-    for (const candidate of recordsById.values()) {
+    for (const candidate of recordsByKey.values()) {
       for (const relation of candidate.metadata.relations ?? []) {
         if (!NON_RETIRING_RELATIONS.has(relation.type)) continue;
-        if (candidate.metadata.id === id) neighbours.push(relation.target);
-        if (relation.target === id) neighbours.push(candidate.metadata.id);
+        if (recordKey(candidate) === key) neighbours.push(relation.target);
+        if (relation.target === key) neighbours.push(recordKey(candidate));
       }
     }
     for (const neighbour of neighbours) {
@@ -311,17 +366,122 @@ export function validateDecisionIdCollisions(file, registry) {
     return findings;
   }
   const seenIds = new Set();
+  const seenIdsCaseFolded = new Set();
+  const seenSourceUrls = new Set();
+  const seenPageIds = new Set();
+  const seenFormalKeysCaseFolded = new Set();
   for (const collision of registry.collisions) {
     if (seenIds.has(collision.id)) {
       findings.push(finding("DECISION_ID_COLLISION_DUPLICATE", file, collision.id));
     }
     seenIds.add(collision.id);
-    const urls = collision.records.map((record) => record.source_url);
-    if (new Set(urls).size !== urls.length) {
-      findings.push(finding("DECISION_ID_COLLISION_SOURCE_DUPLICATE", file, collision.id));
+    const foldedId = collision.id.toLowerCase();
+    if (seenIdsCaseFolded.has(foldedId)) {
+      findings.push(
+        finding("DECISION_ID_COLLISION_CASE_CONFLICT", file, collision.id),
+      );
+    }
+    seenIdsCaseFolded.add(foldedId);
+    for (const record of collision.records) {
+      if (seenSourceUrls.has(record.source_url)) {
+        findings.push(
+          finding("DECISION_ID_COLLISION_SOURCE_DUPLICATE", file, record.source_url),
+        );
+      }
+      seenSourceUrls.add(record.source_url);
+      if (seenPageIds.has(record.source_page_id)) {
+        findings.push(
+          finding("DECISION_ID_COLLISION_PAGE_ID_DUPLICATE", file, record.source_page_id),
+        );
+      }
+      seenPageIds.add(record.source_page_id);
+      const derived = sourcePageId(record.source_url);
+      if (derived !== record.source_page_id) {
+        findings.push(
+          finding(
+            "DECISION_ID_COLLISION_PAGE_ID_MISMATCH",
+            file,
+            `${collision.id}:${record.source_page_id}/${derived ?? "unparseable"}`,
+          ),
+        );
+      }
     }
     if (collision.resolution_status === "unresolved" && collision.resolution_evidence) {
       findings.push(finding("DECISION_ID_COLLISION_FALSE_RESOLUTION", file, collision.id));
+    }
+    if (collision.resolution_status === "unresolved") {
+      for (const record of collision.records) {
+        if (
+          record.disposition !== "unresolved" ||
+          record.record_key !== undefined ||
+          record.rationale !== undefined
+        ) {
+          findings.push(
+            finding(
+              "DECISION_ID_COLLISION_PREMATURE_DISPOSITION",
+              file,
+              `${collision.id}:${record.source_page_id}`,
+            ),
+          );
+        }
+      }
+    } else {
+      const keys = collision.records
+        .filter((record) => record.disposition === "formal_record")
+        .map((record) => record.record_key);
+      if (new Set(keys).size !== keys.length) {
+        findings.push(finding("DECISION_ID_COLLISION_RECORD_KEY_DUPLICATE", file, collision.id));
+      }
+      for (const key of keys) {
+        const foldedKey = key.toLowerCase();
+        if (seenFormalKeysCaseFolded.has(foldedKey)) {
+          findings.push(
+            finding("DECISION_ID_COLLISION_RECORD_KEY_CASE_CONFLICT", file, key),
+          );
+        }
+        seenFormalKeysCaseFolded.add(foldedKey);
+      }
+      for (const record of collision.records) {
+        if (record.disposition === "unresolved") {
+          findings.push(
+            finding(
+              "DECISION_ID_COLLISION_RESOLVED_ROW_UNDISPOSED",
+              file,
+              `${collision.id}:${record.source_page_id}`,
+            ),
+          );
+        }
+        if (record.disposition === "formal_record" && record.rationale !== undefined) {
+          findings.push(
+            finding(
+              "DECISION_ID_COLLISION_FORMAL_RATIONALE_INVALID",
+              file,
+              `${collision.id}:${record.source_page_id}`,
+            ),
+          );
+        }
+        if (
+          record.disposition === "formal_record" &&
+          record.record_key !== `${collision.id}--notion-${record.source_page_id}`
+        ) {
+          findings.push(
+            finding(
+              "DECISION_ID_COLLISION_RECORD_KEY_SOURCE_MISMATCH",
+              file,
+              `${collision.id}:${record.record_key}`,
+            ),
+          );
+        }
+        if (record.disposition === "documented_only" && record.record_key !== undefined) {
+          findings.push(
+            finding(
+              "DECISION_ID_COLLISION_DOCUMENTED_KEY_INVALID",
+              file,
+              `${collision.id}:${record.source_page_id}`,
+            ),
+          );
+        }
+      }
     }
   }
   if (registry.collision_count !== registry.collisions.length) {
@@ -351,7 +511,13 @@ export function validateDecisionIdCollisions(file, registry) {
 
 export function validateDecisionRecords(records, collisionRegistry = { collisions: [] }) {
   const findings = [];
-  const recordsById = new Map();
+  const recordsByKey = new Map();
+  const recordsByCaseFoldedKey = new Map();
+  const recordsByDisplayId = new Map();
+  const collisionsById = new Map(
+    (collisionRegistry.collisions ?? []).map((collision) => [collision.id, collision]),
+  );
+  const collidedIds = new Set(collisionsById.keys());
   const unresolvedCollisionIds = new Set(
     (collisionRegistry.collisions ?? [])
       .filter((collision) => collision.resolution_status === "unresolved")
@@ -370,7 +536,7 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
         );
       }
     }
-    const expectedFile = `${record.metadata.id}.md`;
+    const expectedFile = `${record.metadata.record_key}.md`;
     if (basename(record.file) !== expectedFile) {
       findings.push(finding("DECISION_FILENAME_MISMATCH", record.file, expectedFile));
     }
@@ -392,13 +558,32 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
       }
     }
     const id = record.metadata.id;
+    const key = record.metadata.record_key;
     if (unresolvedCollisionIds.has(id)) {
       findings.push(finding("DECISION_ID_COLLISION_IMPORTED", record.file, id));
     }
-    if (recordsById.has(id)) {
-      findings.push(finding("DECISION_ID_DUPLICATE", record.file, id));
-    } else {
-      recordsById.set(id, record);
+    if (!collidedIds.has(id) && key !== id) {
+      findings.push(
+        finding("DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH", record.file, `${key}/${id}`),
+      );
+    }
+    if (typeof key === "string") {
+      if (recordsByKey.has(key)) {
+        findings.push(finding("DECISION_RECORD_KEY_DUPLICATE", record.file, key));
+      } else {
+        recordsByKey.set(key, record);
+      }
+      const foldedKey = key.toLowerCase();
+      if (recordsByCaseFoldedKey.has(foldedKey)) {
+        findings.push(finding("DECISION_RECORD_KEY_CASE_CONFLICT", record.file, key));
+      } else {
+        recordsByCaseFoldedKey.set(foldedKey, record);
+      }
+    }
+    if (typeof id === "string") {
+      const sameId = recordsByDisplayId.get(id) ?? [];
+      sameId.push(record);
+      recordsByDisplayId.set(id, sameId);
     }
     const seenEdges = new Set();
     for (const relation of record.metadata.relations ?? []) {
@@ -407,12 +592,78 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
         findings.push(finding("DECISION_RELATION_DUPLICATE", record.file, edge));
       }
       seenEdges.add(edge);
-      if (relation.target === id) {
+      if (relation.target === key) {
         findings.push(finding("DECISION_RELATION_SELF", record.file, edge));
       }
-      if (unresolvedCollisionIds.has(relation.target)) {
+      if (collidedIds.has(relation.target)) {
         findings.push(
           finding("DECISION_RELATION_TARGET_COLLIDED", record.file, relation.target),
+        );
+      }
+    }
+  }
+
+  for (const [id, sameId] of recordsByDisplayId) {
+    if (sameId.length > 1 && collisionsById.get(id)?.resolution_status !== "resolved") {
+      for (const record of sameId.slice(1)) {
+        findings.push(finding("DECISION_ID_DUPLICATE_UNMAPPED", record.file, id));
+      }
+    }
+  }
+
+  for (const collision of collisionRegistry.collisions ?? []) {
+    if (collision.resolution_status !== "resolved") continue;
+    const formalRows = collision.records.filter(
+      (sourceRecord) => sourceRecord.disposition === "formal_record",
+    );
+    for (const sourceRecord of formalRows) {
+      const formal = recordsByKey.get(sourceRecord.record_key);
+      if (!formal) {
+        findings.push(
+          finding(
+            "DECISION_ID_COLLISION_FORMAL_RECORD_MISSING",
+            "docs/decisions/id-collisions.yaml",
+            `${collision.id}:${sourceRecord.record_key}`,
+          ),
+        );
+        continue;
+      }
+      for (const [field, actual, expected] of [
+        ["id", formal.metadata.id, collision.id],
+        ["title", formal.metadata.title, sourceRecord.title],
+        ["status", formal.metadata.status, sourceRecord.historical_status],
+      ]) {
+        if (actual !== expected) {
+          findings.push(
+            finding(
+              "DECISION_ID_COLLISION_FORMAL_RECORD_MISMATCH",
+              formal.file,
+              `${field}:${actual}/${expected}`,
+            ),
+          );
+        }
+      }
+      if (!formal.metadata.evidence.includes(sourceRecord.source_url)) {
+        findings.push(
+          finding(
+            "DECISION_ID_COLLISION_SOURCE_EVIDENCE_MISSING",
+            formal.file,
+            sourceRecord.source_url,
+          ),
+        );
+      }
+    }
+    for (const formal of recordsByDisplayId.get(collision.id) ?? []) {
+      const mappings = formalRows.filter(
+        (sourceRecord) => sourceRecord.record_key === recordKey(formal),
+      );
+      if (mappings.length !== 1) {
+        findings.push(
+          finding(
+            "DECISION_ID_COLLISION_FORMAL_RECORD_UNMAPPED",
+            formal.file,
+            `${recordKey(formal)}:${mappings.length}`,
+          ),
         );
       }
     }
@@ -426,14 +677,14 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
         !EFFECTIVE_SUPERSEDER_STATUSES.has(record.metadata.status)
       ) continue;
       const sources = incomingSupersessions.get(relation.target) ?? [];
-      sources.push(record.metadata.id);
+      sources.push(recordKey(record));
       incomingSupersessions.set(relation.target, sources);
     }
   }
   for (const record of records) {
     if (
       record.metadata.status === "superseded" &&
-      !incomingSupersessions.has(record.metadata.id)
+      !incomingSupersessions.has(recordKey(record))
     ) {
       findings.push(finding("DECISION_SUPERSEDED_WITHOUT_SOURCE", record.file));
     }
@@ -441,7 +692,7 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
 
   for (const record of records) {
     for (const relation of record.metadata.relations ?? []) {
-      const target = recordsById.get(relation.target);
+      const target = recordsByKey.get(relation.target);
       if (!target) {
         findings.push(
           finding("DECISION_RELATION_TARGET_MISSING", record.file, relation.target),
@@ -476,21 +727,21 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
   const visited = new Set();
   function visit(id, trail) {
     if (visiting.has(id)) {
-      findings.push(finding("DECISION_RELATION_CYCLE", recordsById.get(id)?.file ?? id, [...trail, id].join(" -> ")));
+      findings.push(finding("DECISION_RELATION_CYCLE", recordsByKey.get(id)?.file ?? id, [...trail, id].join(" -> ")));
       return;
     }
     if (visited.has(id)) return;
     visiting.add(id);
-    const record = recordsById.get(id);
+    const record = recordsByKey.get(id);
     for (const relation of record?.metadata.relations ?? []) {
-      if (ACYCLIC_RELATIONS.has(relation.type) && recordsById.has(relation.target)) {
+      if (ACYCLIC_RELATIONS.has(relation.type) && recordsByKey.has(relation.target)) {
         visit(relation.target, [...trail, id]);
       }
     }
     visiting.delete(id);
     visited.add(id);
   }
-  for (const id of recordsById.keys()) visit(id, []);
+  for (const id of recordsByKey.keys()) visit(id, []);
 
   const activeByTopic = new Map();
   for (const record of records) {
@@ -503,12 +754,12 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
   for (const [topic, group] of activeByTopic) {
     for (let left = 0; left < group.length; left += 1) {
       for (let right = left + 1; right < group.length; right += 1) {
-        if (!relationConnectsActivePair(recordsById, group[left], group[right])) {
+        if (!relationConnectsActivePair(recordsByKey, group[left], group[right])) {
           findings.push(
             finding(
               "DECISION_MULTIPLE_UNRELATED_ACTIVE_TOPIC",
               group[right].file,
-              `${topic}:${group[left].metadata.id},${group[right].metadata.id}`,
+              `${topic}:${recordKey(group[left])},${recordKey(group[right])}`,
             ),
           );
         }
@@ -533,6 +784,7 @@ export function validateProtectedDecisionChange(previous, next, file) {
   }
   if (!PROTECTED_HISTORICAL_STATUSES.has(previous.metadata.status)) return findings;
   for (const field of [
+    "record_key",
     "id",
     "title",
     "topic",
@@ -542,6 +794,13 @@ export function validateProtectedDecisionChange(previous, next, file) {
     "relations",
     "evidence",
   ]) {
+    if (
+      field === "record_key" &&
+      previous.metadata.record_key === undefined &&
+      next.metadata.record_key === previous.metadata.id
+    ) {
+      continue;
+    }
     if (JSON.stringify(previous.metadata[field]) !== JSON.stringify(next.metadata[field])) {
       findings.push(finding("DECISION_ACTIVE_METADATA_CHANGED", file, field));
     }
@@ -560,6 +819,164 @@ export const validateActiveBodyChange = validateProtectedDecisionChange;
 
 function git(root, ...args) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+}
+
+export function validateDecisionCollisionImmutability(
+  root,
+  currentRegistry,
+  baseRef = "origin/main",
+) {
+  const file = "docs/decisions/id-collisions.yaml";
+  let mergeBase;
+  let previousRegistry;
+  try {
+    mergeBase = git(root, "merge-base", "HEAD", baseRef);
+    previousRegistry = parseYaml(git(root, "show", `${mergeBase}:${file}`));
+  } catch (error) {
+    return [finding("DECISION_COLLISION_BASE_UNAVAILABLE", file, error.message)];
+  }
+  const findings = [];
+  const currentById = new Map(
+    (currentRegistry.collisions ?? []).map((collision) => [collision.id, collision]),
+  );
+  for (const previousCollision of previousRegistry.collisions ?? []) {
+    const currentCollision = currentById.get(previousCollision.id);
+    if (!currentCollision) {
+      findings.push(
+        finding("DECISION_COLLISION_REMOVED", file, previousCollision.id),
+      );
+      continue;
+    }
+    if (
+      previousCollision.resolution_status === "resolved" &&
+      currentCollision.resolution_status !== "resolved"
+    ) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_REGRESSION",
+          file,
+          previousCollision.id,
+        ),
+      );
+    }
+    const currentByUrl = new Map(
+      currentCollision.records.map((record) => [record.source_url, record]),
+    );
+    for (const previousRecord of previousCollision.records) {
+      const currentRecord = currentByUrl.get(previousRecord.source_url);
+      if (!currentRecord) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_SOURCE_REMOVED",
+            file,
+            `${previousCollision.id}:${previousRecord.source_url}`,
+          ),
+        );
+        continue;
+      }
+      for (const field of ["title", "historical_status"]) {
+        if (previousRecord[field] !== currentRecord[field]) {
+          findings.push(
+            finding(
+              "DECISION_COLLISION_SOURCE_CHANGED",
+              file,
+              `${previousCollision.id}:${field}`,
+            ),
+          );
+        }
+      }
+      const expectedPageId = sourcePageId(previousRecord.source_url);
+      if (
+        previousRecord.source_page_id !== undefined &&
+        previousRecord.source_page_id !== currentRecord.source_page_id
+      ) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_PAGE_ID_CHANGED",
+            file,
+            `${previousCollision.id}:${previousRecord.source_page_id}`,
+          ),
+        );
+      } else if (
+        previousRecord.source_page_id === undefined &&
+        currentRecord.source_page_id !== expectedPageId
+      ) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_PAGE_ID_BACKFILL_INVALID",
+            file,
+            `${previousCollision.id}:${currentRecord.source_page_id}/${expectedPageId}`,
+          ),
+        );
+      }
+      if (
+        previousRecord.record_key !== undefined &&
+        previousRecord.record_key !== currentRecord.record_key
+      ) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_RECORD_KEY_CHANGED",
+            file,
+            `${previousCollision.id}:${previousRecord.record_key}`,
+          ),
+        );
+      }
+      if (
+        previousRecord.disposition !== undefined &&
+        previousRecord.disposition !== currentRecord.disposition &&
+        !(
+          previousRecord.disposition === "unresolved" &&
+          currentCollision.resolution_status === "resolved" &&
+          ["formal_record", "documented_only"].includes(currentRecord.disposition)
+        )
+      ) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_DISPOSITION_CHANGED",
+            file,
+            `${previousCollision.id}:${previousRecord.source_url}`,
+          ),
+        );
+      } else if (
+        previousRecord.disposition === undefined &&
+        previousCollision.resolution_status === "unresolved" &&
+        currentRecord.disposition !== "unresolved"
+      ) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_DISPOSITION_BACKFILL_INVALID",
+            file,
+            `${previousCollision.id}:${currentRecord.disposition}`,
+          ),
+        );
+      }
+      if (
+        previousRecord.rationale !== undefined &&
+        previousRecord.rationale !== currentRecord.rationale
+      ) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_RATIONALE_CHANGED",
+            file,
+            `${previousCollision.id}:${previousRecord.source_url}`,
+          ),
+        );
+      }
+    }
+    if (
+      previousCollision.resolution_status === "resolved" &&
+      previousCollision.resolution_evidence !== currentCollision.resolution_evidence
+    ) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_EVIDENCE_CHANGED",
+          file,
+          previousCollision.id,
+        ),
+      );
+    }
+  }
+  return findings;
 }
 
 export function validateActiveDecisionImmutability(root, records, baseRef = "origin/main") {
@@ -619,7 +1036,7 @@ export function generateDecisionIndex(records, collisionRegistry = { collisions:
   }
   const sorted = [...records].sort((left, right) =>
     left.metadata.decided_at.localeCompare(right.metadata.decided_at) ||
-    left.metadata.id.localeCompare(right.metadata.id),
+    recordKey(left).localeCompare(recordKey(right)),
   );
   const verifiedAt = sorted.map((record) => record.metadata.decided_at).sort().at(-1) ?? "2026-09-01";
   const active = sorted.filter((record) => record.metadata.status === "active");
@@ -630,27 +1047,32 @@ export function generateDecisionIndex(records, collisionRegistry = { collisions:
       inverseRows.push({
         target: relation.target,
         inverse: INVERSE_RELATION[relation.type],
-        source: source.metadata.id,
+        source: recordKey(source),
       });
     }
   }
   inverseRows.sort((left, right) =>
     left.target.localeCompare(right.target) || left.inverse.localeCompare(right.inverse) || left.source.localeCompare(right.source),
   );
-  const link = (id) => `[${code(id)}](../decisions/records/${id}.md)`;
+  const recordsByKey = new Map(sorted.map((record) => [recordKey(record), record]));
+  const link = (key) => {
+    const record = recordsByKey.get(key);
+    const label = record?.metadata.id ?? key;
+    return `[${code(label)}](../decisions/records/${key}.md)`;
+  };
   const table = (items) => items.length === 0
     ? "_None._"
     : [
-        "| Decision | Status | Topic | Scope | Owner | Decided |",
-        "|---|---|---|---|---|---|",
-        ...items.map((record) => `| ${link(record.metadata.id)} — ${escapeCell(record.metadata.title)} | ${record.metadata.status} | ${code(record.metadata.topic)} | ${record.metadata.scope} | ${record.metadata.owner} | ${record.metadata.decided_at} |`),
+        "| Decision | Internal record key | Status | Topic | Scope | Owner | Decided |",
+        "|---|---|---|---|---|---|---|",
+        ...items.map((record) => `| ${link(recordKey(record))} — ${escapeCell(record.metadata.title)} | ${code(recordKey(record))} | ${record.metadata.status} | ${code(record.metadata.topic)} | ${record.metadata.scope} | ${record.metadata.owner} | ${record.metadata.decided_at} |`),
       ].join("\n");
   const inverseTable = inverseRows.length === 0
     ? "_None._"
     : [
-        "| Target | Generated inverse | Source |",
-        "|---|---|---|",
-        ...inverseRows.map((row) => `| ${link(row.target)} | ${code(row.inverse)} | ${link(row.source)} |`),
+        "| Target | Target key | Generated inverse | Source | Source key |",
+        "|---|---|---|---|---|",
+        ...inverseRows.map((row) => `| ${link(row.target)} | ${code(row.target)} | ${code(row.inverse)} | ${link(row.source)} | ${code(row.source)} |`),
       ].join("\n");
   const unresolvedCollisions = (collisionRegistry.collisions ?? [])
     .filter((collision) => collision.resolution_status === "unresolved")
@@ -662,7 +1084,7 @@ export function generateDecisionIndex(records, collisionRegistry = { collisions:
         "|---|---:|---|",
         ...unresolvedCollisions.map((collision) => `| ${code(collision.id)} | ${collision.records.length} | excluded pending resolution |`),
       ].join("\n");
-  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index (Candidate)\n\n${DECISION_INDEX_CANDIDATE_BANNER}\n\n**PARTIAL GENERATED VIEW — ${code("complete: false")}.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from ${code("docs/decisions/records/DEC-*.md")}.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n\n## Unresolved historical ID collisions\n\nThese IDs are excluded from both formal records and relation targets until their conflicting source rows are reconciled. Source details are preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${collisionTable}\n`;
+  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index (Candidate)\n\n${DECISION_INDEX_CANDIDATE_BANNER}\n\n**PARTIAL GENERATED VIEW — ${code("complete: false")}.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from ${code("docs/decisions/records/DEC-*.md")}.\n\nThe Decision column shows the historical display ID. Internal record keys are the unambiguous graph identities used for links and relationships; they differ from display IDs only when historical IDs collide.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n\n## Unresolved historical ID collisions\n\nThese IDs are excluded from both formal records and relation targets until their conflicting source rows are reconciled. Source details are preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${collisionTable}\n`;
 }
 
 export function decisionGeneratedFiles(root) {
@@ -681,5 +1103,6 @@ export function validateDecisionRepository(root, records = readDecisionRecords(r
     ...validateDecisionIdCollisions(collisions.file, collisions.registry),
     ...validateDecisionRecords(records, collisions.registry),
     ...validateActiveDecisionImmutability(root, records),
+    ...validateDecisionCollisionImmutability(root, collisions.registry),
   ];
 }

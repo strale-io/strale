@@ -15,21 +15,32 @@ verified_at: 2026-09-01
 > **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**
 > Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.
 
-Formal candidates live at `records/DEC-*.md`. Each keeps its historical ID and
-decision status while the extra M2 fields make clear that the repo-native
-register itself is not yet authoritative.
+Formal candidates live at `records/DEC-*.md`. Each keeps its historical `id`
+and decision status while the extra M2 fields make clear that the repo-native
+register itself is not yet authoritative. `record_key` is the graph identity
+and filename. It equals `id` for an unambiguous record; a future record whose
+historical ID was reused must instead have a portable, source-qualified key.
 
 Every record has five protected sections: Decision, Context, Rationale,
 Consequences, and Reversal conditions. Once a record is active, those sections
 cannot be edited in place. Change is represented by a new decision and an
 explicit `supersedes`, `amends`, `interprets`, or `affirms` relationship.
 
-Relationships are stored only on the source record. The candidate index at
+Relationships are stored only on the source record and target `record_key`,
+never an ambiguous display ID. The candidate index at
 `docs/project/DECISIONS.md` is generated and supplies inverse views such as
 `superseded_by` and `amended_by`.
 
 Historical source rows that reuse an ID are preserved in
-`id-collisions.yaml`. An unresolved collision excludes that ID from formal
-records and relation targets; the migration never chooses one meaning silently.
-Run `npm run context:generate`, then
+`id-collisions.yaml`. Each row carries its immutable Notion page identity and a
+disposition. An unresolved collision keeps every row at `unresolved` and
+excludes that display ID from formal records and relation targets. A future
+resolution must map every `formal_record` disposition one-to-one to a formal
+record and give every `documented_only` disposition an evidence-backed
+rationale. A bare collided ID is never targetable, even after resolution; the
+migration never chooses one meaning silently.
+
+Resolve collisions in two stages: land and verify any required graph mechanism
+first, then change one collision's dispositions and formal records atomically
+with source evidence and independent review. Run `npm run context:generate`, then
 `npm run context:test` and `npm run context:check` after changing records.

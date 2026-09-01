@@ -18,38 +18,40 @@ generated: true
 
 **PARTIAL GENERATED VIEW — `complete: false`.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from `docs/decisions/records/DEC-*.md`.
 
+The Decision column shows the historical display ID. Internal record keys are the unambiguous graph identities used for links and relationships; they differ from display IDs only when historical IDs collide.
+
 ## Active decisions
 
-| Decision | Status | Topic | Scope | Owner | Decided |
-|---|---|---|---|---|---|
-| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) — Adopt a three-tier doctrine for third-party scraping | active | `third-party-scraping-doctrine` | global | petter | 2026-04-28 |
-| [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) — Set the engineering bar for Strale-built regulatory data services | active | `regulatory-data-service-engineering-bar` | global | petter | 2026-04-28 |
-| [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) — Clarify data sourcing to permit constrained per-call public-registry parsing | active | `data-sourcing-principles` | global | petter | 2026-05-18 |
-| [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) — Adopt the Platform Readiness and Self-Operation program | active | `autonomous-operating-model` | global | petter | 2026-08-12 |
-| [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) — Affirm constrained per-call parsing as the scraping doctrine interpretation | active | `scraping-doctrine-interpretation` | global | petter | 2026-08-13 |
-| [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) — Adopt the operating charter and delegate day-to-day technical operations | active | `autonomous-operating-model` | global | petter | 2026-08-15 |
-| [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) — Reform daily operations with two artifacts, wider autonomy, and failure families | active | `autonomous-operating-model` | global | petter | 2026-08-22 |
-| [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) — Treat the context pack as complete founder input and make reconciliation M2 work | active | `project-memory-system-of-record` | global | petter | 2026-09-01 |
+| Decision | Internal record key | Status | Topic | Scope | Owner | Decided |
+|---|---|---|---|---|---|---|
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) — Adopt a three-tier doctrine for third-party scraping | `DEC-20260428-A` | active | `third-party-scraping-doctrine` | global | petter | 2026-04-28 |
+| [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) — Set the engineering bar for Strale-built regulatory data services | `DEC-20260428-B` | active | `regulatory-data-service-engineering-bar` | global | petter | 2026-04-28 |
+| [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) — Clarify data sourcing to permit constrained per-call public-registry parsing | `DEC-20260518-F` | active | `data-sourcing-principles` | global | petter | 2026-05-18 |
+| [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) — Adopt the Platform Readiness and Self-Operation program | `DEC-20260812-A` | active | `autonomous-operating-model` | global | petter | 2026-08-12 |
+| [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) — Affirm constrained per-call parsing as the scraping doctrine interpretation | `DEC-20260813-A` | active | `scraping-doctrine-interpretation` | global | petter | 2026-08-13 |
+| [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) — Adopt the operating charter and delegate day-to-day technical operations | `DEC-20260815-A` | active | `autonomous-operating-model` | global | petter | 2026-08-15 |
+| [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) — Reform daily operations with two artifacts, wider autonomy, and failure families | `DEC-20260822-A` | active | `autonomous-operating-model` | global | petter | 2026-08-22 |
+| [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) — Treat the context pack as complete founder input and make reconciliation M2 work | `DEC-20260901-A` | active | `project-memory-system-of-record` | global | petter | 2026-09-01 |
 
 ## Non-active decisions
 
-| Decision | Status | Topic | Scope | Owner | Decided |
-|---|---|---|---|---|---|
-| [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) — Split the public product and capability surfaces while keeping one backend | superseded | `public-surface-architecture` | global | petter | 2026-05-03 |
-| [`DEC-20260831-A`](../decisions/records/DEC-20260831-A.md) — Adopt a staged repo-native operating model for Strale | superseded | `project-memory-system-of-record` | operational | petter | 2026-08-31 |
+| Decision | Internal record key | Status | Topic | Scope | Owner | Decided |
+|---|---|---|---|---|---|---|
+| [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) — Split the public product and capability surfaces while keeping one backend | `DEC-20260503-A` | superseded | `public-surface-architecture` | global | petter | 2026-05-03 |
+| [`DEC-20260831-A`](../decisions/records/DEC-20260831-A.md) — Adopt a staged repo-native operating model for Strale | `DEC-20260831-A` | superseded | `project-memory-system-of-record` | operational | petter | 2026-08-31 |
 
 ## Generated inverse relationships
 
-| Target | Generated inverse | Source |
-|---|---|---|
-| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `interpreted_by` | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) |
-| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `interpreted_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) |
-| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `related_from` | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) |
-| [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) | `superseded_by` | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) |
-| [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) | `affirmed_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) |
-| [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `amended_by` | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) |
-| [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `amended_by` | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) |
-| [`DEC-20260831-A`](../decisions/records/DEC-20260831-A.md) | `superseded_by` | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) |
+| Target | Target key | Generated inverse | Source | Source key |
+|---|---|---|---|---|
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `interpreted_by` | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) | `DEC-20260518-F` |
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `interpreted_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) | `DEC-20260813-A` |
+| [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `related_from` | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` |
+| [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) | `DEC-20260503-A` | `superseded_by` | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` |
+| [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) | `DEC-20260518-F` | `affirmed_by` | [`DEC-20260813-A`](../decisions/records/DEC-20260813-A.md) | `DEC-20260813-A` |
+| [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` | `amended_by` | [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `DEC-20260815-A` |
+| [`DEC-20260815-A`](../decisions/records/DEC-20260815-A.md) | `DEC-20260815-A` | `amended_by` | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) | `DEC-20260822-A` |
+| [`DEC-20260831-A`](../decisions/records/DEC-20260831-A.md) | `DEC-20260831-A` | `superseded_by` | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) | `DEC-20260901-A` |
 
 ## Unresolved historical ID collisions
 

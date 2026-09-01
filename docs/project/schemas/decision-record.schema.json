@@ -4,6 +4,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "record_key",
     "id",
     "title",
     "status",
@@ -19,9 +20,15 @@
     "phase"
   ],
   "properties": {
+    "record_key": {
+      "type": "string",
+      "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$",
+      "maxLength": 120
+    },
     "id": {
       "type": "string",
-      "pattern": "^DEC-[0-9]{8}-[A-Z]$"
+      "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$",
+      "maxLength": 80
     },
     "title": {
       "type": "string",
@@ -81,7 +88,8 @@
           },
           "target": {
             "type": "string",
-            "pattern": "^DEC-[0-9]{8}-[A-Z]$"
+            "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$",
+            "maxLength": 120
           }
         }
       }
