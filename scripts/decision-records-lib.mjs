@@ -1,6 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+} from "node:fs";
+import { basename, resolve, sep } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { Parser as CommonMarkParser } from "commonmark";
 import { parse as parseYaml } from "yaml";
@@ -19,6 +25,9 @@ const DECISION_ID_PATTERN = "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$";
 const DECISION_RECORD_KEY_PATTERN =
   "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$";
 const NOTION_PAGE_ID_PATTERN = "^[0-9a-f]{32}$";
+const REQUIRED_COLLISION_MIGRATION_CORRECTIONS = new Map([
+  ["DEC-20260502-A", ["DEC-20260812-A"]],
+]);
 
 export const DECISION_RECORD_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -238,6 +247,10 @@ function normalizeNewlines(value) {
 }
 
 export function parseDecisionRecord(file, content) {
+  return parseFrontMatterDocument(file, content);
+}
+
+function parseFrontMatterDocument(file, content) {
   const normalized = normalizeNewlines(content);
   const match = normalized.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) throw new Error("front matter is missing or malformed");
@@ -311,6 +324,215 @@ export function readDecisionIdCollisions(root) {
   if (!existsSync(absolute)) throw new Error(`${file} is missing`);
   const registry = parseYaml(readFileSync(absolute, "utf8"));
   return { file, registry };
+}
+
+function resolutionEvidencePath(root, evidenceRef) {
+  if (
+    !/^archive\/sessions\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+\.md$/.test(
+      String(evidenceRef ?? ""),
+    )
+  ) {
+    return null;
+  }
+  const path = resolve(root, evidenceRef);
+  const evidenceRoot = resolve(root, "archive/sessions");
+  if (!path.startsWith(`${evidenceRoot}${sep}`)) return null;
+  if (existsSync(path)) {
+    try {
+      const fileInfo = lstatSync(path);
+      if (fileInfo.isSymbolicLink() || !fileInfo.isFile()) return null;
+      const realEvidenceRoot = realpathSync(evidenceRoot);
+      const realPath = realpathSync(path);
+      if (!realPath.startsWith(`${realEvidenceRoot}${sep}`)) return null;
+    } catch {
+      return null;
+    }
+  }
+  return path;
+}
+
+function isTrackedResolutionEvidence(root, evidenceRef) {
+  try {
+    execFileSync("git", ["ls-files", "--error-unmatch", "--", evidenceRef], {
+      cwd: root,
+      stdio: "ignore",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readDecisionCollisionResolutionEvidence(root, collisionRegistry) {
+  const reports = new Map();
+  for (const collision of collisionRegistry.collisions ?? []) {
+    if (collision.resolution_status !== "resolved") continue;
+    const path = resolutionEvidencePath(root, collision.resolution_evidence);
+    if (
+      !path ||
+      !existsSync(path) ||
+      !isTrackedResolutionEvidence(root, collision.resolution_evidence)
+    ) {
+      throw new Error(
+        `resolved collision evidence is missing or invalid: ${collision.id}`,
+      );
+    }
+    reports.set(
+      collision.id,
+      parseFrontMatterDocument(
+        collision.resolution_evidence,
+        readFileSync(path, "utf8"),
+      ),
+    );
+  }
+  return reports;
+}
+
+export function validateDecisionCollisionResolutionEvidence(
+  root,
+  collisionRegistry,
+  records = [],
+) {
+  const findings = [];
+  const recordsByKey = new Map(records.map((record) => [recordKey(record), record]));
+  for (const collision of collisionRegistry.collisions ?? []) {
+    if (collision.resolution_status !== "resolved") continue;
+    const file = "docs/decisions/id-collisions.yaml";
+    const path = resolutionEvidencePath(root, collision.resolution_evidence);
+    if (!path) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_EVIDENCE_REF_INVALID",
+          file,
+          collision.id,
+        ),
+      );
+      continue;
+    }
+    if (
+      !existsSync(path) ||
+      !isTrackedResolutionEvidence(root, collision.resolution_evidence)
+    ) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_EVIDENCE_MISSING",
+          file,
+          collision.resolution_evidence,
+        ),
+      );
+      continue;
+    }
+    let report;
+    try {
+      report = parseFrontMatterDocument(
+        collision.resolution_evidence,
+        readFileSync(path, "utf8"),
+      );
+    } catch (error) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_EVIDENCE_INVALID",
+          collision.resolution_evidence,
+          error.message,
+        ),
+      );
+      continue;
+    }
+    const metadata = report.metadata;
+    if (
+      metadata.doc_type !== "decision-collision-resolution" ||
+      metadata.collision_id !== collision.id ||
+      metadata.resolution_status !== "resolved" ||
+      metadata.status !== "complete" ||
+      metadata.complete !== true ||
+      metadata.phase !== "M2" ||
+      metadata.authority_scope !== "none" ||
+      metadata.authority_active !== false ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(String(metadata.resolved_at ?? "")) ||
+      !["verified", "drift-open", "not-applicable"].includes(
+        metadata.implementation_status,
+      ) ||
+      !Array.isArray(metadata.corrects_migration_state_in) ||
+      new Set(metadata.corrects_migration_state_in).size !==
+        metadata.corrects_migration_state_in.length ||
+      !Array.isArray(metadata.source_rows)
+    ) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_EVIDENCE_CONTRACT_INVALID",
+          collision.resolution_evidence,
+          collision.id,
+        ),
+      );
+      continue;
+    }
+    const requiredCorrections = REQUIRED_COLLISION_MIGRATION_CORRECTIONS.get(
+      collision.id,
+    ) ?? [];
+    if (
+      JSON.stringify([...metadata.corrects_migration_state_in].sort()) !==
+      JSON.stringify([...requiredCorrections].sort())
+    ) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_CORRECTION_BINDING_MISMATCH",
+          collision.resolution_evidence,
+          collision.id,
+        ),
+      );
+    }
+    const expectedRows = collision.records
+      .map((source) => ({
+        source_page_id: source.source_page_id,
+        disposition: source.disposition,
+        ...(source.disposition === "formal_record"
+          ? { record_key: source.record_key }
+          : {}),
+      }))
+      .sort((left, right) => left.source_page_id.localeCompare(right.source_page_id));
+    const actualRows = metadata.source_rows
+      .map((source) => ({
+        source_page_id: source?.source_page_id,
+        disposition: source?.disposition,
+        ...(source?.record_key === undefined ? {} : { record_key: source.record_key }),
+      }))
+      .sort((left, right) =>
+        String(left.source_page_id).localeCompare(String(right.source_page_id)),
+      );
+    if (JSON.stringify(actualRows) !== JSON.stringify(expectedRows)) {
+      findings.push(
+        finding(
+          "DECISION_COLLISION_RESOLUTION_EVIDENCE_BINDING_MISMATCH",
+          collision.resolution_evidence,
+          collision.id,
+        ),
+      );
+    }
+    for (const correctedKey of metadata.corrects_migration_state_in) {
+      const correctedRecord = recordsByKey.get(correctedKey);
+      if (!correctedRecord) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_RESOLUTION_CORRECTION_TARGET_MISSING",
+            collision.resolution_evidence,
+            correctedKey,
+          ),
+        );
+      } else if (
+        !correctedRecord.body.includes(collision.id) ||
+        !/withheld/i.test(correctedRecord.body)
+      ) {
+        findings.push(
+          finding(
+            "DECISION_COLLISION_RESOLUTION_CORRECTION_TARGET_MISMATCH",
+            collision.resolution_evidence,
+            correctedKey,
+          ),
+        );
+      }
+    }
+  }
+  return findings;
 }
 
 function finding(code, path, detail) {
@@ -975,6 +1197,34 @@ export function validateDecisionCollisionImmutability(
         ),
       );
     }
+    if (
+      previousCollision.resolution_status === "resolved" &&
+      previousCollision.resolution_evidence === currentCollision.resolution_evidence
+    ) {
+      try {
+        execFileSync(
+          "git",
+          [
+            "diff",
+            "--quiet",
+            mergeBase,
+            "--",
+            previousCollision.resolution_evidence,
+          ],
+          { cwd: root, stdio: "ignore" },
+        );
+      } catch (error) {
+        findings.push(
+          finding(
+            error.status === 1
+              ? "DECISION_COLLISION_RESOLUTION_EVIDENCE_CONTENT_CHANGED"
+              : "DECISION_COLLISION_RESOLUTION_EVIDENCE_BASE_UNAVAILABLE",
+            previousCollision.resolution_evidence,
+            previousCollision.id,
+          ),
+        );
+      }
+    }
   }
   return findings;
 }
@@ -1029,7 +1279,11 @@ function code(value) {
   return "`" + value + "`";
 }
 
-export function generateDecisionIndex(records, collisionRegistry = { collisions: [] }) {
+export function generateDecisionIndex(
+  records,
+  collisionRegistry = { collisions: [] },
+  resolutionEvidence = new Map(),
+) {
   const errors = validateDecisionRecords(records, collisionRegistry);
   if (errors.length > 0) {
     throw new Error(errors.map((item) => `${item.code} ${item.path}${item.detail ? ` ${item.detail}` : ""}`).join("; "));
@@ -1084,14 +1338,69 @@ export function generateDecisionIndex(records, collisionRegistry = { collisions:
         "|---|---:|---|",
         ...unresolvedCollisions.map((collision) => `| ${code(collision.id)} | ${collision.records.length} | excluded pending resolution |`),
       ].join("\n");
-  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index (Candidate)\n\n${DECISION_INDEX_CANDIDATE_BANNER}\n\n**PARTIAL GENERATED VIEW — ${code("complete: false")}.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from ${code("docs/decisions/records/DEC-*.md")}.\n\nThe Decision column shows the historical display ID. Internal record keys are the unambiguous graph identities used for links and relationships; they differ from display IDs only when historical IDs collide.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n\n## Unresolved historical ID collisions\n\nThese IDs are excluded from both formal records and relation targets until their conflicting source rows are reconciled. Source details are preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${collisionTable}\n`;
+  const resolvedCollisions = (collisionRegistry.collisions ?? [])
+    .filter((collision) => collision.resolution_status === "resolved")
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const resolvedCollisionTable = resolvedCollisions.length === 0
+    ? "_None._"
+    : [
+        "| Historical ID | Formal record keys | Documented-only rows | Implementation | Resolution evidence |",
+        "|---|---|---:|---|---|",
+        ...resolvedCollisions.map((collision) => {
+          const report = resolutionEvidence.get(collision.id);
+          const formalKeys = collision.records
+            .filter((source) => source.disposition === "formal_record")
+            .map((source) => code(source.record_key))
+            .join("<br>") || "_None._";
+          const documentedOnly = collision.records.filter(
+            (source) => source.disposition === "documented_only",
+          ).length;
+          const implementation = report?.metadata?.implementation_status ?? "unknown";
+          const evidence = `[report](../../${collision.resolution_evidence})`;
+          return `| ${code(collision.id)} | ${formalKeys} | ${documentedOnly} | ${code(implementation)} | ${evidence} |`;
+        }),
+      ].join("\n");
+  const correctionNotes = resolvedCollisions.flatMap((collision) => {
+    const report = resolutionEvidence.get(collision.id);
+    return (report?.metadata?.corrects_migration_state_in ?? []).map(
+      (target) =>
+        `- ${code(collision.id)}: ${link(target)} previously described this ID as withheld. That sentence records the prior M2 migration state; the resolved registry and linked report above are current. The target decision's product and operating substance is unchanged.`,
+    );
+  });
+  const correctionSection = correctionNotes.length === 0
+    ? "_None._"
+    : correctionNotes.join("\n");
+  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index (Candidate)\n\n${DECISION_INDEX_CANDIDATE_BANNER}\n\n**PARTIAL GENERATED VIEW — ${code("complete: false")}.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from ${code("docs/decisions/records/DEC-*.md")}.\n\nThe Decision column shows the historical display ID. Internal record keys are the unambiguous graph identities used for links and relationships; they differ from display IDs only when historical IDs collide.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n\n## Resolved historical ID collisions\n\nResolved collisions retain their historical display IDs. Formal records use source-qualified internal keys; documented-only rows remain preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${resolvedCollisionTable}\n\n### Forward migration-state corrections\n\n${correctionSection}\n\n## Unresolved historical ID collisions\n\nThese IDs are excluded from both formal records and relation targets until their conflicting source rows are reconciled. Source details are preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${collisionTable}\n`;
 }
 
 export function decisionGeneratedFiles(root) {
   const records = readDecisionRecords(root);
   const collisions = readDecisionIdCollisions(root);
+  const evidenceFindings = validateDecisionCollisionResolutionEvidence(
+    root,
+    collisions.registry,
+    records,
+  );
+  if (evidenceFindings.length > 0) {
+    throw new Error(
+      evidenceFindings
+        .map(
+          (item) =>
+            `${item.code} ${item.path}${item.detail ? ` ${item.detail}` : ""}`,
+        )
+        .join("; "),
+    );
+  }
+  const resolutionEvidence = readDecisionCollisionResolutionEvidence(
+    root,
+    collisions.registry,
+  );
   return {
-    "docs/project/DECISIONS.md": generateDecisionIndex(records, collisions.registry),
+    "docs/project/DECISIONS.md": generateDecisionIndex(
+      records,
+      collisions.registry,
+      resolutionEvidence,
+    ),
     "docs/project/schemas/decision-record.schema.json": `${JSON.stringify(DECISION_RECORD_SCHEMA, null, 2)}\n`,
     "docs/project/schemas/decision-id-collisions.schema.json": `${JSON.stringify(DECISION_ID_COLLISION_SCHEMA, null, 2)}\n`,
   };
@@ -1102,6 +1411,7 @@ export function validateDecisionRepository(root, records = readDecisionRecords(r
   return [
     ...validateDecisionIdCollisions(collisions.file, collisions.registry),
     ...validateDecisionRecords(records, collisions.registry),
+    ...validateDecisionCollisionResolutionEvidence(root, collisions.registry, records),
     ...validateActiveDecisionImmutability(root, records),
     ...validateDecisionCollisionImmutability(root, collisions.registry),
   ];

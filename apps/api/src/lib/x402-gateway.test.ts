@@ -13,6 +13,11 @@ describe("eurCentsToUsd", () => {
     expect(JSON.stringify(eurCentsToUsd(20))).toBe("0.216");
   });
 
+  it("does not reintroduce the historical ten-cent cap above one euro", () => {
+    expect(eurCentsToUsd(250)).toBe(2.7);
+    expect(eurCentsToUsdcAtomic(250)).toBe("2700000");
+  });
+
   it("produces no float artifacts across the whole realistic price range", () => {
     for (let cents = 1; cents <= 400; cents++) {
       const s = JSON.stringify(eurCentsToUsd(cents));
