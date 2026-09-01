@@ -41,6 +41,12 @@ the revised plan. Separate technical/money-path and product/public-contract
 Codex reviewers passed the implementation working tree with no findings. The
 merged exact commit and production evidence remain queued for Claude below.
 
+The deploy-safety decision batch made fresh Opus/high and Sonnet/high plan
+review attempts. Both invocations were rejected by Claude Code's weekly
+subscription limit, reported to reset on 2026-09-03 at 17:00 Europe/Stockholm;
+neither produced a verdict. A fresh `gpt-5.6-sol`/xhigh Codex verifier was used
+for the interim plan review under the founder-authorized fallback.
+
 ## Pending cross-provider checks
 
 | Priority | Artifact/topic | Required Claude check | Closure evidence |
@@ -56,6 +62,7 @@ merged exact commit and production evidence remain queued for Claude below.
 | P1 | Website/design canonical wording | Recheck after the redesign working tree is committed/reconciled, especially Quiet Material v0.7 and section implementation status | Review against a stable frontend commit rather than an uncommitted worktree |
 | P1 | #438 operator-action execution and reconciliation | Recheck the corrected founder-gated script and pre-write digest proof, then confirm executed/reconciled state after any production write; do not infer execution from script or issue state | Claude review of exact prepared script plus independent production reconciliation evidence |
 | P1 | x402 AgentCash discovery contract (plan and implementation dated 2026-09-01; Codex plan, technical, and product PASS) | Review the then-current exact commit, real `@agentcash/discovery@1.7.5` fail-before/pass-after evidence, canonical `protocols: [{ x402: {} }]` wire shape, exact-price preservation, dependency pin, and no-change boundary around challenge/verification/settlement | Claude exact-commit PASS plus production AgentCash parse evidence after the OpenAPI cache window, with all high/medium findings resolved |
+| P1 | Inactive deploy-safety decision batch (`DEC-20260504-B` and `DEC-20260504-C`) | Verify source fidelity, corrected incident-evidence wording, protocol coexistence without invented graph edges, and inactive authority at the then-current exact commit | Claude exact-commit PASS with all high/medium findings resolved before M4 activation |
 | P2 | M4 entrypoint/cutover batch | Adversarially verify that Notion consumers are replaced, peer entrypoints are safe, and no mutable facts remain duplicated | Exact-head cross-provider cutover review |
 
 ## Operating rule until cleared
