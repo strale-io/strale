@@ -163,13 +163,14 @@ npm trusted publishing is established. External package changes still require a
 post-publish production-contract smoke on the actual published artifact. This
 does not close WP13 as a whole.
 
-## Review debt
+## Review route
 
-Claude Opus and Sonnet returned no verdict on the M2 evidence audit. A separate
-high-effort Codex review found and closed its blockers, but it is same-provider
-evidence. All 37 claims and the exact first canonical product/state batch remain
-queued in `archive/sessions/2026-09-01-m2-claude-verification-backlog.md` for
-cross-provider review when Claude is available.
+Claude Opus and Sonnet returned no verdict on the M2 evidence audit. Separate
+high-effort Codex reviews found and closed its blockers. On 2026-09-01 the
+founder ended further Claude check-ins, so the former Claude backlog is now
+historical evidence rather than pending work. Before M4 activation, review the
+then-current exact commit with a fresh separate `gpt-5.6-sol`/xhigh Codex task
+and resolve every material finding.
 
 ## Evidence basis
 
