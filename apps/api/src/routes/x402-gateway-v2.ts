@@ -1984,7 +1984,7 @@ function buildX402Operation(opts: {
     summary: opts.summary,
     description: opts.description,
     "x-payment-info": {
-      protocols: ["x402"],
+      protocols: [{ x402: {} }],
       price: { mode: "fixed", currency: "USD", amount: opts.priceUsdAmount },
     },
     security: [], // payment is the auth — no traditional auth scheme applies

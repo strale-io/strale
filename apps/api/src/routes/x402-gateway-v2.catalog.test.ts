@@ -15,6 +15,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  checkL2ForOpenAPI,
+  getOpenAPI,
+  PaymentInfoSchema,
+} from "@agentcash/discovery";
 
 process.env.EUR_USD_RATE = "1.08";
 
@@ -150,6 +155,15 @@ function openApiPriceAmount(
   return price.amount as string;
 }
 
+function openApiOperation(
+  paths: Record<string, unknown>,
+  path: string,
+  method: string,
+): Record<string, unknown> {
+  const pathItem = paths[path] as Record<string, unknown>;
+  return pathItem[method] as Record<string, unknown>;
+}
+
 function decimalUsdToAtomic(amount: string): string {
   const [whole, fraction = ""] = amount.split(".");
   return (BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0"))).toString();
@@ -159,7 +173,10 @@ beforeEach(() => {
   state.capRows = [capabilityRow()];
   state.solRows = [solutionRow()];
 });
-afterEach(() => __resetX402CacheForTests());
+afterEach(() => {
+  __resetX402CacheForTests();
+  vi.unstubAllGlobals();
+});
 
 describe("GET /x402/catalog output_schema projection", () => {
   it("omits output_schema by default — the payload crawlers poll stays lean", async () => {
@@ -299,5 +316,71 @@ describe("x402 public price representation parity", () => {
     expect(challengeAmount).toBe("21600");
     expect(decimalUsdToAtomic(manifestPrice!)).toBe(eurCentsToUsdcAtomic(2));
     expect(decimalUsdToAtomic(openApiPrice)).toBe(eurCentsToUsdcAtomic(2));
+  });
+});
+
+describe("x402 AgentCash discovery contract", () => {
+  beforeEach(() => {
+    state.capRows = [capabilityRow({ priceCents: 2 })];
+    state.solRows = [solutionRow({ priceCents: 2 })];
+  });
+
+  it.each([
+    ["capability", "/x402/v2/paid-api-preflight", "post"],
+    ["solution", "/x402/v2/solutions/kyb-essentials-se", "post"],
+  ])("publishes schema-valid structured payment metadata for the %s", async (_kind, path, method) => {
+    __resetX402CacheForTests();
+    const paths = await getX402OpenApiPaths();
+    const paymentInfo = openApiOperation(paths, path, method)["x-payment-info"];
+
+    expect.soft(paymentInfo).toMatchObject({ protocols: [{ x402: {} }] });
+    expect(PaymentInfoSchema.safeParse(paymentInfo).success).toBe(true);
+  });
+
+  it.each([
+    ["capability", "/x402/v2/paid-api-preflight"],
+    ["solution", "/x402/v2/solutions/kyb-essentials-se"],
+  ])("survives real AgentCash discovery for the %s", async (_kind, path) => {
+    __resetX402CacheForTests();
+    const paths = await getX402OpenApiPaths();
+    const document = {
+      openapi: "3.1.0",
+      info: { title: "Strale x402 contract fixture", version: "1.0.0" },
+      servers: [{ url: BASE_URL }],
+      paths,
+    };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(document), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })));
+
+    const result = await getOpenAPI(BASE_URL);
+    if (result.isErr()) throw new Error(`AgentCash fetch failed: ${result.error.message}`);
+    const source = result.value;
+    if (!source || "parseFailure" in source) {
+      throw new Error(`AgentCash did not parse the OpenAPI fixture: ${JSON.stringify(source)}`);
+    }
+
+    const parsedRoute = source.routes.find((route) => route.path === path && route.method === "POST");
+    expect(parsedRoute).toMatchObject({
+      authMode: "paid",
+      protocols: ["x402"],
+      pricing: {
+        pricingMode: "fixed",
+        price: "0.021600",
+        currency: "USD",
+      },
+    });
+
+    const l2Route = checkL2ForOpenAPI(source).routes.find(
+      (route) => route.path === path && route.method === "POST",
+    );
+    expect(l2Route).toMatchObject({
+      authMode: "paid",
+      price: "0.021600 USD",
+      pricingMode: "fixed",
+      currency: "USD",
+      protocols: ["x402"],
+    });
   });
 });

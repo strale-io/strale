@@ -52,6 +52,7 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@agentcash/discovery": "1.7.5",
     "@types/js-yaml": "^4.0.9",
     "@types/jsdom": "^28.0.1",
     "@types/node": "^22.12.0",
