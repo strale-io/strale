@@ -8,6 +8,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, extname, resolve, sep } from "node:path";
+import Ajv2020 from "ajv/dist/2020.js";
+import { parse as parseYaml } from "yaml";
 
 export const M1_BANNER =
   "> [!CAUTION]\n" +
@@ -85,11 +87,6 @@ coverage-checked in later milestones.`,
     "Decision Records",
     "The record contract and generated inverse views will be activated after M0 and M2 review.",
   ),
-  "docs/decisions/PENDING.md": skeleton(
-    "pending-founder-decisions",
-    "Pending Founder Decisions",
-    "No pending decisions are migrated or created during M1.",
-  ),
   "docs/governance/README.md": skeleton(
     "governance-navigation",
     "Governance",
@@ -109,12 +106,14 @@ export const M2_CANDIDATE_DOCUMENTS = Object.freeze({
   "docs/project/PRODUCT.md": "project-product",
   "docs/project/STATE.md": "project-state",
   "docs/project/ROADMAP.md": "project-roadmap",
+  "docs/decisions/PENDING.md": "pending-founder-decisions",
 });
 
 export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
   "docs/project/PRODUCT.md": 1_200,
   "docs/project/STATE.md": 2_000,
   "docs/project/ROADMAP.md": 1_500,
+  "docs/decisions/PENDING.md": 1_000,
 });
 
 export const INVENTORY_TARGETS = Object.freeze([
@@ -206,6 +205,193 @@ export const PROJECT_DOCUMENT_SCHEMA = {
     },
   ],
 };
+
+export const OPERATOR_ACTIONS_SCHEMA = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  title: "Inactive M2 operator-action registry",
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "schema_version",
+    "doc_type",
+    "authority_scope",
+    "status",
+    "complete",
+    "phase",
+    "authority_active",
+    "verified_at",
+    "actions",
+  ],
+  properties: {
+    schema_version: { const: 1 },
+    doc_type: { const: "operator-actions" },
+    authority_scope: { const: "none" },
+    status: { const: "candidate" },
+    complete: { const: false },
+    phase: { const: "M2" },
+    authority_active: { const: false },
+    verified_at: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+    actions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: [
+          "id",
+          "subject",
+          "status",
+          "authority",
+          "authority_purpose",
+          "prepared_ref",
+          "preflight_evidence_ref",
+          "prepared_at",
+          "executed_at",
+          "execution_evidence",
+          "reconciled_at",
+          "reconciliation_evidence",
+          "cancelled_at",
+          "cancellation_reason",
+          "cancellation_evidence",
+          "blocks_acceptance_of",
+          "targets",
+          "next_step",
+        ],
+        properties: {
+          id: { type: "string", pattern: "^OA-\\d{8}-[A-Z0-9-]+$" },
+          subject: { type: "string", minLength: 1 },
+          status: { enum: ["prepared", "executed", "reconciled", "cancelled"] },
+          authority: {
+            enum: ["approval_required", "preauthorized_notice", "system_acting"],
+          },
+          authority_purpose: { type: "string", pattern: "^[a-z0-9_]+$" },
+          prepared_ref: {
+            type: "string",
+            pattern: "^[0-9a-f]{40}:[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$",
+          },
+          preflight_evidence_ref: {
+            type: "string",
+            pattern: "^archive/sessions/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)*\\.json$",
+          },
+          prepared_at: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+          executed_at: {
+            type: ["string", "null"],
+            pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          },
+          execution_evidence: {
+            type: ["string", "null"],
+            pattern: "^archive/sessions/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+\\.json$",
+          },
+          reconciled_at: {
+            type: ["string", "null"],
+            pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          },
+          reconciliation_evidence: {
+            type: ["string", "null"],
+            pattern: "^archive/sessions/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+\\.json$",
+          },
+          cancelled_at: {
+            type: ["string", "null"],
+            pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          },
+          cancellation_reason: { type: ["string", "null"], minLength: 1 },
+          cancellation_evidence: {
+            type: ["string", "null"],
+            pattern: "^archive/sessions/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+\\.json$",
+          },
+          blocks_acceptance_of: {
+            type: "array",
+            minItems: 1,
+            uniqueItems: true,
+            items: {
+              type: "string",
+              pattern: "^docs/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\.md#[a-z0-9-]+$",
+            },
+          },
+          targets: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["key", "current", "desired"],
+              properties: {
+                key: { type: "string", minLength: 1 },
+                current: { type: ["string", "number", "null"] },
+                desired: { type: ["string", "number", "null"] },
+              },
+            },
+          },
+          next_step: { type: "string", minLength: 1 },
+        },
+        allOf: [
+          {
+            if: { properties: { status: { const: "prepared" } }, required: ["status"] },
+            then: {
+              properties: {
+                executed_at: { const: null },
+                execution_evidence: { const: null },
+                reconciled_at: { const: null },
+                reconciliation_evidence: { const: null },
+                cancelled_at: { const: null },
+                cancellation_reason: { const: null },
+                cancellation_evidence: { const: null },
+              },
+            },
+          },
+          {
+            if: { properties: { status: { const: "executed" } }, required: ["status"] },
+            then: {
+              properties: {
+                executed_at: { type: "string" },
+                execution_evidence: { type: "string" },
+                reconciled_at: { const: null },
+                reconciliation_evidence: { const: null },
+                cancelled_at: { const: null },
+                cancellation_reason: { const: null },
+                cancellation_evidence: { const: null },
+              },
+            },
+          },
+          {
+            if: { properties: { status: { const: "reconciled" } }, required: ["status"] },
+            then: {
+              properties: {
+                executed_at: { type: "string" },
+                execution_evidence: { type: "string" },
+                reconciled_at: { type: "string" },
+                reconciliation_evidence: { type: "string" },
+                cancelled_at: { const: null },
+                cancellation_reason: { const: null },
+                cancellation_evidence: { const: null },
+              },
+            },
+          },
+          {
+            if: { properties: { status: { const: "cancelled" } }, required: ["status"] },
+            then: {
+              properties: {
+                executed_at: { const: null },
+                execution_evidence: { const: null },
+                reconciled_at: { const: null },
+                reconciliation_evidence: { const: null },
+                cancelled_at: { type: "string" },
+                cancellation_reason: { type: "string" },
+                cancellation_evidence: { type: "string" },
+              },
+            },
+          },
+        ],
+      },
+    },
+  },
+};
+
+const operatorActionsAjv = new Ajv2020({
+  allErrors: true,
+  strict: true,
+  allowUnionTypes: true,
+});
+const validateOperatorActionsSchema = operatorActionsAjv.compile(OPERATOR_ACTIONS_SCHEMA);
 
 export const INVENTORY_SCHEMA = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -376,6 +562,8 @@ export function generatedFiles(root) {
     ...SKELETON_DOCUMENTS,
     "docs/project/schemas/project-document.schema.json":
       `${JSON.stringify(PROJECT_DOCUMENT_SCHEMA, null, 2)}\n`,
+    "docs/project/schemas/operator-actions.schema.json":
+      `${JSON.stringify(OPERATOR_ACTIONS_SCHEMA, null, 2)}\n`,
     "docs/project/schemas/legacy-authority-inventory.schema.json":
       `${JSON.stringify(INVENTORY_SCHEMA, null, 2)}\n`,
     "docs/project/legacy-authority-inventory.json":
@@ -522,6 +710,443 @@ export function validateStateEvidence(root, file, actual) {
     if (meta?.[field] !== evidence.state_frontmatter?.[field]) {
       findings.push({ code: "STATE_EVIDENCE_MISMATCH", path: file, detail: field });
     }
+  }
+  return findings;
+}
+
+export function validateOperatorActionTransition(previousStatus, nextStatus) {
+  const allowed = {
+    prepared: new Set(["prepared", "executed", "cancelled"]),
+    executed: new Set(["executed", "reconciled"]),
+    reconciled: new Set(["reconciled"]),
+    cancelled: new Set(["cancelled"]),
+  };
+  return allowed[previousStatus]?.has(nextStatus) === true;
+}
+
+function validDateOnly(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ""))) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function parseOperatorActions(file, actual) {
+  try {
+    const registry = parseYaml(actual);
+    if (!registry || typeof registry !== "object" || Array.isArray(registry)) {
+      return { finding: { code: "OPERATOR_ACTIONS_INVALID_ROOT", path: file } };
+    }
+    return { registry };
+  } catch (error) {
+    return {
+      finding: { code: "OPERATOR_ACTIONS_INVALID_YAML", path: file, detail: error.message },
+    };
+  }
+}
+
+export function validateOperatorActions(file, actual) {
+  const findings = [];
+  const parsed = parseOperatorActions(file, actual);
+  if (parsed.finding) return [parsed.finding];
+  const { registry } = parsed;
+
+  if (!validateOperatorActionsSchema(registry)) {
+    for (const error of validateOperatorActionsSchema.errors ?? []) {
+      findings.push({
+        code: "OPERATOR_ACTIONS_SCHEMA_INVALID",
+        path: file,
+        detail: `${error.instancePath || "/"} ${error.message}`,
+      });
+    }
+  }
+  if (!validDateOnly(registry.verified_at)) {
+    findings.push({ code: "OPERATOR_ACTIONS_VERIFIED_AT_INVALID", path: file });
+  }
+  if (!Array.isArray(registry.actions) || registry.actions.length === 0) {
+    findings.push({ code: "OPERATOR_ACTIONS_EMPTY", path: file });
+    return findings;
+  }
+
+  const ids = new Set();
+  for (const action of registry.actions) {
+    const id = String(action?.id ?? "");
+    if (ids.has(id)) {
+      findings.push({ code: "OPERATOR_ACTION_ID_DUPLICATE", path: file, detail: id });
+    }
+    ids.add(id);
+    if (!validDateOnly(action?.prepared_at)) {
+      findings.push({ code: "OPERATOR_ACTION_PREPARED_AT_INVALID", path: file, detail: id });
+    }
+    const preparedAt = Date.parse(`${action?.prepared_at}T00:00:00.000Z`);
+    const executedAt = action?.executed_at == null ? null : Date.parse(action.executed_at);
+    const reconciledAt = action?.reconciled_at == null ? null : Date.parse(action.reconciled_at);
+    const cancelledAt = action?.cancelled_at == null ? null : Date.parse(action.cancelled_at);
+    if (executedAt != null && (!Number.isFinite(executedAt) || executedAt < preparedAt)) {
+      findings.push({ code: "OPERATOR_ACTION_TIME_ORDER_INVALID", path: file, detail: `${id}:executed_at` });
+    }
+    if (reconciledAt != null && (!Number.isFinite(reconciledAt) || executedAt == null || reconciledAt < executedAt)) {
+      findings.push({ code: "OPERATOR_ACTION_TIME_ORDER_INVALID", path: file, detail: `${id}:reconciled_at` });
+    }
+    if (cancelledAt != null && (!Number.isFinite(cancelledAt) || cancelledAt < preparedAt)) {
+      findings.push({ code: "OPERATOR_ACTION_TIME_ORDER_INVALID", path: file, detail: `${id}:cancelled_at` });
+    }
+  }
+  return findings;
+}
+
+export function validateOperatorActionHistory(file, previousActual, actual) {
+  const previousParsed = parseOperatorActions(file, previousActual);
+  const currentParsed = parseOperatorActions(file, actual);
+  if (previousParsed.finding || currentParsed.finding) return [];
+  const findings = [];
+  const current = new Map(currentParsed.registry.actions.map((action) => [action.id, action]));
+  const immutable = [
+    "id",
+    "subject",
+    "authority",
+    "authority_purpose",
+    "prepared_ref",
+    "preflight_evidence_ref",
+    "prepared_at",
+    "blocks_acceptance_of",
+    "targets",
+  ];
+  for (const before of previousParsed.registry.actions ?? []) {
+    const after = current.get(before.id);
+    if (!after) {
+      findings.push({ code: "OPERATOR_ACTION_DELETED", path: file, detail: before.id });
+      continue;
+    }
+    if (!validateOperatorActionTransition(before.status, after.status)) {
+      findings.push({
+        code: "OPERATOR_ACTION_STATUS_REGRESSION",
+        path: file,
+        detail: `${before.id}:${before.status}->${after.status}`,
+      });
+    }
+    if (JSON.stringify(before.blocks_acceptance_of) !== JSON.stringify(after.blocks_acceptance_of)) {
+      findings.push({
+        code: "OPERATOR_ACTION_IMMUTABLE_FIELD_CHANGED",
+        path: file,
+        detail: `${before.id}:blocks_acceptance_of`,
+      });
+    }
+    if (!(before.status === "prepared" && after.status === "prepared")) {
+      for (const field of immutable) {
+        if (JSON.stringify(before[field]) !== JSON.stringify(after[field])) {
+          findings.push({
+            code: "OPERATOR_ACTION_IMMUTABLE_FIELD_CHANGED",
+            path: file,
+            detail: `${before.id}:${field}`,
+          });
+        }
+      }
+    }
+    for (const field of [
+      "executed_at",
+      "execution_evidence",
+      "reconciled_at",
+      "reconciliation_evidence",
+      "cancelled_at",
+      "cancellation_reason",
+      "cancellation_evidence",
+    ]) {
+      if (before[field] != null && before[field] !== after[field]) {
+        findings.push({
+          code: "OPERATOR_ACTION_EVIDENCE_CHANGED",
+          path: file,
+          detail: `${before.id}:${field}`,
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+export function validateOperatorActionHistoryAgainstGit(root, file, actual, baseRef = "origin/main") {
+  try {
+    execFileSync("git", ["rev-parse", "--verify", `${baseRef}^{commit}`], {
+      cwd: root,
+      stdio: "ignore",
+    });
+  } catch {
+    return [{ code: "OPERATOR_ACTION_HISTORY_BASE_UNAVAILABLE", path: file, detail: baseRef }];
+  }
+  let previous;
+  try {
+    previous = execFileSync("git", ["show", `${baseRef}:${file}`], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    try {
+      const listed = execFileSync("git", ["ls-tree", "-r", "--name-only", baseRef, "--", file], {
+        cwd: root,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+      if (listed === "") return [];
+    } catch {
+      // Fall through: history enforcement must not disappear silently.
+    }
+    return [{ code: "OPERATOR_ACTION_HISTORY_READ_FAILED", path: file, detail: baseRef }];
+  }
+  return validateOperatorActionHistory(file, previous, actual);
+}
+
+function markdownSectionForAnchor(content, wanted) {
+  const lines = content.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!/^#{1,6}\s+/.test(line)) continue;
+    const depth = line.match(/^#+/)[0].length;
+    const anchor = line
+      .replace(/^#{1,6}\s+/, "")
+      .trim()
+      .toLowerCase()
+      .replace(/[`*_]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+    if (anchor !== wanted) continue;
+    let end = index + 1;
+    while (end < lines.length) {
+      const next = lines[end].match(/^(#{1,6})\s+/);
+      if (next && next[1].length <= depth) break;
+      end += 1;
+    }
+    return lines.slice(index, end).join("\n");
+  }
+  return null;
+}
+
+function preparedArtifact(root, preparedRef) {
+  const match = String(preparedRef ?? "").match(
+    /^([0-9a-f]{40}):([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*)$/,
+  );
+  if (!match) return null;
+  try {
+    return execFileSync("git", ["show", `${match[1]}:${match[2]}`], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return null;
+  }
+}
+
+export function validateOperatorActionEvidence(root, file, actual) {
+  const parsed = parseOperatorActions(file, actual);
+  if (parsed.finding) return [parsed.finding];
+  const { registry } = parsed;
+  const findings = [];
+  for (const action of registry?.actions ?? []) {
+    const evidenceRef = String(action?.preflight_evidence_ref ?? "");
+    if (!/^archive\/sessions\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_.-]+)*\.json$/.test(evidenceRef)) {
+      findings.push({ code: "OPERATOR_ACTION_EVIDENCE_REF_INVALID", path: file, detail: action?.id });
+      continue;
+    }
+    const evidencePath = resolve(root, evidenceRef);
+    const evidenceRoot = resolve(root, "archive/sessions");
+    if (!evidencePath.startsWith(`${evidenceRoot}${sep}`) || !existsSync(evidencePath)) {
+      findings.push({ code: "OPERATOR_ACTION_EVIDENCE_MISSING", path: file, detail: evidenceRef });
+      continue;
+    }
+    let evidence;
+    try {
+      evidence = JSON.parse(readFileSync(evidencePath, "utf8"));
+    } catch (error) {
+      findings.push({ code: "OPERATOR_ACTION_EVIDENCE_INVALID", path: file, detail: error.message });
+      continue;
+    }
+    if (
+      evidence.schema_version !== 1 ||
+      typeof evidence.source !== "string" ||
+      !/read-only/i.test(evidence.source) ||
+      typeof evidence.queried_at !== "string" ||
+      Number.isNaN(Date.parse(evidence.queried_at)) ||
+      typeof evidence.query !== "string" ||
+      !/select/i.test(evidence.query) ||
+      !Array.isArray(evidence.rows)
+    ) {
+      findings.push({ code: "OPERATOR_ACTION_EVIDENCE_CONTRACT_INVALID", path: file, detail: evidenceRef });
+      continue;
+    }
+
+    const artifact = preparedArtifact(root, action.prepared_ref);
+    if (artifact == null) {
+      findings.push({ code: "OPERATOR_ACTION_PREPARED_REF_INVALID", path: file, detail: action.id });
+    } else {
+      const escapedPurpose = String(action.authority_purpose).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const authorityPattern =
+        action.authority === "approval_required"
+          ? new RegExp(`requireFounderGrant\\(\\s*["']${escapedPurpose}["']\\s*\\)`)
+          : new RegExp(`autonomousAuthority\\(\\s*["']${escapedPurpose}["']\\s*,`);
+      if (!authorityPattern.test(artifact)) {
+        findings.push({ code: "OPERATOR_ACTION_AUTHORITY_BINDING_MISMATCH", path: file, detail: action.id });
+      }
+    }
+    const targetKeys = new Set();
+    for (const target of action?.targets ?? []) {
+      if (targetKeys.has(target?.key)) {
+        findings.push({ code: "OPERATOR_ACTION_TARGET_DUPLICATE", path: file, detail: `${action.id}:${target?.key}` });
+      }
+      targetKeys.add(target?.key);
+      const match = String(target?.key ?? "").match(/^capabilities\.([a-z0-9-]+)\.avg_latency_ms$/);
+      if (!match) {
+        findings.push({ code: "OPERATOR_ACTION_TARGET_UNSUPPORTED", path: file, detail: `${action.id}:${target?.key}` });
+        continue;
+      }
+      const row = evidence.rows?.find((item) => item.slug === match[1]);
+      if (!row || row.avg_latency_ms !== target.current) {
+        findings.push({
+          code: "OPERATOR_ACTION_PREFLIGHT_MISMATCH",
+          path: file,
+          detail: `${action.id}:${target.key}`,
+        });
+      }
+      if (artifact != null) {
+        const from = target.current === null ? "null" : String(target.current);
+        const tuple = new RegExp(
+          `\\{\\s*slug:\\s*["']${match[1]}["']\\s*,\\s*from:\\s*${from}\\s*,\\s*to:\\s*${String(target.desired)}\\s*\\}`,
+        );
+        if (!tuple.test(artifact)) {
+          findings.push({ code: "OPERATOR_ACTION_TARGET_BINDING_MISMATCH", path: file, detail: `${action.id}:${target.key}` });
+        }
+      }
+      if (!evidence.query.includes(match[1]) || !/avg_latency_ms/i.test(evidence.query)) {
+        findings.push({ code: "OPERATOR_ACTION_EVIDENCE_QUERY_MISMATCH", path: file, detail: `${action.id}:${target.key}` });
+      }
+    }
+    for (const acceptanceRef of action?.blocks_acceptance_of ?? []) {
+      const match = String(acceptanceRef).match(/^([^#]+\.md)#([a-z0-9-]+)$/);
+      const acceptancePath = match ? resolve(root, match[1]) : "";
+      const acceptanceContent = existsSync(acceptancePath)
+        ? readFileSync(acceptancePath, "utf8")
+        : "";
+      const acceptanceSection = match
+        ? markdownSectionForAnchor(acceptanceContent, match[2])
+        : null;
+      if (
+        !match ||
+        !acceptancePath.startsWith(`${resolve(root, "docs")}${sep}`) ||
+        !existsSync(acceptancePath) ||
+        acceptanceSection == null
+      ) {
+        findings.push({ code: "OPERATOR_ACTION_ACCEPTANCE_REF_INVALID", path: file, detail: acceptanceRef });
+      } else if (
+        action.status !== "reconciled" &&
+        action.status !== "cancelled" &&
+        !acceptanceSection.includes(`<!-- acceptance-blocked: ${action.id} -->`)
+      ) {
+        findings.push({ code: "OPERATOR_ACTION_ACCEPTANCE_BLOCK_MISSING", path: file, detail: acceptanceRef });
+      }
+    }
+    for (const [evidenceField, contract] of Object.entries({
+      execution_evidence: { kind: "execution", timestamp: "executed_at" },
+      reconciliation_evidence: { kind: "reconciliation", timestamp: "reconciled_at" },
+      cancellation_evidence: { kind: "cancellation", timestamp: "cancelled_at" },
+    })) {
+      const lifecycleRef = action?.[evidenceField];
+      if (lifecycleRef == null) continue;
+      const lifecyclePath = resolve(root, lifecycleRef);
+      if (
+        !/^archive\/sessions\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_.-]+\.json$/.test(lifecycleRef) ||
+        !lifecyclePath.startsWith(`${resolve(root, "archive/sessions")}${sep}`) ||
+        !existsSync(lifecyclePath) ||
+        !statSync(lifecyclePath).isFile()
+      ) {
+        findings.push({
+          code: "OPERATOR_ACTION_LIFECYCLE_EVIDENCE_MISSING",
+          path: file,
+          detail: `${action.id}:${evidenceField}`,
+        });
+        continue;
+      }
+      try {
+        const lifecycleEvidence = JSON.parse(readFileSync(lifecyclePath, "utf8"));
+        if (
+          lifecycleEvidence.schema_version !== 1 ||
+          lifecycleEvidence.evidence_kind !== contract.kind ||
+          lifecycleEvidence.action_id !== action.id ||
+          typeof lifecycleEvidence.recorded_at !== "string" ||
+          !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(lifecycleEvidence.recorded_at) ||
+          lifecycleEvidence.recorded_at !== action[contract.timestamp] ||
+          (contract.kind === "reconciliation" && lifecycleEvidence.read_only !== true)
+        ) {
+          findings.push({
+            code: "OPERATOR_ACTION_LIFECYCLE_EVIDENCE_INVALID",
+            path: file,
+            detail: `${action.id}:${evidenceField}`,
+          });
+        }
+      } catch {
+        findings.push({
+          code: "OPERATOR_ACTION_LIFECYCLE_EVIDENCE_INVALID",
+          path: file,
+          detail: `${action.id}:${evidenceField}`,
+        });
+      }
+    }
+  }
+  return findings;
+}
+
+export function validatePendingFounderDecisions(file, actual) {
+  const findings = [];
+  if (!actual.includes("## Decision-ready now")) {
+    findings.push({ code: "PENDING_DECISION_READY_SECTION_MISSING", path: file });
+  }
+  if (/\b(?:AUTHORIZATION_UNAVAILABLE|SYSTEM_ACTING)\b/.test(actual)) {
+    findings.push({ code: "PENDING_CONTAINS_OPERATOR_STATUS", path: file });
+  }
+  const topics = [
+    ...actual.matchAll(
+      /^### (FD-\d{8}-[A-Z0-9-]+)\b[\s\S]*?(?=^### |^## |$(?![\s\S]))/gm,
+    ),
+  ];
+  const ids = new Set();
+  for (const topic of topics) {
+    const id = topic[1];
+    if (ids.has(id)) findings.push({ code: "PENDING_DECISION_ID_DUPLICATE", path: file, detail: id });
+    ids.add(id);
+    for (const label of [
+      "**State:**",
+      "**Reserved boundary:**",
+      "**Reserved class:**",
+      "**Established:**",
+      "**Recommendation until ready:**",
+      "**Founder action now:**",
+    ]) {
+      if (!topic[0].includes(label)) {
+        findings.push({ code: "PENDING_DECISION_FIELD_MISSING", path: file, detail: `${id}:${label}` });
+      }
+    }
+    const reservedClass = topic[0].match(/\*\*Reserved class:\*\*\s*([a-z-]+)\./)?.[1];
+    if (!new Set([
+      "spend-above-envelope",
+      "legal-or-company-binding",
+      "vendor-or-license-commitment",
+      "one-way-public-act",
+      "outward-facing-act",
+      "pricing-outside-band",
+      "new-capability",
+      "deactivate-revenue-earner",
+      "regulatory-grade-build",
+      "external-claim",
+      "legal-or-grey-zone",
+      "customer-data-boundary",
+    ]).has(reservedClass)) {
+      findings.push({ code: "PENDING_DECISION_CLASS_INVALID", path: file, detail: id });
+    }
+    if (!/\*\*Founder action now:\*\*\s*(?:none|decide|approve|decline)\b/i.test(topic[0])) {
+      findings.push({ code: "PENDING_FOUNDER_ACTION_UNBOUNDED", path: file, detail: id });
+    }
+  }
+  if (topics.length === 0) {
+    findings.push({ code: "PENDING_DECISION_TOPICS_EMPTY", path: file });
   }
   return findings;
 }

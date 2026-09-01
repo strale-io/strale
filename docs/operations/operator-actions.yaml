@@ -1,0 +1,39 @@
+schema_version: 1
+doc_type: operator-actions
+authority_scope: none
+status: candidate
+complete: false
+phase: M2
+authority_active: false
+verified_at: 2026-09-01
+
+# M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.
+# Existing AGENTS.md, CLAUDE.md, Decision Queue, and Notion-backed workflows
+# remain in force until M4 cutover.
+
+actions:
+  - id: OA-20260830-ROUTING-LATENCY-438
+    subject: Apply and independently reconcile the two measured routing-latency settings from issue 438
+    status: prepared
+    authority: approval_required
+    authority_purpose: reconcile_438_routing_latency
+    prepared_ref: ad67e433f0bdb894999293ab3286aff8ab858ed6:apps/api/scripts/reconcile-438-routing-latency.ts
+    preflight_evidence_ref: archive/sessions/2026-09-01-routing-latency-production-evidence.json
+    prepared_at: 2026-08-30
+    executed_at: null
+    execution_evidence: null
+    reconciled_at: null
+    reconciliation_evidence: null
+    cancelled_at: null
+    cancellation_reason: null
+    cancellation_evidence: null
+    blocks_acceptance_of:
+      - docs/project/ROADMAP.md#438-routing-metadata
+    targets:
+      - key: capabilities.company-news.avg_latency_ms
+        current: null
+        desired: 28734
+      - key: capabilities.page-speed-test.avg_latency_ms
+        current: 8000
+        desired: 20000
+    next_step: Independently review the corrected founder-gated script and its pre-write all-row digest guard, execute only through the ephemeral restricted-write boundary after the exact authority is granted, then store an independent read-only post-write query before marking this reconciled.

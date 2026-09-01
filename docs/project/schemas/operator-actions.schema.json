@@ -1,0 +1,357 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Inactive M2 operator-action registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "doc_type",
+    "authority_scope",
+    "status",
+    "complete",
+    "phase",
+    "authority_active",
+    "verified_at",
+    "actions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "doc_type": {
+      "const": "operator-actions"
+    },
+    "authority_scope": {
+      "const": "none"
+    },
+    "status": {
+      "const": "candidate"
+    },
+    "complete": {
+      "const": false
+    },
+    "phase": {
+      "const": "M2"
+    },
+    "authority_active": {
+      "const": false
+    },
+    "verified_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "subject",
+          "status",
+          "authority",
+          "authority_purpose",
+          "prepared_ref",
+          "preflight_evidence_ref",
+          "prepared_at",
+          "executed_at",
+          "execution_evidence",
+          "reconciled_at",
+          "reconciliation_evidence",
+          "cancelled_at",
+          "cancellation_reason",
+          "cancellation_evidence",
+          "blocks_acceptance_of",
+          "targets",
+          "next_step"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^OA-\\d{8}-[A-Z0-9-]+$"
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "prepared",
+              "executed",
+              "reconciled",
+              "cancelled"
+            ]
+          },
+          "authority": {
+            "enum": [
+              "approval_required",
+              "preauthorized_notice",
+              "system_acting"
+            ]
+          },
+          "authority_purpose": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "prepared_ref": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}:[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+          },
+          "preflight_evidence_ref": {
+            "type": "string",
+            "pattern": "^archive/sessions/[A-Za-z0-9_-]+(?:/[A-Za-z0-9_.-]+)*\\.json$"
+          },
+          "prepared_at": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "executed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+          },
+          "execution_evidence": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^archive/sessions/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+\\.json$"
+          },
+          "reconciled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+          },
+          "reconciliation_evidence": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^archive/sessions/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+\\.json$"
+          },
+          "cancelled_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+          },
+          "cancellation_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "cancellation_evidence": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^archive/sessions/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+\\.json$"
+          },
+          "blocks_acceptance_of": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^docs/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\.md#[a-z0-9-]+$"
+            }
+          },
+          "targets": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "key",
+                "current",
+                "desired"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "current": {
+                  "type": [
+                    "string",
+                    "number",
+                    "null"
+                  ]
+                },
+                "desired": {
+                  "type": [
+                    "string",
+                    "number",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "next_step": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "prepared"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "executed_at": {
+                  "const": null
+                },
+                "execution_evidence": {
+                  "const": null
+                },
+                "reconciled_at": {
+                  "const": null
+                },
+                "reconciliation_evidence": {
+                  "const": null
+                },
+                "cancelled_at": {
+                  "const": null
+                },
+                "cancellation_reason": {
+                  "const": null
+                },
+                "cancellation_evidence": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "executed"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "executed_at": {
+                  "type": "string"
+                },
+                "execution_evidence": {
+                  "type": "string"
+                },
+                "reconciled_at": {
+                  "const": null
+                },
+                "reconciliation_evidence": {
+                  "const": null
+                },
+                "cancelled_at": {
+                  "const": null
+                },
+                "cancellation_reason": {
+                  "const": null
+                },
+                "cancellation_evidence": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "reconciled"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "executed_at": {
+                  "type": "string"
+                },
+                "execution_evidence": {
+                  "type": "string"
+                },
+                "reconciled_at": {
+                  "type": "string"
+                },
+                "reconciliation_evidence": {
+                  "type": "string"
+                },
+                "cancelled_at": {
+                  "const": null
+                },
+                "cancellation_reason": {
+                  "const": null
+                },
+                "cancellation_evidence": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "cancelled"
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "properties": {
+                "executed_at": {
+                  "const": null
+                },
+                "execution_evidence": {
+                  "const": null
+                },
+                "reconciled_at": {
+                  "const": null
+                },
+                "reconciliation_evidence": {
+                  "const": null
+                },
+                "cancelled_at": {
+                  "type": "string"
+                },
+                "cancellation_reason": {
+                  "type": "string"
+                },
+                "cancellation_evidence": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
