@@ -31,8 +31,8 @@ import {
   extractPaymentHeader,
   extractPayerAddress,
   eurCentsToUsd,
+  eurCentsToUsdFixed,
   eurCentsToUsdcAtomic,
-  eurCentsToUsdString,
   encodePaymentResponseHeader,
   getFacilitatorUrl,
   networkToCaip2,
@@ -1888,7 +1888,7 @@ export async function getX402Manifest(): Promise<{
     ...caps.map((cap) => ({
       path: `/x402/v2/${cap.slug}`,
       method: cap.x402Method,
-      price: cap.x402PriceUsd.toFixed(2),
+      price: eurCentsToUsdFixed(cap.priceCents),
       currency: "USDC",
       network: NETWORK,
       description: cap.description,
@@ -1896,7 +1896,7 @@ export async function getX402Manifest(): Promise<{
     ...sols.map((sol) => ({
       path: `/x402/v2/solutions/${sol.slug}`,
       method: "POST",
-      price: sol.x402PriceUsd.toFixed(2),
+      price: eurCentsToUsdFixed(sol.priceCents),
       currency: "USDC",
       network: NETWORK,
       description: sol.description,
@@ -1947,7 +1947,7 @@ export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
         summary: `${cap.name} (x402)`,
         description: cap.description,
         method,
-        priceUsd: cap.x402PriceUsd,
+        priceUsdAmount: eurCentsToUsdFixed(cap.priceCents),
         inputSchema: cap.inputSchema,
         outputSchema: cap.outputSchema,
       }),
@@ -1961,7 +1961,7 @@ export async function getX402OpenApiPaths(): Promise<Record<string, unknown>> {
         summary: `${sol.name} (x402 solution)`,
         description: sol.description,
         method: "post",
-        priceUsd: sol.x402PriceUsd,
+        priceUsdAmount: eurCentsToUsdFixed(sol.priceCents),
         inputSchema: sol.inputSchema,
         outputSchema: sol.outputSchema,
       }),
@@ -1975,7 +1975,7 @@ function buildX402Operation(opts: {
   summary: string;
   description: string;
   method: string;
-  priceUsd: number;
+  priceUsdAmount: string;
   inputSchema: Record<string, unknown> | null;
   outputSchema: Record<string, unknown> | null;
 }): Record<string, unknown> {
@@ -1985,7 +1985,7 @@ function buildX402Operation(opts: {
     description: opts.description,
     "x-payment-info": {
       protocols: ["x402"],
-      price: { mode: "fixed", currency: "USD", amount: opts.priceUsd.toFixed(3) },
+      price: { mode: "fixed", currency: "USD", amount: opts.priceUsdAmount },
     },
     security: [], // payment is the auth — no traditional auth scheme applies
     responses: {

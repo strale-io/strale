@@ -26,6 +26,7 @@ import { parsePaymentRequired } from "@x402/core/schemas";
 // version-branching in verifyX402PaymentOnly can be asserted without any
 // network traffic.
 const verifyCalls: Array<{ payload: unknown; requirements: Record<string, unknown> }> = [];
+const settleCalls: Array<{ payload: unknown; requirements: Record<string, unknown> }> = [];
 vi.mock("@x402/core/server", () => ({
   HTTPFacilitatorClient: class {
     constructor(_cfg: unknown) {}
@@ -33,7 +34,8 @@ vi.mock("@x402/core/server", () => ({
       verifyCalls.push({ payload, requirements });
       return { isValid: true, payer: "0x1111111111111111111111111111111111111111" };
     }
-    async settle() {
+    async settle(payload: unknown, requirements: Record<string, unknown>) {
+      settleCalls.push({ payload, requirements });
       return { success: true, transaction: "0xdead" };
     }
   },
@@ -46,8 +48,10 @@ const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
   verifyCalls.length = 0;
+  settleCalls.length = 0;
   process.env.X402_NETWORK = "base";
   process.env.X402_WALLET_ADDRESS = "0x2222222222222222222222222222222222222222";
+  process.env.EUR_USD_RATE = "1.08";
   delete process.env.X402_CHALLENGE_VERSION;
   vi.resetModules();
 });
@@ -93,6 +97,11 @@ const V2_PAYLOAD = {
     signature: "0xsig",
     authorization: { from: "0x3333333333333333333333333333333333333333" },
   },
+};
+
+const V2_TWO_CENT_PAYLOAD = {
+  ...V2_PAYLOAD,
+  accepted: { ...V2_PAYLOAD.accepted, amount: "21600" },
 };
 
 describe("networkToCaip2", () => {
@@ -285,6 +294,40 @@ describe("verifyX402PaymentOnly version branching", () => {
     expect(req.maxAmountRequired).toBeUndefined();
     expect(req.resource).toBeUndefined();
     expect(req.outputSchema).toBeUndefined();
+  });
+
+  it("preserves the exact two-cent requirement from challenge through verify and settle", async () => {
+    const { build402 } = await loadRoutes();
+    const { eurCentsToUsd, settleX402Payment, verifyX402PaymentOnly } = await loadGateway();
+    const { body } = build402(
+      "Two-cent fixture",
+      "Exact settlement requirement fixture.",
+      eurCentsToUsd(2),
+      "https://api.strale.io/x402/v2/two-cent-fixture",
+      null,
+      "POST",
+      null,
+      2,
+    );
+    const challengeRequirement = ((body as Record<string, unknown>).accepts as Record<string, unknown>[])[0];
+    expect(challengeRequirement.amount).toBe("21600");
+
+    const verification = await verifyX402PaymentOnly(
+      encodePayload(V2_TWO_CENT_PAYLOAD),
+      2,
+      eurCentsToUsd(2),
+    );
+    expect(verification.valid).toBe(true);
+    expect(verification.verified).toBeDefined();
+    expect(verifyCalls).toHaveLength(1);
+    expect(verifyCalls[0].requirements.amount).toBe("21600");
+    expect(verification.verified!.requirements).toBe(verifyCalls[0].requirements);
+
+    const settlement = await settleX402Payment(verification.verified!);
+    expect(settlement).toEqual({ valid: true, settlementId: "0xdead" });
+    expect(settleCalls).toHaveLength(1);
+    expect(settleCalls[0].requirements).toBe(verifyCalls[0].requirements);
+    expect(settleCalls[0].requirements.amount).toBe("21600");
   });
 
   it("normalizes a v1 payload that echoed a CAIP-2 network off a v2 body", async () => {
