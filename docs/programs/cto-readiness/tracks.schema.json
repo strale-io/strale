@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Program track register",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "program", "updated", "tracks"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "program": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "updated": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "status", "depends_on", "owner", "next_action", "resume_file", "exit", "evidence"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^T[0-9]+$" },
+          "title": { "type": "string", "minLength": 3 },
+          "status": { "enum": ["queued", "active", "blocked", "founder_gated", "done", "rehomed"] },
+          "depends_on": { "type": "array", "items": { "type": "string", "pattern": "^T[0-9]+$" } },
+          "owner": { "enum": ["session", "petter"] },
+          "blocker": { "type": "string", "minLength": 3 },
+          "rehomed_to": { "type": "string", "minLength": 3 },
+          "next_action": { "type": "string", "minLength": 10 },
+          "resume_file": { "type": ["string", "null"] },
+          "exit": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 5 } },
+          "evidence": { "type": "array", "items": { "type": "string", "minLength": 3 } }
+        },
+        "allOf": [
+          { "if": { "properties": { "status": { "enum": ["blocked", "founder_gated"] } } }, "then": { "required": ["blocker"] } },
+          { "if": { "properties": { "status": { "const": "done" } } }, "then": { "properties": { "evidence": { "minItems": 1 } } } },
+          { "if": { "properties": { "status": { "const": "rehomed" } } }, "then": { "required": ["rehomed_to"] } }
+        ]
+      }
+    }
+  }
+}

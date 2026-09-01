@@ -35,6 +35,15 @@ This is a navigation pointer, not M4 cutover. Candidate project documents
 remain inactive and Notion-backed workflows remain authoritative until the
 explicit atomic cutover.
 
+### Program register — where multi-batch work resumes
+
+Long-running work is tracked in `docs/programs/` (index: `docs/programs/README.md`).
+Each program has a `PROGRAM.md` with a **Resume here** section and a
+machine-checked `tracks.yaml` (`npm run programs:check`). A session continuing
+a program reads those two files and nothing else; the migration checkpoint
+above is the M2-through-M7 detail behind the `cto-readiness` program. Programs
+are execution records, not project truth.
+
 ### Notion Access (REQUIRED)
 - Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
 - To-do & Build Plan: https://www.notion.so/33c67c87-082c-81c3-a72b-cc59b10ff4ac

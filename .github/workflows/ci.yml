@@ -282,4 +282,11 @@ jobs:
       # so it is checked by one, on every change, rather than trusted.
       - run: node scripts/guard-production-write-access.mjs
 
+      # Program track registers (docs/programs/*/tracks.yaml) are the resume
+      # surface for multi-batch work on both AI tools. A register that fails
+      # validation means a fresh session cannot tell what is active, so it is
+      # checked here rather than trusted. Tests cover the checker itself.
+      - run: npm run programs:check
+      - run: npm run programs:test
+
       - run: npm test
