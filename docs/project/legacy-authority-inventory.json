@@ -31,6 +31,7 @@
         "archive/sessions/2026-09-01-m2-source-enumeration-decision-plan.md",
         "archive/sessions/2026-09-01-m2-source-enumeration-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-vendor-evaluation-decision-plan.md",
+        "archive/sessions/2026-09-01-m2-vendor-evaluation-decision-review-codex.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
@@ -50,7 +51,8 @@
         "handoff/_general/from-code/2026-09-01-m2-deploy-safety-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
-        "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md"
+        "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
+        "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md"
       ]
     },
     {
@@ -111,6 +113,7 @@
         "archive/sessions/2026-09-01-m2-source-enumeration-decision-plan.md",
         "archive/sessions/2026-09-01-m2-source-enumeration-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-vendor-evaluation-decision-plan.md",
+        "archive/sessions/2026-09-01-m2-vendor-evaluation-decision-review-codex.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -204,6 +207,7 @@
         "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
+        "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
         "manifests/c2pa-inspect.yaml",
@@ -390,7 +394,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "5163478f94dfd301b3d4c26baa195c783d1fdbb0b4c3a7be9113f32e7bf46a50",
+      "sha256": "c985550e935a4934e082f8bd41a8e59c7ac75623bcacad1657bfbba2a7514779",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

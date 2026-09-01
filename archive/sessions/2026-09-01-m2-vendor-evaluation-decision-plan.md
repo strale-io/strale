@@ -350,3 +350,38 @@ inconsistency, and identifies owner as migration attribution. The same reviewer
 re-read the amended plan and returned **PASS with no residual findings**. This
 same-provider result permits inactive M2 documentation work under the standing
 fallback, but does not clear the cross-provider backlog before M4 activation.
+
+## Implementation outcome
+
+Implementation commit `2102891ceec38ca9894a88e97ca93466b8e985c8`
+landed through [PR #471](https://github.com/strale-io/strale/pull/471) and
+merged as `01eb86113e96c8f2e40d8a56d4d055e6e2f4e036` after both required
+GitHub jobs passed.
+
+The implementation created the one inactive pointer Decision and the separate
+methodology source/gap report, updated the Claude backlog, and regenerated the
+decision index and legacy-authority inventory. It did not modify an entrypoint,
+protocol, skill, runtime, vendor route, credential, production environment, or
+Notion source page.
+
+Fresh Claude Opus/high and Sonnet/high exact-commit attempts timed out after 94
+and 74 seconds without a verdict. A different fresh
+`gpt-5.6-sol`/xhigh reviewer checked the exact six-file commit against the live
+Notion sources, current Charter, migration architecture, router, vendor-switch
+skill, E/G records, and historical evidence. It reran the repository checks and
+returned **PASS with no HIGH, MEDIUM, or LOW findings**. The cross-provider gate
+remains backlogged before M4.
+
+Verification:
+
+- `npm run context:generate` — reproducible;
+- `npm run context:test` — 54/54 passed;
+- `npm run context:check -- --json` — zero findings;
+- exact-commit `git diff --check` — passed; and
+- GitHub `check` and `integration-db` — passed.
+
+The linked closeout Journal entry is
+[M2 vendor-evaluation pointer and methodology evidence migrated](https://app.notion.com/p/3ce67c87082c8127bcf4fe305029d828?pvs=204).
+Fetch-back confirmed its merge refs, verification, gaps, and inactive-authority
+wording. The source Decision and methodology retained their 2026-05-11 edit
+timestamps.
