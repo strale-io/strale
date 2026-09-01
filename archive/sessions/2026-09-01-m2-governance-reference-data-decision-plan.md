@@ -235,3 +235,24 @@ correction. It specifically affirmed the Git-native provenance of
 stale `DEC-20260517-B`, the non-executable treatment of the historical Notion
 deletion instruction, the distinct topics, and the inactive M2/M4 boundary.
 The passing verifier completed after its verdict.
+
+## Implementation outcome
+
+Implementation commit `5ab19ff09f6ead5674946c27ee62489a29b67071`
+added the three inactive candidates, the source-gap report, and reproducible
+generated context. `npm run context:test` passed 54/54,
+`npm run context:check -- --json` returned zero findings, and
+`git diff --check` passed.
+
+Claude Opus/high and Sonnet/high were each attempted again for exact-commit
+review and rejected by the weekly subscription limit. A fresh separate
+`gpt-5.6-sol`/xhigh verifier returned PASS with no material findings after
+checking live Notion sources, Git history, the deliberate exclusions, and the
+inactive-authority boundary. PR [#465](https://github.com/strale-io/strale/pull/465)
+then passed `check` and `integration-db` and merged as
+`e02355aab61722eab1a25c7bb1a4a85140fda7b8`.
+
+The closeout Journal entry is
+[M2 governance and reference-data decision migration — PR #465](https://app.notion.com/p/3ce67c87082c81558c50dce0ee221210?pvs=204).
+All source Decisions remain unchanged and the cross-provider review remains an
+M4-blocking backlog item.
