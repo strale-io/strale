@@ -231,6 +231,44 @@ test("hidden headings and a commented banner do not satisfy the document contrac
       (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
     ),
   );
+
+  for (const extra of [
+    "\n  ## Indented extra\n\nVisible extra section.\n",
+    "\nSetext extra\n------------\n\nVisible extra section.\n",
+    "\n\\<!-- escaped opener\n## Escaped-comment extra\n-->\n",
+    "\n``` bad`info\n## Invalid-fence extra\n```\n",
+  ]) {
+    const commonMarkExtra = parseDecisionRecord(
+      visible.file,
+      `${visible.content}${extra}`,
+    );
+    assert.ok(
+      validateDecisionRecords([commonMarkExtra]).some(
+        (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
+      ),
+      extra,
+    );
+  }
+
+  const unclosedComment = parseDecisionRecord(
+    visible.file,
+    visible.content.replace("## Context", "<!--\n## Context"),
+  );
+  assert.ok(
+    validateDecisionRecords([unclosedComment]).some(
+      (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
+    ),
+  );
+
+  const attachedClosingHashes = parseDecisionRecord(
+    visible.file,
+    visible.content.replace("## Decision", "## Decision###"),
+  );
+  assert.ok(
+    validateDecisionRecords([attachedClosingHashes]).some(
+      (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
+    ),
+  );
 });
 
 test("an active decision body is immutable while metadata may transition", () => {

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
+import { Parser as CommonMarkParser } from "commonmark";
 import { parse as parseYaml } from "yaml";
 
 export const DECISION_CANDIDATE_BANNER =
@@ -183,6 +184,7 @@ const INVERSE_RELATION = Object.freeze({
 const ajv = new Ajv2020({ allErrors: true });
 const validateSchema = ajv.compile(DECISION_RECORD_SCHEMA);
 const validateCollisionSchema = ajv.compile(DECISION_ID_COLLISION_SCHEMA);
+const commonMarkParser = new CommonMarkParser();
 
 function normalizeNewlines(value) {
   return value.replace(/\r\n/g, "\n");
@@ -199,63 +201,46 @@ export function parseDecisionRecord(file, content) {
   return { file, metadata, body: match[2], content: normalized };
 }
 
-function maskHiddenMarkdown(body) {
-  const characters = [...normalizeNewlines(body)];
-  const hidden = new Array(characters.length).fill(false);
-  const text = characters.join("");
-  for (const match of text.matchAll(/<!--[\s\S]*?-->/g)) {
-    for (let index = match.index; index < match.index + match[0].length; index += 1) {
-      hidden[index] = true;
-    }
+function semanticText(node) {
+  let value = node.literal ?? "";
+  for (let child = node.firstChild; child; child = child.next) {
+    value += semanticText(child);
   }
-  let offset = 0;
-  let fence = null;
-  for (const line of text.split(/(?<=\n)/)) {
-    const marker = line.match(/^ {0,3}(`{3,}|~{3,})([^\n]*)/);
-    if (!fence && marker) {
-      fence = { character: marker[1][0], length: marker[1].length };
-      for (let index = offset; index < offset + line.length; index += 1) {
-        hidden[index] = true;
-      }
-    } else if (fence) {
-      for (let index = offset; index < offset + line.length; index += 1) {
-        hidden[index] = true;
-      }
-      if (
-        marker &&
-        marker[1][0] === fence.character &&
-        marker[1].length >= fence.length &&
-        !marker[2].trim()
-      ) {
-        fence = null;
-      }
-    }
-    offset += line.length;
-  }
-  return characters.map((character, index) =>
-    hidden[index] && character !== "\n" ? " " : character,
-  ).join("");
+  return value;
 }
 
 export function protectedDecisionSections(body) {
   const normalized = normalizeNewlines(body);
-  const visible = maskHiddenMarkdown(normalized);
-  const allLevelTwoHeadings = [...visible.matchAll(/^##[ \t]+(.+?)[ \t]*#*[ \t]*$/gm)];
-  const matches = allLevelTwoHeadings.filter((match) =>
-    PROTECTED_HEADINGS.includes(match[1]),
-  );
+  const document = commonMarkParser.parse(normalized);
+  const headings = [];
+  const walker = document.walker();
+  let event;
+  while ((event = walker.next())) {
+    if (!event.entering) continue;
+    const { node } = event;
+    if (node.type === "html_block" || node.type === "html_inline") return null;
+    if (node.type !== "heading" || node.level !== 2) continue;
+    headings.push({
+      text: semanticText(node),
+      topLevel: node.parent === document,
+      startLine: node.sourcepos[0][0],
+      endLine: node.sourcepos[1][0],
+    });
+  }
   if (
-    allLevelTwoHeadings.length !== PROTECTED_HEADINGS.length ||
-    matches.length !== PROTECTED_HEADINGS.length ||
-    matches.some((match, index) => match[1] !== PROTECTED_HEADINGS[index])
+    headings.length !== PROTECTED_HEADINGS.length ||
+    headings.some((heading, index) =>
+      !heading.topLevel || heading.text !== PROTECTED_HEADINGS[index]
+    )
   ) {
     return null;
   }
+  const lines = normalized.split("\n");
   const sections = {};
-  for (let index = 0; index < matches.length; index += 1) {
-    const start = matches[index].index + matches[index][0].length;
-    const end = matches[index + 1]?.index ?? normalized.length;
-    sections[matches[index][1]] = normalized.slice(start, end).trim();
+  for (let index = 0; index < headings.length; index += 1) {
+    const start = headings[index].endLine;
+    const end = headings[index + 1] ? headings[index + 1].startLine - 1 : lines.length;
+    sections[headings[index].text] = lines.slice(start, end).join("\n").trim();
   }
   return sections;
 }
