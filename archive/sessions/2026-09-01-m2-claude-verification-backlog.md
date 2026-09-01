@@ -33,6 +33,14 @@ timed out after 124 seconds with no verdict; fell to Sonnet/high effort, which
 also timed out after 124 seconds with no verdict. The exact amended commit was
 therefore reviewed by separate Codex tasks and remains queued below.
 
+The x402 AgentCash discovery-contract plan made two bounded attempts: wanted
+Opus/high effort, but the review timed out after 124 seconds with no verdict;
+fell to Sonnet/high effort, which timed out after 94 seconds with no verdict.
+A separate Codex reviewer required one test-shape correction and then passed
+the revised plan. Separate technical/money-path and product/public-contract
+Codex reviewers passed the implementation working tree with no findings. The
+merged exact commit and production evidence remain queued for Claude below.
+
 ## Pending cross-provider checks
 
 | Priority | Artifact/topic | Required Claude check | Closure evidence |
@@ -47,6 +55,7 @@ therefore reviewed by separate Codex tasks and remains queued below.
 | P1 | WP13 status reconciliation | Reconcile delivered dependency/publishing work with the still-open formal package and VERIFY-DEP status | Claude disposition identifying the correct package status and remaining scope |
 | P1 | Website/design canonical wording | Recheck after the redesign working tree is committed/reconciled, especially Quiet Material v0.7 and section implementation status | Review against a stable frontend commit rather than an uncommitted worktree |
 | P1 | #438 operator-action execution and reconciliation | Recheck the corrected founder-gated script and pre-write digest proof, then confirm executed/reconciled state after any production write; do not infer execution from script or issue state | Claude review of exact prepared script plus independent production reconciliation evidence |
+| P1 | x402 AgentCash discovery contract (plan and implementation dated 2026-09-01; Codex plan, technical, and product PASS) | Review the then-current exact commit, real `@agentcash/discovery@1.7.5` fail-before/pass-after evidence, canonical `protocols: [{ x402: {} }]` wire shape, exact-price preservation, dependency pin, and no-change boundary around challenge/verification/settlement | Claude exact-commit PASS plus production AgentCash parse evidence after the OpenAPI cache window, with all high/medium findings resolved |
 | P2 | M4 entrypoint/cutover batch | Adversarially verify that Notion consumers are replaced, peer entrypoints are safe, and no mutable facts remain duplicated | Exact-head cross-provider cutover review |
 
 ## Operating rule until cleared
