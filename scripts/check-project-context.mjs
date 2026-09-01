@@ -157,6 +157,7 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     "docs/project/schemas/project-document.schema.json",
     "docs/project/schemas/operator-actions.schema.json",
     "docs/project/schemas/decision-record.schema.json",
+    "docs/project/schemas/decision-id-collisions.schema.json",
     "docs/project/schemas/legacy-authority-inventory.schema.json",
   ]) {
     const absolute = resolve(root, file);

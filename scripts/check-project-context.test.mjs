@@ -28,6 +28,7 @@ import {
 import {
   checkPrecutoverEntrypoint,
   checkPrivateArchiveStatus,
+  runChecks,
 } from "./check-project-context.mjs";
 
 test("generated M1 skeleton satisfies its exact contract", () => {
@@ -502,4 +503,8 @@ test("private archive status preserves the M0 gate without public raw data", () 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("the checked-in repository context is warning-clean", () => {
+  assert.deepEqual(runChecks(process.cwd()), []);
 });

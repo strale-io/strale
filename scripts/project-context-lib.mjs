@@ -507,7 +507,8 @@ function searchableFiles(root, allTracked) {
       file === "scripts/project-context-lib.mjs" ||
       file === "scripts/generate-project-context.mjs" ||
       file === "scripts/check-project-context.mjs" ||
-      file === "scripts/check-project-context.test.mjs"
+      file === "scripts/check-project-context.test.mjs" ||
+      file.startsWith("scripts/decision-records")
     ) {
       return false;
     }

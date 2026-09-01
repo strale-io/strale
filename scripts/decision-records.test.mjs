@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import test from "node:test";
 
 import {
   DECISION_CANDIDATE_BANNER,
+  DECISION_ID_COLLISION_SCHEMA,
   generateDecisionIndex,
   parseDecisionRecord,
   readDecisionRecords,
   validateActiveBodyChange,
   validateActiveDecisionImmutability,
+  validateDecisionIdCollisions,
   validateDecisionRecords,
 } from "./decision-records-lib.mjs";
 
@@ -70,6 +76,24 @@ test("supersedes cannot leave its target active", () => {
   );
 });
 
+test("a proposed or rejected record cannot perform a supersession", () => {
+  for (const status of ["proposed", "rejected"]) {
+    const records = [
+      record({ id: "DEC-20260502-A", status: "superseded", topic: "old-product" }),
+      record({
+        id: "DEC-20260812-A",
+        status,
+        relations: [{ type: "supersedes", target: "DEC-20260502-A" }],
+      }),
+    ];
+    assert.ok(
+      validateDecisionRecords(records).some(
+        (item) => item.code === "DECISION_SUPERSESSION_SOURCE_INEFFECTIVE",
+      ),
+    );
+  }
+});
+
 test("missing and invented relation targets fail", () => {
   const missing = record({
     id: "DEC-20260812-A",
@@ -88,6 +112,55 @@ test("missing and invented relation targets fail", () => {
   );
 });
 
+test("an unresolved historical ID collision blocks records and relation targets", () => {
+  const registry = {
+    schema_version: 1,
+    authority_scope: "none",
+    status: "candidate",
+    complete: false,
+    phase: "M2",
+    authority_active: false,
+    source_data_source: "collection://decisions",
+    observed_at: "2026-09-01",
+    collision_count: 1,
+    source_row_count: 2,
+    collisions: [
+      {
+        id: "DEC-20260502-A",
+        resolution_status: "unresolved",
+        resolution_evidence: null,
+        records: [
+          {
+            title: "Product decision",
+            historical_status: "superseded",
+            source_url: "https://app.notion.com/one",
+          },
+          {
+            title: "Pricing decision",
+            historical_status: "active",
+            source_url: "https://app.notion.com/two",
+          },
+        ],
+      },
+    ],
+  };
+  assert.ok(DECISION_ID_COLLISION_SCHEMA);
+  assert.deepEqual(validateDecisionIdCollisions("collisions.yaml", registry), []);
+  assert.ok(
+    validateDecisionRecords([
+      record({ id: "DEC-20260502-A", status: "superseded", topic: "old-product" }),
+    ], registry).some((item) => item.code === "DECISION_ID_COLLISION_IMPORTED"),
+  );
+  assert.ok(
+    validateDecisionRecords([
+      record({
+        id: "DEC-20260812-A",
+        relations: [{ type: "supersedes", target: "DEC-20260502-A" }],
+      }),
+    ], registry).some((item) => item.code === "DECISION_RELATION_TARGET_COLLIDED"),
+  );
+});
+
 test("unrelated active decisions cannot share a topic", () => {
   const findings = validateDecisionRecords([
     record({ id: "DEC-20260812-A" }),
@@ -95,6 +168,45 @@ test("unrelated active decisions cannot share a topic", () => {
   ]);
   assert.ok(
     findings.some((item) => item.code === "DECISION_MULTIPLE_UNRELATED_ACTIVE_TOPIC"),
+  );
+});
+
+test("related_to is an explicit non-retiring same-topic relationship", () => {
+  assert.deepEqual(validateDecisionRecords([
+    record({ id: "DEC-20260812-A" }),
+    record({
+      id: "DEC-20260815-A",
+      relations: [{ type: "related_to", target: "DEC-20260812-A" }],
+    }),
+  ]), []);
+});
+
+test("hidden headings and a commented banner do not satisfy the document contract", () => {
+  const visible = record({ id: "DEC-20260812-A" });
+  const commented = parseDecisionRecord(
+    visible.file,
+    visible.content.replace(
+      DECISION_CANDIDATE_BANNER,
+      `<!--${DECISION_CANDIDATE_BANNER}-->`,
+    ),
+  );
+  assert.ok(
+    validateDecisionRecords([commented]).some(
+      (item) => item.code === "DECISION_CANDIDATE_PREAMBLE_INVALID",
+    ),
+  );
+
+  const fenced = parseDecisionRecord(
+    visible.file,
+    visible.content.replace(
+      /## Decision[\s\S]*$/,
+      "```md\n## Decision\nHidden.\n## Context\nHidden.\n## Rationale\nHidden.\n## Consequences\nHidden.\n## Reversal conditions\nHidden.\n```\n",
+    ),
+  );
+  assert.ok(
+    validateDecisionRecords([fenced]).some(
+      (item) => item.code === "DECISION_BODY_SECTIONS_INVALID",
+    ),
   );
 });
 
@@ -129,6 +241,52 @@ test("an active decision body is immutable while metadata may transition", () =>
   );
 });
 
+test("superseded and retired history stays protected permanently", () => {
+  for (const status of ["superseded", "retired"]) {
+    const previous = record({ id: "DEC-20260812-A", status });
+    const rewritten = record({
+      id: "DEC-20260812-A",
+      status,
+      decision: "Rewrite history after it stopped being active.",
+    });
+    assert.ok(
+      validateActiveBodyChange(previous, rewritten, previous.file).some(
+        (item) => item.code === "DECISION_ACTIVE_BODY_CHANGED",
+      ),
+    );
+  }
+
+  const previous = record({ id: "DEC-20260812-A", status: "superseded" });
+  const regressed = record({ id: "DEC-20260812-A", status: "retired" });
+  assert.ok(
+    validateActiveBodyChange(previous, regressed, previous.file).some(
+      (item) => item.code === "DECISION_ACTIVE_STATUS_REGRESSION",
+    ),
+  );
+});
+
+test("removing superseded history is detected against a later merge base", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-decision-history-"));
+  try {
+    const previous = record({ id: "DEC-20260812-A", status: "superseded" });
+    const absolute = join(root, previous.file);
+    mkdirSync(dirname(absolute), { recursive: true });
+    writeFileSync(absolute, previous.content, "utf8");
+    execFileSync("git", ["init"], { cwd: root });
+    execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: root });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
+    execFileSync("git", ["add", previous.file], { cwd: root });
+    execFileSync("git", ["commit", "-m", "base"], { cwd: root });
+    assert.ok(
+      validateActiveDecisionImmutability(root, [], "HEAD").some(
+        (item) => item.code === "DECISION_ACTIVE_RECORD_REMOVED",
+      ),
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("a superseded record must have a formal incoming supersession", () => {
   assert.ok(
     validateDecisionRecords([
@@ -143,6 +301,7 @@ test("generated index stays explicitly inactive", () => {
   assert.match(index, /authority_active: false/);
   assert.match(index, /status: candidate/);
   assert.match(index, /NOT ACTIVE PROJECT AUTHORITY/);
+  assert.match(index, /\| Status \|/);
 });
 
 test("the repository decision candidates and merge-base immutability checks pass", () => {

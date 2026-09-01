@@ -26,5 +26,10 @@ explicit `supersedes`, `amends`, `interprets`, or `affirms` relationship.
 
 Relationships are stored only on the source record. The candidate index at
 `docs/project/DECISIONS.md` is generated and supplies inverse views such as
-`superseded_by` and `amended_by`. Run `npm run context:generate`, then
+`superseded_by` and `amended_by`.
+
+Historical source rows that reuse an ID are preserved in
+`id-collisions.yaml`. An unresolved collision excludes that ID from formal
+records and relation targets; the migration never chooses one meaning silently.
+Run `npm run context:generate`, then
 `npm run context:test` and `npm run context:check` after changing records.

@@ -72,6 +72,79 @@ export const DECISION_RECORD_SCHEMA = {
   },
 };
 
+export const DECISION_ID_COLLISION_SCHEMA = {
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  title: "Historical decision ID collision registry",
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "schema_version",
+    "authority_scope",
+    "status",
+    "complete",
+    "phase",
+    "authority_active",
+    "source_data_source",
+    "observed_at",
+    "collision_count",
+    "source_row_count",
+    "collisions",
+  ],
+  properties: {
+    schema_version: { const: 1 },
+    authority_scope: { const: "none" },
+    status: { const: "candidate" },
+    complete: { const: false },
+    phase: { const: "M2" },
+    authority_active: { const: false },
+    source_data_source: { type: "string", pattern: "^collection://" },
+    observed_at: { type: "string", pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    collision_count: { type: "integer", minimum: 0 },
+    source_row_count: { type: "integer", minimum: 0 },
+    collisions: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "resolution_status", "records"],
+        properties: {
+          id: { type: "string", pattern: "^DEC-.+" },
+          resolution_status: { enum: ["unresolved", "resolved"] },
+          resolution_evidence: { type: ["string", "null"] },
+          records: {
+            type: "array",
+            minItems: 2,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["title", "historical_status", "source_url"],
+              properties: {
+                title: { type: "string", minLength: 1 },
+                historical_status: {
+                  enum: ["proposed", "active", "superseded", "rejected", "retired"],
+                },
+                source_url: { type: "string", pattern: "^https://app\\.notion\\.com/" },
+              },
+            },
+          },
+        },
+        allOf: [
+          {
+            if: {
+              required: ["resolution_status"],
+              properties: { resolution_status: { const: "resolved" } },
+            },
+            then: {
+              required: ["resolution_evidence"],
+              properties: { resolution_evidence: { type: "string", minLength: 1 } },
+            },
+          },
+        ],
+      },
+    },
+  },
+};
+
 const PROTECTED_HEADINGS = [
   "Decision",
   "Context",
@@ -79,7 +152,14 @@ const PROTECTED_HEADINGS = [
   "Consequences",
   "Reversal conditions",
 ];
-const NON_RETIRING_RELATIONS = new Set(["amends", "interprets", "affirms"]);
+const NON_RETIRING_RELATIONS = new Set([
+  "amends",
+  "interprets",
+  "affirms",
+  "related_to",
+]);
+const PROTECTED_HISTORICAL_STATUSES = new Set(["active", "superseded", "retired"]);
+const EFFECTIVE_SUPERSEDER_STATUSES = new Set(["active", "superseded", "retired"]);
 const INVERSE_RELATION = Object.freeze({
   supersedes: "superseded_by",
   amends: "amended_by",
@@ -89,6 +169,7 @@ const INVERSE_RELATION = Object.freeze({
 });
 const ajv = new Ajv2020({ allErrors: true });
 const validateSchema = ajv.compile(DECISION_RECORD_SCHEMA);
+const validateCollisionSchema = ajv.compile(DECISION_ID_COLLISION_SCHEMA);
 
 function normalizeNewlines(value) {
   return value.replace(/\r\n/g, "\n");
@@ -105,9 +186,47 @@ export function parseDecisionRecord(file, content) {
   return { file, metadata, body: match[2], content: normalized };
 }
 
+function maskHiddenMarkdown(body) {
+  const characters = [...normalizeNewlines(body)];
+  const hidden = new Array(characters.length).fill(false);
+  const text = characters.join("");
+  for (const match of text.matchAll(/<!--[\s\S]*?-->/g)) {
+    for (let index = match.index; index < match.index + match[0].length; index += 1) {
+      hidden[index] = true;
+    }
+  }
+  let offset = 0;
+  let fence = null;
+  for (const line of text.split(/(?<=\n)/)) {
+    const marker = line.match(/^\s*(`{3,}|~{3,})/);
+    if (!fence && marker) {
+      fence = marker[1][0];
+      for (let index = offset; index < offset + line.length; index += 1) {
+        hidden[index] = true;
+      }
+    } else if (fence) {
+      for (let index = offset; index < offset + line.length; index += 1) {
+        hidden[index] = true;
+      }
+      if (
+        marker &&
+        marker[1][0] === fence &&
+        !line.slice(marker[0].length).trim()
+      ) {
+        fence = null;
+      }
+    }
+    offset += line.length;
+  }
+  return characters.map((character, index) =>
+    hidden[index] && character !== "\n" ? " " : character,
+  ).join("");
+}
+
 export function protectedDecisionSections(body) {
   const normalized = normalizeNewlines(body);
-  const matches = [...normalized.matchAll(/^## (Decision|Context|Rationale|Consequences|Reversal conditions)\s*$/gm)];
+  const visible = maskHiddenMarkdown(normalized);
+  const matches = [...visible.matchAll(/^## (Decision|Context|Rationale|Consequences|Reversal conditions)\s*$/gm)];
   if (
     matches.length !== PROTECTED_HEADINGS.length ||
     matches.some((match, index) => match[1] !== PROTECTED_HEADINGS[index])
@@ -133,6 +252,14 @@ export function readDecisionRecords(root) {
       const file = `docs/decisions/records/${name}`;
       return parseDecisionRecord(file, readFileSync(resolve(root, file), "utf8"));
     });
+}
+
+export function readDecisionIdCollisions(root) {
+  const file = "docs/decisions/id-collisions.yaml";
+  const absolute = resolve(root, file);
+  if (!existsSync(absolute)) throw new Error(`${file} is missing`);
+  const registry = parseYaml(readFileSync(absolute, "utf8"));
+  return { file, registry };
 }
 
 function finding(code, path, detail) {
@@ -165,9 +292,67 @@ function relationConnectsActivePair(recordsById, left, right) {
   return false;
 }
 
-export function validateDecisionRecords(records) {
+export function validateDecisionIdCollisions(file, registry) {
+  const findings = [];
+  if (!validateCollisionSchema(registry)) {
+    for (const error of validateCollisionSchema.errors ?? []) {
+      findings.push(
+        finding(
+          "DECISION_ID_COLLISION_SCHEMA_INVALID",
+          file,
+          `${error.instancePath || "/"} ${error.message}`,
+        ),
+      );
+    }
+    return findings;
+  }
+  const seenIds = new Set();
+  for (const collision of registry.collisions) {
+    if (seenIds.has(collision.id)) {
+      findings.push(finding("DECISION_ID_COLLISION_DUPLICATE", file, collision.id));
+    }
+    seenIds.add(collision.id);
+    const urls = collision.records.map((record) => record.source_url);
+    if (new Set(urls).size !== urls.length) {
+      findings.push(finding("DECISION_ID_COLLISION_SOURCE_DUPLICATE", file, collision.id));
+    }
+    if (collision.resolution_status === "unresolved" && collision.resolution_evidence) {
+      findings.push(finding("DECISION_ID_COLLISION_FALSE_RESOLUTION", file, collision.id));
+    }
+  }
+  if (registry.collision_count !== registry.collisions.length) {
+    findings.push(
+      finding(
+        "DECISION_ID_COLLISION_COUNT_MISMATCH",
+        file,
+        `${registry.collision_count}/${registry.collisions.length}`,
+      ),
+    );
+  }
+  const sourceRows = registry.collisions.reduce(
+    (total, collision) => total + collision.records.length,
+    0,
+  );
+  if (registry.source_row_count !== sourceRows) {
+    findings.push(
+      finding(
+        "DECISION_ID_COLLISION_ROW_COUNT_MISMATCH",
+        file,
+        `${registry.source_row_count}/${sourceRows}`,
+      ),
+    );
+  }
+  return findings;
+}
+
+export function validateDecisionRecords(records, collisionRegistry = { collisions: [] }) {
   const findings = [];
   const recordsById = new Map();
+  const unresolvedCollisionIds = new Set(
+    (collisionRegistry.collisions ?? [])
+      .filter((collision) => collision.resolution_status === "unresolved")
+      .map((collision) => collision.id),
+  );
 
   for (const record of records) {
     if (!validateSchema(record.metadata)) {
@@ -188,6 +373,10 @@ export function validateDecisionRecords(records) {
     if (!record.content.includes(DECISION_CANDIDATE_BANNER)) {
       findings.push(finding("DECISION_CANDIDATE_BANNER_MISSING", record.file));
     }
+    const expectedPrefix = `${DECISION_CANDIDATE_BANNER}\n\n## Decision`;
+    if (!record.body.trimStart().startsWith(expectedPrefix)) {
+      findings.push(finding("DECISION_CANDIDATE_PREAMBLE_INVALID", record.file));
+    }
     const sections = protectedDecisionSections(record.body);
     if (!sections) {
       findings.push(finding("DECISION_BODY_SECTIONS_INVALID", record.file));
@@ -199,6 +388,9 @@ export function validateDecisionRecords(records) {
       }
     }
     const id = record.metadata.id;
+    if (unresolvedCollisionIds.has(id)) {
+      findings.push(finding("DECISION_ID_COLLISION_IMPORTED", record.file, id));
+    }
     if (recordsById.has(id)) {
       findings.push(finding("DECISION_ID_DUPLICATE", record.file, id));
     } else {
@@ -214,13 +406,21 @@ export function validateDecisionRecords(records) {
       if (relation.target === id) {
         findings.push(finding("DECISION_RELATION_SELF", record.file, edge));
       }
+      if (unresolvedCollisionIds.has(relation.target)) {
+        findings.push(
+          finding("DECISION_RELATION_TARGET_COLLIDED", record.file, relation.target),
+        );
+      }
     }
   }
 
   const incomingSupersessions = new Map();
   for (const record of records) {
     for (const relation of record.metadata.relations ?? []) {
-      if (relation.type !== "supersedes") continue;
+      if (
+        relation.type !== "supersedes" ||
+        !EFFECTIVE_SUPERSEDER_STATUSES.has(record.metadata.status)
+      ) continue;
       const sources = incomingSupersessions.get(relation.target) ?? [];
       sources.push(record.metadata.id);
       incomingSupersessions.set(relation.target, sources);
@@ -250,6 +450,18 @@ export function validateDecisionRecords(records) {
             "DECISION_SUPERSESSION_TARGET_NOT_RETIRED",
             record.file,
             `${relation.target}:${target.metadata.status}`,
+          ),
+        );
+      }
+      if (
+        relation.type === "supersedes" &&
+        !EFFECTIVE_SUPERSEDER_STATUSES.has(record.metadata.status)
+      ) {
+        findings.push(
+          finding(
+            "DECISION_SUPERSESSION_SOURCE_INEFFECTIVE",
+            record.file,
+            record.metadata.status,
           ),
         );
       }
@@ -303,10 +515,15 @@ export function validateDecisionRecords(records) {
   return findings;
 }
 
-export function validateActiveBodyChange(previous, next, file) {
-  if (previous.metadata.status !== "active") return [];
+export function validateProtectedDecisionChange(previous, next, file) {
+  if (!PROTECTED_HISTORICAL_STATUSES.has(previous.metadata.status)) return [];
   const findings = [];
-  if (!["active", "superseded", "retired"].includes(next.metadata.status)) {
+  const allowedStatuses = {
+    active: new Set(["active", "superseded", "retired"]),
+    superseded: new Set(["superseded"]),
+    retired: new Set(["retired"]),
+  };
+  if (!allowedStatuses[previous.metadata.status].has(next.metadata.status)) {
     findings.push(
       finding(
         "DECISION_ACTIVE_STATUS_REGRESSION",
@@ -329,6 +546,8 @@ export function validateActiveBodyChange(previous, next, file) {
   }
   return findings;
 }
+
+export const validateActiveBodyChange = validateProtectedDecisionChange;
 
 function git(root, ...args) {
   return execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
@@ -359,13 +578,13 @@ export function validateActiveDecisionImmutability(root, records, baseRef = "ori
       findings.push(finding("DECISION_BASE_RECORD_INVALID", file, error.message));
       continue;
     }
-    if (previous.metadata.status !== "active") continue;
+    if (!PROTECTED_HISTORICAL_STATUSES.has(previous.metadata.status)) continue;
     const next = currentByFile.get(file);
     if (!next) {
       findings.push(finding("DECISION_ACTIVE_RECORD_REMOVED", file));
       continue;
     }
-    findings.push(...validateActiveBodyChange(previous, next, file));
+    findings.push(...validateProtectedDecisionChange(previous, next, file));
   }
   return findings;
 }
@@ -378,8 +597,8 @@ function code(value) {
   return "`" + value + "`";
 }
 
-export function generateDecisionIndex(records) {
-  const errors = validateDecisionRecords(records);
+export function generateDecisionIndex(records, collisionRegistry = { collisions: [] }) {
+  const errors = validateDecisionRecords(records, collisionRegistry);
   if (errors.length > 0) {
     throw new Error(errors.map((item) => `${item.code} ${item.path}${item.detail ? ` ${item.detail}` : ""}`).join("; "));
   }
@@ -407,9 +626,9 @@ export function generateDecisionIndex(records) {
   const table = (items) => items.length === 0
     ? "_None._"
     : [
-        "| Decision | Topic | Scope | Owner | Decided |",
-        "|---|---|---|---|---|",
-        ...items.map((record) => `| ${link(record.metadata.id)} — ${escapeCell(record.metadata.title)} | ${code(record.metadata.topic)} | ${record.metadata.scope} | ${record.metadata.owner} | ${record.metadata.decided_at} |`),
+        "| Decision | Status | Topic | Scope | Owner | Decided |",
+        "|---|---|---|---|---|---|",
+        ...items.map((record) => `| ${link(record.metadata.id)} — ${escapeCell(record.metadata.title)} | ${record.metadata.status} | ${code(record.metadata.topic)} | ${record.metadata.scope} | ${record.metadata.owner} | ${record.metadata.decided_at} |`),
       ].join("\n");
   const inverseTable = inverseRows.length === 0
     ? "_None._"
@@ -418,20 +637,34 @@ export function generateDecisionIndex(records) {
         "|---|---|---|",
         ...inverseRows.map((row) => `| ${link(row.target)} | ${code(row.inverse)} | ${link(row.source)} |`),
       ].join("\n");
-  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index (Candidate)\n\n${DECISION_INDEX_CANDIDATE_BANNER}\n\n**PARTIAL GENERATED VIEW — ${code("complete: false")}.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from ${code("docs/decisions/records/DEC-*.md")}.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n`;
+  const unresolvedCollisions = (collisionRegistry.collisions ?? [])
+    .filter((collision) => collision.resolution_status === "unresolved")
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const collisionTable = unresolvedCollisions.length === 0
+    ? "_None._"
+    : [
+        "| Historical ID | Source rows | Status |",
+        "|---|---:|---|",
+        ...unresolvedCollisions.map((collision) => `| ${code(collision.id)} | ${collision.records.length} | excluded pending resolution |`),
+      ].join("\n");
+  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index (Candidate)\n\n${DECISION_INDEX_CANDIDATE_BANNER}\n\n**PARTIAL GENERATED VIEW — ${code("complete: false")}.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from ${code("docs/decisions/records/DEC-*.md")}.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n\n## Unresolved historical ID collisions\n\nThese IDs are excluded from both formal records and relation targets until their conflicting source rows are reconciled. Source details are preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${collisionTable}\n`;
 }
 
 export function decisionGeneratedFiles(root) {
   const records = readDecisionRecords(root);
+  const collisions = readDecisionIdCollisions(root);
   return {
-    "docs/project/DECISIONS.md": generateDecisionIndex(records),
+    "docs/project/DECISIONS.md": generateDecisionIndex(records, collisions.registry),
     "docs/project/schemas/decision-record.schema.json": `${JSON.stringify(DECISION_RECORD_SCHEMA, null, 2)}\n`,
+    "docs/project/schemas/decision-id-collisions.schema.json": `${JSON.stringify(DECISION_ID_COLLISION_SCHEMA, null, 2)}\n`,
   };
 }
 
 export function validateDecisionRepository(root, records = readDecisionRecords(root)) {
+  const collisions = readDecisionIdCollisions(root);
   return [
-    ...validateDecisionRecords(records),
+    ...validateDecisionIdCollisions(collisions.file, collisions.registry),
+    ...validateDecisionRecords(records, collisions.registry),
     ...validateActiveDecisionImmutability(root, records),
   ];
 }
