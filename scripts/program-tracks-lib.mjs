@@ -1,10 +1,18 @@
 // Validation for program track registers under docs/programs/*/tracks.yaml.
 // Pure functions; the test file and the CLI both call `validateRegister`.
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+//
+// The JSON schema (docs/programs/tracks.schema.json) owns field shapes. The
+// checks below own what a schema cannot see: relations between rows, and
+// whether a referenced file really is a tracked regular file inside the repo.
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 import YAML from "yaml";
+
+export const SCHEMA_PATH = "docs/programs/tracks.schema.json";
+const SATISFIES_DEPENDENCY = new Set(["done"]);
 
 export function repoRootFrom(metaUrl) {
   return resolve(dirname(fileURLToPath(metaUrl)), "..");
@@ -23,14 +31,39 @@ export function loadRegister(root, relativePath) {
   return YAML.parse(readFileSync(resolve(root, relativePath), "utf8"));
 }
 
+export function loadSchema(root) {
+  return JSON.parse(readFileSync(resolve(root, SCHEMA_PATH), "utf8"));
+}
+
+/** Tracked files as `git ls-files` reports them, forward-slashed, as a Set. */
+export function trackedFiles(root) {
+  const out = execFileSync("git", ["-C", root, "ls-files", "-z"], { encoding: "utf8" });
+  return new Set(out.split("\0").filter(Boolean));
+}
+
+/**
+ * A repository evidence path must be relative, must not escape the root, must
+ * be a regular file on disk, and must be tracked by git. `tracked` may be
+ * omitted (tests construct registers without a git context); then only the
+ * disk checks run.
+ */
+export function classifyRepoPath(root, value, tracked) {
+  if (typeof value !== "string" || value.trim() === "") return "EMPTY";
+  const normalized = value.replace(/\\/g, "/");
+  if (isAbsolute(value) || /^[A-Za-z]:/.test(value)) return "ABSOLUTE";
+  if (normalized.split("/").some((segment) => segment === "..")) return "ESCAPES_ROOT";
+  if (!root) return "OK";
+  const absolute = resolve(root, normalized);
+  if (!existsSync(absolute)) return "MISSING";
+  if (!statSync(absolute).isFile()) return "NOT_A_FILE";
+  if (tracked && !tracked.has(normalized)) return "UNTRACKED";
+  return "OK";
+}
+
 /**
  * Returns a list of findings ({code, path, detail}). Empty means valid.
- * Structural checks come from the JSON schema; the cross-row invariants
- * (one active track, unique ids, resolvable dependencies, acyclic graph,
- * evidence and resume files present on disk) are checked here because a
- * schema cannot see across rows or onto the filesystem.
  */
-export function validateRegister(register, { root, relativePath, schema } = {}) {
+export function validateRegister(register, { root, relativePath, schema, tracked } = {}) {
   const findings = [];
   const finding = (code, detail, path = relativePath) => findings.push({ code, path, detail });
 
@@ -44,38 +77,46 @@ export function validateRegister(register, { root, relativePath, schema } = {}) 
   }
 
   const tracks = register.tracks;
-  const ids = tracks.map((t) => t.id);
   const seen = new Set();
-  for (const id of ids) {
-    if (seen.has(id)) finding("DUPLICATE_ID", id);
-    seen.add(id);
+  for (const t of tracks) {
+    if (seen.has(t.id)) finding("DUPLICATE_ID", t.id);
+    seen.add(t.id);
   }
+  const byId = new Map(tracks.map((t) => [t.id, t]));
 
   const active = tracks.filter((t) => t.status === "active");
   if (active.length !== 1) {
     finding("ACTIVE_COUNT", `expected exactly 1 active track, found ${active.length}`);
   }
 
+  const pathFinding = (code, trackId, value) => {
+    const problem = classifyRepoPath(root, value, tracked);
+    if (problem !== "OK") finding(code, `${trackId}: ${value} (${problem})`);
+  };
+
   for (const t of tracks) {
     for (const dep of t.depends_on) {
-      if (!seen.has(dep)) finding("UNKNOWN_DEPENDENCY", `${t.id} depends on ${dep}`);
       if (dep === t.id) finding("SELF_DEPENDENCY", t.id);
+      else if (!byId.has(dep)) finding("UNKNOWN_DEPENDENCY", `${t.id} depends on ${dep}`);
     }
-    if (t.status === "active") {
+    if (t.status === "active" || t.status === "done") {
       for (const dep of t.depends_on) {
-        const d = tracks.find((x) => x.id === dep);
-        if (d && !["done", "rehomed"].includes(d.status)) {
-          finding("ACTIVE_WITH_OPEN_DEPENDENCY", `${t.id} is active but ${dep} is ${d.status}`);
+        const d = byId.get(dep);
+        if (d && d !== t && !SATISFIES_DEPENDENCY.has(d.status)) {
+          finding(
+            t.status === "active" ? "ACTIVE_WITH_OPEN_DEPENDENCY" : "DONE_WITH_OPEN_DEPENDENCY",
+            `${t.id} is ${t.status} but ${dep} is ${d.status}`,
+          );
         }
       }
     }
-    if (root) {
-      if (t.resume_file && !existsSync(resolve(root, t.resume_file))) {
-        finding("RESUME_FILE_MISSING", `${t.id}: ${t.resume_file}`);
-      }
-      for (const ev of t.evidence) {
-        if (!existsSync(resolve(root, ev))) finding("EVIDENCE_MISSING", `${t.id}: ${ev}`);
-      }
+    if (t.status === "active" && (typeof t.resume_file !== "string" || t.resume_file.trim() === "")) {
+      finding("ACTIVE_WITHOUT_RESUME_FILE", t.id);
+    }
+    if (typeof t.resume_file === "string") pathFinding("RESUME_FILE_INVALID", t.id, t.resume_file);
+    for (const ev of t.evidence) pathFinding("EVIDENCE_INVALID", t.id, ev);
+    if (t.status === "rehomed" && typeof t.rehomed_to === "string") {
+      pathFinding("REHOMED_TARGET_INVALID", t.id, t.rehomed_to);
     }
   }
 
@@ -88,26 +129,21 @@ export function validateRegister(register, { root, relativePath, schema } = {}) 
       return;
     }
     state.set(id, "visiting");
-    const t = tracks.find((x) => x.id === id);
-    for (const dep of t?.depends_on ?? []) if (seen.has(dep)) visit(dep, [...stack, id]);
+    for (const dep of byId.get(id)?.depends_on ?? []) if (byId.has(dep) && dep !== id) visit(dep, [...stack, id]);
     state.set(id, "done");
   };
-  for (const id of ids) visit(id, []);
+  for (const id of byId.keys()) visit(id, []);
 
   return findings;
 }
 
-export function loadSchema(root, relativeDir) {
-  return JSON.parse(readFileSync(resolve(root, relativeDir, "tracks.schema.json"), "utf8"));
-}
-
 export function checkAllRegisters(root) {
+  const schema = loadSchema(root);
+  const tracked = trackedFiles(root);
   const results = [];
   for (const rel of listRegisters(root)) {
-    const dir = dirname(rel);
-    const schema = loadSchema(root, dir);
     const register = loadRegister(root, rel);
-    results.push({ path: rel, findings: validateRegister(register, { root, relativePath: rel, schema }) });
+    results.push({ path: rel, findings: validateRegister(register, { root, relativePath: rel, schema, tracked }) });
   }
   return results;
 }

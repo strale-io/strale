@@ -5,7 +5,7 @@ program: cto-readiness
 status: active
 started: 2026-09-02
 owner: claude-code
-review_route: cross-provider
+review_route: author-self-verification-plus-fresh-codex-review
 ---
 
 # CTO-readiness program
@@ -16,22 +16,26 @@ review_route: cross-provider
 
 ## Resume here
 
-Any fresh session, **Claude Code or Codex**, resumes this program by doing
-exactly this and nothing else:
+Any fresh session, **Claude Code or Codex**, resumes this program by starting
+here and following only the pointers below:
 
-1. Create an isolated worktree from current `origin/main`
-   (`git worktree add --detach <path> origin/main`, then `git switch -c
-   <type>/<kebab-name>`). Never work in the shared checkout at
-   `C:\Users\pette\Projects\strale`; it belongs to other work.
+1. `git fetch origin`, then create an isolated worktree from current
+   `origin/main` (`git worktree add --detach <path> origin/main`, then
+   `git switch -c <type>/<kebab-name>`) and run `npm ci` inside it. Worktrees
+   do not share `node_modules`, and linking is forbidden. Never work in the
+   shared checkout at `C:\Users\pette\Projects\strale`; it belongs to other
+   work.
 2. Read `tracks.yaml`. The single track with `status: active` is the current
-   batch. Its `next_action` is the next concrete step. Its `resume_file` is the
-   handoff written by the last session that touched it.
-3. Run `npm run programs:test`. If it fails, the register is inconsistent and
+   batch. Its `next_action` is the next concrete step. Read its `resume_file`
+   in full: it is the handoff written by the last session that touched the
+   track and names any further sources that batch needs.
+3. Run `npm run programs:check`. If it fails, the register is inconsistent and
    repairing it is the first task.
 4. Work the batch through the **batch loop** below. Do not start a second track
    unless the active one is blocked and the blocker is recorded.
 
-Chat history, Notion, and older handoffs are never needed to resume.
+Chat history, Notion, and handoffs other than the active track's `resume_file`
+are never needed to resume.
 
 ## Goal
 
@@ -63,31 +67,36 @@ register wins on any disagreement.
 | T2 | Repo hygiene sweep | Every stale branch, worktree, rescue snapshot, and orphan directory either verified-landed-and-deleted or listed with a reason it must stay. Shared checkout returned to a clean, known state. |
 | T3 | Hygiene enforcement | CI job flags branches older than seven days without an open PR and worktrees without a session; session-end rule deletes branch and worktree in the merging session; daily run reports and prunes rescue snapshots; `WORKTREES.md` describes reality. |
 | T4 | Remediation closure | WP10 acceptance recorded as ACCEPT, EXTEND, or FAIL; WP9 observation closed; WP12's proxy-hop fact established read-only; WP15 integration lane owns its database; WP17 ledger shipped or formally deferred; WP13 dependency triage run; WP14 blocker and WP16 program re-homed as their own rows. |
-| T5 | CTO-readable structure | `README.md` reads top-down for a stranger; `docs/` has one index; `archive/` and `handoff/` are indexed; root contains only top-level canon; the target information architecture in the migration plan §5 is reached or each deviation is recorded. |
-| T6 | M3 repo-native workflows | Per migration plan §10 M3: Notion replacements for daily priorities, activity, vendor state; session start/end and `go` prepared against repo-native sources; protocol coverage manifest complete; nothing activated. |
-| T7 | M4 atomic cutover | Per migration plan §10 M4. **Founder confirms the flip.** Entrypoints become peers, Notion consumers removed in one PR, guards blocking. |
+| T5 | CTO-readable structure | `README.md` reads top-down for a stranger; `docs/` has one index; `archive/` and `handoff/` are indexed; root contains only top-level canon; the target information architecture in the migration plan section 5 is reached or each deviation is recorded. |
+| T6 | M3 repo-native workflows | Per migration plan section 10 M3: Notion replacements for daily priorities, activity, vendor state; session start/end and `go` prepared against repo-native sources; protocol coverage manifest complete; nothing activated. |
+| T7 | M4 atomic cutover | Per migration plan section 10 M4. **Founder confirms the flip.** Entrypoints become peers, Notion consumers removed in one PR, guards blocking. |
 | T8 | M5 to M7 closeout | Legacy authorities archived, clean-session acceptance passed on both tools, plan archived with evidence. |
 | T9 | Discovery and retrieval (WP16) | Re-homed from remediation. Starts only after T7. Its own plan when opened. |
 
-Ordering: T1 → T2 → T3 → T4 → T5 → T6 → T7 → T8 → T9. T2 and T3 may run
-between T1 sub-batches when T1 is waiting on review. Nothing in T6 or later
-starts before T1's exit gate passes.
+Intended order: T1, T2, T3, T4, T5, T6, T7, T8, T9. Only `depends_on` in the
+register is enforced: T2 and T4 do not depend on T1, so either may become the
+active track while T1 waits on review, provided T1 is marked `blocked` with the
+review named as its blocker. Nothing in T6 or later starts before T1 is done.
 
 ## The batch loop
 
 Every batch, on either tool, runs this loop. A batch that skips a step is not
 done.
 
-1. **Worktree.** Fresh worktree and branch from `origin/main`.
+1. **Worktree.** Fresh worktree and branch from `origin/main`, `npm ci` inside.
 2. **Plan.** A short stored plan in `archive/sessions/<date>-<track>-plan.md`:
    scope, files, exit test, what is explicitly out of scope.
 3. **Implement**, with tests that fail before the change and pass after.
-4. **Self-verify.** A fresh Claude agent with read-only tools is told the exit
-   criteria and asked to break the work, not to praise it. Findings are fixed
-   or explicitly carried.
-5. **Independent review.** A fresh Codex task (`gpt-5.6-sol`, `xhigh`,
-   read-only) reviews the exact commit. Cross-provider review is stronger than
-   same-provider review; this is the spirit of the 2026-09-01 routing rule.
+4. **Self-verify in the author's own environment.** A fresh read-only agent of
+   the same tool that authored the batch (a Claude sub-agent for Claude Code
+   work, a Codex sub-task for Codex work) is told the exit criteria and asked
+   to break the work, not to praise it. Findings are fixed or explicitly
+   carried. Claude is never invoked to review Codex-authored work; that is the
+   founder's 2026-09-01 review-routing rule recorded in `AGENTS.md` and
+   `CLAUDE.md`, and it stands until a recorded supersession says otherwise.
+5. **Independent review.** A fresh, separate Codex task (`gpt-5.6-sol`,
+   `xhigh`, read-only, closed after its verdict) reviews the exact commit.
+   Blocking findings are fixed and re-reviewed; nothing ships on a FAIL.
 6. **Ship.** Open PR, wait for CI, merge, verify `origin/main` carries the
    commit.
 7. **Record.** Update `tracks.yaml` in the same PR, write the handoff to

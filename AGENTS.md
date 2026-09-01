@@ -47,9 +47,10 @@ project documents or retire Notion before M4.
 Long-running work is tracked in `docs/programs/` (index: `docs/programs/README.md`).
 Each program has a `PROGRAM.md` with a **Resume here** section and a
 machine-checked `tracks.yaml` (`npm run programs:check`). A session continuing
-a program reads those two files and nothing else; the migration checkpoint
-above is the M2-through-M7 detail behind the `cto-readiness` program. Programs
-are execution records, not project truth.
+a program starts with those two files and follows their pointers: the active
+track's `resume_file` names anything else that batch needs. The migration
+checkpoint above is the M2-through-M7 detail behind the `cto-readiness`
+program. Programs are execution records, not project truth.
 
 ## Notion & GitHub Access
 

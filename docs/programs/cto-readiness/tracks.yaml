@@ -1,9 +1,11 @@
 # CTO-readiness program — track register.
-# Validated by `npm run programs:test`. Human view: PROGRAM.md (this file wins).
+# Validated by `npm run programs:check` (tests: `npm run programs:test`).
+# Human view: PROGRAM.md; this file wins on any disagreement.
 # Status enum: queued | active | blocked | founder_gated | done | rehomed
 # Exactly one track is `active` at any time. A `blocked` or `founder_gated`
-# track must name its blocker. A `done` track must list evidence paths that
-# exist on main. A `rehomed` track must name where it went.
+# track must name its blocker. A `done` track must list evidence paths that are
+# tracked regular files on main. A `rehomed` track must name where it went.
+# Only `done` satisfies a dependency.
 schema_version: 1
 program: cto-readiness
 updated: 2026-09-02
@@ -15,9 +17,11 @@ tracks:
     owner: session
     next_action: >
       Design the disposition register schema under docs/project/schemas/,
-      classify all 15 legacy-authority inventory entries and all 71 preserved
-      Decision source rows, reconcile the migration plan's older "Next:" notes
-      against merged commits, and add the tests listed in the checkpoint.
+      classify all 15 legacy-authority inventory entries and every preserved
+      Decision source row (318 in the private archive, 71 of them in the
+      collision registry), reconcile the migration plan's older "Next:" notes
+      against merged commits, and add the tests named in this track's exit
+      criteria.
     resume_file: handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md
     exit:
       - schema-validated disposition register committed with exact counts per disposition
@@ -30,13 +34,14 @@ tracks:
   - id: T2
     title: Repo hygiene sweep
     status: queued
-    depends_on: [T1]
+    depends_on: []
     owner: session
     next_action: >
-      Classify every remote branch (50 unmerged at 2026-09-02, 11 of them
-      janitor rescue snapshots), every registered worktree (30), the
-      unregistered strale-work directory, and the dirty shared checkout.
-      Delete what is verified landed; list what must stay and why.
+      Recount at start, then classify every remote branch (50 unmerged on
+      2026-09-02, 11 of them janitor rescue snapshots), every linked worktree
+      (30 on 2026-09-02, plus the shared checkout), the unregistered
+      strale-work directory, and the dirty shared checkout. Delete what is
+      verified landed; list what must stay and why.
     resume_file: null
     exit:
       - every remote and local branch either deleted with landed-evidence or listed with a reason
@@ -66,7 +71,7 @@ tracks:
   - id: T4
     title: Remediation program closure
     status: queued
-    depends_on: [T1]
+    depends_on: []
     owner: session
     next_action: >
       Record WP10's overdue seven-day cadence verdict from production evidence;
@@ -91,14 +96,14 @@ tracks:
     next_action: >
       Rewrite README.md top-down for a stranger; add a docs/ index; index
       archive/ and handoff/; move non-canon root files; reach or record every
-      deviation from the migration plan §5 target architecture.
+      deviation from the migration plan section 5 target architecture.
     resume_file: null
     exit:
       - README.md routes a stranger from product to code to process in one read
       - docs/README.md indexes every docs/ subtree with one line each
       - archive/ and handoff/ have generated indexes and no unindexed files
       - repo root contains only files listed in the CLAUDE.md Report Filing Convention as top-level canon
-      - each deviation from migration plan §5 is listed with a reason
+      - each deviation from migration plan section 5 is listed with a reason
     evidence: []
 
   - id: T6
@@ -107,8 +112,9 @@ tracks:
     depends_on: [T1, T5]
     owner: session
     next_action: >
-      Per migration plan §10 M3. First sub-batch is the vendor-current-state
-      shadow replacement named by the vendor-stack closeout.
+      Per migration plan section 10 M3. First sub-batch is the
+      vendor-current-state shadow replacement named by the vendor-stack
+      closeout.
     resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
     exit:
       - repo-native replacements testable without changing existing authority
@@ -123,10 +129,10 @@ tracks:
     status: queued
     depends_on: [T3, T6]
     owner: petter
-    blocker: founder confirms the flip on the exact reviewed commit
     next_action: >
-      Per migration plan §10 M4. Prepare the single cutover PR; request one
-      founder yes; merge; verify both entrypoints load the same truth.
+      Per migration plan section 10 M4. Prepare the single cutover PR; request
+      one founder yes on the exact reviewed commit; merge; verify both
+      entrypoints load the same truth.
     resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
     exit:
       - both tools load the same project truth and pass entrypoint parity
@@ -139,7 +145,7 @@ tracks:
     status: queued
     depends_on: [T7]
     owner: session
-    next_action: Per migration plan §10 M5, M6, M7.
+    next_action: Per migration plan section 10 M5, M6, M7.
     resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
     exit:
       - legacy authorities archived with zero broken Charter links

@@ -9,12 +9,14 @@ decided. Project truth lives in `docs/project/` (candidate until M4) and
 | Program | Register | Status |
 |---|---|---|
 | [CTO-readiness](cto-readiness/PROGRAM.md) | `cto-readiness/tracks.yaml` | active from 2026-09-02 |
-| [Remediation](../remediation/REMEDIATION-LEDGER.md) | `../remediation/packages/*.yaml` | closure tracked by CTO-readiness track T4 |
+| [Remediation](../remediation/REMEDIATION-LEDGER.md) | legacy program; per-package YAML under `../remediation/packages/`, not a track register | closure tracked by CTO-readiness track T4 |
 
 Rules:
 
-- One register per program, validated by `npm run programs:test`.
+- One register per program, `docs/programs/<program>/tracks.yaml`, validated
+  against the shared `docs/programs/tracks.schema.json` by
+  `npm run programs:check` (the checker's own tests: `npm run programs:test`).
 - A track's `status` changes only in the same PR that lands the evidence for it.
-- Any session, Claude Code or Codex, resumes a program by reading its
-  `PROGRAM.md` **Resume here** section and the register. Nothing else is
-  required, and chat history is never required.
+- Any session, Claude Code or Codex, resumes a program by starting at its
+  `PROGRAM.md` **Resume here** section and following its pointers: the register,
+  then the active track's `resume_file`. Chat history is never required.
