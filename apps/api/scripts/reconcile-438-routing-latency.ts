@@ -38,17 +38,12 @@
  *
  * ## Authority
  *
- * `catalogue_metadata_sync` — metadata that describes a capability, not
- * whether it is sold or what it costs. Money, listing state and lifecycle are
- * deliberately absent from `AUTONOMOUS_PURPOSES`, and none of them is touched
- * here. If you disagree with that classification, the fix is to change the
- * classification, not to widen the purpose list.
- *
- * `requireFounderGrant` is not an option: `FOUNDER_GRANT_PUBLIC_KEY_PEM` is
- * empty, so every founder-gated action is refused by design until a key is
- * installed.
+ * This action remains `approval_required` in DQ-27. The measured values settle
+ * what should change; they do not grant permission to change production.
+ * `requireFounderGrant` therefore fails closed until the founder-grant route is
+ * installed and a short-lived grant for this exact purpose is supplied.
  */
-import { autonomousAuthority } from "../src/lib/production-authority.js";
+import { requireFounderGrant } from "../src/lib/production-authority.js";
 import { openOperatorWriteDb } from "../src/lib/operator-db.js";
 
 interface Target {
@@ -76,7 +71,7 @@ function fingerprint(row: Record<string, unknown>): string {
 
 async function main(): Promise<void> {
   const sql = openOperatorWriteDb(
-    autonomousAuthority("catalogue_metadata_sync", "DEC-20260815-A"),
+    requireFounderGrant("reconcile_438_routing_latency"),
   );
 
   try {
@@ -86,9 +81,20 @@ async function main(): Promise<void> {
     // guard that matters is the one taken against the connection that writes.
     const before = await sql`
       SELECT * FROM capabilities WHERE slug IN ('page-speed-test','company-news') ORDER BY slug`;
-    const [{ digest: digestBefore, n: rowsBefore }] = await sql`
+    const [{ digest: digestBefore, expected_digest: digestExpected, n: rowsBefore }] = await sql`
       SELECT count(*)::int AS n,
-             md5(string_agg(slug || ':' || coalesce(avg_latency_ms::text,'null'), ',' ORDER BY slug)) AS digest
+             md5(string_agg(slug || ':' || coalesce(avg_latency_ms::text,'null'), ',' ORDER BY slug)) AS digest,
+             md5(string_agg(
+               slug || ':' || coalesce(
+                 CASE slug
+                   WHEN 'page-speed-test' THEN '20000'
+                   WHEN 'company-news'    THEN '28734'
+                   ELSE avg_latency_ms::text
+                 END,
+                 'null'
+               ),
+               ',' ORDER BY slug
+             )) AS expected_digest
         FROM capabilities`;
 
     const baseline = new Map(before.map((r) => [r.slug as string, r]));
@@ -171,20 +177,10 @@ async function main(): Promise<void> {
 
     if (rowsAfter !== rowsBefore) problems.push(`capability row count moved: ${rowsBefore} -> ${rowsAfter}`);
 
-    // Unrelated rows: the digest is over (slug, avg_latency_ms) for every row,
-    // so it MUST change — but only by these two slugs. Recompute the expected
-    // digest from the baseline with just the two edits applied.
-    const [{ digest: digestExpected }] = await sql`
-      SELECT md5(string_agg(slug || ':' || coalesce(v::text,'null'), ',' ORDER BY slug)) AS digest
-        FROM (
-          SELECT slug,
-                 CASE slug
-                   WHEN 'page-speed-test' THEN 20000
-                   WHEN 'company-news'    THEN 28734
-                   ELSE avg_latency_ms
-                 END AS v
-            FROM capabilities
-        ) t`;
+    // Unrelated rows: digestExpected was captured before the transaction with
+    // only the two intended substitutions applied. Computing it after the
+    // write would absorb an unrelated concurrent mutation and make this guard
+    // incapable of detecting the very change it is meant to catch.
     if (digestAfter !== digestExpected) {
       problems.push(
         `an unrelated capability's avg_latency_ms changed (digest ${digestAfter} != expected ${digestExpected})`,
