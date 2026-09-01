@@ -75,12 +75,71 @@ export function assertAlertingConfigured(): void {
  * ignoring that field logs "alerting-sent" for emails that never left.
  * Callers that page on this (fatal startup) rely on the distinction.
  */
+/**
+ * Is this process a test runner?
+ *
+ * Vitest sets VITEST=true in every worker. NODE_ENV is checked too because a
+ * script run under `npx tsx` for a test purpose sets that and not VITEST.
+ * Deliberately NOT "is this production": staging and local dev SHOULD be able
+ * to page a human. The thing that must never page a human is a test asserting
+ * on alert behaviour.
+ */
+function isTestRunner(): boolean {
+  return (
+    process.env.VITEST === "true" ||
+    process.env.VITEST === "1" ||
+    (process.env.NODE_ENV ?? "").toLowerCase() === "test"
+  );
+}
+
 export async function sendAlert(opts: {
   subject: string;
   body: string;
   severity: "info" | "warning" | "critical";
 }): Promise<boolean> {
   const { subject, body, severity } = opts;
+
+  // ── Alert isolation (incident 2026-08-22: STARVE-SET-1) ───────────────────
+  //
+  // A test run emailed the production alert inbox. The body read "Settlement
+  // STARVE-SET-1 (slug=real-cap, 99 cents) moved USDC and lost its transaction
+  // row" — a fabricated settlement id, a capability slug that does not exist in
+  // the 340-capability catalogue, and a price never charged on the x402 rail.
+  // It read as a real customer losing real money. Hours went into establishing
+  // that no such settlement had ever existed, and a production money-path
+  // remediation was applied against the wrong incident on the strength of it.
+  //
+  // Every condition needed for that was in place and none of them was checked:
+  //
+  //   - This function had NO environment gate. Only `severity === "info"` was
+  //     filtered; the recovered-settlement alert is "warning".
+  //   - `test-env-setup.ts` set three placeholder secrets and left
+  //     RESEND_API_KEY alone, so a worker that acquired one kept it.
+  //   - ~30 modules run `dotenv.config()` at import time against the repo-root
+  //     .env, which holds a live RESEND_API_KEY. Any test transitively
+  //     importing one of them (index.ts, jobs/daily-digest.ts, …) inherits it.
+  //     This exact leak was identified for DATABASE_URL and fixed in ONE module
+  //     (db/solution-catalogue.ts, 2026-08-16); the alerting boundary was never
+  //     given the same treatment.
+  //   - `alertOnce`'s cooldown fails OPEN by design, and reads whatever
+  //     database the test points at, so dedup suppressed nothing. Under
+  //     `scripts/mutation-test.mjs` — which re-runs the suite per mutant with
+  //     the ambient environment inherited — one alerting call site becomes one
+  //     email per mutant.
+  //
+  // So the gate lives HERE, at the boundary, not in each of 198 test files. Of
+  // those, exactly one (guarded-executor.test.ts) mocks this module today; a
+  // convention that has to be remembered 198 times is not a control.
+  //
+  // Escape hatch for deliberately exercising real delivery. It is opt-in and
+  // per-process; nothing in the suite sets it.
+  if (isTestRunner() && process.env.ALERT_ALLOW_IN_TEST !== "true") {
+    log.info(
+      { label: "alerting-suppressed-test-env", severity, subject },
+      "alerting-suppressed-test-env (test runner detected; set ALERT_ALLOW_IN_TEST=true to override)",
+    );
+    return false;
+  }
 
   // Alert fatigue (incident 2026-08-14): a CRITICAL "x402 settlement volume
   // dropped" page — a full revenue stoppage — arrived in an inbox interleaved
