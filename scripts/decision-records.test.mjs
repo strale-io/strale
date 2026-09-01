@@ -14,7 +14,9 @@ import {
   validateActiveBodyChange,
   validateActiveDecisionImmutability,
   validateDecisionCollisionImmutability,
+  validateDecisionCollisionResolutionEvidence,
   validateDecisionIdCollisions,
+  validateDecisionRepository,
   validateDecisionRecords,
 } from "./decision-records-lib.mjs";
 
@@ -232,12 +234,66 @@ function resolvedCollisionRecords() {
   ];
 }
 
+function resolutionEvidenceDocument({
+  authorityActive = false,
+  collisionId = "DEC-20260502-A",
+  corrections = ["DEC-20260812-A"],
+  sourceRows,
+} = {}) {
+  const rows = sourceRows ?? [
+    {
+      source_page_id: "11111111111111111111111111111111",
+      disposition: "formal_record",
+      record_key: "DEC-20260502-A--notion-11111111111111111111111111111111",
+    },
+    {
+      source_page_id: "22222222222222222222222222222222",
+      disposition: "formal_record",
+      record_key: "DEC-20260502-A--notion-22222222222222222222222222222222",
+    },
+  ];
+  const rowYaml = rows.map((row) => [
+    `  - source_page_id: "${row.source_page_id}"`,
+    `    disposition: ${row.disposition}`,
+    ...(row.record_key ? [`    record_key: ${row.record_key}`] : []),
+  ].join("\n")).join("\n");
+  const correctionYaml = corrections.length === 0
+    ? "corrects_migration_state_in: []"
+    : `corrects_migration_state_in:\n${corrections.map((key) => `  - ${key}`).join("\n")}`;
+  return `---
+doc_type: decision-collision-resolution
+collision_id: ${collisionId}
+resolution_status: resolved
+status: complete
+complete: true
+phase: M2
+authority_scope: none
+authority_active: ${authorityActive}
+resolved_at: 2026-09-01
+implementation_status: drift-open
+${correctionYaml}
+source_rows:
+${rowYaml}
+---
+
+# Resolution
+
+Evidence.
+`;
+}
+
 test("resolved collisions map duplicate display IDs bidirectionally by record key", () => {
   const registry = resolvedCollisionRegistry();
   const records = resolvedCollisionRecords();
   assert.deepEqual(validateDecisionIdCollisions("collisions.yaml", registry), []);
   assert.deepEqual(validateDecisionRecords(records, registry), []);
-  const index = generateDecisionIndex(records, registry);
+  const evidence = new Map([["DEC-20260502-A", {
+    metadata: {
+      implementation_status: "drift-open",
+      corrects_migration_state_in: ["DEC-20260812-A"],
+    },
+  }]]);
+  const index = generateDecisionIndex(records, registry, evidence);
   assert.match(index, /The Decision column shows the historical display ID/);
   assert.match(index, /\| Decision \| Internal record key \|/);
   assert.match(index, /`DEC-20260502-A--notion-11111111111111111111111111111111`/);
@@ -245,6 +301,119 @@ test("resolved collisions map duplicate display IDs bidirectionally by record ke
     index,
     /records\/DEC-20260502-A--notion-22222222222222222222222222222222\.md/,
   );
+  assert.match(index, /Resolved historical ID collisions/);
+  assert.match(index, /`drift-open`/);
+  assert.match(index, /DEC-20260812-A.*prior M2 migration state/);
+});
+
+test("resolved collision evidence is contained and machine-bound", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-collision-evidence-"));
+  const registry = resolvedCollisionRegistry();
+  const records = [
+    ...resolvedCollisionRecords(),
+    record({
+      id: "DEC-20260812-A",
+      topic: "readiness",
+      decision: "DEC-20260502-A was withheld during the earlier migration state.",
+    }),
+  ];
+  const evidenceRef = registry.collisions[0].resolution_evidence;
+  const evidencePath = join(root, evidenceRef);
+  try {
+    mkdirSync(dirname(evidencePath), { recursive: true });
+    writeFileSync(evidencePath, resolutionEvidenceDocument(), "utf8");
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    execFileSync("git", ["add", evidenceRef], { cwd: root });
+    assert.deepEqual(
+      validateDecisionCollisionResolutionEvidence(root, registry, records),
+      [],
+    );
+
+    const mismatched = resolutionEvidenceDocument({
+      sourceRows: [
+        {
+          source_page_id: "11111111111111111111111111111111",
+          disposition: "documented_only",
+        },
+        {
+          source_page_id: "22222222222222222222222222222222",
+          disposition: "formal_record",
+          record_key: "DEC-20260502-A--notion-22222222222222222222222222222222",
+        },
+      ],
+    });
+    writeFileSync(evidencePath, mismatched, "utf8");
+    assert.ok(
+      validateDecisionCollisionResolutionEvidence(root, registry, records).some(
+        (item) =>
+          item.code === "DECISION_COLLISION_RESOLUTION_EVIDENCE_BINDING_MISMATCH",
+      ),
+    );
+
+    writeFileSync(evidencePath, resolutionEvidenceDocument({ authorityActive: true }), "utf8");
+    assert.ok(
+      validateDecisionCollisionResolutionEvidence(root, registry, records).some(
+        (item) =>
+          item.code === "DECISION_COLLISION_RESOLUTION_EVIDENCE_CONTRACT_INVALID",
+      ),
+    );
+
+    const genericRegistry = structuredClone(resolvedCollisionRegistry());
+    genericRegistry.collisions[0].id = "DEC-20260503-A";
+    for (const source of genericRegistry.collisions[0].records) {
+      source.record_key = source.record_key.replace(
+        "DEC-20260502-A",
+        "DEC-20260503-A",
+      );
+    }
+    writeFileSync(
+      evidencePath,
+      resolutionEvidenceDocument({
+        collisionId: "DEC-20260503-A",
+        corrections: [],
+        sourceRows: genericRegistry.collisions[0].records.map((source) => ({
+          source_page_id: source.source_page_id,
+          disposition: source.disposition,
+          record_key: source.record_key,
+        })),
+      }),
+      "utf8",
+    );
+    assert.deepEqual(
+      validateDecisionCollisionResolutionEvidence(root, genericRegistry, []),
+      [],
+    );
+
+    writeFileSync(evidencePath, resolutionEvidenceDocument({ corrections: [] }), "utf8");
+    assert.ok(
+      validateDecisionCollisionResolutionEvidence(root, registry, records).some(
+        (item) =>
+          item.code === "DECISION_COLLISION_RESOLUTION_CORRECTION_BINDING_MISMATCH",
+      ),
+    );
+
+    writeFileSync(
+      evidencePath,
+      resolutionEvidenceDocument({ corrections: ["DEC-20260502-A--notion-11111111111111111111111111111111"] }),
+      "utf8",
+    );
+    assert.ok(
+      validateDecisionCollisionResolutionEvidence(root, registry, records).some(
+        (item) =>
+          item.code === "DECISION_COLLISION_RESOLUTION_CORRECTION_TARGET_MISMATCH",
+      ),
+    );
+
+    registry.collisions[0].resolution_evidence = "archive/sessions/../../package-lock.json";
+    assert.ok(
+      validateDecisionCollisionResolutionEvidence(root, registry, records).some(
+        (item) =>
+          item.code === "DECISION_COLLISION_RESOLUTION_EVIDENCE_REF_INVALID",
+      ),
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test("qualified-key relationships resolve, invert, and participate in cycles", () => {
@@ -905,6 +1074,13 @@ collisions:
 `;
   try {
     initializeCollisionHistoryRepo(root, base);
+    const evidencePath = join(root, "archive/sessions/collision-resolution.md");
+    mkdirSync(dirname(evidencePath), { recursive: true });
+    writeFileSync(evidencePath, resolutionEvidenceDocument(), "utf8");
+    execFileSync("git", ["add", "archive/sessions/collision-resolution.md"], {
+      cwd: root,
+    });
+    execFileSync("git", ["commit", "--amend", "--no-edit"], { cwd: root });
     const current = resolvedCollisionRegistry();
     assert.deepEqual(validateDecisionCollisionImmutability(root, current, "HEAD"), []);
 
@@ -952,6 +1128,18 @@ collisions:
         (item) => item.code === "DECISION_COLLISION_SOURCE_CHANGED",
       ),
     );
+
+    writeFileSync(
+      evidencePath,
+      resolutionEvidenceDocument().replace("Evidence.", "Rewritten evidence."),
+      "utf8",
+    );
+    assert.ok(
+      validateDecisionCollisionImmutability(root, current, "HEAD").some(
+        (item) =>
+          item.code === "DECISION_COLLISION_RESOLUTION_EVIDENCE_CONTENT_CHANGED",
+      ),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -975,7 +1163,5 @@ test("generated index stays explicitly inactive", () => {
 });
 
 test("the repository decision candidates and merge-base immutability checks pass", () => {
-  const records = readDecisionRecords(process.cwd());
-  assert.deepEqual(validateDecisionRecords(records), []);
-  assert.deepEqual(validateActiveDecisionImmutability(process.cwd(), records), []);
+  assert.deepEqual(validateDecisionRepository(process.cwd()), []);
 });

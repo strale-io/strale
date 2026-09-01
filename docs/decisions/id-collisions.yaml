@@ -360,19 +360,21 @@ collisions:
         source_page_id: "34967c87082c810695c2e365deb8f2c8"
         disposition: unresolved
   - id: "DEC-20260502-A"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-01-decision-collision-resolution-DEC-20260502-A.md
     records:
       - title: "Strale v1 product narrowed to Counterparty Assurance; Payee Assurance renamed; lighter Payment-shape product deferred"
         historical_status: superseded
         source_url: https://app.notion.com/35467c87082c81ca99efdca389eb77b9
         source_page_id: "35467c87082c81ca99efdca389eb77b9"
-        disposition: unresolved
+        disposition: documented_only
+        rationale: "DEC-20260812-A preserves and supersedes this retired product direction; importing it as a formal superseded record would require rewriting that protected later record or inventing a historical edge."
       - title: "x402 uses the catalog (EUR) price converted at a single EUR_USD_RATE — no separate USD price tier"
         historical_status: active
         source_url: https://app.notion.com/35467c87082c8124bcc5e2c2597c76c6
         source_page_id: "35467c87082c8124bcc5e2c2597c76c6"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6
   - id: "DEC-20260505-D"
     resolution_status: unresolved
     resolution_evidence: null
