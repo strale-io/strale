@@ -247,6 +247,52 @@ test("resolved collisions map duplicate display IDs bidirectionally by record ke
   );
 });
 
+test("qualified-key relationships resolve, invert, and participate in cycles", () => {
+  const registry = resolvedCollisionRegistry();
+  const records = [
+    ...resolvedCollisionRecords(),
+    record({
+      id: "DEC-20260812-A",
+      topic: "readiness",
+      relations: [
+        {
+          type: "related_to",
+          target: "DEC-20260502-A--notion-22222222222222222222222222222222",
+        },
+      ],
+    }),
+  ];
+  assert.deepEqual(validateDecisionRecords(records, registry), []);
+  const index = generateDecisionIndex(records, registry);
+  assert.match(index, /`related_from`/);
+  assert.match(
+    index,
+    /`DEC-20260502-A--notion-22222222222222222222222222222222`/,
+  );
+  assert.match(index, /`DEC-20260812-A`/);
+
+  const cyclicRecords = resolvedCollisionRecords();
+  cyclicRecords[0].metadata.status = "active";
+  registry.collisions[0].records[0].historical_status = "active";
+  cyclicRecords[0].metadata.relations = [
+    {
+      type: "amends",
+      target: "DEC-20260502-A--notion-22222222222222222222222222222222",
+    },
+  ];
+  cyclicRecords[1].metadata.relations = [
+    {
+      type: "amends",
+      target: "DEC-20260502-A--notion-11111111111111111111111111111111",
+    },
+  ];
+  assert.ok(
+    validateDecisionRecords(cyclicRecords, registry).some(
+      (item) => item.code === "DECISION_RELATION_CYCLE",
+    ),
+  );
+});
+
 test("resolved collision validation fails closed for incomplete or false mappings", () => {
   const registry = resolvedCollisionRegistry();
   const records = resolvedCollisionRecords();
@@ -806,6 +852,22 @@ collisions:
         (item) => item.code === "DECISION_COLLISION_PAGE_ID_BACKFILL_INVALID",
       ),
     );
+
+    const removedCollision = structuredClone(current);
+    removedCollision.collisions = [];
+    assert.ok(
+      validateDecisionCollisionImmutability(root, removedCollision, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_REMOVED",
+      ),
+    );
+
+    const removedSource = structuredClone(current);
+    removedSource.collisions[0].records.shift();
+    assert.ok(
+      validateDecisionCollisionImmutability(root, removedSource, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_SOURCE_REMOVED",
+      ),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -861,6 +923,33 @@ collisions:
     assert.ok(
       validateDecisionCollisionImmutability(root, rebound, "HEAD").some(
         (item) => item.code === "DECISION_COLLISION_RECORD_KEY_CHANGED",
+      ),
+    );
+
+    const changedDisposition = structuredClone(current);
+    changedDisposition.collisions[0].records[0].disposition = "documented_only";
+    delete changedDisposition.collisions[0].records[0].record_key;
+    changedDisposition.collisions[0].records[0].rationale = "Changed later.";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, changedDisposition, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_DISPOSITION_CHANGED",
+      ),
+    );
+
+    const changedEvidence = structuredClone(current);
+    changedEvidence.collisions[0].resolution_evidence =
+      "archive/sessions/replacement-resolution.md";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, changedEvidence, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_RESOLUTION_EVIDENCE_CHANGED",
+      ),
+    );
+
+    const changedSource = structuredClone(current);
+    changedSource.collisions[0].records[0].historical_status = "retired";
+    assert.ok(
+      validateDecisionCollisionImmutability(root, changedSource, "HEAD").some(
+        (item) => item.code === "DECISION_COLLISION_SOURCE_CHANGED",
       ),
     );
   } finally {
