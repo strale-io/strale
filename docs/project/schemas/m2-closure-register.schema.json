@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "M2 closure disposition register",
+  "description": "Authored M2 closure audit. Every legacy-authority inventory entry, every preserved Decision source row, every migration-plan forward statement, the M2 exit gaps, and the next collision-free Decision batch. Machine-checked by scripts/m2-closure-register-lib.mjs; cross-row and filesystem invariants live there, not here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "authority_scope",
+    "status",
+    "complete",
+    "phase",
+    "authority_active",
+    "audited_at",
+    "audited_main",
+    "sources",
+    "counts",
+    "legacy_inventory",
+    "formal_records",
+    "decision_rows",
+    "plan_statements",
+    "exit_gaps",
+    "next_decision_batch"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "authority_scope": { "const": "none" },
+    "status": { "const": "candidate" },
+    "complete": { "const": false },
+    "phase": { "const": "M2" },
+    "authority_active": { "const": false },
+    "audited_at": { "$ref": "#/$defs/date" },
+    "audited_main": { "$ref": "#/$defs/sha40" },
+    "sources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["legacy_inventory", "decision_archive", "formal_records", "collision_registry", "migration_plan"],
+      "properties": {
+        "legacy_inventory": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path", "entry_count"],
+          "properties": { "path": { "type": "string" }, "entry_count": { "type": "integer", "minimum": 1 } }
+        },
+        "decision_archive": {
+          "type": "object", "additionalProperties": false,
+          "required": ["repository", "visibility", "commit", "export_prefix", "row_count", "status_file"],
+          "properties": {
+            "repository": { "type": "string" },
+            "visibility": { "const": "private" },
+            "commit": { "$ref": "#/$defs/sha40" },
+            "export_prefix": { "type": "string" },
+            "row_count": { "type": "integer", "minimum": 1 },
+            "status_file": { "type": "string" }
+          }
+        },
+        "formal_records": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path", "record_count"],
+          "properties": { "path": { "type": "string" }, "record_count": { "type": "integer", "minimum": 0 } }
+        },
+        "collision_registry": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path", "collision_count", "row_count"],
+          "properties": { "path": { "type": "string" }, "collision_count": { "type": "integer" }, "row_count": { "type": "integer" } }
+        },
+        "migration_plan": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path"],
+          "properties": { "path": { "type": "string" } }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["legacy_inventory", "decision_rows", "plan_statements", "exit_gaps"],
+      "properties": {
+        "legacy_inventory": { "$ref": "#/$defs/inventoryCounts" },
+        "decision_rows": { "$ref": "#/$defs/decisionCounts" },
+        "plan_statements": { "$ref": "#/$defs/planCounts" },
+        "exit_gaps": {
+          "type": "object", "additionalProperties": false,
+          "required": ["blocking", "non_blocking"],
+          "properties": { "blocking": { "type": "integer", "minimum": 0 }, "non_blocking": { "type": "integer", "minimum": 0 } }
+        }
+      }
+    },
+    "legacy_inventory": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "owner_area", "disposition", "progress", "target", "evidence", "rationale"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "owner_area": { "type": "string", "minLength": 1 },
+          "disposition": { "enum": ["migrated", "evidence-only", "archive", "obsolete", "unclear"] },
+          "progress": { "enum": ["complete", "partial", "not_started"] },
+          "target": { "type": "string", "minLength": 3 },
+          "remaining": { "type": "array", "items": { "type": "string", "minLength": 3 } },
+          "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceRef" } },
+          "rationale": { "type": "string", "minLength": 20 }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "progress": { "enum": ["partial", "not_started"] } } },
+            "then": { "required": ["remaining"], "properties": { "remaining": { "minItems": 1 } } }
+          },
+          {
+            "if": { "properties": { "disposition": { "const": "unclear" } } },
+            "then": { "properties": { "progress": { "const": "not_started" } } }
+          }
+        ]
+      }
+    },
+    "formal_records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["record_key", "id", "source_kind", "source_rows"],
+        "properties": {
+          "record_key": { "type": "string", "minLength": 1 },
+          "id": { "type": "string", "minLength": 1 },
+          "source_kind": { "enum": ["notion-row", "git-native"] },
+          "source_rows": { "type": "array", "items": { "$ref": "#/$defs/pageId" } },
+          "git_provenance": { "type": "string", "minLength": 3 }
+        },
+        "allOf": [
+          { "if": { "properties": { "source_kind": { "const": "notion-row" } } }, "then": { "properties": { "source_rows": { "minItems": 1 } } } },
+          { "if": { "properties": { "source_kind": { "const": "git-native" } } }, "then": { "required": ["git_provenance"], "properties": { "source_rows": { "maxItems": 0 } } } }
+        ]
+      }
+    },
+    "decision_rows": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["page_id", "id", "title", "historical_status", "historical_scope", "decided_at", "source_url", "disposition", "evidence", "rationale"],
+        "properties": {
+          "page_id": { "$ref": "#/$defs/pageId" },
+          "id": { "type": ["string", "null"] },
+          "title": { "type": "string" },
+          "historical_status": { "type": ["string", "null"], "enum": ["active", "superseded", "reversed", null] },
+          "historical_scope": { "type": ["string", "null"], "enum": ["global", "feature", "temporary", null] },
+          "decided_at": { "$ref": "#/$defs/date" },
+          "source_url": { "type": "string", "pattern": "^https://app\\.notion\\.com/[0-9a-f]{32}$" },
+          "disposition": {
+            "enum": ["formally_migrated", "unresolved_collision", "resolved_collision", "intentionally_historical", "obsolete_or_superseded", "not_yet_reconciled", "unclear"]
+          },
+          "record_key": { "type": "string", "minLength": 1 },
+          "collision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "resolution_status", "row_disposition"],
+            "properties": {
+              "id": { "type": "string" },
+              "resolution_status": { "enum": ["unresolved", "resolved"] },
+              "row_disposition": { "enum": ["unresolved", "formal_record", "documented_only"] },
+              "kind": { "enum": ["notion-duplicate", "cross-surface"] }
+            }
+          },
+          "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRef" } },
+          "rationale": { "type": "string", "minLength": 20 }
+        },
+        "allOf": [
+          { "if": { "properties": { "disposition": { "const": "formally_migrated" } } }, "then": { "required": ["record_key"], "properties": { "evidence": { "minItems": 1 } } } },
+          { "if": { "properties": { "disposition": { "enum": ["unresolved_collision", "resolved_collision"] } } }, "then": { "required": ["collision"], "properties": { "evidence": { "minItems": 1 } } } },
+          { "if": { "properties": { "disposition": { "const": "intentionally_historical" } } }, "then": { "properties": { "evidence": { "minItems": 1 } } } },
+          { "if": { "properties": { "disposition": { "const": "unclear" } } }, "then": { "properties": { "id": { "type": "null" } } } }
+        ]
+      }
+    },
+    "plan_statements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["location", "quote", "disposition", "evidence", "rationale"],
+        "properties": {
+          "location": { "type": "string", "minLength": 3 },
+          "quote": { "type": "string", "minLength": 10 },
+          "disposition": { "enum": ["merged", "partially_merged", "superseded", "open"] },
+          "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceRef" } },
+          "rationale": { "type": "string", "minLength": 20 }
+        }
+      }
+    },
+    "exit_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "gap", "blocking", "owner", "closes_when", "evidence"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^G[0-9]+$" },
+          "gap": { "type": "string", "minLength": 10 },
+          "blocking": { "type": "boolean" },
+          "owner": { "enum": ["session", "petter"] },
+          "closes_when": { "type": "string", "minLength": 10 },
+          "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceRef" } }
+        }
+      }
+    },
+    "next_decision_batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "selection_rule", "candidates"],
+      "properties": {
+        "name": { "type": "string", "minLength": 3 },
+        "selection_rule": { "type": "string", "minLength": 20 },
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["page_id", "id", "why"],
+            "properties": {
+              "page_id": { "$ref": "#/$defs/pageId" },
+              "id": { "type": "string", "minLength": 1 },
+              "why": { "type": "string", "minLength": 10 }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "pageId": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "evidenceRef": {
+      "type": "string",
+      "description": "A repo-relative path that must exist, a GitHub commit/PR URL, or a Notion page URL.",
+      "minLength": 3
+    },
+    "inventoryCounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["migrated", "evidence-only", "archive", "obsolete", "unclear", "total"],
+      "properties": {
+        "migrated": { "type": "integer", "minimum": 0 }, "evidence-only": { "type": "integer", "minimum": 0 },
+        "archive": { "type": "integer", "minimum": 0 }, "obsolete": { "type": "integer", "minimum": 0 },
+        "unclear": { "type": "integer", "minimum": 0 }, "total": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "decisionCounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["formally_migrated", "unresolved_collision", "resolved_collision", "intentionally_historical", "obsolete_or_superseded", "not_yet_reconciled", "unclear", "total"],
+      "properties": {
+        "formally_migrated": { "type": "integer", "minimum": 0 }, "unresolved_collision": { "type": "integer", "minimum": 0 },
+        "resolved_collision": { "type": "integer", "minimum": 0 }, "intentionally_historical": { "type": "integer", "minimum": 0 },
+        "obsolete_or_superseded": { "type": "integer", "minimum": 0 }, "not_yet_reconciled": { "type": "integer", "minimum": 0 },
+        "unclear": { "type": "integer", "minimum": 0 }, "total": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "planCounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["merged", "partially_merged", "superseded", "open", "total"],
+      "properties": {
+        "merged": { "type": "integer", "minimum": 0 }, "partially_merged": { "type": "integer", "minimum": 0 },
+        "superseded": { "type": "integer", "minimum": 0 }, "open": { "type": "integer", "minimum": 0 }, "total": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

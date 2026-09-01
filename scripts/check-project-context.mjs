@@ -23,6 +23,7 @@ import {
   readDecisionRecords,
   validateDecisionRepository,
 } from "./decision-records-lib.mjs";
+import { checkClosureRegister } from "./m2-closure-register-lib.mjs";
 
 function finding(code, path, detail) {
   return { severity: "warning", code, path, ...(detail ? { detail } : {}) };
@@ -200,6 +201,14 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
   }
 
   findings.push(...checkPrivateArchiveStatus(root));
+
+  try {
+    findings.push(
+      ...checkClosureRegister(root).map((item) => ({ severity: "warning", ...item })),
+    );
+  } catch (error) {
+    findings.push(finding("CLOSURE_REGISTER_CHECK_FAILED", "docs/project/m2-closure-register.yaml", error.message));
+  }
 
   return findings;
 }

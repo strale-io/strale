@@ -19,3 +19,5 @@ docs/programs/** text eol=lf
 scripts/program-tracks-lib.mjs text eol=lf
 scripts/check-program-tracks.mjs text eol=lf
 scripts/program-tracks.test.mjs text eol=lf
+scripts/m2-closure-register-lib.mjs text eol=lf
+scripts/m2-closure-register.test.mjs text eol=lf
