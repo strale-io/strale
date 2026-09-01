@@ -72,5 +72,17 @@ lifecycle contract remain on the Claude backlog before M4 activation.
 
 ## Exact-head review
 
-Pending final immutable-commit verification; record the commit and verdict here
-before merge.
+A separate Codex reviewer inspected immutable commit
+`dd6268f084d51bf428be605cabd15bdbf68c6e93` relative to
+`origin/main@46e53f8469282a9dd28a38234eb47c46d184aa5b` and returned `PASS` with no
+high, medium, or low findings. It independently confirmed:
+
+- the exact requested SHA and a clean review worktree;
+- inventory reconstruction from the Git index (`inventory_exact: true`, 15
+  entries);
+- 22/22 context tests, zero checker findings, API typecheck, and clean diff;
+- inactive/non-authoritative candidates with no consumer or cutover; and
+- no unresolved authority, lifecycle, evidence, schema, or PENDING defect.
+
+This is same-provider interim evidence. Claude exact-head review remains a
+pre-M4 requirement.

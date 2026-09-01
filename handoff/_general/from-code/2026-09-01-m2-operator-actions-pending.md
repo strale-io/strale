@@ -35,7 +35,8 @@ bounded decision briefs must be prepared by Codex/Claude first.
 - API TypeScript check: passed.
 - Product review: PASS after plain-language corrections.
 - Technical review: PASS after authority and lifecycle corrections.
-- Exact-head separate Codex review: pending before merge.
+- Exact-head separate Codex review: PASS on `dd6268f084d51bf428be605cabd15bdbf68c6e93`;
+  inventory exact with 15 entries and no findings.
 - Claude review: queued before M4 because Claude was unavailable.
 
 ## Session record
@@ -45,6 +46,6 @@ https://app.notion.com/p/3ce67c87082c81fb8fdaecb7f7ecbc1f?pvs=204
 
 ## Next
 
-Complete exact-head review and merge this batch. Then continue M2 with formal
+Merge this batch after repository CI passes. Then continue M2 with formal
 decision migration in small topic batches; do not activate candidates or start
 the M4 cutover.
