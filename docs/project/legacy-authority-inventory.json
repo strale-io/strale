@@ -399,7 +399,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "c985550e935a4934e082f8bd41a8e59c7ac75623bcacad1657bfbba2a7514779",
+      "sha256": "6b9e76c763481b0cf93cb70aed90cb28e87a9ea39fa188ee0215a18a3f2c63f0",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -441,6 +441,7 @@
         "archive/sessions/2026-09-01-m2-governance-reference-data-decision-plan.md",
         "archive/sessions/2026-09-01-m2-source-enumeration-decision-plan.md",
         "archive/sessions/2026-09-01-m2-vendor-evaluation-decision-plan.md",
+        "archive/sessions/2026-09-01-m2-vendor-stack-authority-closeout.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
         "archive/sessions/2026-09-01-x402-agentcash-discovery-contract-plan.md",
         "archive/sessions/2026-09-01-x402-price-representation-parity-plan.md",

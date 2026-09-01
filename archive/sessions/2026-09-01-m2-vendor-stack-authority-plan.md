@@ -284,3 +284,18 @@ found one contradictory no-entrypoint-change acceptance line. That line was
 narrowed to allow only the explicit review-route override. A third fresh
 reviewer returned PASS with no material findings and completed after its
 verdict.
+
+## Implementation outcome
+
+- Implementation commit: `0c40317c`.
+- Independent exact-commit review: PASS, no material findings. The reviewer
+  rechecked the four live Notion Decision rows and correction pages, confirmed
+  the `DEC-20260420-K` collision and the unique-but-unmigrated
+  `DEC-20260422-H` boundary, reran 54/54 context tests, and left the worktree
+  unchanged.
+- Implementation PR: [#473](https://github.com/strale-io/strale/pull/473).
+- Merge commit: `ffcd1c02f278037d73ecb61d16b902ebad42cc09`.
+- Required GitHub checks: `check` and `integration-db` passed.
+- Journal: [Session log — M2 vendor-stack authority migration 2026-09-01](https://app.notion.com/p/3ce67c87082c8198b76bf0ef07ca58f0?pvs=204).
+- Product/runtime/vendor/database/production changes: none.
+- External spend: €0.
