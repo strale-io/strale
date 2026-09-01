@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { eurCentsToUsd, eurCentsToUsdcAtomic } from "./x402-gateway.js";
+
+process.env.EUR_USD_RATE = "1.08";
+
+const {
+  eurCentsToUsd,
+  eurCentsToUsdFixed,
+  eurCentsToUsdcAtomic,
+} = await import("./x402-gateway.js");
 
 // Regression tests for the P1 machine-surface finding (2026-08-12): float
 // arithmetic on EUR_USD_RATE emitted `price_usd: 0.21600000000000003` in the
@@ -53,5 +60,32 @@ describe("eurCentsToUsdcAtomic", () => {
       expect(String(Math.round(eurCentsToUsd(cents) * 1_000_000)), `round-trip for ${cents}c`)
         .toBe(eurCentsToUsdcAtomic(cents));
     }
+  });
+});
+
+describe("eurCentsToUsdFixed", () => {
+  it("renders the exact atomic amount with six decimal places", () => {
+    expect(eurCentsToUsdFixed(0)).toBe("0.000000");
+    expect(eurCentsToUsdFixed(2)).toBe("0.021600");
+    expect(eurCentsToUsdFixed(250)).toBe("2.700000");
+  });
+
+  it("round-trips to the canonical atomic amount across the realistic price range", () => {
+    for (let cents = 0; cents <= 400; cents++) {
+      const fixed = eurCentsToUsdFixed(cents);
+      const [whole, fraction] = fixed.split(".");
+      expect(fixed, `fixed USD for ${cents}c`).toMatch(/^\d+\.\d{6}$/);
+      expect((BigInt(whole) * 1_000_000n + BigInt(fraction)).toString())
+        .toBe(eurCentsToUsdcAtomic(cents));
+    }
+  });
+
+  it("rejects malformed prices and supports the PostgreSQL integer maximum", () => {
+    for (const invalid of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(() => eurCentsToUsdFixed(invalid), String(invalid)).toThrow(
+        "EUR cents must be a non-negative safe integer",
+      );
+    }
+    expect(eurCentsToUsdFixed(2_147_483_647)).toMatch(/^\d+\.\d{6}$/);
   });
 });

@@ -16,7 +16,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { eurCentsToUsd, getFacilitatorUrl } from "../lib/x402-gateway.js";
+process.env.EUR_USD_RATE = "1.08";
+
+const {
+  eurCentsToUsd,
+  eurCentsToUsdcAtomic,
+  getFacilitatorUrl,
+} = await import("../lib/x402-gateway.js");
 
 const state = vi.hoisted(() => ({
   capRows: [] as Record<string, unknown>[],
@@ -53,7 +59,13 @@ vi.mock("../db/index.js", () => ({
   }),
 }));
 
-const { __resetX402CacheForTests, x402GatewayV2 } = await import("./x402-gateway-v2.js");
+const {
+  __resetX402CacheForTests,
+  build402,
+  getX402Manifest,
+  getX402OpenApiPaths,
+  x402GatewayV2,
+} = await import("./x402-gateway-v2.js");
 
 const BASE_URL = process.env.API_BASE_URL ?? "https://api.strale.io";
 const NETWORK = process.env.X402_NETWORK ?? "base-sepolia";
@@ -124,6 +136,23 @@ async function requestCatalog(query = "") {
     wallet: string | null;
   };
   return { res, body };
+}
+
+function openApiPriceAmount(
+  paths: Record<string, unknown>,
+  path: string,
+  method: string,
+): string {
+  const pathItem = paths[path] as Record<string, unknown>;
+  const operation = pathItem[method] as Record<string, unknown>;
+  const paymentInfo = operation["x-payment-info"] as Record<string, unknown>;
+  const price = paymentInfo.price as Record<string, unknown>;
+  return price.amount as string;
+}
+
+function decimalUsdToAtomic(amount: string): string {
+  const [whole, fraction = ""] = amount.split(".");
+  return (BigInt(whole) * 1_000_000n + BigInt(fraction.padEnd(6, "0"))).toString();
 }
 
 beforeEach(() => {
@@ -197,5 +226,78 @@ describe("GET /x402/catalog output_schema projection", () => {
       input_schema: PAID_INPUT,
       output_schema: PAID_OUTPUT,
     });
+  });
+});
+
+describe("x402 public price representation parity", () => {
+  beforeEach(() => {
+    state.capRows = [capabilityRow({ priceCents: 2 })];
+    state.solRows = [solutionRow({ priceCents: 2 })];
+  });
+
+  it.each([
+    ["capability", "/x402/v2/paid-api-preflight"],
+    ["solution", "/x402/v2/solutions/kyb-essentials-se"],
+  ])("publishes the exact six-decimal manifest price for the %s", async (_kind, path) => {
+    __resetX402CacheForTests();
+    const manifest = await getX402Manifest();
+
+    expect(manifest.endpoints.find((entry) => entry.path === path)?.price)
+      .toBe("0.021600");
+  });
+
+  it.each([
+    ["capability", "/x402/v2/paid-api-preflight", "post"],
+    ["solution", "/x402/v2/solutions/kyb-essentials-se", "post"],
+  ])("publishes the exact six-decimal OpenAPI price for the %s", async (_kind, path, method) => {
+    __resetX402CacheForTests();
+    const paths = await getX402OpenApiPaths();
+
+    expect(openApiPriceAmount(paths, path, method))
+      .toBe("0.021600");
+  });
+
+  it.each([
+    {
+      kind: "capability",
+      manifestPath: "/x402/v2/paid-api-preflight",
+      openApiPath: "/x402/v2/paid-api-preflight",
+      method: "post",
+    },
+    {
+      kind: "solution",
+      manifestPath: "/x402/v2/solutions/kyb-essentials-se",
+      openApiPath: "/x402/v2/solutions/kyb-essentials-se",
+      method: "post",
+    },
+  ])("keeps the $kind catalog, discovery and challenge amounts identical", async (fixture) => {
+    __resetX402CacheForTests();
+    const { body: catalog } = await requestCatalog();
+    const manifest = await getX402Manifest();
+    const paths = await getX402OpenApiPaths();
+    const catalogEntries = fixture.kind === "capability" ? catalog.capabilities : catalog.solutions;
+    const slug = fixture.kind === "capability" ? "paid-api-preflight" : "kyb-essentials-se";
+    const catalogPrice = catalogEntries.find((entry) => entry.slug === slug)?.price_usd;
+    const manifestPrice = manifest.endpoints.find((entry) => entry.path === fixture.manifestPath)?.price;
+    const openApiPrice = openApiPriceAmount(paths, fixture.openApiPath, fixture.method);
+    const { body: challenge } = build402(
+      "Two-cent fixture",
+      "Exact public representation fixture.",
+      eurCentsToUsd(2),
+      `https://api.strale.io${fixture.openApiPath}`,
+      null,
+      fixture.method,
+      null,
+      2,
+    );
+    const challengeAmount = ((challenge as Record<string, unknown>).accepts as Record<string, unknown>[])[0]
+      .amount as string;
+
+    expect(catalogPrice).toBe(0.0216);
+    expect(manifestPrice).toBe("0.021600");
+    expect(openApiPrice).toBe("0.021600");
+    expect(challengeAmount).toBe("21600");
+    expect(decimalUsdToAtomic(manifestPrice!)).toBe(eurCentsToUsdcAtomic(2));
+    expect(decimalUsdToAtomic(openApiPrice)).toBe(eurCentsToUsdcAtomic(2));
   });
 });

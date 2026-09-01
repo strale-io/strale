@@ -255,10 +255,21 @@ export function eurCentsToUsdcAtomic(eurCents: number): string {
   return eurCentsToMicroUsd(eurCents).toString();
 }
 
+/** Fixed six-decimal USD string derived from the exact USDC atomic amount. */
+export function eurCentsToUsdFixed(eurCents: number): string {
+  if (!Number.isSafeInteger(eurCents) || eurCents < 0) {
+    throw new RangeError("EUR cents must be a non-negative safe integer");
+  }
+  const atomic = BigInt(eurCentsToUsdcAtomic(eurCents));
+  const whole = atomic / 1_000_000n;
+  const fraction = (atomic % 1_000_000n).toString().padStart(6, "0");
+  return `${whole}.${fraction}`;
+}
+
 export function eurCentsToUsdString(eurCents: number): string {
   // 6 decimals (micro-USD precision, matching the atomic amount exactly),
   // trailing zeros trimmed: 20c → "$0.216", 3c @1.085 → "$0.03255".
-  const s = eurCentsToUsd(eurCents).toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+  const s = eurCentsToUsdFixed(eurCents).replace(/0+$/, "").replace(/\.$/, "");
   return `$${s}`;
 }
 
