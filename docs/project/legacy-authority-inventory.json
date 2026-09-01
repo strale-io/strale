@@ -30,7 +30,8 @@
         "handoff/_general/from-code/2026-08-12-readiness-p0-baseline.md",
         "handoff/_general/from-code/2026-08-12-readiness-p2-p3-parallel-audits.md",
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
-        "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md"
+        "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md",
+        "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md"
       ]
     },
     {
@@ -162,6 +163,7 @@
         "handoff/_general/from-code/2026-08-23-WP11-account-trial-stripe-lifecycle.md",
         "handoff/_general/from-code/2026-08-23-checkin-morning.md",
         "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md",
+        "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
         "manifests/c2pa-inspect.yaml",
@@ -301,7 +303,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "e8b10a874351921e23dd5bf30383675f50baef1cc59166f4fbd3d9e43b51349f",
+      "sha256": "fb3f09539286ddcae5c40d4d12722c9be80ee243ff46a7de43574b1c423018e8",
       "detected_references": [
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
@@ -348,7 +350,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "0227196321dfce4a33e6c46662bb7e0d8288b296639f203172c2ea788b551106",
+      "sha256": "33a22109b0110ff10c7af23ce161c98a10da86c69fb37b1ad6b6a496f48709db",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
