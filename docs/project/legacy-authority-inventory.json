@@ -31,7 +31,8 @@
         "handoff/_general/from-code/2026-08-12-readiness-p2-p3-parallel-audits.md",
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
         "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md",
-        "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md"
+        "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md",
+        "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md"
       ]
     },
     {
@@ -74,6 +75,7 @@
         "archive/sessions/2026-08-31-m1-parallel-sequencing-review-claude.md",
         "archive/sessions/2026-08-31-repo-native-operating-model-m1-review-claude.md",
         "archive/sessions/2026-08-31-repo-native-operating-model-plan-review-claude.md",
+        "archive/sessions/2026-09-01-m2-doctrine-decision-review-codex.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
@@ -164,6 +166,7 @@
         "handoff/_general/from-code/2026-08-23-checkin-morning.md",
         "handoff/_general/from-code/2026-08-31-repo-native-operating-model-m1.md",
         "handoff/_general/from-code/2026-09-01-m2-decision-authority-graph.md",
+        "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
         "manifests/c2pa-inspect.yaml",
@@ -303,7 +306,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "fb3f09539286ddcae5c40d4d12722c9be80ee243ff46a7de43574b1c423018e8",
+      "sha256": "f24e453bfecabe421924597d222329b1ac3d2c5279c6099a14fe1eb910bc52c4",
       "detected_references": [
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
@@ -350,7 +353,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "33a22109b0110ff10c7af23ce161c98a10da86c69fb37b1ad6b6a496f48709db",
+      "sha256": "2c53df7ca41c3233eeb22e56bf9785c3d049d92af1f8a3e75375fde3ccdaa548",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
