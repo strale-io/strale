@@ -330,6 +330,14 @@ jobs:
       # evidence doesn't resolve.
       - run: npm run claims:check
       - run: npm run claims:test
+      # CTO-readable structure (T5): docs/README.md must list every real
+      # docs/ subtree (and no vanished one); archive/README.md and
+      # handoff/README.md are generated from the filesystem and must not be
+      # stale. Both checkers plant every failure mode in a throwaway fixture.
+      - run: npm run docs:check
+      - run: npm run docs:test
+      - run: node scripts/generate-archive-index.mjs --check
+      - run: npm run archive:index:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.

@@ -1,7 +1,7 @@
 # Demand-mined build queue — what production traffic actually asks for
 
 **Date:** 2026-08-13
-**Mode:** READ-ONLY analysis. Production DB queried via temporary scripts (deleted after use); SELECT only. Deliverables: this file + `manifests-drafts/`.
+**Mode:** READ-ONLY analysis. Production DB queried via temporary scripts (deleted after use); SELECT only. Deliverables: this file + `archive/superseded/manifests-drafts/`.
 **Window:** 30 days and 90 days to 2026-08-13, internal accounts excluded (`petter@`, `test@`, `test2@`, `system@strale.internal`, `test@example.com`), `status <> 'health_probe'`.
 **Extends:** `archive/sessions/audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md` (2026-08-12; archived 2026-08-17, path updated). That document's structural conclusions still hold; this one adds a day of fresh data, the first look at `discovery_hits`, and **three findings that change its ranking**. It does not restate its analysis.
 
@@ -286,4 +286,4 @@ Unchanged in direction from 2026-08-12, sharpened by the new evidence:
 2. **Merchandise before building** (§4). Four capabilities with recorded demand and zero calls. `domain-contact-extract` losing to a Google workaround is the proof that discovery, not supply, is the binding constraint.
 3. **Then build #1–#4.** Mexico is the first capability in a year with a named, paying, repeat buyer identifiable *before* the build. That is the standard the intake loop was designed to enforce, and it is the reason to build it despite twelve dead country registries.
 
-Draft manifests for #1–#5 are in `manifests-drafts/`. They are **not** in `manifests/` and must not enter the onboarding pipeline until the executors exist and the verification debt in each `# DRAFT` header is closed.
+Draft manifests for #1–#5 are in `archive/superseded/manifests-drafts/`. They are **not** in `manifests/` and must not enter the onboarding pipeline until the executors exist and the verification debt in each `# DRAFT` header is closed.
