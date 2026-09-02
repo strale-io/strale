@@ -48,8 +48,8 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
   already appear on `main`; a clear title appears only where
   `id-collisions.yaml` already publishes that exact string; scope and date
   appear on no public row (an aggregate digest binds them); the 24 title
-  hashes on public rows are new per-row commitments to non-public titles and
-  are the only new artefacts; everything else is hashed or kept in the
+  hashes on public rows are the only new per-row commitments; the aggregate
+  digests and counts are new commitments to the set as a whole; everything else is hashed or kept in the
   private archive. Whether the row-level register may
   become public is queued for the founder in `DECISION-QUEUE.md`; nothing
   waits on it.

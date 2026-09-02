@@ -27,11 +27,20 @@ const ARCHIVE_STATUS_PATH = "docs/project/private-archive-status.json";
 const MIGRATION_PLAN_PATH = "docs/strategy/2026-08-31-repo-native-operating-model-migration.md";
 const TRACKS_PATH = "docs/programs/cto-readiness/tracks.yaml";
 // The track register declares each track's relation to the M2 exit gate in a
-// required `gate` field (see docs/programs/tracks.schema.json). The gate track
-// is the one with gate: m2-exit; everything with gate: post-m2 is sequenced
-// after it. Tracks are never identified by id here, so a new track cannot
-// bypass the gate: it must declare a gate, and a post-m2 declaration is
-// enforced.
+// required `gate` field (see docs/programs/tracks.schema.json). Declarations
+// are not trusted on their own: only the tracks below may stand outside the
+// gate (they are the hygiene, remediation, structure, and M2 tracks the plan
+// sequences independently of M3). Every other track, whatever it declares,
+// must reach the m2-exit track and may not start while a blocking M2 gap
+// remains. Adding an independent track is therefore a reviewed change to
+// this list, never a field on the new track. Fail closed.
+export const TRACKS_OUTSIDE_M2_GATE = Object.freeze({
+  T1: "m2",    // M2 closure audit
+  T2: "none",  // repo hygiene sweep
+  T3: "none",  // hygiene enforcement
+  T4: "none",  // remediation closure
+  T5: "none",  // CTO-readable structure
+});
 
 /**
  * Expected disposition of every legacy-authority source, transcribed from the
@@ -714,6 +723,12 @@ export function validateClosureRegister(register, context, { schema, relativePat
     const gates = all.filter((t) => t.gate === "m2-exit");
     if (gates.length !== 1) finding("TRACKS_GATE_MISSING", `${TRACKS_PATH} must have exactly one m2-exit track, found ${gates.length}`);
     const gateId = gates[0]?.id;
+    // Declarations must agree with the reviewed list, and anything not on it is gated.
+    for (const t of all) {
+      const allowed = TRACKS_OUTSIDE_M2_GATE[t.id];
+      if (allowed !== undefined && t.gate !== allowed) finding("TRACKS_GATE_DECLARATION_MISMATCH", `${t.id} declares ${t.gate} but the reviewed list says ${allowed}`);
+      if (allowed === undefined && t.gate !== "m2-exit" && t.gate !== "post-m2") finding("TRACKS_GATE_DECLARATION_MISMATCH", `${t.id} declares ${t.gate} but is not on the reviewed list of tracks outside the M2 gate; it is treated as post-m2`);
+    }
     if (gateId && blocking > 0 && gates[0].status === "done") finding("TRACKS_GATE_DONE_WITH_BLOCKING_GAPS", `${gateId} is done but ${blocking} blocking M2 gap(s) remain`);
     // Gating is transitive: a track depends on the gate if any dependency chain reaches it.
     const reaches = (id, seen = new Set()) => {
@@ -723,7 +738,8 @@ export function validateClosureRegister(register, context, { schema, relativePat
       return Boolean(t) && t.depends_on.some((d) => d === gateId || reaches(d, seen));
     };
     for (const t of all) {
-      if (t.gate !== "post-m2") continue;
+      const outside = TRACKS_OUTSIDE_M2_GATE[t.id] !== undefined || t.gate === "m2-exit";
+      if (outside) continue;
       if (gateId && !reaches(t.id)) finding("TRACKS_POST_M2_NOT_GATED", `${t.id} does not depend, directly or transitively, on ${gateId}`);
       if (blocking > 0 && ["active", "done"].includes(t.status)) finding("TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS", `${t.id} is ${t.status} but ${blocking} blocking M2 gap(s) remain`);
     }

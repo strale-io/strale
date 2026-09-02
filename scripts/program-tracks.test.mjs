@@ -165,14 +165,14 @@ test("an unknown dependency is rejected", () => {
 
 test("a self dependency is rejected", () => {
   const r = base();
-  r.tracks[1].depends_on = ["T2"];
+  byId(r, "T2").depends_on = ["T2"];
   assert.ok(codes(r).includes("SELF_DEPENDENCY"));
 });
 
 test("a dependency cycle is rejected", () => {
   const r = base();
-  r.tracks[0].depends_on = ["T2"];
-  r.tracks[1].depends_on = ["T1"];
+  byId(r, "T1").depends_on = ["T2"];
+  byId(r, "T2").depends_on = ["T1"];
   assert.ok(codes(r).includes("DEPENDENCY_CYCLE"));
 });
 

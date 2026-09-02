@@ -82,8 +82,11 @@ review named as its blocker. Nothing in T6 or later starts before T1 is done.
 Every track also declares a `gate` (`none`, `m2`, `m2-exit`, `post-m2`).
 The M2 closure register's validator reads this file and refuses any
 `post-m2` track that is active or done while a blocking M2 gap remains, or
-that does not depend on the `m2-exit` track; because the field is required, a
-new track cannot bypass the gate.
+that does not depend on the `m2-exit` track. The declaration alone is not
+trusted: the closure register's validator carries a reviewed list of the
+tracks allowed outside the gate (T1 to T5), and any track not on that list is
+gated whatever it declares. Adding an independent track is a reviewed edit
+to that list.
 
 The register carries a `program_status`. While it is `active`, exactly one
 track is active. It becomes `paused` only when every runnable track is done

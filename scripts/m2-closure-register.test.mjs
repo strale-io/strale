@@ -566,6 +566,15 @@ test("the track register cannot start M3 or close the gate while blocking M2 gap
   assert.ok(c11.includes("TRACKS_POST_M2_NOT_GATED"), c11.join(","));
   assert.ok(c11.includes("TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS"));
   has(r, "TRACKS_GATE_UNDECLARED", withTracks((t) => { t.tracks.push({ ...newTrack, status: "queued", gate: undefined }); }));
+  // Declaring the new track as none or m2 does not help: it is not on the reviewed list, so it is gated anyway.
+  for (const gate of ["none", "m2"]) {
+    const c = codes(r, withTracks((t) => { t.tracks.find((x) => x.id === "T2").status = "queued"; t.tracks.push({ ...newTrack, gate }); }));
+    assert.ok(c.includes("TRACKS_GATE_DECLARATION_MISMATCH"), `${gate}: ${c.join(",")}`);
+    assert.ok(c.includes("TRACKS_POST_M2_NOT_GATED"), gate);
+    assert.ok(c.includes("TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS"), gate);
+  }
+  // A listed track cannot re-declare itself either.
+  has(r, "TRACKS_GATE_DECLARATION_MISMATCH", withTracks((t) => { t.tracks.find((x) => x.id === "T2").gate = "post-m2"; }));
   // With every blocking gap closed, the same track states are acceptable.
   const r2 = base();
   for (const g of r2.exit_gaps) { g.blocking = false; g.phase = "M3"; }
