@@ -63,7 +63,7 @@ const publicPending = (r) => {
 };
 // Findings that manufacturing a public pending row always produces; tests
 // filter them out so they assert only on the check under test.
-const MANUFACTURED = new Set(["FORMAL_RECORD_MISSING", "SOURCE_COUNT_DRIFT", "NEXT_BATCH_INCOMPLETE", "DECISION_ROW_SHOULD_BE_MIGRATED"]);
+const MANUFACTURED = new Set(["FORMAL_RECORD_MISSING", "SOURCE_COUNT_DRIFT", "NEXT_BATCH_INCOMPLETE", "DECISION_ROW_SHOULD_BE_MIGRATED", "DECISION_ROW_DERIVATION_MISMATCH"]);
 const codesExcept = (register, ctx) => codes(register, ctx).filter((c) => !MANUFACTURED.has(c));
 
 test("positive smoke test (not mutation evidence): the committed register is valid", () => {
@@ -140,7 +140,7 @@ const syntheticPrivate = () => {
   r.next_decision_batch.private_candidates = { count: 1, digest: sha256(`${"1".repeat(32)}\n`) };
   return { r, rows };
 };
-const pcodes = (r, rows) => validatePrivateProjection(r, rows, { schema, collisions: context.collisions }).map((f) => f.code);
+const pcodes = (r, rows) => validatePrivateProjection(r, rows, { schema, collisions: context.collisions, context }).map((f) => f.code);
 
 test("a coordinated identity edit that re-syncs every digest passes CI but fails the raw-export comparison", () => {
   const r = base();
@@ -507,6 +507,46 @@ test("reclassifying a record-cited row cannot be laundered by editing formal_rec
   fr320.git_provenance = "https://github.com/strale-io/strale/pull/467";
   resync(r2);
   assert.ok(codes(r2).includes("DECISION_ROW_SHOULD_BE_MIGRATED"));
+});
+
+test("every public disposition is derived from evidence; erasing a hand disposition is rejected", () => {
+  // DEC-20260517-B: intentionally_historical -> not_yet_reconciled, with evidence and counts re-synced.
+  const r = base();
+  const hist = row(r, "intentionally_historical");
+  hist.disposition = "not_yet_reconciled";
+  hist.evidence = ["docs/project/private-archive-status.json"];
+  resync(r);
+  const c = codes(r);
+  assert.ok(c.includes("DECISION_ROW_DERIVATION_MISMATCH"), c.join(","));
+  // A pending-derivable row cannot be promoted to intentionally_historical by pointing at a gap report that does not name it.
+  const r2 = base();
+  const p = publicPending(r2);
+  p.disposition = "intentionally_historical";
+  p.evidence = ["archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md"];
+  resync(r2);
+  const c2 = codes(r2);
+  assert.ok(c2.includes("DECISION_ROW_DERIVATION_MISMATCH"), c2.join(","));
+  assert.ok(c2.includes("DECISION_ROW_NOT_CITED_BY_EVIDENCE"));
+  // A migrated row relabelled obsolete with its record removed from the register still derives migrated.
+  const r3 = base();
+  const m = r3.decision_rows.find((x) => x.id === "DEC-20260320-B");
+  m.disposition = "obsolete_or_superseded";
+  delete m.record_key;
+  m.evidence = ["docs/project/private-archive-status.json"];
+  r3.formal_records = r3.formal_records.filter((x) => x.record_key !== "DEC-20260320-B");
+  resync(r3);
+  assert.ok(codes(r3).includes("DECISION_ROW_DERIVATION_MISMATCH"));
+  assert.ok(context.gapCitations.size >= 1, "gap reports were found in the index");
+});
+
+test("private evidence follows the same reference rules as public evidence", () => {
+  const { r, rows } = syntheticPrivate();
+  rows[0].evidence = ["xyz"];
+  const c = pcodes(r, rows);
+  assert.ok(c.includes("PRIVATE_ROW_EVIDENCE_INVALID"), c.join(","));
+  const { r: r2, rows: rows2 } = syntheticPrivate();
+  rows2[0].evidence = ["docs"];
+  assert.ok(pcodes(r2, rows2).includes("PRIVATE_ROW_EVIDENCE_INVALID"));
 });
 
 test("cross-surface collisions are derived from the entrypoints, not from the label", () => {

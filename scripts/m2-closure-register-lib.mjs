@@ -133,6 +133,21 @@ export function gitNativeClaims(root) {
   return ids;
 }
 
+/**
+ * Page ids cited by M2 source-gap reports (tracked files matching
+ * archive/sessions/*-gaps.md, read from the index). A public row cited there,
+ * and by nothing stronger, is intentionally historical by construction.
+ */
+export function gapReportCitations(root) {
+  const files = (gitQuiet(root, ["ls-files", "--", "archive/sessions/*-gaps.md"]) ?? "").split(/\r?\n/).filter(Boolean);
+  const byFile = new Map();
+  for (const f of files) {
+    const text = (gitQuiet(root, ["show", `:${f}`]) ?? "").replace(/-/g, "");
+    byFile.set(f, new Set([...text.matchAll(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g)].map((m) => m[0])));
+  }
+  return byFile;
+}
+
 /** Front matter of every formal record: { record_key, id, evidence[], pageIds[] }. */
 export function readFormalRecordSummaries(root) {
   const dir = resolve(root, RECORDS_DIR);
@@ -207,6 +222,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     isAncestor: (sha) => isAncestorOfHead(root, sha),
     public: publicIdentities(root, baseRef),
     gitNativeClaims: gitNativeClaims(root),
+    gapCitations: gapReportCitations(root),
   };
 }
 
@@ -464,6 +480,35 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // Private rows can never hold dispositions that are public by construction;
   // the schema's closed counts_by_disposition key set enforces this.
 
+  // Every public disposition is derived, in priority order: cited by a
+  // same-id record -> formally_migrated; collision-registry row -> the
+  // registry's status; Git-native protocol label without a record ->
+  // cross-surface collision; cited by a gap report -> intentionally
+  // historical; otherwise from identity fields (no id -> unclear;
+  // superseded/reversed -> obsolete_or_superseded; else not_yet_reconciled).
+  if (context.gapCitations && context.gitNativeClaims) {
+    const recordIds = new Set(context.records.map((r) => r.id));
+    const recordCited = new Set();
+    for (const rec of context.records) for (const p of rec.pageIds) if (rowsByPage.get(p)?.id === rec.id) recordCited.add(p);
+    const gapCited = new Set();
+    for (const set of context.gapCitations.values()) for (const p of set) gapCited.add(p);
+    for (const row of register.decision_rows) {
+      let expected;
+      if (recordCited.has(row.page_id)) expected = "formally_migrated";
+      else if (collisionRows.has(row.page_id)) expected = collisionRows.get(row.page_id).resolution_status === "unresolved" ? "unresolved_collision" : "resolved_collision";
+      else if (row.id && context.gitNativeClaims.has(row.id) && !recordIds.has(row.id)) expected = "unresolved_collision";
+      else if (gapCited.has(row.page_id)) expected = "intentionally_historical";
+      else if (!row.id) expected = "unclear";
+      else if (["superseded", "reversed"].includes(row.historical_status)) expected = "obsolete_or_superseded";
+      else expected = "not_yet_reconciled";
+      if (row.disposition !== expected) finding("DECISION_ROW_DERIVATION_MISMATCH", `${row.page_id}: ${row.disposition} but evidence derives ${expected}`);
+      if (row.disposition === "intentionally_historical") {
+        const citedByGapEvidence = row.evidence.some((ev) => context.gapCitations.get(ev)?.has(row.page_id));
+        if (!citedByGapEvidence) finding("DECISION_ROW_NOT_CITED_BY_EVIDENCE", `${row.page_id}: intentionally_historical rows must cite a gap report that names them`);
+      }
+    }
+  }
+
   // ---- Plan statements: every forward statement in the plan must be quoted, and every quote must exist.
   const planPath = register.sources.migration_plan.path;
   const planRaw = context.root && evidenceProblem(context, planPath) === null
@@ -585,7 +630,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
  * set (count and digest) all recompute to the register's stored values; no
  * page id appears in both projections; ids are unique across both.
  */
-export function validatePrivateProjection(register, privateRows, { schema, collisions } = {}) {
+export function validatePrivateProjection(register, privateRows, { schema, collisions, context } = {}) {
   const findings = [];
   const finding = (code, detail) => findings.push({ code, path: register.private_rows?.file ?? "private_rows", detail });
   const rows = Array.isArray(privateRows) ? privateRows : [];
@@ -631,6 +676,12 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
       finding("PRIVATE_ROW_DERIVATION_MISMATCH", `${r.page_id}: ${r.disposition} but identity fields derive ${expected}`);
     }
     if (r.record_key) finding("PRIVATE_ROW_RECORD_KEY", r.page_id);
+    if (context) {
+      for (const ev of r.evidence ?? []) {
+        const problem = evidenceProblem(context, ev);
+        if (problem) finding("PRIVATE_ROW_EVIDENCE_INVALID", `${r.page_id}: ${ev} (${problem})`);
+      }
+    }
     if (r.id && (idCounts[r.id] ?? 0) > 1 && !collisionIds.has(r.id)) finding("PRIVATE_ROW_UNREGISTERED_DUPLICATE_ID", `${r.page_id}: ${r.id} is shared by ${idCounts[r.id]} rows but is not in the collision registry`);
   }
 

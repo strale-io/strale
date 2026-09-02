@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import YAML from "yaml";
-import { canonicalDigest, compareRowsToExport, loadRegister, loadRegisterSchema, repoRootFrom, validatePrivateProjection } from "./m2-closure-register-lib.mjs";
+import { buildContext, canonicalDigest, compareRowsToExport, loadRegister, loadRegisterSchema, repoRootFrom, validatePrivateProjection } from "./m2-closure-register-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const register = loadRegister(root);
@@ -60,7 +60,7 @@ for (const f of compareRowsToExport(all, raw)) fail(`${f.code} ${f.detail}`);
 // shared with the test suite.
 const schema = loadRegisterSchema(root);
 const collisions = YAML.parse(readFileSync(resolve(root, "docs/decisions/id-collisions.yaml"), "utf8"));
-for (const f of validatePrivateProjection(register, priv, { schema, collisions })) fail(`${f.code} ${f.detail}`);
+for (const f of validatePrivateProjection(register, priv, { schema, collisions, context: buildContext(root) })) fail(`${f.code} ${f.detail}`);
 const privateEligible = priv.filter((r) => r.disposition === "not_yet_reconciled" && r.historical_status === "active" && r.id && r.decided_at >= nb0.decided_on_or_after);
 
 console.log(failures === 0 ? `ok: ${all.length} rows verified against ${repo}@${exportCommit.slice(0, 8)}; ${privateEligible.length} private next-batch candidates` : `${failures} failure(s)`);
