@@ -52,6 +52,36 @@ track's `resume_file` names anything else that batch needs. The migration
 checkpoint above is the M2-through-M7 detail behind the `cto-readiness`
 program. Programs are execution records, not project truth.
 
+### Session contract — both tools, every session
+
+1. **Orient first.** Read `docs/programs/README.md`, then the active track's
+   `next_action` and `resume_file` in `docs/programs/<program>/tracks.yaml`.
+   Claude Code prints this at SessionStart; Codex runs `npm run handoff:orient`.
+   Work happens in one batch worktree (`strale-wt-<track>`) on a feature
+   branch cut from `origin/main`; the trunk stays on `main` and clean
+   (`WORKTREES.md`).
+2. **Gate before stopping.** `npm run handoff:check` must pass before a session
+   ends: no uncommitted paths, the branch pushed to its upstream, at most one
+   batch worktree, no merged branch left locally or on the remote, and every
+   code change accompanied by an updated `next_action` in the program register
+   or a new `handoff/_general/from-code/` file. The check prints one fix per
+   finding; apply them and rerun. Claude Code's Stop hook
+   (`.claude/settings.json`) blocks the stop until it passes. Codex's notify
+   wrapper (`scripts/handoff/codex-notify.mjs`, chained in
+   `~/.codex/config.toml`) records the result in
+   `.claude/state/handoff/last-codex.json`, which the next session's
+   orientation shows, and `.codex/hooks.json` blocks the stop the same way
+   where the Codex hooks feature is on. A Codex session runs the check itself
+   before its final turn and fixes what it lists.
+3. **Git hooks come with `npm ci`** (`prepare` runs `npm run hooks:install`,
+   which sets `core.hooksPath=.githooks` for every worktree of the clone):
+   pre-commit refuses a commit on `main` and an inventory-target edit without
+   `npm run context:generate`; pre-push refuses a direct push to `main`.
+   `main` changes only through reviewed PRs merged on GitHub; pushing the
+   working branch is routine backup and needs no approval. Worktrees and
+   branches recorded in `scripts/handoff/baseline.json` wait for a founder
+   decision and are never deleted by a session.
+
 ### Notion Access (REQUIRED)
 - Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
 - To-do & Build Plan: https://www.notion.so/33c67c87-082c-81c3-a72b-cc59b10ff4ac
@@ -561,9 +591,10 @@ where node holds handles. Hit three times on 2026-08-14.
    commits) and save the foreign diff to a patch file — never discard it.
 
 The guard at `scripts/guard-tree-integrity.mjs` auto-repairs the damage and is
-wired as a PostToolUse/Bash hook in `.claude/settings.json` (gitignored — each
-machine opts in). It only ever restores tracked-and-deleted paths, so it cannot
-discard work. It is a safety net, not a substitute for rule 1.
+wired as a PostToolUse/Bash hook in `.claude/settings.json` (tracked since
+T3 alongside the session hooks; machine-local additions go in the ignored
+`settings.local.json`). It only ever restores tracked-and-deleted paths, so it
+cannot discard work. It is a safety net, not a substitute for rule 1.
 
 ### Worktree node_modules Hazard
 

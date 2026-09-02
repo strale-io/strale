@@ -1,0 +1,88 @@
+name: Stale branches
+
+# Weekly hygiene report (track T3 of the CTO-readiness program). Lists every
+# remote branch other than main whose last commit is older than seven days and
+# which has no open pull request, and keeps exactly one tracking issue
+# (label `stale-branches`) up to date: opened when the list is non-empty,
+# closed when it is empty. Nothing is deleted here; the issue names the
+# `git push origin --delete <branch>` for a session to run after checking the
+# branch has landed (merged PR, or content on main). workflow_dispatch exists
+# so the job can be proven against a planted branch.
+
+on:
+  schedule:
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: "Report branches older than this many days"
+        default: "7"
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Find stale branches
+        id: scan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MAX_AGE_DAYS: ${{ github.event.inputs.max_age_days || '7' }}
+        run: |
+          set -euo pipefail
+          now=$(date +%s)
+          limit=$(( MAX_AGE_DAYS * 86400 ))
+          open_heads=$(gh pr list --state open --limit 200 --json headRefName --jq '.[].headRefName' | sort -u)
+          : > stale.txt
+          git for-each-ref --format='%(refname:short) %(committerdate:unix) %(objectname:short)' refs/remotes/origin \
+            | grep -v -E '^origin/(main|HEAD) ' \
+            | while read -r ref date sha; do
+                branch=${ref#origin/}
+                age=$(( (now - date) / 86400 ))
+                if [ $(( now - date )) -lt "$limit" ]; then continue; fi
+                if printf '%s\n' "$open_heads" | grep -qx "$branch"; then continue; fi
+                merged=$(gh pr list --state merged --head "$branch" --limit 1 --json number --jq '.[0].number // empty')
+                printf '| `%s` | %s | %s days | %s |\n' "$branch" "$sha" "$age" "${merged:+merged in #$merged}" >> stale.txt
+              done
+          count=$(wc -l < stale.txt | tr -d ' ')
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "Stale branches: $count"
+          cat stale.txt
+      - name: Open, update, or close the tracking issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COUNT: ${{ steps.scan.outputs.count }}
+        run: |
+          set -euo pipefail
+          title="Stale remote branches (weekly hygiene report)"
+          existing=$(gh issue list --label stale-branches --state open --limit 1 --json number --jq '.[0].number // empty')
+          if [ "$COUNT" = "0" ]; then
+            if [ -n "$existing" ]; then
+              gh issue close "$existing" --comment "No remote branch other than \`main\` is older than the threshold without an open PR. Closed by the weekly report ($(date -u +%F))."
+            fi
+            exit 0
+          fi
+          {
+            echo "Remote branches other than \`main\` with no open pull request and no commit in the last ${MAX_AGE_DAYS:-7} days, as of $(date -u +%F). Nothing was deleted."
+            echo
+            echo "| Branch | Tip | Age | Landed? |"
+            echo "|---|---|---|---|"
+            cat stale.txt
+            echo
+            echo "For each branch: if its PR is merged or its content is on \`main\` (compare files, not commit counts), run \`git push origin --delete <branch>\` from a session; otherwise open a PR or tag it under \`archive/branches/\` first. Rule and gate: \`WORKTREES.md\`, \`npm run handoff:check\`."
+          } > body.md
+          gh label create stale-branches --description "Weekly stale-branch report" --color c2e0c6 2>/dev/null || true
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --body-file body.md
+            gh issue comment "$existing" --body "Updated by the weekly report on $(date -u +%F): $COUNT stale branch(es)."
+          else
+            gh issue create --title "$title" --label stale-branches --body-file body.md
+          fi

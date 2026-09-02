@@ -1,0 +1,4 @@
+#!/bin/sh
+# Full handoff gate over the refs being pushed; a push to main needs STRALE_ALLOW_MAIN_PUSH=1
+# from a human (main changes only through reviewed PRs merged on GitHub). Git passes the refs on stdin.
+exec node scripts/handoff/handoff-check.mjs --mode pre-push

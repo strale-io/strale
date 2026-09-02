@@ -6,11 +6,10 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "5b601c16ccf350b21d4e5f560356809532a016a2b174b5136f7409149ff4b063",
+      "sha256": "45e66597bead9953a4c2f627d8322754bec1b1e5b984fe76ee325aa91cbb44e2",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
-        ".codex/hooks.json",
         "CLAUDE.md",
         "archive/sessions/2026-08-31-m1-clean-extraction-review-claude.md",
         "archive/sessions/2026-08-31-m1-parallel-sequencing-review-claude.md",
@@ -40,7 +39,6 @@
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
-        "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-16-codebase-quality-program.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
@@ -59,13 +57,14 @@
         "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
+        "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "1c42fa20ed66358b3f0d617de6622478c47d4f3cf7122d7dfb335c481cda0d83",
+      "sha256": "edc4d84fdceaf97aa83366d51ba1ceb0df6e28fc81047404e65286132ee38679",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -76,7 +75,6 @@
         "AGENTS.md",
         "DISTRIBUTION_PR_PREFLIGHT.md",
         "README.md",
-        "WORKTREES.md",
         "apps/api/scripts/convert-browserless-suites-to-fixture.ts",
         "apps/api/scripts/npm-release-resolve.mjs",
         "apps/api/scripts/session-close-check.ts",
@@ -225,6 +223,7 @@
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
         "handoff/_general/from-code/2026-09-02-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
+        "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
         "manifests/c2pa-inspect.yaml",
@@ -235,6 +234,7 @@
         "packages/mcp-server/src/tools.ts",
         "scripts/guard-tree-integrity.mjs",
         "scripts/guard-worktree-isolation.mjs",
+        "scripts/handoff/handoff-check.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs"
       ]
@@ -335,9 +335,13 @@
     {
       "path": ".codex/hooks.json",
       "owner_area": "codex-workflow",
-      "sha256": "bc7f1b539faa145221b94d7b5c73e137756ddf5249d9c21aa5f80b518b84db92",
+      "sha256": "a4f47372d940e04758397fc26fb9d79e970f8fdad15e50729617c4d4149d8ae0",
       "detected_references": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -435,7 +439,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "7283813d182e456d4dfbcd107a68e4a92a6527f437ea511c551748b97dbd1971",
+      "sha256": "aa476db5a43451832a9b98cf5a5f85e86acf3c6c6b06a92d18e098e9cb659ee7",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -446,11 +450,19 @@
         ".claude/WORKFLOW.md",
         ".claude/commands/ceo-brief.md",
         ".claude/commands/end-session.md",
+        ".claude/hooks/handoff-session-start.mjs",
+        ".claude/hooks/handoff-stop.mjs",
+        ".claude/settings.json",
         ".claude/skills/go/SKILL.md",
+        ".codex/hooks.json",
+        ".githooks/pre-commit",
+        ".githooks/pre-push",
         ".github/workflows/ci.yml",
+        ".github/workflows/stale-branches.yml",
         ".github/workflows/weekly-drift.yml",
         "AGENTS.md",
         "CLAUDE.md",
+        "WORKTREES.md",
         "apps/api/docs/v1-identity-coverage-matrix-2026-05-13.md",
         "apps/api/scripts/archive/README.md",
         "apps/api/scripts/archive/deactivate-ecb.ts",
@@ -528,7 +540,13 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "manifests-drafts/mexican-company-data.yaml",
+        "package.json",
         "scripts/guard-production-write-access.mjs",
+        "scripts/handoff/codex-notify.mjs",
+        "scripts/handoff/handoff-check.mjs",
+        "scripts/handoff/handoff-check.test.mjs",
+        "scripts/handoff/install-hooks.mjs",
+        "scripts/handoff/orient.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs",
         "scripts/program-tracks.test.mjs"

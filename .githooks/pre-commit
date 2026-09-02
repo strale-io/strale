@@ -1,0 +1,4 @@
+#!/bin/sh
+# Fast structural handoff checks before every commit (any tool, any worktree).
+# Installed by `npm run hooks:install` (also `npm ci` via prepare): git config core.hooksPath .githooks
+exec node scripts/handoff/handoff-check.mjs --mode pre-commit

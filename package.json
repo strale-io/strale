@@ -22,7 +22,13 @@
     "context:check": "node scripts/check-project-context.mjs",
     "context:test": "node --test scripts/check-project-context.test.mjs scripts/decision-records.test.mjs scripts/m2-closure-register.test.mjs",
     "programs:check": "node scripts/check-program-tracks.mjs",
-    "programs:test": "node --test scripts/program-tracks.test.mjs"
+    "programs:test": "node --test scripts/program-tracks.test.mjs",
+    "handoff:check": "node scripts/handoff/handoff-check.mjs",
+    "handoff:test": "node --test scripts/handoff/handoff-check.test.mjs",
+    "handoff:orient": "node scripts/handoff/orient.mjs",
+    "handoff:baseline": "node scripts/handoff/handoff-check.mjs baseline",
+    "hooks:install": "node scripts/handoff/install-hooks.mjs",
+    "prepare": "node scripts/handoff/install-hooks.mjs"
   },
   "license": "MIT",
   "engines": {
