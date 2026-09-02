@@ -15,3 +15,7 @@ scripts/project-context-lib.mjs text eol=lf
 scripts/generate-project-context.mjs text eol=lf
 scripts/check-project-context.mjs text eol=lf
 scripts/check-project-context.test.mjs text eol=lf
+docs/programs/** text eol=lf
+scripts/program-tracks-lib.mjs text eol=lf
+scripts/check-program-tracks.mjs text eol=lf
+scripts/program-tracks.test.mjs text eol=lf

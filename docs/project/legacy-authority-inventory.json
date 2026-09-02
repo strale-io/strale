@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "b718c012963df727635ca6d8f9fe01c27d998e72317f05ad6891ff96ce00ceab",
+      "sha256": "e2a72983b3e048e175ee94143b48214a69ad59fb428318220c98ae8fc6c94e40",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -38,6 +38,7 @@
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
+        "docs/programs/cto-readiness/PROGRAM.md",
         "docs/strategy/2026-08-16-codebase-quality-program.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
@@ -61,7 +62,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "7d238f47c1fa8cc4d18fb9bd8fd3acaba86239149729bc1bce6e453b5872303d",
+      "sha256": "abaa1caa6d623931905dd169b44a9dd4c5c0561b83fda6a014d19ca1bb0aaa08",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -156,6 +157,8 @@
         "context7.json",
         "docs/company/CHARTER.md",
         "docs/operations/operator-actions.yaml",
+        "docs/programs/cto-readiness/PROGRAM.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/remediation/FABLE-REAUDIT.md",
         "docs/remediation/REMEDIATION-LEDGER.md",
         "docs/remediation/packages/WP10.yaml",
@@ -342,6 +345,7 @@
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
+        "docs/programs/cto-readiness/PROGRAM.md",
         "docs/remediation/REMEDIATION-LEDGER.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/x402-listing.md",
@@ -355,7 +359,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "3e3ab5010590b48673346f4dcfb642c6938374dcd2e2a527d929dc7ce75857e2",
+      "sha256": "0ebff45b4f1ac606ca444bdc17260e140c029ed830b48422ed4fc95697c5700a",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -369,6 +373,7 @@
         "archive/sessions/audit-output/parallel-audits-2026-08-12/kyb-coverage-research.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "handoff/_general/from-code/2026-08-12-readiness-p0-baseline.md",
         "handoff/_general/from-code/2026-08-16-quality-program-phase0-phase1.md",
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
@@ -391,6 +396,7 @@
         "apps/api/src/lib/x402-eligibility.ts",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "docs/company/DECISION-QUEUE.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "handoff/_general/from-code/2026-08-22-PROCESS-VIOLATION-unapproved-prod-mutation.md",
         "handoff/_general/from-code/2026-08-22-checkin-morning.md",
@@ -481,6 +487,8 @@
         "docs/company/GOALS.md",
         "docs/company/LESSONS.md",
         "docs/incidents/2026-08-22-production-authorization-failure.md",
+        "docs/programs/cto-readiness/PROGRAM.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/remediation/ORCHESTRATOR.md",
         "docs/research/2026-04-28-india-kyc-kyb-data-landscape.md",
         "docs/research/2026-04-28-payee-assurance-build-vs-buy.md",
@@ -492,7 +500,8 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "manifests-drafts/mexican-company-data.yaml",
-        "scripts/guard-production-write-access.mjs"
+        "scripts/guard-production-write-access.mjs",
+        "scripts/program-tracks.test.mjs"
       ]
     }
   ]

@@ -48,6 +48,13 @@ also merged, but are product work rather than authority cutover evidence.
 **Latest handoff:**
 `handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md`.
 
+**Program register (added 2026-09-02):** this migration is now track T1 through
+T8 of the `cto-readiness` program, `docs/programs/cto-readiness/PROGRAM.md`
+and `tracks.yaml`. The register says which track is active; this checkpoint
+remains the detailed M2-through-M7 specification behind it. Where the two
+disagree on *what is next*, the register wins; where they disagree on *what a
+milestone requires*, this plan wins.
+
 **Next bounded task:** complete an M2 closure audit before starting M3. Build a
 reviewable remaining-work/disposition register without changing the M1 bare
 inventory's contract. Reconcile:

@@ -20,7 +20,9 @@
     "coverage-matrix:check": "npm run validate:coverage-matrix && npm run coverage-matrix:summary -- --check",
     "context:generate": "node scripts/generate-project-context.mjs",
     "context:check": "node scripts/check-project-context.mjs",
-    "context:test": "node --test scripts/check-project-context.test.mjs scripts/decision-records.test.mjs"
+    "context:test": "node --test scripts/check-project-context.test.mjs scripts/decision-records.test.mjs",
+    "programs:check": "node scripts/check-program-tracks.mjs",
+    "programs:test": "node --test scripts/program-tracks.test.mjs"
   },
   "license": "MIT",
   "engines": {

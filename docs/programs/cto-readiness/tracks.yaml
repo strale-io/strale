@@ -1,0 +1,174 @@
+# CTO-readiness program — track register.
+# Validated by `npm run programs:check` (tests: `npm run programs:test`).
+# Human view: PROGRAM.md; this file wins on any disagreement.
+# Status enum: queued | active | blocked | founder_gated | done | rehomed
+# Exactly one track is `active` at any time. A `blocked` or `founder_gated`
+# track must name its blocker. A `done` track must list evidence paths that are
+# tracked regular files on main. A `rehomed` track must name where it went.
+# Only `done` satisfies a dependency. `program_status` is active (exactly one
+# active track), paused (no active track; at least one founder_gated or blocked
+# track and nothing runnable), or complete (every track done or rehomed).
+schema_version: 1
+program: cto-readiness
+program_status: active
+updated: 2026-09-02
+tracks:
+  - id: T1
+    title: M2 closure audit
+    status: active
+    depends_on: []
+    owner: session
+    next_action: >
+      Design the disposition register schema under docs/project/schemas/,
+      classify all 15 legacy-authority inventory entries and every preserved
+      Decision source row, reconcile the migration plan's older "Next:" notes
+      against merged commits, and add the tests named in this track's exit
+      criteria. Sources beyond the resume_file: the private archive named in
+      docs/project/private-archive-status.json (repository, commit, and the
+      decisions export under archive/imports/notion/2026-08-31/data-sources/
+      inside that archive; read it with gh api, never copy it here); the
+      collision registry docs/decisions/id-collisions.yaml; the formal records
+      under docs/decisions/records/.
+    resume_file: handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md
+    exit:
+      - schema-validated disposition register committed with exact counts per disposition
+      - every inventory entry and Decision source row has a disposition, provenance, and rationale
+      - explicit M2 exit-gap list and next collision-free Decision batch named
+      - tests fail on missing entries, unsupported dispositions, invalid sources, duplicate identities, count drift, or silent removal
+      - M1 bare inventory contract unchanged
+    evidence: []
+
+  - id: T2
+    title: Repo hygiene sweep
+    status: queued
+    depends_on: []
+    owner: session
+    next_action: >
+      Recount at start (branches and worktrees change daily; the 2026-09-02
+      snapshot was 50 unmerged remote branches, 11 of them janitor rescue
+      snapshots, plus roughly thirty linked worktrees), then classify every
+      remote branch, every linked worktree, the unregistered strale-work
+      directory, and the dirty shared checkout. Delete what is verified
+      landed; list what must stay and why.
+    resume_file: null
+    exit:
+      - every remote and local branch either deleted with landed-evidence or listed with a reason
+      - every worktree either removed or mapped to an active session in WORKTREES.md
+      - shared checkout on main, clean, its former uncommitted work preserved on a named branch
+      - rescue snapshots triaged; none silently discarded
+    evidence: []
+
+  - id: T3
+    title: Hygiene enforcement framework
+    status: queued
+    depends_on: [T2]
+    owner: session
+    next_action: >
+      Add a scheduled CI job that lists branches older than seven days with no
+      open PR and opens one tracking issue; add the branch-and-worktree
+      cleanup step to the session-end skill; extend the daily run to report
+      and prune rescue snapshots; rewrite WORKTREES.md to match practice.
+    resume_file: null
+    exit:
+      - CI job exists, is proven to run (workflow_dispatch evidence), and opens an issue on a planted stale branch
+      - session-end skill deletes the merged branch and removes the worktree
+      - daily run reports rescue-snapshot count and prunes ones whose diff is empty against main
+      - WORKTREES.md describes the model actually used by both tools
+    evidence: []
+
+  - id: T4
+    title: Remediation program closure
+    status: queued
+    depends_on: []
+    owner: session
+    next_action: >
+      Record WP10's overdue seven-day cadence verdict from production evidence;
+      close WP9 observation; establish the Railway proxy-hop count read-only
+      for VERIFY-IP; decide WP15's database-lane item; ship or formally defer
+      WP17; run WP13's reachability triage; re-home WP14 and WP16.
+    resume_file: docs/remediation/CURRENT-STATE.md
+    exit:
+      - WP9 and WP10 carry a terminal status in their package files
+      - VERIFY-IP has a recorded answer with the query that produced it
+      - WP12, WP13, WP15, WP17 each have a dated status that is not PLANNED or NOT_STARTED
+      - WP14 appears in tracks.yaml as founder_gated with the exact evidence requested
+      - WP16 appears as T9 with its own plan pointer
+      - PACKAGE-GRAPH.yaml reconciled against package files
+    evidence: []
+
+  - id: T5
+    title: CTO-readable repository structure
+    status: queued
+    depends_on: [T2, T4]
+    owner: session
+    next_action: >
+      Rewrite README.md top-down for a stranger; add a docs/ index; index
+      archive/ and handoff/; move non-canon root files; reach or record every
+      deviation from the migration plan section 5 target architecture.
+    resume_file: null
+    exit:
+      - README.md routes a stranger from product to code to process in one read
+      - docs/README.md indexes every docs/ subtree with one line each
+      - archive/ and handoff/ have generated indexes and no unindexed files
+      - repo root contains only files listed in the CLAUDE.md Report Filing Convention as top-level canon
+      - each deviation from migration plan section 5 is listed with a reason
+    evidence: []
+
+  - id: T6
+    title: M3 repo-native workflows
+    status: queued
+    depends_on: [T1, T5]
+    owner: session
+    next_action: >
+      Per migration plan section 10 M3. First sub-batch is the
+      vendor-current-state shadow replacement named by the vendor-stack
+      closeout.
+    resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
+    exit:
+      - repo-native replacements testable without changing existing authority
+      - no path writes to both repo-native truth and Notion
+      - scheduled and deployment mechanisms verified, not assumed
+      - every mandatory protocol represented in the coverage manifest
+      - old entrypoints remain in force
+    evidence: []
+
+  - id: T7
+    title: M4 atomic authority cutover
+    status: queued
+    depends_on: [T3, T6]
+    owner: session
+    next_action: >
+      Per migration plan section 10 M4. Prepare the single cutover PR, then
+      set this track to founder_gated with the exact reviewed commit named as
+      the blocker; on the founder's yes, merge and verify both entrypoints
+      load the same truth.
+    resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
+    exit:
+      - both tools load the same project truth and pass entrypoint parity
+      - no active state read from or written to Notion
+      - all guards blocking
+    evidence: []
+
+  - id: T8
+    title: M5 to M7 closeout
+    status: queued
+    depends_on: [T7]
+    owner: session
+    next_action: Per migration plan section 10 M5, M6, M7.
+    resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
+    exit:
+      - legacy authorities archived with zero broken Charter links
+      - clean-session acceptance passed on Claude Code and Codex from the same commit
+      - migration plan archived with review and acceptance evidence
+    evidence: []
+
+  - id: T9
+    title: Discovery and retrieval authority (WP16)
+    status: queued
+    depends_on: [T7]
+    owner: session
+    next_action: Open its own program plan under docs/programs/ when T7 is done.
+    resume_file: docs/remediation/PACKAGE-GRAPH.yaml
+    exit:
+      - own program plan and register exist
+    evidence: []
