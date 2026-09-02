@@ -44,6 +44,7 @@ export const TRACKS_OUTSIDE_M2_GATE = Object.freeze({
   T12: "none", // research contract (reviewed 2026-09-02: founder plan milestone 1; documentation contract, no M2 dependency)
   T13: "none", // design tokens as data (reviewed 2026-09-02: founder plan milestones 2-3; design contract, no M2 dependency)
   T14: "none", // cheap extras: env manifest, model registry, claims register (reviewed 2026-09-02: founder plan milestone 4, no M2 dependency)
+  T15: "none", // test receipts and migration ledger (reviewed 2026-09-02: survey second wave; evidence conventions, no M2 dependency)
 });
 
 /**
