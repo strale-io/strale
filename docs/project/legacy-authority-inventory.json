@@ -72,7 +72,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "21a65671c84de00b5322e17143e94b23bb1ec366a1a5bdf94df92a3a390d49fc",
+      "sha256": "f4c88e3850328735905c0bda1ec3fa816ae3e981ff06a62cd355947ba1a4f55e",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -168,6 +168,7 @@
         "archive/sessions/official-source-catalog-batch-2026-08-13.md",
         "archive/sessions/stranded-research-2026-05/identity-field-coverage-2026-05-15.md",
         "archive/sessions/stranded-research-2026-05/rate-limit-and-ca-orchestration-concurrency-2026-05-15.md",
+        "archive/superseded/manifests-drafts/README.md",
         "context7.json",
         "docs/README.md",
         "docs/company/CHARTER.md",
@@ -415,7 +416,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "0ebff45b4f1ac606ca444bdc17260e140c029ed830b48422ed4fc95697c5700a",
+      "sha256": "9300290fff7b50a9f08c265a58b1d52fd53ec366130ba778b7679a517d6727fc",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -430,6 +431,12 @@
         "archive/sessions/audit-output/parallel-audits-2026-08-12/kyb-coverage-research.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md",
+        "archive/superseded/manifests-drafts/README.md",
+        "archive/superseded/manifests-drafts/company-name-resolve.yaml",
+        "archive/superseded/manifests-drafts/domain-email-provider-detect.yaml",
+        "archive/superseded/manifests-drafts/mexican-company-data.yaml",
+        "archive/superseded/manifests-drafts/product-offers-lookup.yaml",
+        "archive/superseded/manifests-drafts/sec-edgar-name-search.yaml",
         "config/env-manifest.yaml",
         "docs/README.md",
         "docs/programs/cto-readiness/tracks.yaml",
@@ -556,6 +563,7 @@
         "archive/sessions/audit-reports/2026-04-21-singapore-kyb-investigation.md",
         "archive/sessions/audit-sqs-surfaces-20260505.md",
         "archive/sessions/handoff-from-code/2026-04-16-frontend-redesign-session1.md",
+        "archive/superseded/manifests-drafts/mexican-company-data.yaml",
         "config/env-manifest.schema.json",
         "context7.json",
         "design/PROVENANCE.md",
