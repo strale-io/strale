@@ -91,10 +91,22 @@ One checker, four layers, one contract:
   layer is unverified until a Codex turn runs here (quota exhausted until
   2026-09-07).
 
+## After merge (same day)
+
+- PR #480 squash-merged as `15fe6f78`; trunk pulled to `main`, batch worktree
+  and branch removed (local and remote); Codex notify chain re-linked with
+  the trunk copy that now exists.
+- `stale-branches` proven: a branch planted at a 15-day-old commit made the
+  dispatched run open issue #481 listing it; deleting the branch and
+  dispatching again closed the issue.
+- Layer two proven live: the Stop hook blocked this very session twice
+  (`block 1/6`, `block 2/6`) while the planted branch existed, naming the
+  exact `git push origin --delete` fix, and let it through once the branch
+  was gone.
+- Register: T3 done, T4 (remediation program closure) active.
+
 ## Open
 
-- Prove `stale-branches` with a `workflow_dispatch` run against a planted
-  branch after merge.
 - `C:\Users\pette\Projects\strale-codex-handoff-v2` (61 files of website
   design/copy handoff documents, 60 of which never existed in this
   repository's history) is the one plain directory left; it belongs with the

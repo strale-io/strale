@@ -68,22 +68,20 @@ tracks:
 
   - id: T3
     title: Automatic session-end gate
-    status: active
+    status: done
     gate: none
     depends_on: [T2]
     owner: session
     next_action: >
-      The four layers are built and proven locally (handoff file
-      2026-09-02-t3-session-end-gate.md): merge the PR once its independent
-      review passes; re-add the Strale entry to the notify chain in
-      ~/.codex/config.toml pointing at the trunk copy of
-      scripts/handoff/codex-notify.mjs (it was removed before merge because the
-      file did not exist on main yet); prove the stale-branches workflow with a
-      workflow_dispatch run against a planted branch; verify the Codex layer
-      live (notify wrapper and .codex/hooks.json Stop hook) the first time a
-      Codex turn runs in this repository after the quota returns; then set this track to done with the
-      evidence paths (ten of the eleven plain directories are deleted after a
-      file-level history check; strale-codex-handoff-v2 is Petter's call).
+      Done. Shipped in PR #480 (15fe6f78): npm run handoff:check behind
+      Claude Code hooks, the Codex notify wrapper and .codex/hooks.json,
+      git hooks via core.hooksPath, and the weekly stale-branches
+      workflow (proven with a planted branch: issue #481 opened, then
+      closed after deletion). The Stop hook blocked a live session twice
+      the same day on exactly that planted branch. Still unverified: the
+      Codex layer live (notify wrapper re-linked in ~/.codex/config.toml
+      after merge; first Codex turn here after the quota returns on
+      2026-09-07 must show .claude/state/handoff/last-codex.json).
     resume_file: handoff/_general/from-code/2026-09-02-t3-session-end-gate.md
     exit:
       - planting each failure mode makes handoff:check fail with a one-line fix; a clean repo passes
@@ -92,11 +90,14 @@ tracks:
       - the Codex notify wrapper writes the status file and the orientation script prints it
       - CI job lists branches older than seven days with no open PR and opens one tracking issue
       - WORKTREES.md describes the allowed set and the trunk is on main
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t3-session-end-gate.md
+      - scripts/handoff/handoff-check.mjs
+      - .github/workflows/stale-branches.yml
 
   - id: T4
     title: Remediation program closure
-    status: queued
+    status: active
     gate: none
     depends_on: []
     owner: session
