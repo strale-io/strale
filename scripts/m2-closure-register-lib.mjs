@@ -70,15 +70,20 @@ export const sha256 = (s) => createHash("sha256").update(s, "utf8").digest("hex"
  * recomputed here and the private one by the operator script against the
  * archive.
  */
-export const scopeDateHash = (r) => r.scope_date_sha256 ?? sha256(`${r.historical_scope ?? ""}|${r.decided_at}`);
-
 export function canonicalDigest(rows) {
   const lines = [...rows]
     .sort((a, b) => (a.page_id < b.page_id ? -1 : a.page_id > b.page_id ? 1 : 0))
-    .map((r) =>
-      [r.page_id, r.id ?? "", r.historical_status ?? "", scopeDateHash(r),
-        r.title_sha256 ?? sha256(r.title), r.disposition].join("|"),
-    );
+    .map((r) => [r.page_id, r.id ?? "", r.historical_status ?? "", r.title_sha256 ?? sha256(r.title), r.disposition].join("|"));
+  return sha256(lines.join("\n") + "\n");
+}
+
+/**
+ * Aggregate commitment to scope and date for a set of rows whose clear values
+ * are known (the archive, or the private projection). Public rows never carry
+ * the values; the register stores only this digest for them.
+ */
+export function scopeDateDigest(triples) {
+  const lines = [...triples].map(([p, scope, date]) => `${p}|${scope ?? ""}|${date}`).sort();
   return sha256(lines.join("\n") + "\n");
 }
 
@@ -351,6 +356,8 @@ export function validateClosureRegister(register, context, { schema, relativePat
       continue;
     }
     if (actual.id !== fr.id) finding("FORMAL_RECORD_ID_MISMATCH", `${fr.record_key}: ${fr.id} vs ${actual.id}`);
+    // Git provenance is the record's own first evidence entry, never a free choice.
+    if (fr.git_provenance !== undefined && fr.git_provenance !== actual.evidence[0]) finding("FORMAL_RECORD_PROVENANCE_MISMATCH", `${fr.record_key}: ${fr.git_provenance} vs record evidence ${actual.evidence[0]}`);
   }
   for (const key of recordByKey.keys()) if (!listedKeys.has(key)) finding("FORMAL_RECORD_MISSING", key);
   if (register.sources.formal_records.record_count !== context.records.length) {
@@ -408,7 +415,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
     if (row.title !== undefined && (!col || col.title !== row.title)) finding("DECISION_ROW_TITLE_NOT_PUBLIC", row.page_id);
     if (row.title === undefined && col && col.title !== undefined) finding("DECISION_ROW_TITLE_EXPECTED", row.page_id);
-    // Scope and date are not published on main for any row; public rows carry a hash.
+    // Scope and date are not published on main for any row; public rows carry neither.
     if (row.historical_scope !== undefined || row.decided_at !== undefined) finding("DECISION_ROW_SCOPE_DATE_NOT_PUBLIC", row.page_id);
     if (col && col.historical_status !== undefined && col.historical_status !== row.historical_status) finding("DECISION_ROW_STATUS_MISMATCH", `${row.page_id}: ${row.historical_status} vs registry ${col.historical_status}`);
 
@@ -598,6 +605,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
   if (register.formal_records.some((fr) => fr.source_kind === "git-native") && !covered.has("formal_records.git_native")) {
     finding("EXIT_GAP_UNCOVERED", "formal_records.git_native has no gap");
   }
+  // The plan's M2 exit requires a closing independent review; until M2 closes,
+  // a gap must always cover it.
+  if (!covered.has("plan.review_route")) finding("EXIT_GAP_UNCOVERED", "plan.review_route has no gap (the closing review requirement cannot disappear)");
 
   // ---- Next batch: cutoff anchored to a public row; public eligibility exact.
   const nb = register.next_decision_batch;
@@ -735,7 +745,8 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
     if (registryPageIds.has(r.page_id)) finding("PRIVATE_ROW_IN_REGISTRY", r.page_id);
     if (r.title !== undefined) finding("PRIVATE_ROW_CLEAR_TITLE", r.page_id);
     if (typeof r.source_url !== "string" || !r.source_url.endsWith(r.page_id)) finding("PRIVATE_ROW_SOURCE_URL_MISMATCH", r.page_id);
-    if (r.scope_date_sha256 !== undefined || r.historical_scope === undefined || r.decided_at === undefined) finding("PRIVATE_ROW_REDACTED_FIELDS", `${r.page_id}: private rows carry clear scope and date`);
+    if (r.historical_scope === undefined || r.decided_at === undefined) finding("PRIVATE_ROW_REDACTED_FIELDS", `${r.page_id}: private rows carry clear scope and date`);
+    if (r.collision !== undefined) finding("PRIVATE_ROW_COLLISION_PAYLOAD", `${r.page_id}: collision payloads belong to registry rows and the cross-surface row, which are public`);
     if (["formally_migrated", "resolved_collision"].includes(r.disposition)) finding("PRIVATE_ROW_PUBLIC_DISPOSITION", `${r.page_id}: ${r.disposition}`);
     if (["intentionally_historical", "unresolved_collision"].includes(r.disposition)) finding("PRIVATE_ROW_HAND_DISPOSITION", `${r.page_id}: ${r.disposition} needs public evidence and must be a public row`);
     const expected = expectedDisposition(r);
@@ -795,7 +806,7 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
  * "date:Date:start", createdTime, Decision }). Pure; used by the operator
  * script with rows fetched over gh api and by tests with synthetic rows.
  */
-export function compareRowsToExport(rows, exportRows) {
+export function compareRowsToExport(rows, exportRows, { publicScopeDateDigest } = {}) {
   const findings = [];
   const finding = (code, detail) => findings.push({ code, path: "archive export", detail });
   const pid = (u) => ((u ?? "").replace(/-/g, "").match(/([0-9a-f]{32})/) ?? [])[1];
@@ -817,10 +828,7 @@ export function compareRowsToExport(rows, exportRows) {
     const actualHash = row.title_sha256 ?? sha256(row.title ?? "");
     if (row.id !== expected.id) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} id ${row.id} != ${expected.id}`);
     if (row.historical_status !== expected.historical_status) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} status`);
-    if (row.scope_date_sha256 !== undefined) {
-      const expectedScopeDate = sha256(`${expected.historical_scope ?? ""}|${expected.decided_at}`);
-      if (row.scope_date_sha256 !== expectedScopeDate) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} scope/date hash`);
-    } else {
+    if (row.historical_scope !== undefined || row.decided_at !== undefined) {
       if (row.historical_scope !== expected.historical_scope) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} scope`);
       if (row.decided_at !== expected.decided_at) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} date ${row.decided_at} != ${expected.decided_at}`);
     }
@@ -828,6 +836,16 @@ export function compareRowsToExport(rows, exportRows) {
     if (row.source_url !== expected.source_url) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} source_url`);
   }
   for (const p of identities.keys()) if (!seen.has(p)) finding("EXPORT_ROW_UNPROJECTED", `${p} is in the export but in neither projection`);
+  // Rows without clear scope/date (the public projection) are bound in aggregate.
+  if (publicScopeDateDigest !== undefined) {
+    const triples = rows
+      .filter((r) => r.historical_scope === undefined && r.decided_at === undefined && identities.has(r.page_id))
+      .map((r) => {
+        const src = identities.get(r.page_id);
+        return [r.page_id, src.Scope ?? "", (src["date:Date:start"] || src.createdTime).slice(0, 10)];
+      });
+    if (scopeDateDigest(triples) !== publicScopeDateDigest) finding("EXPORT_SCOPE_DATE_DIGEST_MISMATCH", "public rows' scope/date digest does not match the export");
+  }
   return findings;
 }
 

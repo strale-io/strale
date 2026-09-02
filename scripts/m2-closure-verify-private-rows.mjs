@@ -53,7 +53,7 @@ if (allDigest !== register.digests.all_rows.digest) fail(`all-rows digest ${allD
 
 // 3. Every projected row must match its raw export row field by field, and
 // every export row must be projected exactly once (pure, shared with tests).
-for (const f of compareRowsToExport(all, raw)) fail(`${f.code} ${f.detail}`);
+for (const f of compareRowsToExport(all, raw, { publicScopeDateDigest: register.digests.public_rows.scope_date_digest })) fail(`${f.code} ${f.detail}`);
 
 // 4. Everything about the private projection that CI cannot see: schema,
 // derivation rules, counts, digests, next-batch candidates. One pure function,

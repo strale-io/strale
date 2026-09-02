@@ -78,7 +78,11 @@
       "required": ["canonical_row_format", "public_rows", "all_rows"],
       "properties": {
         "canonical_row_format": { "type": "string", "minLength": 20 },
-        "public_rows": { "$ref": "#/$defs/countDigest" },
+        "public_rows": {
+          "type": "object", "additionalProperties": false,
+          "required": ["count", "digest", "scope_date_digest"],
+          "properties": { "count": { "type": "integer", "minimum": 0 }, "digest": { "$ref": "#/$defs/sha64" }, "scope_date_digest": { "$ref": "#/$defs/sha64" } }
+        },
         "all_rows": { "$ref": "#/$defs/countDigest" }
       }
     },
@@ -148,7 +152,12 @@
     "decision_rows": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/decisionRow" }
+      "items": {
+        "allOf": [
+          { "$ref": "#/$defs/decisionRow" },
+          { "not": { "anyOf": [{ "required": ["historical_scope"] }, { "required": ["decided_at"] }] } }
+        ]
+      }
     },
     "private_rows": {
       "type": "object",
@@ -285,7 +294,6 @@
         "historical_status": { "type": ["string", "null"], "enum": ["active", "superseded", "reversed", null] },
         "historical_scope": { "type": ["string", "null"], "enum": ["global", "feature", "temporary", null] },
         "decided_at": { "$ref": "#/$defs/date" },
-        "scope_date_sha256": { "$ref": "#/$defs/sha64" },
         "source_url": { "type": "string", "pattern": "^https://app\\.notion\\.com/[0-9a-f]{32}$" },
         "disposition": {
           "enum": ["formally_migrated", "unresolved_collision", "resolved_collision", "intentionally_historical", "obsolete_or_superseded", "not_yet_reconciled", "unclear"]
@@ -310,12 +318,6 @@
         { "required": ["title_sha256"], "not": { "required": ["title"] } }
       ],
       "allOf": [
-        {
-          "oneOf": [
-            { "required": ["historical_scope", "decided_at"], "not": { "required": ["scope_date_sha256"] } },
-            { "required": ["scope_date_sha256"], "not": { "anyOf": [{ "required": ["historical_scope"] }, { "required": ["decided_at"] }] } }
-          ]
-        },
         { "if": { "properties": { "disposition": { "const": "formally_migrated" } } }, "then": { "required": ["record_key"] } },
         { "if": { "properties": { "disposition": { "enum": ["unresolved_collision", "resolved_collision"] } } }, "then": { "required": ["collision"] } },
         { "if": { "properties": { "disposition": { "const": "unclear" } } }, "then": { "properties": { "id": { "type": "null" } } } }

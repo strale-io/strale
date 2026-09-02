@@ -11,6 +11,7 @@ import {
   canonicalDigest,
   checkClosureRegister,
   compareRowsToExport,
+  scopeDateDigest,
   evidenceProblem,
   loadRegister,
   loadRegisterSchema,
@@ -45,13 +46,15 @@ const resync = (r) => {
   for (const [d, n] of Object.entries(r.private_rows.counts_by_disposition)) dec[d] += n;
   dec.total = r.decision_rows.length + r.private_rows.count;
   r.counts.decision_rows = dec;
-  r.digests.public_rows = { count: r.decision_rows.length, digest: canonicalDigest(r.decision_rows) };
+  r.digests.public_rows = { ...r.digests.public_rows, count: r.decision_rows.length, digest: canonicalDigest(r.decision_rows) };
   r.digests.all_rows.count = dec.total;
   r.sources.decision_archive.row_count = dec.total;
 };
 // No pending row is public (their identities are not yet on main), so tests
 // that need a public pending row manufacture one from the migrated
 // DEC-20260815-A row: unique id, historically active, decided after the cutoff.
+// scope_date_digest is an aggregate the tests cannot recompute; keep the committed value.
+const RESYNC_KEEP = { scope_date_digest: loadRegister(root).digests.public_rows.scope_date_digest };
 const publicPending = (r) => {
   const x = r.decision_rows.find((y) => y.id === "DEC-20260815-A");
   x.disposition = "not_yet_reconciled";
@@ -113,17 +116,17 @@ test("an unreadable base ref fails closed instead of skipping removal checks", (
 test("coordinated identity edits are caught by the public digest", () => {
   const r = base();
   const p = publicPending(r);
-  p.scope_date_sha256 = "0".repeat(64);
+  p.historical_status = "superseded";
   has(r, "PUBLIC_DIGEST_MISMATCH");
   const r2 = base();
   publicPending(r2).title_sha256 = "0".repeat(64);
   has(r2, "PUBLIC_DIGEST_MISMATCH");
   const r3 = base();
   const u = row(r3, "formally_migrated");
-  u.scope_date_sha256 = sha256("feature|2026-01-01");
+  u.title_sha256 = "1".repeat(64);
   has(r3, "PUBLIC_DIGEST_MISMATCH");
   const r4 = base();
-  row(r4, "formally_migrated").historical_scope = "feature"; // clear scope next to the hash is a schema violation
+  row(r4, "formally_migrated").historical_scope = "feature"; // clear scope on a public row is a schema violation
   has(r4, "SCHEMA");
 });
 
@@ -147,9 +150,8 @@ const pcodes = (r, rows) => validatePrivateProjection(r, rows, { schema, collisi
 
 test("a coordinated identity edit that re-syncs every digest passes CI but fails the raw-export comparison", () => {
   const r = base();
-  publicPending(r).scope_date_sha256 = sha256("global|2026-01-01");
-  resync(r);
-  assert.deepEqual(codesExcept(r), [], "CI cannot see the archive, so a resynced public register passes");
+  r.digests.public_rows.scope_date_digest = sha256("forged\n");
+  assert.deepEqual(codesExcept(r), [], "CI cannot see the archive, so a forged aggregate scope/date digest passes");
   // Synthetic export rows as the archive stores them.
   const exportRows = [
     { url: `https://app.notion.com/${"1".repeat(32)}`, "userDefined:ID": "DEC-20260901-Q", Status: "active", Scope: "global", "date:Date:start": "2026-09-01", createdTime: "2026-09-01T00:00:00Z", Decision: "q" },
@@ -173,6 +175,12 @@ test("a coordinated identity edit that re-syncs every digest passes CI but fails
   const { rows: badUrl } = syntheticPrivate();
   badUrl[0].source_url = `https://app.notion.com/${"9".repeat(32)}`;
   assert.ok(compareRowsToExport(badUrl, exportRows).map((f) => f.code).includes("EXPORT_FIELD_MISMATCH"));
+  // Public-shaped rows (no scope/date) are bound in aggregate: a wrong digest is rejected, the right one accepted.
+  const { rows: pubShaped } = syntheticPrivate();
+  for (const x of pubShaped) { delete x.historical_scope; delete x.decided_at; }
+  const good = scopeDateDigest([["1".repeat(32), "global", "2026-09-01"], ["2".repeat(32), "feature", "2026-03-01"], ["3".repeat(32), "", "2026-04-02"]]);
+  assert.deepEqual(compareRowsToExport(pubShaped, exportRows, { publicScopeDateDigest: good }), []);
+  assert.ok(compareRowsToExport(pubShaped, exportRows, { publicScopeDateDigest: sha256("x\n") }).map((f) => f.code).includes("EXPORT_SCOPE_DATE_DIGEST_MISMATCH"));
 });
 
 test("the private projection validator recomputes counts, digests, derivation rules, and the next batch", () => {
@@ -238,6 +246,10 @@ test("the private projection validator recomputes counts, digests, derivation ru
   const l = syntheticPrivate();
   l.rows[0].source_url = `https://app.notion.com/${"9".repeat(32)}`;
   assert.ok(pcodes(l.r, l.rows).includes("PRIVATE_ROW_SOURCE_URL_MISMATCH"));
+  // a fabricated collision payload on a private row
+  const m = syntheticPrivate();
+  m.rows[0].collision = { id: m.rows[0].id, resolution_status: "unresolved", row_disposition: "unresolved", kind: "notion-duplicate" };
+  assert.ok(pcodes(m.r, m.rows).includes("PRIVATE_ROW_COLLISION_PAYLOAD"));
 });
 
 test("an identity that is not already public on main is rejected", () => {
@@ -273,23 +285,19 @@ test("a clear title is allowed only where the collision registry publishes that 
   has(r3, "DECISION_ROW_TITLE_EXPECTED");
 });
 
-test("public rows never carry scope or date in clear, and status must match the registry", () => {
+test("public rows never carry scope or date, and status must match the registry", () => {
   const r = base();
   const c = r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate");
-  delete c.scope_date_sha256;
   c.historical_scope = "global";
   c.decided_at = "2026-03-01";
   resync(r);
-  has(r, "DECISION_ROW_SCOPE_DATE_NOT_PUBLIC");
+  has(r, "SCHEMA");
+  assert.ok(!JSON.stringify(base().decision_rows).includes("scope_date_sha256"), "no per-row scope/date hash exists");
   const r2 = base();
   const c2 = r2.decision_rows.find((x) => x.collision?.kind === "notion-duplicate");
   c2.historical_status = c2.historical_status === "active" ? "superseded" : "active";
   resync(r2);
   has(r2, "DECISION_ROW_STATUS_MISMATCH");
-  const r3 = base();
-  const m = row(r3, "formally_migrated");
-  delete m.scope_date_sha256;
-  has(r3, "SCHEMA");
 });
 
 test("duplicate ids inside the public projection must be exactly the registry's page sets", () => {
@@ -442,10 +450,24 @@ test("every formal record file must be listed, and unknown ones rejected", () =>
   has(r, "FORMAL_RECORD_UNKNOWN");
 });
 
-test("git provenance on a git-native record is validated like evidence", () => {
+test("git provenance on a git-native record is validated like evidence and derived from the record", () => {
   const r = base();
   r.formal_records.find((x) => x.source_kind === "git-native").git_provenance = "xyz";
   has(r, "EVIDENCE_INVALID");
+  const r2 = base();
+  r2.formal_records.find((x) => x.source_kind === "git-native").git_provenance = "README.md";
+  has(r2, "FORMAL_RECORD_PROVENANCE_MISMATCH");
+});
+
+test("the closing-review gap cannot disappear", () => {
+  const r = base();
+  const g9 = r.exit_gaps.find((g) => g.covers.includes("plan.review_route"));
+  r.exit_gaps = r.exit_gaps.filter((g) => g !== g9);
+  r.counts.exit_gaps[g9.blocking ? "blocking" : "non_blocking"] -= 1;
+  has(r, "EXIT_GAP_UNCOVERED", withBase(null));
+  const r2 = base();
+  r2.exit_gaps.find((g) => g.covers.includes("plan.review_route")).covers = [];
+  has(r2, "EXIT_GAP_UNCOVERED");
 });
 
 test("a formal record's source rows must be migrated rows pointing back at it", () => {
@@ -631,7 +653,7 @@ test("rows that public evidence classifies cannot hide in the private projection
   r.private_rows.count = rows.length;
   r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, obsolete_or_superseded: 1, unclear: 1 };
   r.private_rows.digest = canonicalDigest(rows);
-  r.digests.public_rows = { count: r.decision_rows.length, digest: canonicalDigest(r.decision_rows) };
+  r.digests.public_rows = { ...RESYNC_KEEP, count: r.decision_rows.length, digest: canonicalDigest(r.decision_rows) };
   r.digests.all_rows = { count: r.decision_rows.length + rows.length, digest: canonicalDigest([...r.decision_rows, ...rows]) };
   r.next_decision_batch.private_candidates = { count: 2, digest: sha256([moved.page_id, "1".repeat(32)].sort().join("\n") + "\n") };
   const c = pcodes(r, rows);
@@ -664,7 +686,7 @@ test("collision completeness is two-way across both projections", () => {
   const { r: r3, rows: rows3 } = syntheticPrivate();
   const gone = r3.decision_rows.find((x) => x.collision?.kind === "notion-duplicate");
   r3.decision_rows = r3.decision_rows.filter((x) => x !== gone);
-  r3.digests.public_rows = { count: r3.decision_rows.length, digest: canonicalDigest(r3.decision_rows) };
+  r3.digests.public_rows = { ...RESYNC_KEEP, count: r3.decision_rows.length, digest: canonicalDigest(r3.decision_rows) };
   r3.digests.all_rows = { count: r3.decision_rows.length + rows3.length, digest: canonicalDigest([...r3.decision_rows, ...rows3]) };
   assert.ok(pcodes(r3, rows3).includes("COLLISION_SET_MISMATCH"));
 });
@@ -792,14 +814,11 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
   has(r7, "NEXT_BATCH_PRIVATE_COUNT_EXCEEDS");
   const r8 = base();
   const old = publicPending(r8);
-  delete old.scope_date_sha256;
   old.historical_scope = "global";
   old.decided_at = "2026-01-01";
   resync(r8);
   r8.next_decision_batch.candidates.push({ page_id: old.page_id, id: old.id, why: "planted old candidate" });
-  const c8 = codes(r8);
-  assert.ok(c8.includes("NEXT_BATCH_TOO_OLD"), c8.join(","));
-  assert.ok(c8.includes("DECISION_ROW_SCOPE_DATE_NOT_PUBLIC"), "a clear date on a public row is itself a finding");
+  assert.ok(codes(r8).includes("SCHEMA"), "a clear date on a public row is a schema violation");
   const r9 = base();
   publicPending(r9);
   assert.ok(codes(r9).includes("NEXT_BATCH_UNEVALUABLE"), "a public pending row without a clear date cannot be judged in CI");
