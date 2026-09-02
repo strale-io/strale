@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
@@ -128,7 +129,7 @@ registerCapability("web-extract", async (input: CapabilityInput) => {
   // for the production incident this fixed.
   const parsed = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 16000,
     prompt: `${extractionPrompt}
 

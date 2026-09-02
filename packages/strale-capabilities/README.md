@@ -91,7 +91,7 @@ This package is a **catalog** — it tells you what's available. To actually _ex
 
 ## Trust & Quality
 
-Every capability has a Strale Quality Score (SQS) — a dual-profile trust rating combining code quality and operational reliability. Scores at [strale.dev/trust](https://strale.dev/trust).
+Every capability publishes its test history and known limitations rather than a single numeric score — the SQS scoring engine was retired 2026-05-05. See [strale.dev/trust](https://strale.dev/trust).
 
 ## Regenerating the Catalog
 

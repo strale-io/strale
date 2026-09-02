@@ -84,6 +84,27 @@ for a literal. `npm run design:check` refuses off-token colours, fonts, and
 off-scale spacing/radii in the surfaces it covers. See `design/README.md`
 and `design/PROVENANCE.md`.
 
+## Cheap extras — env manifest, model registry, claims register (T14)
+
+Three more small "values are data" registers, same shape as tokens/research/
+programs. `config/env-manifest.yaml` (schema `config/env-manifest.schema.json`)
+is one row per distinct `process.env.NAME` read under `apps/api/src`,
+`apps/api/scripts`, `packages`, and `scripts` — purpose, provider, holder,
+cost class, where it's required and where it's actually set. `npm run
+env:check` fails on an undocumented read or a dead row; `npm run env:example`
+regenerates `.env.example` and `apps/api/.env.example` from it.
+`apps/api/src/lib/models.ts` is the only place a Claude/Voyage/GPT model id
+may live — every capability imports a role (`MODELS.capability_default.id`,
+etc.), never a literal. `npm run models:check` fails on a model-id literal
+anywhere else, or a registry entry missing `pinned_at`/`decision`.
+`docs/company/claims.yaml` (schema `docs/company/claims.schema.json`, writing
+rules in `docs/company/VOICE.md`) rules every public claim `allowed` |
+`needs_evidence` | `forbidden` | `retired`. `npm run claims:check` scans
+README.md, package READMEs, manifest descriptions, and `platform-facts.ts`
+(plus, read-only, the sibling frontend's `llms.txt` when present) and fails
+on a forbidden claim. All three are wired into CI after `design:check` /
+`design:test`.
+
 ## Session contract — both tools, every session
 
 1. **Orient first.** Read `docs/programs/README.md`, then the active track's

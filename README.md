@@ -14,7 +14,7 @@ Trust and quality infrastructure for AI agents.
 
 Strale is a capability marketplace for AI agents. Agents call `strale.do()` at runtime to access verified capabilities — company registry lookups, compliance checks, financial validation, Web3 security, and more — plus bundled solutions for multi-step workflows like full KYB checks or company due diligence. No hardcoded integrations or credential management.
 
-Every capability is continuously tested against real upstreams, and every call returns an audit record. You get observability into what your agent is actually doing.
+Free-tier capabilities are tested against real upstreams on a schedule, paid capabilities are watched through production observability, and every call returns an audit record. You get observability into what your agent is actually doing.
 
 ## Quick Start: MCP Server
 

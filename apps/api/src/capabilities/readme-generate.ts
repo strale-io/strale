@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
@@ -32,7 +33,7 @@ registerCapability("readme-generate", async (input: CapabilityInput) => {
   // fixed on web-extract.
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: MAX_OUTPUT_TOKENS,
     prompt: `Generate a comprehensive README.md for this project. Return ONLY valid JSON.
 

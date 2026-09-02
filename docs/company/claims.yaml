@@ -1,0 +1,267 @@
+# Claims register — one row per public claim Strale has ruled on.
+# Schema: claims.schema.json. Checker: ../../scripts/check-claims.mjs
+# (`npm run claims:check`). Writing rules: VOICE.md.
+#
+# Scope boundary: vendor-name drift (a stale vendor mention after a
+# switch, e.g. "OpenSanctions" three days after moving to Dilisense) is
+# NOT tracked here — that is apps/api/scripts/check-platform-facts-drift.ts's
+# job, which already owns the canonical vendor list in platform-facts.ts.
+# This register is for CLAIM PHRASING: certifications, superlatives,
+# scope-widening framing, and forbidden/needs-evidence statements that
+# aren't about which vendor is active.
+#
+# Audit items from the source claim audit
+# (strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md)
+# that intentionally have no row here, because they are about a NUMBER or
+# a LIVE VALUE being static rather than a fixed phrase, which a
+# phrase-matching register cannot express: the static global price range,
+# the static free-tool count, "Completed"/current-looking timestamps on
+# fixtures (section 1), bank_code=500 (section 9), the $0.0540 current price
+# (section 10), the 13/13 and "20 Aug" static values (section 11), and the
+# active-tool, country, customer and static x402 coverage counts (section
+# 14). Those belong to apps/api/scripts/check-platform-facts-drift.ts and
+# to the platform facts endpoint. Every phrase-shaped item in the audit has
+# a row, including "Sign in" (section 13).
+
+- id: revenue-user-social-proof
+  claim: /\b(trusted by|used by)\s+\d+(\+|\s*(companies|customers|developers|teams))?\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, package READMEs]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#14"
+  note: >
+    No customer-count or revenue social proof until real, disclosable
+    evidence exists. "Claims intentionally absent from homepage" list.
+
+- id: sign-in-no-login-product
+  claim: /\bsign in\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, package READMEs]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#13"
+  note: >
+    There is no login product: API keys and x402 are the only access
+    paths, so a "Sign in" control or sentence promises something that does
+    not exist. "Sign up" and "get an API key" are fine.
+
+- id: soc2-certified
+  claim: /\bSOC\s*2\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, methodology page]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#14"
+  note: Strale has no SOC 2 attestation. Revisit only after a real audit completes.
+
+- id: enterprise-ready
+  claim: /\benterprise[- ]ready\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#14"
+  note: Positioning claim with no substantiation standard defined yet.
+
+- id: uptime-sla-percentage
+  claim: /\b\d{2,3}(\.\d+)?\s*%\s*uptime\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, reliability page]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#14"
+  note: No uptime/SLA commitment exists. Do not publish a percentage figure.
+
+- id: sla-commitment
+  claim: /\bSLA\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#14"
+  note: No service-level agreement is offered. Revisit if/when one is.
+
+- id: average-latency-claim
+  claim: /\baverage (response time|latency)\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, reliability page]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#11"
+  note: >
+    "1 ms average response" was ruled DO NOT SHIP — the test-harness
+    average is not a defensible customer-latency claim.
+
+- id: all-x402-coverage
+  claim: /\ball (capabilities|tools|solutions) support x402\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, x402 page, llms.txt]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#10"
+  note: x402 eligibility is a dynamic subset. Read /x402/catalog, never claim universal coverage.
+
+- id: most-popular-tools
+  claim: /\b(most popular|top tools)\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage tool rail]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#3"
+  note: The rail is a curated editorial set, not a live popularity ranking.
+
+- id: current-catalog-records-on-static-card
+  claim: "current catalog records"
+  status: forbidden
+  surfaces: [homepage tool-discovery section]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#8"
+  note: Only legitimate with an actual live data binding, not a hardcoded example card.
+
+- id: live-company-record-on-fixture
+  claim: "live company record"
+  status: forbidden
+  surfaces: [homepage company-research section]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#4"
+  note: A static manifest example is not a page-load lookup.
+
+- id: verified-known-answer-mislabel
+  claim: "verified known-answer"
+  status: forbidden
+  surfaces: [homepage enrichment section]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#5"
+  note: Wrong test provenance for a rich output-schema example.
+
+- id: iban-proves-account-active
+  claim: /\bIBAN\b[^.]{0,60}\b(proves?|confirms?)\b[^.]{0,30}\b(exists?|active|open)\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage developers section, iban-validate manifest description]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#9"
+  note: iban-validate is format/checksum validation only. The manifest's own limitation says so.
+
+- id: full-vies-verification-implied
+  claim: /\b(provides?|performs?|includes?|does)\s+full VIES verification\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage risk-and-verification section, vat-format-validate manifest description]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#7"
+  note: >
+    vat-format-validate is format-level only. Flags a capability CLAIMING
+    to provide/perform full VIES verification — deliberately does not
+    match vat-format-validate's own correct redirect text ("Use
+    vat-validate for full VIES verification"), which is the honest
+    disclosure this rule exists to preserve, not catch.
+
+- id: every-tool-continuously-tested
+  claim: /\bevery (tool|capability)\b[^.]{0,30}\btested\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage reliability section]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#11"
+  note: Paid/LLM capabilities rely on different health signals than the scheduled probe suite.
+
+- id: next-scheduled-run-field
+  claim: "next scheduled run"
+  status: forbidden
+  surfaces: [homepage reliability section, public tests endpoint copy]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#11"
+  note: Refers to a retired schedule-tier semantics field. Do not resurrect the label.
+
+- id: universal-test-type-list
+  claim: "all test types"
+  status: forbidden
+  surfaces: [homepage reliability section]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#11"
+  note: Test types vary by capability (test_suites.test_mode); there is no universal set to enumerate.
+
+- id: strale-operates-scrapers
+  claim: /\b(our scrapers?|we (scrape|crawl)|strale (scrapes|crawls|operates scrapers?)|self-hosted scrapers?|scrap(es|ing|ed) (linkedin|facebook|instagram|twitter|x\.com|tiktok|google (search|results)))\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, methodology page]
+  decided_by: DEC-20260428-A
+  note: >
+    Tier 1 of the third-party scraping doctrine is absolute — Strale
+    itself never operates scrapers. Per-call registry parsing under
+    DEC-20260813-A's constraints is not "scraping" in the customer-facing
+    sense and should be described as direct/per-call registry access, not
+    as Strale running scrapers.
+
+- id: bulk-crawling-claim
+  claim: /\bbulk (crawl(ing)?|scrap(e|ing))\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, methodology page]
+  decided_by: DEC-20260428-A
+  note: Bulk crawling stays absolutely prohibited even under the DEC-20260813-A per-call carve-out.
+
+- id: captcha-bypass-claim
+  claim: /\b(captcha|CAPTCHA)\s*(solving|bypass(ing)?)\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, methodology page]
+  decided_by: DEC-20260428-A
+  note: CAPTCHA solving is on the absolute-prohibition list alongside robots.txt evasion and login-wall circumvention.
+
+- id: framework-native-integration
+  claim: /\bnative (pydantic-ai|langchain|crewai|semantic-kernel|google-adk|openai-agents)\b/
+  is_regex: true
+  status: needs_evidence
+  evidence: apps/api/scripts/check-framework-packages.mjs
+  surfaces: [distribution PRs, package READMEs, npm/PyPI descriptions]
+  decided_by: DEC-20260422-A
+  note: >
+    Every claim of framework-native integration must be backed by a
+    passing check-framework-packages.mjs run for that package. Case
+    study: pydantic-ai maintainer closed a PR with "Shame on you" after
+    finding pydantic-ai-strale had zero pydantic-ai-specific code
+    (archive/sessions/CONTAINMENT_REPORT.md).
+
+- id: trial-credit-amount
+  claim: /€\s*\d+(\.\d+)?\s*(in\s+)?trial credit/
+  is_regex: true
+  status: needs_evidence
+  evidence: apps/api/src/lib/trial-eligibility.ts
+  surfaces: [homepage pricing section, signup flow]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#12"
+  note: >
+    Removed from the homepage as a duplicate static figure; the signup
+    flow may show the currently configured amount, which must match
+    TRIAL_CREDITS_CENTS.
+
+- id: provenance-included
+  claim: "Provenance included"
+  status: allowed
+  evidence: apps/api/src/lib/capability-output-contracts.ts
+  surfaces: [homepage hero]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#1"
+  note: QUALIFIED in the audit — keep only where the surfaced execution mode actually provides source/provenance context.
+
+- id: pay-per-successful-call
+  claim: "Pay per successful call"
+  status: allowed
+  evidence: apps/api/src/routes/x402-gateway-v2.settlement-order.test.ts
+  surfaces: [homepage hero]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#1"
+  note: Wallet/x402 billing tests enforce non-billing for failed/gated/unusable outputs (DEC-14).
+
+- id: structured-results
+  claim: "Structured results"
+  status: allowed
+  evidence: apps/api/src/lib/capability-output-contracts.ts
+  surfaces: [homepage hero, why-strale section]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#1"
+  note: Capability contracts expose structured schemas/results.
+
+- id: no-account-required-x402
+  claim: /\bno (Strale )?account\b[^.]{0,40}\brequired\b/
+  is_regex: true
+  status: needs_evidence
+  evidence: apps/api/src/lib/x402-gateway.ts
+  surfaces: [x402 section]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#10"
+  note: True only for the x402 payment path. Do not generalize to the wallet/API-key path.
+
+- id: sqs-quality-score-trust-layer
+  claim: /\b(SQS score|SQS 0|Strale Quality Score|min_sqs|(?<!no )per-call quality score|quality scores? for every capability)\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, methodology page, capability detail pages]
+  decided_by: DEC-20260503-B
+  note: >
+    The SQS scoring engine was deleted 2026-05-05. No public surface may
+    claim a quality/trust score exists — this is the exact failure mode
+    the 2026-04-30 cert audit found ("SQS 0 / Price unavailable"
+    fallback card).

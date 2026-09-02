@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -62,7 +63,7 @@ registerCapability("salary-benchmark", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 2000,
     prompt: `Extract salary information for "${jobTitle.trim()}"${locationClause} from this page.${experienceClause}
 

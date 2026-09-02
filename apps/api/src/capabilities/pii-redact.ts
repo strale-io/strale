@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
@@ -58,7 +59,7 @@ registerCapability("pii-redact", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const parsed = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 4000,
     prompt: `${REDACTION_PROMPT}\n\n--- TEXT TO REDACT ---\n${truncated}\n--- END TEXT ---`,
     truncationGuidance: "Provide a shorter text excerpt per call.",

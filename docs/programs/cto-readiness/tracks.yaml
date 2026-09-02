@@ -145,32 +145,58 @@ tracks:
 
   - id: T13
     title: Design tokens as data, candidates, promotion
-    status: active
+    status: done
     gate: none
     depends_on: [T12]
     owner: session
     next_action: >
-      Milestones 2 and 3 of the founder's 2026-09-02 plan, per the stored
-      plan: design/tokens/active.json (internal-reports and website surfaces
-      with provenance and adopted_by), schema, two candidates with status,
-      explorations convention, PROVENANCE.md; generator that writes the
-      internal report tokens from active.json with a --check; design:check
-      and design:test in CI (schema, one active, candidate status, promotion
-      requires a decision, generated file in sync, hex/font/off-scale lint
-      over the HTML-emitting consumers with a ratcheted allowlist);
-      DESIGN-SYSTEM.md rewritten to one page; identical paragraph in
-      CLAUDE.md and AGENTS.md.
+      Done 2026-09-02 (PR #487): design/tokens/active.json per surface with
+      provenance and adopted_by, two candidates with status, PROVENANCE.md,
+      generated internal-report tokens, design:check and design:test in CI
+      (per-surface promotion gate, ratcheted allowlist, apps/web joins the
+      lint scope when it exists), DESIGN-SYSTEM.md on one page, identical
+      paragraph in CLAUDE.md and AGENTS.md.
     resume_file: archive/sessions/2026-09-02-t13-design-tokens-plan.md
     exit:
       - design:check passes on main and each planted failure mode fails it with a one-line fix
       - the internal report consumers render from active.json through the generated file
       - both candidates and the provenance record carry a status; DESIGN-SYSTEM.md is one page
       - identical design paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t13-design-tokens.md
+      - design/tokens/active.json
+      - scripts/check-design.mjs
+
+  - id: T14
+    title: Cheap extras — environment manifest, model registry, claims register
+    status: done
+    gate: none
+    depends_on: [T13]
+    owner: session
+    next_action: >
+      Done 2026-09-02 (PR #488): config/env-manifest.yaml (127 rows, 27
+      holders unknown and listed for Petter in the handoff), generated
+      .env.example files, apps/api/src/lib/models.ts as the only home of a
+      model id (93 call sites), docs/company/claims.yaml (27 rows) with a
+      scanner that was hollow on first review and is now proven on planted
+      claims; the drift it then exposed (retired SQS score in README.md and
+      two package READMEs) was narrowed to what the code returns. The
+      founder's 2026-09-02 plan is complete; T4 resumes.
+    resume_file: archive/sessions/2026-09-02-t14-cheap-extras-plan.md
+    exit:
+      - env:check, models:check and claims:check pass on main and each planted failure mode fails with a one-line fix
+      - zero model-id literals outside models.ts; every process.env name has a manifest row
+      - claims register seeded from the handoff audit's forbidden claims and the drift patterns
+      - identical paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t14-cheap-extras.md
+      - config/env-manifest.yaml
+      - apps/api/src/lib/models.ts
+      - docs/company/claims.yaml
 
   - id: T4
     title: Remediation program closure
-    status: queued
+    status: active
     gate: none
     depends_on: []
     owner: session

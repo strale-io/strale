@@ -1,3 +1,4 @@
+import { MODELS } from "../../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { CapabilityRefusalError } from "../../lib/capability-refusal.js";
 
@@ -48,7 +49,7 @@ export async function extractCompanyFromText(
 
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     max_tokens: 800,
     messages: [
       {
@@ -96,7 +97,7 @@ export async function extractCompanyName(
 
   const client = new Anthropic({ apiKey });
   const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     max_tokens: 100,
     messages: [
       {

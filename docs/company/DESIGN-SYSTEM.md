@@ -81,19 +81,8 @@ under 820px.
 
 ## Writing rules — as binding as the colours
 
-You asked for plain English, so it is part of the system, not a preference:
-
-- **No jargon, ever.** Not "capabilities" but *data services*. Not "circuit
-  breaker open" but *switched off*. Not "x402 payers" but *paying customers*.
-  Not "quarantined" but *paused*.
-- **Say what it means for the business.** Finished work is described by what
-  changed for you or the customer, not by what the code does. Commit messages
-  are rewritten before they reach the page.
-- **Decisions are written as questions you can answer.** One sentence, in your
-  words, with my recommendation underneath.
-- **Never dress up a number.** If a measurement can't be trusted yet, the page
-  says so and shows a dash rather than a figure that reads as a fact.
-- **Say the uncomfortable thing first.** If revenue fell, that is the headline.
+Moved to `VOICE.md` (T14, 2026-09-02), alongside the claims register
+(`claims.yaml`) that enforces the fact-based half of voice. Read it there.
 
 ## Adding a page
 

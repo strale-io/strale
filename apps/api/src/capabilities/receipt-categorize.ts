@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { extractJsonObject } from "./lib/llm-json.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -61,7 +62,7 @@ registerCapability("receipt-categorize", async (input: CapabilityInput) => {
   }
 
   const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     max_tokens: 1000,
     messages,
   });

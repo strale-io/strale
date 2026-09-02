@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNull } from "drizzle-orm";
 import { registerCapability, type CapabilityInput } from "./index.js";
@@ -116,7 +117,7 @@ async function extractCompanyName(text: string): Promise<string> {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     max_tokens: 100,
     messages: [{ role: "user", content: `Extract the Estonian company name from this request. Return ONLY the company name, nothing else.\n\nRequest: "${text}"` }],
   });

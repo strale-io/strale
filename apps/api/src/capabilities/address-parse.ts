@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
@@ -14,7 +15,7 @@ registerCapability("address-parse", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 500,
     prompt: `Parse this address into structured components. Return ONLY valid JSON.
 

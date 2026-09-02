@@ -73,13 +73,14 @@ register wins on any disagreement.
 | T7 | M4 atomic cutover | Per migration plan section 10 M4. **Founder confirms the flip.** Entrypoints become peers, Notion consumers removed in one PR, guards blocking. |
 | T8 | M5 to M7 closeout | Legacy authorities archived, clean-session acceptance passed on both tools, plan archived with evidence. |
 | T9 | Discovery and retrieval (WP16) | Re-homed from remediation. Starts only after T7. Its own plan when opened. |
+| T14 | Cheap extras | Every environment variable read by code has a manifest row with holder and cost class and the example files are generated; every model id lives in one registry with a pinned date and decision; a claims register says which public claims are allowed, need evidence, or are forbidden, and a check refuses forbidden phrases on the public surfaces. |
 | T13 | Design tokens as data | `design/tokens/active.json` is what production runs per surface; candidates carry a status; promotion is a decision record plus a file swap; `design:check` in CI refuses off-token values in the consumers and a swap without a decision. |
 | T12 | Research contract | Every `docs/research` file carries status and supersession front matter, one current answer per topic, a generated index, and a checker in CI that refuses drift and refuses active decisions citing superseded research. |
 | T11 | Website repo hygiene and design preservation | Every website folder outside a git checkout preserved (tag or release asset with checksum) and removed; `strale-frontend` holds only `main`, owned work branches and archive tags, and runs the same session-end gate; the monorepo direction (redesign built as `apps/web` here) recorded in ROADMAP section 7 and filed as a decision record through the M2 path. |
 
-Intended order: T1, T2, T3, T11, T12, T13, T4, T5, T10, T6, T7, T8, T9 (T11
-to T13 were inserted on 2026-09-02 when the founder approved the website
-sweep and the authority plan). Only `depends_on` in the
+Intended order: T1, T2, T3, T11, T12, T13, T14, T4, T5, T10, T6, T7, T8, T9
+(T11 to T14 were inserted on 2026-09-02 when the founder approved the
+website sweep and the authority plan). Only `depends_on` in the
 register is enforced: T2 and T4 do not depend on T1, so either may become the
 active track while T1 waits on review, provided T1 is marked `blocked` with the
 review named as its blocker. Nothing in T6 or later starts before T1 is done.
@@ -89,7 +90,7 @@ The M2 closure register's validator reads this file and refuses any
 `post-m2` track that is active or done while a blocking M2 gap remains, or
 that does not depend on the `m2-exit` track. The declaration alone is not
 trusted: the closure register's validator carries a reviewed list of the
-tracks allowed outside the gate (T1 to T5, T11 to T13), and any track not on that list is
+tracks allowed outside the gate (T1 to T5, T11 to T14), and any track not on that list is
 gated whatever it declares. Adding an independent track is a reviewed edit
 to that list.
 

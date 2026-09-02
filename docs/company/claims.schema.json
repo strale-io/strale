@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strale.dev/schemas/claims.schema.json",
+  "title": "Claims register",
+  "description": "One row per public claim Strale has ruled on: allowed, needs evidence, forbidden, or retired. See docs/company/claims.yaml and archive/sessions/2026-09-02-t14-cheap-extras-plan.md (part C).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "claim", "status", "surfaces", "decided_by"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "description": "Short kebab-case id, unique within the register."
+      },
+      "claim": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The exact phrase, or a /regex/ (JS regex literal, case-insensitive match applied by the checker), that identifies this claim in prose."
+      },
+      "is_regex": {
+        "type": "boolean",
+        "default": false,
+        "description": "True when `claim` should be compiled as a regular expression rather than matched as a literal substring."
+      },
+      "status": {
+        "type": "string",
+        "enum": ["allowed", "needs_evidence", "forbidden", "retired"],
+        "description": "allowed: may ship as-is. needs_evidence: may ship only alongside working evidence (checker warns if `evidence` doesn't resolve). forbidden: must never appear on a scanned surface (checker fails the build). retired: no longer scanned for; kept for history."
+      },
+      "evidence": {
+        "type": "string",
+        "minLength": 1,
+        "description": "A repo-relative path or a URL substantiating the claim. Required for status allowed and needs_evidence."
+      },
+      "surfaces": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string" },
+        "description": "Where this claim may (or historically did) appear — e.g. 'homepage', 'README', 'methodology page', 'llms.txt'. Free text; not machine-enforced per-surface, just documentation of scope."
+      },
+      "decided_by": {
+        "type": "string",
+        "minLength": 1,
+        "description": "A DEC id, or 'founder-<YYYY-MM-DD>' for an undocumented founder call, or the audit document that ruled on it (e.g. a path into the claim-audit handoff)."
+      },
+      "note": {
+        "type": "string",
+        "description": "Free-text context — why the ruling, what it replaced, what the correct qualified version looks like."
+      }
+    }
+  }
+}

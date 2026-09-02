@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
@@ -47,7 +48,7 @@ registerCapability("job-posting-analyze", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 1500,
     prompt: `Analyze this job posting. Return ONLY valid JSON.
 
