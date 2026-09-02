@@ -205,6 +205,9 @@ for (const status of ["blocked", "founder_gated"]) {
     r.tracks[0].status = status;
     activate(r, 1);
     r.tracks[1].resume_file = "README.md";
+    // every later track back to queued: a done track whose dependency is
+    // the (now non-done) track 0 or 1 would otherwise add a DEPENDENCY finding
+    for (const t of r.tracks.slice(2)) { t.status = "queued"; t.evidence = []; delete t.blocker; }
     delete r.tracks[0].blocker;
     assert.ok(codes(r).includes("SCHEMA"));
     r.tracks[0].blocker = "   ";
