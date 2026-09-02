@@ -348,7 +348,7 @@ test("pre-push blocks main unless a human allows it, and does not run the dirty 
   } finally { r.cleanup(); }
 });
 
-test("pre-push applies the resume-surface rule to the pushed range", async () => {
+test("pre-push does not apply the resume-surface rule (a backup push is routine); the session gate does", async () => {
   const r = makeRepo();
   try {
     const before = git(r.batch, "rev-parse", "HEAD");
@@ -356,8 +356,10 @@ test("pre-push applies the resume-surface rule to the pushed range", async () =>
     commitAll(r.batch, "feat: code only");
     const sha = git(r.batch, "rev-parse", "HEAD");
     const refs = readPushRefs(`refs/heads/feat/x ${sha} refs/heads/feat/x ${before}\n`);
-    const result = await r.check(r.batch, { mode: "pre-push", pushedRefs: refs, pushRanges: pushRangesFor(refs), env: {} });
-    assert.deepEqual(codes(result), ["resume-surface"]);
+    const push = await r.check(r.batch, { mode: "pre-push", pushedRefs: refs, pushRanges: pushRangesFor(refs), env: {} });
+    assert.equal(push.ok, true, JSON.stringify(push));
+    git(r.batch, "push", "-q");
+    assert.deepEqual(codes(await r.check(r.batch)), ["resume-surface"]);
   } finally { r.cleanup(); }
 });
 

@@ -33,10 +33,10 @@
 //   session     the full gate (Claude Code Stop hook, Codex notify wrapper,
 //               `npm run handoff:check`)
 //   pre-commit  fast structural checks (release-commit, inventory)
-//   pre-push    resume-surface over the refs being pushed plus release-push;
-//               worktree and landed-branch findings are notes here, so the
-//               push that fixes them (or a routine backup push) is never
-//               refused
+//   pre-push    release-push; worktree and landed-branch findings are notes
+//               here, so the push that fixes them (or a routine backup push
+//               of work in progress) is never refused — the resume surface is
+//               owed at session end, not per push
 //   baseline    print or, with --write, record the worktrees and merged
 //               branches that already exist and wait for a founder decision
 //
@@ -414,7 +414,11 @@ export async function runChecks(options = {}) {
   }
 
   // ── resume surface ─────────────────────────────────────────────────────
-  if (mode !== "pre-commit") {
+  // Session mode only: a push is routine backup of work in progress, and the
+  // record of that work (register or handoff) is owed when the session ends,
+  // not on every push. The first pre-push version refused an incremental
+  // code push for exactly that reason.
+  if (mode === "session") {
     const registers = listRegisters(root, cfg);
     if (!registers.length) {
       fail("resume-surface", `no program register found under ${cfg.programsDir}/*/tracks.yaml`,

@@ -70,6 +70,11 @@ One checker, four layers, one contract:
   (pre-commit)`); its first version let an inventory-target commit through
   because `check-project-context.mjs` is warning-only by contract, so the hook
   now reads the checker's `--json` findings and fails on any.
+- The first pre-push version refused an incremental code push of this very
+  branch (no register or handoff update in the pushed range). A push is
+  routine backup of work in progress, so pre-push now checks only the
+  release-branch rule and reports hygiene as notes; the resume surface is
+  owed at session end (Stop hook, notify wrapper, `npm run handoff:check`).
 - Codex wrapper with a fake `agent-turn-complete` payload wrote
   `last-codex.json` and the thread marker, and forwarded to the next command.
 - Independent review (fresh read-only Claude agent) found two blocking
