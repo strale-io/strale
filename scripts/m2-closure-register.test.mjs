@@ -62,7 +62,7 @@ const publicPending = (r) => {
 };
 // Findings that manufacturing a public pending row always produces; tests
 // filter them out so they assert only on the check under test.
-const MANUFACTURED = new Set(["FORMAL_RECORD_MISSING", "SOURCE_COUNT_DRIFT", "NEXT_BATCH_INCOMPLETE"]);
+const MANUFACTURED = new Set(["FORMAL_RECORD_MISSING", "SOURCE_COUNT_DRIFT", "NEXT_BATCH_INCOMPLETE", "DECISION_ROW_SHOULD_BE_MIGRATED"]);
 const codesExcept = (register, ctx) => codes(register, ctx).filter((c) => !MANUFACTURED.has(c));
 
 test("positive smoke test (not mutation evidence): the committed register is valid", () => {
@@ -372,7 +372,11 @@ test("a formal record's source rows must be migrated rows pointing back at it", 
   m.disposition = "not_yet_reconciled";
   delete m.record_key;
   resync(r);
-  has(r, "FORMAL_RECORD_SOURCE_ROW_NOT_MIGRATED");
+  has(r, "DECISION_ROW_SHOULD_BE_MIGRATED");
+  m.disposition = "formally_migrated";
+  m.record_key = r.formal_records.find((x) => x.record_key !== fr.record_key && x.source_kind === "notion-row").record_key;
+  resync(r);
+  has(r, "FORMAL_RECORD_SOURCE_ROW_UNLISTED");
 });
 
 test("collision rows must agree with the collision registry", () => {
@@ -430,6 +434,54 @@ test("the derivation rules are enforced against the registry and evidence files,
   const r4 = base();
   row(r4, "intentionally_historical").evidence = ["README.md"];
   has(r4, "DECISION_ROW_NOT_CITED_BY_EVIDENCE");
+});
+
+test("reclassifying a record-cited row cannot be laundered by editing formal_records too", () => {
+  // DEC-20260423-A: migrated -> pending, with formal_records edited to match.
+  const r = base();
+  const row423 = r.decision_rows.find((x) => x.id === "DEC-20260423-A");
+  row423.disposition = "not_yet_reconciled";
+  delete row423.record_key;
+  row423.evidence = ["docs/project/private-archive-status.json"];
+  const fr423 = r.formal_records.find((x) => x.record_key === "DEC-20260423-A");
+  fr423.source_kind = "git-native";
+  fr423.source_rows = [];
+  fr423.git_provenance = "https://github.com/strale-io/strale/pull/467";
+  resync(r);
+  const c = codes(r);
+  assert.ok(c.includes("DECISION_ROW_SHOULD_BE_MIGRATED"), c.join(","));
+  assert.ok(c.includes("FORMAL_RECORD_SOURCE_ROWS_MISMATCH"));
+  assert.ok(c.includes("FORMAL_RECORD_SOURCE_KIND_MISMATCH"));
+  // DEC-20260320-B: superseded record row relabelled obsolete_or_superseded.
+  const r2 = base();
+  const row320 = r2.decision_rows.find((x) => x.id === "DEC-20260320-B");
+  row320.disposition = "obsolete_or_superseded";
+  delete row320.record_key;
+  row320.evidence = ["docs/project/private-archive-status.json"];
+  const fr320 = r2.formal_records.find((x) => x.record_key === "DEC-20260320-B");
+  fr320.source_kind = "git-native";
+  fr320.source_rows = [];
+  fr320.git_provenance = "https://github.com/strale-io/strale/pull/467";
+  resync(r2);
+  assert.ok(codes(r2).includes("DECISION_ROW_SHOULD_BE_MIGRATED"));
+});
+
+test("cross-surface collisions are derived from the entrypoints, not from the label", () => {
+  // DEC-20260422-A relabelled intentionally_historical (its evidence still cites it).
+  const r = base();
+  const cross = r.decision_rows.find((x) => x.collision?.kind === "cross-surface");
+  cross.disposition = "intentionally_historical";
+  delete cross.collision;
+  resync(r);
+  assert.ok(codes(r).includes("DECISION_ROW_CROSS_SURFACE_EXPECTED"));
+  // A row that is not a protocol label cannot claim cross-surface status.
+  const r2 = base();
+  const hist = row(r2, "intentionally_historical");
+  hist.disposition = "unresolved_collision";
+  hist.collision = { id: hist.id, resolution_status: "unresolved", row_disposition: "unresolved", kind: "cross-surface" };
+  resync(r2);
+  assert.ok(codes(r2).includes("DECISION_ROW_CROSS_SURFACE_UNSUPPORTED"));
+  assert.ok(context.gitNativeClaims.has("DEC-20260422-A"));
 });
 
 test("unclear rows have no id and blank-id rows are unclear", () => {

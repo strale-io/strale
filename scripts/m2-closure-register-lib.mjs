@@ -115,7 +115,25 @@ export function publicIdentities(root, baseRef = "origin/main") {
   return { available: true, ref: baseRef, pageIds, ids };
 }
 
-/** Front matter of every formal record: { record_key, id, evidence[] }. */
+/**
+ * Decision IDs that the live entrypoints use as Git-native protocol labels
+ * (a heading that names a DEC id). A Notion row reusing such an id without a
+ * formal record is a cross-surface collision by construction. Read from the
+ * index so the set matches what the commit ships.
+ */
+export function gitNativeClaims(root) {
+  const ids = new Set();
+  for (const file of ["CLAUDE.md", "AGENTS.md"]) {
+    const text = gitQuiet(root, ["show", `:${file}`]) ?? "";
+    for (const line of text.split(/\r?\n/)) {
+      if (!/^#{1,6}\s/.test(line)) continue;
+      for (const m of line.matchAll(/DEC-[0-9]{8}-[A-Za-z0-9-]+/g)) ids.add(m[0]);
+    }
+  }
+  return ids;
+}
+
+/** Front matter of every formal record: { record_key, id, evidence[], pageIds[] }. */
 export function readFormalRecordSummaries(root) {
   const dir = resolve(root, RECORDS_DIR);
   if (!existsSync(dir)) return [];
@@ -126,7 +144,9 @@ export function readFormalRecordSummaries(root) {
       const content = readFileSync(resolve(dir, f), "utf8");
       const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
       const meta = match ? YAML.parse(match[1]) : {};
-      return { file: `${RECORDS_DIR}/${f}`, record_key: meta.record_key, id: meta.id, evidence: meta.evidence ?? [] };
+      const evidence = meta.evidence ?? [];
+      const pageIds = [...new Set([...evidence.join("\n").replace(/-/g, "").matchAll(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g)].map((m) => m[0]))];
+      return { file: `${RECORDS_DIR}/${f}`, record_key: meta.record_key, id: meta.id, evidence, pageIds };
     });
 }
 
@@ -186,6 +206,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     base: readBaseRegister(root, baseRef),
     isAncestor: (sha) => isAncestorOfHead(root, sha),
     public: publicIdentities(root, baseRef),
+    gitNativeClaims: gitNativeClaims(root),
   };
 }
 
@@ -399,13 +420,45 @@ export function validateClosureRegister(register, context, { schema, relativePat
     checkEvidence(row.page_id, row.evidence);
   }
   for (const pageId of collisionRows.keys()) if (!rowsByPage.has(pageId)) finding("DECISION_ROW_MISSING_FROM_REGISTER", pageId);
+
+  // The record-to-row mapping is DERIVED from record front matter, never
+  // trusted from the register: a record's source rows are the page ids its
+  // evidence cites whose row carries the record's own historical id. Every
+  // such row must be formally_migrated to that record, and formal_records must
+  // state exactly that set.
+  const derivedSourceRows = new Map();
+  for (const rec of context.records) {
+    const own = rec.pageIds.filter((p) => rowsByPage.get(p)?.id === rec.id);
+    derivedSourceRows.set(rec.record_key, own);
+    for (const p of own) {
+      const row = rowsByPage.get(p);
+      if (row.disposition !== "formally_migrated" || row.record_key !== rec.record_key) {
+        finding("DECISION_ROW_SHOULD_BE_MIGRATED", `${p} is cited by ${rec.record_key} with the same id but is ${row.disposition}${row.record_key ? ` -> ${row.record_key}` : ""}`);
+      }
+    }
+  }
   for (const fr of register.formal_records) {
+    const derived = derivedSourceRows.get(fr.record_key);
+    if (!derived) continue; // FORMAL_RECORD_UNKNOWN already reported
+    const listed = [...fr.source_rows].sort();
+    const expected = [...derived].sort();
+    if (listed.join(",") !== expected.join(",")) finding("FORMAL_RECORD_SOURCE_ROWS_MISMATCH", `${fr.record_key}: listed [${listed.join(",")}] vs derived [${expected.join(",")}]`);
+    const expectedKind = expected.length > 0 ? "notion-row" : "git-native";
+    if (fr.source_kind !== expectedKind) finding("FORMAL_RECORD_SOURCE_KIND_MISMATCH", `${fr.record_key}: ${fr.source_kind} vs derived ${expectedKind}`);
     const rows = migratedByRecord.get(fr.record_key) ?? [];
-    if (fr.source_kind === "notion-row") {
-      for (const pid of fr.source_rows) if (!rows.includes(pid)) finding("FORMAL_RECORD_SOURCE_ROW_NOT_MIGRATED", `${fr.record_key}: ${pid}`);
-      for (const pid of rows) if (!fr.source_rows.includes(pid)) finding("FORMAL_RECORD_SOURCE_ROW_UNLISTED", `${fr.record_key}: ${pid}`);
-    } else if (rows.length > 0) {
-      finding("FORMAL_RECORD_GIT_NATIVE_WITH_ROWS", fr.record_key);
+    for (const pid of rows) if (!expected.includes(pid)) finding("FORMAL_RECORD_SOURCE_ROW_UNLISTED", `${fr.record_key}: ${pid} claims this record but the record does not cite it`);
+  }
+
+  // Cross-surface collisions are DERIVED from the entrypoints: a public row
+  // whose id is a Git-native protocol label with no formal record of that id
+  // must be an unresolved cross-surface collision, and only such rows may be.
+  if (context.gitNativeClaims) {
+    const recordIds = new Set(context.records.map((r) => r.id));
+    for (const row of register.decision_rows) {
+      const claimed = row.id && context.gitNativeClaims.has(row.id) && !recordIds.has(row.id);
+      const labelled = row.disposition === "unresolved_collision" && row.collision?.kind === "cross-surface";
+      if (claimed && !labelled) finding("DECISION_ROW_CROSS_SURFACE_EXPECTED", `${row.page_id}: ${row.id} is a Git-native protocol label without a record`);
+      if (labelled && !claimed) finding("DECISION_ROW_CROSS_SURFACE_UNSUPPORTED", `${row.page_id}: ${row.id} is not a Git-native protocol label`);
     }
   }
   // Private rows can never hold dispositions that are public by construction;
