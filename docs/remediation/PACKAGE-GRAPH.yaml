@@ -182,8 +182,8 @@ packages:
 
   WP10:
     title: Durable Job Coordinator
-    status: MERGED_DEPLOYED_UNDER_OBSERVATION
-    acceptance_gate: "2026-08-30 — seven-day cadence measurement. Do not manufacture a deploy to satisfy it."
+    status: ACCEPTED
+    acceptance_gate: "2026-08-30 — seven-day cadence measurement. MET 2026-09-02 (3 days late, picked up by T4): docs/remediation/packages/WP10.yaml acceptance block, archive/receipts/2026-09-02-audit-wp10-cadence-verdict.json."
     depends_on: [WP1]
     risks: [CR-08]
     review: {codex: required, fable: optional}
@@ -283,17 +283,17 @@ verification_gates:
   VERIFY-DEP:   {status: PARTIAL, blocks: [WP13], note: "1crit/14high/7mod/2low counted; reachability triage unrun"}
   VERIFY-LEGAL: {status: OPEN, blocks: [WP14], note: "Dilisense role, DPA, assent evidence"}
   VERIFY-P3:
-    status: PARTIAL
+    status: COMPLETE
     complete:
       - "index / orphans / delisting / free-x402 / publication — production read-only, done at audit time"
       - "settlement — closed by WP5 (durable x402 payment state and its reconciler), ACCEPTED"
       - "process-kill — closed by WP10, which MEASURED the production restart interval at a 1.0h median rather than assuming one"
-    outstanding:
-      - "cadence — the measurement exists but its acceptance is WP10's seven-day gate, due 2026-08-30"
+      - "cadence — WP10's seven-day gate MET 2026-09-02: docs/remediation/packages/WP10.yaml acceptance block"
+    outstanding: []
     note: >
       Previously an undifferentiated PARTIAL, which read as though none of it
-      had moved. Three of the four deferred portions are in fact closed, and
-      the fourth is a dated gate rather than unstarted work.
+      had moved. All four deferred portions are now closed; the last
+      (cadence) closed 2026-09-02 via WP10's acceptance measurement.
 
 # Workstreams outside the master plan that changed its assumptions. Recorded
 # here because several of them narrowed or partly closed packages above, and a
