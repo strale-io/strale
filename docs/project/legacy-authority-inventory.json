@@ -67,6 +67,7 @@
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
+        "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -241,6 +242,7 @@
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
+        "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -406,6 +408,7 @@
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
+        "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -474,13 +477,14 @@
         "handoff/_general/from-code/2026-08-29-checkin-morning.md",
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "0eed76cf6591b51f7cecbd26619844993ecb5e2f63bd714ecdc3dfc27d5300dd",
+      "sha256": "9de1729273b252a6be6c083c2b5c20d211ddda9ac1aebcf2faa57f71e1ac045a",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
