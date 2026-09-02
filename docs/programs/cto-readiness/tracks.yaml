@@ -97,30 +97,51 @@ tracks:
 
   - id: T11
     title: Website repo hygiene and design preservation
-    status: active
+    status: done
     gate: none
     depends_on: [T3]
     owner: session
     next_action: >
-      Everything but the decision filing is done (2026-09-02): strale-frontend
-      PR #22 merged, release preserve-2026-09-02 verified against
-      SHA256SUMS.txt, the three orphan folders, strale-codex-handoff-v2, the
-      Quiet Material folder and its zip removed, the archive repo's M0
-      worktree removed; Projects holds six repositories plus the recorded
-      codex/website-redesign-v2 worktree. Remaining: file the monorepo
-      direction as DEC-20260902-A through the M2 decision path (Notion
-      Decisions DB entry plus closure-register row) once Petter confirms
-      the draft in the T11 handoff; then set this track done with the
-      handoff as evidence and reactivate T4. Left for the next website
-      session: PR #5 on strale-frontend (open since May), the untracked
-      public/og-strale-final.png in the frontend trunk, and the untracked
-      review-evidence zip in the redesign-v2 worktree.
+      Done 2026-09-02. Frontend preserved and swept (strale-frontend PR #22,
+      release preserve-2026-09-02, archive tags), folders removed, the same
+      session-end gate installed there, and the monorepo direction filed as
+      DEC-20260902-A in the Notion Decisions DB (Petter confirmed 2026-09-02)
+      and listed in CLAUDE.md; the repo-native record follows through the M2
+      closure path with that page as its source. Left for the next website
+      session: strale-frontend PR #5, the untracked og-strale-final.png in its
+      trunk, the review-evidence zip in the redesign-v2 worktree.
     resume_file: handoff/_general/from-code/2026-09-02-t11-website-hygiene.md
     exit:
       - every website folder outside a git checkout is preserved (tag or release asset with checksum) and removed
       - strale-frontend has only main, work branches with a named owner or open PR, and archive tags
       - strale-frontend runs the same session-end gate as this repository
       - the monorepo direction is recorded in ROADMAP section 7 and its decision record is filed through the M2 path
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t11-website-hygiene.md
+      - docs/project/ROADMAP.md
+
+  - id: T12
+    title: Research contract
+    status: active
+    gate: none
+    depends_on: [T3]
+    owner: session
+    next_action: >
+      Milestone 1 of the founder's 2026-09-02 plan, per the stored plan:
+      research front-matter template and Ajv schema; research:check
+      (one current file per topic, reciprocal acyclic supersession, resolvable
+      links and sources, active decisions cite only current research, ideas
+      file line shape) with tests that plant each failure mode; generated
+      docs/research/README.md index; front matter on all 37 existing files
+      with the inference table in the handoff; docs/company/IDEAS.md; the
+      identical research-and-ideas paragraph in CLAUDE.md and AGENTS.md;
+      CI runs research:check and research:test.
+    resume_file: archive/sessions/2026-09-02-t12-research-contract-plan.md
+    exit:
+      - research:check passes on main and each planted failure mode fails it with a one-line fix
+      - every docs/research Markdown file carries valid front matter and appears in the generated index
+      - an active decision citing a superseded research file fails the check
+      - identical research-and-ideas paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
     evidence: []
 
   - id: T4

@@ -207,6 +207,8 @@ exactly the kind of thing that drifts; read CLAUDE.md (or the linked Notion
 Decisions DB entry) for the actual text before acting on any of these. The
 IDs every session should know exist, topic only, no numbers:
 
+- **DEC-20260902-A** — Website redesign is built as `apps/web` in this
+  repository (monorepo); `strale-frontend` preserved, not extended.
 - **DEC-20260812-A** — Readiness program / operating strategy.
 - **DEC-20260813-A** — Scraping-doctrine interpretation (per-call registry
   parsing).
