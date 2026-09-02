@@ -21,10 +21,14 @@ tracks:
     next_action: >
       Design the disposition register schema under docs/project/schemas/,
       classify all 15 legacy-authority inventory entries and every preserved
-      Decision source row (318 in the private archive, 71 of them in the
-      collision registry), reconcile the migration plan's older "Next:" notes
+      Decision source row, reconcile the migration plan's older "Next:" notes
       against merged commits, and add the tests named in this track's exit
-      criteria.
+      criteria. Sources beyond the resume_file: the private archive named in
+      docs/project/private-archive-status.json (repository, commit, and the
+      decisions export under archive/imports/notion/2026-08-31/data-sources/
+      inside that archive; read it with gh api, never copy it here); the
+      collision registry docs/decisions/id-collisions.yaml; the formal records
+      under docs/decisions/records/.
     resume_file: handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md
     exit:
       - schema-validated disposition register committed with exact counts per disposition

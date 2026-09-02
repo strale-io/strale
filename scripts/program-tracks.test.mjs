@@ -33,7 +33,7 @@ const finish = (t) => {
   delete t.blocker;
 };
 
-test("the committed registers are valid", () => {
+test("positive smoke test (not mutation evidence): the committed registers are valid", () => {
   const results = checkAllRegisters(root);
   assert.ok(results.length >= 1, "at least one register exists");
   for (const r of results) assert.deepEqual(r.findings, [], `${r.path} has findings`);
@@ -113,18 +113,33 @@ test("duplicate dependency edges are rejected", () => {
 });
 
 test("invisible text is rejected wherever text is required", () => {
-  assert.equal(isVisiblyNonEmpty("\u200b\u200b\u200b"), false);
-  assert.equal(isVisiblyNonEmpty("   "), false);
+  const invisible = ["\u200b\u200b\u200b", "   ", "\u034f\u034f\u034f", "\u200d\u200c\u2060", "\u00ad\u00ad\u00ad", "\ufeff"];
+  for (const s of invisible) assert.equal(isVisiblyNonEmpty(s), false, JSON.stringify(s));
   assert.equal(isVisiblyNonEmpty(" a "), true);
-  const r = base();
-  r.tracks[0].status = "blocked";
-  r.tracks[0].blocker = "\u200b\u200b\u200b";
-  activate(r, 1);
-  r.tracks[1].resume_file = "README.md";
-  assert.ok(codes(r).includes("TEXT_NOT_VISIBLE"));
-  const r2 = base();
-  r2.tracks[0].title = "\u200b\u200b\u200b";
-  assert.ok(codes(r2).includes("TEXT_NOT_VISIBLE"));
+  assert.equal(isVisiblyNonEmpty("\u00e9"), true);
+  assert.equal(isVisiblyNonEmpty("7"), true);
+  for (const field of ["title", "next_action"]) {
+    for (const s of invisible) {
+      const r = base();
+      r.tracks[0][field] = s;
+      assert.ok(codes(r).includes("TEXT_NOT_VISIBLE"), `${field} ${JSON.stringify(s)}`);
+    }
+  }
+  for (const s of invisible) {
+    const r = base();
+    r.tracks[0].exit = [s];
+    assert.ok(codes(r).includes("TEXT_NOT_VISIBLE"), `exit ${JSON.stringify(s)}`);
+    const r2 = base();
+    r2.tracks[0].status = "blocked";
+    r2.tracks[0].blocker = s;
+    activate(r2, 1);
+    r2.tracks[1].resume_file = "README.md";
+    assert.ok(codes(r2).includes("TEXT_NOT_VISIBLE"), `blocker ${JSON.stringify(s)}`);
+    const r3 = base();
+    r3.tracks[1].status = "rehomed";
+    r3.tracks[1].rehomed_to = s;
+    assert.ok(codes(r3).includes("TEXT_NOT_VISIBLE"), `rehomed_to ${JSON.stringify(s)}`);
+  }
 });
 
 test("duplicate ids are rejected", () => {

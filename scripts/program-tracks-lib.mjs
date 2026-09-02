@@ -18,8 +18,11 @@ export const PROGRAMS_DIR = "docs/programs";
 const SATISFIES_DEPENDENCY = new Set(["done"]);
 const TERMINAL = new Set(["done", "rehomed"]);
 const WAITING = new Set(["blocked", "founder_gated"]);
-// Control (Cc), format (Cf, includes zero-width and bidi marks), separators.
-const INVISIBLE = /[\p{Cc}\p{Cf}\p{Z}]/gu;
+// Text counts as visible only if it contains at least one letter, number,
+// punctuation, or symbol. Control and format characters, separators, and
+// bare combining marks (U+034F and friends, which render as nothing without a
+// base) therefore never satisfy the check on their own.
+const VISIBLE = /[\p{L}\p{N}\p{P}\p{S}]/u;
 
 export function repoRootFrom(metaUrl) {
   return resolve(dirname(fileURLToPath(metaUrl)), "..");
@@ -27,7 +30,7 @@ export function repoRootFrom(metaUrl) {
 
 /** True when the text still has visible characters after stripping invisibles. */
 export function isVisiblyNonEmpty(text) {
-  return typeof text === "string" && text.replace(INVISIBLE, "").length > 0;
+  return typeof text === "string" && VISIBLE.test(text);
 }
 
 /** True only for a real calendar date in YYYY-MM-DD form. */
