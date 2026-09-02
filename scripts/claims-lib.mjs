@@ -235,8 +235,11 @@ export function checkForbiddenClaims(root, rows) {
     for (const surface of surfaces) {
       matcher.lastIndex = 0;
       if (matcher.test(surface.text)) {
+        // A surface outside this repository (the frontend's llms.txt) cannot
+        // be fixed here and is absent in CI: report it, do not fail on it.
+        const external = surface.file.startsWith("../");
         findings.push({
-          code: "FORBIDDEN_CLAIM_FOUND",
+          code: external ? "FORBIDDEN_CLAIM_EXTERNAL" : "FORBIDDEN_CLAIM_FOUND",
           file: surface.file,
           detail: `${surface.file} matches forbidden claim "${row.id}" (${row.claim}) — ${row.note ?? "see docs/company/claims.yaml"}`,
         });
@@ -255,7 +258,7 @@ export function checkAllClaims(root) {
   if (valid) {
     findings.push(...checkEvidenceRequired(rows));
     findings.push(...checkDuplicateIds(rows));
-    findings.push(...checkForbiddenClaims(root, rows));
+    for (const f of checkForbiddenClaims(root, rows)) (f.code === "FORBIDDEN_CLAIM_EXTERNAL" ? warnings : findings).push(f);
     warnings.push(...checkEvidenceResolves(root, rows));
   }
 
