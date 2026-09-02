@@ -2,6 +2,7 @@
 doc_type: session-plan
 authority_scope: none
 status: executed
+superseded_notes: handoff disposition corrected to archive after review; see Corrections
 complete: true
 phase: M2
 authority_active: false
@@ -58,6 +59,14 @@ untouched.
 - `npm run context:test` passes, including the register suite whose tests, apart from one labelled positive smoke test, each mutate
   the valid register and assert a specific finding code.
 - Counts in the register equal the counts a reader can recompute from its rows.
+
+## Corrections after review
+
+- Step 3 and the last bullet below recorded `handoff/` as unclear. Independent
+  review pointed at the migration map's row "Existing handoffs: promote
+  remaining current truth, then archive"; the register classifies it as
+  `archive`. The text above is left as written because this file is an
+  executed plan, not the register.
 
 ## Out of scope
 

@@ -15,6 +15,7 @@ import {
   loadRegisterSchema,
   publicIdentities,
   readBaseRegister,
+  validatePrivateProjection,
   repoRootFrom,
   requiredPlanStatements,
   sha256,
@@ -122,12 +123,75 @@ test("coordinated identity edits are caught by the public digest", () => {
   has(r3, "PUBLIC_DIGEST_MISMATCH");
 });
 
-test("the digest recomputation is the only thing that can catch a re-synced identity edit", () => {
+// A synthetic private projection that agrees with a synthetic register, so
+// the pure private-projection validator can be exercised without the archive.
+const syntheticPrivate = () => {
+  const r = base();
+  const rows = [
+    { page_id: "1".repeat(32), id: "DEC-20260901-Q", title_sha256: sha256("q"), historical_status: "active", historical_scope: "global", decided_at: "2026-09-01", source_url: `https://app.notion.com/${"1".repeat(32)}`, disposition: "not_yet_reconciled", evidence: ["docs/project/private-archive-status.json"], rationale: "synthetic pending row for the projection test" },
+    { page_id: "2".repeat(32), id: "DEC-20260301-Q", title_sha256: sha256("s"), historical_status: "superseded", historical_scope: "feature", decided_at: "2026-03-01", source_url: `https://app.notion.com/${"2".repeat(32)}`, disposition: "obsolete_or_superseded", evidence: ["docs/project/private-archive-status.json"], rationale: "synthetic superseded row for the projection test" },
+    { page_id: "3".repeat(32), id: null, title_sha256: sha256("u"), historical_status: "active", historical_scope: null, decided_at: "2026-04-02", source_url: `https://app.notion.com/${"3".repeat(32)}`, disposition: "unclear", evidence: ["docs/project/private-archive-status.json"], rationale: "synthetic blank-id row for the projection test" },
+  ];
+  r.private_rows.count = rows.length;
+  r.private_rows.counts_by_disposition = { not_yet_reconciled: 1, obsolete_or_superseded: 1, unclear: 1 };
+  r.private_rows.digest = canonicalDigest(rows);
+  r.digests.all_rows = { count: r.decision_rows.length + rows.length, digest: canonicalDigest([...r.decision_rows, ...rows]) };
+  r.next_decision_batch.private_candidates = { count: 1, digest: sha256(`${"1".repeat(32)}\n`) };
+  return { r, rows };
+};
+const pcodes = (r, rows) => validatePrivateProjection(r, rows, { schema, collisions: context.collisions }).map((f) => f.code);
+
+test("a coordinated identity edit that re-syncs the public digest passes CI but fails the private-projection check", () => {
   const r = base();
   publicPending(r).decided_at = "2026-01-01";
   resync(r);
-  assert.deepEqual(codesExcept(r), [], "a resynced register cannot be caught by CI; the operator script catches it");
-  assert.notEqual(r.digests.public_rows.digest, base().digests.public_rows.digest, "the digest changed, which the operator script compares to the archive");
+  assert.deepEqual(codesExcept(r), [], "CI cannot see the archive, so a resynced public register passes");
+  // The same edit against the projection: the all-rows digest no longer recomputes.
+  const { r: sr, rows } = syntheticPrivate();
+  rows[0].decided_at = "2026-01-01";
+  assert.ok(pcodes(sr, rows).includes("PRIVATE_DIGEST_MISMATCH"));
+  assert.ok(pcodes(sr, rows).includes("ALL_ROWS_DIGEST_MISMATCH"));
+});
+
+test("the private projection validator recomputes counts, digests, derivation rules, and the next batch", () => {
+  const { r, rows } = syntheticPrivate();
+  assert.deepEqual(pcodes(r, rows), []);
+  // count swap between dispositions
+  const a = syntheticPrivate();
+  a.r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, obsolete_or_superseded: 0, unclear: 1 };
+  assert.ok(pcodes(a.r, a.rows).includes("PRIVATE_COUNT_MISMATCH"));
+  // disposition changed on a row with counts and digests re-synced: derivation rule catches it
+  const b = syntheticPrivate();
+  b.rows[1].disposition = "not_yet_reconciled";
+  b.r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, unclear: 1 };
+  b.r.private_rows.digest = canonicalDigest(b.rows);
+  b.r.digests.all_rows.digest = canonicalDigest([...b.r.decision_rows, ...b.rows]);
+  assert.ok(pcodes(b.r, b.rows).includes("PRIVATE_ROW_PENDING_NOT_ACTIVE"));
+  // erased hand classification: an unclear row given an id
+  const c = syntheticPrivate();
+  c.rows[2].id = "DEC-20260402-E";
+  assert.ok(pcodes(c.r, c.rows).includes("PRIVATE_ROW_UNCLEAR_WITH_ID"));
+  // erased next batch
+  const d = syntheticPrivate();
+  d.r.next_decision_batch.private_candidates = { count: 0, digest: sha256("\n") };
+  assert.ok(pcodes(d.r, d.rows).includes("PRIVATE_NEXT_BATCH_COUNT_MISMATCH"));
+  // clear title, public-only disposition, registry row, duplicate of a public row, schema violation
+  const e = syntheticPrivate();
+  e.rows[0].title = "leak";
+  delete e.rows[0].title_sha256;
+  assert.ok(pcodes(e.r, e.rows).includes("PRIVATE_ROW_CLEAR_TITLE"));
+  const f = syntheticPrivate();
+  f.rows[0].disposition = "formally_migrated";
+  assert.ok(pcodes(f.r, f.rows).includes("PRIVATE_ROW_PUBLIC_DISPOSITION"));
+  const g = syntheticPrivate();
+  g.rows[0].page_id = g.r.decision_rows[0].page_id;
+  assert.ok(pcodes(g.r, g.rows).includes("PRIVATE_ROW_ALSO_PUBLIC"));
+  const h = syntheticPrivate();
+  h.rows[0].historical_status = "active-ish";
+  assert.ok(pcodes(h.r, h.rows).includes("PRIVATE_ROW_SCHEMA"));
+  const i = syntheticPrivate();
+  i.rows[0].page_id = [...context.collisions.collisions[0].records][0].source_page_id;
+  assert.ok(pcodes(i.r, i.rows).includes("PRIVATE_ROW_IN_REGISTRY"));
 });
 
 test("an identity that is not already public on main is rejected", () => {

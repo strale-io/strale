@@ -520,6 +520,81 @@ export function validateClosureRegister(register, context, { schema, relativePat
   return findings;
 }
 
+/**
+ * Pure validation of the private row projection against the public register.
+ * Used by the operator script (with rows fetched from the archive) and by
+ * tests (with synthetic rows). It does not touch disk or git.
+ *
+ * Checks: every private row is a schema-valid decision row with a hashed
+ * title; no private row is a collision-registry row or carries a public-only
+ * disposition; the derivation rules hold; counts_by_disposition, count, the
+ * private digest, the all-rows digest, and the private next-batch candidate
+ * set (count and digest) all recompute to the register's stored values; no
+ * page id appears in both projections; ids are unique across both.
+ */
+export function validatePrivateProjection(register, privateRows, { schema, collisions } = {}) {
+  const findings = [];
+  const finding = (code, detail) => findings.push({ code, path: register.private_rows?.file ?? "private_rows", detail });
+  const rows = Array.isArray(privateRows) ? privateRows : [];
+
+  if (schema) {
+    const ajv = new Ajv2020({ allErrors: true, strict: false });
+    const validateRow = ajv.compile({ ...schema.$defs.decisionRow, $defs: schema.$defs });
+    rows.forEach((r, i) => {
+      if (!validateRow(r)) finding("PRIVATE_ROW_SCHEMA", `row ${i} (${r?.page_id}): ${(validateRow.errors ?? []).map((e) => `${e.instancePath || "/"} ${e.message}`).join("; ")}`);
+    });
+  }
+
+  const registryPageIds = new Set();
+  const collisionIds = new Set();
+  for (const c of collisions?.collisions ?? []) {
+    collisionIds.add(c.id);
+    for (const r of c.records) registryPageIds.add(r.source_page_id);
+  }
+  const publicPages = new Set(register.decision_rows.map((r) => r.page_id));
+  const seen = new Set();
+  const idCounts = {};
+  for (const r of register.decision_rows) if (r.id) idCounts[r.id] = (idCounts[r.id] ?? 0) + 1;
+  for (const r of rows) if (r.id) idCounts[r.id] = (idCounts[r.id] ?? 0) + 1;
+
+  for (const r of rows) {
+    if (seen.has(r.page_id)) finding("PRIVATE_ROW_DUPLICATE", r.page_id);
+    seen.add(r.page_id);
+    if (publicPages.has(r.page_id)) finding("PRIVATE_ROW_ALSO_PUBLIC", r.page_id);
+    if (registryPageIds.has(r.page_id)) finding("PRIVATE_ROW_IN_REGISTRY", r.page_id);
+    if (r.title !== undefined) finding("PRIVATE_ROW_CLEAR_TITLE", r.page_id);
+    if (["formally_migrated", "resolved_collision"].includes(r.disposition)) finding("PRIVATE_ROW_PUBLIC_DISPOSITION", `${r.page_id}: ${r.disposition}`);
+    if (r.disposition === "unresolved_collision" && r.collision?.kind !== "cross-surface") finding("PRIVATE_ROW_IN_REGISTRY", `${r.page_id}: notion-duplicate collisions are public by construction`);
+    if (r.disposition === "not_yet_reconciled" && r.historical_status !== "active") finding("PRIVATE_ROW_PENDING_NOT_ACTIVE", r.page_id);
+    if (r.disposition === "obsolete_or_superseded" && !["superseded", "reversed"].includes(r.historical_status)) finding("PRIVATE_ROW_OBSOLETE_BUT_ACTIVE", r.page_id);
+    if (r.disposition === "unclear" && r.id) finding("PRIVATE_ROW_UNCLEAR_WITH_ID", r.page_id);
+    if (r.disposition !== "unclear" && !r.id) finding("PRIVATE_ROW_BLANK_ID_NOT_UNCLEAR", r.page_id);
+    if (r.record_key) finding("PRIVATE_ROW_RECORD_KEY", r.page_id);
+  }
+
+  const counts = {};
+  for (const r of rows) counts[r.disposition] = (counts[r.disposition] ?? 0) + 1;
+  const stored = register.private_rows.counts_by_disposition ?? {};
+  for (const d of new Set([...Object.keys(counts), ...Object.keys(stored)])) {
+    if ((counts[d] ?? 0) !== (stored[d] ?? 0)) finding("PRIVATE_COUNT_MISMATCH", `${d}: rows say ${counts[d] ?? 0}, register says ${stored[d] ?? 0}`);
+  }
+  if (rows.length !== register.private_rows.count) finding("PRIVATE_COUNT_MISMATCH", `count: rows ${rows.length}, register ${register.private_rows.count}`);
+  const privateDigest = canonicalDigest(rows);
+  if (privateDigest !== register.private_rows.digest) finding("PRIVATE_DIGEST_MISMATCH", `${privateDigest.slice(0, 12)}… vs ${register.private_rows.digest.slice(0, 12)}…`);
+  const allDigest = canonicalDigest([...register.decision_rows, ...rows]);
+  if (allDigest !== register.digests.all_rows.digest) finding("ALL_ROWS_DIGEST_MISMATCH", `${allDigest.slice(0, 12)}… vs ${register.digests.all_rows.digest.slice(0, 12)}…`);
+
+  const nb = register.next_decision_batch;
+  const eligible = rows.filter((r) =>
+    r.disposition === "not_yet_reconciled" && r.historical_status === "active" && r.id &&
+    (idCounts[r.id] ?? 0) === 1 && !collisionIds.has(r.id) && r.decided_at >= nb.decided_on_or_after);
+  // Digest format: sorted page ids joined by LF with a trailing LF, SHA-256.
+  const candidateDigest = sha256(eligible.map((r) => r.page_id).sort().join("\n") + "\n");
+  if (eligible.length !== nb.private_candidates.count) finding("PRIVATE_NEXT_BATCH_COUNT_MISMATCH", `${eligible.length} eligible vs ${nb.private_candidates.count}`);
+  if (candidateDigest !== nb.private_candidates.digest) finding("PRIVATE_NEXT_BATCH_DIGEST_MISMATCH", candidateDigest.slice(0, 12));
+  return findings;
+}
+
 export function checkClosureRegister(root, options = {}) {
   const path = resolve(root, REGISTER_PATH);
   if (!existsSync(path)) return [{ code: "CLOSURE_REGISTER_MISSING", path: REGISTER_PATH }];
