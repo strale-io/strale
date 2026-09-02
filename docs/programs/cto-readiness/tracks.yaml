@@ -16,7 +16,7 @@
 # is required.
 schema_version: 1
 program: cto-readiness
-program_status: active
+program_status: paused
 updated: 2026-09-02
 tracks:
   - id: T1
@@ -196,26 +196,25 @@ tracks:
 
   - id: T15
     title: Test receipts and the schema-migration ledger
-    status: active
+    status: done
     gate: none
     depends_on: [T14]
     owner: session
     next_action: >
-      Second wave of the founder's 2026-09-02 plan, per the stored plan:
-      archive/receipts/ as immutable JSON evidence with receipts:check
-      (schema, blob unchanged since introduction, every evidence path in
-      decisions, tracks and remediation packages resolves, bare test counts
-      in new handoffs warned); a writer helper and the first receipt; the
-      startup-migrations ledger (block ids, added dates, columns written,
-      hashes) with migrations:check refusing edited blocks, unledgered
-      blocks and duplicate column writers; identical paragraph in CLAUDE.md
-      and AGENTS.md.
+      Done 2026-09-02 (PR #490): archive/receipts with receipts:check in CI,
+      the first receipt, the 54-block startup-migrations ledger with
+      migrations:check. Follow-ups: verify the 25 known column overlaps with
+      a runtime trace; write receipts for the two 2026-09-02 handoffs that
+      still state bare test counts.
     resume_file: archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md
     exit:
       - receipts:check and migrations:check pass on main and each planted failure mode fails with a one-line fix
       - the ledger covers every migration block; the first receipt exists
       - identical paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t15-receipts-and-ledger.md
+      - scripts/check-receipts.mjs
+      - apps/api/src/lib/startup-migrations.ledger.json
 
   - id: T4
     title: Remediation program closure
@@ -266,7 +265,8 @@ tracks:
 
   - id: T10
     title: M2 exit-gap closure
-    status: queued
+    status: blocked
+    blocker: the collision-checked Decision batches and the closing M2 review use the Codex review path (review routing 2026-09-01); Codex quota is exhausted until 2026-09-07
     gate: m2-exit
     depends_on: [T1]
     owner: session

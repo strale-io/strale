@@ -20,7 +20,28 @@ const root = repoRootFrom(import.meta.url);
 const REL = "docs/programs/cto-readiness/tracks.yaml";
 const schema = loadSchema(root);
 const tracked = trackedFiles(root);
-const base = () => loadRegister(root, REL);
+// Mutation tests start from an ACTIVE baseline. The committed register may be
+// paused (no active track, blocked tracks with blockers — e.g. 2026-09-02,
+// T4 on DQ-29 and T10 on the Codex quota); the positive smoke test validates
+// the committed file as it is, every other test normalises it first so that
+// "plant one defect, expect one finding" keeps meaning exactly that.
+const base = () => {
+  const r = loadRegister(root, REL);
+  if (r.program_status !== "active" || !r.tracks.some((t) => t.status === "active")) {
+    r.program_status = "active";
+    for (const t of r.tracks) {
+      if (t.status === "blocked" || t.status === "founder_gated") {
+        t.status = "queued";
+        delete t.blocker;
+      }
+    }
+    const done = new Set(r.tracks.filter((t) => t.status === "done").map((t) => t.id));
+    const first = r.tracks.find((t) => t.status === "queued" && t.depends_on.every((d) => done.has(d)));
+    first.status = "active";
+    if (!first.resume_file) first.resume_file = "README.md";
+  }
+  return r;
+};
 const codes = (register, extra = {}) =>
   validateRegister(register, { root, relativePath: REL, schema, tracked, programDir: "cto-readiness", ...extra }).map((f) => f.code);
 const activate = (r, index) => {
