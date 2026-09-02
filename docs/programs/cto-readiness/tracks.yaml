@@ -78,9 +78,9 @@ tracks:
       review passes; prove the stale-branches workflow with a workflow_dispatch
       run against a planted branch; verify the Codex layer live (notify wrapper
       and .codex/hooks.json Stop hook) the first time a Codex turn runs in this
-      repository after the quota returns; decide the eleven plain directories
-      the T2 report lists (seven under Projects, four under C:/tmp) by comparing
-      their files to main; then set this track to done with the evidence paths.
+      repository after the quota returns; then set this track to done with the
+      evidence paths (ten of the eleven plain directories are deleted after a
+      file-level history check; strale-codex-handoff-v2 is Petter's call).
     resume_file: handoff/_general/from-code/2026-09-02-t3-session-end-gate.md
     exit:
       - planting each failure mode makes handoff:check fail with a one-line fix; a clean repo passes

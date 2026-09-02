@@ -46,7 +46,13 @@ One checker, four layers, one contract:
 - **Machine state**: the morning check-in task's prompt now works in
   `strale-wt-checkin` on a dated branch and removes it after its PR merges;
   `strale-wt-0902` was removed and the trunk is on `main`, clean. Allowed set
-  today: trunk + `strale-wt-t3`.
+  today: trunk + `strale-wt-t3`. Of the eleven plain directories the T2
+  report listed, ten were deleted after a file-level check proved every file's
+  content already exists as an object in this repository's history
+  (`strale-wt-a2a`, `-fix`, `-san`, `strale-phase7a`,
+  `strale-public-remediation-wt`, `strale-website-design-handoff-2026-08-25`,
+  and `C:/tmp/strale-wt-{docs,docs3,fixture,promote}`); nothing unique was
+  removed.
 
 ## Evidence
 
@@ -72,8 +78,11 @@ One checker, four layers, one contract:
 
 - Prove `stale-branches` with a `workflow_dispatch` run against a planted
   branch after merge.
-- Eleven plain directories (seven under `Projects`, four under `C:/tmp`)
-  listed in the T2 report still wait for a file-level comparison against main.
+- `C:\Users\pette\Projects\strale-codex-handoff-v2` (61 files of website
+  design/copy handoff documents, 60 of which never existed in this
+  repository's history) is the one plain directory left; it belongs with the
+  website project, and whether to file it under `strale-frontend` or drop it is
+  Petter's call (DQ companion note).
 - Multi-commit squash merges leave no git-visible trace on the local branch;
   the batch loop deletes the branch after merging, and the weekly workflow
   catches the remote copy.

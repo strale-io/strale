@@ -118,6 +118,19 @@ test("unpushed commits fail as ahead; pushing clears it", async () => {
   } finally { r.cleanup(); }
 });
 
+test("a branch that tracks origin/main counts as having no upstream", async () => {
+  const r = makeRepo();
+  try {
+    git(r.batch, "branch", "--set-upstream-to=origin/main");
+    const result = await r.check(r.batch);
+    assert.ok(codes(result).includes("ahead"));
+    assert.match(finding(result, "ahead").message, /no upstream of its own \(it tracks origin\/main\)/);
+    assert.match(finding(result, "ahead").fix, /git push -u origin feat\/x/);
+    git(r.batch, "push", "-q", "-u", "origin", "feat/x");
+    assert.equal((await r.check(r.batch)).ok, true);
+  } finally { r.cleanup(); }
+});
+
 test("a branch without an upstream fails as ahead with the push -u fix", async () => {
   const r = makeRepo();
   try {
@@ -257,6 +270,11 @@ test("a branch whose commits were rebased onto main has landed (patch-equivalent
     commitAll(r.batch, "docs: landed by rebase");
     git(r.batch, "push", "-q");
     const sha = git(r.batch, "rev-parse", "HEAD");
+    // main moves first, so the cherry-pick gets a different parent and cannot
+    // reproduce the branch commit's SHA byte for byte (same tree, same
+    // parent, same second would make it an ancestor instead)
+    writeFileSync(join(r.trunk, "main.md"), "moved\n");
+    commitAll(r.trunk, "docs: main moved");
     git(r.trunk, "cherry-pick", sha);
     git(r.trunk, "push", "-q");
     const fromTrunk = await r.check(r.trunk);

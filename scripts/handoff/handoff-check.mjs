@@ -276,8 +276,12 @@ export async function runChecks(options = {}) {
   // ── ahead ──────────────────────────────────────────────────────────────
   if (mode === "session" && branch) {
     const upstream = git(["rev-parse", "--abbrev-ref", "@{upstream}"], { allowFail: true });
-    if (!upstream) {
-      fail("ahead", `branch ${branch} has no upstream`, `git push -u ${cfg.remote} ${branch}`);
+    // `git worktree add -b x <path> origin/main` makes the new branch track
+    // origin/main; that is not a backup of the branch, so it counts as no
+    // upstream (the push -u below re-points the tracking to origin/<branch>).
+    const borrowed = upstream && branch !== cfg.releaseBranch && upstream === `${cfg.remote}/${cfg.releaseBranch}`;
+    if (!upstream || borrowed) {
+      fail("ahead", `branch ${branch} has no upstream of its own${borrowed ? ` (it tracks ${upstream})` : ""}`, `git push -u ${cfg.remote} ${branch}`);
     } else {
       const ahead = Number(git(["rev-list", "--count", `${upstream}..HEAD`], { allowFail: true }) ?? "0");
       const behind = Number(git(["rev-list", "--count", `HEAD..${upstream}`], { allowFail: true }) ?? "0");
