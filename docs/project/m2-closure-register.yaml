@@ -13,6 +13,15 @@
 # archive (private_rows) and are represented here by counts and digests.
 # Row identity fields are copies from the private preservation archive; they are verified against
 # it by scripts/m2-closure-verify-private-rows.mjs, not by CI.
+# Boundary, stated exactly: no page id, Decision ID, clear title, scope, or date appears here that
+# is not already on main. The 24 title_sha256 values on public rows are new per-row commitments to
+# titles that are not public; they reveal nothing without the title but are new artefacts.
+# What validation proves: structure, that every Decision disposition is derived from evidence
+# (records, collision registry, protocol labels, gap reports, identity fields), that inventory
+# dispositions match the migration map, coverage of every open bucket by a gap, provenance and
+# digest consistency, and no silent removal. What it does not prove: the truth of reviewer-authored
+# prose (progress, remaining, rationale, closes_when, selection_rule), the plan-statement
+# dispositions, or which gaps are blocking. Those are judgements reviewed in the PR.
 schema_version: 2
 authority_scope: none
 status: candidate

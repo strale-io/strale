@@ -257,6 +257,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     archiveRowCount: archiveStatus.pagination?.decisions?.rows_preserved ?? null,
     archiveCommit: archiveStatus.archive_commit ?? null,
     archiveRepository: archiveStatus.repository ?? null,
+    archiveExportPath: archiveStatus.export_path ?? null,
     base: readBaseRegister(root, baseRef),
     isAncestor: (sha) => isAncestorOfHead(root, sha),
     public: publicIdentities(root, baseRef),
@@ -347,6 +348,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
   }
   if (context.archiveRepository && register.sources.decision_archive.repository !== context.archiveRepository) {
     finding("ARCHIVE_REPOSITORY_MISMATCH", register.sources.decision_archive.repository);
+  }
+  if (context.archiveExportPath && register.sources.decision_archive.export_prefix !== `${context.archiveExportPath}/data-sources/decisions-rows`) {
+    finding("EXPORT_PREFIX_MISMATCH", `${register.sources.decision_archive.export_prefix} vs ${context.archiveExportPath}/data-sources/decisions-rows`);
   }
   if (register.private_rows.repository !== register.sources.decision_archive.repository) {
     finding("PRIVATE_ROWS_REPOSITORY_MISMATCH", register.private_rows.repository);
@@ -556,8 +560,13 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // must be an unresolved cross-surface collision, and only such rows may be.
   if (context.gitNativeClaims) {
     const recordIds = new Set(context.records.map((r) => r.id));
+    const recordCitedPages = new Set();
+    for (const rec of context.records) for (const p of rec.pageIds) if (rowsByPage.get(p)?.id === rec.id) recordCitedPages.add(p);
     for (const row of register.decision_rows) {
-      const claimed = row.id && context.gitNativeClaims.has(row.id) && !recordIds.has(row.id);
+      // A row whose id is a Git-native claim (protocol label) or a formal record's
+      // id, and which no same-id record cites, competes with that Git-native
+      // meaning: a cross-surface collision.
+      const claimed = row.id && (context.gitNativeClaims.has(row.id) || recordIds.has(row.id)) && !recordCitedPages.has(row.page_id);
       const labelled = row.disposition === "unresolved_collision" && row.collision?.kind === "cross-surface";
       if (claimed && !labelled) finding("DECISION_ROW_CROSS_SURFACE_EXPECTED", `${row.page_id}: ${row.id} is a Git-native protocol label without a record`);
       if (labelled && !claimed) finding("DECISION_ROW_CROSS_SURFACE_UNSUPPORTED", `${row.page_id}: ${row.id} is not a Git-native protocol label`);
@@ -582,7 +591,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
       let expected;
       if (recordCited.has(row.page_id)) expected = "formally_migrated";
       else if (collisionRows.has(row.page_id)) expected = collisionRows.get(row.page_id).resolution_status === "unresolved" ? "unresolved_collision" : "resolved_collision";
-      else if (row.id && context.gitNativeClaims.has(row.id) && !recordIds.has(row.id)) expected = "unresolved_collision";
+      else if (row.id && (context.gitNativeClaims.has(row.id) || recordIds.has(row.id))) expected = "unresolved_collision";
       else if (gapCited.has(row.page_id)) expected = "intentionally_historical";
       else if (!row.id) expected = "unclear";
       else if (["superseded", "reversed"].includes(row.historical_status)) expected = "obsolete_or_superseded";

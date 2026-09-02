@@ -186,6 +186,13 @@ test("a coordinated identity edit that re-syncs every digest passes CI but fails
 test("the private projection validator recomputes counts, digests, derivation rules, and the next batch", () => {
   const { r, rows } = syntheticPrivate();
   assert.deepEqual(pcodes(r, rows), []);
+  // stored digests edited without touching the rows
+  const z = syntheticPrivate();
+  z.r.private_rows.digest = "0".repeat(64);
+  assert.ok(pcodes(z.r, z.rows).includes("PRIVATE_DIGEST_MISMATCH"));
+  const z2 = syntheticPrivate();
+  z2.r.digests.all_rows.digest = "0".repeat(64);
+  assert.ok(pcodes(z2.r, z2.rows).includes("ALL_ROWS_DIGEST_MISMATCH"));
   // count swap between dispositions
   const a = syntheticPrivate();
   a.r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, obsolete_or_superseded: 0, unclear: 1 };
@@ -347,6 +354,9 @@ test("archive provenance must match the private-archive status file", () => {
   const r = base();
   r.sources.decision_archive.commit = "0".repeat(40);
   has(r, "ARCHIVE_COMMIT_MISMATCH");
+  const r0 = base();
+  r0.sources.decision_archive.export_prefix = "archive/imports/notion/2099-01-01/data-sources/decisions-rows";
+  has(r0, "EXPORT_PREFIX_MISMATCH");
   const r2 = base();
   r2.sources.decision_archive.repository = "someone/else";
   has(r2, "ARCHIVE_REPOSITORY_MISMATCH");
@@ -742,6 +752,14 @@ test("cross-surface collisions are derived from the entrypoints, not from the la
   resync(r2);
   assert.ok(codes(r2).includes("DECISION_ROW_CROSS_SURFACE_UNSUPPORTED"));
   assert.ok(context.gitNativeClaims.has("DEC-20260422-A"));
+  // A public row reusing a Git-native record's id (DEC-20260504-A has no Notion row) is a cross-surface collision.
+  const r3 = base();
+  const h = row(r3, "intentionally_historical");
+  h.id = "DEC-20260504-A";
+  resync(r3);
+  const c3 = codes(r3);
+  assert.ok(c3.includes("DECISION_ROW_CROSS_SURFACE_EXPECTED"), c3.join(","));
+  assert.ok(c3.includes("DECISION_ROW_DERIVATION_MISMATCH"));
 });
 
 test("unclear rows have no id and blank-id rows are unclear", () => {

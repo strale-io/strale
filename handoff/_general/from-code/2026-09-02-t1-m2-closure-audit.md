@@ -41,13 +41,15 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
 
 ## Decisions taken in this batch (technical, mine)
 
-- **The public boundary set at M0 is not widened.** Independent review found
+- **The public boundary set at M0 is not widened in clear.** Independent review found
   that the source titles of migrated rows differ from the published record
   titles and that a full row list would add 218 page IDs and 140 Decision IDs
   to the public repository. A row is now public only if its page id and ID
   already appear on `main`; a clear title appears only where
   `id-collisions.yaml` already publishes that exact string; scope and date
-  appear on no public row (an aggregate digest binds them); everything else is hashed or kept in the
+  appear on no public row (an aggregate digest binds them); the 24 title
+  hashes on public rows are new per-row commitments to non-public titles and
+  are the only new artefacts; everything else is hashed or kept in the
   private archive. Whether the row-level register may
   become public is queued for the founder in `DECISION-QUEUE.md`; nothing
   waits on it.
