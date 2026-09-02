@@ -4,8 +4,9 @@
 // The JSON schema (docs/project/schemas/m2-closure-register.schema.json) owns
 // field shapes. This module owns what a schema cannot see: agreement with the
 // M1 bare inventory, the formal decision records, the collision registry, the
-// private-archive status file, the recomputed counts, and the version of the
-// register already on the base branch (so rows cannot silently disappear).
+// private-archive status file, the derivation rules each disposition rests on,
+// the recomputed counts, and the version of the register already on the base
+// branch (so rows cannot silently disappear).
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
@@ -31,7 +32,8 @@ export const DECISION_DISPOSITIONS = [
   "unclear",
 ];
 export const PLAN_DISPOSITIONS = ["merged", "partially_merged", "superseded", "open"];
-const URL_EVIDENCE = /^https:\/\/(github\.com\/strale-io\/[A-Za-z0-9._-]+\/(pull|commit|issues)\/[A-Za-z0-9]+|app\.notion\.com\/(p\/)?[0-9a-f]{32}(\?.*)?)$/;
+const URL_EVIDENCE =
+  /^https:\/\/(github\.com\/strale-io\/(strale|strale-context-archive)\/(pull\/[0-9]+|issues\/[0-9]+|commit\/[0-9a-f]{7,40})|app\.notion\.com\/(p\/)?[0-9a-f]{32})$/;
 
 export function repoRootFrom(metaUrl) {
   return resolve(dirname(fileURLToPath(metaUrl)), "..");
@@ -43,6 +45,12 @@ export function loadRegister(root, relativePath = REGISTER_PATH) {
 
 export function loadRegisterSchema(root) {
   return JSON.parse(readFileSync(resolve(root, REGISTER_SCHEMA_PATH), "utf8"));
+}
+
+/** Tracked files as `git ls-files` reports them, forward-slashed, as a Set. */
+export function trackedFiles(root) {
+  const out = execFileSync("git", ["-C", root, "ls-files", "-z"], { encoding: "utf8" });
+  return new Set(out.split("\0").filter(Boolean));
 }
 
 /** Front matter of every formal record: { record_key, id, evidence[] }. */
@@ -60,16 +68,30 @@ export function readFormalRecordSummaries(root) {
     });
 }
 
-export function readBaseRegister(root, baseRef = "origin/main") {
+function gitQuiet(root, args) {
   try {
-    const content = execFileSync("git", ["-C", root, "show", `${baseRef}:${REGISTER_PATH}`], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    return YAML.parse(content);
+    return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   } catch {
-    return null; // no register on the base yet: first introduction
+    return null;
   }
+}
+
+/**
+ * The register as it exists on the base ref. Three outcomes are distinguished:
+ * { available: true, register } — base ref readable and file present;
+ * { available: true, register: null } — base ref readable, file absent (first introduction);
+ * { available: false } — base ref unreadable; removal checks cannot run and must say so.
+ */
+export function readBaseRegister(root, baseRef = "origin/main") {
+  if (gitQuiet(root, ["rev-parse", "--verify", "--quiet", `${baseRef}^{commit}`]) === null) {
+    return { available: false, ref: baseRef };
+  }
+  const content = gitQuiet(root, ["show", `${baseRef}:${REGISTER_PATH}`]);
+  return { available: true, ref: baseRef, register: content === null ? null : YAML.parse(content) };
+}
+
+export function isAncestorOfHead(root, sha) {
+  return gitQuiet(root, ["merge-base", "--is-ancestor", sha, "HEAD"]) !== null;
 }
 
 /**
@@ -82,15 +104,19 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
   const archiveStatus = JSON.parse(readFileSync(resolve(root, ARCHIVE_STATUS_PATH), "utf8"));
   return {
     root,
+    tracked: trackedFiles(root),
     inventoryEntries: inventory.entries.map((e) => ({ path: e.path, owner_area: e.owner_area })),
     records: readFormalRecordSummaries(root),
     collisions,
     archiveRowCount: archiveStatus.pagination?.decisions?.rows_preserved ?? null,
-    baseRegister: readBaseRegister(root, baseRef),
+    base: readBaseRegister(root, baseRef),
+    isAncestor: (sha) => isAncestorOfHead(root, sha),
   };
 }
 
-function evidenceProblem(root, value) {
+/** Null when the reference is acceptable, otherwise a short problem code. */
+export function evidenceProblem(context, value) {
+  const root = context?.root;
   if (typeof value !== "string" || value.trim() === "") return "EMPTY";
   if (URL_EVIDENCE.test(value)) return null;
   if (/^[a-z]+:\/\//i.test(value)) return "UNSUPPORTED_URL";
@@ -100,8 +126,16 @@ function evidenceProblem(root, value) {
   if (!root) return null;
   const absolute = resolve(root, normalized);
   if (!existsSync(absolute)) return "MISSING";
-  if (!statSync(absolute).isFile() && !statSync(absolute).isDirectory()) return "NOT_A_FILE";
+  if (!statSync(absolute).isFile()) return "IS_DIRECTORY";
+  if (context.tracked && !context.tracked.has(normalized)) return "UNTRACKED";
   return null;
+}
+
+/** True when the tracked evidence file mentions the page id (dashed or not). */
+function fileCites(context, file, pageId) {
+  if (!context?.root || evidenceProblem(context, file) !== null) return false;
+  const text = readFileSync(resolve(context.root, file), "utf8").replace(/-/g, "");
+  return text.includes(pageId);
 }
 
 function countBy(items, key) {
@@ -118,13 +152,14 @@ function countsMatch(expected, actual, allowedKeys) {
   return diffs;
 }
 
+const normalizeWs = (s) => s.replace(/\s+/g, " ").trim();
+
 /**
  * Returns findings ({code, path, detail}); empty means valid.
  */
 export function validateClosureRegister(register, context, { schema, relativePath = REGISTER_PATH } = {}) {
   const findings = [];
   const finding = (code, detail) => findings.push({ code, path: relativePath, detail });
-  const root = context?.root;
 
   const ajv = new Ajv2020({ allErrors: true, strict: false });
   const validate = ajv.compile(schema);
@@ -133,11 +168,23 @@ export function validateClosureRegister(register, context, { schema, relativePat
     return findings;
   }
 
+  const checkEvidence = (label, refs) => {
+    for (const ev of refs) {
+      const problem = evidenceProblem(context, ev);
+      if (problem) finding("EVIDENCE_INVALID", `${label}: ${ev} (${problem})`);
+    }
+  };
+
+  if (context.isAncestor && !context.isAncestor(register.audited_main)) {
+    finding("AUDITED_MAIN_NOT_ANCESTOR", register.audited_main);
+  }
+
   // ---- Legacy inventory: exact set equality with the M1 bare inventory.
   const invByPath = new Map();
   for (const e of register.legacy_inventory) {
     if (invByPath.has(e.path)) finding("INVENTORY_DUPLICATE", e.path);
     invByPath.set(e.path, e);
+    checkEvidence(`inventory ${e.path}`, e.evidence);
   }
   const expectedInv = new Map(context.inventoryEntries.map((e) => [e.path, e]));
   for (const [path, e] of expectedInv) {
@@ -155,6 +202,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
   for (const fr of register.formal_records) {
     if (listedKeys.has(fr.record_key)) finding("FORMAL_RECORD_DUPLICATE", fr.record_key);
     listedKeys.add(fr.record_key);
+    if (fr.git_provenance !== undefined) checkEvidence(`formal record ${fr.record_key} git_provenance`, [fr.git_provenance]);
     const actual = recordByKey.get(fr.record_key);
     if (!actual) {
       finding("FORMAL_RECORD_UNKNOWN", fr.record_key);
@@ -169,7 +217,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
 
   // ---- Collision registry facts.
   const collisionRows = new Map();
+  const collisionIds = new Set();
   for (const c of context.collisions.collisions ?? []) {
+    collisionIds.add(c.id);
     for (const r of c.records) collisionRows.set(r.source_page_id, { id: c.id, resolution_status: c.resolution_status, disposition: r.disposition, record_key: r.record_key });
   }
   if (register.sources.collision_registry.collision_count !== (context.collisions.collision_count ?? 0)) {
@@ -199,6 +249,10 @@ export function validateClosureRegister(register, context, { schema, relativePat
   for (const row of register.decision_rows) {
     const d = row.disposition;
     const col = collisionRows.get(row.page_id);
+    const isPublicTitle = d === "formally_migrated" || Boolean(col);
+    if (row.title !== undefined && !isPublicTitle) finding("DECISION_ROW_TITLE_NOT_PUBLIC", row.page_id);
+    if (row.title === undefined && isPublicTitle) finding("DECISION_ROW_TITLE_EXPECTED", row.page_id);
+
     if (d === "formally_migrated") {
       const rec = recordByKey.get(row.record_key);
       if (!rec) finding("DECISION_ROW_RECORD_UNKNOWN", `${row.page_id} -> ${row.record_key}`);
@@ -214,34 +268,38 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
 
     if (d === "unresolved_collision" || d === "resolved_collision") {
-      const kind = row.collision?.kind ?? "notion-duplicate";
-      if (kind === "notion-duplicate") {
+      if (row.collision.kind === "notion-duplicate") {
         if (!col) finding("DECISION_ROW_COLLISION_NOT_IN_REGISTRY", row.page_id);
         else {
           if (col.id !== row.collision.id) finding("DECISION_ROW_COLLISION_ID_MISMATCH", row.page_id);
           if (col.resolution_status !== row.collision.resolution_status) finding("DECISION_ROW_COLLISION_STATUS_MISMATCH", row.page_id);
-          if (col.disposition !== row.collision.row_disposition) finding("DECISION_ROW_COLLISION_DISPOSITION_MISMATCH", row.page_id);
+          if (col.disposition !== row.collision.row_disposition) finding("DECISION_ROW_COLLISION_ROW_DISPOSITION_MISMATCH", row.page_id);
           const expected = col.resolution_status === "unresolved" ? "unresolved_collision" : "resolved_collision";
           if (d !== expected) finding("DECISION_ROW_COLLISION_DISPOSITION_MISMATCH", `${row.page_id}: ${d} vs registry ${col.resolution_status}`);
         }
-      } else if (col) {
-        finding("DECISION_ROW_CROSS_SURFACE_IN_REGISTRY", row.page_id);
+      } else {
+        if (col) finding("DECISION_ROW_CROSS_SURFACE_IN_REGISTRY", row.page_id);
+        if (row.collision.id !== row.id) finding("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH", row.page_id);
+        if (!row.evidence.some((ev) => fileCites(context, ev, row.page_id))) finding("DECISION_ROW_NOT_CITED_BY_EVIDENCE", row.page_id);
       }
     } else if (col && d !== "formally_migrated") {
       finding("DECISION_ROW_COLLISION_UNDECLARED", `${row.page_id} is in the collision registry but classified ${d}`);
     }
+    if (d === "formally_migrated" && row.collision && row.collision.kind !== "notion-duplicate") {
+      finding("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH", `${row.page_id}: migrated rows may only carry registry collisions`);
+    }
 
+    if (d === "intentionally_historical" && !row.evidence.some((ev) => fileCites(context, ev, row.page_id))) {
+      finding("DECISION_ROW_NOT_CITED_BY_EVIDENCE", row.page_id);
+    }
+    if (d === "not_yet_reconciled" && row.historical_status !== "active") finding("DECISION_ROW_PENDING_NOT_ACTIVE", row.page_id);
+    if (d === "obsolete_or_superseded" && !["superseded", "reversed"].includes(row.historical_status)) finding("DECISION_ROW_OBSOLETE_BUT_ACTIVE", row.page_id);
     if (d === "unclear" && row.id) finding("DECISION_ROW_UNCLEAR_WITH_ID", row.page_id);
     if (d !== "unclear" && !row.id) finding("DECISION_ROW_BLANK_ID_NOT_UNCLEAR", row.page_id);
 
-    for (const ev of row.evidence) {
-      const problem = evidenceProblem(root, ev);
-      if (problem) finding("EVIDENCE_INVALID", `${row.page_id}: ${ev} (${problem})`);
-    }
+    checkEvidence(row.page_id, row.evidence);
   }
-  // Every collision-registry row must appear in the register.
   for (const pageId of collisionRows.keys()) if (!rowsByPage.has(pageId)) finding("DECISION_ROW_MISSING_FROM_REGISTER", pageId);
-  // Formal records with Notion sources must be reachable from migrated rows.
   for (const fr of register.formal_records) {
     const rows = migratedByRecord.get(fr.record_key) ?? [];
     if (fr.source_kind === "notion-row") {
@@ -252,37 +310,49 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
   }
 
-  // ---- Other evidence references.
-  for (const e of register.legacy_inventory) for (const ev of e.evidence) {
-    const problem = evidenceProblem(root, ev);
-    if (problem) finding("EVIDENCE_INVALID", `inventory ${e.path}: ${ev} (${problem})`);
+  // ---- Plan statements: every quote must occur in the plan file.
+  const planPath = register.sources.migration_plan.path;
+  const planText = context.root && evidenceProblem(context, planPath) === null
+    ? normalizeWs(readFileSync(resolve(context.root, planPath), "utf8"))
+    : null;
+  for (const p of register.plan_statements) {
+    checkEvidence(`plan statement ${p.location}`, p.evidence);
+    if (planText !== null && !planText.includes(normalizeWs(p.quote))) finding("PLAN_QUOTE_NOT_FOUND", p.location);
   }
-  for (const p of register.plan_statements) for (const ev of p.evidence) {
-    const problem = evidenceProblem(root, ev);
-    if (problem) finding("EVIDENCE_INVALID", `plan statement: ${ev} (${problem})`);
-  }
+  if (planText === null) finding("EVIDENCE_INVALID", `migration_plan: ${planPath} (${evidenceProblem(context, planPath) ?? "unreadable"})`);
+
   const gapIds = new Set();
   for (const g of register.exit_gaps) {
     if (gapIds.has(g.id)) finding("EXIT_GAP_DUPLICATE", g.id);
     gapIds.add(g.id);
-    for (const ev of g.evidence) {
-      const problem = evidenceProblem(root, ev);
-      if (problem) finding("EVIDENCE_INVALID", `${g.id}: ${ev} (${problem})`);
-    }
+    checkEvidence(g.id, g.evidence);
   }
 
-  // ---- Next batch must be collision-free by construction.
+  // ---- Next batch: the rule's filter and its completeness are both enforced.
+  const nb = register.next_decision_batch;
+  const eligible = (row) =>
+    row.disposition === "not_yet_reconciled" &&
+    row.historical_status === "active" &&
+    row.id &&
+    (idCounts[row.id] ?? 0) === 1 &&
+    !collisionRows.has(row.page_id) &&
+    !collisionIds.has(row.id) &&
+    row.decided_at >= nb.decided_on_or_after;
   const candidateIds = new Set();
-  for (const c of register.next_decision_batch.candidates) {
+  for (const c of nb.candidates) {
     const row = rowsByPage.get(c.page_id);
     if (!row) { finding("NEXT_BATCH_ROW_UNKNOWN", c.page_id); continue; }
     if (row.id !== c.id) finding("NEXT_BATCH_ID_MISMATCH", c.page_id);
     if (row.disposition !== "not_yet_reconciled") finding("NEXT_BATCH_ROW_NOT_PENDING", `${c.page_id} is ${row.disposition}`);
     if ((idCounts[c.id] ?? 0) !== 1) finding("NEXT_BATCH_ID_NOT_UNIQUE", c.id);
-    if (collisionRows.has(c.page_id) || (context.collisions.collisions ?? []).some((x) => x.id === c.id)) finding("NEXT_BATCH_COLLIDES", c.id);
+    if (collisionRows.has(c.page_id) || collisionIds.has(c.id)) finding("NEXT_BATCH_COLLIDES", c.id);
     if (row.historical_status !== "active") finding("NEXT_BATCH_NOT_ACTIVE", c.id);
+    if (row.decided_at < nb.decided_on_or_after) finding("NEXT_BATCH_TOO_OLD", `${c.id} decided ${row.decided_at}`);
     if (candidateIds.has(c.page_id)) finding("NEXT_BATCH_DUPLICATE", c.page_id);
     candidateIds.add(c.page_id);
+  }
+  for (const row of register.decision_rows) {
+    if (eligible(row) && !candidateIds.has(row.page_id)) finding("NEXT_BATCH_INCOMPLETE", `${row.id} is eligible but not listed`);
   }
 
   // ---- Counts must equal what the rows say.
@@ -295,15 +365,18 @@ export function validateClosureRegister(register, context, { schema, relativePat
   for (const d of countsMatch(planCounts, register.counts.plan_statements, [...PLAN_DISPOSITIONS, "total"])) finding("COUNT_DRIFT", `plan_statements ${d}`);
   for (const d of countsMatch(gapCounts, register.counts.exit_gaps, ["blocking", "non_blocking"])) finding("COUNT_DRIFT", `exit_gaps ${d}`);
 
-  // ---- Silent removal: nothing present on the base may vanish.
-  const base = context.baseRegister;
-  if (base && Array.isArray(base.decision_rows)) {
-    for (const row of base.decision_rows) if (!rowsByPage.has(row.page_id)) finding("DECISION_ROW_REMOVED", row.page_id);
-    for (const e of base.legacy_inventory ?? []) if (!invByPath.has(e.path)) finding("INVENTORY_ENTRY_REMOVED", e.path);
-    for (const p of base.plan_statements ?? []) {
+  // ---- Silent removal: nothing present on the base may vanish. Fails closed
+  // when the base is unreadable rather than skipping.
+  const base = context.base;
+  if (!base || base.available === false) {
+    finding("BASE_REGISTER_UNAVAILABLE", `${base?.ref ?? "origin/main"} is not readable; removal checks did not run`);
+  } else if (base.register && Array.isArray(base.register.decision_rows)) {
+    for (const row of base.register.decision_rows) if (!rowsByPage.has(row.page_id)) finding("DECISION_ROW_REMOVED", row.page_id);
+    for (const e of base.register.legacy_inventory ?? []) if (!invByPath.has(e.path)) finding("INVENTORY_ENTRY_REMOVED", e.path);
+    for (const p of base.register.plan_statements ?? []) {
       if (!register.plan_statements.some((q) => q.location === p.location)) finding("PLAN_STATEMENT_REMOVED", p.location);
     }
-    for (const g of base.exit_gaps ?? []) if (!gapIds.has(g.id)) finding("EXIT_GAP_REMOVED", g.id);
+    for (const g of base.register.exit_gaps ?? []) if (!gapIds.has(g.id)) finding("EXIT_GAP_REMOVED", g.id);
   }
 
   return findings;

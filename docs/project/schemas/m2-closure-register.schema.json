@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "M2 closure disposition register",
-  "description": "Authored M2 closure audit. Every legacy-authority inventory entry, every preserved Decision source row, every migration-plan forward statement, the M2 exit gaps, and the next collision-free Decision batch. Machine-checked by scripts/m2-closure-register-lib.mjs; cross-row and filesystem invariants live there, not here.",
+  "description": "Authored M2 closure audit. Every legacy-authority inventory entry, every preserved Decision source row, every migration-plan forward statement, the M2 exit gaps, and the next collision-free Decision batch. Machine-checked by scripts/m2-closure-register-lib.mjs; cross-row, derivation-rule, and filesystem invariants live there, not here.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -99,7 +99,7 @@
           "progress": { "enum": ["complete", "partial", "not_started"] },
           "target": { "type": "string", "minLength": 3 },
           "remaining": { "type": "array", "items": { "type": "string", "minLength": 3 } },
-          "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceRef" } },
+          "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRef" } },
           "rationale": { "type": "string", "minLength": 20 }
         },
         "allOf": [
@@ -124,8 +124,8 @@
           "record_key": { "type": "string", "minLength": 1 },
           "id": { "type": "string", "minLength": 1 },
           "source_kind": { "enum": ["notion-row", "git-native"] },
-          "source_rows": { "type": "array", "items": { "$ref": "#/$defs/pageId" } },
-          "git_provenance": { "type": "string", "minLength": 3 }
+          "source_rows": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/pageId" } },
+          "git_provenance": { "$ref": "#/$defs/evidenceRef" }
         },
         "allOf": [
           { "if": { "properties": { "source_kind": { "const": "notion-row" } } }, "then": { "properties": { "source_rows": { "minItems": 1 } } } },
@@ -139,11 +139,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["page_id", "id", "title", "historical_status", "historical_scope", "decided_at", "source_url", "disposition", "evidence", "rationale"],
+        "required": ["page_id", "id", "historical_status", "historical_scope", "decided_at", "source_url", "disposition", "evidence", "rationale"],
         "properties": {
           "page_id": { "$ref": "#/$defs/pageId" },
           "id": { "type": ["string", "null"] },
-          "title": { "type": "string" },
+          "title": { "type": "string", "minLength": 1 },
+          "title_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
           "historical_status": { "type": ["string", "null"], "enum": ["active", "superseded", "reversed", null] },
           "historical_scope": { "type": ["string", "null"], "enum": ["global", "feature", "temporary", null] },
           "decided_at": { "$ref": "#/$defs/date" },
@@ -155,7 +156,7 @@
           "collision": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "resolution_status", "row_disposition"],
+            "required": ["id", "resolution_status", "row_disposition", "kind"],
             "properties": {
               "id": { "type": "string" },
               "resolution_status": { "enum": ["unresolved", "resolved"] },
@@ -163,13 +164,16 @@
               "kind": { "enum": ["notion-duplicate", "cross-surface"] }
             }
           },
-          "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRef" } },
+          "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRef" } },
           "rationale": { "type": "string", "minLength": 20 }
         },
+        "oneOf": [
+          { "required": ["title"], "not": { "required": ["title_sha256"] } },
+          { "required": ["title_sha256"], "not": { "required": ["title"] } }
+        ],
         "allOf": [
-          { "if": { "properties": { "disposition": { "const": "formally_migrated" } } }, "then": { "required": ["record_key"], "properties": { "evidence": { "minItems": 1 } } } },
-          { "if": { "properties": { "disposition": { "enum": ["unresolved_collision", "resolved_collision"] } } }, "then": { "required": ["collision"], "properties": { "evidence": { "minItems": 1 } } } },
-          { "if": { "properties": { "disposition": { "const": "intentionally_historical" } } }, "then": { "properties": { "evidence": { "minItems": 1 } } } },
+          { "if": { "properties": { "disposition": { "const": "formally_migrated" } } }, "then": { "required": ["record_key"] } },
+          { "if": { "properties": { "disposition": { "enum": ["unresolved_collision", "resolved_collision"] } } }, "then": { "required": ["collision"] } },
           { "if": { "properties": { "disposition": { "const": "unclear" } } }, "then": { "properties": { "id": { "type": "null" } } } }
         ]
       }
@@ -185,7 +189,7 @@
           "location": { "type": "string", "minLength": 3 },
           "quote": { "type": "string", "minLength": 10 },
           "disposition": { "enum": ["merged", "partially_merged", "superseded", "open"] },
-          "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceRef" } },
+          "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRef" } },
           "rationale": { "type": "string", "minLength": 20 }
         }
       }
@@ -202,17 +206,18 @@
           "blocking": { "type": "boolean" },
           "owner": { "enum": ["session", "petter"] },
           "closes_when": { "type": "string", "minLength": 10 },
-          "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidenceRef" } }
+          "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRef" } }
         }
       }
     },
     "next_decision_batch": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "selection_rule", "candidates"],
+      "required": ["name", "selection_rule", "decided_on_or_after", "candidates"],
       "properties": {
         "name": { "type": "string", "minLength": 3 },
         "selection_rule": { "type": "string", "minLength": 20 },
+        "decided_on_or_after": { "$ref": "#/$defs/date" },
         "candidates": {
           "type": "array",
           "minItems": 1,
@@ -236,7 +241,7 @@
     "pageId": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
     "evidenceRef": {
       "type": "string",
-      "description": "A repo-relative path that must exist, a GitHub commit/PR URL, or a Notion page URL.",
+      "description": "A repo-relative path to a tracked regular file, a strale-io GitHub pull/commit/issue URL, or a Notion page URL. Checked by the library, not here.",
       "minLength": 3
     },
     "inventoryCounts": {

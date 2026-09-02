@@ -410,7 +410,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "316ade0915542840ba068a407f8baf65f215ee6d100cb2d167164bdad81a3102",
+      "sha256": "51fd3d0b389754086e048ebd4c9861649929eca9fd1b2ebb60285aebc251137c",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -457,6 +457,7 @@
         "archive/sessions/2026-09-01-x402-agentcash-discovery-contract-plan.md",
         "archive/sessions/2026-09-01-x402-price-representation-parity-plan.md",
         "archive/sessions/2026-09-02-fresh-session-readiness-plan.md",
+        "archive/sessions/2026-09-02-t1-m2-closure-audit-plan.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",

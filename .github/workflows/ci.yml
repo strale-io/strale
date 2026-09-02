@@ -128,6 +128,10 @@ jobs:
       FRONTEND_URL: https://strale.dev
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The project-context checks compare against origin/main (operator-action
+          # history, closure-register removal checks); a shallow clone has no such ref.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -288,5 +292,11 @@ jobs:
       # checked here rather than trusted. Tests cover the checker itself.
       - run: npm run programs:check
       - run: npm run programs:test
+      # Repo-native project-context layer (M1/M2 candidates, decision graph,
+      # M2 closure register). The checker itself is warning-only by contract
+      # until M4; its test suite is not, and it asserts the checked-in context
+      # is warning-clean, so drift on these files fails the build here.
+      - run: npm run context:check
+      - run: npm run context:test
 
       - run: npm test
