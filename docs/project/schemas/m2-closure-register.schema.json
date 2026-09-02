@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "M2 closure disposition register",
-  "description": "Authored M2 closure audit. Every legacy-authority inventory entry, every preserved Decision source row, every migration-plan forward statement, the M2 exit gaps, and the next collision-free Decision batch. Machine-checked by scripts/m2-closure-register-lib.mjs; cross-row, derivation-rule, and filesystem invariants live there, not here.",
+  "description": "Authored M2 closure audit. Classifies every legacy-authority inventory entry and every preserved Decision source row, reconciles the migration plan's forward statements, lists the M2 exit gaps, and names the next collision-free Decision batch. Row-level detail for Decision rows that are not already public on main lives in the private archive; this file carries only their counts and a canonical digest. Machine-checked by scripts/m2-closure-register-lib.mjs; cross-row, derivation-rule, public-boundary, and filesystem invariants live there, not here.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,16 +14,18 @@
     "audited_at",
     "audited_main",
     "sources",
+    "digests",
     "counts",
     "legacy_inventory",
     "formal_records",
     "decision_rows",
+    "private_rows",
     "plan_statements",
     "exit_gaps",
     "next_decision_batch"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "authority_scope": { "const": "none" },
     "status": { "const": "candidate" },
     "complete": { "const": false },
@@ -68,6 +70,16 @@
           "required": ["path"],
           "properties": { "path": { "type": "string" } }
         }
+      }
+    },
+    "digests": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_row_format", "public_rows", "all_rows"],
+      "properties": {
+        "canonical_row_format": { "type": "string", "minLength": 20 },
+        "public_rows": { "$ref": "#/$defs/countDigest" },
+        "all_rows": { "$ref": "#/$defs/countDigest" }
       }
     },
     "counts": {
@@ -136,46 +148,31 @@
     "decision_rows": {
       "type": "array",
       "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["page_id", "id", "historical_status", "historical_scope", "decided_at", "source_url", "disposition", "evidence", "rationale"],
-        "properties": {
-          "page_id": { "$ref": "#/$defs/pageId" },
-          "id": { "type": ["string", "null"] },
-          "title": { "type": "string", "minLength": 1 },
-          "title_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-          "historical_status": { "type": ["string", "null"], "enum": ["active", "superseded", "reversed", null] },
-          "historical_scope": { "type": ["string", "null"], "enum": ["global", "feature", "temporary", null] },
-          "decided_at": { "$ref": "#/$defs/date" },
-          "source_url": { "type": "string", "pattern": "^https://app\\.notion\\.com/[0-9a-f]{32}$" },
-          "disposition": {
-            "enum": ["formally_migrated", "unresolved_collision", "resolved_collision", "intentionally_historical", "obsolete_or_superseded", "not_yet_reconciled", "unclear"]
-          },
-          "record_key": { "type": "string", "minLength": 1 },
-          "collision": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["id", "resolution_status", "row_disposition", "kind"],
-            "properties": {
-              "id": { "type": "string" },
-              "resolution_status": { "enum": ["unresolved", "resolved"] },
-              "row_disposition": { "enum": ["unresolved", "formal_record", "documented_only"] },
-              "kind": { "enum": ["notion-duplicate", "cross-surface"] }
-            }
-          },
-          "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRef" } },
-          "rationale": { "type": "string", "minLength": 20 }
+      "items": { "$ref": "#/$defs/decisionRow" }
+    },
+    "private_rows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "visibility", "commit", "file", "count", "digest", "counts_by_disposition", "verification"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 3 },
+        "visibility": { "const": "private" },
+        "commit": { "$ref": "#/$defs/sha40" },
+        "file": { "type": "string", "minLength": 3 },
+        "count": { "type": "integer", "minimum": 0 },
+        "digest": { "$ref": "#/$defs/sha64" },
+        "counts_by_disposition": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "intentionally_historical": { "type": "integer", "minimum": 0 },
+            "obsolete_or_superseded": { "type": "integer", "minimum": 0 },
+            "not_yet_reconciled": { "type": "integer", "minimum": 0 },
+            "unclear": { "type": "integer", "minimum": 0 },
+            "unresolved_collision": { "type": "integer", "minimum": 0 }
+          }
         },
-        "oneOf": [
-          { "required": ["title"], "not": { "required": ["title_sha256"] } },
-          { "required": ["title_sha256"], "not": { "required": ["title"] } }
-        ],
-        "allOf": [
-          { "if": { "properties": { "disposition": { "const": "formally_migrated" } } }, "then": { "required": ["record_key"] } },
-          { "if": { "properties": { "disposition": { "enum": ["unresolved_collision", "resolved_collision"] } } }, "then": { "required": ["collision"] } },
-          { "if": { "properties": { "disposition": { "const": "unclear" } } }, "then": { "properties": { "id": { "type": "null" } } } }
-        ]
+        "verification": { "type": "string", "minLength": 20 }
       }
     },
     "plan_statements": {
@@ -199,28 +196,48 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "gap", "blocking", "owner", "closes_when", "evidence"],
+        "required": ["id", "gap", "blocking", "owner", "phase", "covers", "closes_when", "evidence"],
         "properties": {
           "id": { "type": "string", "pattern": "^G[0-9]+$" },
           "gap": { "type": "string", "minLength": 10 },
           "blocking": { "type": "boolean" },
           "owner": { "enum": ["session", "petter"] },
+          "phase": { "enum": ["M2", "M3", "M5"] },
+          "covers": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "decision_rows.not_yet_reconciled",
+                "decision_rows.unresolved_collision",
+                "decision_rows.intentionally_historical",
+                "decision_rows.obsolete_or_superseded",
+                "decision_rows.unclear",
+                "formal_records.git_native",
+                "legacy_inventory.incomplete",
+                "plan.review_route"
+              ]
+            }
+          },
           "closes_when": { "type": "string", "minLength": 10 },
           "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRef" } }
-        }
+        },
+        "allOf": [
+          { "if": { "properties": { "blocking": { "const": true } } }, "then": { "properties": { "phase": { "const": "M2" } } } }
+        ]
       }
     },
     "next_decision_batch": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "selection_rule", "decided_on_or_after", "candidates"],
+      "required": ["name", "selection_rule", "decided_on_or_after", "cutoff_anchor_id", "candidates", "private_candidates"],
       "properties": {
         "name": { "type": "string", "minLength": 3 },
         "selection_rule": { "type": "string", "minLength": 20 },
         "decided_on_or_after": { "$ref": "#/$defs/date" },
+        "cutoff_anchor_id": { "type": "string", "minLength": 3 },
         "candidates": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -231,6 +248,12 @@
               "why": { "type": "string", "minLength": 10 }
             }
           }
+        },
+        "private_candidates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "digest"],
+          "properties": { "count": { "type": "integer", "minimum": 0 }, "digest": { "$ref": "#/$defs/sha64" } }
         }
       }
     }
@@ -238,11 +261,58 @@
   "$defs": {
     "date": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
     "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "pageId": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "countDigest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["count", "digest"],
+      "properties": { "count": { "type": "integer", "minimum": 0 }, "digest": { "$ref": "#/$defs/sha64" } }
+    },
     "evidenceRef": {
       "type": "string",
       "description": "A repo-relative path to a tracked regular file, a strale-io GitHub pull/commit/issue URL, or a Notion page URL. Checked by the library, not here.",
       "minLength": 3
+    },
+    "decisionRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["page_id", "id", "historical_status", "historical_scope", "decided_at", "source_url", "disposition", "evidence", "rationale"],
+      "properties": {
+        "page_id": { "$ref": "#/$defs/pageId" },
+        "id": { "type": ["string", "null"] },
+        "title": { "type": "string", "minLength": 1 },
+        "title_sha256": { "$ref": "#/$defs/sha64" },
+        "historical_status": { "type": ["string", "null"], "enum": ["active", "superseded", "reversed", null] },
+        "historical_scope": { "type": ["string", "null"], "enum": ["global", "feature", "temporary", null] },
+        "decided_at": { "$ref": "#/$defs/date" },
+        "source_url": { "type": "string", "pattern": "^https://app\\.notion\\.com/[0-9a-f]{32}$" },
+        "disposition": {
+          "enum": ["formally_migrated", "unresolved_collision", "resolved_collision", "intentionally_historical", "obsolete_or_superseded", "not_yet_reconciled", "unclear"]
+        },
+        "record_key": { "type": "string", "minLength": 1 },
+        "collision": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "resolution_status", "row_disposition", "kind"],
+          "properties": {
+            "id": { "type": "string" },
+            "resolution_status": { "enum": ["unresolved", "resolved"] },
+            "row_disposition": { "enum": ["unresolved", "formal_record", "documented_only"] },
+            "kind": { "enum": ["notion-duplicate", "cross-surface"] }
+          }
+        },
+        "evidence": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRef" } },
+        "rationale": { "type": "string", "minLength": 20 }
+      },
+      "oneOf": [
+        { "required": ["title"], "not": { "required": ["title_sha256"] } },
+        { "required": ["title_sha256"], "not": { "required": ["title"] } }
+      ],
+      "allOf": [
+        { "if": { "properties": { "disposition": { "const": "formally_migrated" } } }, "then": { "required": ["record_key"] } },
+        { "if": { "properties": { "disposition": { "enum": ["unresolved_collision", "resolved_collision"] } } }, "then": { "required": ["collision"] } },
+        { "if": { "properties": { "disposition": { "const": "unclear" } } }, "then": { "properties": { "id": { "type": "null" } } } }
+      ]
     },
     "inventoryCounts": {
       "type": "object", "additionalProperties": false,

@@ -1,19 +1,23 @@
 # M2 closure disposition register - AUTHORED M2 CANDIDATE, NOT ACTIVE PROJECT AUTHORITY.
 # Validated by scripts/m2-closure-register-lib.mjs (npm run context:check / context:test).
-# The M1 bare inventory (legacy-authority-inventory.json) is untouched; this file classifies it.
+# The M1 bare inventory's contract, schema, and hashing algorithm are unchanged; this file
+# classifies its entries. Its generated hash and detected-reference values were refreshed by
+# the generator as usual, because the audit's own files reference inventory targets.
 # Dispositions are audit findings about migration state, never restatements of decision content.
-# Row identity fields (id, historical_status, historical_scope, decided_at, title or title_sha256)
-# are copies from the private preservation archive at sources.decision_archive.commit; they cannot
-# be re-verified from this public repository. A title appears only where main already publishes it
-# (formal records, collision registry); every other row carries a SHA-256 of its title instead.
-schema_version: 1
+# Public boundary: a Decision row appears here only if its page id and historical ID are already
+# public on main; a clear title appears only where docs/decisions/id-collisions.yaml already
+# publishes that exact string. Every other row is a title hash, and rows that are not yet public
+# live in the private archive (private_rows) and are represented here by counts and digests.
+# Row identity fields are copies from the private preservation archive; they are verified against
+# it by scripts/m2-closure-verify-private-rows.mjs, not by CI.
+schema_version: 2
 authority_scope: none
 status: candidate
 complete: false
 phase: M2
 authority_active: false
 audited_at: '2026-09-02'
-audited_main: 9ff347953c8738d65ebf69471c8875a695765a51
+audited_main: dea316a22a3c3130faf3e222da6fc46e95c8c112
 sources:
   legacy_inventory:
     path: docs/project/legacy-authority-inventory.json
@@ -34,22 +38,31 @@ sources:
     row_count: 71
   migration_plan:
     path: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
+digests:
+  canonical_row_format: page_id|id|historical_status|historical_scope|decided_at|sha256(title)|disposition,
+    rows sorted by page_id, joined by LF with a trailing LF, SHA-256 of the UTF-8 bytes
+  public_rows:
+    count: 95
+    digest: 8744eb96b6bc6265c6dcc77bb236f2efeace00917e683746a54081611f76e4cc
+  all_rows:
+    count: 318
+    digest: 14077c622e5bd4ff9bde40987c9359d467b1fd5fb902f2f2c70a3a7bcbb43489
 counts:
   legacy_inventory:
     migrated: 6
-    archive: 6
+    archive: 7
     obsolete: 2
-    unclear: 1
     total: 15
     evidence-only: 0
+    unclear: 0
   decision_rows:
-    not_yet_reconciled: 212
     unresolved_collision: 70
-    obsolete_or_superseded: 6
     formally_migrated: 23
-    unclear: 5
     resolved_collision: 1
     intentionally_historical: 1
+    not_yet_reconciled: 212
+    obsolete_or_superseded: 6
+    unclear: 5
     total: 318
   plan_statements:
     partially_merged: 1
@@ -58,8 +71,8 @@ counts:
     total: 5
     superseded: 0
   exit_gaps:
-    blocking: 5
-    non_blocking: 4
+    blocking: 4
+    non_blocking: 5
 legacy_inventory:
 - path: AGENTS.md
   owner_area: root-agent-entrypoint
@@ -82,9 +95,9 @@ legacy_inventory:
   target: Thin peer entrypoint; mandatory protocol full text moves to docs/governance/protocols with a
     coverage manifest and router; Active Decisions move to formal records (plan sections 6, 7, 9).
   remaining:
+  - Classify or migrate the Active Decisions listed in CLAUDE.md that have no formal record (M2; they
+    are Decision rows counted under not_yet_reconciled)
   - Extract every mandatory protocol into the protocol router and coverage manifest (M3 item 5)
-  - Migrate or classify the remaining Active Decisions listed in CLAUDE.md that have no formal record
-    (see decision_rows not_yet_reconciled)
   - Rewrite as a peer entrypoint at M4
   evidence:
   - docs/decisions/README.md
@@ -224,8 +237,8 @@ legacy_inventory:
     under docs/governance; DECISION-QUEUE splits into docs/decisions/PENDING.md, formal records, and operator-actions.yaml;
     GOALS feeds PRODUCT/STATE; briefs archive (plan sections 5 and 9).
   remaining:
+  - Migrate settled DECISION-QUEUE entries into formal records or evidence (M2)
   - Physically move governance documents in M5 with the Charter link invariant
-  - Migrate settled DECISION-QUEUE entries into formal records or evidence
   - Archive daily briefs and the original GOALS/DECISION-QUEUE files in M5
   evidence:
   - docs/decisions/PENDING.md
@@ -264,29 +277,29 @@ legacy_inventory:
   remaining:
   - Relocate to docs/programs/remediation in M5 with link repair
   - Replace CURRENT-STATE.md with a generated overview
-  - Close or re-home every open package (tracked as remediation closure work)
+  - Close or re-home every open package (CTO-readiness track T4)
   evidence:
   - docs/remediation/PACKAGE-GRAPH.yaml
   - docs/remediation/REMEDIATION-LEDGER.md
+  - docs/programs/cto-readiness/tracks.yaml
   - docs/strategy/2026-08-31-repo-native-operating-model-migration.md
   rationale: The remediation program is execution record rather than project truth; the per-package YAML
     files are its authority and nothing has moved yet.
 - path: handoff
   owner_area: session-handoffs
-  disposition: unclear
+  disposition: archive
   progress: not_started
-  target: 'Not specified: plan section 5 omits handoff/ from the target tree, section 6 says routine handoffs
-    end at cutover, and section 10 M4 item 4 replaces routine handoff requirements, but no section says
-    whether existing handoff files move to archive/ or stay in place as evidence.'
+  target: 'Existing handoffs: promote remaining current truth, then archive (plan section 9 migration
+    map). Future handoffs exist only for unfinished work or ephemeral evidence (plan section 6), and routine
+    one-line handoffs end at cutover.'
   remaining:
-  - Decide in the M3 plan whether historical handoffs move to archive/sessions or remain in place as evidence-only,
-    then reclassify
+  - Promote any remaining current truth from historical handoffs into canonical candidates before M4
+  - Archive the historical handoff set in M5 with a pointer README
   evidence:
   - docs/strategy/2026-08-31-repo-native-operating-model-migration.md
   - handoff/_general/README.md
-  rationale: The only durable statement is that handoff files are historical session records. Whether
-    they are archived or left as evidence is a design choice the plan has not made, so it is recorded
-    as unclear rather than guessed.
+  rationale: 'The migration map states the treatment explicitly: promote, then archive. Until M4 the directory
+    stays live because the current session-end procedure still writes to it.'
 formal_records:
 - record_key: DEC-20260320-B
   id: DEC-20260320-B
@@ -424,66 +437,6 @@ formal_records:
   source_rows: []
   git_provenance: archive/sessions/2026-09-01-context-pack-evidence-manifest.json
 decision_rows:
-- page_id: 31167c87082c81d0808ff56906e6ee26
-  id: DEC-20260224-P-a1b2
-  title_sha256: 0e602d30888857156ac7ad37c0111238f40261caa19a16b17fbaea4c84c0c3d6
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-24'
-  source_url: https://app.notion.com/31167c87082c81d0808ff56906e6ee26
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31167c87082c81839825e54b2f34d561
-  id: DEC-20260224-P-c3d4
-  title_sha256: cac96bac852e5bbc74ef750ed97bdad17b9521aedd4f472dfb3c894c502958cf
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-24'
-  source_url: https://app.notion.com/31167c87082c81839825e54b2f34d561
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31167c87082c813d8bb9ea18a3d25199
-  id: DEC-20260224-P-e5f6
-  title_sha256: e19fe8cf531de4a05f4cc9343c80ffe155a5eb143b6e50b17c1cf0209af0c0fe
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-24'
-  source_url: https://app.notion.com/31167c87082c813d8bb9ea18a3d25199
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31167c87082c81ae8589cb372ae7c872
-  id: DEC-20260224-P-g7h8
-  title_sha256: 35f170dc35658904cd092a8aea91d97c7e3fa563b915edd49e0625226e1cbad5
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-24'
-  source_url: https://app.notion.com/31167c87082c81ae8589cb372ae7c872
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c81999f6ef6cd68976dae
-  id: DEC-20260225-P-a3b4
-  title_sha256: 76be1e50a2da2c316fbd2f1ad2131808268d4d202e80c1f42ff6fbc1754960c0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c81999f6ef6cd68976dae
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 31267c87082c81279b14f3859f6f2038
   id: DEC-20260225-P-c5d6
   title: Add failed_requests table to MVP schema. Log every no_matching_capability response with task,
@@ -522,390 +475,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 31267c87082c8197bd02c8620d562c78
-  id: DEC-20260225-P-e7f8
-  title_sha256: c22624c2ba2ac390da3f80e15067346a20e8b1e30a912c64dbdd4519a1900824
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c8197bd02c8620d562c78
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c8176a9e7e6320d4ff8d5
-  id: DEC-20260225-P-g9h0
-  title_sha256: d22041e34571c70e5be560cb5eacac9bda072f16a667ac7fc4386c7cd2a625dd
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c8176a9e7e6320d4ff8d5
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c817bb026f7781747096f
-  id: DEC-20260225-P-i1j2
-  title_sha256: 421fae9367d836f432c1c75cb95ef117594f705c2b0d8419873d816f860f3aba
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c817bb026f7781747096f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c81b5b0d6cb9764dd5228
-  id: DEC-20260225-P-k3l4
-  title_sha256: 77a23613338216756f718a19a6f3060633a050a7a2006185b128819dfd909a1d
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c81b5b0d6cb9764dd5228
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c811f932fe2a2220dd9af
-  id: DEC-20260225-P-m1n2
-  title_sha256: 82169d4ae2d105fe406442349d2774b2d006f5873973a2f295969a6421d9f484
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c811f932fe2a2220dd9af
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c81eaacfeea1146069586
-  id: DEC-20260225-P-m5n6
-  title_sha256: 52ca36f444a78fe195df45d5d3ce025a8da80020fefdda38a04ce6f42d0009c5
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c81eaacfeea1146069586
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c81a58ee8dba0fee289ab
-  id: DEC-20260225-P-o7p8
-  title_sha256: d9d9f513e4498fc0713db13a6f946943c2713d63ea37bfdfba8e68775cd4cdcc
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c81a58ee8dba0fee289ab
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c8125aba2d603fcb8eb3d
-  id: DEC-20260225-P-q3r4
-  title_sha256: 558e404df8637c52dcb3ec0bd00ab7d81a05e2b900442c78167abfcdd3d64da7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c8125aba2d603fcb8eb3d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c814d9ebaf274358867e1
-  id: DEC-20260225-P-s5t6
-  title_sha256: 0d9a81a415d2822d79d6908dc769366736d199c7d9d879c3990837385f0d8475
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c814d9ebaf274358867e1
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c81f6a5cef185671be93c
-  id: DEC-20260225-P-u7v8
-  title_sha256: c27947f74b404c7941685c74c29f703f679cf994b78acae7036c2497716f9f11
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c81f6a5cef185671be93c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c818b8085e711723ff1b2
-  id: DEC-20260225-P-w9x0
-  title_sha256: 02430460cdea802bf483f291d140402760ca55670ed67f6920f97a600e6e3c3d
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c818b8085e711723ff1b2
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31267c87082c8112bb06e0823b8bf0e4
-  id: DEC-20260225-P-y1z2
-  title_sha256: a56b9e8e8764a9bcc2954aa1f7a4e9090034504fa1251cca0c69a9f61312496e
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
-  source_url: https://app.notion.com/31267c87082c8112bb06e0823b8bf0e4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c8122a738c78e9dab0e16
-  id: DEC-20260226-P-q1r2
-  title_sha256: 2542de13c0d331e514475a47c34e4c0204b1fa6ee20257e3b38827ef04af931e
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-26'
-  source_url: https://app.notion.com/31367c87082c8122a738c78e9dab0e16
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c81c69b79db1abefa936d
-  id: DEC-20260226-P-s3t4
-  title_sha256: bd82acec868a7353811db4feaa49fd75743956233b9fd930f022ce231dc377b1
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-26'
-  source_url: https://app.notion.com/31367c87082c81c69b79db1abefa936d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c8182abe7f3c4c561f8d3
-  id: DEC-20260226-P-u5v6
-  title_sha256: 59dbc70ea08c66bb5a065a6a8828e857e44489c32618250a5cb75d01b17dda61
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-26'
-  source_url: https://app.notion.com/31367c87082c8182abe7f3c4c561f8d3
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c814c98e3d791d06f8abd
-  id: DEC-20260226-P-w7x8
-  title_sha256: 05b76b2f1652db0c85c21a4127bee509f809d287a417958ffce4d11e15aafa2a
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-26'
-  source_url: https://app.notion.com/31367c87082c814c98e3d791d06f8abd
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c814bac2bea252352ce64
-  id: DEC-20260227-P-a1b2
-  title_sha256: 12a1657cf5cea5167a9def2667cdbd8fc58ae72cae134acc949bd03e75fbca24
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c814bac2bea252352ce64
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c81238fd2f08e7d176a9d
-  id: DEC-20260227-P-c3d4
-  title_sha256: b54e15cacc19b614a8f5e8f794116736c2d89c01595851523ec53ff2658b8a5a
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c81238fd2f08e7d176a9d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c81a795c2f2c75c279eff
-  id: DEC-20260227-P-e5f6
-  title_sha256: ba1a97ebcfa215c0b72c09c598a469b7bd978f230bbff880ce211436ae1145f4
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c81a795c2f2c75c279eff
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c8103ab84c5fe6d140a4a
-  id: DEC-20260227-P-g7h8
-  title_sha256: 3abcc53c7d174353371d85cab84f582fc3ccd8310d5aa347206fc6e1b6bbfff6
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c8103ab84c5fe6d140a4a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c81049ba4d112accd3f43
-  id: DEC-20260227-P-i9j0
-  title_sha256: b084793ba1ac4421c2a00141db3b5b69f2f42cd5b76132e99ffa6276740c1e4d
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c81049ba4d112accd3f43
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c819cac9bc1917def3951
-  id: DEC-20260227-P-k1l2
-  title_sha256: b4e05838c04d91a8fe371587baa25b544e30f88b5547c1fc293fe0cdff9cdf7d
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c819cac9bc1917def3951
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c81398ce1f05d8c74005f
-  id: DEC-20260227-P-m3n4
-  title_sha256: c9ed1e7a80da6e45f87426fd31c8d90e8efcb25044a4f8a89575eefa78c438fb
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c81398ce1f05d8c74005f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31367c87082c81f9abcbdcea95085407
-  id: DEC-20260227-P-o5p6
-  title_sha256: 761167aac9b71fa19d0abf574a9f5856795be03e4c8d50a7758f7ff0dbfb277b
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31367c87082c81f9abcbdcea95085407
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31467c87082c8148b86ef4d455bfce34
-  id: DEC-20260227-P-q7r8
-  title_sha256: 37c09d4b0a12f9f31ba4cfd07ccab34a6b07d70a5e75c5791b61aca19b8ef651
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31467c87082c8148b86ef4d455bfce34
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31467c87082c8171babed0c2434111ac
-  id: DEC-20260227-P-s9t0
-  title_sha256: 57104f23cf688395449a3f0a7e0a56dd23fa35c306bfb124ae2b8fb4b0d1a1da
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31467c87082c8171babed0c2434111ac
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31467c87082c81d0a71acc35c14f1c87
-  id: DEC-20260227-P-u1v2
-  title_sha256: 7da0577854bf36279b909b9d81d9c6ce80b67173d95903a91a6634432f903827
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-27'
-  source_url: https://app.notion.com/31467c87082c81d0a71acc35c14f1c87
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31767c87082c81ae9098eeb8269c2b22
-  id: DEC-20260302-A-0001
-  title_sha256: 29e60ce1e24137674efe2d805aa37aa47b20884d383c7304eb83866145840bb7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-02'
-  source_url: https://app.notion.com/31767c87082c81ae9098eeb8269c2b22
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31767c87082c818fbe69c610cd0b834b
-  id: DEC-20260302-B-0001
-  title_sha256: 007bb9861af753a472023161a23518e36236834c843b076f5d4de3a9420df990
-  historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-03-02'
-  source_url: https://app.notion.com/31767c87082c818fbe69c610cd0b834b
-  disposition: obsolete_or_superseded
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Marked superseded in the preserved source database and not migrated; it can enter the graph
-    only as a superseded record in a batch that also migrates its successor.
-- page_id: 31767c87082c8153b2f4f850ebeebffb
-  id: DEC-20260302-C
-  title_sha256: 8226153c92b53db6b3437e7721caba29d957be169052c336d8d74d5e27b33b54
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-02'
-  source_url: https://app.notion.com/31767c87082c8153b2f4f850ebeebffb
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31767c87082c81aeba8cca2fcd82a7bf
-  id: DEC-20260302-D
-  title_sha256: e2f48cac5c45c79d291d89fa79edc7f05b2c02e6b13cd29d160d97343cbcd0ba
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-02'
-  source_url: https://app.notion.com/31767c87082c81aeba8cca2fcd82a7bf
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31767c87082c8122afbae0e095b76dbc
-  id: DEC-20260302-E
-  title_sha256: dbdc79fd6b214bb9018ca4c5e51ccb93811db300b61be3128317672d69c06d7f
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-02'
-  source_url: https://app.notion.com/31767c87082c8122afbae0e095b76dbc
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 31867c87082c812dba47c52f4f36ca33
   id: DEC-20260303-A
   title: 'Solution discovery UX: smart input with AI recommendation card (not chat, not traditional search)'
@@ -940,150 +509,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 31867c87082c81cabf16da662cd874f5
-  id: DEC-20260303-B
-  title_sha256: 1daf98a05e2fbdf39201500051a36336864a28490312406c7656a8d298e24876
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c81cabf16da662cd874f5
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c8177b174d27f5bd9fa9d
-  id: DEC-20260303-C
-  title_sha256: 8f716f23f071456cc80effb59e799a635beae6592c4e9387907b9fb32add09d5
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c8177b174d27f5bd9fa9d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c8195a9dffe7132c1cc89
-  id: DEC-20260303-D
-  title_sha256: a7a42606515620fcdf1f6e20ce210f1b676833236d166da523931daed241b634
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c8195a9dffe7132c1cc89
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c81e09d58deb1fe3cb086
-  id: DEC-20260303-E
-  title_sha256: 50b2d237d8033be3e778732e5f41a63286c2b364d99ca16cee629139c27321b0
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c81e09d58deb1fe3cb086
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c814d9d5ccdf8d2ee37d5
-  id: DEC-20260303-F
-  title_sha256: b38a87103b0f039143dba4877e460459e2430cdc41f1d20e6e00dc5b359c9e5f
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c814d9d5ccdf8d2ee37d5
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c81de8327f7ad1f1295ca
-  id: DEC-20260303-G
-  title_sha256: 1c4d2ed0fe1fa48f03c94faac9c4cd54bad85daa8db09b576727eb97581bd5c7
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c81de8327f7ad1f1295ca
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c81aebe08f00f24bc1d10
-  id: DEC-20260303-H
-  title_sha256: 2a18b5854cea1ddf28109bc64843cace5f90fdedf1ef6b51cc1b9049f2fe5a23
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c81aebe08f00f24bc1d10
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c81d389f5f59c89e00750
-  id: DEC-20260303-I
-  title_sha256: 4a82e45f66c95641a93d14b8eb15dc6b4ee22ab87edb525c6716fe84ca6c787b
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c81d389f5f59c89e00750
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c81068c5cd4cdd98d24e0
-  id: DEC-20260303-J
-  title_sha256: 36149af6cdad441434a2f72320f46ecf314de7066a2ef7dda96f87fbbd8987f4
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c81068c5cd4cdd98d24e0
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c814fb72ff1aab1015227
-  id: DEC-20260303-K
-  title_sha256: 83fd8b9602c6e0b82a406498de218f70edf51ded007ab730f4a0b92960276cbe
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c814fb72ff1aab1015227
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c810294eedb4e5cadc4f1
-  id: DEC-20260303-L
-  title_sha256: 390f66a4a0305ac549e0fdf1c54a821131daae1ab056aeb39865a9e55fffbd9f
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c810294eedb4e5cadc4f1
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31867c87082c81c18937e77ae55b1e92
-  id: DEC-20260303-M
-  title_sha256: b13cbb2c9cfc5a57e845e0f8af42495889d1d544f8068216bc6a86992eb46e61
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
-  source_url: https://app.notion.com/31867c87082c81c18937e77ae55b1e92
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 31867c87082c812c9ccef7f58256f40a
   id: DEC-20260304-A
   title: 'Homepage v2.1 polish: comparison back to #2, remove Built for Agents, compact three-steps, tabbed
@@ -1187,646 +612,9 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 31a67c87082c81ab9947de831a3b7730
-  id: DEC-20260305-B
-  title_sha256: 58bf3117ba6d331f96f529b9a05af479362789ba4f10c59dd2f40b947f73d667
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-05'
-  source_url: https://app.notion.com/31a67c87082c81ab9947de831a3b7730
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31a67c87082c813fa2eacb9f22748a82
-  id: DEC-20260305-C
-  title_sha256: 6d051e6253d58b20cac5c8e836ffa45210b21c123d3fb735a04ea3a27d7b8779
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-05'
-  source_url: https://app.notion.com/31a67c87082c813fa2eacb9f22748a82
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31a67c87082c81b29d12de21bc02af76
-  id: DEC-20260305-D
-  title_sha256: 187c2cd317d92e18eb85f31216dadf1e581f65f05f74f28b508f52c5cdefffa8
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-05'
-  source_url: https://app.notion.com/31a67c87082c81b29d12de21bc02af76
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31a67c87082c811eb712c7acda7bb4ab
-  id: DEC-20260305-E
-  title_sha256: 173523fdeaf1c90398ba1f8e71a3abc6346c7c6fd025ce21fc2c774f79b941f0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-05'
-  source_url: https://app.notion.com/31a67c87082c811eb712c7acda7bb4ab
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31a67c87082c8195ae9ae5ad5ae491ce
-  id: DEC-20260305-F
-  title_sha256: e0fe4cd5d2fe35954e439596545ae5e6ae9b0ae0b74ccb880ad2b55850284204
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-05'
-  source_url: https://app.notion.com/31a67c87082c8195ae9ae5ad5ae491ce
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31a67c87082c81b7820debe8a27e5759
-  id: DEC-20260305-G
-  title_sha256: aa31dfdaae5299ef15732c945b3361b076a067c2757a510b15e5720460410d6f
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-05'
-  source_url: https://app.notion.com/31a67c87082c81b7820debe8a27e5759
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c814785a8ff40666fe83b
-  id: DEC-20260306-A
-  title_sha256: 1a5b4397ec2a9a6c3279b80aef0fa84aff0f05e681abb489892b308f121098ec
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-06'
-  source_url: https://app.notion.com/31b67c87082c814785a8ff40666fe83b
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c81d4b535cfbaaba8ef47
-  id: DEC-20260306-B
-  title_sha256: e821d0aec4871f302f4b45d3f48f40517dbaf99c32010599d2a7a5e73eaa8eb0
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-06'
-  source_url: https://app.notion.com/31b67c87082c81d4b535cfbaaba8ef47
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c815bae75db8f3dfbadab
-  id: DEC-20260306-C
-  title_sha256: 0e90a3583f5b4645aff3c443829826118687190b3b1210acd41ff5842f057d57
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-06'
-  source_url: https://app.notion.com/31b67c87082c815bae75db8f3dfbadab
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c818cb5aee225cccee2e4
-  id: DEC-20260306-D
-  title_sha256: 1e99403bdf425ec744d254d78033f015e0d6c50aae5f55f97248dbe4a73f9b83
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-06'
-  source_url: https://app.notion.com/31b67c87082c818cb5aee225cccee2e4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c81f0b41dedbe561e0c4f
-  id: DEC-20260306-E
-  title_sha256: 915ccaf08d98ea648299bd5c11058ec5678ae2346c42e6d8850134164cc50040
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-06'
-  source_url: https://app.notion.com/31b67c87082c81f0b41dedbe561e0c4f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c81d88b49d8b27e290768
-  id: DEC-20260306-F
-  title_sha256: 56923f25aba728d23b2af66c80621b6cee6c1bc6ba8a87358d5c6033e21b8a9e
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-06'
-  source_url: https://app.notion.com/31b67c87082c81d88b49d8b27e290768
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c8165b2c9e7d193d5826f
-  id: DEC-20260306-G
-  title_sha256: 409eb2a1262c25e4c4e860e504ccfc2e1c11dadd60805327ab00a7adf31fb94c
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-06'
-  source_url: https://app.notion.com/31b67c87082c8165b2c9e7d193d5826f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31b67c87082c81eb92bff556b63e443e
-  id: DEC-20260306-H
-  title_sha256: e182a5dec0bd33d5c0dbd404113b841084c6e99d9e599179f9d3797a7d0a795f
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-07'
-  source_url: https://app.notion.com/31b67c87082c81eb92bff556b63e443e
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31d67c87082c81b4b8aef9ab21fbcf0d
-  id: DEC-20260308-1
-  title_sha256: 42177e1d38eeded2d5959f2e0048350940d6b40c0347b2d592f105fe4f4be689
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-08'
-  source_url: https://app.notion.com/31d67c87082c81b4b8aef9ab21fbcf0d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31e67c87082c81d2a3acd0d2298570b4
-  id: DEC-20260309-G
-  title_sha256: 7001c12a30055c39384e5d70d2e2a7cf87a9a39ed460fdaddafcd5bca0b90333
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-09'
-  source_url: https://app.notion.com/31e67c87082c81d2a3acd0d2298570b4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31e67c87082c8154ade9c84abae59128
-  id: DEC-20260309-H
-  title_sha256: 98946f1d07ad30cecbabcff3e73e7a57ae9291e60f3a88489aa3801b12008ef5
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-09'
-  source_url: https://app.notion.com/31e67c87082c8154ade9c84abae59128
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31f67c87082c81b2817cc79eab66baa8
-  id: DEC-20260310-E
-  title_sha256: 8a7a6f18647e998d23e0fab4493cc6b1f5c7bf31fef2861becf72843aef00d28
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-10'
-  source_url: https://app.notion.com/31f67c87082c81b2817cc79eab66baa8
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 31f67c87082c81f1b1c4f8b69ede15b8
-  id: DEC-20260310-F
-  title_sha256: 5d5e1a8934ba6d33a965567743079a1811c6356f49367b1c1ac69233a35f2a8c
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-10'
-  source_url: https://app.notion.com/31f67c87082c81f1b1c4f8b69ede15b8
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32067c87082c815a90f3f59ca2f0b915
-  id: DEC-20260311-A
-  title_sha256: 235ef2d7bd50d335994b45d4900833250ddec12ffc841fe967c6e1e3c750753b
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-11'
-  source_url: https://app.notion.com/32067c87082c815a90f3f59ca2f0b915
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32067c87082c8113a1adc2ecab0ce968
-  id: DEC-20260311-B
-  title_sha256: f48cd76744e6bdb931cd099839b474e20b8b49bf8b16206c9e66e9ee576b0817
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-11'
-  source_url: https://app.notion.com/32067c87082c8113a1adc2ecab0ce968
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32267c87082c81c58995f598d70524e6
-  id: DEC-20260313-A
-  title_sha256: 28c2867697f673d37aa6dd3be383b475b2bab6315916117709e181ba9941eb84
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-13'
-  source_url: https://app.notion.com/32267c87082c81c58995f598d70524e6
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32267c87082c819280c1df580fe8aeff
-  id: DEC-20260313-B
-  title_sha256: 226072e5c4eb7c54fe78efeb0609d6b6badd996cd398fe09c31d84c9dfab34cf
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-13'
-  source_url: https://app.notion.com/32267c87082c819280c1df580fe8aeff
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32267c87082c8189a74ac57214ba5bec
-  id: DEC-20260313-C
-  title_sha256: 4d50d9f1e288a4b66e64324a4bbb0d973967068526d43bc61608a4f5c9977de4
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-13'
-  source_url: https://app.notion.com/32267c87082c8189a74ac57214ba5bec
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32267c87082c81f297c2e2c8445ad228
-  id: DEC-20260313-D
-  title_sha256: 9d5cc1bce3dcb343f89a78798de3f310d6f0b4e9eba601a6b3a178392bce8e8b
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-13'
-  source_url: https://app.notion.com/32267c87082c81f297c2e2c8445ad228
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32267c87082c8133af0ac4948371a740
-  id: DEC-20260313-E
-  title_sha256: 3654b6d5aa317bbd7f5dbc6c7dcba9fab1dfc7a6341049954d1c8dcf71896c1a
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-13'
-  source_url: https://app.notion.com/32267c87082c8133af0ac4948371a740
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32267c87082c8130a425fca08317488a
-  id: DEC-20260313-F
-  title_sha256: 64a6b82da22f0ec8bb0fe9ccf2503f87cbe6dbb5610af62ba272116e32b8e90c
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-13'
-  source_url: https://app.notion.com/32267c87082c8130a425fca08317488a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c812295d5c57d1244ec11
-  id: DEC-20260314-A
-  title_sha256: 8412de24a5f8a2c19ee80e6ecd84d88a970161f8c1d480874171f18ff36b5dff
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-14'
-  source_url: https://app.notion.com/32367c87082c812295d5c57d1244ec11
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c818a97d5ddabc73029c1
-  id: DEC-20260314-B
-  title_sha256: 694dd4d48a837d96d7d66165a24b59e2a865cfd12b7423c2e39e78f63e7ab376
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-14'
-  source_url: https://app.notion.com/32367c87082c818a97d5ddabc73029c1
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c813db699fca58f081386
-  id: DEC-20260314-C
-  title_sha256: ed9bc6b7187f49168360d14cb1215325a360a50ddcd50827a144405cab5af87d
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-14'
-  source_url: https://app.notion.com/32367c87082c813db699fca58f081386
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c81bfaf90c949e06b8594
-  id: DEC-20260314-F
-  title_sha256: d9319162d543ec093cd85413e7fdfef4d3cda254667f046a498b24cc94936c16
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-14'
-  source_url: https://app.notion.com/32367c87082c81bfaf90c949e06b8594
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c815a807ad7a537de11f7
-  id: DEC-20260314-G
-  title_sha256: 2b101c89a71d0a37a56dcc600525320238ad55414a107536d19d491970571613
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-14'
-  source_url: https://app.notion.com/32367c87082c815a807ad7a537de11f7
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c81eda40dfa601fd6b444
-  id: DEC-20260315-A
-  title_sha256: 2f05014f40407ee6bb9682d9605af2f83f5f12f6c42d331f6b6daf1f91aea92a
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-15'
-  source_url: https://app.notion.com/32367c87082c81eda40dfa601fd6b444
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c8119be47c14271503995
-  id: DEC-20260315-B
-  title_sha256: 24e1dc2a772de9e4707918db00e81a58862e6ce1054e3eb63e8c28762e932ac7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-15'
-  source_url: https://app.notion.com/32367c87082c8119be47c14271503995
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32367c87082c81349c24cdb7b0e36481
-  id: DEC-20260315-C
-  title_sha256: 482ac9475b031c3789d62cc9eb32a21a293836dab9bb04bf989208cacb0027e5
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-15'
-  source_url: https://app.notion.com/32367c87082c81349c24cdb7b0e36481
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32467c87082c811287d9fcc2a1fd3e79
-  id: DEC-20260315-H
-  title_sha256: 1ef0057cd2aaa084e5bd062da975875629e2f661dd236cf7f88b7e2e438d899f
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-15'
-  source_url: https://app.notion.com/32467c87082c811287d9fcc2a1fd3e79
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32467c87082c813cbc23c5388918e8c7
-  id: DEC-20260315-I
-  title_sha256: a9b103b091d253c6ae4a4ce3b7124f0d27cda5c60a64b6cad72f07a3cc938afb
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-15'
-  source_url: https://app.notion.com/32467c87082c813cbc23c5388918e8c7
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32467c87082c81bb9547c1a2e5353534
-  id: DEC-20260315-J
-  title_sha256: 28c0c1f073fb795e1320c0d886ce70e5a2992eae4211d3b5889f228d76bc1bc6
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-15'
-  source_url: https://app.notion.com/32467c87082c81bb9547c1a2e5353534
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32567c87082c819da00ffeb660efa605
-  id: DEC-20260316-A
-  title_sha256: 8d9119e450b7d1069d0a4d551acbe89a830eb2b3b2095ee34b6a1045a3e18891
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-16'
-  source_url: https://app.notion.com/32567c87082c819da00ffeb660efa605
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32567c87082c819790a6d7786e80e78a
-  id: DEC-20260316-B
-  title_sha256: a068f427d85c611804baf9fb726028432a0a421d38524fa6ac6e7aa5056e9de4
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-16'
-  source_url: https://app.notion.com/32567c87082c819790a6d7786e80e78a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32567c87082c8194b76cf9bb2cadc61a
-  id: DEC-20260316-C
-  title_sha256: 4540e68b97568996567e8471f83061d835145d2514887f42e2dcfacfcb66c33d
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-16'
-  source_url: https://app.notion.com/32567c87082c8194b76cf9bb2cadc61a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c81de8ff7c4d2f710612d
-  id: DEC-20260317-A
-  title_sha256: b6118ca7b998a99e13e6914b0a22268924d66a15a8a1656573140eeddb58f267
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c81de8ff7c4d2f710612d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c81f790c0fe18f4b09bdb
-  id: DEC-20260317-B
-  title_sha256: 9adf99bf13bd524cd1699e2b997018e4e15d4064f6d8f13aa07581d1a58be6c4
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c81f790c0fe18f4b09bdb
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c810aba91e8e32271aa08
-  id: DEC-20260317-C
-  title_sha256: 94e36b0c7d8cec7492d18ad74da79c1d259349cb8a2fa5863fa9f5f82e29e9f3
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c810aba91e8e32271aa08
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c812398c6fc9b405da9c3
-  id: DEC-20260317-D
-  title_sha256: 80ab2ca85d306209b441d02d1347988c9c5ad0d066a08dfa12d7468507c6a874
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c812398c6fc9b405da9c3
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c81fa8896d57ed40a1bbd
-  id: DEC-20260317-E
-  title_sha256: 3b87552ee791eefcdddd35046c2fb0ae8b9a0b0a17647ddff06e7f809916b73c
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c81fa8896d57ed40a1bbd
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c81f7b363e6ea7af6e12b
-  id: DEC-20260317-F
-  title_sha256: fed03179b82294ec8d16e28b75f8a3afbda87e539f94fd1bae344095e0274766
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c81f7b363e6ea7af6e12b
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c81e8a014efdd8bbdebad
-  id: DEC-20260317-G
-  title_sha256: 3e04878137b44f226ec8baa986acfb9281037dbe49f3183537e08cd52eaeef01
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c81e8a014efdd8bbdebad
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c81fb9d7df43e37be2954
-  id: DEC-20260317-H
-  title_sha256: 9fbc0055c22f16771c8e3eb728d4fcc465c90e89cc644f62747e40b94330acf8
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c81fb9d7df43e37be2954
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32667c87082c81b08169d245763c8e73
-  id: DEC-20260317-I
-  title_sha256: e0cf3c0adc6984363249a0a0104528db5ba282371c76d8e0acf0fad7d35381f2
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-17'
-  source_url: https://app.notion.com/32667c87082c81b08169d245763c8e73
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32767c87082c810581aefd19d1af8f34
-  id: DEC-20260318-A
-  title_sha256: 1e1b631048de562842ffa8d3fcb73c7b9af63bf69dbd4081b45f355eeb34266c
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-18'
-  source_url: https://app.notion.com/32767c87082c810581aefd19d1af8f34
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32767c87082c81a0bd8aec76edddee13
-  id: DEC-20260318-B
-  title_sha256: 18eb0981a93f44d51f9721933e929c71503ac97c44de8ac6f30786ea099069db
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-18'
-  source_url: https://app.notion.com/32767c87082c81a0bd8aec76edddee13
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32967c87082c81ea9912da343ea09960
-  id: DEC-20260320-A
-  title_sha256: 31d1aa08939267b4eed1d28166a8db787f7da78275811307886bafe66aba7b33
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-20'
-  source_url: https://app.notion.com/32967c87082c81ea9912da343ea09960
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 32967c87082c81b7a8ccd169b431f99c
   id: DEC-20260320-B
-  title: 'Capability Onboarding Enforcement Rule: CC must follow the Onboarding Pipeline spec for ANY
-    capability work, regardless of how the instruction is given'
+  title_sha256: e97bf872a4ed3aa042b72873bfc830b28d0811986f22973d04c4f84de1af2a99
   historical_status: superseded
   historical_scope: global
   decided_at: '2026-03-20'
@@ -1871,78 +659,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 32967c87082c81a39e9be7c319ecc60a
-  id: DEC-20260320-D
-  title_sha256: e0096c5c7d399dc16a17eb9f16db6d40db00797b077eabd1faf24969409f10e3
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
-  source_url: https://app.notion.com/32967c87082c81a39e9be7c319ecc60a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32967c87082c817bbfffd9c5038bed04
-  id: DEC-20260320-E
-  title_sha256: 1cbab6c58dcefd9710f59250e79543dbfda037aaa66ac1fe5f858742883459c4
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-20'
-  source_url: https://app.notion.com/32967c87082c817bbfffd9c5038bed04
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32967c87082c818d9b6ce06c985f5836
-  id: DEC-20260320-F
-  title_sha256: d5f1f7ffae9a2a8154847faf36db0024461f4cf96982b357ab5ca6797fb8fea7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-20'
-  source_url: https://app.notion.com/32967c87082c818d9b6ce06c985f5836
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32967c87082c8138b5c5cef430075d6a
-  id: DEC-20260320-G
-  title_sha256: 6b22a5c4b665f40993dbc6320b3dc200f93f09c18f654ce1cfa83993a8d156aa
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
-  source_url: https://app.notion.com/32967c87082c8138b5c5cef430075d6a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32967c87082c81b6962aef4f8bebcdbb
-  id: DEC-20260320-H
-  title_sha256: 4100e4d59366aedd600262fd063228e31811b596cca5e196685f0085e10cd842
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
-  source_url: https://app.notion.com/32967c87082c81b6962aef4f8bebcdbb
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32967c87082c8180bf20d41f80b528e4
-  id: DEC-20260320-I
-  title_sha256: 7be6d37d355c35d4e3e6ce698ac10e97c495f537a1a21108f3064fd25913d900
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
-  source_url: https://app.notion.com/32967c87082c8180bf20d41f80b528e4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 32967c87082c8177a82be21d48f57411
   id: DEC-20260320-J
   title: 'Dynamic methodology text: capability counts, solution counts, and test suite counts must never
@@ -2013,246 +729,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 32a67c87082c81f8a672ec0549077021
-  id: DEC-20260321-A
-  title_sha256: a39242f2ef588523b7bdcedeeb548d76ff823ae079bbb2ee11906d5340537787
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-21'
-  source_url: https://app.notion.com/32a67c87082c81f8a672ec0549077021
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32c67c87082c81719ea5f67617482c43
-  id: DEC-20260323-A
-  title_sha256: eb5467a39458c3ad37010779a5530c1bc7e21f0b961a9e6932782c16e3f2db90
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-23'
-  source_url: https://app.notion.com/32c67c87082c81719ea5f67617482c43
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32d67c87082c81dd9c53dfd6ce1ffc9c
-  id: DEC-20260324-A
-  title_sha256: 05120bb34284705c036af98efb457e380f264b5d7fb40e9ad9632a56f6188134
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-24'
-  source_url: https://app.notion.com/32d67c87082c81dd9c53dfd6ce1ffc9c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32d67c87082c8124b484d2fd0c17cdc0
-  id: DEC-20260324-B
-  title_sha256: eac64569cb3cfe01f40b0c98f6502768ad4a664ca48ed4caa75605eee3f6bfbf
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-24'
-  source_url: https://app.notion.com/32d67c87082c8124b484d2fd0c17cdc0
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32d67c87082c81e18ee2cf6b26226f1c
-  id: DEC-20260324-C
-  title_sha256: 97d144c78361e776af0669e6a80660d7bd990f9d69752b42c7c53f7096eb09ec
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-24'
-  source_url: https://app.notion.com/32d67c87082c81e18ee2cf6b26226f1c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32d67c87082c81378f63ca3272b44c8d
-  id: DEC-20260324-D
-  title_sha256: 5ec03d510d1b9c644313b6174363f69a38f622e361d255cb5fe742c70f2ebcd1
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-24'
-  source_url: https://app.notion.com/32d67c87082c81378f63ca3272b44c8d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32d67c87082c81499f64de8ff2c570f4
-  id: DEC-20260324-E
-  title_sha256: fa13bc63feb92d96965c7d7578c441d96d0169e5ba63b336780cc1498f457367
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-24'
-  source_url: https://app.notion.com/32d67c87082c81499f64de8ff2c570f4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 32d67c87082c8173be2ded071699cf63
-  id: DEC-20260324-F
-  title_sha256: 6e49a7e581a8de3a56587361acdd28fe3235a438b3fbdac88ad610b63537ecaf
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-24'
-  source_url: https://app.notion.com/32d67c87082c8173be2ded071699cf63
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33267c87082c8153a59fce1f5e2b125d
-  id: DEC-20260329-A
-  title_sha256: d7f94ece3d48a754790509cd24ddead06edde15ebc5c18483d7793bbfaee41e3
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-29'
-  source_url: https://app.notion.com/33267c87082c8153a59fce1f5e2b125d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33367c87082c81249e34d3dee1190763
-  id: null
-  title_sha256: 115b8e8e277f8a9cdb1caabc1c83dc8e41d2ae292873905d287cf0bcb52e6a5e
-  historical_status: null
-  historical_scope: null
-  decided_at: '2026-03-30'
-  source_url: https://app.notion.com/33367c87082c81249e34d3dee1190763
-  disposition: unclear
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Source row has an empty ID property; the ID embedded in the title is not a recorded identity.
-    Left unclear rather than inferred.
-- page_id: 33367c87082c8138bdbdd4dd20af3ca0
-  id: DEC-20260330-B
-  title_sha256: 1a2a7faabd4d13796484f886c69c9f1a9f4b29845cdace26f7b94373495f8dc1
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-30'
-  source_url: https://app.notion.com/33367c87082c8138bdbdd4dd20af3ca0
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33467c87082c812aa2e6d8116c99aa87
-  id: DEC-20260331-A
-  title_sha256: c301776950eb7d75a22145f48ac5da4be87f0f035930ace185940942874702b1
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-31'
-  source_url: https://app.notion.com/33467c87082c812aa2e6d8116c99aa87
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33667c87082c81438bb1cf0672c5658e
-  id: null
-  title_sha256: 2d7a88a670535a121c753cc99e4c4e48ff77a9b57bc9ff8cf7f7f872829a06e9
-  historical_status: null
-  historical_scope: null
-  decided_at: '2026-04-02'
-  source_url: https://app.notion.com/33667c87082c81438bb1cf0672c5658e
-  disposition: unclear
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Source row has an empty ID property; the ID embedded in the title is not a recorded identity.
-    Left unclear rather than inferred.
-- page_id: 33667c87082c814e8626f3cc1293ffc4
-  id: null
-  title_sha256: f2286cecd73eadf943128c5086b0a05c9c68edf6ecfa2cc49193119c665394fc
-  historical_status: null
-  historical_scope: null
-  decided_at: '2026-04-02'
-  source_url: https://app.notion.com/33667c87082c814e8626f3cc1293ffc4
-  disposition: unclear
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Source row has an empty ID property; the ID embedded in the title is not a recorded identity.
-    Left unclear rather than inferred.
-- page_id: 33667c87082c8169993bdcc59f7e6128
-  id: null
-  title_sha256: 688155956aadf0cba1e3332fd79de4644c17c1e33901a1293afb4f0fa9212e55
-  historical_status: null
-  historical_scope: null
-  decided_at: '2026-04-02'
-  source_url: https://app.notion.com/33667c87082c8169993bdcc59f7e6128
-  disposition: unclear
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Source row has an empty ID property; the ID embedded in the title is not a recorded identity.
-    Left unclear rather than inferred.
-- page_id: 33667c87082c81da8f3bf14c6f2b8009
-  id: null
-  title_sha256: eee32b1e0f8b1b3939c0e8fb4856687f8ff0c3abd0a2789bb0ee71d96acd559e
-  historical_status: null
-  historical_scope: null
-  decided_at: '2026-04-02'
-  source_url: https://app.notion.com/33667c87082c81da8f3bf14c6f2b8009
-  disposition: unclear
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Source row has an empty ID property; the ID embedded in the title is not a recorded identity.
-    Left unclear rather than inferred.
-- page_id: 33667c87082c818ca676ff77d4c40588
-  id: DEC-20260402-A
-  title_sha256: 887f9961785059fcc37adab0ace6b8363a2d779f142048458ecf24b90a8a9b7f
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-02'
-  source_url: https://app.notion.com/33667c87082c818ca676ff77d4c40588
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33667c87082c8123beb1d6a8e807f05c
-  id: DEC-20260402-B
-  title_sha256: b99c321960ea82a1542e220ad2c76f5bb4c0cb45593ff0a1e23ce3a34e6b91b0
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-02'
-  source_url: https://app.notion.com/33667c87082c8123beb1d6a8e807f05c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33867c87082c8116aa2ae2a1c6d2cad4
-  id: DEC-20260404-A
-  title_sha256: 6721a97bce45377e7c51549ea87839d60eddcea9d80249a4c5d80f7490ba5e0d
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-04'
-  source_url: https://app.notion.com/33867c87082c8116aa2ae2a1c6d2cad4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33d67c87082c81b6a938de6f68971c38
-  id: DEC-20260405-A
-  title_sha256: 37a8ac602288574ee3265956bb2d7121798b4904d2f90ad1b3c542dc1e0f5f8c
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-05'
-  source_url: https://app.notion.com/33d67c87082c81b6a938de6f68971c38
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 33967c87082c810c920dd09d78aa06b6
   id: DEC-20260405-B
   title: 'DEC-20260405-B: Solution execution transaction storage model and Phase 1.4 migration tooling
@@ -2271,18 +747,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 33967c87082c81648c55d06ba3877dd9
-  id: DEC-20260405-C
-  title_sha256: e89fdbe214ccd3846da87b46954f0a45ad46932eacf7b47a8bef4787545f4558
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-05'
-  source_url: https://app.notion.com/33967c87082c81648c55d06ba3877dd9
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 33967c87082c816b825cdf812ef006b8
   id: DEC-20260406-A
   title: 'DEC-20260406-A: Fix missing per-step latencyMs capture in solution audit_trail'
@@ -2386,78 +850,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 33b67c87082c81e18216d5aee7e24bff
-  id: DEC-20260406-D
-  title_sha256: 27dae22544d26e95c71561b3a49026b214aa0044d4a36eb4f878417f8c1cab81
-  historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-04-06'
-  source_url: https://app.notion.com/33b67c87082c81e18216d5aee7e24bff
-  disposition: obsolete_or_superseded
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Marked superseded in the preserved source database and not migrated; it can enter the graph
-    only as a superseded record in a batch that also migrates its successor.
-- page_id: 33b67c87082c811fb274c299d3d07ab3
-  id: DEC-20260406-E
-  title_sha256: 58fde9b53e0420240ab5109900b19957de84d0e969fb5d0a0f84212c16328434
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-07'
-  source_url: https://app.notion.com/33b67c87082c811fb274c299d3d07ab3
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33b67c87082c81bc8073ffb13d94fc1e
-  id: DEC-20260406-F
-  title_sha256: 719d861fef0b0cbee2276c4590ef03610c6ecb7c84255227a18d04cffcc0b6d0
-  historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-04-07'
-  source_url: https://app.notion.com/33b67c87082c81bc8073ffb13d94fc1e
-  disposition: obsolete_or_superseded
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Marked superseded in the preserved source database and not migrated; it can enter the graph
-    only as a superseded record in a batch that also migrates its successor.
-- page_id: 33c67c87082c818c9d56d84e02bb75f0
-  id: DEC-20260408-A
-  title_sha256: 5445102411f1463bba858eefc732265ee4d0e051fe4b2464a489c1ca149e57e8
-  historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-04-08'
-  source_url: https://app.notion.com/33c67c87082c818c9d56d84e02bb75f0
-  disposition: obsolete_or_superseded
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Marked superseded in the preserved source database and not migrated; it can enter the graph
-    only as a superseded record in a batch that also migrates its successor.
-- page_id: 33d67c87082c81d3990cf296e057f0b5
-  id: DEC-20260409-A
-  title_sha256: c0bc3e0efd6cf3ef02a428bf30fb9578909dbce1e0ea142b86415edcd7f0d457
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-09'
-  source_url: https://app.notion.com/33d67c87082c81d3990cf296e057f0b5
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33d67c87082c81c7a5b2db6a30279f5e
-  id: DEC-20260409-B
-  title_sha256: f1e7627a1068fdc7a75ba5673f6da68da4efc8a2a60f9555070300e34bbda740
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-09'
-  source_url: https://app.notion.com/33d67c87082c81c7a5b2db6a30279f5e
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 33d67c87082c81c19655cb04fb7d3ecf
   id: DEC-20260409-C
   title: 'Gate 4: Solution-level smoke tests in scheduler'
@@ -2492,162 +884,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 33d67c87082c8118af3bf12a823aa540
-  id: DEC-20260409-D
-  title_sha256: a12539b206d40ec8e0ebed59daf53e92756798d1c97fe4138c06af55740c05de
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-09'
-  source_url: https://app.notion.com/33d67c87082c8118af3bf12a823aa540
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33e67c87082c8108b5f0cc85c53fa329
-  id: DEC-20260410-A
-  title_sha256: c6dda2f1133848f359b336683cef09c2297bcf66f3f2b17e0b9447260abdc773
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-10'
-  source_url: https://app.notion.com/33e67c87082c8108b5f0cc85c53fa329
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33e67c87082c81248802d52f765deb84
-  id: DEC-20260411-A
-  title_sha256: 37a3a8e9da87017b905f0c0277f4ca7a4a3ac2594b3139f61a4aa7a1c522e0b0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-11'
-  source_url: https://app.notion.com/33e67c87082c81248802d52f765deb84
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33f67c87082c819a9690c560365afd1e
-  id: DEC-20260411-B
-  title_sha256: bf61230fbb6cc409529f7e05c30ec3ae021875346b07e7dee9cbda07c176e1dc
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-11'
-  source_url: https://app.notion.com/33f67c87082c819a9690c560365afd1e
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 33f67c87082c81d68803cf7a7248e814
-  id: DEC-20260411-C
-  title_sha256: 1828a1e8b8cccb03838e74d4eebce7e7379ff22743b2358ff22298976afd66cd
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-11'
-  source_url: https://app.notion.com/33f67c87082c81d68803cf7a7248e814
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34167c87082c81319338d956e3649d4c
-  id: DEC-20260413-A
-  title_sha256: 8bb87a8a365e6d90a1f95c47ebcd7d35710e6e7d6ccc5b336745b898d9a30c04
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-13'
-  source_url: https://app.notion.com/34167c87082c81319338d956e3649d4c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34367c87082c8127badec3e6e0f08c91
-  id: DEC-20260415-A
-  title_sha256: c9c4428a95ac1e6282ddff03bc0c62d3c77c6125329437fd203917c4696a80c7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-15'
-  source_url: https://app.notion.com/34367c87082c8127badec3e6e0f08c91
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34367c87082c818a9947da273d8c1161
-  id: DEC-20260415-B
-  title_sha256: a9799addb7dee5c5628fd977ed2a139432a7e6a737d163323507d48abd4a0948
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-15'
-  source_url: https://app.notion.com/34367c87082c818a9947da273d8c1161
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34467c87082c81208727dab42331cae4
-  id: DEC-20260416-A
-  title_sha256: 67c8935f12fd80921e06df9ecd69831e59446139d04997cd1a00ce24fb765389
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-16'
-  source_url: https://app.notion.com/34467c87082c81208727dab42331cae4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34767c87082c81b8825ee5c2cccc803c
-  id: DEC-20260419-A
-  title_sha256: 7a7c6c151732e5282569d6179b3d2d946f201154feea8a098b5c0d0ca24a8ad4
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-19'
-  source_url: https://app.notion.com/34767c87082c81b8825ee5c2cccc803c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c81d2b9d3f66e436fcaec
-  id: DEC-20260420-A
-  title_sha256: cdd56d12f02e1ab4b1d6203eaed3b261dfa90547227d4dd2a7a13516712b8d51
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-20'
-  source_url: https://app.notion.com/34867c87082c81d2b9d3f66e436fcaec
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c818299a1e08733019df0
-  id: DEC-20260420-B
-  title_sha256: 15f82f0b1133ca9febe7a3e9aad28044032c30f4523a2e3a20b698cce0bff575
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
-  source_url: https://app.notion.com/34867c87082c818299a1e08733019df0
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c819b9605fbdcf2824df4
-  id: DEC-20260420-C
-  title_sha256: 1dada10a0a97b839dc89c7c23d852c20cca8b62983d4fc285b020d799a799a61
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
-  source_url: https://app.notion.com/34867c87082c819b9605fbdcf2824df4
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 34867c87082c81409ee0d6c992ce3d43
   id: DEC-20260420-D
   title: 'SA.2b per-capability PII classification: manifest-declared field + 12-value category enum +
@@ -2936,54 +1172,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 34867c87082c81a995bfc8b6579d18d3
-  id: DEC-20260420-L
-  title_sha256: c7f82478c2e2196528d034c8da2b2314aefd24dfd9c8a4015459834eeb787562
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
-  source_url: https://app.notion.com/34867c87082c81a995bfc8b6579d18d3
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c81598f69c2a973447a0a
-  id: DEC-20260420-M
-  title_sha256: 5cb67caa99be46131a7b326e79a61519a9ce731fd8039d1098636dd26179fea6
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
-  source_url: https://app.notion.com/34867c87082c81598f69c2a973447a0a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c811bb01fd066850afb8a
-  id: DEC-20260420-N
-  title_sha256: 6cd5a78c0f3ecb568110763d5c304579095acd8bfb792bcc03a2bdea19e710ce
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
-  source_url: https://app.notion.com/34867c87082c811bb01fd066850afb8a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c81ff8a28c9319c648aa3
-  id: DEC-20260420-O
-  title_sha256: ae41e63e22cfb270f1b167e2b2b3f26713567a1e3a097eafd44d46fa91288b37
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
-  source_url: https://app.notion.com/34867c87082c81ff8a28c9319c648aa3
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 34867c87082c81babd35eba5856ded79
   id: DEC-20260421-A
   title: DEC-20260421-A — Cluster 2 Phase 3 split into C1 and C2
@@ -3126,150 +1314,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 34867c87082c81b5879be194466683a2
-  id: DEC-20260421-E
-  title_sha256: e5b694d38eeb33af71c2766808d86c96346a236a61c474b9912b719f75a98d61
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34867c87082c81b5879be194466683a2
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c81e4bbe4db1f713888ca
-  id: DEC-20260421-F
-  title_sha256: c39e9af8a15097a08a67593c52e9ac0fc15126c2afb60510b3bd2eaed9cfa11a
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34867c87082c81e4bbe4db1f713888ca
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34867c87082c818f8ec0e942777e9558
-  id: DEC-20260421-G
-  title_sha256: 6b9ab33f932bd2f9bb45243b76a0aac0ff52b93c7bba535d89d34f62e7d7741d
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34867c87082c818f8ec0e942777e9558
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c815f961ce1911c52669a
-  id: DEC-20260421-H
-  title_sha256: 22da109da03887be3e53ba324fc353e15249b59c1d4cf517e6dee77586e78ebd
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c815f961ce1911c52669a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c810dae0dda7a1ef125cd
-  id: DEC-20260421-HR
-  title_sha256: f2c781da0b92af2f4147434c5e23b40d626cb96fec27b565bcda546d53998e02
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c810dae0dda7a1ef125cd
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c814395bcc611e0066850
-  id: DEC-20260421-I
-  title_sha256: 4d295dad73f3abb920508781fef59e645e67badb33fc57cfcbddb36bcd65559a
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c814395bcc611e0066850
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c818e8e97c3a78182d3b3
-  id: DEC-20260421-J
-  title_sha256: 8512f01eda1418b3cf97bb4bc650b1bea329977daaff2f33b92c27012243036a
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c818e8e97c3a78182d3b3
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c8173a2adc905f762303c
-  id: DEC-20260421-K
-  title_sha256: 42ef97271162d1869318cb379f20220a2ce412481b6d45d736e8cc09429ce733
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c8173a2adc905f762303c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c81cab418eb4e7952b3f2
-  id: DEC-20260421-L
-  title_sha256: f7da6b67536c0efea2d066b593a5c6feb37a6471d82b72c93cfa4c7aedcf1397
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c81cab418eb4e7952b3f2
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c8148bb8fd139dab5d3a3
-  id: DEC-20260421-SE-B
-  title_sha256: b5c141ba923ef9d4c2a42829fba46ee353b50bf59870c6c05f9a28dc62e4d3c7
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c8148bb8fd139dab5d3a3
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c81daa06ff98472610dcc
-  id: DEC-20260421-SE-C
-  title_sha256: 6c18faae21155f8efd725d68743cbd2dca169a0b5795311e415b4b4a8079ac64
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c81daa06ff98472610dcc
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c811eb015d273b457d63f
-  id: DEC-20260425-B
-  title_sha256: 87958f5122ee85a1687f547fe5d6cdcfb3d847ca4015c4b7e0f08dce68b0b26e
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
-  source_url: https://app.notion.com/34967c87082c811eb015d273b457d63f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 34a67c87082c810692c8dd4374a6f9ac
   id: DEC-20260405-B
   title: Deactivate credit-report-summary; no free source for Swedish credit ratings exists
@@ -3305,22 +1349,9 @@ decision_rows:
   rationale: Single Notion row whose ID also names the Git-native Distribution PR Integrity Protocol;
     the Notion-only collision registry cannot represent it, so no formal record or relation target may
     use this ID until a cross-surface identity mechanism exists.
-- page_id: 34967c87082c818290fdf9ca1c3071d0
-  id: DEC-20260422-B
-  title_sha256: a1afc4d6098bdeb3fda02f06cfbd2c8b2f225e7a8a6df7fe6dba1445eeac8df0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-22'
-  source_url: https://app.notion.com/34967c87082c818290fdf9ca1c3071d0
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 34967c87082c81ec8c4dd04c40ba5685
   id: DEC-20260422-C
-  title: 'DEC-20260422-C — Onboarding pipeline gap: some prod capabilities exist outside DEC-20260320-B
-    guarantees'
+  title_sha256: 328d666e12c61750b629d94ddb11787b4b9e0563e27aacacc3350a3a6e13566e
   historical_status: superseded
   historical_scope: global
   decided_at: '2026-04-22'
@@ -3330,69 +1361,9 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260422-C.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
-- page_id: 34a67c87082c816f91b8dd8285c5cc8f
-  id: DEC-20260422-D
-  title_sha256: 8f4239e63c0b7066e3529ff7881f653f77c1af848413f1e8b1acf4a8548e4ae0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-22'
-  source_url: https://app.notion.com/34a67c87082c816f91b8dd8285c5cc8f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34a67c87082c81cda198d739d82cdb9c
-  id: DEC-20260422-E
-  title_sha256: c211c908a3e580abede5c829bae48e76def93ca5c1f83e0b1e0f593897a880fe
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-22'
-  source_url: https://app.notion.com/34a67c87082c81cda198d739d82cdb9c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34a67c87082c811e8e43ee63427cfb5b
-  id: DEC-20260422-F
-  title_sha256: aecce849d37f2a450eb27e38deb99a8b69a3d7652460ec0a000ee33f03477f6d
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-22'
-  source_url: https://app.notion.com/34a67c87082c811e8e43ee63427cfb5b
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34a67c87082c8117a3f2c71cae63b9bb
-  id: DEC-20260422-G
-  title_sha256: 911ea41bfdaa7290d685aa330179c7960e7903b06f3be5b9dad8cde2b47a804c
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-22'
-  source_url: https://app.notion.com/34a67c87082c8117a3f2c71cae63b9bb
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34a67c87082c8176b873e5e2c68cb87c
-  id: DEC-20260422-H
-  title_sha256: 42e0178bde3dfc2888c54c5bb3f50c4773a28e5f06aebb63d1f72786d3c64831
-  historical_status: active
-  historical_scope: temporary
-  decided_at: '2026-04-22'
-  source_url: https://app.notion.com/34a67c87082c8176b873e5e2c68cb87c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 34967c87082c81c08b89ea9ecc0fb478
   id: DEC-20260423-A
-  title: 'DEC-20260423-A — Fix DEC-20260320-B pipeline coverage gap: 3-stage structural fix'
+  title_sha256: 9fe62e129cffff6e8edfd47e87b5f2ee8d2da8512d525c6c3c850db367938150
   historical_status: active
   historical_scope: global
   decided_at: '2026-04-23'
@@ -3404,7 +1375,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 34967c87082c81e6bf87f4ce36729be2
   id: DEC-20260423-B
-  title: DEC-20260423-B — Capability onboarding pipeline (revised, supersedes DEC-20260320-B)
+  title_sha256: 7e57dcdecb32ea9f8355998655e699d600bac906f43d58e7aadd69b138d125e6
   historical_status: active
   historical_scope: global
   decided_at: '2026-04-23'
@@ -3416,8 +1387,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 34967c87082c819fa6a9e23525a08c8c
   id: DEC-20260424-A
-  title: DEC-20260424-A — Always-enforce DECs require structural enforcement + read-back verification
-    (Working Rules Rule F)
+  title_sha256: 04bf15373b789c765018077b0c1756aa57160b6b63ed29b94c60db2e5b16c3d6
   historical_status: active
   historical_scope: global
   decided_at: '2026-04-24'
@@ -3427,33 +1397,9 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260424-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
-- page_id: 34967c87082c813db2b7ca2728aac3cd
-  id: DEC-20260424-B
-  title_sha256: b0eecf1b16921098ede68bfc216f8a048506d718c738993ff022f6d14ec73615
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-24'
-  source_url: https://app.notion.com/34967c87082c813db2b7ca2728aac3cd
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34967c87082c8127bb80fb885c4d8f23
-  id: DEC-20260425-A
-  title_sha256: cd3d73e3e6bf2f12ed0598fd141d7ccffe151beedc6e259698cce311823202f2
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-25'
-  source_url: https://app.notion.com/34967c87082c8127bb80fb885c4d8f23
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 34f67c87082c81ed9f69de1583fd5f5e
   id: DEC-20260427-A
-  title: 'Adverse-media language coverage gap: accept-and-disclose for v1 (option a)'
+  title_sha256: 8493224e7ac0edc98f84dd180892d2bf26aa5137bafbe16d57c2d1bc53abaf11
   historical_status: active
   historical_scope: feature
   decided_at: '2026-04-27'
@@ -3465,7 +1411,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 34f67c87082c813c98d2cad51d99384f
   id: DEC-20260427-B
-  title: Drop OpenSanctions for v1 — single-vendor on Dilisense for sanctions, PEP, and adverse media
+  title_sha256: f52a4f9ab9c0c26645a72dcbf6f31c23fd0942722d76fb6b488ed2d549a5ecd6
   historical_status: active
   historical_scope: feature
   decided_at: '2026-04-27'
@@ -3475,33 +1421,9 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260427-B.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
-- page_id: 34f67c87082c81519b01d6342f9ff8ad
-  id: DEC-20260427-H
-  title_sha256: 42bd05059a78aae4f7ca1e36563341a04514d44cf704be95b0c49eadbf4ca60a
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-27'
-  source_url: https://app.notion.com/34f67c87082c81519b01d6342f9ff8ad
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 34f67c87082c813cbe5dce9694ec0d3f
-  id: DEC-20260427-I
-  title_sha256: a848596f3476a8825a066e7e8cfaceffdfefa6273abf916427934347ffc0c3b7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-27'
-  source_url: https://app.notion.com/34f67c87082c813cbe5dce9694ec0d3f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 35067c87082c810db6a4edf9f14b4446
   id: DEC-20260428-A
-  title: Third-party scraping doctrine — three-tier framework
+  title_sha256: 3bbde135d7832dd1ce2f1f7e5f4d8473fd97258cff3e40b349254a02712a3e61
   historical_status: active
   historical_scope: global
   decided_at: '2026-04-28'
@@ -3513,7 +1435,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35067c87082c81e2ba86d235e27b5cd6
   id: DEC-20260428-B
-  title: Engineering bar for Strale-built data services (sanctions, PEP, UBO, adverse media)
+  title_sha256: f34c4850d6523988021a9b8711c506d7929d0bbf77bc33b6befc4e4949115592
   historical_status: active
   historical_scope: global
   decided_at: '2026-04-28'
@@ -3525,7 +1447,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35167c87082c8172bff8f3485699c961
   id: DEC-20260429-A
-  title: Sanctions/PEP screening continues via Dilisense as Tier-2 vendor; self-host deferred indefinitely
+  title_sha256: 1152e5515e09c2aeb79483ff377b76545909280e8df35687b1fff6eae61d3a81
   historical_status: active
   historical_scope: feature
   decided_at: '2026-04-29'
@@ -3537,7 +1459,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35267c87082c81eca01cf6eedb5eafeb
   id: DEC-20260430-A
-  title: v1 + v1.1 vendor stack canonicalized to Vendor Roster
+  title_sha256: 9f6da21a85f101c568587d1fb23813f104996e2384304caa368b3332ae359230
   historical_status: active
   historical_scope: global
   decided_at: '2026-04-30'
@@ -3586,8 +1508,7 @@ decision_rows:
     registry.
 - page_id: 35567c87082c81068831ec1d2e826115
   id: DEC-20260503-A
-  title: 'Dual-domain architecture: strale.dev as agent capabilities API, strale.io as *-Assurance product
-    family home; solutions removed wholesale from public surfaces; bundle pricing rule established'
+  title_sha256: 909ecb58f737cc5852952280cd97512a8ba49857edd9e2a164668f1769742afe
   historical_status: superseded
   historical_scope: global
   decided_at: '2026-05-03'
@@ -3597,33 +1518,9 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260503-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
-- page_id: 35567c87082c8120b4c6cde88cf1e435
-  id: DEC-20260503-B
-  title_sha256: 339638c09e345aa7feb8321b5770cda2fe8a509cafdb5f0ad6e0a7af7b481b8e
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-03'
-  source_url: https://app.notion.com/35567c87082c8120b4c6cde88cf1e435
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35567c87082c8104b99cc1139c474e51
-  id: DEC-20260503-C
-  title_sha256: 7efcdf0f26ada4d44785a8ad882a20ee47adebf91b736e30541aff1d86fb6a31
-  historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-05-03'
-  source_url: https://app.notion.com/35567c87082c8104b99cc1139c474e51
-  disposition: obsolete_or_superseded
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Marked superseded in the preserved source database and not migrated; it can enter the graph
-    only as a superseded record in a batch that also migrates its successor.
 - page_id: 35667c87082c81fabc3cf9ecc4871d90
   id: DEC-20260504-B
-  title: 'DEC-20260504-B: Bulk-Operation Deploy Protocol'
+  title_sha256: 80a9083cbb032577d2b131b7fc621b07a855e3224397255ac07187ccfddf67cc
   historical_status: active
   historical_scope: global
   decided_at: '2026-05-04'
@@ -3635,7 +1532,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35667c87082c81e7af49fc042371f566
   id: DEC-20260504-C
-  title: 'DEC-20260504-C: Deploy Mechanism Verification Protocol'
+  title_sha256: d97a6219174615d92dff36a837d166a5e8abed7c513597ce12525377430c16cf
   historical_status: active
   historical_scope: global
   decided_at: '2026-05-04'
@@ -3679,54 +1576,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 35767c87082c8121ac43fc970dbe78ac
-  id: DEC-20260505-F
-  title_sha256: 3739b5d8274522e491e61e03083af3876f521d6853ebbb7c1e180eeb902c80cf
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-04'
-  source_url: https://app.notion.com/35767c87082c8121ac43fc970dbe78ac
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35767c87082c81949dcef0abc9058d9c
-  id: DEC-20260505-A
-  title_sha256: e60b1d2e495810bb524a2d00749490bde166c24443f178b59df351f3d818300e
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-05'
-  source_url: https://app.notion.com/35767c87082c81949dcef0abc9058d9c
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35767c87082c8108b1e5feda64588081
-  id: DEC-20260505-B
-  title_sha256: 835b006fdb69eb6c8d0dc67ce1cbc47410b9465525658acc7a953cbebeb588f5
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-05'
-  source_url: https://app.notion.com/35767c87082c8108b1e5feda64588081
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35767c87082c8126951cedabd9fac480
-  id: DEC-20260505-C
-  title_sha256: 938b23014afdef8ce90c529957ad34db547d2a16a93583e32964f4849aad1baf
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-05'
-  source_url: https://app.notion.com/35767c87082c8126951cedabd9fac480
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 35767c87082c81059f67e756f5c5eefa
   id: DEC-20260505-D
   title: 'DEC-20260505-D — InfoCamere route: pursue Distributore Ufficiale program, not Telemaco Pay'
@@ -3762,114 +1611,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 35767c87082c8161ac2cee6bdc1200c6
-  id: DEC-20260505-G
-  title_sha256: 05fcd1dc37845cceadf218138e8ebb879076723b2d7404c27d44db77483c7e9e
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-05'
-  source_url: https://app.notion.com/35767c87082c8161ac2cee6bdc1200c6
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35767c87082c8135a0ace75e6c33a3dd
-  id: DEC-20260505-H
-  title_sha256: 967ea1bddccbeab3b803bdd6e420d124e2f893354007e21d8e1431801da89d5b
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-05'
-  source_url: https://app.notion.com/35767c87082c8135a0ace75e6c33a3dd
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35867c87082c817ab229ea191f9564fe
-  id: DEC-20260506-A
-  title_sha256: bad8d08d6663e9d53c648f63e27b835e93e3bdbf164bf54f84d0756f50160ed5
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-06'
-  source_url: https://app.notion.com/35867c87082c817ab229ea191f9564fe
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35867c87082c81d88be5cd076bc24f68
-  id: DEC-20260506-B
-  title_sha256: a5930901786d0f87ba214b7c06ddc6954fc2fb912af08e4f967646260f237ca4
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-06'
-  source_url: https://app.notion.com/35867c87082c81d88be5cd076bc24f68
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35867c87082c81098cf9fbf2ba5e96a2
-  id: DEC-20260506-C
-  title_sha256: 7e89ed66a2eeec9e57ef06ffa02c9220cfd843755613ae1a3b76fea8614cff9f
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-06'
-  source_url: https://app.notion.com/35867c87082c81098cf9fbf2ba5e96a2
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35867c87082c81e4a649ec5001096dad
-  id: DEC-20260506-D
-  title_sha256: dfaf477af9d9061c25d357308beeb916a9cb44fbdb803b558f019da06c2c393a
-  historical_status: superseded
-  historical_scope: feature
-  decided_at: '2026-05-06'
-  source_url: https://app.notion.com/35867c87082c81e4a649ec5001096dad
-  disposition: obsolete_or_superseded
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Marked superseded in the preserved source database and not migrated; it can enter the graph
-    only as a superseded record in a batch that also migrates its successor.
-- page_id: 35867c87082c8127ad95d2531403f4f7
-  id: DEC-20260506-E
-  title_sha256: 47a364a33e84912f307a6555c5deeaae47e89cbcaec33ae78efa6c136da0da85
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-06'
-  source_url: https://app.notion.com/35867c87082c8127ad95d2531403f4f7
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35867c87082c81498a7cef963cd19c52
-  id: DEC-20260506-F
-  title_sha256: f263ce15e62124ed3b59e81de46183a944f9d776afa6152a19e02e5831ff6d2b
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-06'
-  source_url: https://app.notion.com/35867c87082c81498a7cef963cd19c52
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35867c87082c811681acc38e7fee28e6
-  id: DEC-20260506-G
-  title_sha256: 1a4cb82eb391fd2b9158247bb67584b2b4a2b0b887a11658ceecd3eb05df42b0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-06'
-  source_url: https://app.notion.com/35867c87082c811681acc38e7fee28e6
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 35967c87082c81a9abc3da329b92a0f9
   id: DEC-20260507-A
   title: 'Gap-8 reclassified to Gap-7: SK misclassification corrected, SI/SK/RO confirmed buildable, MT
@@ -3976,102 +1717,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 35967c87082c81bab96dc64b983e85f1
-  id: DEC-20260507-D
-  title_sha256: a6104c3399cb3fccf299180de4665bec1fc9e0df8876bda3fd7f364cd3d181e7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
-  source_url: https://app.notion.com/35967c87082c81bab96dc64b983e85f1
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35967c87082c81f58dc4c81c34bbeafd
-  id: DEC-20260507-E
-  title_sha256: 98b6cb551ab65bd6cf3966551a1878ba2da6986abb64005fdd03ac80960cf8c8
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
-  source_url: https://app.notion.com/35967c87082c81f58dc4c81c34bbeafd
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35967c87082c81108066cc35330a9f65
-  id: DEC-20260507-F
-  title_sha256: eb256304ca116b57688822b5fdc45727123d9118ded200b8e5378fde570f79f6
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
-  source_url: https://app.notion.com/35967c87082c81108066cc35330a9f65
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35967c87082c81ecbf78d9db46c8deaa
-  id: DEC-20260507-G
-  title_sha256: 330788361ee6309d7f9229f4f2226bf9646d5ef1e66526a2c10a8f95d4a60cd8
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
-  source_url: https://app.notion.com/35967c87082c81ecbf78d9db46c8deaa
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35967c87082c8144bb94c56b63478754
-  id: DEC-20260507-H
-  title_sha256: 4249afee072a1598c072174ef9da5337793a04a8a09c27d150d8d2232adf2a50
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
-  source_url: https://app.notion.com/35967c87082c8144bb94c56b63478754
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35967c87082c81a28b04d44b83d63c3b
-  id: DEC-20260507-I
-  title_sha256: 4e42c0a6cb750b939fa7d35823a5e7d73e5b4bc0e6c6cf192dce32f65d288cc0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
-  source_url: https://app.notion.com/35967c87082c81a28b04d44b83d63c3b
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35967c87082c815590afcfd02be8b79a
-  id: DEC-20260507-J
-  title_sha256: 9547b7e4ac895a4bbe34b5e4422f0ac4171de3d56104f0d4f75ddc34c5182f72
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
-  source_url: https://app.notion.com/35967c87082c815590afcfd02be8b79a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35a67c87082c8139993eea13b6235b67
-  id: DEC-20260508-A
-  title_sha256: 43c2659546caebd8fcf31dccbf278762fc071a7b54a9b2fd24a0c731a9618581
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-08'
-  source_url: https://app.notion.com/35a67c87082c8139993eea13b6235b67
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 35a67c87082c8119a22bf1414e307e5f
   id: DEC-20260508-B
   title: 'Provenance posture for aggregator-sourced data: pointer-to-register where Strale calls registers
@@ -4164,69 +1809,9 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 35a67c87082c81b7a60af143e1f3dec1
-  id: DEC-20260508-D
-  title_sha256: 0ebcf51610b69fa9a97deacc256b8a06294fff6d01e64a3693ac2de02b7b62bf
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-08'
-  source_url: https://app.notion.com/35a67c87082c81b7a60af143e1f3dec1
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35c67c87082c81949063e8b6dd94980d
-  id: DEC-20260510-A
-  title_sha256: 848fb84e57fa03848d7100ecc7f4fc350282670a13c61278517c7ac974abdff9
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-10'
-  source_url: https://app.notion.com/35c67c87082c81949063e8b6dd94980d
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35d67c87082c81d18ec2fd9c53a33007
-  id: DEC-20260511-A
-  title_sha256: 2b019ff75de46bdf45bc847888ba56cac153b7470193c1ff812bd1b6eef792db
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-11'
-  source_url: https://app.notion.com/35d67c87082c81d18ec2fd9c53a33007
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35d67c87082c812c864dfeaa2b9afaff
-  id: DEC-20260511-B
-  title_sha256: 931e10516da8f94a11b8dc359fe3ee6b4eb13ce41f765af1b50b45b2aa1823e6
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-11'
-  source_url: https://app.notion.com/35d67c87082c812c864dfeaa2b9afaff
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35d67c87082c810eb79dd5ad25e3b65f
-  id: DEC-20260511-C
-  title_sha256: 6ac6e617973e3803d11e8a625bbb9559c0035f7fb33698aa1b26f74399b6477d
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-11'
-  source_url: https://app.notion.com/35d67c87082c810eb79dd5ad25e3b65f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 35d67c87082c81299957e2884a40d69e
   id: DEC-20260511-D
-  title: Rule H — Vendor evaluation methodology codified in Working Rules
+  title_sha256: a66e410e7063381aff5ecbccb9a39966bc15b1a1cb062eb69f0453d08ae842e6
   historical_status: active
   historical_scope: global
   decided_at: '2026-05-11'
@@ -4236,30 +1821,6 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260511-D.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
-- page_id: 35d67c87082c8111a057d140694d35c8
-  id: DEC-20260511-E
-  title_sha256: 2f97a49fb3406392d76a1d913895ddb2657b62184fba2842566b9e6413d52cf0
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-11'
-  source_url: https://app.notion.com/35d67c87082c8111a057d140694d35c8
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35d67c87082c81f9a4addf5904c35025
-  id: DEC-20260511-F
-  title_sha256: b8e2ae738932b1ec47d9e6a2b1416df12de6a6345337273b18bc2799f28fdfa9
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-11'
-  source_url: https://app.notion.com/35d67c87082c81f9a4addf5904c35025
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 35e67c87082c8122a29ef35f256d5958
   id: DEC-20260512-A
   title: KVK Option B (Strale-applies-for-KVK-recognised-partner-status) closed — all KVK channels confirmed
@@ -4295,66 +1856,6 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 35e67c87082c8165ab1ac6f1999026be
-  id: DEC-20260513-A
-  title_sha256: 9cb5dc3ffd146e4b385f22d65dc82c7adf34d366beca8661c0068abd86902fb2
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-13'
-  source_url: https://app.notion.com/35e67c87082c8165ab1ac6f1999026be
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35f67c87082c813b9dfbced384cc310f
-  id: DEC-20260513-B
-  title_sha256: 7be674cf2853816f315d3d714baf2c96a9d7038d27055d94f463dca3c30d8902
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-13'
-  source_url: https://app.notion.com/35f67c87082c813b9dfbced384cc310f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35f67c87082c815ba77fd8ba706ec0fc
-  id: DEC-20260513-C
-  title_sha256: ceb63628b7eb68f5dbba777bcc855c0291b2d7afbf15263ea9fba0ce3e560a58
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-13'
-  source_url: https://app.notion.com/35f67c87082c815ba77fd8ba706ec0fc
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35f67c87082c81f78805c7f287969d33
-  id: DEC-20260513-D
-  title_sha256: a60a20369eeefcd1554d72cc87e44eee6bf50268387c11466084005753a1f536
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-13'
-  source_url: https://app.notion.com/35f67c87082c81f78805c7f287969d33
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 35f67c87082c81f499a9cbb9ebb39553
-  id: DEC-20260513-E
-  title_sha256: 6717595f3a89cee41a9ed8cc21f68715d002ed403533b54e082d4792285f5dbe
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-13'
-  source_url: https://app.notion.com/35f67c87082c81f499a9cbb9ebb39553
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 35f67c87082c81269b79cb7d0367dc46
   id: DEC-20260513-F
   title: Classify guaranteed_field_missing:* as manifest_drift non-tripping in categorizeFailureReason
@@ -4389,46 +1890,9 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
-- page_id: 36167c87082c8199bbc9e65480db6f80
-  id: DEC-20260515-A
-  title_sha256: a89a238cbf1e7ab5bb1f420c2f5faebc7ab9fe26fd11b5540147ae62a070bd99
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-15'
-  source_url: https://app.notion.com/36167c87082c8199bbc9e65480db6f80
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 36167c87082c814281dcd2dac911efa0
-  id: DEC-20260515-B
-  title_sha256: e8be647f920513f3de7d70f005cad940784a0ee56ad93aff37b54d9d172e6f25
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-15'
-  source_url: https://app.notion.com/36167c87082c814281dcd2dac911efa0
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 36167c87082c8106badac48483871f00
-  id: DEC-20260515-C
-  title_sha256: e779e8678308707893a45734cbc0d12b0c9e1836f482c48eb1408739e9dd1605
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-15'
-  source_url: https://app.notion.com/36167c87082c8106badac48483871f00
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 36367c87082c81b99376c4225d38374c
   id: DEC-20260517-A
-  title: 'Reference data canonical surface: manifests over Notion (Provider-Coverage matrix moves to repo
-    YAML)'
+  title_sha256: 3205b19d9989ff198a16f696caff05b624c851a28fd73b4feceb17d065494680
   historical_status: active
   historical_scope: global
   decided_at: '2026-05-17'
@@ -4450,57 +1914,9 @@ decision_rows:
   - archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md
   rationale: 'Preserved as evidence and deferred to an explicit supersession batch: its CC-prompt mechanics
     no longer describe the operating model.'
-- page_id: 36367c87082c81aabeebd8dcff8a2dcd
-  id: DEC-20260518-A
-  title_sha256: f9c0f4b79e5b4650268c9f22203244d973bb39975488a5d98e04db2643b0d5c7
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-18'
-  source_url: https://app.notion.com/36367c87082c81aabeebd8dcff8a2dcd
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 36467c87082c81838cdac890814e2089
-  id: DEC-20260518-B
-  title_sha256: e1707c1b00efad1f635555bd47e2484d9e09f7ea0a47e065ce14a92b251e227b
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-18'
-  source_url: https://app.notion.com/36467c87082c81838cdac890814e2089
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 36467c87082c8186a795e4b7dbe8c742
-  id: DEC-20260518-C
-  title_sha256: 03e4fe8e89518e31105660598830bb980bc2fff1c1c1dc349a7add1ced2013db
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-18'
-  source_url: https://app.notion.com/36467c87082c8186a795e4b7dbe8c742
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 36467c87082c818a914dddd0e74544dc
-  id: DEC-20260518-D
-  title_sha256: 8b90e589ab0f6dd6b935f8228da625514390f7b5684e1302cdce09a0864f30d9
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-18'
-  source_url: https://app.notion.com/36467c87082c818a914dddd0e74544dc
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
 - page_id: 36467c87082c817db910d00b828a2bf3
   id: DEC-20260518-E
-  title: DEC-20260518-E — Exhaustive Source Enumeration before declaring a country blocked or paid-only
+  title_sha256: 36a0dfedecf08b4e34930dda71fe6524d13f7cb4fe21e6dadc337cf0bc3793a6
   historical_status: active
   historical_scope: global
   decided_at: '2026-05-18'
@@ -4512,7 +1928,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 36467c87082c8135bc61f631193c9da5
   id: DEC-20260518-F
-  title: 'DEC-20260518-F — Data sourcing principles: clarification of DEC-20260428-A'
+  title_sha256: 1d29aa68bfb71197adc0594d4a29b354bbe5070e2a5a004b3d5882cc267da304
   historical_status: active
   historical_scope: global
   decided_at: '2026-05-18'
@@ -4524,8 +1940,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 36467c87082c81129f04e07d01a93045
   id: DEC-20260518-G
-  title: DEC-20260518-G — Platform-fee probe mandatory for RFQ-only Tier-2 aggregators (refinement of
-    DEC-20260518-E Path 4)
+  title_sha256: 9f8dba9e8c14cee8fbe9b9197508f7ff37cd87d23aa29fe017f3c96773fff114
   historical_status: active
   historical_scope: global
   decided_at: '2026-05-18'
@@ -4537,8 +1952,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3ba67c87082c812986c6c35d82bc986f
   id: DEC-20260812-A
-  title: 'DEC-20260812-A: Adopt the Readiness program (Platform Readiness & Self-Operation) with confirmed
-    operating defaults'
+  title_sha256: 5705eaff0b406e7b0c4f1bf516793759b50fa044cf72486e45cdc81685c9c7ad
   historical_status: active
   historical_scope: global
   decided_at: '2026-08-12'
@@ -4550,8 +1964,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3bb67c87082c8101a08addaf92ffb5df
   id: DEC-20260813-A
-  title: DEC-20260518-F affirmed as the operative interpretation of DEC-20260428-A — per-call parsing
-    of statutorily-public registries permitted under four constraints
+  title_sha256: 00bb02d76dd6b2140f22fa916b6d8e08d12e42e4f050e3aadd1bd74b7dff7535
   historical_status: active
   historical_scope: global
   decided_at: '2026-08-13'
@@ -4563,7 +1976,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3be67c87082c8143b70dc6503893ba73
   id: DEC-20260815-A
-  title: Operating charter — Claude runs day-to-day operations
+  title_sha256: 9fbf6cc3ebfc00c65cf0bf8f5b399f112a585f9d23a94a149646b20432781a32
   historical_status: active
   historical_scope: global
   decided_at: '2026-08-15'
@@ -4573,90 +1986,20 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260815-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
-- page_id: 3c267c87082c81e09187de8e0cd7fe46
-  id: DEC-20260820-A-WEBSITE-HERO
-  title_sha256: 2108da58c8bc28ec2c1b0b11b80057dcbca80688e1a59b34d23b6ce4b8635460
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-08-20'
-  source_url: https://app.notion.com/3c267c87082c81e09187de8e0cd7fe46
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 3c267c87082c81ee9e7cc995b11f12d6
-  id: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
-  title_sha256: 9b8b9619174481c3303c386685d1cb8fb255e33462ebad4d84c693b427c4b6b7
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-08-20'
-  source_url: https://app.notion.com/3c267c87082c81ee9e7cc995b11f12d6
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 3c267c87082c819d89afdd257de4a15f
-  id: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
-  title_sha256: 58b79875a863d1002d8047955f9e6bffcb7c474255c656973b0d3228b86e150b
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-08-20'
-  source_url: https://app.notion.com/3c267c87082c819d89afdd257de4a15f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 3c267c87082c8132adcce02b453b63cb
-  id: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
-  title_sha256: f95277521ac779932003c69877704ba6c4644089b545f386265e19521ad660d3
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-08-20'
-  source_url: https://app.notion.com/3c267c87082c8132adcce02b453b63cb
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 3c267c87082c812a8533d8eed592bb8f
-  id: DEC-20260820-E-WEBSITE-SEARCH-WEB
-  title_sha256: 02c9c191514343389ddedf919e48e767db26ac82bf01c741387e570aff80f56d
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-08-20'
-  source_url: https://app.notion.com/3c267c87082c812a8533d8eed592bb8f
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 3c267c87082c81f98018f6fb4d90b2c1
-  id: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
-  title_sha256: a6885e8607edd240401cec64e696051daffecbd1dd81715fa393d86f961c686e
-  historical_status: active
-  historical_scope: feature
-  decided_at: '2026-08-20'
-  source_url: https://app.notion.com/3c267c87082c81f98018f6fb4d90b2c1
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
-- page_id: 3c967c87082c81be9ebac7982b89a36a
-  id: DEC-20260827-A
-  title_sha256: 241a1685d5d86bf9374d0c21a28cadccc4f34b47e45125107b0a7d27c644c254
-  historical_status: active
-  historical_scope: global
-  decided_at: '2026-08-27'
-  source_url: https://app.notion.com/3c967c87082c81be9ebac7982b89a36a
-  disposition: not_yet_reconciled
-  evidence:
-  - docs/project/private-archive-status.json
-  rationale: Unique historical ID with no formal record, collision, or deferral decision yet; migration
-    or evidence-only classification is pending.
+private_rows:
+  repository: strale-io/strale-context-archive
+  visibility: private
+  commit: 3b0a3ea82e776d337577526b23d75cb460a891db
+  file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
+  count: 223
+  digest: 592f5cc07c09d4c25fb3dea984754b5c9f6c94a2838359c9a6ceecd0852f6ffe
+  counts_by_disposition:
+    not_yet_reconciled: 212
+    obsolete_or_superseded: 6
+    unclear: 5
+  verification: node scripts/m2-closure-verify-private-rows.mjs recomputes this digest, the all_rows digest,
+    every identity field, and the private next-batch candidate set from the archive over gh api; CI verifies
+    the public rows and the count arithmetic only.
 plan_statements:
 - location: docs/strategy/2026-08-31-repo-native-operating-model-migration.md section 'M1 completion update
     - 2026-08-31', final bullet
@@ -4729,6 +2072,9 @@ exit_gaps:
     decision.
   blocking: true
   owner: session
+  phase: M2
+  covers:
+  - decision_rows.not_yet_reconciled
   closes_when: Every row reaches formally_migrated, intentionally_historical, or obsolete_or_superseded
     through contradiction-checked batches, or an explicitly reviewed rule classifies pre-readiness feature-scope
     rows as evidence-only.
@@ -4740,6 +2086,9 @@ exit_gaps:
     are excluded from formal records and relation targets.
   blocking: true
   owner: session
+  phase: M2
+  covers:
+  - decision_rows.unresolved_collision
   closes_when: Each collision is resolved atomically with source evidence and independent review, or every
     row is given an evidence-backed documented_only disposition.
   evidence:
@@ -4750,6 +2099,9 @@ exit_gaps:
     the ID, and the Notion-only registry cannot represent it.'
   blocking: true
   owner: session
+  phase: M2
+  covers:
+  - decision_rows.unresolved_collision
   closes_when: A reviewed identity mechanism represents source-qualified Git-native claims and both meanings
     receive distinct record keys or evidence-only dispositions.
   evidence:
@@ -4759,6 +2111,9 @@ exit_gaps:
     source row and rest on Git provenance alone.
   blocking: false
   owner: session
+  phase: M2
+  covers:
+  - formal_records.git_native
   closes_when: Each record's provenance metadata states the Git origin explicitly; verified in this register's
     formal_records section, so this gap is informational.
   evidence:
@@ -4770,6 +2125,9 @@ exit_gaps:
   gap: Five preserved rows have an empty ID property although their titles embed an ID string.
   blocking: false
   owner: session
+  phase: M2
+  covers:
+  - decision_rows.unclear
   closes_when: A reviewed rule either accepts the title-embedded ID as identity with a source-qualified
     key or classifies the rows as evidence-only; no inference is made until then.
   evidence:
@@ -4779,6 +2137,9 @@ exit_gaps:
     successors.
   blocking: false
   owner: session
+  phase: M2
+  covers:
+  - decision_rows.obsolete_or_superseded
   closes_when: Each successor is migrated or classified and the superseded row is either migrated as a
     superseded record or left as evidence.
   evidence:
@@ -4788,18 +2149,25 @@ exit_gaps:
     changes) has no current formal record.
   blocking: false
   owner: session
+  phase: M2
+  covers:
+  - decision_rows.intentionally_historical
   closes_when: An explicit supersession batch records the current mechanism and marks the historical row
     superseded.
   evidence:
   - archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md
 - id: G8
-  gap: 'Of 15 legacy-authority sources, none is fully migrated: 4 partial, 10 not started, 1 unclear.
-    Protocol extraction into the router and the docs/company split are the M2-relevant parts; physical
-    moves belong to M5.'
-  blocking: true
+  gap: 'Of 15 legacy-authority sources, none is fully migrated: 4 partial, 11 not started. The M2 share
+    is the classification of CLAUDE.md''s Active Decisions and docs/company''s settled DECISION-QUEUE
+    entries (both counted under G1''s rows). Protocol extraction into the router is M3 work and physical
+    moves are M5 work; neither blocks M2.'
+  blocking: false
   owner: session
-  closes_when: CLAUDE.md protocol full text is represented in the coverage manifest and router, docs/company
-    settled entries are in formal records or evidence, and the handoff directory has a recorded disposition.
+  phase: M3
+  covers:
+  - legacy_inventory.incomplete
+  closes_when: M3 populates the protocol coverage manifest and router from CLAUDE.md, and M5 executes
+    the archive and move steps listed per entry in legacy_inventory.remaining.
   evidence:
   - docs/project/m2-closure-register.yaml
   - docs/project/PROTOCOL-ROUTER.md
@@ -4808,6 +2176,9 @@ exit_gaps:
     route changed on 2026-09-01 and no closing review of the full M2 candidate set has been recorded.
   blocking: true
   owner: session
+  phase: M2
+  covers:
+  - plan.review_route
   closes_when: A fresh independent review (per the recorded route) passes the complete M2 candidate set
     at an exact commit and its verdict is archived.
   evidence:
@@ -4817,35 +2188,13 @@ next_decision_batch:
   name: 2026-08 operating-window batch
   selection_rule: Every not_yet_reconciled row whose historical ID is unique across all preserved rows,
     absent from both collision kinds, historically active, and decided on or after decided_on_or_after
-    (the readiness program adoption date), so that the content is the least likely to have been superseded
-    and the batch cannot introduce a collision. The validator enforces both the filter and completeness.
+    (the date the readiness program was adopted, anchored to cutoff_anchor_id so the cutoff cannot drift),
+    so that the content is the least likely to have been superseded and the batch cannot introduce a collision.
+    Candidates whose identity is not yet public on main are counted and digested here and listed in the
+    private projection; the operator script enforces their completeness.
   decided_on_or_after: '2026-08-12'
-  candidates:
-  - page_id: 3c967c87082c81be9ebac7982b89a36a
-    id: DEC-20260827-A
-    why: Most recent global decision (Austrian registry source switch, 2026-08-27) with a unique ID and
-      current runtime relevance.
-  - page_id: 3c267c87082c81e09187de8e0cd7fe46
-    id: DEC-20260820-A-WEBSITE-HERO
-    why: One of six 2026-08-20 website use-case decisions; unique IDs, feature scope, decided inside the
-      current operating window so still likely true.
-  - page_id: 3c267c87082c81ee9e7cc995b11f12d6
-    id: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
-    why: One of six 2026-08-20 website use-case decisions; unique IDs, feature scope, decided inside the
-      current operating window so still likely true.
-  - page_id: 3c267c87082c819d89afdd257de4a15f
-    id: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
-    why: One of six 2026-08-20 website use-case decisions; unique IDs, feature scope, decided inside the
-      current operating window so still likely true.
-  - page_id: 3c267c87082c8132adcce02b453b63cb
-    id: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
-    why: One of six 2026-08-20 website use-case decisions; unique IDs, feature scope, decided inside the
-      current operating window so still likely true.
-  - page_id: 3c267c87082c812a8533d8eed592bb8f
-    id: DEC-20260820-E-WEBSITE-SEARCH-WEB
-    why: One of six 2026-08-20 website use-case decisions; unique IDs, feature scope, decided inside the
-      current operating window so still likely true.
-  - page_id: 3c267c87082c81f98018f6fb4d90b2c1
-    id: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
-    why: One of six 2026-08-20 website use-case decisions; unique IDs, feature scope, decided inside the
-      current operating window so still likely true.
+  cutoff_anchor_id: DEC-20260812-A
+  candidates: []
+  private_candidates:
+    count: 7
+    digest: 3c7254da7bc1ca5e5d6a7efac074aa3c7064ce67e3e0a9d5a432163fd15ee877

@@ -55,7 +55,7 @@ untouched.
 
 - `npm run context:check -- --json` returns zero findings with the register
   present.
-- `npm run context:test` passes, including 23 register tests that each mutate
+- `npm run context:test` passes, including the register suite whose tests, apart from one labelled positive smoke test, each mutate
   the valid register and assert a specific finding code.
 - Counts in the register equal the counts a reader can recompute from its rows.
 

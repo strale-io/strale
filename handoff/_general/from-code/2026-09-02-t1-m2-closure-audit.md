@@ -1,19 +1,28 @@
-Intent: close the M2 audit gap by shipping a machine-checked disposition register, so the next session (Claude Code or Codex) can pick the next Decision batch from evidence instead of memory.
+Intent: close the M2 audit gap by shipping a machine-checked disposition register, so the next session (Claude Code or Codex) can pick the next Decision batch from evidence instead of memory, without widening what the public repository reveals about the preserved Notion export.
 
 ## What landed
 
 Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`).
 
-- `docs/project/m2-closure-register.yaml` — the register. Front matter keeps
-  every inactive-candidate marker (`authority_scope: none`, `status:
+- `docs/project/m2-closure-register.yaml` — the public register. Front matter
+  keeps every inactive-candidate marker (`authority_scope: none`, `status:
   candidate`, `complete: false`, `authority_active: false`).
+- `archive/derived/2026-09-02-m2-closure-private-rows.yaml` in the **private**
+  archive repository `strale-io/strale-context-archive` — the row-level
+  projection for the 223 Decision rows whose identity is not yet public on
+  `main`. The public register carries their counts and a canonical digest.
 - `docs/project/schemas/m2-closure-register.schema.json` — field shapes.
-- `scripts/m2-closure-register-lib.mjs` — cross-row, derivation-rule, and
-  filesystem checks; `scripts/m2-closure-register.test.mjs` — 29 tests, each
-  mutating the valid register and asserting one finding code.
+- `scripts/m2-closure-register-lib.mjs` — cross-row, derivation-rule,
+  public-boundary, digest, and filesystem checks;
+  `scripts/m2-closure-register.test.mjs` — the discriminating suite (one
+  positive smoke test, the rest mutate the valid register and assert a
+  finding code).
+- `scripts/m2-closure-verify-private-rows.mjs` — operator check (not CI)
+  that recomputes every digest and identity field from the archive over
+  `gh api` and enforces next-batch completeness over the private rows.
 - `scripts/check-project-context.mjs` runs the register check (warning mode,
   per the M1 rollout contract); `context:test` includes the new suite; CI's
-  `check` job now runs `context:check` and `context:test` with a full-depth
+  `check` job runs `context:check` and `context:test` on a full-depth
   checkout, so drift in the project-context layer fails the build.
 - `archive/sessions/2026-09-02-t1-m2-closure-audit-plan.md` — stored plan.
 
@@ -21,46 +30,54 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
 
 | Section | Result |
 |---|---|
-| Legacy-authority inventory (15) | 6 migrated (4 partial, 2 not started), 6 archive, 2 obsolete, 1 unclear, 0 evidence-only |
+| Legacy-authority inventory (15) | 6 migrated (4 partial, 2 not started), 7 archive, 2 obsolete, 0 unclear, 0 evidence-only |
 | Decision source rows (318) | 23 formally migrated, 70 unresolved collision (69 Notion duplicates + 1 cross-surface), 1 resolved collision, 1 intentionally historical, 6 obsolete or superseded, 212 not yet reconciled, 5 unclear |
+| Of which public in the register | 95 rows (identity already on main); 71 carry a clear title (exactly the collision-registry strings), 24 a title hash |
+| Of which private | 223 rows (212 pending, 6 superseded, 5 unclear), counts and digest in the register, rows in the archive |
 | Formal records (27) | 23 with a Notion source row, 4 Git-native |
 | Plan forward statements (5) | 3 merged, 1 partially merged, 1 open (this audit) |
-| M2 exit gaps (9) | 5 blocking, 4 non-blocking |
-| Next collision-free batch | 7 rows: `DEC-20260827-A` and the six `DEC-20260820-*` website decisions; the validator proves the set is exactly the rule-eligible set |
+| M2 exit gaps (9) | 4 blocking (G1 pending rows, G2 Notion collisions, G3 cross-surface `DEC-20260422-A`, G9 closing review), 5 non-blocking |
+| Next collision-free batch | 7 candidates, all in the private projection because their page ids are not yet public on main (count and digest in the register; the 2026-08-27 Austrian-registry decision and the six 2026-08-20 website decisions) |
 
 ## Decisions taken in this batch (technical, mine)
 
-- **Titles are not widened.** A Decision title appears in the register only
-  where `main` already publishes it (formal records, collision registry: 93
-  rows). The other 225 rows carry a SHA-256 of the title, so the row stays
-  checkable against the private archive without publishing new content. The
-  self-review flagged that publishing all 318 titles would widen the M0 public
-  boundary and is a founder call; the conservative path needs no call.
-- `handoff/` is recorded as **unclear**: the migration plan omits it from the
-  target tree and does not say whether historical handoffs move or stay.
+- **The public boundary set at M0 is not widened.** Independent review found
+  that the source titles of migrated rows differ from the published record
+  titles and that a full row list would add 218 page IDs and 140 Decision IDs
+  to the public repository. A row is now public only if its page id and ID
+  already appear on `main`; a clear title appears only where
+  `id-collisions.yaml` already publishes that exact string; everything else
+  is hashed or kept in the private archive. Whether the row-level register may
+  become public is queued for the founder in `DECISION-QUEUE.md`; nothing
+  waits on it.
+- `handoff/` is **archive**, per the migration map's "promote remaining current
+  truth, then archive"; the earlier "unclear" reading was wrong.
+- G8 (legacy sources not yet migrated) is **non-blocking and M3/M5**: the M2
+  share of it is already counted in G1; protocol extraction and physical moves
+  belong to later milestones, so M2 no longer depends on M3.
 - Rows with an empty ID property (5) are **unclear**, not inferred from the
-  title.
-- Empty-ID, superseded, and pending rows cite the private-archive status file
-  as their only evidence; that is honest, and the schema requires at least one
-  evidence reference on every row.
+  title. Pending, superseded, and unclear rows cite the private-archive status
+  file as their evidence.
 
 ## Review trail
 
-- Author-environment self-verification (Claude sub-agent, read-only): FAIL on
-  the first pass, 13 findings; all applied (inventory regeneration, fail-closed
-  base check, tracked-file evidence, derivation-rule enforcement, next-batch
-  completeness, CI wiring, title boundary, provenance validation, plan-quote
-  check, ancestor check, split finding codes, header note).
-- Independent Codex review of the exact final commit: see the PR.
+- Author self-verification (Claude sub-agent, read-only): FAIL on the first
+  pass, 13 findings, all applied.
+- Independent Codex review (gpt-5.6-sol, xhigh, read-only) of the first
+  hardened commit: FAIL, 4 blocking (identity not source-verified, title and
+  metadata boundary, `handoff/` disposition, G8 phase deadlock), 1 should-fix
+  (initial completeness), 2 nits; all applied in this version.
+- Second Codex review of the exact final commit: recorded in the PR.
 
 ## What the next session should do
 
-1. Merge order: the CTO-readiness plan PR first, then this PR rebased on it;
-   then set T1 to `done` in `tracks.yaml` with this register and handoff as
-   evidence, and make this file T1's `resume_file`.
-2. Next Decision batch: the seven rows named in `next_decision_batch`, as one
-   contradiction-checked batch under the existing decision-record protocol.
-3. The five blocking exit gaps (G1, G2, G3, G8, G9) are the remaining M2 work;
+1. T2 (repo hygiene sweep) is the active track; its plan is
+   `archive/sessions/2026-09-02-t2-repo-hygiene-sweep-plan.md`.
+2. Next Decision batch: the seven rows the register counts and digests under
+   `next_decision_batch.private_candidates`, listed in the private projection,
+   as one contradiction-checked batch under the existing decision-record
+   protocol. Run the operator verification script first.
+3. The four blocking exit gaps (G1, G2, G3, G9) are the remaining M2 work;
    G2/G3 need the identity mechanism the collision plan describes before any
    collided ID can be migrated.
 

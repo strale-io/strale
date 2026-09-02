@@ -56,7 +56,8 @@
         "handoff/_general/from-code/2026-09-01-m2-doctrine-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
-        "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md"
+        "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -227,7 +228,8 @@
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
         "scripts/guard-tree-integrity.mjs",
-        "scripts/guard-worktree-isolation.mjs"
+        "scripts/guard-worktree-isolation.mjs",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -410,7 +412,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "51fd3d0b389754086e048ebd4c9861649929eca9fd1b2ebb60285aebc251137c",
+      "sha256": "445f8b46b795897e17b95174a98d3cd9fe42649730d542cc847ff993a8e37d11",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

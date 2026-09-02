@@ -27,6 +27,10 @@ const activate = (r, index) => {
   for (const t of r.tracks) if (t.status === "active") t.status = "queued";
   r.tracks[index].status = "active";
 };
+// The register's row order and which track is active change as work lands;
+// tests locate rows by status, never by position.
+const activeIdx = (r) => r.tracks.findIndex((t) => t.status === "active");
+const queuedIdx = (r) => r.tracks.findIndex((t) => t.status === "queued");
 const finish = (t) => {
   t.status = "done";
   t.evidence = ["README.md"];
@@ -47,14 +51,15 @@ test("an unsupported status is rejected", () => {
 
 test("two active tracks are rejected", () => {
   const r = base();
-  r.tracks[1].status = "active";
-  r.tracks[1].resume_file = "README.md";
+  const q = r.tracks[queuedIdx(r)];
+  q.status = "active";
+  q.resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_COUNT"));
 });
 
 test("zero active tracks are rejected while the program is active", () => {
   const r = base();
-  r.tracks[0].status = "queued";
+  r.tracks[activeIdx(r)].status = "queued";
   assert.ok(codes(r).includes("ACTIVE_COUNT"));
 });
 
@@ -215,24 +220,28 @@ test("a blocker on a non-blocked track is rejected", () => {
 
 test("rehomed requires rehomed_to, and rehomed_to is rejected elsewhere", () => {
   const r = base();
-  r.tracks[1].status = "rehomed";
+  const q = r.tracks[queuedIdx(r)];
+  q.status = "rehomed";
   assert.ok(codes(r).includes("SCHEMA"));
-  r.tracks[1].rehomed_to = "docs/programs/README.md";
+  q.rehomed_to = "docs/programs/README.md";
   assert.deepEqual(codes(r), []);
   const r2 = base();
-  r2.tracks[1].rehomed_to = "docs/programs/README.md";
+  r2.tracks[queuedIdx(r2)].rehomed_to = "docs/programs/README.md";
   assert.ok(codes(r2).includes("SCHEMA"));
 });
 
 test("done requires evidence, and evidence must be a tracked regular file", () => {
   const r = base();
-  r.tracks[1].status = "done";
+  const q = r.tracks[queuedIdx(r)];
+  q.depends_on = [];
+  q.status = "done";
+  q.evidence = [];
   assert.ok(codes(r).includes("SCHEMA"), "empty evidence on a done track");
   for (const bad of ["docs/programs/does-not-exist.md", "docs", "../strale/README.md", "C:/Windows", "/etc/passwd", ".git"]) {
-    r.tracks[1].evidence = [bad];
+    q.evidence = [bad];
     assert.ok(codes(r).includes("EVIDENCE_INVALID"), `evidence ${bad} should be rejected`);
   }
-  r.tracks[1].evidence = ["README.md"];
+  q.evidence = ["README.md"];
   assert.deepEqual(codes(r), []);
 });
 
@@ -287,13 +296,14 @@ test("validateRegister applies the tracked set to resume files, evidence, and re
 
 test("an active track must have a resume file that is a tracked regular file", () => {
   const r = base();
-  r.tracks[0].resume_file = null;
+  const a = r.tracks[activeIdx(r)];
+  a.resume_file = null;
   assert.ok(codes(r).includes("ACTIVE_WITHOUT_RESUME_FILE"));
   for (const bad of ["handoff/_general/from-code/nope.md", "docs", ".git", "../x.md"]) {
-    r.tracks[0].resume_file = bad;
+    a.resume_file = bad;
     assert.ok(codes(r).includes("RESUME_FILE_INVALID"), `resume file ${bad} should be rejected`);
   }
-  r.tracks[0].resume_file = "   ";
+  a.resume_file = "   ";
   assert.ok(codes(r).includes("ACTIVE_WITHOUT_RESUME_FILE"), "whitespace resume file");
 });
 

@@ -5,9 +5,13 @@
 // field shapes. This module owns what a schema cannot see: agreement with the
 // M1 bare inventory, the formal decision records, the collision registry, the
 // private-archive status file, the derivation rules each disposition rests on,
-// the recomputed counts, and the version of the register already on the base
-// branch (so rows cannot silently disappear).
+// the public boundary (a row may be listed here only if its identity is
+// already public on this repository's main), the canonical digests that bind
+// the public rows to the private projection, the recomputed counts, and the
+// version of the register already on the base branch (so rows cannot silently
+// disappear).
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,6 +24,9 @@ const INVENTORY_PATH = "docs/project/legacy-authority-inventory.json";
 const COLLISIONS_PATH = "docs/decisions/id-collisions.yaml";
 const RECORDS_DIR = "docs/decisions/records";
 const ARCHIVE_STATUS_PATH = "docs/project/private-archive-status.json";
+// Where identities may already be public. The register itself is excluded so
+// it cannot make an identity "public" by listing it.
+const PUBLIC_SCOPES = ["docs", "archive", "AGENTS.md", "CLAUDE.md", "README.md"];
 
 export const INVENTORY_DISPOSITIONS = ["migrated", "evidence-only", "archive", "obsolete", "unclear"];
 export const DECISION_DISPOSITIONS = [
@@ -32,8 +39,13 @@ export const DECISION_DISPOSITIONS = [
   "unclear",
 ];
 export const PLAN_DISPOSITIONS = ["merged", "partially_merged", "superseded", "open"];
+const PUBLIC_ONLY_DISPOSITIONS = new Set(["formally_migrated", "resolved_collision"]);
 const URL_EVIDENCE =
   /^https:\/\/(github\.com\/strale-io\/(strale|strale-context-archive)\/(pull\/[0-9]+|issues\/[0-9]+|commit\/[0-9a-f]{7,40})|app\.notion\.com\/(p\/)?[0-9a-f]{32})$/;
+// Forward-looking sentences in the migration plan that the register must reconcile.
+const PLAN_STATEMENT_PATTERNS = [
+  /^- Next:/, /^- Next M2 batches:/, /^- The next milestone is/, /^\*\*Next bounded task:\*\*/,
+];
 
 export function repoRootFrom(metaUrl) {
   return resolve(dirname(fileURLToPath(metaUrl)), "..");
@@ -47,10 +59,52 @@ export function loadRegisterSchema(root) {
   return JSON.parse(readFileSync(resolve(root, REGISTER_SCHEMA_PATH), "utf8"));
 }
 
+export const sha256 = (s) => createHash("sha256").update(s, "utf8").digest("hex");
+
+/**
+ * Canonical digest over identity rows. Titles never enter the digest in clear:
+ * a row contributes its title hash (or the hash of its clear title). Public
+ * and private projections use the same function, so the public digest can be
+ * recomputed here and the private one by the operator script against the
+ * archive.
+ */
+export function canonicalDigest(rows) {
+  const lines = [...rows]
+    .sort((a, b) => (a.page_id < b.page_id ? -1 : a.page_id > b.page_id ? 1 : 0))
+    .map((r) =>
+      [r.page_id, r.id ?? "", r.historical_status ?? "", r.historical_scope ?? "", r.decided_at,
+        r.title_sha256 ?? sha256(r.title), r.disposition].join("|"),
+    );
+  return sha256(lines.join("\n") + "\n");
+}
+
 /** Tracked files as `git ls-files` reports them, forward-slashed, as a Set. */
 export function trackedFiles(root) {
   const out = execFileSync("git", ["-C", root, "ls-files", "-z"], { encoding: "utf8" });
   return new Set(out.split("\0").filter(Boolean));
+}
+
+function gitQuiet(root, args, opts = {}) {
+  try {
+    return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024, ...opts });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Identities (32-hex page ids, DEC-* ids) that appear in tracked text under the
+ * public scopes, excluding the register. Read from the index, not the working
+ * tree, so an uncommitted edit cannot widen the set.
+ */
+export function publicIdentities(root) {
+  const pageIds = new Set();
+  const ids = new Set();
+  for (const [re, set] of [[/[0-9a-f]{32}/g, pageIds], [/DEC-[0-9]{8}-[A-Za-z0-9-]+/g, ids]]) {
+    const out = gitQuiet(root, ["grep", "--cached", "-h", "-o", "-E", "-e", re.source, "--", ...PUBLIC_SCOPES, `:(exclude)${REGISTER_PATH}`]) ?? "";
+    for (const m of out.split(/\s+/)) if (m) set.add(m);
+  }
+  return { pageIds, ids };
 }
 
 /** Front matter of every formal record: { record_key, id, evidence[] }. */
@@ -66,14 +120,6 @@ export function readFormalRecordSummaries(root) {
       const meta = match ? YAML.parse(match[1]) : {};
       return { file: `${RECORDS_DIR}/${f}`, record_key: meta.record_key, id: meta.id, evidence: meta.evidence ?? [] };
     });
-}
-
-function gitQuiet(root, args) {
-  try {
-    return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -94,6 +140,24 @@ export function isAncestorOfHead(root, sha) {
   return gitQuiet(root, ["merge-base", "--is-ancestor", sha, "HEAD"]) !== null;
 }
 
+/** Forward-looking statements the plan file contains, as normalized sentences. */
+export function requiredPlanStatements(planText) {
+  const lines = planText.split(/\r?\n/);
+  const out = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    if (!PLAN_STATEMENT_PATTERNS.some((p) => p.test(lines[i]))) continue;
+    // A statement runs until the next blank line or the next list item / heading.
+    let text = lines[i];
+    for (let j = i + 1; j < lines.length; j += 1) {
+      const l = lines[j];
+      if (l.trim() === "" || /^(- |\d+\. |#|\*\*)/.test(l)) break;
+      text += ` ${l.trim()}`;
+    }
+    out.push({ line: i + 1, text: normalizeWs(text.replace(/^- /, "").replace(/\*\*/g, "")) });
+  }
+  return out;
+}
+
 /**
  * Gather every external fact the register must agree with. Tests pass a
  * hand-built context to exercise each check without touching disk.
@@ -109,8 +173,11 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     records: readFormalRecordSummaries(root),
     collisions,
     archiveRowCount: archiveStatus.pagination?.decisions?.rows_preserved ?? null,
+    archiveCommit: archiveStatus.archive_commit ?? null,
+    archiveRepository: archiveStatus.repository ?? null,
     base: readBaseRegister(root, baseRef),
     isAncestor: (sha) => isAncestorOfHead(root, sha),
+    public: publicIdentities(root),
   };
 }
 
@@ -178,6 +245,15 @@ export function validateClosureRegister(register, context, { schema, relativePat
   if (context.isAncestor && !context.isAncestor(register.audited_main)) {
     finding("AUDITED_MAIN_NOT_ANCESTOR", register.audited_main);
   }
+  if (context.archiveCommit && register.sources.decision_archive.commit !== context.archiveCommit) {
+    finding("ARCHIVE_COMMIT_MISMATCH", `${register.sources.decision_archive.commit} vs ${ARCHIVE_STATUS_PATH} ${context.archiveCommit}`);
+  }
+  if (context.archiveRepository && register.sources.decision_archive.repository !== context.archiveRepository) {
+    finding("ARCHIVE_REPOSITORY_MISMATCH", register.sources.decision_archive.repository);
+  }
+  if (register.private_rows.repository !== register.sources.decision_archive.repository) {
+    finding("PRIVATE_ROWS_REPOSITORY_MISMATCH", register.private_rows.repository);
+  }
 
   // ---- Legacy inventory: exact set equality with the M1 bare inventory.
   const invByPath = new Map();
@@ -220,7 +296,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
   const collisionIds = new Set();
   for (const c of context.collisions.collisions ?? []) {
     collisionIds.add(c.id);
-    for (const r of c.records) collisionRows.set(r.source_page_id, { id: c.id, resolution_status: c.resolution_status, disposition: r.disposition, record_key: r.record_key });
+    for (const r of c.records) collisionRows.set(r.source_page_id, { id: c.id, resolution_status: c.resolution_status, disposition: r.disposition, record_key: r.record_key, title: r.title });
   }
   if (register.sources.collision_registry.collision_count !== (context.collisions.collision_count ?? 0)) {
     finding("SOURCE_COUNT_DRIFT", `collision_registry.collision_count ${register.sources.collision_registry.collision_count} vs ${context.collisions.collision_count}`);
@@ -229,7 +305,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
     finding("SOURCE_COUNT_DRIFT", `collision_registry.row_count ${register.sources.collision_registry.row_count} vs ${collisionRows.size}`);
   }
 
-  // ---- Decision rows.
+  // ---- Public decision rows.
   const rowsByPage = new Map();
   const idCounts = {};
   for (const row of register.decision_rows) {
@@ -238,20 +314,34 @@ export function validateClosureRegister(register, context, { schema, relativePat
     if (row.id) idCounts[row.id] = (idCounts[row.id] ?? 0) + 1;
     if (!row.source_url.endsWith(row.page_id)) finding("DECISION_ROW_SOURCE_URL_MISMATCH", row.page_id);
   }
-  if (register.decision_rows.length !== register.sources.decision_archive.row_count) {
-    finding("SOURCE_COUNT_DRIFT", `decision_archive.row_count ${register.sources.decision_archive.row_count} vs ${register.decision_rows.length} rows`);
+  const publicCount = register.decision_rows.length;
+  const privateCount = register.private_rows.count;
+  if (publicCount + privateCount !== register.sources.decision_archive.row_count) {
+    finding("SOURCE_COUNT_DRIFT", `decision_archive.row_count ${register.sources.decision_archive.row_count} vs ${publicCount} public + ${privateCount} private`);
   }
-  if (context.archiveRowCount != null && register.decision_rows.length !== context.archiveRowCount) {
-    finding("DECISION_ROW_COUNT_DRIFT", `${register.decision_rows.length} rows vs ${context.archiveRowCount} preserved in ${ARCHIVE_STATUS_PATH}`);
+  if (context.archiveRowCount != null && publicCount + privateCount !== context.archiveRowCount) {
+    finding("DECISION_ROW_COUNT_DRIFT", `${publicCount + privateCount} rows vs ${context.archiveRowCount} preserved in ${ARCHIVE_STATUS_PATH}`);
   }
+  const privateSum = Object.values(register.private_rows.counts_by_disposition).reduce((a, b) => a + b, 0);
+  if (privateSum !== privateCount) finding("PRIVATE_ROWS_COUNT_DRIFT", `${privateSum} by disposition vs count ${privateCount}`);
+  if (register.digests.public_rows.count !== publicCount) finding("DIGEST_COUNT_DRIFT", `public_rows.count ${register.digests.public_rows.count} vs ${publicCount}`);
+  if (register.digests.all_rows.count !== publicCount + privateCount) finding("DIGEST_COUNT_DRIFT", `all_rows.count ${register.digests.all_rows.count} vs ${publicCount + privateCount}`);
+  const recomputed = canonicalDigest(register.decision_rows);
+  if (recomputed !== register.digests.public_rows.digest) finding("PUBLIC_DIGEST_MISMATCH", `recomputed ${recomputed.slice(0, 12)}… vs stored ${register.digests.public_rows.digest.slice(0, 12)}…`);
 
   const migratedByRecord = new Map();
   for (const row of register.decision_rows) {
     const d = row.disposition;
     const col = collisionRows.get(row.page_id);
-    const isPublicTitle = d === "formally_migrated" || Boolean(col);
-    if (row.title !== undefined && !isPublicTitle) finding("DECISION_ROW_TITLE_NOT_PUBLIC", row.page_id);
-    if (row.title === undefined && isPublicTitle) finding("DECISION_ROW_TITLE_EXPECTED", row.page_id);
+
+    // Public boundary: identity must already be public elsewhere; a clear title
+    // only where the collision registry publishes that exact string.
+    if (context.public) {
+      if (!context.public.pageIds.has(row.page_id)) finding("DECISION_ROW_NOT_PUBLIC", `${row.page_id}: page id not published outside the register`);
+      if (row.id && !context.public.ids.has(row.id)) finding("DECISION_ROW_NOT_PUBLIC", `${row.page_id}: id ${row.id} not published outside the register`);
+    }
+    if (row.title !== undefined && (!col || col.title !== row.title)) finding("DECISION_ROW_TITLE_NOT_PUBLIC", row.page_id);
+    if (row.title === undefined && col && col.title !== undefined) finding("DECISION_ROW_TITLE_EXPECTED", row.page_id);
 
     if (d === "formally_migrated") {
       const rec = recordByKey.get(row.record_key);
@@ -263,6 +353,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
         migratedByRecord.set(row.record_key, [...(migratedByRecord.get(row.record_key) ?? []), row.page_id]);
       }
       if (col && col.resolution_status === "unresolved") finding("DECISION_ROW_MIGRATED_BUT_UNRESOLVED", row.page_id);
+      if (row.collision && row.collision.kind !== "notion-duplicate") finding("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH", `${row.page_id}: migrated rows may only carry registry collisions`);
     } else if (row.record_key) {
       finding("DECISION_ROW_RECORD_KEY_WITHOUT_MIGRATION", row.page_id);
     }
@@ -285,9 +376,6 @@ export function validateClosureRegister(register, context, { schema, relativePat
     } else if (col && d !== "formally_migrated") {
       finding("DECISION_ROW_COLLISION_UNDECLARED", `${row.page_id} is in the collision registry but classified ${d}`);
     }
-    if (d === "formally_migrated" && row.collision && row.collision.kind !== "notion-duplicate") {
-      finding("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH", `${row.page_id}: migrated rows may only carry registry collisions`);
-    }
 
     if (d === "intentionally_historical" && !row.evidence.some((ev) => fileCites(context, ev, row.page_id))) {
       finding("DECISION_ROW_NOT_CITED_BY_EVIDENCE", row.page_id);
@@ -309,27 +397,55 @@ export function validateClosureRegister(register, context, { schema, relativePat
       finding("FORMAL_RECORD_GIT_NATIVE_WITH_ROWS", fr.record_key);
     }
   }
+  // Private rows can never hold dispositions that are public by construction.
+  for (const d of Object.keys(register.private_rows.counts_by_disposition)) {
+    if (PUBLIC_ONLY_DISPOSITIONS.has(d)) finding("PRIVATE_ROWS_PUBLIC_DISPOSITION", d);
+  }
 
-  // ---- Plan statements: every quote must occur in the plan file.
+  // ---- Plan statements: every forward statement in the plan must be quoted, and every quote must exist.
   const planPath = register.sources.migration_plan.path;
-  const planText = context.root && evidenceProblem(context, planPath) === null
-    ? normalizeWs(readFileSync(resolve(context.root, planPath), "utf8"))
+  const planRaw = context.root && evidenceProblem(context, planPath) === null
+    ? readFileSync(resolve(context.root, planPath), "utf8")
     : null;
+  const planText = planRaw === null ? null : normalizeWs(planRaw);
   for (const p of register.plan_statements) {
     checkEvidence(`plan statement ${p.location}`, p.evidence);
     if (planText !== null && !planText.includes(normalizeWs(p.quote))) finding("PLAN_QUOTE_NOT_FOUND", p.location);
   }
-  if (planText === null) finding("EVIDENCE_INVALID", `migration_plan: ${planPath} (${evidenceProblem(context, planPath) ?? "unreadable"})`);
+  if (planRaw === null) finding("EVIDENCE_INVALID", `migration_plan: ${planPath} (${evidenceProblem(context, planPath) ?? "unreadable"})`);
+  else {
+    const quotes = register.plan_statements.map((p) => normalizeWs(p.quote));
+    for (const s of requiredPlanStatements(planRaw)) {
+      const head = s.text.slice(0, 60);
+      if (!quotes.some((q) => s.text.includes(q) || q.includes(head))) finding("PLAN_STATEMENT_UNRECONCILED", `${planPath}:${s.line} ${head}`);
+    }
+  }
 
+  // ---- Exit gaps: unique, and every open bucket must be covered.
   const gapIds = new Set();
+  const covered = new Set();
   for (const g of register.exit_gaps) {
     if (gapIds.has(g.id)) finding("EXIT_GAP_DUPLICATE", g.id);
     gapIds.add(g.id);
+    for (const c of g.covers) covered.add(c);
     checkEvidence(g.id, g.evidence);
   }
+  const totals = register.counts.decision_rows;
+  for (const d of ["not_yet_reconciled", "unresolved_collision", "intentionally_historical", "obsolete_or_superseded", "unclear"]) {
+    if ((totals[d] ?? 0) > 0 && !covered.has(`decision_rows.${d}`)) finding("EXIT_GAP_UNCOVERED", `decision_rows.${d} (${totals[d]} rows) has no gap`);
+  }
+  if (register.legacy_inventory.some((e) => e.progress !== "complete") && !covered.has("legacy_inventory.incomplete")) {
+    finding("EXIT_GAP_UNCOVERED", "legacy_inventory.incomplete has no gap");
+  }
+  if (register.formal_records.some((fr) => fr.source_kind === "git-native") && !covered.has("formal_records.git_native")) {
+    finding("EXIT_GAP_UNCOVERED", "formal_records.git_native has no gap");
+  }
 
-  // ---- Next batch: the rule's filter and its completeness are both enforced.
+  // ---- Next batch: cutoff anchored to a public row; public eligibility exact.
   const nb = register.next_decision_batch;
+  const anchor = register.decision_rows.find((r) => r.id === nb.cutoff_anchor_id);
+  if (!anchor) finding("NEXT_BATCH_ANCHOR_UNKNOWN", nb.cutoff_anchor_id);
+  else if (anchor.decided_at !== nb.decided_on_or_after) finding("NEXT_BATCH_CUTOFF_MISMATCH", `${nb.decided_on_or_after} vs ${nb.cutoff_anchor_id} decided ${anchor.decided_at}`);
   const eligible = (row) =>
     row.disposition === "not_yet_reconciled" &&
     row.historical_status === "active" &&
@@ -354,10 +470,13 @@ export function validateClosureRegister(register, context, { schema, relativePat
   for (const row of register.decision_rows) {
     if (eligible(row) && !candidateIds.has(row.page_id)) finding("NEXT_BATCH_INCOMPLETE", `${row.id} is eligible but not listed`);
   }
+  if (nb.private_candidates.count > privateCount) finding("NEXT_BATCH_PRIVATE_COUNT_EXCEEDS", `${nb.private_candidates.count} > ${privateCount}`);
 
-  // ---- Counts must equal what the rows say.
+  // ---- Counts must equal what the rows say (public rows plus the private projection).
   const invCounts = { ...countBy(register.legacy_inventory, "disposition"), total: register.legacy_inventory.length };
-  const decCounts = { ...countBy(register.decision_rows, "disposition"), total: register.decision_rows.length };
+  const decCounts = { ...countBy(register.decision_rows, "disposition") };
+  for (const [d, n] of Object.entries(register.private_rows.counts_by_disposition)) decCounts[d] = (decCounts[d] ?? 0) + n;
+  decCounts.total = publicCount + privateCount;
   const planCounts = { ...countBy(register.plan_statements, "disposition"), total: register.plan_statements.length };
   const gapCounts = { blocking: register.exit_gaps.filter((g) => g.blocking).length, non_blocking: register.exit_gaps.filter((g) => !g.blocking).length };
   for (const d of countsMatch(invCounts, register.counts.legacy_inventory, [...INVENTORY_DISPOSITIONS, "total"])) finding("COUNT_DRIFT", `legacy_inventory ${d}`);
@@ -377,6 +496,10 @@ export function validateClosureRegister(register, context, { schema, relativePat
       if (!register.plan_statements.some((q) => q.location === p.location)) finding("PLAN_STATEMENT_REMOVED", p.location);
     }
     for (const g of base.register.exit_gaps ?? []) if (!gapIds.has(g.id)) finding("EXIT_GAP_REMOVED", g.id);
+    const basePrivate = base.register.private_rows?.count ?? 0;
+    if (privateCount + publicCount < basePrivate + (base.register.decision_rows?.length ?? 0)) {
+      finding("DECISION_ROW_REMOVED", `total rows fell from ${basePrivate + base.register.decision_rows.length} to ${privateCount + publicCount}`);
+    }
   }
 
   return findings;

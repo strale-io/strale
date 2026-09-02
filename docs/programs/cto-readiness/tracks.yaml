@@ -15,42 +15,39 @@ updated: 2026-09-02
 tracks:
   - id: T1
     title: M2 closure audit
-    status: active
+    status: done
     depends_on: []
     owner: session
     next_action: >
-      Design the disposition register schema under docs/project/schemas/,
-      classify all 15 legacy-authority inventory entries and every preserved
-      Decision source row, reconcile the migration plan's older "Next:" notes
-      against merged commits, and add the tests named in this track's exit
-      criteria. Sources beyond the resume_file: the private archive named in
-      docs/project/private-archive-status.json (repository, commit, and the
-      decisions export under archive/imports/notion/2026-08-31/data-sources/
-      inside that archive; read it with gh api, never copy it here); the
-      collision registry docs/decisions/id-collisions.yaml; the formal records
-      under docs/decisions/records/.
-    resume_file: handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md
+      Done. The remaining M2 work is the exit-gap list in
+      docs/project/m2-closure-register.yaml (G1, G2, G3, G9 blocking); the
+      next collision-free Decision batch is named there. The row-level
+      projection for rows not yet public lives in the private archive and is
+      verified with node scripts/m2-closure-verify-private-rows.mjs.
+    resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - schema-validated disposition register committed with exact counts per disposition
       - every inventory entry and Decision source row has a disposition, provenance, and rationale
       - explicit M2 exit-gap list and next collision-free Decision batch named
       - tests fail on missing entries, unsupported dispositions, invalid sources, duplicate identities, count drift, or silent removal
       - M1 bare inventory contract unchanged
-    evidence: []
+    evidence:
+      - docs/project/m2-closure-register.yaml
+      - handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
 
   - id: T2
     title: Repo hygiene sweep
-    status: queued
+    status: active
     depends_on: []
     owner: session
     next_action: >
-      Recount at start (branches and worktrees change daily; the 2026-09-02
-      snapshot was 50 unmerged remote branches, 11 of them janitor rescue
-      snapshots, plus roughly thirty linked worktrees), then classify every
-      remote branch, every linked worktree, the unregistered strale-work
-      directory, and the dirty shared checkout. Delete what is verified
-      landed; list what must stay and why.
-    resume_file: null
+      Execute the stored plan: recount, then delete the branches whose merged
+      PR head equals the branch tip, archive-tag and delete the real unmerged
+      branches and one rescue snapshot per distinct content set, remove
+      worktrees whose branch is gone, return the shared checkout to main once
+      its uncommitted work is confirmed identical to its tagged snapshot, and
+      file the strale-work reports under archive/sessions.
+    resume_file: archive/sessions/2026-09-02-t2-repo-hygiene-sweep-plan.md
     exit:
       - every remote and local branch either deleted with landed-evidence or listed with a reason
       - every worktree either removed or mapped to an active session in WORKTREES.md
