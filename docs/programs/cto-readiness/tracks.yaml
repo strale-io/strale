@@ -95,9 +95,33 @@ tracks:
       - scripts/handoff/handoff-check.mjs
       - .github/workflows/stale-branches.yml
 
+  - id: T11
+    title: Website repo hygiene and design preservation
+    status: active
+    gate: none
+    depends_on: [T3]
+    owner: session
+    next_action: >
+      Merge the strale-frontend preservation PR (design candidates, handoff
+      docs, session-end gate, website register), verify both release assets
+      against SHA256SUMS.txt, then remove from the machine: the three orphan
+      frontend folders, strale-codex-handoff-v2, the Quiet Material folder and
+      its zip. File the monorepo direction (website redesign built as
+      apps/web in this repository) as DEC-20260902-A through the M2 decision
+      path — Notion Decisions DB entry plus closure-register row — once Petter
+      confirms the record text drafted in the T11 handoff. Then set this
+      track done and reactivate T4.
+    resume_file: handoff/_general/from-code/2026-09-02-t11-website-hygiene.md
+    exit:
+      - every website folder outside a git checkout is preserved (tag or release asset with checksum) and removed
+      - strale-frontend has only main, work branches with a named owner or open PR, and archive tags
+      - strale-frontend runs the same session-end gate as this repository
+      - the monorepo direction is recorded in ROADMAP section 7 and its decision record is filed through the M2 path
+    evidence: []
+
   - id: T4
     title: Remediation program closure
-    status: active
+    status: queued
     gate: none
     depends_on: []
     owner: session

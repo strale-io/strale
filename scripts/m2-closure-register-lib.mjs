@@ -40,6 +40,7 @@ export const TRACKS_OUTSIDE_M2_GATE = Object.freeze({
   T3: "none",  // hygiene enforcement
   T4: "none",  // remediation closure
   T5: "none",  // CTO-readable structure
+  T11: "none", // website repo hygiene and design preservation (reviewed 2026-09-02: preservation work, no M2 dependency)
 });
 
 /**

@@ -605,7 +605,7 @@ test("the track register cannot start M3 or close the gate while blocking M2 gap
   has(r, "TRACKS_UNAVAILABLE", { ...context, tracks: null });
   // A new post-m2 track added without depending on the gate, or started while gaps remain, is refused;
   // a track without a gate field is refused; the id is irrelevant.
-  const newTrack = { id: "T11", title: "M3 shadow workflow subtrack", status: "active", gate: "post-m2", depends_on: ["T1"], owner: "session", next_action: "start M3 early", resume_file: "README.md", exit: ["never"], evidence: [] };
+  const newTrack = { id: "T99", title: "M3 shadow workflow subtrack", status: "active", gate: "post-m2", depends_on: ["T1"], owner: "session", next_action: "start M3 early", resume_file: "README.md", exit: ["never"], evidence: [] };
   const c11 = codes(r, withTracks((t) => { t.tracks.find((x) => x.id === "T2").status = "queued"; t.tracks.push(newTrack); }));
   assert.ok(c11.includes("TRACKS_POST_M2_NOT_GATED"), c11.join(","));
   assert.ok(c11.includes("TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS"));

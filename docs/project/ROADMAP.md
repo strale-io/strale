@@ -115,6 +115,13 @@ gaps. Do not reopen outreach to the transaction-inferred card buyer.
 
 ## 7. Reconcile and complete the website
 
+**Direction (founder, 2026-09-02; decision record DEC-20260902-A to be filed
+on the founder's confirmation of its text):** the website redesign is built
+inside this repository as `apps/web`, making it a monorepo. Preserve
+the existing frontend material first (done in T11: tags, release
+`preserve-2026-09-02`, tracked candidates), then build the redesign here;
+`strale-frontend` is swept and kept until the cutover ships, not extended.
+
 First preserve and review the local v0.7 design-system candidate against the
 durable v0.5 checkpoint. Rebase/reconcile Homepage v2 with frontend main, run
 build and visual/accessibility verification, then decide what is accepted.
