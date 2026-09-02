@@ -1,0 +1,40 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "apps/api/scripts/verify-ip-probe.mjs",
+    "commit": "116ebd107704aa7b445c874b4d4fda889c44540c"
+  },
+  "at": "2026-09-02T21:51:30.000Z",
+  "inputs": {
+    "target": "https://api.strale.io",
+    "method": "direct requests from this machine, no auth (free-tier email-validate, price 0)",
+    "reference": "docs/remediation/PACKAGE-GRAPH.yaml verification_gates.VERIFY-IP"
+  },
+  "summary": {
+    "dns_cname_target": "m1d21ii9.up.railway.app",
+    "dns_resolved_ip": "69.46.46.35",
+    "cloudflare_headers_present": false,
+    "server_header": "railway-hikari",
+    "railway_edge_pop": "ams1",
+    "proxy_hop_count": 1,
+    "baseline_ipHash": "85a8e902040a39ef",
+    "spoofed_single_xff_ipHash": "85a8e902040a39ef",
+    "spoofed_multi_xff_plus_xrealip_ipHash": "85a8e902040a39ef",
+    "distinct_ipHash_values_across_3_requests": 1,
+    "client_supplied_xff_reaches_app": false,
+    "client_supplied_xrealip_reaches_app": false,
+    "current_leftmost_xff_extraction_is_spoofable": false,
+    "railway_official_docs_confirm_xff_handling": false,
+    "railway_community_forum_staff_answers_agree": false,
+    "confidence": "high for hop-count-and-overwrite-behavior (direct empirical test, 3 requests, consistent); documentation-only claims below that are explicitly not relied on"
+  },
+  "topic": "verify-ip-proxy-hops",
+  "raw": {
+    "dns": "nslookup api.strale.io -> Name: m1d21ii9.up.railway.app, Address: 69.46.46.35, Aliases: api.strale.io. CNAME target is a Railway-generated *.up.railway.app hostname, resolving straight to a Railway edge IP -- no intermediate CNAME to any CDN (e.g. no *.cloudflare.net hop).",
+    "response_headers": "curl -sS -D - -o /dev/null https://api.strale.io/health -> Server: railway-hikari; x-railway-edge: ams1; x-hikari-trace: ams1.kxr8; x-railway-request-id present. No cf-ray, no Server: cloudflare, no other CDN fingerprint. Consistent across two separate probes taken ~15 minutes apart.",
+    "empirical_xff_spoof_test": "node apps/api/scripts/verify-ip-probe.mjs: three POST /v1/do calls to the free-tier email-validate capability (price_cents=0) -- (1) no custom headers, (2) X-Forwarded-For: 203.0.113.77, (3) X-Forwarded-For: '8.8.8.8, 1.1.1.1' plus X-Real-IP: 8.8.4.4. All three requests produced the IDENTICAL meta.audit.request_context.ipHash (85a8e902040a39ef) in the response body, which is sha256(extracted-ip).slice(0,16) per lib/middleware.ts hashIp(). Ran twice (ad hoc via curl, then via the committed script) with the same result both times -- 6 requests total, 1 distinct hash.",
+    "interpretation": "getClientIp() (apps/api/src/lib/middleware.ts:115) reads c.req.header('x-forwarded-for').split(',')[0] -- the LEFTMOST entry. Because the leftmost value stayed the app's real caller across three different client-supplied XFF/X-Real-IP payloads, Railway's single edge hop must be OVERWRITING or STRIPPING these headers before forwarding to the app, not appending the true IP after a client-supplied prefix. Conclusion: for requests to api.strale.io, there is exactly ONE proxy hop (Railway's own edge, no Cloudflare/CDN in front), and the leftmost X-Forwarded-For entry the app reads IS the true client IP -- current code is correct and not spoofable through this path, contradicting FABLE-REAUDIT.md's CR-19 claim ('every extractor reads leftmost XFF (spoofable)') and the in-code comment's uncertainty about it.",
+    "documentation_was_contradictory_and_not_relied_on": "docs.railway.com/networking/edge-networking documents the request path (User -> ISP -> Internet (BGP) -> Nearest Edge -> Internal Routing -> Deployment Region -> Your Service) but does not mention X-Forwarded-For handling at all. Railway's own community forum (station.railway.com, 'Security-Critical Questions on Edge Proxy Header Handling and Hop Count') has two DIRECTLY CONTRADICTORY staff/community answers: one says Railway appends the real IP and only the rightmost value is trustworthy; another, marked as an employee reply, says Railway strips XFF at the edge and the first value is the real connecting IP (matching this probe's result) plus mentions X-Real-IP as a 'single source of truth' (which this probe's spoofed-X-Real-IP test also found to be overwritten, contradicting that specific claim too). Neither forum reply nor the official docs page is cited as the basis for this verdict -- the empirical test is.",
+    "caveat": "This test used one client machine/network at one point in time against the current production topology and the public custom domain (api.strale.io) only. It does not rule out a different code path reaching the app (e.g. Railway's own internal private networking, a differently-configured Railway edge PoP, or a future infrastructure change) behaving differently. Recommended re-check cadence: re-run apps/api/scripts/verify-ip-probe.mjs after any change to the domain/DNS setup or a Railway platform-level networking change."
+  }
+}

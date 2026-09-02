@@ -175,11 +175,22 @@ packages:
 
   WP12:
     title: Network/resource safety substrate
-    status: BLOCKED
-    blocked_by: VERIFY-IP
-    blocked_note: >
-      Reading the wrong X-Forwarded-For entry breaks every IP-keyed rate limit
-      at once. Confirm the Railway hop count first; do not infer it.
+    status: UNBLOCKED_NOT_YET_STARTED
+    status_date: "2026-09-02"
+    unblocked_by: >
+      VERIFY-IP resolved 2026-09-02 (empirical probe, high confidence): exactly
+      one proxy hop in front of api.strale.io (Railway's own edge, no CDN), and
+      client-supplied X-Forwarded-For / X-Real-IP values do NOT reach the app
+      -- Railway's edge overwrites them. The leftmost-XFF read is NOT
+      spoofable through this path, contradicting FABLE-REAUDIT.md's CR-19
+      framing. See verification_gates.VERIFY-IP below and
+      archive/receipts/2026-09-02-audit-verify-ip-proxy-hops.json.
+    remaining_scope_unaffected_by_verify_ip: >
+      The XFF-trust question was one exit condition of five. CIDR-based IP
+      guard (IPv6 gaps), connect-time re-check for raw-socket DNS rebinding,
+      and byte/pixel caps are real, unbuilt work independent of VERIFY-IP and
+      still NOT started. This package is unblocked, not accepted or scoped
+      down -- it needs its own implementation session.
     depends_on: [WP0]
     risks: [CR-11, CR-12, CR-19]
     review: {codex: required, fable: required}
@@ -284,7 +295,42 @@ packages:
     review: {codex: required, fable: optional}
 
 verification_gates:
-  VERIFY-IP:    {status: OPEN, blocks: [WP12], note: "leftmost XFF confirmed spoofable; confirm Railway hop count"}
+  VERIFY-IP:
+    status: RESOLVED
+    resolved: "2026-09-02"
+    blocks: []   # was [WP12]; WP12 unblocked, see packages above
+    confidence: high
+    method: >
+      Empirical, not documentary. DNS: api.strale.io CNAMEs to a Railway-
+      generated *.up.railway.app hostname resolving straight to a Railway
+      edge IP -- no CDN hop. Response headers (Server: railway-hikari,
+      x-railway-edge: ams1) show only Railway's own edge, no cf-ray or other
+      CDN fingerprint. Decisive test: 3 POST /v1/do calls to the free-tier
+      email-validate capability from this machine -- no spoof, a single
+      spoofed X-Forwarded-For, and a multi-value spoofed X-Forwarded-For plus
+      a spoofed X-Real-IP -- all three produced the IDENTICAL ipHash in the
+      response's audit request_context, proving Railway's single edge hop
+      overwrites/strips client-supplied XFF and X-Real-IP rather than
+      appending to them. Script: apps/api/scripts/verify-ip-probe.mjs.
+      Receipt: archive/receipts/2026-09-02-audit-verify-ip-proxy-hops.json.
+    answer: >
+      Exactly ONE proxy hop (Railway's own edge; no Cloudflare/CDN in front
+      of api.strale.io). The leftmost X-Forwarded-For entry IS the true
+      client IP for requests through this path; client-supplied
+      X-Forwarded-For / X-Real-IP values cannot reach the application.
+      Current code (getClientIp, leftmost-XFF) is CORRECT and not spoofable
+      through this path.
+    note: >
+      Corrects FABLE-REAUDIT.md's CR-19 framing ("every extractor reads
+      leftmost XFF (spoofable)") for the topology as it actually exists.
+      Railway's own documentation is silent on XFF handling and its
+      community forum carries two directly contradictory staff answers on
+      the same question -- neither was relied on; the verdict rests on the
+      direct empirical test only. Caveat: single-machine, single-point-in-time
+      test against the public custom domain; does not cover Railway internal
+      private networking or a future platform-level change. See
+      docs/remediation/CURRENT-STATE.md "VERIFY-IP resolved" for the full
+      writeup.
   VERIFY-DEP:   {status: PARTIAL, blocks: [WP13], note: "1crit/14high/7mod/2low counted; reachability triage unrun"}
   VERIFY-LEGAL: {status: OPEN, blocks: [WP14], note: "Dilisense role, DPA, assent evidence"}
   VERIFY-P3:
