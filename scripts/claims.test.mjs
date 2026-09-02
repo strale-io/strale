@@ -187,7 +187,9 @@ test("a literal (non-regex) claim containing regex special characters matches on
 test("real repo: claims register is currently clean against every scanned surface", () => {
   const { findings, warnings } = checkAllClaims(realRoot);
   assert.deepEqual(findings, []);
-  assert.deepEqual(warnings, []);
+  // Surfaces outside this repository (the frontend's llms.txt) may carry a
+  // forbidden claim this repo cannot fix; they are reported, never fatal.
+  assert.deepEqual(warnings.filter((w) => w.code !== "FORBIDDEN_CLAIM_EXTERNAL"), []);
 });
 
 test("a forbidden row written as /pattern/ matches prose on a surface; a literal row matches verbatim", () => {
