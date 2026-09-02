@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { stringify } from "yaml";
-import { checkAllClaims, repoRootFrom, REGISTER_PATH, SCHEMA_PATH } from "./claims-lib.mjs";
+import { checkAllClaims, checkForbiddenClaims, compileMatcher, repoRootFrom, REGISTER_PATH, SCHEMA_PATH } from "./claims-lib.mjs";
 
 const realRoot = repoRootFrom(import.meta.url);
 const realSchema = readFileSync(join(realRoot, SCHEMA_PATH), "utf8");
@@ -188,4 +188,22 @@ test("real repo: claims register is currently clean against every scanned surfac
   const { findings, warnings } = checkAllClaims(realRoot);
   assert.deepEqual(findings, []);
   assert.deepEqual(warnings, []);
+});
+
+test("a forbidden row written as /pattern/ matches prose on a surface; a literal row matches verbatim", () => {
+  const dir = mkdtempSync(join(tmpdir(), "claims-slash-"));
+  try {
+    writeFileSync(join(dir, "README.md"), "Strale is enterprise-ready, SOC 2 certified, and trusted by 500+ companies.\n");
+    const rows = [
+      { id: "soc2", claim: "/\\bSOC\\s*2\\b/", status: "forbidden", surfaces: ["README"] },
+      { id: "social-proof", claim: "/\\b(trusted by|used by)\\s+\\d+(\\+|\\s*(companies|customers))?\\b/", status: "forbidden", surfaces: ["README"] },
+      { id: "literal", claim: "enterprise-ready", status: "forbidden", surfaces: ["README"] },
+      { id: "absent", claim: "/\\bISO 27001\\b/", status: "forbidden", surfaces: ["README"] },
+    ];
+    const found = checkForbiddenClaims(dir, rows).filter((f) => f.code === "FORBIDDEN_CLAIM_FOUND").map((f) => f.detail.match(/forbidden claim "([^"]+)"/)[1]).sort();
+    assert.deepEqual(found, ["literal", "soc2", "social-proof"]);
+    assert.equal(compileMatcher({ claim: "/abc/g" }).flags, "gi");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

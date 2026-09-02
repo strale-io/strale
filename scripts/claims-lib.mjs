@@ -132,10 +132,19 @@ export function checkEvidenceResolves(root, rows) {
   return warnings;
 }
 
-function compileMatcher(row) {
-  if (row.is_regex) {
+// A claim is a regex when it is written as /pattern/flags (the register's
+// form) or when the row says is_regex; anything else is a literal phrase.
+// The first version required is_regex and searched every /…/ row as literal
+// text, so none of the forbidden rows could match prose (found by the
+// orchestrator's plant during review of PR #488).
+const SLASH_REGEX = /^\/(.+)\/([a-z]*)$/s;
+export function compileMatcher(row) {
+  const slash = typeof row.claim === "string" ? SLASH_REGEX.exec(row.claim) : null;
+  if (slash || row.is_regex) {
     try {
-      return new RegExp(row.claim, "i");
+      const source = slash ? slash[1] : row.claim;
+      const flags = new Set([...(slash ? slash[2] : ""), "i"]);
+      return new RegExp(source, [...flags].join(""));
     } catch (err) {
       return null;
     }
