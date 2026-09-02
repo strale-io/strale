@@ -15,11 +15,11 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
   example_value: https://strale.dev
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ADMIN_SECRET
   purpose: Bearer secret protecting internal admin/dashboard endpoints.
   provider: internal
@@ -40,27 +40,26 @@
   holder: petter
   cost_class: free
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
-  cost_note: Free tier with registration.
+  cost_note: "Free tier with registration. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ADZUNA_APP_KEY
   purpose: Adzuna job-search API app key, paired with ADZUNA_APP_ID.
   provider: Adzuna
   holder: petter
   cost_class: free
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ALCHEMY_API_KEY
   purpose: Alchemy Ethereum RPC key, one of several RPC endpoint providers in eth-rpc-endpoints.ts (rotates across providers to spread load and survive a restart).
   provider: Alchemy
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -81,10 +80,10 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ALERT_RECIPIENTS
   purpose: Comma-separated override for who receives operational alert emails (defaults to petter@strale.io).
   provider: internal
@@ -122,10 +121,10 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: AUDIT_HMAC_SECRET
   purpose: HMAC secret signing audit-trail URLs (EU AI Act compliance links). Must be at least 32 characters.
   provider: internal
@@ -145,27 +144,26 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
   docs: docs/operations/hmac-rotation.md
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: AVIATIONSTACK_API_KEY
   purpose: Aviationstack flight-data API key for flight-status.
   provider: Aviationstack
   holder: petter
   cost_class: free
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
-  cost_note: Freemium tier; upgrade path is metered.
+  cost_note: "Freemium tier; upgrade path is metered. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: BAG_API_KEY
   purpose: Dutch BAG (Basisregistratie Adressen en Gebouwen) key for nl-bag-address.
   provider: Kadaster (Dutch BAG)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -175,7 +173,7 @@
 - name: BEACON_SUPABASE_SERVICE_ROLE_KEY
   purpose: Supabase service-role key for the Beacon project, paired with BEACON_SUPABASE_URL.
   provider: Supabase (Beacon project)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -184,7 +182,7 @@
 - name: BEACON_SUPABASE_URL
   purpose: Supabase project URL for 'Beacon' — a separate activity feed the daily digest folds in. Ownership/scope of the Beacon project itself is not established in this repo.
   provider: Supabase (Beacon project)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -196,10 +194,10 @@
   provider: Better Stack
   holder: petter
   cost_class: subscription
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: BOLAGSVERKET_CLIENT_ID
   purpose: Bolagsverket (Swedish Companies Registration Office) OAuth client ID for swedish-company-data.
   provider: Bolagsverket
@@ -258,7 +256,7 @@
 - name: CBEAPI_KEY
   purpose: Belgian CBE/KBO company-data vendor key for belgian-company-data.
   provider: CBE API (Belgium)
-  holder: unknown
+  holder: railway
   cost_class: subscription
   required_in:
     - production
@@ -289,10 +287,10 @@
   provider: Cobalt Intelligence
   holder: unknown
   cost_class: subscription
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: CODEX_CWD
   purpose: Working-directory hint from the Codex CLI's own turn-complete payload — not a Strale-owned variable; read by codex-notify.mjs to locate the repo when Codex doesn't pass one explicitly.
   provider: Codex CLI (OpenAI)
@@ -326,7 +324,7 @@
 - name: COURTLISTENER_API_TOKEN
   purpose: CourtListener API token for us-court-search.
   provider: CourtListener (Free Law Project)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -400,11 +398,11 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
   docs: apps/api/src/lib/production-authority.ts
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: DILISENSE_API_KEY
   purpose: Dilisense API key backing pep-check, adverse-media-check (primary), and (historically) sanctions-check — the single sanctions/PEP/adverse-media vendor per DEC-20260429-A.
   provider: Dilisense
@@ -422,15 +420,14 @@
   provider: EINsearch
   holder: unknown
   cost_class: subscription
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
-  cost_note: No active subscription as of the 2026-08-18 vendor audit.
+  cost_note: "No active subscription as of the 2026-08-18 vendor audit. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: EP_ONLINE_API_KEY
   purpose: Dutch EP-Online (energy performance certificate registry) key for nl-energy-label.
   provider: RVO EP-Online (Netherlands)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -442,32 +439,32 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ERC8004_REGISTRY_BASE
   purpose: ERC-8004 reputation registry contract address on Base.
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ERC8004_REGISTRY_ETH
   purpose: ERC-8004 reputation registry contract address on Ethereum mainnet.
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: ESORTCODE_API_KEY
   purpose: UK sort-code / Confirmation-of-Payee vendor key for uk-cop-check.
   provider: eSortCode (UK)
-  holder: unknown
+  holder: railway
   cost_class: subscription
   required_in:
     - production
@@ -477,7 +474,7 @@
 - name: ETHERSCAN_API_KEY
   purpose: Etherscan API key used by the shared etherscan-client for on-chain lookups across several web3-assurance evaluators.
   provider: Etherscan
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -498,11 +495,11 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
   example_value: "300000"
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: FRONTEND_URL
   purpose: Canonical frontend origin — used for CORS allow-list and building redirect/link URLs (Stripe checkout return, dispute links).
   provider: internal
@@ -520,7 +517,7 @@
 - name: GEMI_API_KEY
   purpose: Greek GEMI company-registry key for greek-company-data — the per-call parsing path opened by DEC-20260813-A.
   provider: GEMI (Greece)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -539,7 +536,7 @@
 - name: GITHUB_TOKEN
   purpose: Optional GitHub token used by the github-repo-compare capability to raise the unauthenticated GitHub API rate limit. Capability works without it, at the lower anonymous rate limit.
   provider: GitHub
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -560,47 +557,46 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: HEALTH_MONITOR_INBOUND
   purpose: Reply-To address for the health-monitor digest — email replies land on the reply-webhook route.
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: HMRC_CLIENT_ID
   purpose: HMRC (UK tax authority) OAuth client ID for production VAT lookups.
   provider: HMRC (UK)
   holder: petter
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
-  cost_note: Official UK government API, free with OAuth app registration.
+  cost_note: "Official UK government API, free with OAuth app registration. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: HMRC_CLIENT_SECRET
   purpose: HMRC OAuth client secret, paired with HMRC_CLIENT_ID.
   provider: HMRC (UK)
   holder: petter
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: HMRC_REQUESTER_VRN
   purpose: Optional GB VAT registration number of the requester — when set, HMRC issues a consultation reference number Strale surfaces as source_reference for the audit trail.
   provider: HMRC (UK)
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: HMRC_SANDBOX_CLIENT_ID
   purpose: HMRC sandbox OAuth client ID, used when HMRC_USE_SANDBOX is true and by the archived sandbox-retest script.
   provider: HMRC (UK)
@@ -635,11 +631,11 @@
   holder: petter
   cost_class: none
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: INTERNAL_SECRET
   purpose: Optional bearer secret for scripts/smoke-test.ts's internal API calls, distinct from ADMIN_SECRET. Empty by default.
   provider: internal
@@ -654,10 +650,10 @@
   provider: Jina AI
   holder: unknown
   cost_class: metered
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: JUSTIZONLINE_API_KEY
   purpose: JustizOnline IWG token for austrian-company-data (Firmenbuch HVD API). Passed as X-API-KEY; the WSDL 401s without it.
   provider: JustizOnline / BRZ (Austria)
@@ -675,22 +671,22 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: LOG_LEVEL
   purpose: Pino log level (trace|debug|info|warn|error|fatal). Defaults to info.
   provider: internal
   holder: petter
   cost_class: none
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
   example_value: info
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: NODE_ENV
   purpose: Standard Node environment flag; gates dev-only self-checks (e.g. iban-validate startup self-test) and pino transport pretty-printing.
   provider: internal
@@ -760,16 +756,16 @@
   holder: petter
   cost_class: none
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
   example_value: "false"
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: OPENREGISTER_API_KEY
   purpose: OpenRegister.de key for german-company-data.
   provider: OpenRegister (Germany)
-  holder: unknown
+  holder: railway
   cost_class: subscription
   required_in:
     - production
@@ -792,21 +788,21 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
   example_value: "60000"
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: PG_STATEMENT_TIMEOUT_MS
   purpose: Postgres statement_timeout applied to pooled connections (overridable per-statement with SET LOCAL for long jobs like REINDEX CONCURRENTLY).
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
   example_value: "30000"
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: PORT
   purpose: TCP port the Hono server listens on.
   provider: internal
@@ -862,20 +858,19 @@
   provider: Rekt Database
   holder: unknown
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
-  cost_note: Cost tier not independently re-verified this session.
+  cost_note: "Cost tier not independently re-verified this session. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: REPLY_WEBHOOK_SECRET
   purpose: Optional shared secret validating inbound requests to the health-monitor reply webhook.
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: RESEND_API_KEY
   purpose: Resend transactional-email API key for activation and health-digest emails.
   provider: Resend
@@ -890,40 +885,38 @@
   provider: Anthropic
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
   docs: apps/api/src/lib/models.ts
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: SDDA_API_CLIENT_ID
   purpose: Latvian SDDA (Enterprise Register) OAuth client ID for latvian-company-data-sdda.
   provider: SDDA (Latvia)
   holder: unknown
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
-  cost_note: Cost tier not independently re-verified this session.
+  cost_note: "Cost tier not independently re-verified this session. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: SDDA_API_CLIENT_SECRET
   purpose: Latvian SDDA OAuth client secret, paired with SDDA_API_CLIENT_ID.
   provider: SDDA (Latvia)
   holder: unknown
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: SEC_API_IO_TOKEN
   purpose: "sec-api.io token for us-sec-filings-extended. Per project_vendor_cost_facts (2026-08-18 audit): no active subscription exists."
   provider: sec-api.io
   holder: unknown
   cost_class: subscription
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
-  cost_note: No active subscription as of the 2026-08-18 vendor audit.
+  cost_note: "No active subscription as of the 2026-08-18 vendor audit. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: SERPER_API_KEY
   purpose: Serper.dev (Google Search API) key — google-search capability, and the fallback path for adverse-media-check when Dilisense doesn't cover a query.
   provider: Serper.dev
@@ -951,20 +944,20 @@
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: STRALE_API_KEY
   purpose: API key strale-mcp (packages/mcp-server) uses when calling the public Strale API on the caller's behalf. Per user_api_key.md, the copy in the root .env is dead (matches no account, verified 2026-08-25) — rotation needs write access Petter alone holds.
   provider: internal
-  holder: unknown
+  holder: local-only
   cost_class: none
   required_in:
     - local
   set_in:
     - .env
-  cost_note: The historical root .env value is confirmed dead; treat as needing a fresh key from Petter, not a rotation of the current one.
+  cost_note: Local smoke-test key. The value in Railway and in the rebuilt .env is the dead prefix sk_live_babb73df (matches no account since 2026-08-25); a fresh key needs an account with write access.
 - name: STRALE_API_URL
   purpose: Base URL an archived diagnostic script (empirical-screening-coverage.ts) targets. Defaults to production.
   provider: internal
@@ -981,12 +974,12 @@
   holder: petter
   cost_class: none
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
   example_value: http://localhost:3000
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: STRALE_FRONTEND_PATH
   purpose: Local filesystem path to the sibling strale-frontend checkout, read by check-platform-facts-drift.ts to scan frontend surfaces for stale vendor/count copy. Defaults to a hardcoded Windows path.
   provider: internal
@@ -1004,21 +997,21 @@
   holder: petter
   cost_class: none
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
   example_value: "200"
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: STRALE_PROCESSING_REGION
   purpose: Manual override for the EU AI Act processing-location marker when RAILWAY_REPLICA_REGION isn't authoritative (legacy alias, see processing-location.ts).
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: STRALE_REQUIRE_INTEGRATION_DB
   purpose: "Hard-fail flag: makes a missing DATABASE_URL_TEST a thrown error inside useTestDatabase() rather than a silent describe.skip, so an empty integration lane fails loudly instead of reporting green."
   provider: internal
@@ -1033,21 +1026,23 @@
 - name: STRALE_SMOKE_API_KEY
   purpose: API key an archived smoke-test script (solution-execution-smoke.mts) uses to exercise solution execution end to end.
   provider: internal
-  holder: unknown
+  holder: local-only
   cost_class: none
   required_in:
     - local
   set_in:
     - .env
+  cost_note: Local smoke-test key; never set anywhere on 2026-09-02.
 - name: STRALE_TEST_API_KEY
   purpose: API key used by archived/ad-hoc scripts (empirical-screening-coverage.ts, sweep-prod-catalog.ts fallback) to authenticate against the live API for read-style diagnostics.
   provider: internal
-  holder: unknown
+  holder: local-only
   cost_class: none
   required_in:
     - local
   set_in:
     - .env
+  cost_note: Local test key; never set anywhere on 2026-09-02.
 - name: STRIPE_SECRET_KEY
   purpose: Stripe secret key for wallet top-up Checkout sessions. LIVE (sk_live_) in production, sk_test_ locally.
   provider: Stripe
@@ -1078,7 +1073,7 @@
 - name: SUDREG_CLIENT_ID
   purpose: Croatian Sudski registar (court register) OAuth client ID for croatian-company-data.
   provider: Sudski registar (Croatia)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -1088,7 +1083,7 @@
 - name: SUDREG_CLIENT_SECRET
   purpose: Croatian Sudski registar OAuth client secret, paired with SUDREG_CLIENT_ID.
   provider: Sudski registar (Croatia)
-  holder: unknown
+  holder: railway
   cost_class: free
   required_in:
     - production
@@ -1149,29 +1144,28 @@
   provider: Tenderly
   holder: unknown
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: TENDERLY_ACCOUNT
   purpose: Tenderly account slug for the tenderly-simulation web3-assurance evaluator.
   provider: Tenderly
   holder: unknown
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
-  cost_note: Assumed free tier — not independently verified this session.
+  cost_note: "Assumed free tier — not independently verified this session. Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: TENDERLY_PROJECT
   purpose: Tenderly project slug, paired with TENDERLY_ACCOUNT.
   provider: Tenderly
   holder: unknown
   cost_class: free
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: TREE_GUARD_THRESHOLD
   purpose: Tracked-file-count threshold above which scripts/guard-tree-integrity.mjs treats a sudden drop as the Windows checkout-corruption bug (Shared-Checkout Rule) rather than a real deletion.
   provider: internal
@@ -1199,29 +1193,29 @@
   holder: petter
   cost_class: metered
   required_in:
-    - production
     - local
   set_in:
     - railway
     - .env
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: WEBHOOK_URL
   purpose: Generic outbound webhook URL used by lib/webhook.ts for operational notifications.
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: X402_CHALLENGE_VERSION
   purpose: Which x402 challenge/response protocol version (1 or 2) the gateway advertises — a config switch so the version bump takes effect without a code change.
   provider: internal
   holder: petter
   cost_class: none
-  required_in:
-    - production
+  required_in: []
   set_in:
     - railway
+  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: X402_FACILITATOR_URL
   purpose: "Legacy HTTP x402 facilitator URL, used only when no CDP credentials are configured. Read indirectly: resolveFacilitatorSelection(process.env as FacilitatorEnv) destructures it inside x402-gateway.ts rather than the literal `process.env.X402_FACILITATOR_URL` text this manifest's checker scans for."
   provider: internal

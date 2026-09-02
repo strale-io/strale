@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-214 files (187 with a recorded intent, 27 without).
+215 files (188 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -22,6 +22,7 @@
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t12-research-contract.md`](_general/from-code/2026-09-02-t12-research-contract.md) | Implement T12 (Research contract) — front-matter schema, checker, |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t11-website-hygiene.md`](_general/from-code/2026-09-02-t11-website-hygiene.md) | preserve every piece of website design material that lived outside git on the founder's machine, sweep the frontend r... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md`](_general/from-code/2026-09-02-t1-m2-closure-audit.md) | close the M2 audit gap by shipping a machine-checked disposition register, so the next session (Claude Code or Codex)... |
+| 2026-09-02 | [`handoff/_general/from-code/2026-09-02-env-rebuilt-and-tools-recommendation.md`](_general/from-code/2026-09-02-env-rebuilt-and-tools-recommendation.md) | rebuild the two credential files lost in the 2026-09-02 checkout deletion from Railway, correct the environment manif... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md`](_general/from-code/2026-09-02-claude-code-resume-checkpoint.md) | Make a clean Claude Code continuation deterministic without activating repo-native authority before M4. |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-checkin-morning.md`](_general/from-code/2026-09-02-checkin-morning.md) | Run the 2026-09-02 morning operating session — and, once the run found the |
 | 2026-09-01 | [`handoff/_general/from-code/2026-09-01-x402-price-representation-parity.md`](_general/from-code/2026-09-01-x402-price-representation-parity.md) | Close the x402 public price-representation drift without changing what customers are challenged or charged. |

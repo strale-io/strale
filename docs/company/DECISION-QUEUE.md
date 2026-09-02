@@ -14,7 +14,17 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-29** · `your_call` · owner Petter · raised 2026-09-02T07:10Z · no deadline — **two credential files were deleted and only you can restore them**
+**DQ-29** · `resolved` · owner Petter → Claude · raised 2026-09-02T07:10Z · resolved 2026-09-02T21:30Z — **two credential files were deleted and only you can restore them**
+*Resolution:* Petter asked the session to handle it. Both files were rebuilt
+from Railway's variables through the CLI (19 keys copied, values never shown
+in the session; the database answers read-only queries again). Two things
+were deliberately not copied: the live Stripe keys (local development uses
+test-mode keys, which Railway does not hold — only needed if you want to
+exercise top-ups locally) and the dead `STRALE_API_KEY`. The remaining
+placeholders are optional local settings. The environment manifest now
+records who holds each key; see the tools recommendation in the T14
+follow-up handoff of 2026-09-02.
+*Original text:*
 While cleaning up old worktrees, my script deleted the main project folder
 itself (the code and history came straight back from GitHub; nothing committed
 was lost, and production was never touched). Two files are not in git and are

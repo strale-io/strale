@@ -7,7 +7,15 @@
   "items": {
     "type": "object",
     "additionalProperties": false,
-    "required": ["name", "purpose", "provider", "holder", "cost_class", "required_in", "set_in"],
+    "required": [
+      "name",
+      "purpose",
+      "provider",
+      "holder",
+      "cost_class",
+      "required_in",
+      "set_in"
+    ],
     "properties": {
       "name": {
         "type": "string",
@@ -26,26 +34,54 @@
       },
       "holder": {
         "type": "string",
-        "enum": ["petter", "railway", "github-actions", "local-only", "unknown"],
+        "enum": [
+          "petter",
+          "railway",
+          "github-actions",
+          "local-only",
+          "unknown"
+        ],
         "description": "Who holds the real value. 'unknown' is allowed and must be listed in the handoff for Petter to fill in."
       },
       "cost_class": {
         "type": "string",
-        "enum": ["free", "metered", "subscription", "none"],
+        "enum": [
+          "free",
+          "metered",
+          "subscription",
+          "none"
+        ],
         "description": "'none' for internal config with no external cost (flags, URLs, internal secrets)."
       },
       "required_in": {
         "type": "array",
-        "minItems": 1,
+        "minItems": 0,
         "uniqueItems": true,
-        "items": { "type": "string", "enum": ["production", "test", "local", "ci"] },
-        "description": "Which contexts fail to boot/run correctly without this set."
+        "items": {
+          "type": "string",
+          "enum": [
+            "production",
+            "test",
+            "local",
+            "ci"
+          ]
+        },
+        "description": "Which contexts fail to boot/run correctly without this set. Empty means none: the variable is optional everywhere (feature off or fallback when unset)."
       },
       "set_in": {
         "type": "array",
         "minItems": 1,
         "uniqueItems": true,
-        "items": { "type": "string", "enum": ["railway", ".env", ".env.test", "workflow", "none"] },
+        "items": {
+          "type": "string",
+          "enum": [
+            "railway",
+            ".env",
+            ".env.test",
+            "workflow",
+            "none"
+          ]
+        },
         "description": "Where the real value(s) actually live today. 'none' for a variable that is read but never actually configured anywhere (dead-but-not-yet-marked-retired candidate)."
       },
       "cost_note": {
