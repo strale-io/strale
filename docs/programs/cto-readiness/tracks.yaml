@@ -196,7 +196,8 @@ tracks:
 
   - id: T4
     title: Remediation program closure
-    status: active
+    status: blocked
+    blocker: production read-only access needs the root .env and apps/api/.env that were lost on 2026-09-02 (DQ-29); Petter recreates them, then T4 resumes
     gate: none
     depends_on: []
     owner: session
@@ -217,15 +218,24 @@ tracks:
 
   - id: T5
     title: CTO-readable repository structure
-    status: queued
+    status: active
     gate: none
-    depends_on: [T2, T4]
+    depends_on: [T2]
     owner: session
     next_action: >
-      Rewrite README.md top-down for a stranger; add a docs/ index; index
-      archive/ and handoff/; move non-canon root files; reach or record every
-      deviation from the migration plan section 5 target architecture.
-    resume_file: null
+      (Dependency on T4 dropped 2026-09-02: T5 moves nothing under docs/,
+      so remediation closure need not precede it; T4 is blocked on DQ-29.)
+      Per the stored plan: README.md rewritten top-down for a stranger;
+      docs/README.md with an authority status per subtree and docs:check;
+      generated archive/ and handoff/ indexes with a --check in CI; root
+      reduced to canon, LICENSE, build files and registry manifests (the two
+      checklists move under docs/governance/protocols with references
+      updated; manifests-drafts archived if nothing reads it);
+      docs/project/STRUCTURE.md records every deviation from the migration
+      plan's target layout with a reason and owner track; LESSONS F5 gains
+      the standing rule that no checker ships before it has failed on a
+      planted case.
+    resume_file: archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md
     exit:
       - README.md routes a stranger from product to code to process in one read
       - docs/README.md indexes every docs/ subtree with one line each
