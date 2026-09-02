@@ -16,6 +16,13 @@ review_route: author-self-verification-plus-fresh-codex-review
 
 ## Resume here
 
+> **State on 2026-09-02, end of the founder's authority plan.** Every
+> track the founder approved that day is done (T3, T11–T15, T5). The
+> program is paused: T4 waits for Petter to recreate the two `.env`
+> files (DQ-29), T10 waits for the Codex quota (2026-09-07). The next
+> session sets one of them back to `active` once its blocker clears and
+> follows its `next_action`.
+
 Any fresh session, **Claude Code or Codex**, resumes this program by starting
 here and following only the pointers below:
 
