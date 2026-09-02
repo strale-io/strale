@@ -32,7 +32,7 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
 |---|---|
 | Legacy-authority inventory (15) | 6 migrated (3 partial, 3 not started), 7 archive, 2 obsolete, 0 unclear, 0 evidence-only |
 | Decision source rows (318) | 23 formally migrated, 70 unresolved collision (69 Notion duplicates + 1 cross-surface), 1 resolved collision, 1 intentionally historical, 6 obsolete or superseded, 212 not yet reconciled, 5 unclear |
-| Of which public in the register | 95 rows (identity already on main); 71 carry a clear title (exactly the collision-registry strings), 24 a title hash |
+| Of which public in the register | 95 rows (page id and ID already on main); 71 carry a clear title (exactly the collision-registry strings), 24 a title hash; scope and date are hashed on every public row because main does not publish them |
 | Of which private | 223 rows (212 pending, 6 superseded, 5 unclear), counts and digest in the register, rows in the archive |
 | Formal records (27) | 23 with a Notion source row, 4 Git-native |
 | Plan forward statements (5) | 3 merged, 1 partially merged, 1 open (this audit) |
@@ -46,8 +46,9 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
   titles and that a full row list would add 218 page IDs and 140 Decision IDs
   to the public repository. A row is now public only if its page id and ID
   already appear on `main`; a clear title appears only where
-  `id-collisions.yaml` already publishes that exact string; everything else
-  is hashed or kept in the private archive. Whether the row-level register may
+  `id-collisions.yaml` already publishes that exact string; scope and date
+  are hashed on every public row; everything else is hashed or kept in the
+  private archive. Whether the row-level register may
   become public is queued for the founder in `DECISION-QUEUE.md`; nothing
   waits on it.
 - `handoff/` is **archive**, per the migration map's "promote remaining current

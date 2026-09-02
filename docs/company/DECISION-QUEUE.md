@@ -17,9 +17,10 @@ fill the expanded panel.
 **DQ-28** · `your_call` · owner Petter · raised 2026-09-02T02:30Z · no deadline — **may the row-level M2 Decision register become public?**
 The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the
 public repository's boundary exactly where M0 left it: the public register
-lists only the 95 rows whose page id and Decision ID are already on `main`,
-and the other 223 rows (identity fields only, titles hashed, no decision text)
-sit in the private archive repository. That is workable but clumsy: the next
+lists only the 95 rows whose page id and Decision ID are already on `main`
+(with their titles, scopes and dates hashed), and the other 223 rows (identity
+fields only, titles hashed, no decision text) sit in the private archive
+repository. That is workable but clumsy: the next
 Decision batch is named by a count and a digest in public and by rows in
 private, and every future M2 batch will have to shuttle rows across.
 *What you are deciding:* whether page ids, Decision IDs, dates, statuses and

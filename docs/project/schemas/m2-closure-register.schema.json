@@ -276,7 +276,7 @@
     "decisionRow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["page_id", "id", "historical_status", "historical_scope", "decided_at", "source_url", "disposition", "evidence", "rationale"],
+      "required": ["page_id", "id", "historical_status", "source_url", "disposition", "evidence", "rationale"],
       "properties": {
         "page_id": { "$ref": "#/$defs/pageId" },
         "id": { "type": ["string", "null"] },
@@ -285,6 +285,7 @@
         "historical_status": { "type": ["string", "null"], "enum": ["active", "superseded", "reversed", null] },
         "historical_scope": { "type": ["string", "null"], "enum": ["global", "feature", "temporary", null] },
         "decided_at": { "$ref": "#/$defs/date" },
+        "scope_date_sha256": { "$ref": "#/$defs/sha64" },
         "source_url": { "type": "string", "pattern": "^https://app\\.notion\\.com/[0-9a-f]{32}$" },
         "disposition": {
           "enum": ["formally_migrated", "unresolved_collision", "resolved_collision", "intentionally_historical", "obsolete_or_superseded", "not_yet_reconciled", "unclear"]
@@ -309,6 +310,12 @@
         { "required": ["title_sha256"], "not": { "required": ["title"] } }
       ],
       "allOf": [
+        {
+          "oneOf": [
+            { "required": ["historical_scope", "decided_at"], "not": { "required": ["scope_date_sha256"] } },
+            { "required": ["scope_date_sha256"], "not": { "anyOf": [{ "required": ["historical_scope"] }, { "required": ["decided_at"] }] } }
+          ]
+        },
         { "if": { "properties": { "disposition": { "const": "formally_migrated" } } }, "then": { "required": ["record_key"] } },
         { "if": { "properties": { "disposition": { "enum": ["unresolved_collision", "resolved_collision"] } } }, "then": { "required": ["collision"] } },
         { "if": { "properties": { "disposition": { "const": "unclear" } } }, "then": { "properties": { "id": { "type": "null" } } } }

@@ -6,8 +6,10 @@
 # Dispositions are audit findings about migration state, never restatements of decision content.
 # Public boundary: a Decision row appears here only if its page id and historical ID are already
 # public on main; a clear title appears only where docs/decisions/id-collisions.yaml already
-# publishes that exact string. Every other row is a title hash, and rows that are not yet public
-# live in the private archive (private_rows) and are represented here by counts and digests.
+# publishes that exact string. Scope and date are never published here (main does not publish
+# them for these rows): every public row carries scope_date_sha256 instead. Every other row is a
+# title hash, and rows that are not yet public live in the private archive (private_rows) and are
+# represented here by counts and digests.
 # Row identity fields are copies from the private preservation archive; they are verified against
 # it by scripts/m2-closure-verify-private-rows.mjs, not by CI.
 schema_version: 2
@@ -39,14 +41,15 @@ sources:
   migration_plan:
     path: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
 digests:
-  canonical_row_format: page_id|id|historical_status|historical_scope|decided_at|sha256(title)|disposition,
-    rows sorted by page_id, joined by LF with a trailing LF, SHA-256 of the UTF-8 bytes
+  canonical_row_format: page_id|id|historical_status|sha256(historical_scope|decided_at)|sha256(title)|disposition,
+    rows sorted by page_id, joined by LF with a trailing LF, SHA-256 of the UTF-8 bytes; public rows carry
+    scope_date_sha256 and title_sha256 in place of the clear values
   public_rows:
     count: 95
-    digest: 8744eb96b6bc6265c6dcc77bb236f2efeace00917e683746a54081611f76e4cc
+    digest: a66cb62edf9ef1b4f89ea02296ae3ad097792de6626b6eab8bc7abce5f10a1a3
   all_rows:
     count: 318
-    digest: 14077c622e5bd4ff9bde40987c9359d467b1fd5fb902f2f2c70a3a7bcbb43489
+    digest: 26e89fcc7dee25f3a5584218d633177f260b6ffd9496bb8e135ab124ae82a77c
 counts:
   legacy_inventory:
     migrated: 6
@@ -442,8 +445,6 @@ decision_rows:
   title: Add failed_requests table to MVP schema. Log every no_matching_capability response with task,
     category, max_price_cents, user_id. Turns failures into provider recruitment data for Phase 2.
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
   source_url: https://app.notion.com/31267c87082c81279b14f3859f6f2038
   collision:
     id: DEC-20260225-P-c5d6
@@ -455,6 +456,7 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: f7b82f92bc19145e5f516326a4053107be72b32ef9ce611769e6c5ab510c2dcb
 - page_id: 31267c87082c818e9d46cd25ac0236a8
   id: DEC-20260225-P-c5d6
   title: 'GTM strategy: Demo-first, no community credibility required. Three launch outputs in week 4-5:
@@ -462,8 +464,6 @@ decision_rows:
     Framework integrations (LangChain, CrewAI) as primary distribution in weeks 5-8. HN Show post with
     real transaction data in week 6-7.'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-02-25'
   source_url: https://app.notion.com/31267c87082c818e9d46cd25ac0236a8
   collision:
     id: DEC-20260225-P-c5d6
@@ -475,12 +475,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: f7b82f92bc19145e5f516326a4053107be72b32ef9ce611769e6c5ab510c2dcb
 - page_id: 31867c87082c812dba47c52f4f36ca33
   id: DEC-20260303-A
   title: 'Solution discovery UX: smart input with AI recommendation card (not chat, not traditional search)'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
   source_url: https://app.notion.com/31867c87082c812dba47c52f4f36ca33
   collision:
     id: DEC-20260303-A
@@ -492,12 +491,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 4330ec358018c70ff74f1e42ec4d2688e5d41f158aafd7176052d7ba6ff23c12
 - page_id: 31867c87082c813198e2da8e3d02b531
   id: DEC-20260303-A
   title: Problem→Solution section uses SVG diagrams + bullet lists, no code blocks
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-03'
   source_url: https://app.notion.com/31867c87082c813198e2da8e3d02b531
   collision:
     id: DEC-20260303-A
@@ -509,13 +507,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 4330ec358018c70ff74f1e42ec4d2688e5d41f158aafd7176052d7ba6ff23c12
 - page_id: 31867c87082c812c9ccef7f58256f40a
   id: DEC-20260304-A
   title: 'Homepage v2.1 polish: comparison back to #2, remove Built for Agents, compact three-steps, tabbed
     integrations, static discovery'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-04'
   source_url: https://app.notion.com/31867c87082c812c9ccef7f58256f40a
   collision:
     id: DEC-20260304-A
@@ -527,12 +524,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 1c0b7687b48e7ac56795d751e1463d223253fc2ec81801f4af50ba77c1f7f403
 - page_id: 31967c87082c8185b0a6c33de2293215
   id: DEC-20260304-A
   title: Hide component prices in discovery UI
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-04'
   source_url: https://app.notion.com/31967c87082c8185b0a6c33de2293215
   collision:
     id: DEC-20260304-A
@@ -544,12 +540,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 1c0b7687b48e7ac56795d751e1463d223253fc2ec81801f4af50ba77c1f7f403
 - page_id: 31867c87082c81a4b2f7ccdd52b99b1e
   id: DEC-20260304-B
   title: 'Stats bar: swap 27 Countries for 15 Solutions'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-04'
   source_url: https://app.notion.com/31867c87082c81a4b2f7ccdd52b99b1e
   collision:
     id: DEC-20260304-B
@@ -561,12 +556,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 1c0b7687b48e7ac56795d751e1463d223253fc2ec81801f4af50ba77c1f7f403
 - page_id: 31967c87082c81dda9c4f43b5b7674b3
   id: DEC-20260304-B
   title: Kill 'Compare with DIY' cost calculator feature
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-04'
   source_url: https://app.notion.com/31967c87082c81dda9c4f43b5b7674b3
   collision:
     id: DEC-20260304-B
@@ -578,12 +572,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 1c0b7687b48e7ac56795d751e1463d223253fc2ec81801f4af50ba77c1f7f403
 - page_id: 31867c87082c810197f9efa520332024
   id: DEC-20260304-C
   title: Trust verification card redesigned as monitoring dashboard panel, not product card
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-04'
   source_url: https://app.notion.com/31867c87082c810197f9efa520332024
   collision:
     id: DEC-20260304-C
@@ -595,12 +588,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 1c0b7687b48e7ac56795d751e1463d223253fc2ec81801f4af50ba77c1f7f403
 - page_id: 31967c87082c815cb440e586e783df0a
   id: DEC-20260304-C
   title: Trust data must never be displayed with false confidence
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-04'
   source_url: https://app.notion.com/31967c87082c815cb440e586e783df0a
   collision:
     id: DEC-20260304-C
@@ -612,25 +604,23 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 2749259cb3788bb32ff50e60b42d2350ff9894643f0bc33e9395d01beb92ca20
 - page_id: 32967c87082c81b7a8ccd169b431f99c
   id: DEC-20260320-B
   title_sha256: e97bf872a4ed3aa042b72873bfc830b28d0811986f22973d04c4f84de1af2a99
   historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-03-20'
   source_url: https://app.notion.com/32967c87082c81b7a8ccd169b431f99c
   record_key: DEC-20260320-B
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260320-B.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: ad13c588d09ef43a43bfb32f40c99723579788001f4a7fe556105525c715fe13
 - page_id: 32967c87082c81178c7acc8b5c396aa3
   id: DEC-20260320-C
   title: 'Hotfix: auto-register must filter .d.ts declaration files + startup health gate (MIN_EXPECTED_EXECUTORS
     = 200)'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
   source_url: https://app.notion.com/32967c87082c81178c7acc8b5c396aa3
   collision:
     id: DEC-20260320-C
@@ -642,12 +632,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: b36f0f3aae0240909c8cf7f8bff8a77802d9725132ee7fafec2b09256485456c
 - page_id: 32967c87082c81bfa5d1ee04b7d753dc
   id: DEC-20260320-C
   title: au-company-data capability onboarded via ABR API (Australian Business Register)
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
   source_url: https://app.notion.com/32967c87082c81bfa5d1ee04b7d753dc
   collision:
     id: DEC-20260320-C
@@ -659,13 +648,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: b36f0f3aae0240909c8cf7f8bff8a77802d9725132ee7fafec2b09256485456c
 - page_id: 32967c87082c8177a82be21d48f57411
   id: DEC-20260320-J
   title: 'Dynamic methodology text: capability counts, solution counts, and test suite counts must never
     be hardcoded. Always query live data.'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-20'
   source_url: https://app.notion.com/32967c87082c8177a82be21d48f57411
   collision:
     id: DEC-20260320-J
@@ -677,12 +665,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: ad13c588d09ef43a43bfb32f40c99723579788001f4a7fe556105525c715fe13
 - page_id: 32967c87082c8192b920f8d8cfb40aa7
   id: DEC-20260320-J
   title: pep-check uses transparency tag mixed instead of commercial_data
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
   source_url: https://app.notion.com/32967c87082c8192b920f8d8cfb40aa7
   collision:
     id: DEC-20260320-J
@@ -694,12 +681,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: b36f0f3aae0240909c8cf7f8bff8a77802d9725132ee7fafec2b09256485456c
 - page_id: 32967c87082c818e8cbbc29a3a0c1bed
   id: DEC-20260320-K
   title: KYB + Invoice Verify implementation complete — 60 solutions, 3 capabilities, all docs updated
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-03-20'
   source_url: https://app.notion.com/32967c87082c818e8cbbc29a3a0c1bed
   collision:
     id: DEC-20260320-K
@@ -711,13 +697,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: ad13c588d09ef43a43bfb32f40c99723579788001f4a7fe556105525c715fe13
 - page_id: 32967c87082c81e890bfe564a3c2e917
   id: DEC-20260320-K
   title: 'Free-tier showcase protection: 5 free-tier capabilities get dedicated meta-monitor alerting
     on any quality degradation. These are the front door.'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-03-20'
   source_url: https://app.notion.com/32967c87082c81e890bfe564a3c2e917
   collision:
     id: DEC-20260320-K
@@ -729,13 +714,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: b36f0f3aae0240909c8cf7f8bff8a77802d9725132ee7fafec2b09256485456c
 - page_id: 33967c87082c810c920dd09d78aa06b6
   id: DEC-20260405-B
   title: 'DEC-20260405-B: Solution execution transaction storage model and Phase 1.4 migration tooling
     workaround'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-05'
   source_url: https://app.notion.com/33967c87082c810c920dd09d78aa06b6
   collision:
     id: DEC-20260405-B
@@ -747,12 +731,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 3a989986c7b6d135f79cf5a3b1327e839a04d3fc5339648685b95f96ec7598a3
 - page_id: 33967c87082c816b825cdf812ef006b8
   id: DEC-20260406-A
   title: 'DEC-20260406-A: Fix missing per-step latencyMs capture in solution audit_trail'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-06'
   source_url: https://app.notion.com/33967c87082c816b825cdf812ef006b8
   collision:
     id: DEC-20260406-A
@@ -764,13 +747,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 59da6ba54c77464cefc0c752186a93736e548ceaaa22657f13fe01f5992de889
 - page_id: 33a67c87082c81bdb38fd9eeaa556d98
   id: DEC-20260406-A
   title: Consolidate working rules for Claude (chat), CC, and Notion governance into single source-of-truth
     page
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-06'
   source_url: https://app.notion.com/33a67c87082c81bdb38fd9eeaa556d98
   collision:
     id: DEC-20260406-A
@@ -782,12 +764,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 24afee613444aa87b84c4b70b117914b9fcf7977d140768a4f9b7e60c93da86d
 - page_id: 33967c87082c8103becfe4900a1ff319
   id: DEC-20260406-B
   title: 'DEC-20260406-B: Fix nested field reference resolution in solution input mapping'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-06'
   source_url: https://app.notion.com/33967c87082c8103becfe4900a1ff319
   collision:
     id: DEC-20260406-B
@@ -799,12 +780,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 59da6ba54c77464cefc0c752186a93736e548ceaaa22657f13fe01f5992de889
 - page_id: 33a67c87082c81629339d9f208f65f52
   id: DEC-20260406-B
   title: Restructure Notion workspace around Operating Manual as single entry point and four-layer model
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-06'
   source_url: https://app.notion.com/33a67c87082c81629339d9f208f65f52
   collision:
     id: DEC-20260406-B
@@ -816,12 +796,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 24afee613444aa87b84c4b70b117914b9fcf7977d140768a4f9b7e60c93da86d
 - page_id: 33a67c87082c814b8afafb2e1c6ca317
   id: DEC-20260406-C
   title: Project Home physical tidy — canonical set at top level, ~90 pages archived to Archive — Q1 2026
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-06'
   source_url: https://app.notion.com/33a67c87082c814b8afafb2e1c6ca317
   collision:
     id: DEC-20260406-C
@@ -833,12 +812,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 24afee613444aa87b84c4b70b117914b9fcf7977d140768a4f9b7e60c93da86d
 - page_id: 33a67c87082c819cabf6d47331d695ce
   id: DEC-20260406-C
   title: 'Rule E added to Working Rules: brand voice is institutional and human, no em dashes'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-06'
   source_url: https://app.notion.com/33a67c87082c819cabf6d47331d695ce
   collision:
     id: DEC-20260406-C
@@ -850,12 +828,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 24afee613444aa87b84c4b70b117914b9fcf7977d140768a4f9b7e60c93da86d
 - page_id: 33d67c87082c81c19655cb04fb7d3ecf
   id: DEC-20260409-C
   title: 'Gate 4: Solution-level smoke tests in scheduler'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-09'
   source_url: https://app.notion.com/33d67c87082c81c19655cb04fb7d3ecf
   collision:
     id: DEC-20260409-C
@@ -867,12 +844,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 7af30beb5bacfab423878190471799ba04200720f0c414065adcba11f59a6b5e
 - page_id: 33d67c87082c81f4a3ffcb774b1d84e4
   id: DEC-20260409-C
   title: 'Gate 4: Solution-level smoke tests in scheduler'
   historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-04-09'
   source_url: https://app.notion.com/33d67c87082c81f4a3ffcb774b1d84e4
   collision:
     id: DEC-20260409-C
@@ -884,13 +860,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 7af30beb5bacfab423878190471799ba04200720f0c414065adcba11f59a6b5e
 - page_id: 34867c87082c81409ee0d6c992ce3d43
   id: DEC-20260420-D
   title: 'SA.2b per-capability PII classification: manifest-declared field + 12-value category enum +
     heuristic fallback during backfill + blocking gate for new capabilities + 15/15 top backfill shipped'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81409ee0d6c992ce3d43
   collision:
     id: DEC-20260420-D
@@ -902,13 +877,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81f0827eedf29d133600
   id: DEC-20260420-D
   title: 'SA.2b per-capability PII classification: manifest-declared field + 12-value category enum +
     heuristic fallback during backfill + blocking gate for new capabilities + 15/15 top backfill shipped'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81f0827eedf29d133600
   collision:
     id: DEC-20260420-D
@@ -920,13 +894,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81b590b4e8bee4b59228
   id: DEC-20260420-E
   title: 'F-A-005 free-tier transaction lookup redaction: always-redact (path a), asymmetric marker (unauth-only),
     single commit, 200 + body_redacted envelope, verify endpoint untouched'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81b590b4e8bee4b59228
   collision:
     id: DEC-20260420-E
@@ -938,12 +911,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81d5a898f48cc1554086
   id: DEC-20260420-E
   title: Product architecture and first wedge
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81d5a898f48cc1554086
   collision:
     id: DEC-20260420-E
@@ -955,13 +927,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 070e9dfc465beefb4d0b13c74ec4c5de7c151bcb7c41cf9f63ab3b4d5a25a9cc
 - page_id: 34867c87082c810b8547fccb3e75c61b
   id: DEC-20260420-F
   title: 'F-A-006 + F-A-007 HMAC audit token lifecycle: 90-day bounded expiry, two-key rotation ring,
     separate query params encoding, 180-day legacy grace, auth-gated re-issue endpoint. Two commits shipped.'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c810b8547fccb3e75c61b
   collision:
     id: DEC-20260420-F
@@ -973,12 +944,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c810b8df1e8e459039d35
   id: DEC-20260420-F
   title: Capability rationalization and site rebuild
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c810b8df1e8e459039d35
   collision:
     id: DEC-20260420-F
@@ -990,13 +960,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 070e9dfc465beefb4d0b13c74ec4c5de7c151bcb7c41cf9f63ab3b4d5a25a9cc
 - page_id: 34867c87082c81c38c3acaca5d01d6ef
   id: DEC-20260420-G
   title: 'F-A-012 verify endpoint DoS hardening: MAX_DEPTH 200→50, DEFAULT_DEPTH 50→20, rate limit 30→10/min
     per IP, explicit truncated marker. Single commit shipped.'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81c38c3acaca5d01d6ef
   collision:
     id: DEC-20260420-G
@@ -1008,12 +977,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81dcafe3dea59cc119b1
   id: DEC-20260420-G
   title: Entity resolution as priority engineering investment
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81dcafe3dea59cc119b1
   collision:
     id: DEC-20260420-G
@@ -1025,12 +993,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 070e9dfc465beefb4d0b13c74ec4c5de7c151bcb7c41cf9f63ab3b4d5a25a9cc
 - page_id: 34867c87082c81b58b36de5f71c0937f
   id: DEC-20260420-H
   title: Strale positioning and ICP clarification
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81b58b36de5f71c0937f
   collision:
     id: DEC-20260420-H
@@ -1042,14 +1009,13 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 070e9dfc465beefb4d0b13c74ec4c5de7c151bcb7c41cf9f63ab3b4d5a25a9cc
 - page_id: 34867c87082c81c6a58dfbc5f46ed3f6
   id: DEC-20260420-H
   title: 'Option C for 238-slug manifest drift: fix Class 5.2 mapping + add backfill safety banner, defer
     full Class 4 cleanup to Session 1 onboarding engine rewrite. SA.2b.c will use direct-SQL backfill
     to avoid the pipeline entirely.'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81c6a58dfbc5f46ed3f6
   collision:
     id: DEC-20260420-H
@@ -1061,13 +1027,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c8172a41ac4c9d52904de
   id: DEC-20260420-I
   title: SA.2b.c direct-SQL backfill of 260 remaining capabilities with PII classification + 2 Class 2
     fixture fixes. Complete.
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c8172a41ac4c9d52904de
   collision:
     id: DEC-20260420-I
@@ -1079,13 +1044,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81c8b9d4c6b5568bbcef
   id: DEC-20260420-I
   title: Adopt split-by-data-source-type as the operable form of the "direct connections only" doctrine.
     Amends DEC-20260420-H.
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81c8b9d4c6b5568bbcef
   collision:
     id: DEC-20260420-I
@@ -1097,14 +1061,13 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 070e9dfc465beefb4d0b13c74ec4c5de7c151bcb7c41cf9f63ab3b4d5a25a9cc
 - page_id: 34867c87082c81478c15cb6985d10137
   id: DEC-20260420-J
   title: 'SA.2b.d closes Session A: 32 orphans classified (15 TRUE/17 FALSE), processes_personal_data
     flipped to NOT NULL with default false, heuristic fallback deleted from audit-helpers.ts + all three
     call sites in do.ts. Session A formally complete.'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81478c15cb6985d10137
   collision:
     id: DEC-20260420-J
@@ -1116,13 +1079,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81dc803bc3709bd5fdd6
   id: DEC-20260420-J
   title: SUPERSEDED 2026-04-20 by DEC-20260420-K. Original decision (defer bank verification to v1.1)
     was incorrect — the v1 vision has not changed, bank verification is a launch gate, not a descope.
   historical_status: superseded
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81dc803bc3709bd5fdd6
   collision:
     id: DEC-20260420-J
@@ -1134,6 +1096,7 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c8198b6ecf3569a68a9b4
   id: DEC-20260420-K
   title: 'Session B Open Questions resolved: OQ-1 hybrid split ownership, OQ-2 5-second countdown + CI=1
@@ -1141,8 +1104,6 @@ decision_rows:
     env-var kill switch + add --skip-gates=<reason> CLI flag, OQ-6 delete transparency-tag heuristic default
     (same pattern as SA.2b.d). OQ-7 already being fixed in three-hotfix prompt.'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c8198b6ecf3569a68a9b4
   collision:
     id: DEC-20260420-K
@@ -1154,13 +1115,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81e3a62bf051cc0575c4
   id: DEC-20260420-K
   title: Payee Assurance v1 launch is conditional on resolving the bank verification (IBAN/name match)
     source. No source contracted, no launch. Supersedes DEC-20260420-J.
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-20'
   source_url: https://app.notion.com/34867c87082c81e3a62bf051cc0575c4
   collision:
     id: DEC-20260420-K
@@ -1172,12 +1132,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 6a2b72ecf4e0d77ed1e6820cdde0db02ed49f8440ebba98ef8a80b4df236dd47
 - page_id: 34867c87082c81babd35eba5856ded79
   id: DEC-20260421-A
   title: DEC-20260421-A — Cluster 2 Phase 3 split into C1 and C2
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34867c87082c81babd35eba5856ded79
   collision:
     id: DEC-20260421-A
@@ -1189,13 +1148,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: db6b1338301b836fe23f84a344e452ad22095e4fe6ccfd607c7a0e7e9b93a082
 - page_id: 34967c87082c813c825cc3e4dca30a98
   id: DEC-20260421-A
   title: Payee Assurance input spec is single-field (company name only); entity resolution engine is a
     v1 launch blocker
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34967c87082c813c825cc3e4dca30a98
   collision:
     id: DEC-20260421-A
@@ -1207,12 +1165,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: c751ac50df25702b57347067ad7aa9a8956940490789c4ca4305a67da6938934
 - page_id: 34867c87082c81dab702f98b2034aa5d
   id: DEC-20260421-B
   title: 'DEC-20260421-B — Hook placement correction: onCapabilityCreated moved outside db.transaction'
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34867c87082c81dab702f98b2034aa5d
   collision:
     id: DEC-20260421-B
@@ -1224,13 +1181,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: db6b1338301b836fe23f84a344e452ad22095e4fe6ccfd607c7a0e7e9b93a082
 - page_id: 34967c87082c81828e3fe183dd5e8072
   id: DEC-20260421-B
   title: Landing page H1 is product-led ("Counterparty verification for AI agents, in one call."), not
     platform-led. Amends Brand & Voice Section 7.1.
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34967c87082c81828e3fe183dd5e8072
   collision:
     id: DEC-20260421-B
@@ -1242,12 +1198,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: c751ac50df25702b57347067ad7aa9a8956940490789c4ca4305a67da6938934
 - page_id: 34867c87082c81a6bb52ca8dbd61dc25
   id: DEC-20260421-C
   title: DEC-20260421-C — Replace Phase 4 7-day traffic soak with evidence-based validation gates
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34867c87082c81a6bb52ca8dbd61dc25
   collision:
     id: DEC-20260421-C
@@ -1259,14 +1214,13 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: c751ac50df25702b57347067ad7aa9a8956940490789c4ca4305a67da6938934
 - page_id: 34967c87082c81bd8c6bf8e92e901711
   id: DEC-20260421-C
   title: '"No scraping" positioning commitment promoted to v1 launch blocker. All 9 EU countries currently
     using Browserless+LLM scraping must be migrated to direct APIs or licensed aggregator contracts before
     launch.'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34967c87082c81bd8c6bf8e92e901711
   collision:
     id: DEC-20260421-C
@@ -1278,13 +1232,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: c751ac50df25702b57347067ad7aa9a8956940490789c4ca4305a67da6938934
 - page_id: 34867c87082c81a2a12cc95010bf25bf
   id: DEC-20260421-D
   title: DEC-20260421-D — Phase 4 split into 4a (authority enforcement) and 4b (manifest completeness
     + bulk regen)
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34867c87082c81a2a12cc95010bf25bf
   collision:
     id: DEC-20260421-D
@@ -1296,13 +1249,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: db6b1338301b836fe23f84a344e452ad22095e4fe6ccfd607c7a0e7e9b93a082
 - page_id: 34967c87082c810695c2e365deb8f2c8
   id: DEC-20260421-D
   title: Landing page Section 2 is a full-quality agent-in-use animation, not a static problem statement.
     Ships in v1.
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-21'
   source_url: https://app.notion.com/34967c87082c810695c2e365deb8f2c8
   collision:
     id: DEC-20260421-D
@@ -1314,12 +1266,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: c751ac50df25702b57347067ad7aa9a8956940490789c4ca4305a67da6938934
 - page_id: 34a67c87082c810692c8dd4374a6f9ac
   id: DEC-20260405-B
   title: Deactivate credit-report-summary; no free source for Swedish credit ratings exists
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-22'
   source_url: https://app.notion.com/34a67c87082c810692c8dd4374a6f9ac
   collision:
     id: DEC-20260405-B
@@ -1331,12 +1282,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 8722a96003fcf0e21c3a7f3d74705a09278324e6e4bda32d2f0c5991be71ca7a
 - page_id: 34967c87082c81ffacfbd04b59df64fe
   id: DEC-20260422-A
   title_sha256: 48efd18fb8731f504b6fd4fa5d7ce521ac604339e24b1390edcdbd0ce1b3d01f
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-22'
   source_url: https://app.notion.com/34967c87082c81ffacfbd04b59df64fe
   collision:
     id: DEC-20260422-A
@@ -1349,133 +1299,122 @@ decision_rows:
   rationale: Single Notion row whose ID also names the Git-native Distribution PR Integrity Protocol;
     the Notion-only collision registry cannot represent it, so no formal record or relation target may
     use this ID until a cross-surface identity mechanism exists.
+  scope_date_sha256: 97e7abcd9578680f50cd1db7b0b1830164fbd2f05fd7195428dfea7d44d043c5
 - page_id: 34967c87082c81ec8c4dd04c40ba5685
   id: DEC-20260422-C
   title_sha256: 328d666e12c61750b629d94ddb11787b4b9e0563e27aacacc3350a3a6e13566e
   historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-04-22'
   source_url: https://app.notion.com/34967c87082c81ec8c4dd04c40ba5685
   record_key: DEC-20260422-C
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260422-C.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 8722a96003fcf0e21c3a7f3d74705a09278324e6e4bda32d2f0c5991be71ca7a
 - page_id: 34967c87082c81c08b89ea9ecc0fb478
   id: DEC-20260423-A
   title_sha256: 9fe62e129cffff6e8edfd47e87b5f2ee8d2da8512d525c6c3c850db367938150
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-23'
   source_url: https://app.notion.com/34967c87082c81c08b89ea9ecc0fb478
   record_key: DEC-20260423-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260423-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 1d1cdab0e7580cc875e19841648fc37d0f9fcd53ebc6aa489c32961a1de927f1
 - page_id: 34967c87082c81e6bf87f4ce36729be2
   id: DEC-20260423-B
   title_sha256: 7e57dcdecb32ea9f8355998655e699d600bac906f43d58e7aadd69b138d125e6
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-23'
   source_url: https://app.notion.com/34967c87082c81e6bf87f4ce36729be2
   record_key: DEC-20260423-B
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260423-B.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 1d1cdab0e7580cc875e19841648fc37d0f9fcd53ebc6aa489c32961a1de927f1
 - page_id: 34967c87082c819fa6a9e23525a08c8c
   id: DEC-20260424-A
   title_sha256: 04bf15373b789c765018077b0c1756aa57160b6b63ed29b94c60db2e5b16c3d6
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-24'
   source_url: https://app.notion.com/34967c87082c819fa6a9e23525a08c8c
   record_key: DEC-20260424-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260424-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: d58b8899f3d35724759bb78f4306ef4179b4b771f5dcfdea1f86d830edc25a15
 - page_id: 34f67c87082c81ed9f69de1583fd5f5e
   id: DEC-20260427-A
   title_sha256: 8493224e7ac0edc98f84dd180892d2bf26aa5137bafbe16d57c2d1bc53abaf11
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-27'
   source_url: https://app.notion.com/34f67c87082c81ed9f69de1583fd5f5e
   record_key: DEC-20260427-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260427-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 6872b41397806ffb15668affec47c0582e76438934592ca9a9b72b428418b87d
 - page_id: 34f67c87082c813c98d2cad51d99384f
   id: DEC-20260427-B
   title_sha256: f52a4f9ab9c0c26645a72dcbf6f31c23fd0942722d76fb6b488ed2d549a5ecd6
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-27'
   source_url: https://app.notion.com/34f67c87082c813c98d2cad51d99384f
   record_key: DEC-20260427-B
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260427-B.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 6872b41397806ffb15668affec47c0582e76438934592ca9a9b72b428418b87d
 - page_id: 35067c87082c810db6a4edf9f14b4446
   id: DEC-20260428-A
   title_sha256: 3bbde135d7832dd1ce2f1f7e5f4d8473fd97258cff3e40b349254a02712a3e61
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-28'
   source_url: https://app.notion.com/35067c87082c810db6a4edf9f14b4446
   record_key: DEC-20260428-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260428-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 96161d726908133e3bb4e5b3a22a091340c3f5a620cdaacff38b00bffa957cdd
 - page_id: 35067c87082c81e2ba86d235e27b5cd6
   id: DEC-20260428-B
   title_sha256: f34c4850d6523988021a9b8711c506d7929d0bbf77bc33b6befc4e4949115592
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-28'
   source_url: https://app.notion.com/35067c87082c81e2ba86d235e27b5cd6
   record_key: DEC-20260428-B
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260428-B.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 96161d726908133e3bb4e5b3a22a091340c3f5a620cdaacff38b00bffa957cdd
 - page_id: 35167c87082c8172bff8f3485699c961
   id: DEC-20260429-A
   title_sha256: 1152e5515e09c2aeb79483ff377b76545909280e8df35687b1fff6eae61d3a81
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-04-29'
   source_url: https://app.notion.com/35167c87082c8172bff8f3485699c961
   record_key: DEC-20260429-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260429-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 5d670e8b699753006fe877e23e4a34670598a4dc0ba80dceab90cdfd194c7032
 - page_id: 35267c87082c81eca01cf6eedb5eafeb
   id: DEC-20260430-A
   title_sha256: 9f6da21a85f101c568587d1fb23813f104996e2384304caa368b3332ae359230
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-04-30'
   source_url: https://app.notion.com/35267c87082c81eca01cf6eedb5eafeb
   record_key: DEC-20260430-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260430-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 0d5bf6e36aa1ab38c7a56ab3fad2e607ea92e939d84fc48baffd55cc12bc15ac
 - page_id: 35467c87082c8124bcc5e2c2597c76c6
   id: DEC-20260502-A
   title: x402 uses the catalog (EUR) price converted at a single EUR_USD_RATE — no separate USD price
     tier
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-02'
   source_url: https://app.notion.com/35467c87082c8124bcc5e2c2597c76c6
   record_key: DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6
   collision:
@@ -1487,13 +1426,12 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: b4b25a23e837241f48ef0f1e687210e7fa7dffbdb1515ad780e431e1e3bdeac6
 - page_id: 35467c87082c81ca99efdca389eb77b9
   id: DEC-20260502-A
   title: Strale v1 product narrowed to Counterparty Assurance; Payee Assurance renamed; lighter Payment-shape
     product deferred
   historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-05-02'
   source_url: https://app.notion.com/35467c87082c81ca99efdca389eb77b9
   collision:
     id: DEC-20260502-A
@@ -1506,48 +1444,44 @@ decision_rows:
   - archive/sessions/2026-09-01-decision-collision-resolution-DEC-20260502-A.md
   rationale: Collision resolved; this row is documented-only with an evidence-backed rationale in the
     registry.
+  scope_date_sha256: b4b25a23e837241f48ef0f1e687210e7fa7dffbdb1515ad780e431e1e3bdeac6
 - page_id: 35567c87082c81068831ec1d2e826115
   id: DEC-20260503-A
   title_sha256: 909ecb58f737cc5852952280cd97512a8ba49857edd9e2a164668f1769742afe
   historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-05-03'
   source_url: https://app.notion.com/35567c87082c81068831ec1d2e826115
   record_key: DEC-20260503-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260503-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: dd16303040379e3d7c864c893670cb7f995790f61d1fa9da40c5a02e8fb022b6
 - page_id: 35667c87082c81fabc3cf9ecc4871d90
   id: DEC-20260504-B
   title_sha256: 80a9083cbb032577d2b131b7fc621b07a855e3224397255ac07187ccfddf67cc
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-04'
   source_url: https://app.notion.com/35667c87082c81fabc3cf9ecc4871d90
   record_key: DEC-20260504-B
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260504-B.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: ad37fd32f172908d57ac86fcba7e1892216fb12ebdb59667ca8c9645333a75b0
 - page_id: 35667c87082c81e7af49fc042371f566
   id: DEC-20260504-C
   title_sha256: d97a6219174615d92dff36a837d166a5e8abed7c513597ce12525377430c16cf
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-04'
   source_url: https://app.notion.com/35667c87082c81e7af49fc042371f566
   record_key: DEC-20260504-C
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260504-C.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: ad37fd32f172908d57ac86fcba7e1892216fb12ebdb59667ca8c9645333a75b0
 - page_id: 35767c87082c81d3897fe47a2ec7a4c1
   id: DEC-20260505-D
   title: v1 launch scope expanded from 6-fixed to as-close-to-full-EU-coverage-as-possible
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-04'
   source_url: https://app.notion.com/35767c87082c81d3897fe47a2ec7a4c1
   collision:
     id: DEC-20260505-D
@@ -1559,12 +1493,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: ad37fd32f172908d57ac86fcba7e1892216fb12ebdb59667ca8c9645333a75b0
 - page_id: 35767c87082c81e2ba50d630d0b95f9d
   id: DEC-20260505-E
   title: Topograph downgraded to customer-funded or fee-waived only; not v1 default
   historical_status: active
-  historical_scope: feature
-  decided_at: '2026-05-04'
   source_url: https://app.notion.com/35767c87082c81e2ba50d630d0b95f9d
   collision:
     id: DEC-20260505-E
@@ -1576,12 +1509,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 99cd186df2a1b3d795baa9ab904469bac63a52e91dc0aa768e4830b8b48c827e
 - page_id: 35767c87082c81059f67e756f5c5eefa
   id: DEC-20260505-D
   title: 'DEC-20260505-D — InfoCamere route: pursue Distributore Ufficiale program, not Telemaco Pay'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-05'
   source_url: https://app.notion.com/35767c87082c81059f67e756f5c5eefa
   collision:
     id: DEC-20260505-D
@@ -1593,13 +1525,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 672c968785c3735d42dd2b9f961d6f2257ac3686a3b2e0e34b430af090c6aa3f
 - page_id: 35767c87082c813481a8efa27ea37438
   id: DEC-20260505-E
   title: 'DEC-20260505-E — HMRC VAT Checker: surface redistribution model proactively, force compliance
     review now'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-05'
   source_url: https://app.notion.com/35767c87082c813481a8efa27ea37438
   collision:
     id: DEC-20260505-E
@@ -1611,13 +1542,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 672c968785c3735d42dd2b9f961d6f2257ac3686a3b2e0e34b430af090c6aa3f
 - page_id: 35967c87082c81a9abc3da329b92a0f9
   id: DEC-20260507-A
   title: 'Gap-8 reclassified to Gap-7: SK misclassification corrected, SI/SK/RO confirmed buildable, MT
     remains genuine gap pending MBR outreach'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
   source_url: https://app.notion.com/35967c87082c81a9abc3da329b92a0f9
   collision:
     id: DEC-20260507-A
@@ -1629,12 +1559,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: af4a0532cf17be2dbe5054c93aeb0aa4e3c6a9be25f349b830b4dae90e1bfb6e
 - page_id: 35967c87082c81b0ad02d69148811b57
   id: DEC-20260507-A
   title: Drift-check substrate moves to platform-facts.ts; static maps in CI scripts deprecated
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
   source_url: https://app.notion.com/35967c87082c81b0ad02d69148811b57
   collision:
     id: DEC-20260507-A
@@ -1646,12 +1575,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: af4a0532cf17be2dbe5054c93aeb0aa4e3c6a9be25f349b830b4dae90e1bfb6e
 - page_id: 35967c87082c81ec9db7cba5b6fecb76
   id: DEC-20260507-B
   title: Closing-steps Rule 16 — CC self-merges feature-branch PRs after session-end verification passes
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
   source_url: https://app.notion.com/35967c87082c81ec9db7cba5b6fecb76
   collision:
     id: DEC-20260507-B
@@ -1663,13 +1591,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: af4a0532cf17be2dbe5054c93aeb0aa4e3c6a9be25f349b830b4dae90e1bfb6e
 - page_id: 35967c87082c81f38091f6afba337a8a
   id: DEC-20260507-B
   title: NL dutch-company-data defaults to KVK direct API (Basisprofiel + Zoeken), replacing Company.info
     as primary mid-rebuild target
   historical_status: superseded
-  historical_scope: global
-  decided_at: '2026-05-07'
   source_url: https://app.notion.com/35967c87082c81f38091f6afba337a8a
   collision:
     id: DEC-20260507-B
@@ -1681,13 +1608,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: af4a0532cf17be2dbe5054c93aeb0aa4e3c6a9be25f349b830b4dae90e1bfb6e
 - page_id: 35967c87082c817cad56ec58c707d895
   id: DEC-20260507-C
   title: IT/ES/PT/AT cohort defaults to Openapi PAYG for v1; self-build / Compass / InfoCamere / publicacoes.mj.pt
     parser deferred until revenue triggers
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
   source_url: https://app.notion.com/35967c87082c817cad56ec58c707d895
   collision:
     id: DEC-20260507-C
@@ -1699,13 +1625,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: af4a0532cf17be2dbe5054c93aeb0aa4e3c6a9be25f349b830b4dae90e1bfb6e
 - page_id: 35967c87082c81f187e7f1881a6d74c4
   id: DEC-20260507-C
   title: Branch protection enabled on main (required PR, required status checks, strict base, enforce
     on admins)
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-07'
   source_url: https://app.notion.com/35967c87082c81f187e7f1881a6d74c4
   collision:
     id: DEC-20260507-C
@@ -1717,14 +1642,13 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: af4a0532cf17be2dbe5054c93aeb0aa4e3c6a9be25f349b830b4dae90e1bfb6e
 - page_id: 35a67c87082c8119a22bf1414e307e5f
   id: DEC-20260508-B
   title: 'Provenance posture for aggregator-sourced data: pointer-to-register where Strale calls registers
     directly; pointer-to-aggregator-plus-legal-basis where Strale calls aggregators operating under their
     own legal authority'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-08'
   source_url: https://app.notion.com/35a67c87082c8119a22bf1414e307e5f
   collision:
     id: DEC-20260508-B
@@ -1736,14 +1660,13 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 928af266a18f34e85ed116378f1c796c557772912d306734be6f43fd969ec539
 - page_id: 35a67c87082c814bbb8df7036fccf8e1
   id: DEC-20260508-B
   title: 'Canonical local-development worktree structure locked: trunk always on main; daily work in strale-work
     (detached HEAD); research/exploratory in strale-research (detached HEAD). WORKTREES.md at repo root
     is the operational doc.'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-08'
   source_url: https://app.notion.com/35a67c87082c814bbb8df7036fccf8e1
   collision:
     id: DEC-20260508-B
@@ -1755,13 +1678,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 928af266a18f34e85ed116378f1c796c557772912d306734be6f43fd969ec539
 - page_id: 35a67c87082c8170a19af278e67abd46
   id: DEC-20260508-C
   title: Closing-steps Rule 17 — CC verifies worktree HEAD state at session start; adds Worktree branch-collision
     tripwire to stop-conditions.md
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-08'
   source_url: https://app.notion.com/35a67c87082c8170a19af278e67abd46
   collision:
     id: DEC-20260508-C
@@ -1773,13 +1695,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 928af266a18f34e85ed116378f1c796c557772912d306734be6f43fd969ec539
 - page_id: 35a67c87082c817eb9b5d491786dc67b
   id: DEC-20260508-C
   title: KVK direct M2M ineligible for Swedish AB; NL primary intent reverts to Company.info as KVK recognised
     partner pending eligibility validation. Supersedes DEC-20260507-B for the eligibility question.
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-08'
   source_url: https://app.notion.com/35a67c87082c817eb9b5d491786dc67b
   collision:
     id: DEC-20260508-C
@@ -1791,13 +1712,12 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 928af266a18f34e85ed116378f1c796c557772912d306734be6f43fd969ec539
 - page_id: 35a67c87082c81dd8477cdb92d1403f2
   id: DEC-20260508-C
   title: 'Audit-first template extended at point 1: adds Files I will modify sub-list and cross-worktree
     write-conflict check. Halts on file modified <1h ago in another worktree; warns on stale ≥1h modifications.'
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-08'
   source_url: https://app.notion.com/35a67c87082c81dd8477cdb92d1403f2
   collision:
     id: DEC-20260508-C
@@ -1809,25 +1729,23 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 928af266a18f34e85ed116378f1c796c557772912d306734be6f43fd969ec539
 - page_id: 35d67c87082c81299957e2884a40d69e
   id: DEC-20260511-D
   title_sha256: a66e410e7063381aff5ecbccb9a39966bc15b1a1cb062eb69f0453d08ae842e6
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-11'
   source_url: https://app.notion.com/35d67c87082c81299957e2884a40d69e
   record_key: DEC-20260511-D
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260511-D.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: e1ead015f8a42c840f631474dd65e3d15d572b7548b8e589ba03a74e29891c4c
 - page_id: 35e67c87082c8122a29ef35f256d5958
   id: DEC-20260512-A
   title: KVK Option B (Strale-applies-for-KVK-recognised-partner-status) closed — all KVK channels confirmed
     closed to foreign EU entities
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-12'
   source_url: https://app.notion.com/35e67c87082c8122a29ef35f256d5958
   collision:
     id: DEC-20260512-A
@@ -1839,12 +1757,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 12ce63338491ab1784cd75f00dc828b2b37d630654b3c55a9b3a1853c2f1f9ff
 - page_id: 35e67c87082c8188a014f4b1f963cf77
   id: DEC-20260512-A
   title: Scheduler and internal callers must respect vendor cost class + quota windows
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-12'
   source_url: https://app.notion.com/35e67c87082c8188a014f4b1f963cf77
   collision:
     id: DEC-20260512-A
@@ -1856,12 +1773,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 12ce63338491ab1784cd75f00dc828b2b37d630654b3c55a9b3a1853c2f1f9ff
 - page_id: 35f67c87082c81269b79cb7d0367dc46
   id: DEC-20260513-F
   title: Classify guaranteed_field_missing:* as manifest_drift non-tripping in categorizeFailureReason
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-13'
   source_url: https://app.notion.com/35f67c87082c81269b79cb7d0367dc46
   collision:
     id: DEC-20260513-F
@@ -1873,12 +1789,11 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 7370c57b39519e972aa7ec4b3c68c5f732f92afd1a7e41937acd33aa41ad1840
 - page_id: 35f67c87082c81c09fbfc2253cf4e24c
   id: DEC-20260513-F
   title: v1 Identity coverage verdict — 20 of 20 audited capabilities v1-ready
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-13'
   source_url: https://app.notion.com/35f67c87082c81c09fbfc2253cf4e24c
   collision:
     id: DEC-20260513-F
@@ -1890,109 +1805,102 @@ decision_rows:
   - docs/decisions/id-collisions.yaml
   rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
     excluded from formal records and relation targets.
+  scope_date_sha256: 7370c57b39519e972aa7ec4b3c68c5f732f92afd1a7e41937acd33aa41ad1840
 - page_id: 36367c87082c81b99376c4225d38374c
   id: DEC-20260517-A
   title_sha256: 3205b19d9989ff198a16f696caff05b624c851a28fd73b4feceb17d065494680
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-17'
   source_url: https://app.notion.com/36367c87082c81b99376c4225d38374c
   record_key: DEC-20260517-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260517-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 1b8ed9aae9e12781a0d9cea3854f09c7d53f7131450c8ef34257536b6045acaf
 - page_id: 36367c87082c81048009eedcd0dbcd17
   id: DEC-20260517-B
   title_sha256: cd27f452a0401aea32269efc7720fda313efc61718df27da9cfff2423a62574f
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-17'
   source_url: https://app.notion.com/36367c87082c81048009eedcd0dbcd17
   disposition: intentionally_historical
   evidence:
   - archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md
   rationale: 'Preserved as evidence and deferred to an explicit supersession batch: its CC-prompt mechanics
     no longer describe the operating model.'
+  scope_date_sha256: 1b8ed9aae9e12781a0d9cea3854f09c7d53f7131450c8ef34257536b6045acaf
 - page_id: 36467c87082c817db910d00b828a2bf3
   id: DEC-20260518-E
   title_sha256: 36a0dfedecf08b4e34930dda71fe6524d13f7cb4fe21e6dadc337cf0bc3793a6
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-18'
   source_url: https://app.notion.com/36467c87082c817db910d00b828a2bf3
   record_key: DEC-20260518-E
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260518-E.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 6ad432ccf1b82bed8f74d98c1934263d9466f37d0402be56eb588ba65526a357
 - page_id: 36467c87082c8135bc61f631193c9da5
   id: DEC-20260518-F
   title_sha256: 1d29aa68bfb71197adc0594d4a29b354bbe5070e2a5a004b3d5882cc267da304
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-18'
   source_url: https://app.notion.com/36467c87082c8135bc61f631193c9da5
   record_key: DEC-20260518-F
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260518-F.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 6ad432ccf1b82bed8f74d98c1934263d9466f37d0402be56eb588ba65526a357
 - page_id: 36467c87082c81129f04e07d01a93045
   id: DEC-20260518-G
   title_sha256: 9f8dba9e8c14cee8fbe9b9197508f7ff37cd87d23aa29fe017f3c96773fff114
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-05-18'
   source_url: https://app.notion.com/36467c87082c81129f04e07d01a93045
   record_key: DEC-20260518-G
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260518-G.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 6ad432ccf1b82bed8f74d98c1934263d9466f37d0402be56eb588ba65526a357
 - page_id: 3ba67c87082c812986c6c35d82bc986f
   id: DEC-20260812-A
   title_sha256: 5705eaff0b406e7b0c4f1bf516793759b50fa044cf72486e45cdc81685c9c7ad
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-08-12'
   source_url: https://app.notion.com/3ba67c87082c812986c6c35d82bc986f
   record_key: DEC-20260812-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260812-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 19b1decc14216a13cdf3655f3351efdf9dd14ce527bcb96dcbff88e0e0ff2071
 - page_id: 3bb67c87082c8101a08addaf92ffb5df
   id: DEC-20260813-A
   title_sha256: 00bb02d76dd6b2140f22fa916b6d8e08d12e42e4f050e3aadd1bd74b7dff7535
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-08-13'
   source_url: https://app.notion.com/3bb67c87082c8101a08addaf92ffb5df
   record_key: DEC-20260813-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260813-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: a9f29b81a786e9396d8864bf300ce6466d9d32e86274d6977f85101c8018c86d
 - page_id: 3be67c87082c8143b70dc6503893ba73
   id: DEC-20260815-A
   title_sha256: 9fbf6cc3ebfc00c65cf0bf8f5b399f112a585f9d23a94a149646b20432781a32
   historical_status: active
-  historical_scope: global
-  decided_at: '2026-08-15'
   source_url: https://app.notion.com/3be67c87082c8143b70dc6503893ba73
   record_key: DEC-20260815-A
   disposition: formally_migrated
   evidence:
   - docs/decisions/records/DEC-20260815-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+  scope_date_sha256: 300ba9987c152d8eeedf2fe8bd6a6f410bd27f3d47b39731f0303cfea577198a
 private_rows:
   repository: strale-io/strale-context-archive
   visibility: private
   commit: 3b0a3ea82e776d337577526b23d75cb460a891db
   file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
   count: 223
-  digest: 592f5cc07c09d4c25fb3dea984754b5c9f6c94a2838359c9a6ceecd0852f6ffe
+  digest: fdbcb6e6a9cd25c34e773d10c8b4e3114d58a28b2840deafe6fff1bb7eec7c52
   counts_by_disposition:
     not_yet_reconciled: 212
     obsolete_or_superseded: 6

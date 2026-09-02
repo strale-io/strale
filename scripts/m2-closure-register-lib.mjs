@@ -70,11 +70,13 @@ export const sha256 = (s) => createHash("sha256").update(s, "utf8").digest("hex"
  * recomputed here and the private one by the operator script against the
  * archive.
  */
+export const scopeDateHash = (r) => r.scope_date_sha256 ?? sha256(`${r.historical_scope ?? ""}|${r.decided_at}`);
+
 export function canonicalDigest(rows) {
   const lines = [...rows]
     .sort((a, b) => (a.page_id < b.page_id ? -1 : a.page_id > b.page_id ? 1 : 0))
     .map((r) =>
-      [r.page_id, r.id ?? "", r.historical_status ?? "", r.historical_scope ?? "", r.decided_at,
+      [r.page_id, r.id ?? "", r.historical_status ?? "", scopeDateHash(r),
         r.title_sha256 ?? sha256(r.title), r.disposition].join("|"),
     );
   return sha256(lines.join("\n") + "\n");
@@ -351,7 +353,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
   const collisionIds = new Set();
   for (const c of context.collisions.collisions ?? []) {
     collisionIds.add(c.id);
-    for (const r of c.records) collisionRows.set(r.source_page_id, { id: c.id, resolution_status: c.resolution_status, disposition: r.disposition, record_key: r.record_key, title: r.title });
+    for (const r of c.records) collisionRows.set(r.source_page_id, { id: c.id, resolution_status: c.resolution_status, disposition: r.disposition, record_key: r.record_key, title: r.title, historical_status: r.historical_status });
   }
   if (register.sources.collision_registry.collision_count !== (context.collisions.collision_count ?? 0)) {
     finding("SOURCE_COUNT_DRIFT", `collision_registry.collision_count ${register.sources.collision_registry.collision_count} vs ${context.collisions.collision_count}`);
@@ -397,6 +399,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
     if (row.title !== undefined && (!col || col.title !== row.title)) finding("DECISION_ROW_TITLE_NOT_PUBLIC", row.page_id);
     if (row.title === undefined && col && col.title !== undefined) finding("DECISION_ROW_TITLE_EXPECTED", row.page_id);
+    // Scope and date are not published on main for any row; public rows carry a hash.
+    if (row.historical_scope !== undefined || row.decided_at !== undefined) finding("DECISION_ROW_SCOPE_DATE_NOT_PUBLIC", row.page_id);
+    if (col && col.historical_status !== undefined && col.historical_status !== row.historical_status) finding("DECISION_ROW_STATUS_MISMATCH", `${row.page_id}: ${row.historical_status} vs registry ${col.historical_status}`);
 
     if (d === "formally_migrated") {
       const rec = recordByKey.get(row.record_key);
@@ -443,6 +448,19 @@ export function validateClosureRegister(register, context, { schema, relativePat
     checkEvidence(row.page_id, row.evidence);
   }
   for (const pageId of collisionRows.keys()) if (!rowsByPage.has(pageId)) finding("DECISION_ROW_MISSING_FROM_REGISTER", pageId);
+  // Duplicate ids inside the public projection must be exactly the registry's page sets.
+  const publicPagesById = new Map();
+  for (const row of register.decision_rows) if (row.id) publicPagesById.set(row.id, [...(publicPagesById.get(row.id) ?? []), row.page_id]);
+  const registryPagesById = new Map();
+  for (const c of context.collisions.collisions ?? []) registryPagesById.set(c.id, c.records.map((r) => r.source_page_id));
+  for (const [id, pages] of publicPagesById) {
+    if (pages.length > 1 && !registryPagesById.has(id)) finding("DECISION_ROW_UNREGISTERED_DUPLICATE_ID", `${id} is carried by ${pages.length} public rows but is not in the collision registry`);
+  }
+  for (const [id, registryPages] of registryPagesById) {
+    const actual = [...(publicPagesById.get(id) ?? [])].sort().join(",");
+    const expected = [...registryPages].sort().join(",");
+    if (actual !== expected) finding("COLLISION_SET_MISMATCH", `${id}: public rows carry [${actual}] but the registry lists [${expected}]`);
+  }
 
   // The record-to-row mapping is DERIVED from record front matter, never
   // trusted from the register: a record's source rows are the page ids its
@@ -562,13 +580,14 @@ export function validateClosureRegister(register, context, { schema, relativePat
   const nb = register.next_decision_batch;
   if (nb.cutoff_anchor_id !== READINESS_ANCHOR_ID) finding("NEXT_BATCH_ANCHOR_NOT_READINESS", `${nb.cutoff_anchor_id} is not ${READINESS_ANCHOR_ID}`);
   const anchorRecord = context.records.find((r) => r.id === READINESS_ANCHOR_ID);
-  const anchorRow = register.decision_rows.find((r) => r.id === READINESS_ANCHOR_ID);
   if (!anchorRecord) finding("NEXT_BATCH_ANCHOR_UNKNOWN", `${READINESS_ANCHOR_ID} has no formal record`);
   else if (anchorRecord.decided_at !== nb.decided_on_or_after) finding("NEXT_BATCH_CUTOFF_MISMATCH", `${nb.decided_on_or_after} vs record ${READINESS_ANCHOR_ID} decided ${anchorRecord.decided_at}`);
-  if (anchorRow && anchorRecord && anchorRow.decided_at !== anchorRecord.decided_at) finding("NEXT_BATCH_CUTOFF_MISMATCH", `row ${READINESS_ANCHOR_ID} decided ${anchorRow.decided_at} vs record ${anchorRecord.decided_at}`);
   // Uniqueness is judged over the public rows plus the collision registry; every
   // registry row is public (DECISION_ROW_MISSING_FROM_REGISTER), so this equals
   // the all-rows rule the operator script applies to the private projection.
+  // A public pending row has no clear date, so its eligibility cannot be
+  // evaluated here; it is reported and left to the operator script, which sees
+  // the archive dates.
   const eligible = (row) =>
     row.disposition === "not_yet_reconciled" &&
     row.historical_status === "active" &&
@@ -576,7 +595,10 @@ export function validateClosureRegister(register, context, { schema, relativePat
     (idCounts[row.id] ?? 0) === 1 &&
     !collisionRows.has(row.page_id) &&
     !collisionIds.has(row.id) &&
-    row.decided_at >= nb.decided_on_or_after;
+    (row.decided_at === undefined || row.decided_at >= nb.decided_on_or_after);
+  for (const row of register.decision_rows) {
+    if (row.disposition === "not_yet_reconciled" && row.decided_at === undefined) finding("NEXT_BATCH_UNEVALUABLE", `${row.page_id}: public pending row has no clear date; the operator script must judge its eligibility`);
+  }
   const candidateIds = new Set();
   for (const c of nb.candidates) {
     const row = rowsByPage.get(c.page_id);
@@ -586,7 +608,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
     if ((idCounts[c.id] ?? 0) !== 1) finding("NEXT_BATCH_ID_NOT_UNIQUE", c.id);
     if (collisionRows.has(c.page_id) || collisionIds.has(c.id)) finding("NEXT_BATCH_COLLIDES", c.id);
     if (row.historical_status !== "active") finding("NEXT_BATCH_NOT_ACTIVE", c.id);
-    if (row.decided_at < nb.decided_on_or_after) finding("NEXT_BATCH_TOO_OLD", `${c.id} decided ${row.decided_at}`);
+    if (row.decided_at !== undefined && row.decided_at < nb.decided_on_or_after) finding("NEXT_BATCH_TOO_OLD", `${c.id} decided ${row.decided_at}`);
     if (candidateIds.has(c.page_id)) finding("NEXT_BATCH_DUPLICATE", c.page_id);
     candidateIds.add(c.page_id);
   }
@@ -690,6 +712,7 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
     if (registryPageIds.has(r.page_id)) finding("PRIVATE_ROW_IN_REGISTRY", r.page_id);
     if (r.title !== undefined) finding("PRIVATE_ROW_CLEAR_TITLE", r.page_id);
     if (typeof r.source_url !== "string" || !r.source_url.endsWith(r.page_id)) finding("PRIVATE_ROW_SOURCE_URL_MISMATCH", r.page_id);
+    if (r.scope_date_sha256 !== undefined || r.historical_scope === undefined || r.decided_at === undefined) finding("PRIVATE_ROW_REDACTED_FIELDS", `${r.page_id}: private rows carry clear scope and date`);
     if (["formally_migrated", "resolved_collision"].includes(r.disposition)) finding("PRIVATE_ROW_PUBLIC_DISPOSITION", `${r.page_id}: ${r.disposition}`);
     if (["intentionally_historical", "unresolved_collision"].includes(r.disposition)) finding("PRIVATE_ROW_HAND_DISPOSITION", `${r.page_id}: ${r.disposition} needs public evidence and must be a public row`);
     const expected = expectedDisposition(r);
@@ -771,8 +794,13 @@ export function compareRowsToExport(rows, exportRows) {
     const actualHash = row.title_sha256 ?? sha256(row.title ?? "");
     if (row.id !== expected.id) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} id ${row.id} != ${expected.id}`);
     if (row.historical_status !== expected.historical_status) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} status`);
-    if (row.historical_scope !== expected.historical_scope) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} scope`);
-    if (row.decided_at !== expected.decided_at) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} date ${row.decided_at} != ${expected.decided_at}`);
+    if (row.scope_date_sha256 !== undefined) {
+      const expectedScopeDate = sha256(`${expected.historical_scope ?? ""}|${expected.decided_at}`);
+      if (row.scope_date_sha256 !== expectedScopeDate) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} scope/date hash`);
+    } else {
+      if (row.historical_scope !== expected.historical_scope) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} scope`);
+      if (row.decided_at !== expected.decided_at) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} date ${row.decided_at} != ${expected.decided_at}`);
+    }
     if (actualHash !== expected.title_hash) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} title hash`);
     if (row.source_url !== expected.source_url) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} source_url`);
   }

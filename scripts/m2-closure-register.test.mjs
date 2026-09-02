@@ -63,7 +63,7 @@ const publicPending = (r) => {
 };
 // Findings that manufacturing a public pending row always produces; tests
 // filter them out so they assert only on the check under test.
-const MANUFACTURED = new Set(["FORMAL_RECORD_MISSING", "SOURCE_COUNT_DRIFT", "NEXT_BATCH_INCOMPLETE", "DECISION_ROW_SHOULD_BE_MIGRATED", "DECISION_ROW_DERIVATION_MISMATCH"]);
+const MANUFACTURED = new Set(["FORMAL_RECORD_MISSING", "SOURCE_COUNT_DRIFT", "NEXT_BATCH_INCOMPLETE", "DECISION_ROW_SHOULD_BE_MIGRATED", "DECISION_ROW_DERIVATION_MISMATCH", "NEXT_BATCH_UNEVALUABLE"]);
 const codesExcept = (register, ctx) => codes(register, ctx).filter((c) => !MANUFACTURED.has(c));
 
 test("positive smoke test (not mutation evidence): the committed register is valid", () => {
@@ -113,15 +113,18 @@ test("an unreadable base ref fails closed instead of skipping removal checks", (
 test("coordinated identity edits are caught by the public digest", () => {
   const r = base();
   const p = publicPending(r);
-  p.decided_at = "2026-01-01";
+  p.scope_date_sha256 = "0".repeat(64);
   has(r, "PUBLIC_DIGEST_MISMATCH");
   const r2 = base();
   publicPending(r2).title_sha256 = "0".repeat(64);
   has(r2, "PUBLIC_DIGEST_MISMATCH");
   const r3 = base();
   const u = row(r3, "formally_migrated");
-  u.historical_scope = "feature";
+  u.scope_date_sha256 = sha256("feature|2026-01-01");
   has(r3, "PUBLIC_DIGEST_MISMATCH");
+  const r4 = base();
+  row(r4, "formally_migrated").historical_scope = "feature"; // clear scope next to the hash is a schema violation
+  has(r4, "SCHEMA");
 });
 
 // A synthetic private projection that agrees with a synthetic register, so
@@ -144,7 +147,7 @@ const pcodes = (r, rows) => validatePrivateProjection(r, rows, { schema, collisi
 
 test("a coordinated identity edit that re-syncs every digest passes CI but fails the raw-export comparison", () => {
   const r = base();
-  publicPending(r).decided_at = "2026-01-01";
+  publicPending(r).scope_date_sha256 = sha256("global|2026-01-01");
   resync(r);
   assert.deepEqual(codesExcept(r), [], "CI cannot see the archive, so a resynced public register passes");
   // Synthetic export rows as the archive stores them.
@@ -268,6 +271,43 @@ test("a clear title is allowed only where the collision registry publishes that 
   delete c3.title;
   resync(r3);
   has(r3, "DECISION_ROW_TITLE_EXPECTED");
+});
+
+test("public rows never carry scope or date in clear, and status must match the registry", () => {
+  const r = base();
+  const c = r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate");
+  delete c.scope_date_sha256;
+  c.historical_scope = "global";
+  c.decided_at = "2026-03-01";
+  resync(r);
+  has(r, "DECISION_ROW_SCOPE_DATE_NOT_PUBLIC");
+  const r2 = base();
+  const c2 = r2.decision_rows.find((x) => x.collision?.kind === "notion-duplicate");
+  c2.historical_status = c2.historical_status === "active" ? "superseded" : "active";
+  resync(r2);
+  has(r2, "DECISION_ROW_STATUS_MISMATCH");
+  const r3 = base();
+  const m = row(r3, "formally_migrated");
+  delete m.scope_date_sha256;
+  has(r3, "SCHEMA");
+});
+
+test("duplicate ids inside the public projection must be exactly the registry's page sets", () => {
+  // A migrated row's id reused by the historical row, everything re-synced.
+  const r = base();
+  const hist = row(r, "intentionally_historical");
+  hist.id = row(r, "formally_migrated").id;
+  resync(r);
+  const c = codes(r);
+  assert.ok(c.includes("DECISION_ROW_UNREGISTERED_DUPLICATE_ID"), c.join(","));
+  // A registry row moved out of the public set.
+  const r2 = base();
+  const gone = r2.decision_rows.find((x) => x.collision?.kind === "notion-duplicate");
+  r2.decision_rows = r2.decision_rows.filter((x) => x !== gone);
+  r2.private_rows.count += 1;
+  r2.private_rows.counts_by_disposition.not_yet_reconciled += 1;
+  resync(r2);
+  assert.ok(codes(r2).includes("COLLISION_SET_MISMATCH"));
 });
 
 test("private rows may not hold dispositions that are public by construction", () => {
@@ -684,11 +724,9 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
   const c2b = codes(r2b);
   assert.ok(c2b.includes("NEXT_BATCH_ANCHOR_NOT_READINESS"), c2b.join(","));
   assert.ok(c2b.includes("NEXT_BATCH_CUTOFF_MISMATCH"));
-  // The cutoff comes from the record's front matter, not the register row.
+  // The cutoff comes from the record's front matter; the register cannot move it.
   const r2c = base();
-  r2c.decision_rows.find((x) => x.id === "DEC-20260812-A").decided_at = "2026-08-01";
   r2c.next_decision_batch.decided_on_or_after = "2026-08-01";
-  resync(r2c);
   assert.ok(codes(r2c).includes("NEXT_BATCH_CUTOFF_MISMATCH"));
   const r3 = base();
   publicPending(r3); // an eligible public row that the candidate list does not name
@@ -713,10 +751,17 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
   has(r7, "NEXT_BATCH_PRIVATE_COUNT_EXCEEDS");
   const r8 = base();
   const old = publicPending(r8);
+  delete old.scope_date_sha256;
+  old.historical_scope = "global";
   old.decided_at = "2026-01-01";
   resync(r8);
   r8.next_decision_batch.candidates.push({ page_id: old.page_id, id: old.id, why: "planted old candidate" });
-  has(r8, "NEXT_BATCH_TOO_OLD");
+  const c8 = codes(r8);
+  assert.ok(c8.includes("NEXT_BATCH_TOO_OLD"), c8.join(","));
+  assert.ok(c8.includes("DECISION_ROW_SCOPE_DATE_NOT_PUBLIC"), "a clear date on a public row is itself a finding");
+  const r9 = base();
+  publicPending(r9);
+  assert.ok(codes(r9).includes("NEXT_BATCH_UNEVALUABLE"), "a public pending row without a clear date cannot be judged in CI");
 });
 
 test("every open bucket must be covered by an exit gap", () => {
