@@ -407,6 +407,7 @@
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/remediation/REMEDIATION-LEDGER.md",
+        "docs/remediation/packages/WP17.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/x402-listing.md",
         "handoff/_general/from-code/2026-08-15-checkin-defects-and-eureg-rebuild.md",
@@ -468,7 +469,7 @@
     {
       "path": "docs/remediation",
       "owner_area": "remediation-program",
-      "sha256": "3bfaaf96624afc8312a5cfc0c39204707991589aa3fec59f5bf72c9ce45e3f32",
+      "sha256": "4a514154ccd28d52376b511dde03c07e131d14c4ccaeb06484ebf473f1888c65",
       "detected_references": [
         "apps/api/scripts/verify-ip-probe.mjs",
         "apps/api/scripts/wp10-cadence-verdict.mjs",

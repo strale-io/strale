@@ -295,7 +295,9 @@ packages:
 
   WP17:
     title: Immutable capability-state change ledger
-    status: SPECIFIED_NOT_STARTED
+    status: DEFERRED
+    status_date: "2026-09-02"
+    deferred_record: docs/remediation/packages/WP17.yaml (deferred block)
     depends_on: [WP8]
     risks: [CR-05]
     note: >
@@ -312,7 +314,8 @@ packages:
 
   WP15:
     title: CI/runtime hygiene
-    status: PARTIALLY_SUPERSEDED
+    status: PARTIALLY_SUPERSEDED_DB_LANE_ASSESSED
+    status_date: "2026-09-02"
     superseded_by: production-authorization-incident-2026-08-22
     superseded_note: >
       guard-production-write-access.mjs, guard-worktree-isolation.mjs and the
@@ -321,12 +324,42 @@ packages:
       the integration lane should create and drop its own uniquely-named
       database, so disposability holds by construction rather than by
       row-count heuristics.
+    db_lane_assessment:
+      date: "2026-09-02"
+      files_read: [.github/workflows/ci.yml integration-db job, apps/api/scripts/assert-disposable-test-db.mjs]
+      finding: >
+        Partially satisfied, not closed. The integration-db job runs Postgres
+        as a GitHub Actions `services:` container -- a fresh, isolated process
+        provisioned per job run on its own runner VM and destroyed afterward,
+        which already gives real per-run infrastructure disposability, not
+        merely a heuristic. What is NOT present is the literal residual: the
+        lane always connects to one fixed database name (strale_test, from
+        POSTGRES_DB) within that container, rather than generating and
+        CREATE/DROP-ing a uniquely-named database itself. The only thing
+        standing between the lane and a shared/tunnelled production-pointed
+        DATABASE_URL_TEST is assert-disposable-test-db.mjs's row-count
+        heuristic (its own docstring: "Verified against production: refuses
+        on 340 capabilities and 899k transactions" -- a real, working
+        safety net, but a heuristic, not a structural impossibility).
+      why_not_closed_here: >
+        Implementing unique-name create/drop is a small, well-scoped CI
+        workflow change (e.g. DB name suffixed with ${{ github.run_id }},
+        an explicit CREATE DATABASE / DROP DATABASE step) but touches the CI
+        pipeline that every PR depends on -- scoped to its own session per
+        the Deploy Mechanism Verification Protocol (DEC-20260504-C) rather
+        than folded into this closure batch.
+      next_step: >
+        Suffix DATABASE_URL_TEST's database name with a run-unique token,
+        add explicit CREATE DATABASE before schema materialisation and DROP
+        DATABASE (or rely on the container's own destruction) after the job,
+        and keep assert-disposable-test-db.mjs as a second, independent
+        layer rather than removing it.
     depends_on: [WP1]
     risks: [CR-20, N7]
     inherited_exit_conditions:
       - "integration lane creates and drops its own uniquely-named database, so
          disposability holds by construction rather than by row-count heuristics
-         (Codex WP1 residual)"
+         (Codex WP1 residual) -- STILL OPEN, see db_lane_assessment above"
     review: {codex: required, fable: optional}
 
 verification_gates:
