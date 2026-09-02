@@ -469,7 +469,7 @@
     {
       "path": "docs/remediation",
       "owner_area": "remediation-program",
-      "sha256": "4a514154ccd28d52376b511dde03c07e131d14c4ccaeb06484ebf473f1888c65",
+      "sha256": "2c9e71b60c8e22e488a7a5ba9914bb38946b7bb725cbc596deed854736953070",
       "detected_references": [
         "apps/api/scripts/verify-ip-probe.mjs",
         "apps/api/scripts/wp10-cadence-verdict.mjs",
@@ -489,6 +489,7 @@
         "docs/company/DECISION-QUEUE.md",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "handoff/README.md",
         "handoff/_general/from-code/2026-08-22-PROCESS-VIOLATION-unapproved-prod-mutation.md",
         "handoff/_general/from-code/2026-08-22-checkin-morning.md",
         "handoff/_general/from-code/2026-08-23-checkin-morning.md",
@@ -498,6 +499,7 @@
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-t15-receipts-and-ledger.md",
+        "handoff/_general/from-code/2026-09-02-t4-remediation-closure.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/receipts-lib.mjs",
@@ -507,7 +509,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "4e2da8adde0988940845af1a15ccd2b832fd5e26f1063b843f83e36cacbb675f",
+      "sha256": "f4625244963d9e2f2367056618e38a3fa12848632c8142c7de7037e9480b42e9",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

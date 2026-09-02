@@ -1,6 +1,183 @@
 # Remediation Program — Current State
 
-_Last updated: 2026-08-25 (governance rebaseline)_
+_Last updated: 2026-09-02 (T4 remediation-program closure)_
+
+## State on 2026-09-02 (T4 remediation-program closure)
+
+T4 picked up six items the program had left dated or open past their own
+gates. All six are read-only production measurements or documented judgement
+calls; nothing here changed application code. Every number below has a query
+and a receipt under `archive/receipts/`. Full reasoning lives in the named
+package files; this section is the reconciled summary.
+
+### WP10 — Durable Job Coordinator: ACCEPTED
+
+The seven-day cadence gate (due 2026-08-30) went unmeasured for three days
+until this session ran it. Verdict: **ACCEPTED**, no reservations.
+`quality-floor` and `capability-promotion` both ran ~7 times in the last 7
+days (was 51 and 45 respectively pre-fix) with gaps averaging 24.02–24.03h,
+stddev 0.01h, across 120 deploys between the WP10 merge (`ce5e63f`,
+2026-08-23) and HEAD (`2feb22bf`, 2026-09-02) — `GET /health` confirmed HEAD
+is the deployed commit, so all 120 merges are real redeploys, not just
+landed commits. `weekly-sweep`'s `next_run_at` sits exactly 7 days after its
+last run, unchanged across the ~90 deploys since 2026-08-30 (was 141 runs in
+17.6 days pre-fix). Zero `job_schedule` rows show a consecutive failure, an
+error outcome, or a stranded lease. One item is `unverified:` — crash-
+recovery / watchdog-expiry log events go to Better Stack, not a queryable DB
+table, so "zero crash recoveries occurred" rests on a same-instant proxy
+(`consecutive_failures=0`) rather than direct confirmation; recorded, not
+acted on. VERIFY-P3 moves PARTIAL → COMPLETE; cadence was its last open
+portion. Detail: `packages/WP10.yaml` `acceptance` block. Receipt:
+`archive/receipts/2026-09-02-audit-wp10-cadence-verdict.json`.
+
+### WP9 — Capability Invocation Facts: ACCEPTED_WITH_RESIDUALS
+
+The two-week observation watch (opened 2026-08-22, nominally closes
+2026-09-05) closed 3 days early on flat evidence: `suppressed_incomplete_
+evidence` stayed at 0 across all 17 `tick_complete` heartbeats observed, no
+`invocation_fact_write_failed` event ever fired, and `facts_table_protected`
+was `true` on every tick — every `escalate_if` condition the watch itself
+names stayed clean for the full 11 days it was checked. Two things are named
+rather than smoothed over: (1) the package's own hoped-for live proof —
+"the first solution_step fact whose slug has no direct transaction traffic"
+— has not happened (0 such slugs on 2,416 facts); not an exit condition, so
+it doesn't block acceptance, but it hasn't been observed either. (2) the
+already-known `transaction_id` residual is reconfirmed: still NULL on 100%
+of facts (2,416/2,416), matching PACKAGE-GRAPH.yaml's existing
+classification exactly. Detail: `packages/WP9.yaml` `watch.closed` block.
+Receipt: `archive/receipts/2026-09-02-audit-wp9-observation-close.json`.
+
+### VERIFY-IP — RESOLVED (high confidence); WP12 UNBLOCKED_NOT_YET_STARTED
+
+Established empirically, not from documentation. DNS: `api.strale.io`
+CNAMEs straight to a Railway-generated `*.up.railway.app` host resolving to
+a Railway edge IP — no CDN in the chain. Response headers show only
+Railway's own edge (`Server: railway-hikari`, `x-railway-edge: ams1`), no
+`cf-ray` or other CDN fingerprint. Decisive test: three `POST /v1/do` calls
+to the free-tier `email-validate` capability from this machine — no spoof, a
+spoofed single-value `X-Forwarded-For`, and a spoofed multi-value XFF plus a
+spoofed `X-Real-IP` — all three returned the **identical** `ipHash` in the
+response's audit `request_context`. Railway's single edge hop overwrites or
+strips client-supplied `X-Forwarded-For`/`X-Real-IP` rather than appending
+to them. **Answer: exactly one proxy hop, and the leftmost XFF entry the
+code already reads IS the true client IP** — the opposite of
+FABLE-REAUDIT.md's CR-19 framing ("every extractor reads leftmost XFF
+(spoofable)"). Railway's own docs are silent on XFF handling and its
+community forum carries two directly contradictory staff answers on the
+same question; neither is relied on here. Caveat: single-machine,
+single-point-in-time test against the public custom domain only — does not
+cover Railway's internal private networking or a future platform change.
+WP12 moves BLOCKED → **UNBLOCKED_NOT_YET_STARTED**: the XFF-trust exit
+condition is answered, but CIDR/IPv6 gaps, raw-socket DNS-rebinding TOCTOU,
+and byte/pixel caps are real, unbuilt, VERIFY-IP-independent work still
+needing its own implementation session. Script:
+`apps/api/scripts/verify-ip-probe.mjs`. Receipt:
+`archive/receipts/2026-09-02-audit-verify-ip-proxy-hops.json`.
+
+### VERIFY-DEP / WP13 — TRIAGE_COMPLETE / TRIAGED_UPGRADE_PENDING
+
+`npm audit --omit=dev --json` at root and in `apps/api` both count 1
+critical / 14 high / 7 moderate / 2 low — agrees with FABLE-REAUDIT.md's
+original count exactly. Triaged the 15 critical/high advisories by import
+graph (grep + `npm ls` + manual `node_modules` require-graph tracing for the
+harder transitive cases): **10 reachable** (`@coinbase/cdp-sdk`, `axios`,
+`brace-expansion`, `c2pa-node`, `drizzle-orm`, `fast-uri`, `form-data`,
+`hono`, `sharp`, `undici`), **5 unreachable** (`ip-address`, `js-yaml`,
+`path-to-regexp`, `shell-quote`, `ws`). Notably: **the one CRITICAL
+advisory (`shell-quote`) is unreachable** — both paths to it are dev/build
+CLI tooling (`npm-run-all` bundled inside `c2pa-node`, and `drizzle-kit`)
+never imported by `apps/api/src` at runtime. The highest-priority
+**reachable** finding is `drizzle-orm` (SQL injection via improperly
+escaped identifiers, direct dependency, used throughout `apps/api/src`) —
+its fix is semver-major and needs its own scoped upgrade session under the
+DEC-20260504-A regression-test discipline; `hono` (cookie-name validation,
+non-major fix, also reachable and load-bearing for auth) is a lower-risk
+first candidate. This is a triage, not the upgrade — none of the 10
+reachable packages were bumped in this batch. Script:
+`apps/api/scripts/wp13-dependency-triage.mjs`. Receipt:
+`archive/receipts/2026-09-02-audit-wp13-dependency-reachability.json`.
+
+### WP15 — database-lane ownership: partially satisfied, not closed
+
+Read `.github/workflows/ci.yml`'s `integration-db` job and
+`apps/api/scripts/assert-disposable-test-db.mjs`. The job's GitHub Actions
+`services:` Postgres container already gives real per-run infrastructure
+disposability (a fresh, isolated process per job, destroyed after) — a
+stronger property than "just a heuristic" implies. But the residual's
+literal ask — the lane creates and drops its **own uniquely-named**
+database — is not implemented: the lane always connects to one fixed name
+(`strale_test`), and the only thing standing between it and a
+tunnelled/misconfigured production `DATABASE_URL_TEST` is the row-count
+heuristic in `assert-disposable-test-db.mjs` (a real, working safety net —
+its own docstring: verified against production, refuses on 340 capabilities
+/ 899k transactions — but a heuristic, not a structural guarantee). Left as
+a small, well-scoped follow-up (unique DB name + explicit CREATE/DROP) in
+its own session, since it touches the CI pipeline every PR depends on.
+
+### WP17 — Immutable capability-state ledger: DEFERRED
+
+Dated 2026-09-02. A DB trigger + writer inventory + adversarial review is
+its own scoped implementation with its own review cycle, not separable into
+a smaller first slice without reproducing the exact failure mode the
+package exists to prevent (partial protection reading as protection). Three
+reopen triggers named in `packages/WP17.yaml`: a second out-of-band
+capability-state write recurring in production, a session explicitly scoped
+and budgeted for it, or DEC-20260428-B-grade work touching the same paths
+for an unrelated reason. The underlying gap (WHO changed a capability's
+state and on what authority, for a write that bypasses the application
+entirely) is unchanged from the 2026-08-21 incident; WP8's CHECK constraint
+still only prevents and detects one specific invalid state, and the
+execution-receipt programme's narrowing (DETECTION, not attribution) still
+stands.
+
+### WP14 → T16 (founder_gated); WP16 → T9 (confirmed correct)
+
+Added `docs/programs/cto-readiness/tracks.yaml` track **T16** for WP14
+(Legal & Data Policy Authority), `status: founder_gated`, `gate: none`,
+naming the exact evidence Petter must supply per DEC-20260815-A: the
+Dilisense vendor-role/DPA determination, real user-assent evidence (or an
+explicit decision that the current backend-only `tos_accepted` stamp is
+intended), and sign-off on the three `checkin_b` legal-text rewrites
+(Privacy retention wording, "charged only on success", Terms-at-signup).
+Added `T16` to `TRACKS_OUTSIDE_M2_GATE` in
+`scripts/m2-closure-register-lib.mjs`. `npm run programs:check` and
+`programs:test` pass. **T9 already pointed at WP16 correctly** (Discovery &
+Retrieval Authority, `gate: post-m2`, `depends_on: [T7]`) — verified, left
+unchanged per the task's own instruction to fix only if wrong.
+
+### DECISION-BRIEFS.md / PUBLIC-COPY-CORRECTION.md — still open, narrowed
+
+Neither file exists on `main` (confirmed: `git cat-file -e
+main:docs/remediation/DECISION-BRIEFS.md` fails). New finding this session:
+**`PUBLIC-COPY-CORRECTION.md`'s content has already shipped** — commit
+`171c2bff` (PR #388, on `main`) states explicitly that it "Executes sections
+3, 4 and 5 of docs/remediation/PUBLIC-COPY-CORRECTION.md, the twice-reviewed
+surface list for the correction Petter approved (DQ-18 item 2)," with
+sections 1–2 shipped via the frontend earlier. The withdrawn-integrity-claim
+surfaces this document named are gone from production; only the planning
+document itself was never merged as a standalone doc, which reads as
+superseded-by-execution rather than genuinely open. **DECISION-BRIEFS.md
+remains open**: commit `d462e013` (not on `main`) records that "Brief A was
+executed against production without approval" on 2026-08-22 — a governance
+process violation (the founder had reserved that write and never granted
+it), though the economic outcome matched what the brief proposed and every
+guard in the script held. `unverified:` whether Brief B was ever executed,
+and whether the process-violation finding itself has been formally closed —
+both require reading files/branches outside this worktree's `main`-rooted
+history, which this session did not do. **Still a founder question**:
+whether to merge either document (as historical record, now that most of
+their content is either executed or superseded), formally supersede them in
+place, or discard — none of the three was decided here.
+
+### Unverified items (hard-rule discipline: not acted on)
+
+- WP10: `job-coordinator-recovered` / `job-coordinator-job-timed-out` log
+  events (Better Stack, not DB-queryable read-only) — the
+  `consecutive_failures=0` DB proxy is same-instant, not a full history.
+- DECISION-BRIEFS.md: Brief B's execution status, and whether the Brief A
+  process-violation finding has been formally closed.
+
+### Everything below this point is prior history, unchanged.
 
 ## Governance rebaseline, 2026-08-25
 
