@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: product
+topic: dk-cvr-breaker-false-recovery-investigation
+question: Why did the danish-company-data circuit breaker appear stuck open, and what does the Phase 2 investigation establish about its real state?
+date: 2026-05-07
+status: current
+sources:
+  - apps/api/src/capabilities/danish-company-data.ts
+  - https://cvrapi.dk/documentation
+---
+
 # DK Phase 2 (Understand) — CVR breaker false-recovery via edge_case test pass
 
 **Date:** 2026-05-07

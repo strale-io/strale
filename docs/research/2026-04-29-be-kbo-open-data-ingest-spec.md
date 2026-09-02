@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: product
+topic: be-kbo-open-data-ingest-spec
+question: What is the design and registration spec for first-party ingest of the Belgian FPS Economy KBO Open Data feed?
+date: 2026-04-29
+status: current
+sources:
+  - apps/api/src/capabilities/belgian-company-data.ts
+  - https://strale.dev
+---
+
 # BE KBO Open Data first-party ingest — design + registration spec
 
 **Date:** 2026-04-29

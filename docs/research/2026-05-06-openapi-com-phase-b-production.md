@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: vendor
+topic: openapi-com-production-eval
+question: Which countries does Openapi.com's production API cover, at what field depth and latency, among Strale's gap and identity-only jurisdictions?
+date: 2026-05-06
+status: current
+sources:
+  - https://company.openapi.com/WW-start/DE/DE811115368
+  - docs/research/2026-05-06-openapi-com-sandbox-test.md
+---
+
 # Openapi.com Phase B — production depth + latency
 
 **Date:** 2026-05-06

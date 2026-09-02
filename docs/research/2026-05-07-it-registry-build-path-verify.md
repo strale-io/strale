@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: it-registry-build-path-verify
+question: Does the chosen IT registry data path (InfoCamere primary, or Openapi under a resale addendum) still hold up under a fresh technical-viability probe?
+date: 2026-05-07
+status: current
+sources:
+  - https://console.openapi.com/apis/company/info
+  - https://accessoallebanchedati.registroimprese.it/abdo/en/api
+---
+
 # IT registry build-path verification memo
 *Date: 2026-05-07. Spike branch: research/midrebuild-verify-spikes.*
 

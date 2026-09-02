@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: ro-registry-build-path
+question: What is the build path for ingesting Romania's ONRC company register?
+date: 2026-05-06
+status: current
+sources:
+  - https://data.gov.ro/api/3/action/package_search?q=onrc
+  - https://www.onrc.ro/
+---
+
 # Romania Registry — Direct Build Path Design Memo
 
 **Date:** 2026-05-06

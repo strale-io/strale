@@ -292,6 +292,12 @@ jobs:
       # checked here rather than trusted. Tests cover the checker itself.
       - run: npm run programs:check
       - run: npm run programs:test
+      # Research contract (T12, docs/research/*.md): one current file per
+      # topic, reciprocal acyclic supersession, resolvable links/sources,
+      # active decisions cite only current research. Tests plant every
+      # failure mode in a throwaway repository.
+      - run: npm run research:check
+      - run: npm run research:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.

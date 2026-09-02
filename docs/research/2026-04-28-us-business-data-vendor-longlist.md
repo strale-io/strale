@@ -1,3 +1,18 @@
+---
+doc_type: research
+type: vendor
+topic: us-business-data-vendor-longlist
+question: Which commercial vendor best supplies US private-company identity data (EIN match, legal name, address, officers) on a PAYG reseller-rights basis?
+date: 2026-04-28
+status: current
+sources:
+  - https://cobaltintelligence.com/blog/post/what-is-cobalt-intelligences-pricing-structure
+  - https://opencorporates.com/pricing/
+  - https://sayari.com/platform/
+decisions:
+  - DEC-20260428-A
+---
+
 # US Business-Data API Vendor Long-list — Payee Assurance v1.1
 
 **Date:** 2026-04-28 (verification pass added same day)

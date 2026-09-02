@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: si-registry-build-path
+question: What is the build path for ingesting Slovenia's AJPES business register?
+date: 2026-05-06
+status: current
+sources:
+  - https://podatki.gov.si/dataset/poslovni-register-slovenije
+  - https://www.ajpes.si/
+---
+
 # Slovenia Registry — Direct Build Path Design Memo
 
 **Date:** 2026-05-06

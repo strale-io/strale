@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: pt-registry-build-path-verify
+question: Does the chosen PT registry data path (publicacoes.mj.pt parser plus Certidao Permanente) still hold up under a fresh technical-viability probe?
+date: 2026-05-07
+status: current
+sources:
+  - https://publicacoes.mj.pt/
+  - https://openapi.com/products/company-advanced-portugal
+---
+
 # PT registry build-path verification memo
 *Date: 2026-05-07. Spike branch: research/midrebuild-verify-spikes.*
 

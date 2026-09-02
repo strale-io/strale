@@ -1,4 +1,17 @@
 ---
+doc_type: research
+type: vendor
+topic: us-ein-match-cheaper-alternatives
+question: Are there vendors or free-data ingest paths cheaper than Liberty Data/EINsearch for matching a US EIN to a named entity?
+date: 2026-04-28
+status: current
+sources:
+  - https://www.globaldatabase.com/top-5-ein-verification-tools-the-2026-kyb-guide
+  - https://www.irs.gov/charities-non-profits/exempt-organizations-business-master-file-extract-eo-bmf
+  - https://www.dol.gov/agencies/ebsa/about-ebsa/our-activities/public-disclosure/foia/form-5500-datasets
+---
+
+---
 date: 2026-04-28
 intent: Find vendors and free-data ingest paths that are cheaper than (or complementary to) Liberty Data / EINsearch ($375/yr Startup, ~$0.75/call effective) for the "does this EIN belong to this named entity?" check inside Payee Assurance v1.1. Founder constraint: PAYG > committed monthly fees at v1.1 launch volumes.
 confidence: Mixed. Pricing for Liberty Data and Cobalt Intelligence is published or confirmed. BrightQuery, Sayari, Veridion, Avalara, TIN Comply, Judy Diamond are quote-gated and marked low-confidence. Free-data record counts are primary-source verified.

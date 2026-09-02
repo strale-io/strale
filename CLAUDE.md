@@ -52,6 +52,17 @@ track's `resume_file` names anything else that batch needs. The migration
 checkpoint above is the M2-through-M7 detail behind the `cto-readiness`
 program. Programs are execution records, not project truth.
 
+### Research and ideas — where each one lives
+
+Research goes to `docs/research/` in the dated, front-matter template
+(`docs/research/research.schema.json`), checked by `npm run research:check`:
+one `current` file per topic, reciprocal and acyclic supersession, resolvable
+links and sources, and no active decision record citing research that is not
+current. Research is evidence, never authority — a finding that changes
+direction produces a decision record, not a rewrite of the research file.
+Ideas go to `docs/company/IDEAS.md`, nowhere else — not a Journal entry, not a
+prose aside in a plan or handoff.
+
 ### Session contract — both tools, every session
 
 1. **Orient first.** Read `docs/programs/README.md`, then the active track's
@@ -197,6 +208,9 @@ strale/
 #### Current Decisions (April 2026)
 - **DEC-20260428-A** (global, active): Third-party scraping doctrine — three-tier framework. Tier 1: Strale itself never operates scrapers (absolute). Tier 2: may consume vendor-scraped data when underlying data is public records by statute, vendor has documented redistribution rights + indemnification, vendor provides primary-source provenance per fact, and Strale discloses sourcing via `provenance.upstream_vendor` / `acquisition_method` / `primary_source_reference`. Tier 3: prefer licensed-bulk over scraping-derived when both are available at compatible economics. Anchored on Meta v. Bright Data (NDCal Jan 2024) and hiQ v. LinkedIn (settled Dec 2022, $500k judgment). Supersedes the implicit absolute no-scraping rule. Full doctrine: Notion Decisions DB (page id `35067c87-082c-810d-b6a4-edf9f14b4446`).
 - **DEC-20260428-B** (global, active): Engineering bar for Strale-built data services (sanctions/PEP, UBO, adverse media, future registry self-builds). Codifies regulatory-grade requirements: versioned dataset with stale-data circuit breaker, source-list manifest per response, Merkle-rooted ingest, match explainability, confidence buckets, dispute endpoint with disposition tracking, replay capability, golden test suite, canary deploys, per-list kill switches, GDPR Art. 22 compliance, threat-model document and public methodology page mandatory before production. AI synthesis steps (e.g. risk-narrative-generate) must require per-flag source citation, "screening checks found" framing, and never assert facts not present in input. Pairs with DEC-20260428-A.
+
+#### Current Decisions (September 2026)
+- **DEC-20260902-A** (global, active): **The website redesign is built inside this repository as `apps/web` (monorepo).** Directed by Petter 2026-09-02. Preserve first, then build: `strale-frontend` was swept and its design material preserved (release `preserve-2026-09-02`, archive tags, tracked candidates) and is kept, not extended, until the `apps/web` site serves production. Design-token work lands in `apps/web`. Reversal: a new record if Cloudflare Pages cannot build from a monorepo subdirectory or the site source must stay private. Notion Decisions DB entry filed 2026-09-02; repo-native record follows through the M2 closure path.
 
 #### Current Decisions (August 2026)
 - **DEC-20260813-A** (global, active): **DEC-20260518-F affirmed as the operative interpretation of DEC-20260428-A.** Tier 1 ("Strale never operates scrapers") targets bulk collection and scraping infrastructure, NOT targeted per-call parsing. Per-call HTML/PDF parsing of statutorily-public registry pages is permitted when ALL four constraints hold: (a) statutorily public, (b) registry ToS permits per-call automated access — verified and recorded in the capability's manifest before launch, (c) per-entity/per-customer-request, never bulk, (d) attribution + provenance preserved. Still absolute: bulk crawling, ToS-prohibited targets (DEC-20260420-H social platforms, DEC-20260427-H-4 Google), robots.txt evasion, CAPTCHA solving, proxy rotation, login-wall circumvention. Preference order: official API > licensed bulk > Tier-2 vendor > per-call parsing — F is the floor, not the default. Opens the Greece per-call path; supersedes the absolutist reading in the 2026-05-18 MT/HU partials. Full text: Notion Decisions DB `3bb67c87-082c-8101-a08a-ddaf92ffb5df`.

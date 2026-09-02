@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: mt-registry-build-path
+question: What is the build path for Malta's company registry now that the Malta Business Registry has launched paid API packages?
+date: 2026-05-06
+status: current
+sources:
+  - https://mbr.mt/
+  - https://thebusinesspicture.com/2026/03/04/malta-business-registry-launches-application-programming-interface-packages/
+---
+
 # Malta Registry — Direct Build Path Design Memo
 
 **Date:** 2026-05-06

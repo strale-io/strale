@@ -1,3 +1,16 @@
+---
+doc_type: research
+type: product
+topic: payee-assurance-build-vs-buy
+question: Which Payee Assurance legs should Strale buy from a vendor PAYG versus build or ingest directly?
+date: 2026-04-28
+status: current
+sources:
+  - https://www.opensanctions.org/licensing/
+  - https://bods-data.openownership.org/source/register/
+  - https://www.dol.gov/agencies/ebsa/about-ebsa/our-activities/public-disclosure/foia/form-5500-datasets
+---
+
 # Payee Assurance — Build vs Buy Cost Analysis
 
 **Date:** 2026-04-28
@@ -202,4 +215,4 @@ The leg that *doesn't* compress under this plan: **IBAN/name match**. €0.50/ca
 - [OpenOwnership data downloads](https://bods-data.openownership.org/source/register/)
 - [DOL Form 5500 datasets (free downloads)](https://www.dol.gov/agencies/ebsa/about-ebsa/our-activities/public-disclosure/foia/form-5500-datasets)
 - [`2026-04-22-bolagsverket-hvd-migration` handoff (Bolagsverket migration in progress)](../../handoff/_general/from-code/2026-04-22-bolagsverket-hvd-migration.md)
-- [`project_dilisense_reseller_status` memory (Dilisense reseller tier requirement)](../../../../.claude/projects/c--Users-pette-Projects-strale/memory/project_dilisense_reseller_status.md)
+- `project_dilisense_reseller_status` memory (Dilisense reseller tier requirement) — outside the repo, in Claude Code project memory

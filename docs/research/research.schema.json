@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strale.dev/schemas/research.schema.json",
+  "title": "Research file front matter",
+  "description": "Front matter contract for docs/research/*.md, per the T12 research contract (archive/sessions/2026-09-02-t12-research-contract-plan.md). Checked by scripts/check-research.mjs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["doc_type", "type", "topic", "question", "date", "status", "sources"],
+  "properties": {
+    "doc_type": {
+      "const": "research"
+    },
+    "type": {
+      "enum": ["market", "competitor", "positioning", "product", "user", "vendor", "registry"]
+    },
+    "topic": {
+      "type": "string",
+      "description": "Stable kebab-slug. One topic may have many files over time (current + superseded + historical).",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "minLength": 3,
+      "maxLength": 80
+    },
+    "question": {
+      "type": "string",
+      "description": "One sentence this file answers.",
+      "minLength": 15
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "status": {
+      "enum": ["current", "superseded", "historical"]
+    },
+    "supersedes": {
+      "type": "array",
+      "description": "File names (docs/research/*.md) this file replaces. Reciprocal with the target's superseded_by.",
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+\\.md$" },
+      "minItems": 1
+    },
+    "superseded_by": {
+      "type": "string",
+      "description": "File name (docs/research/*.md) that replaced this one. Required when status is superseded.",
+      "pattern": "^[A-Za-z0-9._-]+\\.md$"
+    },
+    "sources": {
+      "type": "array",
+      "description": "URLs or repo paths this file's findings are grounded in. At least one.",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "decisions": {
+      "type": "array",
+      "description": "DEC ids this file changed or informed.",
+      "items": { "type": "string", "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$" },
+      "minItems": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "superseded" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["superseded_by"]
+      }
+    }
+  ]
+}

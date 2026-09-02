@@ -1,3 +1,14 @@
+---
+doc_type: research
+type: registry
+topic: gleif-lei-coverage-by-country
+question: How many active LEIs does GLEIF report per target country, for v1 jurisdiction coverage planning?
+date: 2026-04-27
+status: current
+sources:
+  - https://api.gleif.org/api/v1/lei-records
+---
+
 # GLEIF LEI Coverage by Target Country — 2026-04-27
 
 **Method:** GLEIF public API `/lei-records` with `filter[entity.legalAddress.country]` per ISO country code, reading `meta.pagination.total`. No auth required.

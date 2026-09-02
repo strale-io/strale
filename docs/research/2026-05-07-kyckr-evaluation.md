@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: vendor
+topic: kyckr-evaluation
+question: Is Kyckr a viable primary fallback or parallel gap-closer for Strale's registry and UBO data, given its published terms?
+date: 2026-05-07
+status: current
+sources:
+  - https://www.kyckr.com/terms-conditions
+  - https://developer.kyckr.com/api/
+---
+
 # Kyckr — Build/Buy Evaluation
 
 **Date:** 2026-05-07

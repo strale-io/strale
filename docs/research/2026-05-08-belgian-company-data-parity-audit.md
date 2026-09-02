@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: product
+topic: belgian-company-data-parity-audit
+question: Does the belgian-company-data capability meet the four parity questions raised against Topograph's BE catalog?
+date: 2026-05-08
+status: current
+sources:
+  - apps/api/src/capabilities/belgian-company-data.ts
+  - manifests/belgian-company-data.yaml
+---
+
 # belgian-company-data parity audit — 2026-05-08
 
 Read-only audit against four parity questions raised in chat session 2026-05-08 after comparative analysis vs Topograph's BE catalog.

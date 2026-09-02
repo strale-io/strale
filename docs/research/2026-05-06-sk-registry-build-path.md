@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: sk-registry-build-path
+question: What is the build path for Slovakia's company registry, given the corrected discovery of the free api.statistics.sk RPO REST endpoint?
+date: 2026-05-06
+status: current
+sources:
+  - https://api.statistics.sk/rpo/v1/
+  - https://data.gov.sk/dataset
+---
+
 # Slovakia Registry — Direct Build Path Design Memo
 
 **Date:** 2026-05-06

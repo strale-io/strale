@@ -1,3 +1,17 @@
+---
+doc_type: research
+type: vendor
+topic: screening-coverage-empirical
+question: What is the real-world hit rate and coverage of Strale's PEP, sanctions, and adverse-media screening across v1 and v1.1 target jurisdictions?
+date: 2026-04-27
+status: current
+sources:
+  - apps/api/scripts/archive/empirical-screening-coverage.ts
+decisions:
+  - DEC-20260427-A
+  - DEC-20260427-B
+---
+
 # Empirical Screening Coverage — 2026-04-27
 
 **Decision this informs:** v1 launch readiness for sanctions-check / pep-check / adverse-media-check across EU27 + UK + NO + CH (v1) and + US (v1.1).
@@ -120,7 +134,7 @@ Every sanctions and PEP call returns `source: "dilisense"`. Verified via direct 
 - Production is in fail state for adverse-media-check until quota resets (will fall to Serper).
 - Confirms Mirko's 2026-04-27 nudge is operationally urgent, not just legal.
 
-**Action:** upgrade to Basic tier (€300/mo, 10k calls). Already on the legal-readiness path per [project_dilisense_reseller_status.md](../../) memory note.
+**Action:** upgrade to Basic tier (€300/mo, 10k calls). Already on the legal-readiness path per `project_dilisense_reseller_status.md` memory note.
 
 ### 3. Adverse-media native-language surfacing is structurally weak
 

@@ -1,3 +1,17 @@
+---
+doc_type: research
+type: market
+topic: us-company-registry-ein-research
+question: What registry and EIN/tax-ID data sources exist for covering US private companies under Payee Assurance v1.1?
+date: 2026-04-21
+status: current
+sources:
+  - https://icis.corp.delaware.gov/ecorp/entitysearch/NameSearch.aspx
+  - https://bizfileonline.sos.ca.gov/search/business
+  - https://search.sunbiz.org/Inquiry/CorporationSearch/ByName
+  - apps/api/src/capabilities/us-company-data.ts
+---
+
 # US Company Registry + EIN / Tax-ID Validation — Source Research for Payee Assurance v1.1
 
 **Date:** 2026-04-21

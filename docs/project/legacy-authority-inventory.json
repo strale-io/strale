@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "89438b862274794761ead1c941ed27b7550860278c3d779eaa240f236a670f6d",
+      "sha256": "699f3f15c13436be81304101d909e9486d0607596b02686bc2d70d21641a71b5",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -34,11 +34,13 @@
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
         "archive/sessions/2026-09-02-fresh-session-readiness-plan.md",
+        "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-16-codebase-quality-program.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
@@ -57,6 +59,7 @@
         "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
+        "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
@@ -64,7 +67,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "8b60ba2ec54b834ef1f9d6e30ec18f7e8e5814a7d0614d5fc75711e3c15a9dbf",
+      "sha256": "2d84c635499f073e7695713b2820bc58c60430f5a3a2f372260dc46fc191d3b3",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -123,6 +126,7 @@
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
         "archive/sessions/2026-09-02-fresh-session-readiness-plan.md",
+        "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
@@ -223,6 +227,7 @@
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
         "handoff/_general/from-code/2026-09-02-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
+        "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
@@ -348,7 +353,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "954872558c7cb8d0c8ad8f4497dfd97fdfb46cd3153b86958974437937bbbf75",
+      "sha256": "cff5606fe0d2b097f6643518caa362ca0134e6b3277d33de1b038069e9bf03d2",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -367,9 +372,11 @@
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
+        "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
         "docs/programs/cto-readiness/PROGRAM.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/remediation/REMEDIATION-LEDGER.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/x402-listing.md",
@@ -377,8 +384,11 @@
         "handoff/_general/from-code/2026-08-15-operating-charter-and-measurement-rebuild.md",
         "handoff/_general/from-code/2026-08-25-f1-taxonomy-default.md",
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "scripts/guard-production-write-access.mjs",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/research-lib.mjs",
+        "scripts/research.test.mjs"
       ]
     },
     {
@@ -394,6 +404,7 @@
         "archive/sessions/2026-08-31-repo-native-operating-model-m1-review-claude.md",
         "archive/sessions/2026-08-31-repo-native-operating-model-plan-review-claude.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
+        "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/kyb-coverage-research.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
@@ -403,13 +414,16 @@
         "handoff/_general/from-code/2026-08-16-quality-program-phase0-phase1.md",
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
+        "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "manifests-drafts/README.md",
         "manifests-drafts/company-name-resolve.yaml",
         "manifests-drafts/domain-email-provider-detect.yaml",
         "manifests-drafts/mexican-company-data.yaml",
         "manifests-drafts/product-offers-lookup.yaml",
         "manifests-drafts/sec-edgar-name-search.yaml",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/research-lib.mjs",
+        "scripts/research.test.mjs"
       ]
     },
     {
@@ -439,7 +453,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "31087f2ab5842aaa0713af065647d15d5ee6711d33de6a6d61e59c8714a70538",
+      "sha256": "a5c47cce63fae44cf16416378cca7234123648dae9846b673a637bfbb80aedd6",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -495,6 +509,7 @@
         "archive/sessions/2026-09-01-x402-price-representation-parity-plan.md",
         "archive/sessions/2026-09-02-fresh-session-readiness-plan.md",
         "archive/sessions/2026-09-02-t1-m2-closure-audit-plan.md",
+        "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md",
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/CONTAINMENT_REPORT.md",

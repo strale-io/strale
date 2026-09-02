@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: bg-registry-build-path
+question: What is the build path for ingesting Bulgaria's BRRA commercial register open data?
+date: 2026-05-07
+status: current
+sources:
+  - https://data.egov.bg/
+  - https://github.com/governmentbg/brra-opendata
+---
+
 # Bulgaria Registry — Build Path Verification Memo
 
 **Date:** 2026-05-07
