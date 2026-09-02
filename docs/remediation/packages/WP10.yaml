@@ -40,7 +40,7 @@ acceptance:
     weekly_sweep: >
       Read directly off job_schedule rather than off upstream_escalation
       (see note below): last_started_at 2026-08-30T09:11:21Z, next_run_at
-      2026-09-06T09:11:21Z — exactly 7 days later, unchanged across the ~90
+      2026-09-06T09:11:21Z — exactly 7 days later, unchanged across the 47 merges-to-main deploys since 2026-08-30 (first-parent commits, reviewer-reproduced; an earlier draft said ~90, unsourced) —
       deploys that happened between 2026-08-30 and this measurement
       (2026-09-02). Pre-fix this job ran 141 times in 17.6 days.
     upstream_escalation_is_not_a_sweep_marker: >

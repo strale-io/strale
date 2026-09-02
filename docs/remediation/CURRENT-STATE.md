@@ -20,7 +20,7 @@ stddev 0.01h, across 120 deploys between the WP10 merge (`ce5e63f`,
 2026-08-23) and HEAD (`2feb22bf`, 2026-09-02) — `GET /health` confirmed HEAD
 is the deployed commit, so all 120 merges are real redeploys, not just
 landed commits. `weekly-sweep`'s `next_run_at` sits exactly 7 days after its
-last run, unchanged across the ~90 deploys since 2026-08-30 (was 141 runs in
+last run, unchanged across the 47 merges to main since 2026-08-30T09:11Z (first-parent commits; each merge deploys), a count reproduced by the reviewer (was 141 runs in
 17.6 days pre-fix). Zero `job_schedule` rows show a consecutive failure, an
 error outcome, or a stranded lease. One item is `unverified:` — crash-
 recovery / watchdog-expiry log events go to Better Stack, not a queryable DB

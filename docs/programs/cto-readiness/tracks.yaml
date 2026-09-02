@@ -16,7 +16,7 @@
 # is required.
 schema_version: 1
 program: cto-readiness
-program_status: active
+program_status: paused
 updated: 2026-09-02
 tracks:
   - id: T1
@@ -218,15 +218,17 @@ tracks:
 
   - id: T4
     title: Remediation program closure
-    status: active
+    status: done
     gate: none
     depends_on: []
     owner: session
     next_action: >
-      Record WP10's overdue seven-day cadence verdict from production evidence;
-      close WP9 observation; establish the Railway proxy-hop count read-only
-      for VERIFY-IP; decide WP15's database-lane item; ship or formally defer
-      WP17; run WP13's reachability triage; re-home WP14 and WP16.
+      Done 2026-09-02 (PR #493): WP10 accepted on production cadence
+      evidence, WP9 accepted with residuals, VERIFY-IP resolved (one proxy
+      hop), WP12 unblocked, WP13 triaged, WP15 assessed, WP17 deferred with
+      reopen triggers, WP14 as founder-gated track T16, PACKAGE-GRAPH
+      reconciled. Open for Petter: DECISION-BRIEFS.md (merge, supersede or
+      discard) and T16's evidence.
     resume_file: docs/remediation/CURRENT-STATE.md
     exit:
       - WP9 and WP10 carry a terminal status in their package files
@@ -235,7 +237,11 @@ tracks:
       - WP14 appears in tracks.yaml as founder_gated with the exact evidence requested
       - WP16 appears as T9 with its own plan pointer
       - PACKAGE-GRAPH.yaml reconciled against package files
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t4-remediation-closure.md
+      - docs/remediation/packages/WP10.yaml
+      - docs/remediation/packages/WP9.yaml
+      - archive/receipts/2026-09-02-audit-wp10-cadence-verdict.json
 
   - id: T5
     title: CTO-readable repository structure

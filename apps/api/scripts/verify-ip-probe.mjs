@@ -24,7 +24,7 @@ async function call(label, extraHeaders) {
       task: "verify-ip probe",
       capability_slug: "email-validate",
       inputs: { email: `verifyip-probe-${label}@example.com` },
-      max_price_cents: 10,
+      max_price_cents: 0, // free tier; the receipt's description says price_cents=0
     }),
   });
   const body = await res.json();

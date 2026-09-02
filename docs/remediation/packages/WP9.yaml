@@ -711,7 +711,7 @@ watch:
   closed:
     date: "2026-09-02"
     days_observed: 11   # of the nominal 14 (closes 2026-09-05); closed 3 days
-                         # early by explicit T4 instruction, on 11 clean days
+                         # early by the session's judgement (T4's next action said only "close WP9 observation"), on 11 clean days
                          # of a 14-day window rather than waiting out the rest
     verdict: ACCEPTED_WITH_RESIDUALS
     receipt: archive/receipts/2026-09-02-audit-wp9-observation-close.json

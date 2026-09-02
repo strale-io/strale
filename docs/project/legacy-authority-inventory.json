@@ -469,7 +469,7 @@
     {
       "path": "docs/remediation",
       "owner_area": "remediation-program",
-      "sha256": "2c9e71b60c8e22e488a7a5ba9914bb38946b7bb725cbc596deed854736953070",
+      "sha256": "37b5b094a3c49b91ea20b23fbfddae1f63a9cfa992dd8dfdb1806e079bcbda39",
       "detected_references": [
         "apps/api/scripts/verify-ip-probe.mjs",
         "apps/api/scripts/wp10-cadence-verdict.mjs",
@@ -509,7 +509,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f4625244963d9e2f2367056618e38a3fa12848632c8142c7de7037e9480b42e9",
+      "sha256": "9b91f72199eb18b64dd550aee6a7bd21d120ad76f39572832175a1889b07447d",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

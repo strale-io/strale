@@ -36,7 +36,7 @@ Query: `apps/api/scripts/wp10-cadence-verdict.mjs`. Receipt:
 - `capability-promotion`: 7/7d (was 45/7d), gaps 24.02h avg / 0.01h stddev
   across 10 gaps.
 - `weekly-sweep`: `next_run_at` exactly 7 days after `last_started_at`,
-  unchanged across ~90 deploys since 2026-08-30 (was 141 runs/17.6 days
+  unchanged across the 47 merges to main since 2026-08-30T09:11Z (first-parent commits; each merge deploys), a count reproduced by the reviewer; the first draft of this line said ~90 without a source (was 141 runs/17.6 days
   pre-fix).
 - 120 commits merged to `main` between `ce5e63f` (2026-08-23) and HEAD
   (`2feb22bf`, 2026-09-02); `GET /health` confirmed HEAD is the deployed
