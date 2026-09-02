@@ -118,26 +118,28 @@ test("invisible text is rejected wherever text is required", () => {
   assert.equal(isVisiblyNonEmpty(" a "), true);
   assert.equal(isVisiblyNonEmpty("\u00e9"), true);
   assert.equal(isVisiblyNonEmpty("7"), true);
+  // Field-level cases use strings long enough to clear the schema's minLength,
+  // so the only check that can reject them is the visibility rule.
   for (const field of ["title", "next_action"]) {
     for (const s of invisible) {
       const r = base();
-      r.tracks[0][field] = s;
+      r.tracks[0][field] = s.repeat(12);
       assert.ok(codes(r).includes("TEXT_NOT_VISIBLE"), `${field} ${JSON.stringify(s)}`);
     }
   }
   for (const s of invisible) {
     const r = base();
-    r.tracks[0].exit = [s];
+    r.tracks[0].exit = [s.repeat(12)];
     assert.ok(codes(r).includes("TEXT_NOT_VISIBLE"), `exit ${JSON.stringify(s)}`);
     const r2 = base();
     r2.tracks[0].status = "blocked";
-    r2.tracks[0].blocker = s;
+    r2.tracks[0].blocker = s.repeat(12);
     activate(r2, 1);
     r2.tracks[1].resume_file = "README.md";
     assert.ok(codes(r2).includes("TEXT_NOT_VISIBLE"), `blocker ${JSON.stringify(s)}`);
     const r3 = base();
     r3.tracks[1].status = "rehomed";
-    r3.tracks[1].rehomed_to = s;
+    r3.tracks[1].rehomed_to = s.repeat(12);
     assert.ok(codes(r3).includes("TEXT_NOT_VISIBLE"), `rehomed_to ${JSON.stringify(s)}`);
   }
 });
