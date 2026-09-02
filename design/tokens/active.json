@@ -1,0 +1,139 @@
+{
+  "surfaces": {
+    "internal-reports": {
+      "palette": {
+        "bg": "#F5F6F9",
+        "surface": "#FFFFFF",
+        "raised": "#FAFBFC",
+        "line": "#E7E9F0",
+        "lineSoft": "#EFF1F6",
+        "ink": "#151821",
+        "ink2": "#3D4453",
+        "muted": "#767E8E",
+        "accent": "#2563EB",
+        "accentSoft": "#E7F0FE",
+        "accentLine": "#A8C7FA",
+        "good": "#177245",
+        "goodSoft": "#E6F4EC",
+        "warn": "#9A5B12",
+        "warnSoft": "#FCF0E2",
+        "crit": "#B3352C",
+        "critSoft": "#FBEBEA"
+      },
+      "type": {
+        "families": {
+          "sans": "system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif"
+        },
+        "scale": {
+          "body": 14,
+          "caption": 10.5,
+          "small": 11,
+          "smallPlus": 11.5,
+          "label": 12,
+          "labelPlus": 12.5,
+          "cardTitle": 13,
+          "cardTitlePlus": 13.5,
+          "kpiUnit": 15,
+          "metric": 25
+        }
+      },
+      "spacing": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 18, 20, 22, 24, 53, 56],
+      "radii": [2, 3, 4, 5, 6, 7, 8, 10, 12, "50%", "full"],
+      "shadows": [
+        "0 1px 2px rgba(21,24,33,.04),0 1px 1px rgba(21,24,33,.03)"
+      ],
+      "motion": {
+        "note": "No animation tokens in the source stylesheet beyond the .qchev rotate transition, itself gated by prefers-reduced-motion.",
+        "transitions": {
+          "qchev-rotate": "transform .15s ease"
+        }
+      },
+      "provenance": {
+        "source": "apps/api/scripts/lib/design-system.ts",
+        "note": "Captured from the TOKENS export and DESIGN_SYSTEM_CSS string as of this PR. This repository is canonical for this surface, so no cross-repo commit applies — see git history of design-system.ts for prior state."
+      },
+      "adopted_by": "DEC-20260815-A",
+      "adopted_at": "2026-08-15"
+    },
+    "website": {
+      "palette": {
+        "--background": "220 5% 4%",
+        "--foreground": "220 2% 95%",
+        "--card": "220 5% 7%",
+        "--card-foreground": "220 2% 95%",
+        "--popover": "220 5% 7%",
+        "--popover-foreground": "220 2% 95%",
+        "--primary": "213 67% 65%",
+        "--primary-foreground": "220 5% 4%",
+        "--secondary": "220 5% 10%",
+        "--secondary-foreground": "220 2% 95%",
+        "--muted": "220 5% 12%",
+        "--muted-foreground": "218 6% 62%",
+        "--destructive": "0 65% 68%",
+        "--destructive-foreground": "220 2% 95%",
+        "--border": "220 5% 12%",
+        "--input": "220 5% 12%",
+        "--ring": "213 67% 65%",
+        "--code-highlight": "43 53% 64%",
+        "--success": "149 39% 62%",
+        "--success-foreground": "220 5% 4%",
+        "--warning": "36 73% 57%",
+        "--warning-foreground": "220 5% 4%",
+        "--info": "262 42% 70%",
+        "--info-foreground": "220 5% 4%",
+        "--teal": "149 39% 62%",
+        "--teal-foreground": "220 5% 4%",
+        "--pink": "330 59% 69%",
+        "--pink-foreground": "220 5% 4%",
+        "--purple": "262 42% 70%",
+        "--purple-foreground": "220 5% 4%",
+        "--accent": "220 5% 14%",
+        "--accent-foreground": "220 2% 95%",
+        "--sidebar-background": "220 5% 5%",
+        "--sidebar-foreground": "220 2% 95%",
+        "--sidebar-primary": "213 67% 65%",
+        "--sidebar-primary-foreground": "220 5% 4%",
+        "--sidebar-accent": "220 5% 10%",
+        "--sidebar-accent-foreground": "220 2% 95%",
+        "--sidebar-border": "220 5% 12%",
+        "--sidebar-ring": "213 67% 65%"
+      },
+      "type": {
+        "families": {
+          "sans": "Inter, system-ui, sans-serif",
+          "mono": "'JetBrains Mono', monospace"
+        },
+        "scale": {
+          "display": { "base": "2.25rem/2.5rem", "md": "3rem/1", "lg": "3.75rem/1" },
+          "pageTitle": { "base": "1.875rem/2.25rem", "md": "2.25rem" },
+          "sectionTitle": { "base": "1.875rem" },
+          "lead": { "base": "1.125rem" },
+          "body": { "base": "0.875rem" },
+          "small": { "base": "0.75rem" },
+          "caption": { "base": "0.6875rem" },
+          "micro": { "base": "0.625rem" }
+        }
+      },
+      "spacing": [0.5, 1, 1.5, 2, 3, 4, 6, 8],
+      "radii": [
+        "var(--radius)",
+        "calc(var(--radius) - 2px)",
+        "calc(var(--radius) - 4px)"
+      ],
+      "shadows": [],
+      "motion": {
+        "note": "tailwindcss-animate plugin (accordion-down/up keyframes); no other custom motion tokens in tailwind.config.ts as of capture."
+      },
+      "provenance": {
+        "repo": "strale-frontend",
+        "source": "src/index.css, tailwind.config.ts, index.html",
+        "commit": "04c9fca970d82b2c98145973816d52086b3b91d7",
+        "captured_at": "2026-09-02",
+        "note": "Dark theme, HSL CSS custom properties in src/index.css; Inter + JetBrains Mono and the radius/font-family Tailwind extensions in tailwind.config.ts; page <title> and meta description read from index.html. This is a faithful capture of what strale-frontend main serves today, not a redesign — it becomes the build input when apps/web exists (ROADMAP section 7)."
+      },
+      "adopted_by": "unrecorded",
+      "adopted_at": "unrecorded",
+      "note": "No decision record ever adopted this theme — it accreted through ordinary frontend commits before the design-tokens-as-data discipline existed. Recorded 'unrecorded' rather than backfilling a decision id, per design/PROVENANCE.md."
+    }
+  }
+}

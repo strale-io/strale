@@ -130,6 +130,10 @@ After that, complete the remaining homepage outcomes—Featured Tools,
 Developers/x402, Reliability, Pricing/Access, closing CTA, footer, and a final
 full-page cohesion pass—without mistaking branch source for live state.
 
+Design values for both preserved candidates (and the live theme) are tracked
+as data in `design/tokens/`, not restated here — see `design/README.md` and
+`design/PROVENANCE.md` before any promotion decision.
+
 ## Blocked tracks
 
 - **WP12:** VERIFY-IP / trusted-hop evidence.

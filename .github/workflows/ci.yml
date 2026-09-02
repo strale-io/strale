@@ -298,6 +298,16 @@ jobs:
       # failure mode in a throwaway repository.
       - run: npm run research:check
       - run: npm run research:test
+      # Design tokens as data (T13, design/tokens/*.json): one active file
+      # per surface with provenance/adopted_by, candidates carry a status,
+      # promotion requires a decision (active.json changing against
+      # origin/main with no adopted_by change fails), the generated
+      # apps/api/scripts/lib/design-tokens.generated.ts stays in sync, and
+      # an off-token hex/rgb/hsl/font-family/off-scale-px lint over the
+      # internal-report consumers with a ratcheted allowlist. Tests plant
+      # every failure mode in a throwaway repository.
+      - run: npm run design:check
+      - run: npm run design:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strale.io/schemas/design-tokens.schema.json",
+  "title": "Strale design token file",
+  "description": "Validates design/tokens/active.json (a `surfaces` map, one entry per production surface) and every design/tokens/candidates/*.json file (a single surface plus a `status`). See design/README.md for the promotion flow.",
+  "$defs": {
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "colorValue": {
+      "description": "A color token value. Hex for surfaces whose source is hex-native; an HSL triple string (\"H S% L%\", no hsl() wrapper) for surfaces whose source stores HSL custom properties, so the captured value matches the source file byte-for-byte.",
+      "type": "string",
+      "minLength": 1
+    },
+    "palette": {
+      "type": "object",
+      "description": "Flat map of token name to color value. Keys are the names used in the surface's own source (e.g. `accent`, or `--primary`); no fixed key set, because the two existing surfaces do not share one.",
+      "additionalProperties": { "$ref": "#/$defs/colorValue" },
+      "minProperties": 1
+    },
+    "type": {
+      "type": "object",
+      "required": ["families"],
+      "properties": {
+        "families": {
+          "type": "object",
+          "description": "Role (sans, mono, ...) to font-family stack.",
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "minProperties": 1
+        },
+        "scale": {
+          "type": "object",
+          "description": "Role name to a size descriptor. Free-form per surface (a px number, or an object of responsive values) — the two surfaces' source files do not share one shape.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "spacing": {
+      "type": "array",
+      "description": "The surface's spacing scale, smallest first. Used by the lint check to judge whether a margin/padding/gap literal in a consumer file is on-token.",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 1
+    },
+    "radii": {
+      "type": "array",
+      "description": "The surface's corner-radius scale. Items are px numbers, the strings \"50%\" / \"full\" for pill/circle radii, or a CSS length/expression string (e.g. \"var(--radius)\") when the surface's own source expresses radii that way rather than as resolved pixels.",
+      "items": {
+        "oneOf": [
+          { "type": "number", "minimum": 0 },
+          { "type": "string", "minLength": 1 }
+        ]
+      },
+      "minItems": 1
+    },
+    "shadows": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "motion": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Where this surface's values were captured from.",
+      "required": ["source"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repo-relative (or cross-repo, e.g. \"strale-frontend:src/index.css\") path to the file the values were read from."
+        },
+        "repo": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The repository the source file lives in, when it is not this one."
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}$",
+          "description": "The commit the values were captured at."
+        },
+        "captured_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "surfaceFields": {
+      "type": "object",
+      "required": ["palette", "type", "spacing", "radii", "provenance"],
+      "properties": {
+        "palette": { "$ref": "#/$defs/palette" },
+        "type": { "$ref": "#/$defs/type" },
+        "spacing": { "$ref": "#/$defs/spacing" },
+        "radii": { "$ref": "#/$defs/radii" },
+        "shadows": { "$ref": "#/$defs/shadows" },
+        "motion": { "$ref": "#/$defs/motion" },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "description": "active.json — what production currently runs, per surface.",
+      "type": "object",
+      "required": ["surfaces"],
+      "properties": {
+        "surfaces": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "allOf": [
+              { "$ref": "#/$defs/surfaceFields" },
+              {
+                "type": "object",
+                "required": ["adopted_by", "adopted_at"],
+                "properties": {
+                  "adopted_by": {
+                    "description": "The decision id that adopted this surface's values, or the literal string \"unrecorded\" when no decision record ever did — see design/PROVENANCE.md.",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "adopted_at": {
+                    "description": "ISO date the surface was adopted, or \"unrecorded\".",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "note": { "type": "string" }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "description": "A candidate token file (design/tokens/candidates/*.json) — one surface plus a status.",
+      "type": "object",
+      "required": ["name", "status", "provenance"],
+      "allOf": [{ "$ref": "#/$defs/surfaceFields" }],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["exploring", "proposed", "adopted", "rejected"]
+        },
+        "supersedes": {
+          "type": ["string", "null"]
+        },
+        "superseded_by": {
+          "type": ["string", "null"]
+        },
+        "notes": { "type": "string" },
+        "palette": { "$ref": "#/$defs/palette" },
+        "type": { "$ref": "#/$defs/type" },
+        "spacing": { "$ref": "#/$defs/spacing" },
+        "radii": { "$ref": "#/$defs/radii" },
+        "shadows": { "$ref": "#/$defs/shadows" },
+        "motion": { "$ref": "#/$defs/motion" },
+        "provenance": { "$ref": "#/$defs/provenance" }
+      },
+      "additionalProperties": false
+    }
+  ]
+}

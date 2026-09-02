@@ -122,26 +122,50 @@ tracks:
 
   - id: T12
     title: Research contract
-    status: active
+    status: done
     gate: none
     depends_on: [T3]
     owner: session
     next_action: >
-      Milestone 1 of the founder's 2026-09-02 plan, per the stored plan:
-      research front-matter template and Ajv schema; research:check
-      (one current file per topic, reciprocal acyclic supersession, resolvable
-      links and sources, active decisions cite only current research, ideas
-      file line shape) with tests that plant each failure mode; generated
-      docs/research/README.md index; front matter on all 37 existing files
-      with the inference table in the handoff; docs/company/IDEAS.md; the
-      identical research-and-ideas paragraph in CLAUDE.md and AGENTS.md;
-      CI runs research:check and research:test.
+      Done 2026-09-02 (PR #486): front-matter schema, research:check and
+      research:test in CI, generated index, all 37 files migrated, IDEAS.md,
+      identical paragraph in CLAUDE.md and AGENTS.md. Five research-looking
+      files under docs/strategy and docs/audits are reported as warnings for
+      a later migration batch.
     resume_file: archive/sessions/2026-09-02-t12-research-contract-plan.md
     exit:
       - research:check passes on main and each planted failure mode fails it with a one-line fix
       - every docs/research Markdown file carries valid front matter and appears in the generated index
       - an active decision citing a superseded research file fails the check
       - identical research-and-ideas paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t12-research-contract.md
+      - scripts/check-research.mjs
+      - docs/research/README.md
+
+  - id: T13
+    title: Design tokens as data, candidates, promotion
+    status: active
+    gate: none
+    depends_on: [T12]
+    owner: session
+    next_action: >
+      Milestones 2 and 3 of the founder's 2026-09-02 plan, per the stored
+      plan: design/tokens/active.json (internal-reports and website surfaces
+      with provenance and adopted_by), schema, two candidates with status,
+      explorations convention, PROVENANCE.md; generator that writes the
+      internal report tokens from active.json with a --check; design:check
+      and design:test in CI (schema, one active, candidate status, promotion
+      requires a decision, generated file in sync, hex/font/off-scale lint
+      over the HTML-emitting consumers with a ratcheted allowlist);
+      DESIGN-SYSTEM.md rewritten to one page; identical paragraph in
+      CLAUDE.md and AGENTS.md.
+    resume_file: archive/sessions/2026-09-02-t13-design-tokens-plan.md
+    exit:
+      - design:check passes on main and each planted failure mode fails it with a one-line fix
+      - the internal report consumers render from active.json through the generated file
+      - both candidates and the provenance record carry a status; DESIGN-SYSTEM.md is one page
+      - identical design paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
     evidence: []
 
   - id: T4

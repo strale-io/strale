@@ -1,0 +1,60 @@
+{
+  "name": "Quiet Material v0.7",
+  "status": "proposed",
+  "supersedes": "quiet-material-v0.5",
+  "superseded_by": null,
+  "notes": "Preserved marketing-website design system, light theme, material-driven surfaces (soft gradients and image-backed atmosphere tokens rather than flat fills). Its own docs/website-redesign/CURRENT-DESIGN-SYSTEM.md calls it canonical; the source folder's README.md still names v0.5. Not the design production runs today (that is the `website` surface in ../active.json — a dark HSL theme). See design/explorations/2026-09-01-quiet-material-v0.7/README.md and design/PROVENANCE.md for how this was found and preserved, and the Codex handoff round 23 candidate for the competing direction reviewed against the same baseline.",
+  "palette": {
+    "--canvas": "#ffffff",
+    "--surface": "#f8f8f5",
+    "--surface-strong": "#f1f1ed",
+    "--surface-warm": "#f2f0ec",
+    "--section-canvas-primary": "#ffffff",
+    "--section-canvas-cool": "#f4f8fb",
+    "--section-canvas-warm": "#f7f4ef",
+    "--section-canvas-mineral": "#f1f7f4",
+    "--section-canvas-dark": "#071829",
+    "--ink": "#11110f",
+    "--ink-secondary": "#5f605c",
+    "--hairline": "#ddddd7",
+    "--signal-red": "#f2381b",
+    "--signal-red-inverse": "#ff7658",
+    "--deep-ember": "#25100d",
+    "--signal-blue": "#164076",
+    "--atmospheric-blue": "#315e8b",
+    "--midnight": "#0d223b",
+    "--blue-mist": "#e5eff9",
+    "--blue-whisper": "#f0f6fc",
+    "--border-blue": "#b8cee4",
+    "--mineral": "#246b5a",
+    "--mineral-light": "#8fd5a6",
+    "--deep-pine": "#12382f",
+    "--mint-whisper": "#edf6f2",
+    "--border-mint": "#d7e6df",
+    "--success": "#17795d",
+    "--ink-inverse": "#f3f6f9",
+    "--ink-inverse-secondary": "#aebdcd",
+    "--accent-blue-inverse": "#9bc9f5",
+    "--border-midnight": "#1d3958"
+  },
+  "type": {
+    "families": {
+      "sans": "\"Instrument Sans\", Arial, sans-serif",
+      "mono": "\"IBM Plex Mono\", Consolas, monospace"
+    },
+    "scale": {
+      "note": "Full responsive marketing type ladder lives in the preserved source, not restated here — see the exploration README for the file path."
+    }
+  },
+  "spacing": [4, 8, 12, 16, 20, 24, 28, 32, 40, 44, 48, 56, 72],
+  "radii": [11, 12, 16, 18, 24, 26, "full"],
+  "shadows": [],
+  "motion": {
+    "note": "Not captured in this token file — see the preserved source's own CSS for stage/atmosphere transition timing."
+  },
+  "provenance": {
+    "repo": "strale-frontend",
+    "source": "design/candidates/quiet-material-v0.7/public/strale-site/design-system/assets/design-tokens.css",
+    "note": "Values transcribed from the color, spacing, and radius sections of the preserved token file (391 of 669 files of the original dated folder; see that folder's own README.md for the full preservation record and the release tag with the complete byte-for-byte zip). Palette here is the subset actually used as flat colors — the file also defines gradient and image-backed tokens (surface-stage-soft, pattern-folded-*, etc.) that this flat JSON schema does not represent; read the source file directly for those."
+  }
+}
