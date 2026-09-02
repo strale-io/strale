@@ -185,9 +185,18 @@ export function findMutatedReceipts(root, tracked) {
   return findings;
 }
 
-/** True for a whitespace-free string that is a plausible repo-path-or-reference candidate. */
+/**
+ * True for a whitespace-free string that is a plausible repo-path-or-reference
+ * candidate: contains a slash, is a `<sha>:<path>` reference, or is a bare
+ * root-level file name with an extension (`CLAUDE.md`, `package.json`). A
+ * bare identifier such as `DEC-20260302-A` is not a path and is left alone.
+ * (Independent review of PR #490: the first version exempted every bare
+ * file name, so `CLAUDE.md` and a misspelt one were never checked.)
+ */
+const BARE_FILE_NAME = /^[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8}$/;
 export function isBarePathCandidate(value) {
-  return typeof value === "string" && value.length > 0 && !/\s/.test(value) && (value.includes("/") || SHA_PATH_REF.test(value));
+  if (typeof value !== "string" || value.length === 0 || /\s/.test(value)) return false;
+  return value.includes("/") || SHA_PATH_REF.test(value) || BARE_FILE_NAME.test(value);
 }
 
 /**

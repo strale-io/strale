@@ -243,6 +243,9 @@ test("full check surfaces RECEIPT_MUTATED end to end", () => {
 test("isBarePathCandidate rejects prose (whitespace) and accepts a whitespace-free path-like token", () => {
   assert.equal(isBarePathCandidate("verified read-only against production — has spaces"), false);
   assert.equal(isBarePathCandidate("docs/company/CHARTER.md"), true);
+  assert.equal(isBarePathCandidate("CLAUDE.md"), true, "a bare root-level file name is a path candidate");
+  assert.equal(isBarePathCandidate("NONEXISTENT-BARE-FILENAME.md"), true);
+  assert.equal(isBarePathCandidate("DEC-20260302-A"), false, "a decision id is not a path");
   assert.equal(isBarePathCandidate("DEC-20260302-A"), false); // no "/", not sha:path shaped
 });
 

@@ -257,7 +257,9 @@
         "scripts/guard-worktree-isolation.mjs",
         "scripts/handoff/handoff-check.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
-        "scripts/m2-closure-register.test.mjs"
+        "scripts/m2-closure-register.test.mjs",
+        "scripts/receipts-lib.mjs",
+        "scripts/receipts.test.mjs"
       ]
     },
     {
@@ -495,7 +497,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "5e4482e3aa44d18c055ca748a1bc0cb2a02aac8a241d0924dac01edde58e8c46",
+      "sha256": "0d0b547b8397a610f8bd25afcf3c681ed4bd659f917a4b48de7faa328d08ca66",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

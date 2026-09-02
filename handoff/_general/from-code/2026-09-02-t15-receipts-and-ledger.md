@@ -171,7 +171,7 @@ Two categories, allowlisted in the ledger with per-column notes:
 2. **Classification/consolidation columns** (`capabilities.cost_class`
    and 4 siblings, `test_suites.external_cost_cents` and 6 siblings,
    `solutions.*`, `capabilities.visible`/`x402_enabled`/
-   `deactivation_reason`): 23 columns total. **Judgement call, not a full
+   `deactivation_reason`): 17 columns total. **Judgement call, not a full
    verification.** Spot-checked a sample (the `0066`/`0069` pair has an
    explicit source comment — "Block 0069 owns every classified
    capability; see UNCLASSIFIED_ONLY's comment for why the two must not
