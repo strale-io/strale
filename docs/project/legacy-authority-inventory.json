@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "3e376bd5f36cf7c12a670f25d473caddf6f3c3cb429645c5d3a9f6c014b55ced",
+      "sha256": "12c6966c432dd09f661a36c1680a109537af75015f323f242a09466f282cf881",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -38,6 +38,7 @@
         "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t13-design-tokens-plan.md",
         "archive/sessions/2026-09-02-t14-cheap-extras-plan.md",
+        "archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md",
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
@@ -74,7 +75,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "f4c88e3850328735905c0bda1ec3fa816ae3e981ff06a62cd355947ba1a4f55e",
+      "sha256": "101172545172884afb3152236cd165314be6f3e544ca72c0fccd30e05186de0e",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -135,6 +136,7 @@
         "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t13-design-tokens-plan.md",
         "archive/sessions/2026-09-02-t14-cheap-extras-plan.md",
+        "archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md",
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
@@ -241,6 +243,7 @@
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
+        "handoff/_general/from-code/2026-09-02-t15-receipts-and-ledger.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/security-audit-api.md",
@@ -254,7 +257,9 @@
         "scripts/guard-worktree-isolation.mjs",
         "scripts/handoff/handoff-check.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
-        "scripts/m2-closure-register.test.mjs"
+        "scripts/m2-closure-register.test.mjs",
+        "scripts/receipts-lib.mjs",
+        "scripts/receipts.test.mjs"
       ]
     },
     {
@@ -378,12 +383,14 @@
         "apps/api/scripts/ceo-dashboard.ts",
         "apps/api/scripts/check-ceo-brief.ts",
         "apps/api/scripts/lib/design-system.ts",
+        "apps/api/scripts/migration-ledger.test.mjs",
         "apps/api/src/jobs/revenue-heartbeat.ts",
         "apps/api/src/lib/ceo-brief-lint.ts",
         "apps/api/src/lib/discovery-source.ts",
         "apps/api/src/lib/models.ts",
         "apps/api/src/lib/seller-rank.ts",
         "apps/api/src/lib/startup-migrations.ts",
+        "archive/receipts/README.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-01-m2-product-state-reconciliation.md",
         "archive/sessions/2026-09-01-m2-vendor-stack-authority-plan.md",
@@ -414,6 +421,7 @@
         "scripts/claims-lib.mjs",
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
+        "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
       ]
@@ -464,7 +472,9 @@
         "apps/api/src/lib/ceo-brief-lint.ts",
         "apps/api/src/lib/withdrawn-integrity-claims.test.ts",
         "apps/api/src/lib/x402-eligibility.ts",
+        "archive/receipts/README.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
+        "archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md",
         "archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md",
         "docs/company/DECISION-QUEUE.md",
         "docs/programs/cto-readiness/tracks.yaml",
@@ -477,14 +487,17 @@
         "handoff/_general/from-code/2026-08-29-checkin-morning.md",
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-02-t15-receipts-and-ledger.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/receipts-lib.mjs",
+        "scripts/receipts.test.mjs"
       ]
     },
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "9de1729273b252a6be6c083c2b5c20d211ddda9ac1aebcf2faa57f71e1ac045a",
+      "sha256": "0d0b547b8397a610f8bd25afcf3c681ed4bd659f917a4b48de7faa328d08ca66",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -524,8 +537,11 @@
         "apps/api/src/lib/check-self-staleness.ts",
         "apps/api/src/lib/handoff-preservation.test.ts",
         "apps/api/src/lib/handoff-preservation.ts",
+        "apps/api/src/lib/startup-migrations.ledger.json",
         "apps/api/test/guard-production-write-access.test.ts",
         "archive/README.md",
+        "archive/receipts/2026-09-02-test-run-receipts-lib-t15.json",
+        "archive/receipts/README.md",
         "archive/sessions/2026-08-16-t02-quality-floor-quarantine-audit.md",
         "archive/sessions/2026-08-18-local-branch-cleanup.md",
         "archive/sessions/2026-08-31-m1-foundation-extraction-boundary.md",
@@ -544,6 +560,7 @@
         "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t13-design-tokens-plan.md",
         "archive/sessions/2026-09-02-t14-cheap-extras-plan.md",
+        "archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md",
         "archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md",
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
@@ -600,6 +617,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "package.json",
+        "scripts/check-receipts.mjs",
         "scripts/generate-archive-index.mjs",
         "scripts/generate-archive-index.test.mjs",
         "scripts/guard-production-write-access.mjs",
@@ -610,7 +628,10 @@
         "scripts/handoff/orient.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs",
-        "scripts/program-tracks.test.mjs"
+        "scripts/program-tracks.test.mjs",
+        "scripts/receipts-lib.mjs",
+        "scripts/receipts.test.mjs",
+        "scripts/write-receipt.mjs"
       ]
     }
   ]

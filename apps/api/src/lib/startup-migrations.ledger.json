@@ -1,0 +1,947 @@
+{
+  "source": "apps/api/src/lib/startup-migrations.ts",
+  "blocks": [
+    {
+      "id": "M001",
+      "function": "runMigration0029_actualCostCents",
+      "title": "actual_cost_cents on test_run_log",
+      "added": "2026-05-04",
+      "columns_written": [
+        "test_run_log.actual_cost_cents"
+      ],
+      "sha256": "8e16fe0f6f89e279f80b1d79addd49c1e327116c78717fe410c65b32f4848fee"
+    },
+    {
+      "id": "M002",
+      "function": "runMigration0030_complianceColumns",
+      "title": "compliance infrastructure (transactions hash chain)",
+      "added": "2026-05-04",
+      "columns_written": [
+        "transactions.integrity_hash",
+        "transactions.legal_hold",
+        "transactions.previous_hash"
+      ],
+      "sha256": "d3a4ce82386c42c05e9cd877a68bd2712ea82a96c7c402d62c1c5ee585b2386f"
+    },
+    {
+      "id": "M003",
+      "function": "runMigration0031_testResultsCompositeIdx",
+      "title": "test_results composite index",
+      "added": "2026-05-04",
+      "columns_written": [],
+      "sha256": "e19dbd5239d86aaf8342d63328e3e96d3b58d9a160da058014dc70707293b6b7"
+    },
+    {
+      "id": "M004",
+      "function": "runMigration0060_marketplaceEligible",
+      "title": "marketplace_eligible columns",
+      "added": "2026-05-04",
+      "columns_written": [
+        "capabilities.marketplace_eligible",
+        "capabilities.marketplace_eligible_reason"
+      ],
+      "sha256": "a621cbeec175d01aa96631259a346fc6b9d9161221f93a6749e2e51914897dfd"
+    },
+    {
+      "id": "M005",
+      "function": "runMigration0062_paidVendorCosts",
+      "title": "paid-vendor suite cost classification",
+      "added": "2026-05-04",
+      "columns_written": [
+        "test_suites.external_cost_cents",
+        "test_suites.updated_at"
+      ],
+      "sha256": "220c9ee58e43abf459ae79ca553285b7ebbe3234c3d0a12681af844924d56860"
+    },
+    {
+      "id": "M006",
+      "function": "runMigration0063_invoiceExtractCostReclassify",
+      "title": "invoice-extract paid-vendor cost reclassification",
+      "added": "2026-05-04",
+      "columns_written": [
+        "test_suites.external_cost_cents",
+        "test_suites.updated_at"
+      ],
+      "sha256": "700a869a02ef3fe295b91ada8baa5184e5fc05f4193486eaec11e078d7a42934"
+    },
+    {
+      "id": "M007",
+      "function": "runMigration0064_alwaysLlmHaikuCosts",
+      "title": "always-LLM Haiku capability cost reclassification",
+      "added": "2026-05-11",
+      "columns_written": [
+        "test_suites.external_cost_cents",
+        "test_suites.updated_at"
+      ],
+      "sha256": "1209db51a4780088a7556420f2b540f3d93d0703e4d92d4aa7b3c1799698a137"
+    },
+    {
+      "id": "M008",
+      "function": "runMigration0065_pr86LeakyCapsCleanup",
+      "title": "PR #86 follow-up — leaky-cap cleanup",
+      "added": "2026-05-11",
+      "columns_written": [
+        "test_suites.external_cost_cents",
+        "test_suites.input",
+        "test_suites.updated_at"
+      ],
+      "sha256": "8a6bd04761e73b90560ddd53d6a0a1436566a28e3300cf796f352dea0add5c12"
+    },
+    {
+      "id": "M009",
+      "function": "runMigration0066_ensureEligibilityColumnAndReconcile",
+      "title": "Ensure Eligibility Column And Reconcile",
+      "added": "2026-05-11",
+      "columns_written": [
+        "test_suites.scheduled_testing_eligible"
+      ],
+      "sha256": "e95069e02a1cf701b8414c2099eb9cb72fd1f7abde0e0642f22126336c7dbd94"
+    },
+    {
+      "id": "M010",
+      "function": "runMigration0067_costClassTaxonomy",
+      "title": "cost_class taxonomy columns on `capabilities`",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window"
+      ],
+      "sha256": "7317340cdf0da192a12c9bf5f99136ec0426f2f0b6f3e3cfe98eddb1e7a5c676"
+    },
+    {
+      "id": "M011",
+      "function": "runMigration0068_seedDeDkSkCostClass",
+      "title": "seed cost_class for DE/DK/SK",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "24377747d1bc6253a5d182c76a3ff5180648830dec65e9450c56b082667589d0"
+    },
+    {
+      "id": "M012",
+      "function": "runMigration0069_reconcileEligibilityFromCostClass",
+      "title": "reconcile scheduled_testing_eligible from cost_class",
+      "added": "2026-05-12",
+      "columns_written": [
+        "test_suites.scheduled_testing_eligible"
+      ],
+      "sha256": "de776cf2370a8146a3df01b64b076887db972560eb2be5d273cf8c073af91d32"
+    },
+    {
+      "id": "M013",
+      "function": "runMigration0070_capabilityBudgetCounters",
+      "title": "capability_budget_counters table",
+      "added": "2026-05-12",
+      "columns_written": [],
+      "sha256": "60f764306474e09e09767305aac427cfe74ed4266fede0033563161a0277fa10"
+    },
+    {
+      "id": "M014",
+      "function": "runMigration0071_bulkClassifyFreeUnlimited",
+      "title": "bulk-classify 180 high-confidence free_unlimited caps",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "ef7faccdd9bcd81a1ed5e6a7551cbaeb9aa1922a32c90d27481aa76d4530de70"
+    },
+    {
+      "id": "M015",
+      "function": "runMigration0072_classifyFreeQuotaHighConfidence",
+      "title": "Classify Free Quota High Confidence",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "b396ebd3da7d244ec0239c78a924b55e5e9fa9724853ee2064ba6bc6e7b3d37e"
+    },
+    {
+      "id": "M016",
+      "function": "runMigration0073_classifyFreeUnlimitedMediumConfidence",
+      "title": "Classify Free Unlimited Medium Confidence",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "663eea39061b95b15153af555378deed6138428386121db5dc7db5a4b26a616b"
+    },
+    {
+      "id": "M017",
+      "function": "runMigration0074_classifyAnthropicPaidPrepaid",
+      "title": "classify 83 ANTHROPIC_API_KEY caps as paid_prepaid",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "a955b924366f9d92e9f052fa9728d86e6a413fd2c5f0579a9b187c5494712511"
+    },
+    {
+      "id": "M018",
+      "function": "runMigration0075_classifyFreeQuotaLowConfidence",
+      "title": "Classify Free Quota Low Confidence",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "4593df332430cd49ec655e4383f5819640ded71c88e3304ea4c986d8fb330ebf"
+    },
+    {
+      "id": "M019",
+      "function": "runMigration0076_classifyNonAnthropicPaidPrepaid",
+      "title": "Classify Non Anthropic Paid Prepaid",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "b15623ac8e5aed6ada36dbf928d86e7e09ae1d5e8d955cafe45a41d2e493756a"
+    },
+    {
+      "id": "M020",
+      "function": "runMigration0077_classifyFreeQuotaOverrides",
+      "title": "Classify Free Quota Overrides",
+      "added": "2026-05-12",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "8451e04803fe2a2fce98a7d486fd76cee8681bb10e0c2ab41a95939c8036f679"
+    },
+    {
+      "id": "M021",
+      "function": "runMigration0078_transactionsCapabilityIdCreatedAtIdx",
+      "title": "transactions(capability_id, created_at) compound index",
+      "added": "2026-05-13",
+      "columns_written": [],
+      "sha256": "8dab799161a44d6bbc99c381f43c537d79a86d66519d419bcab84ffc5bf5eb08"
+    },
+    {
+      "id": "M022",
+      "function": "runMigration0079_eeDirectors",
+      "title": "ee_directors + ee_directors_sync tables",
+      "added": "2026-05-18",
+      "columns_written": [],
+      "sha256": "c5cdf95f742b908c6ca42d124bd2ed126c68a85c03ad20869adac80d8a23ddf1"
+    },
+    {
+      "id": "M023",
+      "function": "runMigration0080_cyDirectors",
+      "title": "cy_directors + cy_directors_sync tables",
+      "added": "2026-05-19",
+      "columns_written": [],
+      "sha256": "656f51c7fa5db970985189f07dfafb231bd13f9083f715dbe1fa72fece73087f"
+    },
+    {
+      "id": "M024",
+      "function": "runMigration0095_walletReservations",
+      "title": "wallet reservations + non-negative balance (WP3)",
+      "added": "2026-08-21",
+      "columns_written": [],
+      "sha256": "e251fc26fcaf5b1357d3ac1903641b618a79d5b6642a886e517519b0ee6957ba"
+    },
+    {
+      "id": "M025",
+      "function": "runMigration0096_x402SettlementIntents",
+      "title": "X402 Settlement Intents",
+      "added": "2026-08-21",
+      "columns_written": [
+        "x402_settlement_intents.escalated_at"
+      ],
+      "sha256": "1889a066d2190ef0aaf70aaa8cc0182a95dd16c70e9d3a9e0f5d1e141d97352e"
+    },
+    {
+      "id": "M026",
+      "function": "runMigration0097_chainSequence",
+      "title": "Chain Sequence",
+      "added": "2026-08-21",
+      "columns_written": [
+        "transactions.chain_seq"
+      ],
+      "sha256": "1bb119a7f76ec629b7372e191facba4a47a229c9dbf3d9521c56388f4d894a24"
+    },
+    {
+      "id": "M027",
+      "function": "runMigration0098_perCustomerIdempotency",
+      "title": "Per Customer Idempotency",
+      "added": "2026-08-21",
+      "columns_written": [
+        "transactions.idempotency_fingerprint"
+      ],
+      "sha256": "96352a3762bf6fdf7410674fae1e5171ad24dbb12dd410d38495b32e2704d010"
+    },
+    {
+      "id": "M028",
+      "function": "runMigration0099_noHalfQuarantine",
+      "title": "No Half Quarantine",
+      "added": "2026-08-22",
+      "columns_written": [],
+      "sha256": "3d9e37f04b9fea4b87ccca10d719b0fa673a70feb450f356ab74d67d8b66cb7c"
+    },
+    {
+      "id": "M029",
+      "function": "runMigration0100_relistUrlToMarkdown",
+      "title": "re-list url-to-markdown — the takedown was wrong",
+      "added": "2026-08-22",
+      "columns_written": [
+        "capabilities.updated_at",
+        "capabilities.visible",
+        "capabilities.x402_enabled",
+        "health_monitor_events.action_taken",
+        "health_monitor_events.capability_slug",
+        "health_monitor_events.details",
+        "health_monitor_events.event_type",
+        "health_monitor_events.human_override",
+        "health_monitor_events.tier",
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected"
+      ],
+      "sha256": "26188beb2edb600ec539a20a9c08b2aabfd9c76bc093425fcfefe233b7fde5c6"
+    },
+    {
+      "id": "M030",
+      "function": "runMigration0101_capabilityInvocations",
+      "title": "Capability Invocations",
+      "added": "2026-08-22",
+      "columns_written": [
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected"
+      ],
+      "sha256": "0f330f485a54161036a93eac0953028248c6b295e6532ad2989e13751f887ed2"
+    },
+    {
+      "id": "M031",
+      "function": "runMigration0102_accountLifecycleTables",
+      "title": "account lifecycle authority tables (WP11, CR-09/CR-10)",
+      "added": "2026-08-23",
+      "columns_written": [
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected",
+        "trial_grants.channel",
+        "trial_grants.email_hash",
+        "trial_grants.granted_at",
+        "trial_grants.granted_cents",
+        "trial_grants.ip_hash",
+        "trial_grants.user_id"
+      ],
+      "sha256": "e9e9554ab2c57bf75c334d06b9e68c6cc40e1e3fba8166a796099c3841d0e8d2"
+    },
+    {
+      "id": "M032",
+      "function": "runMigration0103_redactedContentStaysRedacted",
+      "title": "redacted content stays redacted (WP11, round 7)",
+      "added": "2026-08-23",
+      "columns_written": [],
+      "sha256": "6c7cf4492ba268a067e8edba3192533fb25003c589cbf0b0ade16774b0b28474"
+    },
+    {
+      "id": "M033",
+      "function": "runMigration0104_jobSchedule",
+      "title": "Job Schedule",
+      "added": "2026-08-23",
+      "columns_written": [],
+      "sha256": "a0c59d60e686b03142be75148713c68691a62da71f7d9ba9727919e25cb268c5"
+    },
+    {
+      "id": "M034",
+      "function": "runMigration0105_onboardingHookFailures",
+      "title": "Onboarding Hook Failures",
+      "added": "2026-08-23",
+      "columns_written": [
+        "capabilities.onboarding_hook_failures"
+      ],
+      "sha256": "aeed1f0742b8ca25d4a406e749c4a47cc4d49e798c7b2dd54fd5c89664df6983"
+    },
+    {
+      "id": "M035",
+      "function": "runMigration0106_executionManifestSnapshots",
+      "title": "Execution Manifest Snapshots",
+      "added": "2026-08-23",
+      "columns_written": [],
+      "sha256": "6adc03b69582045b11a4ddf4c8d12a0ad46f1b969784c71cfc68f9d1e353844f"
+    },
+    {
+      "id": "M036",
+      "function": "runMigration0107_executionReceiptColumns",
+      "title": "Execution Receipt Columns",
+      "added": "2026-08-23",
+      "columns_written": [
+        "transactions.integrity_payload_version",
+        "transactions.receipt_attempts",
+        "transactions.receipt_canonicalization",
+        "transactions.receipt_digest",
+        "transactions.receipt_digest_alg",
+        "transactions.receipt_failure_reason",
+        "transactions.receipt_manifest_digest",
+        "transactions.receipt_status",
+        "transactions.receipt_version"
+      ],
+      "sha256": "5c65826f1ef438d90781e29b4dd1376f57f860b4fe5ed4a6d67666a7afe9bc81"
+    },
+    {
+      "id": "M037",
+      "function": "runMigration0108_receiptStateInvariants",
+      "title": "Receipt State Invariants",
+      "added": "2026-08-23",
+      "columns_written": [],
+      "sha256": "1962a356d6c5edde1c22185abca2377a9cb107c45f89c59719728de33f7cb78d"
+    },
+    {
+      "id": "M038",
+      "function": "runMigration0109_receiptEpoch",
+      "title": "Receipt Epoch",
+      "added": "2026-08-24",
+      "columns_written": [
+        "transactions.data_jurisdiction",
+        "transactions.input",
+        "transactions.is_free_tier",
+        "transactions.price_cents",
+        "transactions.solution_slug",
+        "transactions.status",
+        "transactions.transparency_marker"
+      ],
+      "sha256": "24e95211b409e6ea79c466ba63315dfb5ce5423987d02369f469e07c680d8380"
+    },
+    {
+      "id": "M039",
+      "function": "runMigration0110_receiptExecutionContext",
+      "title": "Receipt Execution Context",
+      "added": "2026-08-24",
+      "columns_written": [
+        "transactions.receipt_deploy_commit",
+        "transactions.receipt_rail"
+      ],
+      "sha256": "5fd468e34138e1cb04011fbde49f37048b8695e2cfb6f40952289acba6681dc1"
+    },
+    {
+      "id": "M040",
+      "function": "runMigration0111_vendorControlTower",
+      "title": "Vendor Control Tower + immediate OpenRegister quarantine",
+      "added": "2026-08-25",
+      "columns_written": [
+        "capabilities.deactivation_reason",
+        "capabilities.lifecycle_state",
+        "capabilities.price_cents",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at",
+        "capabilities.visible",
+        "capabilities.x402_enabled",
+        "health_monitor_events.action_taken",
+        "health_monitor_events.capability_slug",
+        "health_monitor_events.details",
+        "health_monitor_events.event_type",
+        "health_monitor_events.human_override",
+        "health_monitor_events.tier",
+        "solutions.deactivation_reason",
+        "solutions.is_active",
+        "solutions.updated_at",
+        "solutions.x402_enabled",
+        "test_suites.active",
+        "test_suites.baseline_captured_at",
+        "test_suites.baseline_output",
+        "test_suites.capability_slug",
+        "test_suites.estimated_cost_cents",
+        "test_suites.external_cost_cents",
+        "test_suites.fixture_last_refreshed",
+        "test_suites.input",
+        "test_suites.schedule_tier",
+        "test_suites.scheduled_testing_eligible",
+        "test_suites.test_mode",
+        "test_suites.test_name",
+        "test_suites.test_type",
+        "test_suites.updated_at",
+        "test_suites.validation_rules",
+        "vendor_accounts.billing_model",
+        "vendor_accounts.currency",
+        "vendor_accounts.display_name",
+        "vendor_accounts.expires_at",
+        "vendor_accounts.included_units",
+        "vendor_accounts.low_balance_threshold_units",
+        "vendor_accounts.metadata",
+        "vendor_accounts.monitor_mode",
+        "vendor_accounts.overage_units",
+        "vendor_accounts.payment_method",
+        "vendor_accounts.plan_name",
+        "vendor_accounts.provider_name",
+        "vendor_accounts.remaining_units",
+        "vendor_accounts.reset_at",
+        "vendor_accounts.status",
+        "vendor_accounts.status_reason",
+        "vendor_accounts.usage_unit",
+        "vendor_accounts.used_units",
+        "vendor_capability_dependencies.capability_slug",
+        "vendor_capability_dependencies.dependency_kind",
+        "vendor_capability_dependencies.provider_name",
+        "vendor_capability_dependencies.units_per_execution",
+        "vendor_capability_dependencies.updated_at",
+        "vendor_capability_suspensions.capability_slug",
+        "vendor_capability_suspensions.previous_lifecycle_state",
+        "vendor_capability_suspensions.previous_visible",
+        "vendor_capability_suspensions.previous_x402_enabled",
+        "vendor_capability_suspensions.provider_name",
+        "vendor_capability_suspensions.restore_after",
+        "vendor_capability_suspensions.suspension_marker",
+        "vendor_solution_suspensions.previous_is_active",
+        "vendor_solution_suspensions.previous_x402_enabled",
+        "vendor_solution_suspensions.provider_name",
+        "vendor_solution_suspensions.restore_after",
+        "vendor_solution_suspensions.solution_slug",
+        "vendor_solution_suspensions.suspension_marker"
+      ],
+      "sha256": "f52b43b6f10dafafb904c2d6abe3998bbcb19a3ffcde61383b69503e28e56cc2"
+    },
+    {
+      "id": "M041",
+      "function": "runMigration0081_attribution",
+      "title": "Attribution",
+      "added": "2026-08-13",
+      "columns_written": [
+        "transactions.client_meta"
+      ],
+      "sha256": "6722f20b731300d725ebf7aa0a5081065b2dfdb4b8725ba595456dd7aaca3706"
+    },
+    {
+      "id": "M042",
+      "function": "runMigration0082_reclassifyThrottledFreeUnlimited",
+      "title": "Reclassify Throttled Free Unlimited",
+      "added": "2026-08-14",
+      "columns_written": [
+        "capabilities.cost_class",
+        "capabilities.quota_cap",
+        "capabilities.quota_reset_dom",
+        "capabilities.quota_window",
+        "capabilities.updated_at"
+      ],
+      "sha256": "229521112549e8690b3b2db5409dd6729460e08b778281199934ce986550e5ff"
+    },
+    {
+      "id": "M043",
+      "function": "runMigration0083_x402PayerHash",
+      "title": "MCP funnel + x402 payer hash",
+      "added": "2026-08-15",
+      "columns_written": [
+        "transactions.x402_payer_hash"
+      ],
+      "sha256": "38a9cc1e25e5251032cba15ec8bc9263c8976b47542a077f1a7bc5293eeb9664"
+    },
+    {
+      "id": "M044",
+      "function": "runMigration0084_danishQuotaHeadroom",
+      "title": "Danish Quota Headroom",
+      "added": "2026-08-15",
+      "columns_written": [
+        "capabilities.quota_cap",
+        "capabilities.updated_at"
+      ],
+      "sha256": "9bf278c21c6396a3118f61014d2000ef4345d6886d901f132c3384173d1d44f6"
+    },
+    {
+      "id": "M045",
+      "function": "runMigration0085_actorIdentity",
+      "title": "Actor Identity",
+      "added": "2026-08-15",
+      "columns_written": [],
+      "sha256": "b95ff28a98dbafed7dbcbd3370c880ef12410093a885910a14f6c22e880118cd"
+    },
+    {
+      "id": "M046",
+      "function": "runMigration0086_srcBasis",
+      "title": "Src Basis",
+      "added": "2026-08-15",
+      "columns_written": [
+        "discovery_hits.src_basis"
+      ],
+      "sha256": "1437dd46d14ef33c5e80831d86a648cfd3d4ac0bc4602c26d2933ab166103034"
+    },
+    {
+      "id": "M047",
+      "function": "runMigration0087_unhideRedactedRows",
+      "title": "Unhide Redacted Rows",
+      "added": "2026-08-16",
+      "columns_written": [
+        "transactions.deleted_at",
+        "transactions.deletion_reason"
+      ],
+      "sha256": "e83a29f78e0d9f73dbe36d29db411838ba6d76379603bcb6b21463210b0dfb65"
+    },
+    {
+      "id": "M048",
+      "function": "runMigration0088_solutionGateCondition",
+      "title": "Solution Gate Condition",
+      "added": "2026-08-16",
+      "columns_written": [
+        "solution_steps.gate_condition"
+      ],
+      "sha256": "118e5cb3616b5d8ccf62acd83f45e9b75f5feb9a22177519c1b75eff800dbcec"
+    },
+    {
+      "id": "M049",
+      "function": "runMigration0089_deactivateUsCourtSearch",
+      "title": "Deactivate Us Court Search",
+      "added": "2026-08-17",
+      "columns_written": [
+        "capabilities.deactivation_reason",
+        "capabilities.is_active",
+        "capabilities.visible",
+        "capabilities.x402_enabled"
+      ],
+      "sha256": "327dfd5c670ec39de86600269cfa54d4b869dd81c35c202f22bf01bbe626cb92"
+    },
+    {
+      "id": "M050",
+      "function": "runMigration0090_capabilityOutputContracts",
+      "title": "Capability Output Contracts",
+      "added": "2026-08-17",
+      "columns_written": [
+        "capabilities.output_field_reliability",
+        "capabilities.output_schema",
+        "test_suites.input",
+        "test_suites.updated_at"
+      ],
+      "sha256": "fad1bd6d89f197f1a6e6673a26caac8e234dc5aa85cc193dbcc7dc7e896fe4ce"
+    },
+    {
+      "id": "M051",
+      "function": "runMigration0091_bolStaleValidationRules",
+      "title": "Bol Stale Validation Rules",
+      "added": "2026-08-17",
+      "columns_written": [
+        "test_suites.updated_at",
+        "test_suites.validation_rules"
+      ],
+      "sha256": "c04e30db4908032614084b7fbc8f732675290134626610d9decae7ecab9c1d7b"
+    },
+    {
+      "id": "M052",
+      "function": "runMigration0092_x402GrowthBundles",
+      "title": "X402 Growth Bundles",
+      "added": "2026-08-18",
+      "columns_written": [
+        "solutions.updated_at",
+        "solutions.x402_enabled",
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected"
+      ],
+      "sha256": "a7af18954f18e974559c25d5c679f1815a8d45c78d6ad3cee3c2c64a3d4373bf"
+    },
+    {
+      "id": "M053",
+      "function": "runMigration0093_fixtureRecaptureFailures",
+      "title": "fixture_recapture_failures on test_suites",
+      "added": "2026-08-18",
+      "columns_written": [
+        "test_suites.fixture_recapture_failures"
+      ],
+      "sha256": "ef441f34a71e837b1553939c4ae61763920370bafe4a7fc4fffae266474e1315"
+    },
+    {
+      "id": "M054",
+      "function": "runMigration0094_clearChurnInvalidatedBaselines",
+      "title": "discard baselines this codebase's own churn invalidated",
+      "added": "2026-08-21",
+      "columns_written": [
+        "test_suites.baseline_captured_at",
+        "test_suites.baseline_output"
+      ],
+      "sha256": "a07b475a9e9e188f383c24f0be16377efb964bbf5e657902375e0a704349476f"
+    }
+  ],
+  "known_overlaps": [
+    {
+      "column": "test_suites.external_cost_cents",
+      "blocks": [
+        "M005",
+        "M006",
+        "M007",
+        "M008",
+        "M040"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 5): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M005, M006, M007, M008, M040. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "test_suites.updated_at",
+      "blocks": [
+        "M005",
+        "M006",
+        "M007",
+        "M008",
+        "M040",
+        "M050",
+        "M051"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 7): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M005, M006, M007, M008, M040, M050, M051. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "test_suites.input",
+      "blocks": [
+        "M008",
+        "M040",
+        "M050"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M008, M040, M050. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "test_suites.scheduled_testing_eligible",
+      "blocks": [
+        "M009",
+        "M012",
+        "M040"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M009, M012, M040. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "capabilities.cost_class",
+      "blocks": [
+        "M010",
+        "M011",
+        "M014",
+        "M015",
+        "M016",
+        "M017",
+        "M018",
+        "M019",
+        "M020",
+        "M042"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 10): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M010, M011, M014, M015, M016, M017, M018, M019, M020, M042. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "capabilities.quota_cap",
+      "blocks": [
+        "M010",
+        "M011",
+        "M014",
+        "M015",
+        "M016",
+        "M017",
+        "M018",
+        "M019",
+        "M020",
+        "M040",
+        "M042",
+        "M044"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 12): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M010, M011, M014, M015, M016, M017, M018, M019, M020, M040, M042, M044. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "capabilities.quota_reset_dom",
+      "blocks": [
+        "M010",
+        "M011",
+        "M014",
+        "M015",
+        "M016",
+        "M017",
+        "M018",
+        "M019",
+        "M020",
+        "M040",
+        "M042"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 11): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M010, M011, M014, M015, M016, M017, M018, M019, M020, M040, M042. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "capabilities.quota_window",
+      "blocks": [
+        "M010",
+        "M011",
+        "M014",
+        "M015",
+        "M016",
+        "M017",
+        "M018",
+        "M019",
+        "M020",
+        "M040",
+        "M042"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 11): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M010, M011, M014, M015, M016, M017, M018, M019, M020, M040, M042. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "capabilities.updated_at",
+      "blocks": [
+        "M011",
+        "M014",
+        "M015",
+        "M016",
+        "M017",
+        "M018",
+        "M019",
+        "M020",
+        "M029",
+        "M040",
+        "M042",
+        "M044"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 12): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M011, M014, M015, M016, M017, M018, M019, M020, M029, M040, M042, M044. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "capabilities.visible",
+      "blocks": [
+        "M029",
+        "M040",
+        "M049"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M029, M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "capabilities.x402_enabled",
+      "blocks": [
+        "M029",
+        "M040",
+        "M049"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M029, M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "health_monitor_events.action_taken",
+      "blocks": [
+        "M029",
+        "M040"
+      ],
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value)."
+    },
+    {
+      "column": "health_monitor_events.capability_slug",
+      "blocks": [
+        "M029",
+        "M040"
+      ],
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value)."
+    },
+    {
+      "column": "health_monitor_events.details",
+      "blocks": [
+        "M029",
+        "M040"
+      ],
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value)."
+    },
+    {
+      "column": "health_monitor_events.event_type",
+      "blocks": [
+        "M029",
+        "M040"
+      ],
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value)."
+    },
+    {
+      "column": "health_monitor_events.human_override",
+      "blocks": [
+        "M029",
+        "M040"
+      ],
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value)."
+    },
+    {
+      "column": "health_monitor_events.tier",
+      "blocks": [
+        "M029",
+        "M040"
+      ],
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value)."
+    },
+    {
+      "column": "startup_migration_ledger.block",
+      "blocks": [
+        "M029",
+        "M030",
+        "M031",
+        "M052"
+      ],
+      "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict."
+    },
+    {
+      "column": "startup_migration_ledger.rows_affected",
+      "blocks": [
+        "M029",
+        "M030",
+        "M031",
+        "M052"
+      ],
+      "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict."
+    },
+    {
+      "column": "capabilities.deactivation_reason",
+      "blocks": [
+        "M040",
+        "M049"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M049. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "solutions.updated_at",
+      "blocks": [
+        "M040",
+        "M052"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M052. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "solutions.x402_enabled",
+      "blocks": [
+        "M040",
+        "M052"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M052. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "test_suites.baseline_captured_at",
+      "blocks": [
+        "M040",
+        "M054"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "test_suites.baseline_output",
+      "blocks": [
+        "M040",
+        "M054"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    },
+    {
+      "column": "test_suites.validation_rules",
+      "blocks": [
+        "M040",
+        "M051"
+      ],
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M051. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+    }
+  ]
+}

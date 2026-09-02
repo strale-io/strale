@@ -194,6 +194,29 @@ tracks:
       - apps/api/src/lib/models.ts
       - docs/company/claims.yaml
 
+  - id: T15
+    title: Test receipts and the schema-migration ledger
+    status: active
+    gate: none
+    depends_on: [T14]
+    owner: session
+    next_action: >
+      Second wave of the founder's 2026-09-02 plan, per the stored plan:
+      archive/receipts/ as immutable JSON evidence with receipts:check
+      (schema, blob unchanged since introduction, every evidence path in
+      decisions, tracks and remediation packages resolves, bare test counts
+      in new handoffs warned); a writer helper and the first receipt; the
+      startup-migrations ledger (block ids, added dates, columns written,
+      hashes) with migrations:check refusing edited blocks, unledgered
+      blocks and duplicate column writers; identical paragraph in CLAUDE.md
+      and AGENTS.md.
+    resume_file: archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md
+    exit:
+      - receipts:check and migrations:check pass on main and each planted failure mode fails with a one-line fix
+      - the ledger covers every migration block; the first receipt exists
+      - identical paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
+    evidence: []
+
   - id: T4
     title: Remediation program closure
     status: blocked
@@ -218,23 +241,17 @@ tracks:
 
   - id: T5
     title: CTO-readable repository structure
-    status: active
+    status: done
     gate: none
     depends_on: [T2]
     owner: session
     next_action: >
-      (Dependency on T4 dropped 2026-09-02: T5 moves nothing under docs/,
-      so remediation closure need not precede it; T4 is blocked on DQ-29.)
-      Per the stored plan: README.md rewritten top-down for a stranger;
-      docs/README.md with an authority status per subtree and docs:check;
-      generated archive/ and handoff/ indexes with a --check in CI; root
-      reduced to canon, LICENSE, build files and registry manifests (the two
-      checklists move under docs/governance/protocols with references
-      updated; manifests-drafts archived if nothing reads it);
-      docs/project/STRUCTURE.md records every deviation from the migration
-      plan's target layout with a reason and owner track; LESSONS F5 gains
-      the standing rule that no checker ships before it has failed on a
-      planted case.
+      Done 2026-09-02: README rewritten for a stranger, docs/README.md with
+      authority status per subtree and docs:check, generated archive/ and
+      handoff/ indexes checked in CI, root reduced to canon and registry
+      manifests, docs/project/STRUCTURE.md records every deviation from the
+      target layout with its owner track, LESSONS F5 carries the planting
+      rule. See the handoff for the reference updates.
     resume_file: archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md
     exit:
       - README.md routes a stranger from product to code to process in one read
@@ -242,7 +259,10 @@ tracks:
       - archive/ and handoff/ have generated indexes and no unindexed files
       - repo root contains only files listed in the CLAUDE.md Report Filing Convention as top-level canon
       - each deviation from migration plan section 5 is listed with a reason
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md
+      - docs/README.md
+      - docs/project/STRUCTURE.md
 
   - id: T10
     title: M2 exit-gap closure

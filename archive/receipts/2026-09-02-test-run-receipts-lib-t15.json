@@ -1,0 +1,50 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/receipts.test.mjs",
+    "commit": "36f4ab93c5f261f72e98e2cfd4e4385dacbbaa1e"
+  },
+  "at": "2026-09-02T19:19:39.703Z",
+  "inputs": {
+    "source": "stdin"
+  },
+  "summary": {
+    "tests": 25,
+    "pass": 25,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "topic": "receipts-lib-t15",
+  "raw": {
+    "note": "node --test scripts/receipts.test.mjs — tests=25 pass=25 fail=0 cancelled=0 skipped=0 todo=0. Captured by hand: node's default TAP/spec reporter is not JSON; see script header note.",
+    "tests": [
+      "clean pass: a well-formed committed receipt has zero findings",
+      "a filename not matching YYYY-MM-DD-<kind>-<topic>.json fails, renaming it passes",
+      "an unrecognized kind segment in the filename fails, correcting it passes",
+      "filename kind disagreeing with the JSON body's kind fails, aligning them passes",
+      "malformed JSON fails, fixing it passes",
+      "a receipt missing a required field fails schema validation, adding it passes",
+      "additionalProperties: false rejects an unknown top-level field",
+      "a summary value that is not a number/string/boolean fails, flattening it passes",
+      "editing a committed receipt in a later commit is caught; an untouched receipt is not",
+      "an uncommitted new receipt is not flagged as mutated",
+      "full check surfaces RECEIPT_MUTATED end to end",
+      "isBarePathCandidate rejects prose (whitespace) and accepts a whitespace-free path-like token",
+      "classifyEvidenceReference: a missing local path is MISSING, an existing one is OK",
+      "classifyEvidenceReference accepts a URL, a resolvable <sha>:<path>, and a cross-repo owner/repo@sha ref",
+      "classifyEvidenceReference: an unresolvable sha, and a real sha with a missing path, both fail",
+      "a decision record citing a nonexistent path fails, correcting it passes",
+      "a program track evidence entry citing a nonexistent path fails, correcting it passes",
+      "a remediation package evidence field citing a nonexistent path fails, correcting it passes",
+      "a remediation package's production_evidence map is prose (has spaces) and is never flagged",
+      "a handoff dated 2026-09-02+ stating a bare test count with no receipt link warns",
+      "the same handoff with a receipt link does not warn",
+      "a handoff dated before 2026-09-02 stating a bare test count does not warn (predates the contract)",
+      "findBareTestCountHandoffs matches the pass-ratio pattern too",
+      "inferSummary reads the repo-wide check-*.mjs --json shape",
+      "inferSummary returns null for a shape it cannot read"
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strale.dev/schemas/receipt.schema.json",
+  "title": "Evidence receipt",
+  "description": "Contract for archive/receipts/*.json, per the T15 plan (archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md). Checked by scripts/check-receipts.mjs. A receipt is the file form of a claim like \"312 tests pass\" or \"swept 40 capabilities\" — produced once by the tool that ran the thing, never edited afterward. The file name (YYYY-MM-DD-<kind>-<topic>.json) is part of the contract; see README.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "produced_by", "at", "inputs", "summary"],
+  "properties": {
+    "kind": {
+      "description": "What kind of evidence this is. Matches the filename's <kind> segment.",
+      "enum": ["test-run", "sweep", "audit", "check"]
+    },
+    "produced_by": {
+      "description": "The tool and the commit it ran at — so a reader can reproduce the receipt or tell it apart from a hand-written claim.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["script", "commit"],
+      "properties": {
+        "script": {
+          "type": "string",
+          "description": "Repo-relative path to the script/command that produced this receipt.",
+          "minLength": 1
+        },
+        "commit": {
+          "type": "string",
+          "description": "Git commit SHA the producing script ran at (short or full hex).",
+          "pattern": "^[0-9a-f]{7,40}$"
+        }
+      }
+    },
+    "at": {
+      "description": "UTC timestamp the receipt was written, ISO 8601.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+    },
+    "inputs": {
+      "description": "What was run against (a slug, a file list, a query, a manifest path, ...). Free-form — shape depends on kind."
+    },
+    "summary": {
+      "description": "The counts a reader actually wants: passed/failed/total, findings count, rows swept, etc. Values are numbers, strings, or booleans — never a pre-formatted sentence.",
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": ["number", "string", "boolean"]
+      }
+    },
+    "topic": {
+      "description": "Optional restatement of the filename's <topic> segment for readability.",
+      "type": "string",
+      "minLength": 1
+    },
+    "raw": {
+      "description": "Optional full output — inline, or a repo-relative path to it when too large to inline."
+    }
+  }
+}

@@ -338,6 +338,25 @@ jobs:
       - run: npm run docs:test
       - run: node scripts/generate-archive-index.mjs --check
       - run: npm run archive:index:test
+      # Evidence receipts (T15, archive/receipts/*.json): schema-valid,
+      # immutable once committed (blob at the introducing commit must match
+      # HEAD), and every evidence: / production_evidence: path cited from a
+      # decision record, a program track, or a remediation package resolves.
+      # Warns (does not fail) on a post-2026-09-02 handoff stating a bare
+      # test count with no receipt link. Tests plant every failure mode in a
+      # throwaway repository.
+      - run: npm run receipts:check
+      - run: npm run receipts:test
+      # Schema-migration ledger (T15, apps/api/src/lib/startup-migrations.ledger.json):
+      # every runMigrationNNNN_* block in startup-migrations.ts is ledgered
+      # with a content hash (append-only — an edited block needs a new
+      # block, not a silent rewrite) and columns_written, so two blocks
+      # writing the same table.column fail the build unless allowlisted in
+      # known_overlaps (the 2026-08-21 two-blocks-fought-every-boot
+      # incident class). Tests plant every failure mode in a throwaway
+      # fixture.
+      - run: npm run migrations:check
+      - run: npm run migrations:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.
