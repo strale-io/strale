@@ -44,42 +44,50 @@ tracks:
 
   - id: T2
     title: Repo hygiene sweep
-    status: active
+    status: done
     gate: none
     depends_on: []
     owner: session
     next_action: >
-      Execute the stored plan: recount, then delete the branches whose merged
-      PR head equals the branch tip, archive-tag and delete the real unmerged
-      branches and one rescue snapshot per distinct content set, remove
-      worktrees whose branch is gone, return the shared checkout to main once
-      its uncommitted work is confirmed identical to its tagged snapshot, and
-      file the strale-work reports under archive/sessions.
-    resume_file: archive/sessions/2026-09-02-t2-repo-hygiene-sweep-plan.md
+      Done. Remote branches other than main: 0; archive tags: 45; linked
+      worktrees: 2 (the morning check-in's and the active batch). The trunk
+      is detached at origin/main because the check-in worktree holds main;
+      T3 re-points the daily run and returns the trunk to main. Seven
+      unmapped plain directories and three frontend orphan worktrees are
+      listed in the report for a reviewed decision in T3. See the report.
+    resume_file: archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md
     exit:
       - every remote and local branch either deleted with landed-evidence or listed with a reason
       - every worktree either removed or mapped to an active session in WORKTREES.md
       - shared checkout on main, clean, its former uncommitted work preserved on a named branch
       - rescue snapshots triaged; none silently discarded
-    evidence: []
+    evidence:
+      - archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md
+      - handoff/_general/from-code/2026-09-02-t2-repo-hygiene-sweep.md
 
   - id: T3
-    title: Hygiene enforcement framework
-    status: queued
+    title: Automatic session-end gate
+    status: active
     gate: none
     depends_on: [T2]
     owner: session
     next_action: >
-      Add a scheduled CI job that lists branches older than seven days with no
-      open PR and opens one tracking issue; add the branch-and-worktree
-      cleanup step to the session-end skill; extend the daily run to report
-      and prune rescue snapshots; rewrite WORKTREES.md to match practice.
-    resume_file: null
+      Build the founder's four-layer gate per the stored plan: npm run
+      handoff:check (dirty tree, unpushed branch, unregistered worktree,
+      merged-but-present branch, code change without a register update);
+      Claude Code SessionStart and blocking Stop hooks; the Codex notify
+      wrapper and AGENTS.md instruction; git hooks via core.hooksPath with a
+      pre-push refusal of direct pushes to main. Then re-point the daily run
+      off strale-wt-0902, return the trunk to main, decide the seven unmapped
+      directories the T2 report lists, and add the weekly stale-branch CI job.
+    resume_file: archive/sessions/2026-09-02-t3-session-end-gate-plan.md
     exit:
-      - CI job exists, is proven to run (workflow_dispatch evidence), and opens an issue on a planted stale branch
-      - session-end skill deletes the merged branch and removes the worktree
-      - daily run reports rescue-snapshot count and prunes ones whose diff is empty against main
-      - WORKTREES.md describes the model actually used by both tools
+      - planting each failure mode makes handoff:check fail with a one-line fix; a clean repo passes
+      - a Claude Code Stop with a dirty worktree is blocked; SessionStart prints the active track
+      - a direct push to main from a workstation is refused by the git hook
+      - the Codex notify wrapper writes the status file and the orientation script prints it
+      - CI job lists branches older than seven days with no open PR and opens one tracking issue
+      - WORKTREES.md describes the allowed set and the trunk is on main
     evidence: []
 
   - id: T4

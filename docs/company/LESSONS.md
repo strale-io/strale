@@ -882,6 +882,29 @@ structure that has exactly one object store — and CLAUDE.md's Shared-Checkout
 Rule already carried the first four. They were never gathered into a family, so
 the threshold was passed without anyone counting.
 
+#### Incident 5 — cause established (added 2026-09-02, same day, by the session that caused it)
+
+The deletion was the worktree phase of the T2 repo-hygiene sweep (Claude Code
+session, this repository, ~06:05Z–06:13Z). Its keep-list of worktrees to spare
+was written as `/c/Users/pette/Projects/strale`; `git worktree list --porcelain`
+prints `C:/Users/pette/Projects/strale`. Nothing matched. The loop reached the
+primary checkout, `git worktree remove --force` refused it (the main working
+tree always refuses), and the script's fallback for a refusal was
+`git worktree prune; rm -rf "$wt"`. The refusal was the guard; the fallback
+removed it. Full record: `archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md`.
+
+Step 3 of the root-cause workflow, the falsifiable hypothesis, is therefore
+closed by direct evidence rather than inference. Step 4, the repair of the
+shared mechanism: (a) no deletion loop may take its targets from tool output
+without normalising both sides and reading back a dry run; (b) a refused
+`git worktree remove` is a stop, never a fallback to `rm -rf`; (c) untracked
+secrets (`.env`, `apps/api/.env`, `.claude/settings.json`) are copied aside
+before any bulk deletion, because they are the one thing GitHub cannot return.
+Step 5, the discriminating protection, is track T3's session-end gate, which
+refuses to end a session with an unregistered worktree present and installs
+`git` hooks that make the primary checkout's deletion visible at the next
+command.
+
 #### Incident 5 (2026-09-02) — what is established, and what is not
 
 Established, each of it second-sourced:

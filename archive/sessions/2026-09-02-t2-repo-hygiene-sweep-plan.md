@@ -1,8 +1,8 @@
 ---
 doc_type: session-plan
 authority_scope: none
-status: planned
-complete: false
+status: executed
+complete: true
 phase: M2
 authority_active: false
 created_at: 2026-09-02
