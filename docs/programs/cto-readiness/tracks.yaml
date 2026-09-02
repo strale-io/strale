@@ -16,7 +16,7 @@
 # is required.
 schema_version: 1
 program: cto-readiness
-program_status: paused
+program_status: active
 updated: 2026-09-02
 tracks:
   - id: T1
@@ -218,8 +218,7 @@ tracks:
 
   - id: T4
     title: Remediation program closure
-    status: blocked
-    blocker: production read-only access needs the root .env and apps/api/.env that were lost on 2026-09-02 (DQ-29); Petter recreates them, then T4 resumes
+    status: active
     gate: none
     depends_on: []
     owner: session
