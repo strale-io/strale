@@ -1,0 +1,123 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "apps/api/scripts/wp13-dependency-triage.mjs",
+    "commit": "42cfc7311807202547ebf5f366c6caed8033a4d4"
+  },
+  "at": "2026-09-02T22:10:00.000Z",
+  "inputs": {
+    "commands": ["npm audit --omit=dev --json (repo root)", "npm audit --omit=dev --json (apps/api)"],
+    "reachability_method": "grep of apps/api/src for import sites, npm ls <pkg> --all for dependency paths, and manual tracing of each anchor package's own require graph in node_modules for eagerly-vs-never-required transitive vulnerable packages (documented per-advisory below)",
+    "reference": "FABLE-REAUDIT.md CR-13 (\"1 critical / 14 high / 7 moderate / 2 low counted; reachability triage unrun\") and docs/remediation/PACKAGE-GRAPH.yaml verification_gates.VERIFY-DEP"
+  },
+  "summary": {
+    "total_advisories": 24,
+    "critical": 1,
+    "high": 14,
+    "moderate_not_triaged": 7,
+    "low_not_triaged": 2,
+    "root_and_apps_api_counts_match": true,
+    "matches_fable_reaudit_count": true,
+    "reachable_count": 10,
+    "unreachable_count": 5,
+    "unverified_count": 0,
+    "the_one_critical_shell_quote_is_reachable": false,
+    "highest_severity_reachable_finding": "drizzle-orm (SQL injection via improperly escaped identifiers, direct dependency, used throughout apps/api/src)"
+  },
+  "topic": "wp13-dependency-reachability",
+  "raw": {
+    "note": "node apps/api/scripts/wp13-dependency-triage.mjs captured npm audit + npm ls dependency-path evidence (inlined per-advisory below alongside the reachability verdict, which required additional manual tracing the script does not automate -- see method notes per row).",
+    "advisories": [
+      {
+        "name": "@coinbase/cdp-sdk", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> @coinbase/x402 -> @coinbase/cdp-sdk",
+        "reachable": "reachable",
+        "why": "apps/api/src/lib/x402-gateway.ts imports createFacilitatorConfig from @coinbase/x402, which requires @coinbase/cdp-sdk/auth. Loaded at boot whenever the x402 gateway module loads."
+      },
+      {
+        "name": "axios", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> @coinbase/x402 -> @coinbase/cdp-sdk -> axios-retry -> axios",
+        "reachable": "reachable",
+        "why": "node_modules/@coinbase/cdp-sdk/_cjs/auth/index.js does `const axiosHooks = __importStar(require('./hooks/axios/index.js'))` -- a static, eager CommonJS require, executed whenever cdp-sdk's /auth subpath loads (which x402-gateway.ts's import chain does at boot)."
+      },
+      {
+        "name": "brace-expansion", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> @logtail/pino -> @logtail/node -> minimatch -> brace-expansion",
+        "reachable": "reachable",
+        "why": "lib/log.ts loads @logtail/pino via pino.transport() whenever BETTER_STACK_SOURCE_TOKEN is set, which it is in Railway production per the module's own comment. The package loads in the log-transport worker thread. Caveat: minimatch's specific invocation inside @logtail/node appears to be internal config/glob matching, not fed externally-attacker-controlled input as far as traced -- reachable at the package-load level, practical exploitability not established either way."
+      },
+      {
+        "name": "c2pa-node", "severity": "high", "isDirect": true, "fixAvailable": {"name": "c2pa-node", "version": "0.1.0", "isSemVerMajor": true},
+        "path": "@strale/api -> c2pa-node (direct)",
+        "reachable": "reachable",
+        "why": "apps/api/src/capabilities/c2pa-inspect.ts imports and calls c2pa-node directly; the capability is registered via registerCapability and is NOT in auto-register.ts's DEACTIVATED map (grep for \"c2pa\" in that map: zero hits)."
+      },
+      {
+        "name": "drizzle-orm", "severity": "high", "isDirect": true, "fixAvailable": {"name": "drizzle-orm", "version": "0.45.2", "isSemVerMajor": true},
+        "path": "@strale/api -> drizzle-orm (direct)",
+        "reachable": "reachable",
+        "why": "The ORM used throughout apps/api/src (app.ts, capabilities/*, db/*, lib/guarded-executor.ts, and dozens more). Advisory is SQL injection via improperly escaped SQL identifiers -- the highest-severity REACHABLE finding in this triage; the fix is a semver-major bump (0.38.4 -> 0.45.2+) needing its own scoped upgrade session with the DEC-20260504-A regression-test discipline, not performed here."
+      },
+      {
+        "name": "fast-uri", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "ajv -> fast-uri (ajv itself: @strale/api -> @modelcontextprotocol/sdk -> ajv-formats -> ajv; also @strale/api -> @x402/extensions -> ajv; also root direct dependency)",
+        "reachable": "reachable",
+        "why": "ajv is imported directly in apps/api/src/capabilities/screenshot-url.ts, and is also a dependency of @modelcontextprotocol/sdk's ajv-formats (used for MCP tool JSON-schema validation, exercised on every tool call) and of @x402/extensions."
+      },
+      {
+        "name": "form-data", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> @coinbase/x402 -> @coinbase/cdp-sdk -> axios -> form-data",
+        "reachable": "reachable",
+        "why": "Same eager-require chain as axios above (cdp-sdk/auth/index.js -> hooks/axios/index.js -> axios -> form-data)."
+      },
+      {
+        "name": "hono", "severity": "high", "isDirect": true, "fixAvailable": true,
+        "path": "@strale/api -> hono (direct); also -> @hono/node-server -> hono (deduped); also -> @modelcontextprotocol/sdk -> hono (deduped)",
+        "reachable": "reachable",
+        "why": "The core web framework -- every HTTP request to the API runs through it. Advisories: cookie-name validation bypass in setCookie()/getCookie(), and a toSSG() path-traversal (toSSG is a static-site-generation helper Strale does not appear to call, but setCookie/getCookie are load-bearing for auth). Fix is available and not semver-major; a strong upgrade candidate."
+      },
+      {
+        "name": "ip-address", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> @modelcontextprotocol/sdk -> express-rate-limit -> ip-address",
+        "reachable": "unreachable",
+        "why": "apps/api/src/routes/mcp.ts imports only McpServer (server/mcp.js) and WebStandardStreamableHTTPServerTransport (server/webStandardStreamableHttp.js) from @modelcontextprotocol/sdk. Traced both files' own import graphs in node_modules: webStandardStreamableHttp.js imports only ../types.js; server/mcp.js imports only ./index.js, ./completable.js, ../shared/uriTemplate.js, ../shared/toolNameValidation.js, ../experimental/tasks/mcp-server.js -- none touch server/express.js or server/auth/* (grep for files requiring 'express' inside the SDK found only server/express.js, server/auth/handlers/*, server/auth/router.js, and examples/* -- none reachable from the two files Strale imports). express-rate-limit (and its ip-address dependency) exists only inside the SDK's unused OAuth/express transport."
+      },
+      {
+        "name": "js-yaml", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> js-yaml@4.3.1 (direct, PATCHED, used for manifest parsing at boot per commit 5da32514) AND @strale/api -> c2pa-node -> @changesets/cli -> @manypkg/get-packages -> read-yaml-file -> js-yaml@3.14.2 (vulnerable, nested)",
+        "reachable": "unreachable",
+        "why": "npm ls js-yaml --all shows TWO instances: the direct dependency (4.3.1, deduped, already outside the vulnerable <=3.15.0 range -- this is the one apps/api's own manifest-loading code uses) and a nested 3.14.2 reachable only through @changesets/cli, a release-management CLI tool (invoked via `npx changeset`, never imported by any file under apps/api/src). The vulnerable instance is dev-tooling-only."
+      },
+      {
+        "name": "path-to-regexp", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> @modelcontextprotocol/sdk -> express -> router -> path-to-regexp",
+        "reachable": "unreachable",
+        "why": "Same reasoning as ip-address above -- express (and everything under it) lives only in the SDK's unused OAuth/express transport, never imported by apps/api/src/routes/mcp.ts."
+      },
+      {
+        "name": "sharp", "severity": "high", "isDirect": false, "fixAvailable": {"name": "c2pa-node", "version": "0.1.0", "isSemVerMajor": true},
+        "path": "@strale/api -> sharp@0.35.3 (direct, PATCHED per commit 3909dc1e) AND @strale/api -> c2pa-node -> sharp@0.34.3 (vulnerable, nested, c2pa-node's own bundled copy)",
+        "reachable": "reachable",
+        "why": "c2pa-node bundles its own sharp@0.34.3 internally (separate install from the direct, already-patched sharp@0.35.3). Because c2pa-inspect.ts calls into c2pa-node's own API, any image processing c2pa-node does internally uses ITS OWN sharp copy, not the direct one apps/api imports -- so the vulnerable nested instance is reachable whenever the c2pa-inspect capability runs, despite the direct dependency already being fixed."
+      },
+      {
+        "name": "shell-quote", "severity": "critical", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> c2pa-node -> npm-run-all -> shell-quote; also @strale/api -> drizzle-kit -> ... -> shell-quote",
+        "reachable": "unreachable",
+        "why": "Both paths are dev/build/CLI tooling: npm-run-all is a package.json script-chaining tool (bundled as one of c2pa-node's own regular dependencies, never imported by c2pa-inspect.ts's actual usage of the c2pa-node public API), and drizzle-kit is the schema-migration CLI (`npx drizzle-kit generate`), never imported by any apps/api/src runtime file. The ONE critical advisory in this audit is not reachable from the running API."
+      },
+      {
+        "name": "undici", "severity": "high", "isDirect": true, "fixAvailable": true,
+        "path": "@strale/api -> undici (direct); also -> jsdom -> undici (deduped)",
+        "reachable": "reachable",
+        "why": "apps/api/src/lib/safe-fetch.ts imports `Agent as UndiciAgent` from undici directly and uses it as the dispatcher for every outbound fetch() capabilities make -- this is the SSRF-containment module (WP0/WP12). A security-critical reachable path; worth prioritizing given the advisory is a TLS-cert-validation bypass and header-injection class."
+      },
+      {
+        "name": "ws", "severity": "high", "isDirect": false, "fixAvailable": true,
+        "path": "@strale/api -> @coinbase/x402 -> @coinbase/cdp-sdk -> @solana/kit -> @solana/rpc-subscriptions -> ws",
+        "reachable": "unreachable",
+        "why": "Traced cdp-sdk/_cjs/auth/index.js's full eager require list: ./hooks/axios/index.js, ./utils/http.js, ./utils/jwt.js, ./utils/ws.js -- none is @solana/kit, and utils/ws.js (a locally-named auth-header helper, not the ws npm package) itself only requires ./http.js and ./jwt.js. The only 'solana' string found anywhere in the /auth subpath's files is a URL-path regex (`/end-users/[^/]+/solana$/`) in utils/http.js, not an import. Strale's x402 rail is Base-mainnet-only per CLAUDE.md; the Solana-specific submodule that would pull in @solana/kit (and therefore ws) is never imported."
+      }
+    ]
+  }
+}

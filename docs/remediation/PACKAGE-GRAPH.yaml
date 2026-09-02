@@ -245,7 +245,8 @@ packages:
 
   WP13:
     title: Supply chain
-    status: NOT_STARTED
+    status: TRIAGED_UPGRADE_PENDING
+    status_date: "2026-09-02"
     partially_superseded_by: [trusted-publishing, mcp-trust-fix, post-publish-smoke-test]
     superseded_note: >
       The publish-integrity half is closed: npm trusted publishing (PR #363,
@@ -254,6 +255,40 @@ packages:
       production contract smoke test mandatory after every publish. What
       remains is the dependency half, and VERIFY-DEP's reachability triage is
       the gate on it.
+    reachability_triage:
+      date: "2026-09-02"
+      receipt: archive/receipts/2026-09-02-audit-wp13-dependency-reachability.json
+      query: apps/api/scripts/wp13-dependency-triage.mjs
+      counted: "1 critical / 14 high / 7 moderate (untriaged) / 2 low (untriaged) -- root and apps/api npm audit counts agree, matching FABLE-REAUDIT.md's original count exactly"
+      reachable:
+        [
+          "@coinbase/cdp-sdk", "axios", "brace-expansion", "c2pa-node",
+          "drizzle-orm", "fast-uri", "form-data", "hono", "sharp", "undici",
+        ]
+      unreachable:
+        ["ip-address", "js-yaml", "path-to-regexp", "shell-quote", "ws"]
+      headline: >
+        The ONE critical advisory (shell-quote) is unreachable -- both paths
+        to it (c2pa-node's bundled npm-run-all, and drizzle-kit) are dev/build
+        CLI tooling never imported by apps/api/src at runtime. Of the 14 high
+        advisories, 5 are unreachable for the same reason (four route through
+        @modelcontextprotocol/sdk's unused express/OAuth transport or a
+        release-management CLI's own nested js-yaml, one of which is doubly
+        moot since the runtime-used js-yaml instance is already patched to
+        4.3.1 per commit 5da32514).
+      highest_priority_reachable: >
+        drizzle-orm (SQL injection via improperly escaped identifiers) -- a
+        direct dependency used throughout apps/api/src, semver-major fix
+        (0.38.4 -> 0.45.2+) needing its own scoped upgrade session under the
+        DEC-20260504-A regression-test discipline. hono (semver-minor,
+        cookie-name validation) is also reachable and load-bearing for auth,
+        with a non-major fix available -- a lower-risk first upgrade.
+      not_performed_here: >
+        This is a triage, not the upgrade. WP13's remaining exit work is: bump
+        the 10 reachable packages (prioritizing drizzle-orm and hono), verify
+        c2pa-node's nested vulnerable sharp copy separately from the already-
+        patched direct sharp dependency, and re-run npm audit to confirm.
+        Scoped to its own session per the task that opened this triage.
     depends_on: [VERIFY-DEP]
     risks: [CR-13, N8]
     review: {codex: required, fable: optional}
@@ -331,7 +366,19 @@ verification_gates:
       private networking or a future platform-level change. See
       docs/remediation/CURRENT-STATE.md "VERIFY-IP resolved" for the full
       writeup.
-  VERIFY-DEP:   {status: PARTIAL, blocks: [WP13], note: "1crit/14high/7mod/2low counted; reachability triage unrun"}
+  VERIFY-DEP:
+    status: TRIAGE_COMPLETE
+    resolved: "2026-09-02"
+    blocks: []   # was [WP13]; triage done, upgrade work remains (see WP13.reachability_triage)
+    note: >
+      1 critical / 14 high counted (7 moderate / 2 low not triaged --
+      out of this pass's scope). Reachability triage run:
+      archive/receipts/2026-09-02-audit-wp13-dependency-reachability.json.
+      10 of 15 critical/high advisories reachable from the running API import
+      graph, including the sole critical's UNreachability (shell-quote, dev-
+      tooling-only) and the highest-value reachable finding (drizzle-orm SQL
+      injection, direct dependency). 5 unreachable, each with a traced reason
+      (unused MCP-SDK express/OAuth transport, or dev-CLI-only nesting).
   VERIFY-LEGAL: {status: OPEN, blocks: [WP14], note: "Dilisense role, DPA, assent evidence"}
   VERIFY-P3:
     status: COMPLETE
