@@ -34,12 +34,38 @@ export const ACTIVE_PATH = "design/tokens/active.json";
 export const ALLOWLIST_PATH = "design/lint-allowlist.json";
 export const GENERATED_PATH = "apps/api/scripts/lib/design-tokens.generated.ts";
 
-/** Consumer files the lint scans. design-system.ts and the generated file are the token source and are exempt. */
+/** Consumer files the lint always scans. design-system.ts and the generated file are the token source and are exempt. */
 export const LINT_TARGETS = [
   "apps/api/scripts/ceo-dashboard.ts",
   "apps/api/src/lib/digest-formatter.ts",
   "apps/api/src/lib/interrupt-sender.ts",
 ];
+
+/** Directories whose source files join the lint scope as soon as they exist (the website, once it is built as apps/web). */
+export const LINT_TREES = ["apps/web"];
+const LINT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".css", ".html"]);
+const LINT_SKIP_DIRS = new Set(["node_modules", "dist", "build", ".next", "coverage"]);
+
+function walkTree(absDir, relDir, out) {
+  for (const entry of readdirSync(absDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (LINT_SKIP_DIRS.has(entry.name)) continue;
+      walkTree(resolve(absDir, entry.name), `${relDir}/${entry.name}`, out);
+    } else if (LINT_EXTENSIONS.has(entry.name.slice(entry.name.lastIndexOf(".")))) {
+      out.push(`${relDir}/${entry.name}`);
+    }
+  }
+}
+
+/** The explicit targets plus every source file under the lint trees that exist in this checkout. */
+export function lintTargets(root) {
+  const targets = [...LINT_TARGETS];
+  for (const tree of LINT_TREES) {
+    const abs = resolve(root, tree);
+    if (existsSync(abs)) walkTree(abs, tree, targets);
+  }
+  return targets.sort();
+}
 
 export function loadSchema(root) {
   return JSON.parse(readFileSync(resolve(root, SCHEMA_PATH), "utf8"));
@@ -190,25 +216,29 @@ export function checkPromotionRequiresDecision(root) {
     return { findings, warnings };
   }
 
+  // Per surface: the surface whose values changed is the one whose adopted_by
+  // must change. A bump on an unrelated surface does not license the change
+  // (independent review of PR #487 proved that bypass live).
   const localSurfaces = local.surfaces ?? {};
   const remoteSurfaces = remoteParsed.surfaces ?? {};
   const surfaceNames = new Set([...Object.keys(localSurfaces), ...Object.keys(remoteSurfaces)]);
-  let anyAdoptedByChanged = false;
-  for (const name of surfaceNames) {
-    const localAdopted = localSurfaces[name]?.adopted_by;
-    const remoteAdopted = remoteSurfaces[name]?.adopted_by;
-    if (localAdopted !== remoteAdopted) {
-      anyAdoptedByChanged = true;
-      break;
+  const valuesOf = (surface) => {
+    if (!surface) return null;
+    const { adopted_by: _a, adopted_at: _b, ...rest } = surface;
+    return JSON.stringify(rest);
+  };
+  for (const name of [...surfaceNames].sort()) {
+    const localSurface = localSurfaces[name];
+    const remoteSurface = remoteSurfaces[name];
+    const valuesChanged = valuesOf(localSurface) !== valuesOf(remoteSurface);
+    const adoptedChanged = localSurface?.adopted_by !== remoteSurface?.adopted_by;
+    if (valuesChanged && !adoptedChanged) {
+      findings.push({
+        code: "PROMOTION_WITHOUT_DECISION",
+        file: ACTIVE_PATH,
+        detail: `surface "${name}" in ${ACTIVE_PATH} differs from origin/main but its adopted_by is unchanged — promotion requires a decision record: set this surface's adopted_by to the decision id (a change to another surface's adopted_by does not count).`,
+      });
     }
-  }
-
-  if (!anyAdoptedByChanged) {
-    findings.push({
-      code: "PROMOTION_WITHOUT_DECISION",
-      file: ACTIVE_PATH,
-      detail: `${ACTIVE_PATH} differs from origin/main but no surface's adopted_by changed — promotion requires a decision record. If a surface's values legitimately changed, its adopted_by must change too.`,
-    });
   }
 
   return { findings, warnings };
@@ -302,7 +332,7 @@ export function scanAllLintTargets(root) {
   const scale = loadInternalReportsScale(root);
   const entries = [];
   let rawCount = 0;
-  for (const file of LINT_TARGETS) {
+  for (const file of lintTargets(root)) {
     const abs = resolve(root, file);
     if (!existsSync(abs)) continue;
     const text = readFileSync(abs, "utf8");

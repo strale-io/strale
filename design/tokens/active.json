@@ -127,7 +127,7 @@
       "provenance": {
         "repo": "strale-frontend",
         "source": "src/index.css, tailwind.config.ts, index.html",
-        "commit": "04c9fca970d82b2c98145973816d52086b3b91d",
+        "commit": "04c9fca970d82b2c98145973816d52086b3b91d7",
         "captured_at": "2026-09-02",
         "note": "Dark theme, HSL CSS custom properties in src/index.css; Inter + JetBrains Mono and the radius/font-family Tailwind extensions in tailwind.config.ts; page <title> and meta description read from index.html. This is a faithful capture of what strale-frontend main serves today, not a redesign — it becomes the build input when apps/web exists (ROADMAP section 7)."
       },

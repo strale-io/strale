@@ -253,6 +253,39 @@ test("active.json changed against origin/main with no adopted_by change fails, c
   });
 });
 
+test("a change to one surface is not licensed by another surface's adopted_by change", () => {
+  const twoSurfaces = (accentA, adoptedA, adoptedB) => ({
+    surfaces: {
+      "internal-reports": { ...SURFACE, palette: { ...SURFACE.palette, accent: accentA }, adopted_by: adoptedA, adopted_at: "2026-08-15" },
+      website: { ...SURFACE, provenance: { source: "strale-frontend/src/index.css" }, adopted_by: adoptedB, adopted_at: "2026-09-02" },
+    },
+  });
+  const main = baseFiles({ accent: "#111111" });
+  main["design/tokens/active.json"] = twoSurfaces("#111111", "DEC-TEST-1", "unrecorded");
+  const bypass = baseFiles({ accent: "#222222" });
+  bypass["design/tokens/active.json"] = twoSurfaces("#222222", "DEC-TEST-1", "DEC-BOGUS-UNRELATED");
+  withFixture(bypass, main, (root) => {
+    const { findings } = checkPromotionRequiresDecision(root);
+    const f = findings.find((x) => x.code === "PROMOTION_WITHOUT_DECISION");
+    assert.ok(f, JSON.stringify(findings));
+    assert.match(f.detail, /surface "internal-reports"/);
+  });
+  const proper = baseFiles({ accent: "#222222" });
+  proper["design/tokens/active.json"] = twoSurfaces("#222222", "DEC-TEST-2", "unrecorded");
+  withFixture(proper, main, (root) => {
+    assert.deepEqual(checkPromotionRequiresDecision(root).findings, []);
+  });
+});
+
+test("source files under apps/web join the lint scope as soon as the tree exists", () => {
+  const files = { ...baseFiles(), "apps/web/src/App.tsx": 'const c = "#ABCDEF";\n', "apps/web/node_modules/x/index.js": 'const d = "#FEDCBA";\n' };
+  withFixture(files, baseFiles(), (root) => {
+    const { unique } = scanAllLintTargets(root);
+    const web = unique.filter((e) => e.file.startsWith("apps/web/"));
+    assert.deepEqual(web.map((e) => `${e.file}:${e.value}`), ["apps/web/src/App.tsx:#ABCDEF"]);
+  });
+});
+
 test("active.json absent on origin/main (this PR creates it) is a pass", () => {
   const local = baseFiles();
   const mainWithoutActive = baseFiles();
