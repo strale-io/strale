@@ -43,7 +43,8 @@ const priv = YAML.parse(ghRaw(register.private_rows.file, register.private_rows.
 let failures = 0;
 const fail = (m) => { failures += 1; console.log(`FAIL ${m}`); };
 
-if (identities.size !== register.sources.decision_archive.row_count) fail(`export has ${identities.size} rows, register says ${register.sources.decision_archive.row_count}`);
+if (raw.length !== register.sources.decision_archive.row_count) fail(`export has ${raw.length} raw rows, register says ${register.sources.decision_archive.row_count}`);
+if (identities.size !== raw.length) fail(`export has ${raw.length} rows but only ${identities.size} distinct page ids`);
 if (priv.length !== register.private_rows.count) fail(`private file has ${priv.length} rows, register says ${register.private_rows.count}`);
 const privDigest = canonicalDigest(priv);
 if (privDigest !== register.private_rows.digest) fail(`private digest ${privDigest} != ${register.private_rows.digest}`);

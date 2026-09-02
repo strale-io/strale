@@ -563,6 +563,28 @@ test("declared source paths must be the ones the validator reads", () => {
   assert.ok(c2.includes("SOURCE_PATH_NOT_CANONICAL"), c2.join(","));
 });
 
+test("evidence must be disposition-specific, not merely valid", () => {
+  const r = base();
+  row(r, "formally_migrated").evidence = ["README.md"];
+  has(r, "DECISION_ROW_EVIDENCE_NOT_SPECIFIC");
+  const r2 = base();
+  r2.decision_rows.find((x) => x.disposition === "unresolved_collision" && x.collision.kind === "notion-duplicate").evidence = ["README.md"];
+  has(r2, "DECISION_ROW_EVIDENCE_NOT_SPECIFIC");
+  const r3 = base();
+  const nr = r3.formal_records.find((x) => x.source_kind === "notion-row");
+  nr.git_provenance = "docs/decisions/README.md";
+  has(r3, "SCHEMA");
+});
+
+test("a duplicated export row is rejected by the export comparison", () => {
+  const exportRows = [
+    { url: `https://app.notion.com/${"1".repeat(32)}`, "userDefined:ID": "DEC-20260901-Q", Status: "active", Scope: "global", "date:Date:start": "2026-09-01", createdTime: "2026-09-01T00:00:00Z", Decision: "q" },
+    { url: `https://app.notion.com/${"1".repeat(32)}`, "userDefined:ID": "DEC-20260901-Q", Status: "active", Scope: "global", "date:Date:start": "2026-09-01", createdTime: "2026-09-01T00:00:00Z", Decision: "q" },
+  ];
+  const { rows } = syntheticPrivate();
+  assert.ok(compareRowsToExport([rows[0]], exportRows).map((f) => f.code).includes("EXPORT_ROW_DUPLICATE"));
+});
+
 test("inventory dispositions must match the migration-map table", () => {
   const r = base();
   r.legacy_inventory.find((e) => e.path === "handoff").disposition = "unclear";

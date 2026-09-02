@@ -65,8 +65,8 @@ digests:
 counts:
   legacy_inventory:
     migrated: 6
-    archive: 7
-    obsolete: 2
+    archive: 8
+    obsolete: 1
     total: 15
     evidence-only: 0
     unclear: 0
@@ -179,17 +179,20 @@ legacy_inventory:
     the file is archived in M5.'
 - path: .claude/NOTION.md
   owner_area: claude-workflow
-  disposition: obsolete
+  disposition: archive
   progress: not_started
-  target: Retire with Notion at M4; the workspace map survives only as private preservation evidence (plan
-    section 10, M4 items 5 and 6).
+  target: Archive with the other starter-kit workflow files after unique live rules are extracted (plan
+    section 9 groups NOTION with PROTOCOL, RUNBOOK, WORKFLOW, BUILD, DISPATCH). The Notion dependency
+    it describes is retired at M4 (section 10 items 5 and 6); the file itself is archived, not deleted.
   remaining:
-  - Remove at M4 after code search and tests prove no active consumer
+  - Extract any unique live rule into the protocol router (M3)
+  - Archive at M5 after M4 has removed every active Notion consumer
   evidence:
   - docs/strategy/2026-08-31-repo-native-operating-model-migration.md
   - docs/project/private-archive-status.json
-  rationale: A map of Notion page IDs has no meaning once Notion is neither authority nor runtime dependency;
-    until M4 it stays because Notion-backed workflows remain authoritative.
+  rationale: The migration map's row for the starter-kit files is explicit and includes NOTION; treating
+    the file as obsolete would have read section 10's retirement of Notion as a disposition of the file,
+    which the map does not say.
 - path: .claude/DISPATCH.yaml
   owner_area: claude-workflow
   disposition: archive

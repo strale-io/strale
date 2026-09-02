@@ -144,7 +144,7 @@
           "git_provenance": { "$ref": "#/$defs/evidenceRef" }
         },
         "allOf": [
-          { "if": { "properties": { "source_kind": { "const": "notion-row" } } }, "then": { "properties": { "source_rows": { "minItems": 1 } } } },
+          { "if": { "properties": { "source_kind": { "const": "notion-row" } } }, "then": { "properties": { "source_rows": { "minItems": 1 } }, "not": { "required": ["git_provenance"] } } },
           { "if": { "properties": { "source_kind": { "const": "git-native" } } }, "then": { "required": ["git_provenance"], "properties": { "source_rows": { "maxItems": 0 } } } }
         ]
       }

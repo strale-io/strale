@@ -39,7 +39,7 @@ export const EXPECTED_INVENTORY_DISPOSITIONS = Object.freeze({
   ".claude/RUNBOOK.md": "archive",
   ".claude/WORKFLOW.md": "archive",
   ".claude/BUILD.md": "archive",
-  ".claude/NOTION.md": "obsolete",  // §10 M4 items 5-6: Notion retired
+  ".claude/NOTION.md": "archive",   // §9 groups NOTION with the starter-kit files: archive after extraction (§10 M4 retires the Notion dependency itself)
   ".claude/DISPATCH.yaml": "archive",
   ".claude/commands": "migrated",   // §9: keep useful tool affordances; rewrite against repo-native authorities
   ".agents/skills": "migrated",
@@ -458,6 +458,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
       const rec = recordByKey.get(row.record_key);
       if (!rec) finding("DECISION_ROW_RECORD_UNKNOWN", `${row.page_id} -> ${row.record_key}`);
       else {
+        if (!row.evidence.includes(rec.file)) finding("DECISION_ROW_EVIDENCE_NOT_SPECIFIC", `${row.page_id}: a migrated row must cite its record ${rec.file}`);
         if (rec.id !== row.id) finding("DECISION_ROW_RECORD_ID_MISMATCH", `${row.page_id}: ${row.id} vs ${rec.id}`);
         const cited = rec.evidence.join("\n").replace(/-/g, "").includes(row.page_id);
         if (!cited) finding("DECISION_ROW_NOT_CITED_BY_RECORD", `${row.page_id} not in evidence of ${row.record_key}`);
@@ -485,6 +486,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
     if (d === "unresolved_collision" || d === "resolved_collision") {
       if (row.collision.kind === "notion-duplicate") {
+        if (!row.evidence.includes(COLLISIONS_PATH)) finding("DECISION_ROW_EVIDENCE_NOT_SPECIFIC", `${row.page_id}: a registry collision row must cite ${COLLISIONS_PATH}`);
         if (!col) finding("DECISION_ROW_COLLISION_NOT_IN_REGISTRY", row.page_id);
         else {
           if (col.id !== row.collision.id) finding("DECISION_ROW_COLLISION_ID_MISMATCH", row.page_id);
@@ -853,7 +855,13 @@ export function compareRowsToExport(rows, exportRows, { publicScopeDateDigest } 
   const findings = [];
   const finding = (code, detail) => findings.push({ code, path: "archive export", detail });
   const pid = (u) => ((u ?? "").replace(/-/g, "").match(/([0-9a-f]{32})/) ?? [])[1];
-  const identities = new Map(exportRows.map((r) => [pid(r.url), r]));
+  const identities = new Map();
+  for (const r of exportRows) {
+    const p = pid(r.url);
+    if (!p) { finding("EXPORT_ROW_UNIDENTIFIED", `export row without a page id: ${r.url}`); continue; }
+    if (identities.has(p)) finding("EXPORT_ROW_DUPLICATE", `export lists ${p} more than once`);
+    identities.set(p, r);
+  }
   const seen = new Set();
   for (const row of rows) {
     const src = identities.get(row.page_id);

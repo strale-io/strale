@@ -30,7 +30,7 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
 
 | Section | Result |
 |---|---|
-| Legacy-authority inventory (15) | 6 migrated (3 partial, 3 not started), 7 archive, 2 obsolete, 0 unclear, 0 evidence-only |
+| Legacy-authority inventory (15) | 6 migrated (3 partial, 3 not started), 8 archive, 1 obsolete, 0 unclear, 0 evidence-only |
 | Decision source rows (318) | 23 formally migrated, 70 unresolved collision (69 Notion duplicates + 1 cross-surface), 1 resolved collision, 1 intentionally historical, 6 obsolete or superseded, 212 not yet reconciled, 5 unclear |
 | Of which public in the register | 95 rows (page id and ID already on main); 71 carry a clear title (exactly the collision-registry strings), 24 a title hash; scope and date appear on no public row, not even hashed, because main does not publish them and a per-row hash would be recoverable; they are bound by one aggregate digest the operator script verifies |
 | Of which private | 223 rows (212 pending, 6 superseded, 5 unclear), counts and digest in the register, rows in the archive |
