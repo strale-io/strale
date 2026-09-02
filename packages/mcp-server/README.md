@@ -224,7 +224,7 @@ These use free capabilities — no API key needed (KYB/Invoice solutions require
 ```
 1. strale_ping          → Verify the connection is working
 2. strale_search        → Find capabilities matching your needs
-3. strale_trust_profile → (Optional) Check quality data for a specific capability
+3. strale_trust_profile → (Optional) Read the trust profile (test history, limitations, provenance) for a specific capability
 4. strale_execute       → Run the capability with the required inputs
 5. strale_transaction   → (Optional) Retrieve the full audit trail for any past execution
 6. strale_balance       → Check remaining balance
@@ -257,7 +257,7 @@ npm run dev --workspace=packages/mcp-server
 2. Eight meta-tools are registered: ping, getting_started, search, execute, methodology, trust_profile, balance, transaction
 3. Agents use `strale_search` to discover capabilities with input requirements and pricing
 4. `strale_execute` sends `POST /v1/do` with `capability_slug` and `inputs`
-5. The response (output, price, latency, provenance, quality) is returned as structured text
+5. The response (output, price, latency, provenance) is returned as structured text
 6. Async capabilities (>10s) return a transaction ID for polling
 7. Errors (insufficient balance, degraded capability, etc.) are returned with helpful messages
 
