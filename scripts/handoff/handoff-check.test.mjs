@@ -409,6 +409,71 @@ test("baseline records the extra worktree and merged branch that already exist",
   } finally { r.cleanup(); }
 });
 
+test("pre-push never refuses the push that deletes a landed branch, nor a routine backup push", async () => {
+  const r = makeRepo();
+  try {
+    git(r.trunk, "push", "-q", "origin", "main:refs/heads/old/a");
+    git(r.trunk, "push", "-q", "origin", "main:refs/heads/old/b");
+    const zeros = "0".repeat(40);
+    const sha = git(r.batch, "rev-parse", "HEAD");
+    const del = readPushRefs(`(delete) ${zeros} refs/heads/old/a ${sha}\n`);
+    const deleting = await r.check(r.batch, { mode: "pre-push", pushedRefs: del, pushRanges: pushRangesFor(del), env: {} });
+    assert.equal(deleting.ok, true, JSON.stringify(deleting));
+    assert.ok(!deleting.warnings.some((w) => /origin\/old\/a/.test(w)), "the branch being deleted is not reported");
+    assert.ok(deleting.warnings.some((w) => /\[merged-branch\] remote branch origin\/old\/b/.test(w)), "the other landed branch is a note");
+    const routine = readPushRefs(`refs/heads/feat/x ${sha} refs/heads/feat/x ${sha}\n`);
+    const backup = await r.check(r.batch, { mode: "pre-push", pushedRefs: routine, pushRanges: pushRangesFor(routine), env: {} });
+    assert.equal(backup.ok, true, JSON.stringify(backup));
+    const session = await r.check(r.batch);
+    assert.ok(codes(session).includes("merged-branch"), "the session gate still fails on them");
+  } finally { r.cleanup(); }
+});
+
+test("a baseline canonical path that is not one of this clone's worktrees is ignored", async () => {
+  const r = makeRepo();
+  try {
+    writeFileSync(r.baseline, JSON.stringify({ canonicalWorktree: "C:/somewhere/else/strale", knownWorktrees: [], knownBranches: [] }));
+    const fromTrunk = await r.check(r.trunk);
+    assert.equal(fromTrunk.kind, "trunk", JSON.stringify(fromTrunk));
+    assert.equal(fromTrunk.ok, true, JSON.stringify(fromTrunk));
+    const fromBatch = await r.check(r.batch);
+    assert.equal(fromBatch.kind, "batch");
+    assert.equal(fromBatch.ok, true, JSON.stringify(fromBatch));
+  } finally { r.cleanup(); }
+});
+
+test("a Claude Code agent worktree under .claude/worktrees/ is a note, not a batch worktree", async () => {
+  const r = makeRepo();
+  try {
+    const agent = join(r.trunk, ".claude", "worktrees", "agent-1");
+    git(r.trunk, "worktree", "add", "-q", "-b", "claude/agent-1", agent, "main");
+    const result = await r.check(r.batch);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.ok(result.warnings.some((w) => /1 Claude Code agent worktree/.test(w)), JSON.stringify(result));
+  } finally { r.cleanup(); }
+});
+
+test("a gone upstream after a merged PR is a note; a gone upstream with unlanded work is an ahead failure", async () => {
+  const r = makeRepo();
+  try {
+    writeFileSync(join(r.batch, "docs.md"), "x\n");
+    commitAll(r.batch, "docs: landed");
+    git(r.batch, "push", "-q");
+    git(r.trunk, "merge", "-q", "--ff-only", "feat/x");
+    git(r.trunk, "push", "-q");
+    git(r.trunk, "push", "-q", "origin", "--delete", "feat/x");
+    git(r.batch, "fetch", "-q", "--prune", "origin");
+    const landed = await r.check(r.batch);
+    assert.equal(landed.ok, true, JSON.stringify(landed));
+    assert.ok(landed.warnings.some((w) => /remote branch is deleted \(PR merged\)/.test(w) && /do not push it again/.test(w)), JSON.stringify(landed));
+    writeFileSync(join(r.batch, "more.md"), "y\n");
+    commitAll(r.batch, "docs: unlanded");
+    const unlanded = await r.check(r.batch);
+    assert.ok(codes(unlanded).includes("ahead"), JSON.stringify(unlanded));
+    assert.match(finding(unlanded, "ahead").message, /remote branch is gone and its work has not landed/);
+  } finally { r.cleanup(); }
+});
+
 test("path comparison is separator-insensitive, and case-insensitive on Windows", () => {
   assert.equal(normalizePath("C:\\Users\\x\\repo\\"), normalizePath("C:/Users/x/repo"));
   if (process.platform === "win32") assert.equal(normalizePath("c:/users/X/REPO"), normalizePath("C:/Users/x/repo"));

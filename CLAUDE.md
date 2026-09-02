@@ -68,7 +68,8 @@ program. Programs are execution records, not project truth.
    finding; apply them and rerun. Claude Code's Stop hook
    (`.claude/settings.json`) blocks the stop until it passes. Codex's notify
    wrapper (`scripts/handoff/codex-notify.mjs`, chained in
-   `~/.codex/config.toml`) records the result in
+   `~/.codex/config.toml` by its trunk path, which must exist on `main`)
+   records the result in
    `.claude/state/handoff/last-codex.json`, which the next session's
    orientation shows, and `.codex/hooks.json` blocks the stop the same way
    where the Codex hooks feature is on. A Codex session runs the check itself

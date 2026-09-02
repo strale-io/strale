@@ -16,8 +16,8 @@ One checker, four layers, one contract:
   `inventory` (inventory targets staged without `npm run context:generate`).
   Modes `session`, `pre-commit`, `pre-push`; `baseline` records worktrees and
   branches that wait for a founder decision (`scripts/handoff/baseline.json`,
-  empty today). 25 tests plant each failure mode in a throwaway repository
-  (`npm run handoff:test`, in CI).
+  empty today). The test suite plants each failure mode in a throwaway
+  repository (`npm run handoff:test`, in CI).
 - **Claude Code**: `.claude/settings.json` is now tracked (un-ignored; local
   additions go in `settings.local.json`). SessionStart runs
   `.claude/hooks/handoff-session-start.mjs` (records the session's start
@@ -27,9 +27,13 @@ One checker, four layers, one contract:
   `{"decision":"block","reason":…}` until the gate passes (loop guard: six
   blocks on identical findings let the stop through and leave the failure in
   `.claude/state/handoff/last-claude.json`).
-- **Codex**: `~/.codex/config.toml` `notify` now chains
-  `scripts/handoff/codex-notify.mjs` in front of the existing Tilja wrapper and
-  the original notifier; it runs the gate for the repository of the turn's
+- **Codex**: `~/.codex/config.toml` `notify` is to chain
+  `scripts/handoff/codex-notify.mjs` (the trunk copy, which exists once this PR
+  is on `main`) in front of the existing wrappers and the original notifier —
+  this session added the link before merge and another session removed it the
+  same day because the trunk file did not exist yet and a missing wrapper
+  breaks every project's notifications, so the link is re-added right after
+  merge; the wrapper runs the gate for the repository of the turn's
   `cwd`, scopes the code-change rule to the thread (start commit recorded at
   the first turn), and writes `.claude/state/handoff/last-codex.json`, which
   orientation prints. `.codex/hooks.json` declares the same SessionStart and
@@ -68,6 +72,14 @@ One checker, four layers, one contract:
   now reads the checker's `--json` findings and fails on any.
 - Codex wrapper with a fake `agent-turn-complete` payload wrote
   `last-codex.json` and the thread marker, and forwarded to the next command.
+- Independent review (fresh read-only Claude agent) found two blocking
+  defects, both fixed before merge: `prepare` would have failed the Docker
+  build (the image never copies `scripts/`), and pre-push refused the very
+  pushes that delete landed branches; plus seven should-fix items (gone
+  upstream after a merged PR, hook files not executable in the index,
+  machine-local canonical path, agent worktrees counted as batches, the
+  workflow's `grep -v` on empty input, the dirty fix text, the notify-link
+  claim), all applied.
 - Codex 0.147.0's binary carries the notify payload keys (`type`, `thread-id`,
   `turn-id`, `cwd`, …) and a Claude-compatible hooks engine
   (`stop.command.output` with `decision: block` / `reason`). The live Codex

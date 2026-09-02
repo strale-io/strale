@@ -28,7 +28,7 @@
     "handoff:orient": "node scripts/handoff/orient.mjs",
     "handoff:baseline": "node scripts/handoff/handoff-check.mjs baseline",
     "hooks:install": "node scripts/handoff/install-hooks.mjs",
-    "prepare": "node scripts/handoff/install-hooks.mjs"
+    "prepare": "node scripts/handoff/install-hooks.mjs || exit 0"
   },
   "license": "MIT",
   "engines": {

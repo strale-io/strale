@@ -33,8 +33,10 @@
 //   session     the full gate (Claude Code Stop hook, Codex notify wrapper,
 //               `npm run handoff:check`)
 //   pre-commit  fast structural checks (release-commit, inventory)
-//   pre-push    everything except dirty/ahead, over the refs being pushed,
-//               plus release-push
+//   pre-push    resume-surface over the refs being pushed plus release-push;
+//               worktree and landed-branch findings are notes here, so the
+//               push that fixes them (or a routine backup push) is never
+//               refused
 //   baseline    print or, with --write, record the worktrees and merged
 //               branches that already exist and wait for a founder decision
 //
@@ -224,7 +226,17 @@ export async function runChecks(options = {}) {
   }
 
   const worktrees = listWorktrees(git);
-  const canonical = normalizePath(baseline.canonicalWorktree ?? worktrees[0]?.path ?? toplevel);
+  const listed = new Set(worktrees.map((w) => normalizePath(w.path)));
+  const recorded = baseline.canonicalWorktree ? normalizePath(baseline.canonicalWorktree) : null;
+  // The baseline's canonical path only counts when it is one of this clone's
+  // worktrees; any other clone (another machine, CI, a cloud sandbox) uses
+  // git's own answer: the main worktree is always listed first.
+  const canonical = recorded && listed.has(recorded) ? recorded : normalizePath(worktrees[0]?.path ?? toplevel);
+  // pre-push: hygiene findings (worktrees, landed branches) are notes, so the
+  // push that fixes them — or a routine backup push — is never refused; only
+  // release-push and resume-surface can fail a push.
+  const hygiene = mode === "pre-push" ? (code, message, fix) => note(`[${code}] ${message} — ${fix}`) : fail;
+  const deleting = new Set((options.pushedRefs ?? []).filter((r) => /^0+$/.test(r.localSha ?? "")).map((r) => String(r.remoteRef ?? "").replace(/^refs\/heads\//, "")));
   const known = new Map(baseline.knownWorktrees.map((w) => [normalizePath(w.path), w.reason ?? "recorded"]));
   const me = normalizePath(toplevel);
   const kind = me === canonical ? "trunk" : known.has(me) ? "known" : "batch";
@@ -246,7 +258,7 @@ export async function runChecks(options = {}) {
     const dirty = statusPaths(git);
     if (dirty.length) {
       fail("dirty", `${dirty.length} uncommitted or untracked path(s) in ${toplevel}: ${summarize(dirty, 5)}`,
-        "commit them (Conventional Commit message) or delete stray files; nothing may stay uncommitted when a session ends");
+        "commit your own changes (Conventional Commit message); if a path is not yours, stop and report it — never delete another session's work; nothing may stay uncommitted when a session ends");
     }
   }
 
@@ -273,6 +285,17 @@ export async function runChecks(options = {}) {
     }
   }
 
+  // A branch has landed when main already contains its work: an ancestor of
+  // main, or every commit patch-equivalent to one on main (`git cherry`).
+  const aheadOf = (ref) => Number(git(["rev-list", "--count", `${releaseRef}..${ref}`], { allowFail: true }) ?? "0");
+  const patchEquivalent = (ref) => {
+    const out = git(["cherry", releaseRef, ref], { allowFail: true });
+    if (!out) return false;
+    const lines = out.split("\n").filter(Boolean);
+    return lines.length > 0 && lines.every((l) => l.startsWith("-"));
+  };
+  const landedHow = (ref) => (releaseSha ? (aheadOf(ref) === 0 ? "ancestor" : patchEquivalent(ref) ? "patch-equivalent" : null) : null);
+
   // ── ahead ──────────────────────────────────────────────────────────────
   if (mode === "session" && branch) {
     const upstream = git(["rev-parse", "--abbrev-ref", "@{upstream}"], { allowFail: true });
@@ -280,8 +303,15 @@ export async function runChecks(options = {}) {
     // origin/main; that is not a backup of the branch, so it counts as no
     // upstream (the push -u below re-points the tracking to origin/<branch>).
     const borrowed = upstream && branch !== cfg.releaseBranch && upstream === `${cfg.remote}/${cfg.releaseBranch}`;
-    if (!upstream || borrowed) {
-      fail("ahead", `branch ${branch} has no upstream of its own${borrowed ? ` (it tracks ${upstream})` : ""}`, `git push -u ${cfg.remote} ${branch}`);
+    // An upstream that was configured but no longer exists means the remote
+    // branch was deleted — after a merged PR, usually. Re-pushing it would
+    // resurrect a landed branch, so that case is a note for the next session.
+    const configured = !upstream && git(["config", `branch.${branch}.merge`], { allowFail: true });
+    const gone = Boolean(configured) && !refExists(git, `refs/remotes/${cfg.remote}/${branch}`);
+    if (gone && landedHow("HEAD")) {
+      note(`this branch (${branch}) has landed on ${cfg.releaseBranch} and its remote branch is deleted (PR merged); the next session removes this worktree from the trunk and deletes the branch — do not push it again`);
+    } else if (!upstream || borrowed) {
+      fail("ahead", `branch ${branch} has no upstream of its own${borrowed ? ` (it tracks ${upstream})` : gone ? ` (its remote branch is gone and its work has not landed on ${cfg.releaseBranch})` : ""}`, `git push -u ${cfg.remote} ${branch}`);
     } else {
       const ahead = Number(git(["rev-list", "--count", `${upstream}..HEAD`], { allowFail: true }) ?? "0");
       const behind = Number(git(["rev-list", "--count", `HEAD..${upstream}`], { allowFail: true }) ?? "0");
@@ -299,22 +329,28 @@ export async function runChecks(options = {}) {
   // ── worktrees ──────────────────────────────────────────────────────────
   const batch = [];
   let knownCount = 0;
+  let agentCount = 0;
   if (mode !== "pre-commit") {
     for (const wt of worktrees) {
       const n = normalizePath(wt.path);
       if (n === canonical) continue;
       if (known.has(n)) { knownCount += 1; continue; }
+      // Claude Code agent worktrees (isolation: "worktree", required by the
+      // Shared-Checkout Rule for any editing agent) live under
+      // <worktree>/.claude/worktrees/ and belong to a running session.
+      if (n.includes("/.claude/worktrees/")) { agentCount += 1; continue; }
       batch.push(wt);
       if (wt.detached || wt.branch === cfg.releaseBranch) {
-        fail("worktree", `worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`})`,
+        hygiene("worktree", `worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`})`,
           `the trunk is the only checkout that idles: git -C ${worktrees[0]?.path ?? toplevel} worktree remove ${wt.path} (never rm -rf; delete any node_modules junction inside first)`);
       }
     }
     if (batch.length > cfg.maxBatchWorktrees) {
-      fail("worktree", `${batch.length} batch worktrees exist (${batch.map((w) => `${w.path} [${w.branch ?? "detached"}]`).join(", ")}); the model allows ${cfg.maxBatchWorktrees}`,
+      hygiene("worktree", `${batch.length} batch worktrees exist (${batch.map((w) => `${w.path} [${w.branch ?? "detached"}]`).join(", ")}); the model allows ${cfg.maxBatchWorktrees}`,
         "one batch at a time: finish and remove the others (git worktree remove <path>; never rm -rf), or record one in scripts/handoff/baseline.json with a reason");
     }
     if (knownCount) note(`${knownCount} worktree(s) recorded in scripts/handoff/baseline.json wait for a founder decision; nothing is deleted without it`);
+    if (agentCount) note(`${agentCount} Claude Code agent worktree(s) under .claude/worktrees/ belong to a running session (prune with apps/api/scripts/prune-claude-worktrees.ts once it is over)`);
     if (mode === "session") {
       for (const wt of worktrees) {
         if (normalizePath(wt.path) === me || wt.bare) continue;
@@ -339,14 +375,6 @@ export async function runChecks(options = {}) {
     const knownBranches = new Map(baseline.knownBranches.map((b) => [b.name, b.reason ?? "recorded"]));
     const byBranch = new Map(worktrees.filter((w) => w.branch).map((w) => [w.branch, w.path]));
     const exclude = new Set([cfg.releaseBranch, branch].filter(Boolean));
-    const aheadOf = (ref) => Number(git(["rev-list", "--count", `${releaseRef}..${ref}`], { allowFail: true }) ?? "0");
-    const patchEquivalent = (ref) => {
-      const out = git(["cherry", releaseRef, ref], { allowFail: true });
-      if (!out) return false;
-      const lines = out.split("\n").filter(Boolean);
-      return lines.length > 0 && lines.every((l) => l.startsWith("-"));
-    };
-    const landedHow = (ref) => (aheadOf(ref) === 0 ? "ancestor" : patchEquivalent(ref) ? "patch-equivalent" : null);
     let waiting = 0;
     const localBranches = (git(["branch", "--format=%(refname:short)"], { allowFail: true }) ?? "").split("\n").map((s) => s.trim()).filter((b) => b && !b.startsWith("("));
     for (const b of localBranches) {
@@ -361,7 +389,7 @@ export async function runChecks(options = {}) {
         continue;
       }
       const del = how === "ancestor" ? `git branch -d ${b} (nothing is lost: every commit is reachable from ${cfg.releaseBranch})` : `git branch -D ${b} (safe: every commit on it is patch-equivalent to one on ${cfg.releaseBranch})`;
-      fail("merged-branch", `local branch ${b} has landed on ${cfg.releaseBranch} (${how}) and still exists${wt ? ` (checked out in ${wt})` : ""}`,
+      hygiene("merged-branch", `local branch ${b} has landed on ${cfg.releaseBranch} (${how}) and still exists${wt ? ` (checked out in ${wt})` : ""}`,
         wt ? `git worktree remove ${wt} from the trunk, then ${del}` : del);
     }
     const remoteSkip = new Set([`${cfg.remote}/${cfg.releaseBranch}`, `${cfg.remote}/HEAD`, ...(branch ? [`${cfg.remote}/${branch}`] : [])]);
@@ -370,11 +398,12 @@ export async function runChecks(options = {}) {
       if (remoteSkip.has(rb) || !rb.startsWith(`${cfg.remote}/`)) continue;
       const short = rb.slice(cfg.remote.length + 1);
       if (knownBranches.has(short)) { waiting += 1; continue; }
+      if (deleting.has(short)) continue; // this push deletes it
       if (!releaseSha) break;
       const how = landedHow(rb);
       if (!how) continue;
       if (byBranch.has(short) && how === "ancestor") continue; // the note above covers the checked-out branch
-      fail("merged-branch", `remote branch ${rb} has landed on ${cfg.releaseBranch} (${how}) and still exists`,
+      hygiene("merged-branch", `remote branch ${rb} has landed on ${cfg.releaseBranch} (${how}) and still exists`,
         `git push ${cfg.remote} --delete ${short} (its PR is merged, or it never diverged from ${cfg.releaseBranch})`);
     }
     if (waiting) note(`${waiting} landed branch(es) recorded in scripts/handoff/baseline.json wait for a founder decision`);

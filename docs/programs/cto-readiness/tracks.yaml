@@ -75,10 +75,13 @@ tracks:
     next_action: >
       The four layers are built and proven locally (handoff file
       2026-09-02-t3-session-end-gate.md): merge the PR once its independent
-      review passes; prove the stale-branches workflow with a workflow_dispatch
-      run against a planted branch; verify the Codex layer live (notify wrapper
-      and .codex/hooks.json Stop hook) the first time a Codex turn runs in this
-      repository after the quota returns; then set this track to done with the
+      review passes; re-add the Strale entry to the notify chain in
+      ~/.codex/config.toml pointing at the trunk copy of
+      scripts/handoff/codex-notify.mjs (it was removed before merge because the
+      file did not exist on main yet); prove the stale-branches workflow with a
+      workflow_dispatch run against a planted branch; verify the Codex layer
+      live (notify wrapper and .codex/hooks.json Stop hook) the first time a
+      Codex turn runs in this repository after the quota returns; then set this track to done with the
       evidence paths (ten of the eleven plain directories are deleted after a
       file-level history check; strale-codex-handoff-v2 is Petter's call).
     resume_file: handoff/_general/from-code/2026-09-02-t3-session-end-gate.md

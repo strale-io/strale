@@ -42,7 +42,9 @@ if (result.ok) {
   process.exit(0);
 }
 
-const key = result.failures.map((f) => `${f.code}:${f.message}`).join("|");
+// Keyed by finding codes only: a changing count ("3 uncommitted…" → "2…")
+// is the same stuck state, not progress, so the guard still runs out.
+const key = [...new Set(result.failures.map((f) => f.code))].sort().join("|");
 const blocks = state.lastKey === key ? state.blocks + 1 : 1;
 writeFileSync(marker, JSON.stringify({ ...state, blocks, lastKey: key }));
 

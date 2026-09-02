@@ -43,7 +43,7 @@ jobs:
           open_heads=$(gh pr list --state open --limit 200 --json headRefName --jq '.[].headRefName' | sort -u)
           : > stale.txt
           git for-each-ref --format='%(refname:short) %(committerdate:unix) %(objectname:short)' refs/remotes/origin \
-            | grep -v -E '^origin/(main|HEAD) ' \
+            | awk '!/^origin\/(main|HEAD) /' \
             | while read -r ref date sha; do
                 branch=${ref#origin/}
                 age=$(( (now - date) / 86400 ))
@@ -60,6 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           COUNT: ${{ steps.scan.outputs.count }}
+          MAX_AGE_DAYS: ${{ github.event.inputs.max_age_days || '7' }}
         run: |
           set -euo pipefail
           title="Stale remote branches (weekly hygiene report)"
