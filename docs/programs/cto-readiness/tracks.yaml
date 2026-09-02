@@ -8,6 +8,12 @@
 # Only `done` satisfies a dependency. `program_status` is active (exactly one
 # active track), paused (no active track; at least one founder_gated or blocked
 # track and nothing runnable), or complete (every track done or rehomed).
+# Every track declares `gate`: none (not sequenced by the migration), m2 (M2
+# work), m2-exit (the single M2 exit gate), post-m2 (M3 and later). The M2
+# closure register's validator refuses any post-m2 track that is active or
+# done while a blocking M2 gap remains, or that does not depend (transitively)
+# on the m2-exit track; adding a track cannot bypass this because the field
+# is required.
 schema_version: 1
 program: cto-readiness
 program_status: active
@@ -16,6 +22,7 @@ tracks:
   - id: T1
     title: M2 closure audit
     status: done
+    gate: m2
     depends_on: []
     owner: session
     next_action: >
@@ -38,6 +45,7 @@ tracks:
   - id: T2
     title: Repo hygiene sweep
     status: active
+    gate: none
     depends_on: []
     owner: session
     next_action: >
@@ -58,6 +66,7 @@ tracks:
   - id: T3
     title: Hygiene enforcement framework
     status: queued
+    gate: none
     depends_on: [T2]
     owner: session
     next_action: >
@@ -76,6 +85,7 @@ tracks:
   - id: T4
     title: Remediation program closure
     status: queued
+    gate: none
     depends_on: []
     owner: session
     next_action: >
@@ -96,6 +106,7 @@ tracks:
   - id: T5
     title: CTO-readable repository structure
     status: queued
+    gate: none
     depends_on: [T2, T4]
     owner: session
     next_action: >
@@ -114,6 +125,7 @@ tracks:
   - id: T10
     title: M2 exit-gap closure
     status: queued
+    gate: m2-exit
     depends_on: [T1]
     owner: session
     next_action: >
@@ -123,8 +135,9 @@ tracks:
       the collision identity mechanism, and one closing independent review of
       the complete M2 candidate set. Start with the next batch the register
       names. This track is the M2 exit gate: T6 cannot start before it is
-      done, and the closure register's validator refuses a state where it or
-      T6 is done or active while a blocking gap remains.
+      done, and the closure register's validator refuses a state where this
+      track is done, or any post-m2 track is active or done, while a blocking
+      gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -134,6 +147,7 @@ tracks:
   - id: T6
     title: M3 repo-native workflows
     status: queued
+    gate: post-m2
     depends_on: [T1, T5, T10]
     owner: session
     next_action: >
@@ -152,6 +166,7 @@ tracks:
   - id: T7
     title: M4 atomic authority cutover
     status: queued
+    gate: post-m2
     depends_on: [T3, T6]
     owner: session
     next_action: >
@@ -169,6 +184,7 @@ tracks:
   - id: T8
     title: M5 to M7 closeout
     status: queued
+    gate: post-m2
     depends_on: [T7]
     owner: session
     next_action: Per migration plan section 10 M5, M6, M7.
@@ -182,6 +198,7 @@ tracks:
   - id: T9
     title: Discovery and retrieval authority (WP16)
     status: queued
+    gate: post-m2
     depends_on: [T7]
     owner: session
     next_action: Open its own program plan under docs/programs/ when T7 is done.

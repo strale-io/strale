@@ -16,11 +16,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "title", "status", "depends_on", "owner", "next_action", "resume_file", "exit", "evidence"],
+        "required": ["id", "title", "status", "gate", "depends_on", "owner", "next_action", "resume_file", "exit", "evidence"],
         "properties": {
           "id": { "type": "string", "pattern": "^T[0-9]+$" },
           "title": { "type": "string", "minLength": 3 },
           "status": { "enum": ["queued", "active", "blocked", "founder_gated", "done", "rehomed"] },
+          "gate": { "enum": ["none", "m2", "m2-exit", "post-m2"] },
           "depends_on": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^T[0-9]+$" } },
           "owner": { "enum": ["session", "petter"] },
           "blocker": { "type": "string", "minLength": 3 },

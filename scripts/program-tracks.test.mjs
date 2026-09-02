@@ -280,9 +280,9 @@ test("validateRegister applies the tracked set to resume files, evidence, and re
       program_status: "active",
       updated: "2026-09-02",
       tracks: [
-        { id: "T1", title: "one", status: "active", depends_on: [], owner: "session", next_action: "do the thing", resume_file: "resume.md", exit: ["done when"], evidence: [] },
-        { id: "T2", title: "two", status: "done", depends_on: [], owner: "session", next_action: "did the thing", resume_file: null, exit: ["done when"], evidence: ["evidence.md"] },
-        { id: "T3", title: "three", status: "rehomed", rehomed_to: "home.md", depends_on: [], owner: "session", next_action: "moved the thing", resume_file: null, exit: ["done when"], evidence: [] },
+        { id: "T1", title: "one", status: "active", gate: "none", depends_on: [], owner: "session", next_action: "do the thing", resume_file: "resume.md", exit: ["done when"], evidence: [] },
+        { id: "T2", title: "two", status: "done", gate: "none", depends_on: [], owner: "session", next_action: "did the thing", resume_file: null, exit: ["done when"], evidence: ["evidence.md"] },
+        { id: "T3", title: "three", status: "rehomed", gate: "none", rehomed_to: "home.md", depends_on: [], owner: "session", next_action: "moved the thing", resume_file: null, exit: ["done when"], evidence: [] },
       ],
     };
     const detail = validateRegister(register, { root: dir, relativePath: "tracks.yaml", schema, tracked: new Set(), programDir: "p" });
@@ -325,6 +325,21 @@ test("an unknown field is rejected at both levels", () => {
   assert.ok(codes(r2).includes("SCHEMA"), "top-level");
 });
 
+test("every track declares a gate, and post-m2 tracks require exactly one m2-exit track", () => {
+  const r = base();
+  delete r.tracks[0].gate;
+  assert.ok(codes(r).includes("SCHEMA"));
+  const r2 = base();
+  r2.tracks[0].gate = "later";
+  assert.ok(codes(r2).includes("SCHEMA"));
+  const r3 = base();
+  byId(r3, "T10").gate = "m2";
+  assert.ok(codes(r3).includes("GATE_COUNT"));
+  const r4 = base();
+  byId(r4, "T2").gate = "m2-exit";
+  assert.ok(codes(r4).includes("GATE_COUNT"));
+});
+
 test("program directories must hold both files and a matching slug", () => {
   const dir = mkdtempSync(join(tmpdir(), "tracks-topology-"));
   try {
@@ -336,7 +351,7 @@ test("program directories must hold both files and a matching slug", () => {
     writeFileSync(join(dir, "docs/programs/alpha/PROGRAM.md"), "# alpha\n");
     // alpha: PROGRAM.md only
     // beta: register only, slug mismatch
-    const reg = `schema_version: 1\nprogram: not-beta\nprogram_status: active\nupdated: 2026-09-02\ntracks:\n  - id: T1\n    title: one\n    status: active\n    depends_on: []\n    owner: session\n    next_action: do the thing\n    resume_file: README.md\n    exit: [done when]\n    evidence: []\n`;
+    const reg = `schema_version: 1\nprogram: not-beta\nprogram_status: active\nupdated: 2026-09-02\ntracks:\n  - id: T1\n    title: one\n    status: active\n    gate: none\n    depends_on: []\n    owner: session\n    next_action: do the thing\n    resume_file: README.md\n    exit: [done when]\n    evidence: []\n`;
     writeFileSync(join(dir, "docs/programs/beta/tracks.yaml"), reg);
     writeFileSync(join(dir, "README.md"), "x");
     // gamma: both files, valid

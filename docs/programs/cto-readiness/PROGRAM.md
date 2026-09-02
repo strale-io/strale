@@ -79,6 +79,12 @@ register is enforced: T2 and T4 do not depend on T1, so either may become the
 active track while T1 waits on review, provided T1 is marked `blocked` with the
 review named as its blocker. Nothing in T6 or later starts before T1 is done.
 
+Every track also declares a `gate` (`none`, `m2`, `m2-exit`, `post-m2`).
+The M2 closure register's validator reads this file and refuses any
+`post-m2` track that is active or done while a blocking M2 gap remains, or
+that does not depend on the `m2-exit` track; because the field is required, a
+new track cannot bypass the gate.
+
 The register carries a `program_status`. While it is `active`, exactly one
 track is active. It becomes `paused` only when every runnable track is done
 and the remaining work waits on a founder gate (T7 becomes `founder_gated`

@@ -120,6 +120,10 @@ export function validateRegister(register, { root, relativePath, schema, tracked
   }
   const byId = new Map(tracks.map((t) => [t.id, t]));
 
+  const gates = tracks.filter((t) => t.gate === "m2-exit");
+  if (tracks.some((t) => t.gate === "post-m2") && gates.length !== 1) {
+    finding("GATE_COUNT", `expected exactly 1 m2-exit track when post-m2 tracks exist, found ${gates.length}`);
+  }
   const active = tracks.filter((t) => t.status === "active");
   const status = register.program_status;
   if (status === "active" && active.length !== 1) {

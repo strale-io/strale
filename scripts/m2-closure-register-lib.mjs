@@ -26,10 +26,12 @@ const RECORDS_DIR = "docs/decisions/records";
 const ARCHIVE_STATUS_PATH = "docs/project/private-archive-status.json";
 const MIGRATION_PLAN_PATH = "docs/strategy/2026-08-31-repo-native-operating-model-migration.md";
 const TRACKS_PATH = "docs/programs/cto-readiness/tracks.yaml";
-// Tracks that may not be done, or active, while a blocking M2 gap remains:
-// the M2 exit gate itself and everything the plan sequences after M2.
-const M2_GATE_TRACK = "T10";
-const POST_M2_TRACKS = ["T6", "T7", "T8", "T9"];
+// The track register declares each track's relation to the M2 exit gate in a
+// required `gate` field (see docs/programs/tracks.schema.json). The gate track
+// is the one with gate: m2-exit; everything with gate: post-m2 is sequenced
+// after it. Tracks are never identified by id here, so a new track cannot
+// bypass the gate: it must declare a gate, and a post-m2 declaration is
+// enforced.
 
 /**
  * Expected disposition of every legacy-authority source, transcribed from the
@@ -706,22 +708,24 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // ---- The program's track register must respect the M2 exit gate.
   if (context.tracks) {
     const blocking = register.exit_gaps.filter((g) => g.blocking).length;
-    const byId = new Map((context.tracks.tracks ?? []).map((t) => [t.id, t]));
-    const gate = byId.get(M2_GATE_TRACK);
-    if (!gate) finding("TRACKS_GATE_MISSING", `${TRACKS_PATH} has no ${M2_GATE_TRACK} (M2 exit-gap closure) track`);
-    else if (blocking > 0 && gate.status === "done") finding("TRACKS_GATE_DONE_WITH_BLOCKING_GAPS", `${M2_GATE_TRACK} is done but ${blocking} blocking M2 gap(s) remain`);
+    const all = context.tracks.tracks ?? [];
+    const byId = new Map(all.map((t) => [t.id, t]));
+    for (const t of all) if (!["none", "m2", "m2-exit", "post-m2"].includes(t.gate)) finding("TRACKS_GATE_UNDECLARED", `${t.id} has no valid gate field`);
+    const gates = all.filter((t) => t.gate === "m2-exit");
+    if (gates.length !== 1) finding("TRACKS_GATE_MISSING", `${TRACKS_PATH} must have exactly one m2-exit track, found ${gates.length}`);
+    const gateId = gates[0]?.id;
+    if (gateId && blocking > 0 && gates[0].status === "done") finding("TRACKS_GATE_DONE_WITH_BLOCKING_GAPS", `${gateId} is done but ${blocking} blocking M2 gap(s) remain`);
     // Gating is transitive: a track depends on the gate if any dependency chain reaches it.
     const reaches = (id, seen = new Set()) => {
       if (seen.has(id)) return false;
       seen.add(id);
       const t = byId.get(id);
-      return Boolean(t) && t.depends_on.some((d) => d === M2_GATE_TRACK || reaches(d, seen));
+      return Boolean(t) && t.depends_on.some((d) => d === gateId || reaches(d, seen));
     };
-    for (const id of POST_M2_TRACKS) {
-      const t = byId.get(id);
-      if (!t) continue;
-      if (!reaches(id)) finding("TRACKS_POST_M2_NOT_GATED", `${id} does not depend, directly or transitively, on ${M2_GATE_TRACK}`);
-      if (blocking > 0 && ["active", "done"].includes(t.status)) finding("TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS", `${id} is ${t.status} but ${blocking} blocking M2 gap(s) remain`);
+    for (const t of all) {
+      if (t.gate !== "post-m2") continue;
+      if (gateId && !reaches(t.id)) finding("TRACKS_POST_M2_NOT_GATED", `${t.id} does not depend, directly or transitively, on ${gateId}`);
+      if (blocking > 0 && ["active", "done"].includes(t.status)) finding("TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS", `${t.id} is ${t.status} but ${blocking} blocking M2 gap(s) remain`);
     }
   } else {
     finding("TRACKS_UNAVAILABLE", `${TRACKS_PATH} is missing; the M2 exit gate cannot be checked`);
