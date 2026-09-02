@@ -219,7 +219,10 @@ export function checkPromotionRequiresDecision(root) {
 // Excludes HTML numeric character references (&#128202;) — an entity whose
 // digits happen to all be valid hex digits (e.g. &#128202;) would otherwise
 // false-positive as a six-digit hex color.
-const HEX_RE = /(?<!&)#[0-9A-Fa-f]{6}\b(?!;)/g;
+// A hex colour anywhere: in a CSS declaration (`color:#2563EB;`), a quoted TS
+// string, or a template literal. Not preceded by `&` (HTML entities such as
+// `&#128202;`) and not part of a longer hex run.
+const HEX_RE = /(?<![&0-9A-Za-z])#[0-9A-Fa-f]{6}(?![0-9A-Za-z])/g;
 const RGB_HSL_RE = /\b(rgb|hsl)a?\s*\(/g;
 const FONT_FAMILY_RE = /font-family\s*:/g;
 // Box-model properties whose px literals are judged against the spacing
@@ -291,7 +294,7 @@ export function scanFileForLiterals(text, scale) {
 }
 
 function dedupeKey(entry) {
-  return `${entry.file} ${entry.kind} ${entry.value}`;
+  return `${entry.file}|${entry.kind}|${entry.value}`;
 }
 
 /** Every off-token literal currently in the lint targets, deduplicated by (file, kind, value). Also returns the raw (non-deduplicated) count. */

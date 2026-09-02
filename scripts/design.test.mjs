@@ -19,6 +19,7 @@ import {
   scanAllLintTargets,
   repoRootFrom,
   SCHEMA_PATH,
+  scanFileForLiterals,
 } from "./design-lib.mjs";
 import { generate } from "./generate-design-tokens.mjs";
 
@@ -379,6 +380,13 @@ test("a missing generated file is detected by generate({check:true})", () => {
     assert.equal(result.stale, true);
     assert.equal(result.missing, true);
   });
+});
+
+test("hex literals are found in CSS declarations (followed by a semicolon) and inside strings, but HTML entities are not", () => {
+  const scale = { spacing: new Set([8]), radii: new Set([12]), radiiStrings: new Set() };
+  const found = scanFileForLiterals('const css = `color:#2563EB;background:#abcdef}` + "#ABCDEF" + "&#128202;" + "#ABCDEFAB";', scale);
+  const hex = found.filter((f) => f.kind === "hex").map((f) => f.value).sort();
+  assert.deepEqual(hex, ["#2563EB", "#ABCDEF", "#abcdef"]);
 });
 
 test("regenerating a stale file makes it match", () => {
