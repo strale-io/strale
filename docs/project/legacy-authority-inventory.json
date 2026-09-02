@@ -467,13 +467,15 @@
     {
       "path": "docs/remediation",
       "owner_area": "remediation-program",
-      "sha256": "4e84a6475287ccac48456e45b5318305309ac122f222a44942f96a86e8346d91",
+      "sha256": "36d0ec40a09b0fcecfd47ed9b382f85a20ab4e17a58e47467be20193df6d9969",
       "detected_references": [
         "apps/api/scripts/wp10-cadence-verdict.mjs",
+        "apps/api/scripts/wp9-observation-close.mjs",
         "apps/api/src/lib/ceo-brief-lint.ts",
         "apps/api/src/lib/withdrawn-integrity-claims.test.ts",
         "apps/api/src/lib/x402-eligibility.ts",
         "archive/receipts/2026-09-02-audit-wp10-cadence-verdict.json",
+        "archive/receipts/2026-09-02-audit-wp9-observation-close.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
         "archive/sessions/2026-09-02-t15-receipts-and-migration-ledger-plan.md",

@@ -144,10 +144,15 @@ packages:
 
   WP9:
     title: Capability Invocation Facts
-    status: MERGED_DEPLOYED_UNDER_OBSERVATION
+    status: ACCEPTED_WITH_RESIDUALS
+    closed: "2026-09-02"
+    closure_record: docs/remediation/packages/WP9.yaml (watch.closed block)
     observation_exit: >
       The first solution_step fact whose slug has no direct transaction traffic
-      becoming quarantinable. Condition, not a date.
+      becoming quarantinable. Condition, not a date. NOT YET OBSERVED as of
+      closure (0 such slugs on 2,416 facts) -- does not block acceptance (not
+      an exit condition; see watch.closed.also_watch_item_not_yet_observed),
+      but the package's own hoped-for live confirmation has not happened.
     transaction_id_linkage: >
       RESIDUAL, NOT AN ACCEPTANCE BLOCKER. Checked against the package's own six
       exit conditions, none of which mention it: the column is null for 100% of
