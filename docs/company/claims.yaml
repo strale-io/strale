@@ -238,7 +238,7 @@
   note: True only for the x402 payment path. Do not generalize to the wallet/API-key path.
 
 - id: sqs-quality-score-trust-layer
-  claim: /\b(SQS score|SQS 0|Strale Quality Score|min_sqs|per-call quality score|quality score for every capability)\b/
+  claim: /\b(SQS score|SQS 0|Strale Quality Score|min_sqs|(?<!no )per-call quality score|quality scores? for every capability)\b/
   is_regex: true
   status: forbidden
   surfaces: [homepage, README, methodology page, capability detail pages]
