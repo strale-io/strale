@@ -546,6 +546,41 @@ test("collision payloads are validated wherever they appear and forbidden elsewh
   assert.ok(c4.includes("SCHEMA") || c4.includes("DECISION_ROW_COLLISION_PAYLOAD_EXPECTED"), c4.join(","));
 });
 
+test("the track register cannot start M3 or close the gate while blocking M2 gaps remain", () => {
+  const withTracks = (mutate) => {
+    const tracks = structuredClone(context.tracks);
+    mutate(tracks);
+    return { ...context, tracks };
+  };
+  const r = base();
+  assert.ok(r.exit_gaps.some((g) => g.blocking), "the committed register has blocking gaps");
+  has(r, "TRACKS_GATE_DONE_WITH_BLOCKING_GAPS", withTracks((t) => { t.tracks.find((x) => x.id === "T10").status = "done"; }));
+  has(r, "TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS", withTracks((t) => { t.tracks.find((x) => x.id === "T6").status = "active"; }));
+  has(r, "TRACKS_POST_M2_NOT_GATED", withTracks((t) => { t.tracks.find((x) => x.id === "T6").depends_on = ["T1", "T5"]; }));
+  has(r, "TRACKS_GATE_MISSING", withTracks((t) => { t.tracks = t.tracks.filter((x) => x.id !== "T10"); }));
+  has(r, "TRACKS_UNAVAILABLE", { ...context, tracks: null });
+  // With every blocking gap closed, the same track states are acceptable.
+  const r2 = base();
+  for (const g of r2.exit_gaps) { g.blocking = false; g.phase = "M3"; }
+  r2.counts.exit_gaps = { blocking: 0, non_blocking: r2.exit_gaps.length };
+  const c2 = codes(r2, withTracks((t) => { t.tracks.find((x) => x.id === "T10").status = "done"; t.tracks.find((x) => x.id === "T10").evidence = ["README.md"]; }));
+  assert.ok(!c2.includes("TRACKS_GATE_DONE_WITH_BLOCKING_GAPS"), c2.join(","));
+});
+
+test("private rows whose identities are already public, or with unspecific evidence, are rejected", () => {
+  const { r, rows } = syntheticPrivate();
+  const pub = r.decision_rows.find((x) => x.disposition === "unresolved_collision" && x.collision.kind === "notion-duplicate");
+  // Manufacture a private row with a page id and id that are both public on main.
+  rows[0].page_id = pub.page_id;
+  rows[0].id = pub.id;
+  rows[0].source_url = pub.source_url;
+  const c = pcodes(r, rows);
+  assert.ok(c.includes("PRIVATE_ROW_ALREADY_PUBLIC"), c.join(","));
+  const { r: r2, rows: rows2 } = syntheticPrivate();
+  rows2[0].evidence = ["README.md"];
+  assert.ok(pcodes(r2, rows2).includes("PRIVATE_ROW_EVIDENCE_NOT_SPECIFIC"));
+});
+
 test("declared source paths must be the ones the validator reads", () => {
   const r = base();
   r.sources.legacy_inventory.path = "README.md";

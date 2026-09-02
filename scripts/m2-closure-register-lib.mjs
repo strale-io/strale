@@ -25,6 +25,11 @@ const COLLISIONS_PATH = "docs/decisions/id-collisions.yaml";
 const RECORDS_DIR = "docs/decisions/records";
 const ARCHIVE_STATUS_PATH = "docs/project/private-archive-status.json";
 const MIGRATION_PLAN_PATH = "docs/strategy/2026-08-31-repo-native-operating-model-migration.md";
+const TRACKS_PATH = "docs/programs/cto-readiness/tracks.yaml";
+// Tracks that may not be done, or active, while a blocking M2 gap remains:
+// the M2 exit gate itself and everything the plan sequences after M2.
+const M2_GATE_TRACK = "T10";
+const POST_M2_TRACKS = ["T6", "T7", "T8", "T9"];
 
 /**
  * Expected disposition of every legacy-authority source, transcribed from the
@@ -69,7 +74,10 @@ export const PLAN_DISPOSITIONS = ["merged", "partially_merged", "superseded", "o
 export const READINESS_ANCHOR_ID = "DEC-20260812-A";
 const URL_EVIDENCE =
   /^https:\/\/(github\.com\/strale-io\/(strale|strale-context-archive)\/(pull\/[0-9]+|issues\/[0-9]+|commit\/[0-9a-f]{7,40})|app\.notion\.com\/(p\/)?[0-9a-f]{32})$/;
-// Forward-looking sentences in the migration plan that the register must reconcile.
+// Forward-looking sentences in the migration plan that the register must
+// reconcile. Scope: the four directive forms below. The plan's top status
+// line is not a work statement; it is checked by the resume checkpoint, not
+// by this register.
 const PLAN_STATEMENT_PATTERNS = [
   /^- Next:/, /^- Next M2 batches:/, /^- The next milestone is/, /^\*\*Next bounded task:\*\*/,
 ];
@@ -263,6 +271,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     public: publicIdentities(root, baseRef),
     gitNativeClaims: gitNativeClaims(root),
     gapCitations: gapReportCitations(root),
+    tracks: existsSync(resolve(root, TRACKS_PATH)) ? YAML.parse(readFileSync(resolve(root, TRACKS_PATH), "utf8")) : null,
   };
 }
 
@@ -694,6 +703,30 @@ export function validateClosureRegister(register, context, { schema, relativePat
   }
   if (nb.private_candidates.count > privateCount) finding("NEXT_BATCH_PRIVATE_COUNT_EXCEEDS", `${nb.private_candidates.count} > ${privateCount}`);
 
+  // ---- The program's track register must respect the M2 exit gate.
+  if (context.tracks) {
+    const blocking = register.exit_gaps.filter((g) => g.blocking).length;
+    const byId = new Map((context.tracks.tracks ?? []).map((t) => [t.id, t]));
+    const gate = byId.get(M2_GATE_TRACK);
+    if (!gate) finding("TRACKS_GATE_MISSING", `${TRACKS_PATH} has no ${M2_GATE_TRACK} (M2 exit-gap closure) track`);
+    else if (blocking > 0 && gate.status === "done") finding("TRACKS_GATE_DONE_WITH_BLOCKING_GAPS", `${M2_GATE_TRACK} is done but ${blocking} blocking M2 gap(s) remain`);
+    // Gating is transitive: a track depends on the gate if any dependency chain reaches it.
+    const reaches = (id, seen = new Set()) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      const t = byId.get(id);
+      return Boolean(t) && t.depends_on.some((d) => d === M2_GATE_TRACK || reaches(d, seen));
+    };
+    for (const id of POST_M2_TRACKS) {
+      const t = byId.get(id);
+      if (!t) continue;
+      if (!reaches(id)) finding("TRACKS_POST_M2_NOT_GATED", `${id} does not depend, directly or transitively, on ${M2_GATE_TRACK}`);
+      if (blocking > 0 && ["active", "done"].includes(t.status)) finding("TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS", `${id} is ${t.status} but ${blocking} blocking M2 gap(s) remain`);
+    }
+  } else {
+    finding("TRACKS_UNAVAILABLE", `${TRACKS_PATH} is missing; the M2 exit gate cannot be checked`);
+  }
+
   // ---- Counts must equal what the rows say (public rows plus the private projection).
   const invCounts = { ...countBy(register.legacy_inventory, "disposition"), total: register.legacy_inventory.length };
   const decCounts = { ...countBy(register.decision_rows, "disposition") };
@@ -798,6 +831,12 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
       finding("PRIVATE_ROW_DERIVATION_MISMATCH", `${r.page_id}: ${r.disposition} but identity fields derive ${expected}`);
     }
     if (r.record_key) finding("PRIVATE_ROW_RECORD_KEY", r.page_id);
+    // A row whose page id and id are both already public belongs in the public projection.
+    if (context?.public?.available && context.public.pageIds.has(r.page_id) && (!r.id || context.public.ids.has(r.id))) {
+      finding("PRIVATE_ROW_ALREADY_PUBLIC", `${r.page_id}: page id and id are both public on main; the row must be listed publicly`);
+    }
+    // Private dispositions are derived from identity fields, so their only evidence is the archive itself.
+    if (!(r.evidence ?? []).includes(ARCHIVE_STATUS_PATH)) finding("PRIVATE_ROW_EVIDENCE_NOT_SPECIFIC", `${r.page_id}: private rows must cite ${ARCHIVE_STATUS_PATH}`);
     // Rows that public evidence already classifies cannot hide in the private projection.
     if (r.id && (recordCitations.get(r.page_id) ?? []).includes(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: cited by a same-id formal record`);
     if (r.id && gitNative.has(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: ${r.id} is a Git-native protocol label; the row is either record-cited or a cross-surface collision, both public`);

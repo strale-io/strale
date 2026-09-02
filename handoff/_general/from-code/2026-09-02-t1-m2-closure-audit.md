@@ -80,7 +80,9 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
 ## What the next session should do
 
 1. T2 (repo hygiene sweep) is the active track; its plan is
-   `archive/sessions/2026-09-02-t2-repo-hygiene-sweep-plan.md`.
+   `archive/sessions/2026-09-02-t2-repo-hygiene-sweep-plan.md`. T10 (M2
+   exit-gap closure) owns the four blocking gaps and is the gate before M3;
+   the closure register's validator refuses a track state that skips it.
 2. Next Decision batch: the seven rows the register counts and digests under
    `next_decision_batch.private_candidates`, listed in the private projection,
    as one contradiction-checked batch under the existing decision-record

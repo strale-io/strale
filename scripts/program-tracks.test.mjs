@@ -30,6 +30,8 @@ const activate = (r, index) => {
 // The register's row order and which track is active change as work lands;
 // tests locate rows by status, never by position.
 const activeIdx = (r) => r.tracks.findIndex((t) => t.status === "active");
+const byId = (r, id) => r.tracks.find((t) => t.id === id);
+const idx = (r, id) => r.tracks.findIndex((t) => t.id === id);
 const queuedIdx = (r) => r.tracks.findIndex((t) => t.status === "queued");
 const finish = (t) => {
   t.status = "done";
@@ -68,16 +70,16 @@ test("program_status paused: no active track, a gate must exist, nothing runnabl
   r.program_status = "paused";
   assert.ok(codes(r).includes("PAUSED_WITH_ACTIVE_TRACK"));
   for (const t of r.tracks) finish(t);
-  r.tracks[6].status = "founder_gated";
-  r.tracks[6].blocker = "founder yes on the exact reviewed commit";
-  r.tracks[6].evidence = [];
-  r.tracks[7].status = "queued";
-  r.tracks[7].evidence = [];
-  r.tracks[8].status = "queued";
-  r.tracks[8].evidence = [];
+  byId(r, "T7").status = "founder_gated";
+  byId(r, "T7").blocker = "founder yes on the exact reviewed commit";
+  byId(r, "T7").evidence = [];
+  byId(r, "T8").status = "queued";
+  byId(r, "T8").evidence = [];
+  byId(r, "T9").status = "queued";
+  byId(r, "T9").evidence = [];
   assert.deepEqual(codes(r), [], "a correctly paused program is valid");
-  r.tracks[6].status = "queued";
-  delete r.tracks[6].blocker;
+  byId(r, "T7").status = "queued";
+  delete byId(r, "T7").blocker;
   const c = codes(r);
   assert.ok(c.includes("PAUSED_WITHOUT_GATE"));
   assert.ok(c.includes("PAUSED_WITH_RUNNABLE_TRACK"), "T7's dependencies are done, so it is runnable");
@@ -176,24 +178,24 @@ test("a dependency cycle is rejected", () => {
 
 test("an active track whose dependency is not done is rejected", () => {
   const r = base();
-  activate(r, 5); // T6 depends on T1 and T5, both open
-  r.tracks[5].resume_file = "README.md";
+  activate(r, idx(r, "T6")); // T6 depends on T5 and T10, both open
+  byId(r, "T6").resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_WITH_OPEN_DEPENDENCY"));
 });
 
 test("a done track whose dependency is not done is rejected", () => {
   const r = base();
-  finish(r.tracks[5]);
+  finish(byId(r, "T6"));
   assert.ok(codes(r).includes("DONE_WITH_OPEN_DEPENDENCY"));
 });
 
 test("a rehomed dependency does not satisfy an active track", () => {
   const r = base();
-  r.tracks[0].status = "rehomed";
-  r.tracks[0].rehomed_to = "docs/programs/README.md";
-  for (const i of [1, 3, 4]) finish(r.tracks[i]);
-  activate(r, 5);
-  r.tracks[5].resume_file = "README.md";
+  byId(r, "T10").status = "rehomed";
+  byId(r, "T10").rehomed_to = "docs/programs/README.md";
+  for (const id of ["T1", "T2", "T4", "T5"]) finish(byId(r, id));
+  activate(r, idx(r, "T6"));
+  byId(r, "T6").resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_WITH_OPEN_DEPENDENCY"));
 });
 

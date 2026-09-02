@@ -111,10 +111,30 @@ tracks:
       - each deviation from migration plan section 5 is listed with a reason
     evidence: []
 
+  - id: T10
+    title: M2 exit-gap closure
+    status: queued
+    depends_on: [T1]
+    owner: session
+    next_action: >
+      Close the blocking gaps listed in docs/project/m2-closure-register.yaml
+      (G1 pending rows, G2 Notion collisions, G3 the cross-surface collision,
+      G9 the closing review) through contradiction-checked Decision batches,
+      the collision identity mechanism, and one closing independent review of
+      the complete M2 candidate set. Start with the next batch the register
+      names. This track is the M2 exit gate: T6 cannot start before it is
+      done, and the closure register's validator refuses a state where it or
+      T6 is done or active while a blocking gap remains.
+    resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
+    exit:
+      - counts.exit_gaps.blocking in the closure register is 0
+      - the closing independent review of the full M2 candidate set is archived under archive/sessions
+    evidence: []
+
   - id: T6
     title: M3 repo-native workflows
     status: queued
-    depends_on: [T1, T5]
+    depends_on: [T1, T5, T10]
     owner: session
     next_action: >
       Per migration plan section 10 M3. First sub-batch is the
