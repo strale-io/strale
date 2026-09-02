@@ -169,31 +169,34 @@ tracks:
 
   - id: T14
     title: Cheap extras — environment manifest, model registry, claims register
-    status: active
+    status: done
     gate: none
     depends_on: [T13]
     owner: session
     next_action: >
-      Milestone 4 of the founder's 2026-09-02 plan, per the stored plan:
-      config/env-manifest.yaml with a schema, env:check (every process.env
-      name documented, no dead rows, generated .env.example files in sync)
-      and env:test in CI; apps/api/src/lib/models.ts as the only place a
-      model id lives, models:check refusing literals elsewhere, the 90
-      capability files switched to the registry; docs/company/claims.yaml
-      with claims:check scanning README, package READMEs, manifests and
-      platform facts for forbidden phrases; VOICE.md; identical paragraph in
-      CLAUDE.md and AGENTS.md; handoff lists holders Petter must fill in.
+      Done 2026-09-02 (PR #488): config/env-manifest.yaml (127 rows, 27
+      holders unknown and listed for Petter in the handoff), generated
+      .env.example files, apps/api/src/lib/models.ts as the only home of a
+      model id (93 call sites), docs/company/claims.yaml (27 rows) with a
+      scanner that was hollow on first review and is now proven on planted
+      claims; the drift it then exposed (retired SQS score in README.md and
+      two package READMEs) was narrowed to what the code returns. The
+      founder's 2026-09-02 plan is complete; T4 resumes.
     resume_file: archive/sessions/2026-09-02-t14-cheap-extras-plan.md
     exit:
       - env:check, models:check and claims:check pass on main and each planted failure mode fails with a one-line fix
       - zero model-id literals outside models.ts; every process.env name has a manifest row
       - claims register seeded from the handoff audit's forbidden claims and the drift patterns
       - identical paragraph in CLAUDE.md and AGENTS.md, inventory regenerated
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t14-cheap-extras.md
+      - config/env-manifest.yaml
+      - apps/api/src/lib/models.ts
+      - docs/company/claims.yaml
 
   - id: T4
     title: Remediation program closure
-    status: queued
+    status: active
     gate: none
     depends_on: []
     owner: session

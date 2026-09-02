@@ -10,12 +10,18 @@
 # scope-widening framing, and forbidden/needs-evidence statements that
 # aren't about which vendor is active.
 #
-# Two audit items from the source claim audit intentionally have no row
-# here because they are about a NUMBER being static rather than a fixed
-# phrase (a phrase-matching register can't express "any hardcoded
-# integer"): a static global price range, and a static free-tool count.
-# Both are structurally numeric-drift concerns already covered in spirit
-# by check-platform-facts-drift.ts's capability/country-count checks.
+# Audit items from the source claim audit
+# (strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md)
+# that intentionally have no row here, because they are about a NUMBER or
+# a LIVE VALUE being static rather than a fixed phrase, which a
+# phrase-matching register cannot express: the static global price range,
+# the static free-tool count, "Completed"/current-looking timestamps on
+# fixtures (section 1), bank_code=500 (section 9), the $0.0540 current price
+# (section 10), the 13/13 and "20 Aug" static values (section 11), and the
+# active-tool, country, customer and static x402 coverage counts (section
+# 14). Those belong to apps/api/scripts/check-platform-facts-drift.ts and
+# to the platform facts endpoint. Every phrase-shaped item in the audit has
+# a row, including "Sign in" (section 13).
 
 - id: revenue-user-social-proof
   claim: /\b(trusted by|used by)\s+\d+(\+|\s*(companies|customers|developers|teams))?\b/
@@ -26,6 +32,17 @@
   note: >
     No customer-count or revenue social proof until real, disclosable
     evidence exists. "Claims intentionally absent from homepage" list.
+
+- id: sign-in-no-login-product
+  claim: /\bsign in\b/
+  is_regex: true
+  status: forbidden
+  surfaces: [homepage, README, package READMEs]
+  decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#13"
+  note: >
+    There is no login product: API keys and x402 are the only access
+    paths, so a "Sign in" control or sentence promises something that does
+    not exist. "Sign up" and "get an API key" are fine.
 
 - id: soc2-certified
   claim: /\bSOC\s*2\b/
@@ -150,7 +167,7 @@
   note: Test types vary by capability (test_suites.test_mode); there is no universal set to enumerate.
 
 - id: strale-operates-scrapers
-  claim: /\b(our scrapers?|we scrape|self-hosted scrapers?)\b/
+  claim: /\b(our scrapers?|we (scrape|crawl)|strale (scrapes|crawls|operates scrapers?)|self-hosted scrapers?|scrap(es|ing|ed) (linkedin|facebook|instagram|twitter|x\.com|tiktok|google (search|results)))\b/
   is_regex: true
   status: forbidden
   surfaces: [homepage, README, methodology page]

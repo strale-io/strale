@@ -51,7 +51,7 @@ All three wired into `.github/workflows/ci.yml` immediately after
   (`claude-sonnet-4-20250514` → `MODELS.digest.id`), and
   `apps/api/src/capabilities/risk-narrative-generate.ts`
   (`claude-sonnet-4-6` → `MODELS.capability_reasoning.id`).
-- **Claims seeded**: 26 rows — 20 forbidden, 4 needs_evidence, 3 allowed
+- **Claims seeded**: 27 rows after review — 21 forbidden, 3 needs_evidence, 3 allowed
   (26 total; some rows carry more than one status label in the audit
   source but resolve to one register status).
 
@@ -243,8 +243,33 @@ session-checklist's code-review gate targets. Flagging per CLAUDE.md's
 still expected before this branch is considered mergeable, that is the
 next action, not something this session skipped silently.
 
+## Review fixes (orchestrator and independent review, same day)
+
+- `9d5fe85a` — the forbidden-claim scanner was hollow: every row is written
+  as `/pattern/`, but the matcher only compiled `is_regex` rows and even
+  then kept the slashes, so no forbidden row could match prose. Found by
+  planting three forbidden claims in README; fixed with a regression test.
+- `725db5f2` — with a working scanner the register found real drift: the
+  SQS row was over-broad ("quality score" is what `data-quality-check`
+  returns; "trust layer" is the positioning tagline) and was narrowed; hits
+  on surfaces outside this repository (the frontend's `llms.txt`) became
+  warnings; `README.md` no longer says every capability is continuously
+  tested (paid capabilities are watched through production observability).
+- `dfaf6420`, `3bf02751` — `packages/mcp-server/README.md` and
+  `packages/strale-capabilities/README.md` still described the retired SQS
+  score, the QP/RP matrix and an invented `execution_guidance` shape;
+  narrowed to what `packages/mcp-server/src/tools.ts` actually returns
+  (narrowing only, each statement traced to a code line in the commit body).
+- `748fc136` — the SQS row ignores the negated "no per-call quality score".
+- Independent review of the branch: the scraping row was first-person only
+  and passed "Strale scrapes LinkedIn profiles for you."; widened to
+  third-person and named ToS-prohibited targets; a "Sign in" row added (no
+  login product exists); the header now lists every audit item without a
+  row and why. T14 marked done in the register, T4 active.
+- Claims tests: 18 after the review (17 before).
+
 ## Final commit
 
-`05b9aac0` (branch `feat/cheap-extras`, worktree `strale-wt-t14`).
+`05b9aac0` was the last implementation commit; the review-fix commits above follow it on branch `feat/cheap-extras` (worktree `strale-wt-t14`).
 Preceding commits this session: `25796245` (Part A), `c3921069`
 (Part B).
