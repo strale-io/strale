@@ -734,6 +734,11 @@ export function validateClosureRegister(register, context, { schema, relativePat
     for (const m of raw.matchAll(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g)) {
       if (!context.public.pageIds.has(m[0])) finding("REGISTER_IDENTITY_NOT_PUBLIC", `page id ${m[0]} appears in the register text but nowhere public`);
     }
+    // Dashed (API-form) page ids are the same identity written differently.
+    for (const m of raw.matchAll(/(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/g)) {
+      const undashed = m[0].replace(/-/g, "");
+      if (!context.public.pageIds.has(undashed)) finding("REGISTER_IDENTITY_NOT_PUBLIC", `page id ${m[0]} (dashed) appears in the register text but nowhere public`);
+    }
     for (const m of raw.matchAll(/DEC-[0-9]{8}-[A-Za-z0-9-]+/g)) {
       if (!context.public.ids.has(m[0])) finding("REGISTER_IDENTITY_NOT_PUBLIC", `id ${m[0]} appears in the register text but nowhere public`);
     }

@@ -496,6 +496,13 @@ test("no identity anywhere in the register text may be absent from the public se
     // Only the raw scan reads from `root`; other file-backed checks fall back to findings we ignore here.
     const c = validateClosureRegister(r, ctx, { schema, relativePath: rel }).map((f) => f.code);
     assert.ok(c.includes("REGISTER_IDENTITY_NOT_PUBLIC"), c.join(","));
+    // The same identity in dashed API form is caught too.
+    const r2 = base();
+    r2.exit_gaps[0].evidence.push("https://github.com/strale-io/strale/pull/475");
+    r2.exit_gaps[0].closes_when += " (see https://www.notion.so/77777777-7777-7777-7777-777777777777)";
+    writeFileSync(join(dir, rel), YAML.stringify(r2));
+    const c2 = validateClosureRegister(r2, ctx, { schema, relativePath: rel }).map((f) => f.code);
+    assert.ok(c2.includes("REGISTER_IDENTITY_NOT_PUBLIC"), c2.join(","));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
