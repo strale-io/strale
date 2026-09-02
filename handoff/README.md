@@ -9,13 +9,14 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-213 files (186 with a recorded intent, 27 without).
+214 files (187 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md`](_general/from-code/2026-09-02-t5-cto-readable-structure.md) | make the repository readable top-down for a stranger in one pass — README.md, docs/README.md, archive/ and handoff/ i... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t3-session-end-gate.md`](_general/from-code/2026-09-02-t3-session-end-gate.md) | make session end automatic and identical for Claude Code and Codex, so no session can leave uncommitted work, an unpu... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t2-repo-hygiene-sweep.md`](_general/from-code/2026-09-02-t2-repo-hygiene-sweep.md) | leave the repository with no stale branches, no stale worktrees, and every deletion backed by evidence, so both AI to... |
+| 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t15-receipts-and-ledger.md`](_general/from-code/2026-09-02-t15-receipts-and-ledger.md) | Implement T15 — evidence receipts (`archive/receipts/`) and the |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t14-cheap-extras.md`](_general/from-code/2026-09-02-t14-cheap-extras.md) | Ship T14 (cheap extras) — an environment-variable manifest, a |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t13-design-tokens.md`](_general/from-code/2026-09-02-t13-design-tokens.md) | implement T13 (design tokens as data, candidates, promotion) per |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t12-research-contract.md`](_general/from-code/2026-09-02-t12-research-contract.md) | Implement T12 (Research contract) — front-matter schema, checker, |
