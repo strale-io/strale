@@ -18,7 +18,7 @@ fill the expanded panel.
 The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the
 public repository's boundary exactly where M0 left it: the public register
 lists only the 95 rows whose page id and Decision ID are already on `main`
-(titles hashed unless already public; scopes and dates omitted), and the other 223 rows (identity
+(71 already-public titles clear, 24 titles hashed; scopes and dates omitted), and the other 223 rows (identity
 fields only, titles hashed, no decision text) sit in the private archive
 repository. That is workable but clumsy: the next
 Decision batch is named by a count and a digest in public and by rows in

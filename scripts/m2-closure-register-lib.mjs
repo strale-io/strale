@@ -24,6 +24,31 @@ const INVENTORY_PATH = "docs/project/legacy-authority-inventory.json";
 const COLLISIONS_PATH = "docs/decisions/id-collisions.yaml";
 const RECORDS_DIR = "docs/decisions/records";
 const ARCHIVE_STATUS_PATH = "docs/project/private-archive-status.json";
+const MIGRATION_PLAN_PATH = "docs/strategy/2026-08-31-repo-native-operating-model-migration.md";
+
+/**
+ * Expected disposition of every legacy-authority source, transcribed from the
+ * migration plan's section 9 migration map (and sections 5, 6, 7, 10 where
+ * named). The register's classification must agree; changing this table is a
+ * reviewed change to the audit's reading of the plan, not a data edit.
+ */
+export const EXPECTED_INVENTORY_DISPOSITIONS = Object.freeze({
+  "AGENTS.md": "migrated",          // §7, §9: thin peer entrypoint
+  "CLAUDE.md": "migrated",          // §6, §7, §9: thin peer entrypoint; protocols and decisions extracted
+  ".claude/PROTOCOL.md": "archive", // §9: extract unique live rules; archive obsolete starter-kit system
+  ".claude/RUNBOOK.md": "archive",
+  ".claude/WORKFLOW.md": "archive",
+  ".claude/BUILD.md": "archive",
+  ".claude/NOTION.md": "obsolete",  // §10 M4 items 5-6: Notion retired
+  ".claude/DISPATCH.yaml": "archive",
+  ".claude/commands": "migrated",   // §9: keep useful tool affordances; rewrite against repo-native authorities
+  ".agents/skills": "migrated",
+  ".codex/hooks.json": "obsolete",  // §9: remove or replace only after a real shared bootstrap exists
+  "docs/company": "migrated",       // §5, §9: governance, PENDING, records, operator actions; briefs archive
+  "docs/strategy": "archive",       // §9: extract accepted decisions; archive dated papers as rationale
+  "docs/remediation": "migrated",   // §5, §9: docs/programs/remediation; CURRENT-STATE replaced
+  "handoff": "archive",             // §9: existing handoffs promote remaining truth, then archive
+});
 // Where identities may already be public. The register itself is excluded so
 // it cannot make an identity "public" by listing it.
 const PUBLIC_SCOPES = ["docs", "archive", "AGENTS.md", "CLAUDE.md", "README.md"];
@@ -312,6 +337,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
     "formal_records.path": [register.sources.formal_records.path, RECORDS_DIR],
     "collision_registry.path": [register.sources.collision_registry.path, COLLISIONS_PATH],
     "decision_archive.status_file": [register.sources.decision_archive.status_file, ARCHIVE_STATUS_PATH],
+    "migration_plan.path": [register.sources.migration_plan.path, MIGRATION_PLAN_PATH],
   };
   for (const [k, [actual, expected]] of Object.entries(canonicalPaths)) {
     if (actual !== expected) finding("SOURCE_PATH_NOT_CANONICAL", `sources.${k} is ${actual}; the validator reads ${expected}`);
@@ -339,6 +365,11 @@ export function validateClosureRegister(register, context, { schema, relativePat
     else if (invByPath.get(path).owner_area !== e.owner_area) finding("INVENTORY_OWNER_AREA_MISMATCH", path);
   }
   for (const path of invByPath.keys()) if (!expectedInv.has(path)) finding("INVENTORY_ENTRY_UNKNOWN", path);
+  for (const [path, e] of invByPath) {
+    const expected = EXPECTED_INVENTORY_DISPOSITIONS[path];
+    if (expected === undefined) finding("INVENTORY_DISPOSITION_UNMAPPED", `${path} has no expected disposition in the migration-map table`);
+    else if (e.disposition !== expected) finding("INVENTORY_DISPOSITION_MISMATCH", `${path}: ${e.disposition} but the migration map derives ${expected}`);
+  }
   if (register.sources.legacy_inventory.entry_count !== context.inventoryEntries.length) {
     finding("SOURCE_COUNT_DRIFT", `legacy_inventory.entry_count ${register.sources.legacy_inventory.entry_count} vs ${context.inventoryEntries.length}`);
   }
@@ -756,7 +787,8 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
     if (r.record_key) finding("PRIVATE_ROW_RECORD_KEY", r.page_id);
     // Rows that public evidence already classifies cannot hide in the private projection.
     if (r.id && (recordCitations.get(r.page_id) ?? []).includes(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: cited by a same-id formal record`);
-    if (r.id && gitNative.has(r.id) && !recordIds.has(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: ${r.id} is a Git-native protocol label without a record (cross-surface collision)`);
+    if (r.id && gitNative.has(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: ${r.id} is a Git-native protocol label; the row is either record-cited or a cross-surface collision, both public`);
+    if (r.id && recordIds.has(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: ${r.id} is a formal record id; a source row with that id is either cited by the record or a collision with it`);
     if (gapCited.has(r.page_id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: cited by an M2 gap report`);
     if (context) {
       for (const ev of r.evidence ?? []) {

@@ -229,7 +229,8 @@
         "packages/mcp-server/src/tools.ts",
         "scripts/guard-tree-integrity.mjs",
         "scripts/guard-worktree-isolation.mjs",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-closure-register.test.mjs"
       ]
     },
     {
@@ -243,7 +244,8 @@
         "AGENTS.md",
         "CLAUDE.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
-        "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md"
+        "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -253,7 +255,8 @@
       "detected_references": [
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "handoff/_general/from-code/2026-05-13-lovable-cancellation-audit.md",
-        "handoff/_general/from-code/2026-05-13-lovable-cancellation-cleanup-execution.md"
+        "handoff/_general/from-code/2026-05-13-lovable-cancellation-cleanup-execution.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -262,7 +265,8 @@
       "sha256": "cf3ada53c260f109b0b2ab9800ffd25fa7faf61709c47ff461e3f3bc53bd699c",
       "detected_references": [
         ".claude/BUILD.md",
-        ".claude/PROTOCOL.md"
+        ".claude/PROTOCOL.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -271,7 +275,8 @@
       "sha256": "bcfba41bfb78be344be59f7de37798a8ab82295d8bd506999119048122bbc5ef",
       "detected_references": [
         ".claude/DISPATCH.yaml",
-        ".claude/WORKFLOW.md"
+        ".claude/WORKFLOW.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -281,7 +286,8 @@
       "detected_references": [
         ".claude/DISPATCH.yaml",
         ".claude/RUNBOOK.md",
-        "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md"
+        "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -291,7 +297,8 @@
       "detected_references": [
         ".claude/RUNBOOK.md",
         ".claude/WORKFLOW.md",
-        "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md"
+        "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -303,7 +310,8 @@
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
-        "handoff/_general/from-code/2026-04-30-cert-audit-drift-prevention-and-bucket-c.md"
+        "handoff/_general/from-code/2026-04-30-cert-audit-drift-prevention-and-bucket-c.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -314,7 +322,8 @@
         "AGENTS.md",
         "docs/company/LESSONS.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
-        "handoff/_general/from-code/2026-08-19-checkin-morning.md"
+        "handoff/_general/from-code/2026-08-19-checkin-morning.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -322,13 +331,14 @@
       "owner_area": "codex-workflow",
       "sha256": "bc7f1b539faa145221b94d7b5c73e137756ddf5249d9c21aa5f80b518b84db92",
       "detected_references": [
-        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md"
+        "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "d4dc92f2d247d9bd7190c81647d12bfa84a260d8d05b8c0df6de84d5303ebb65",
+      "sha256": "dd7bc143c91a68665067d1fc1eb4397df624e0630af8a09dd43b56a12c15ac44",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -355,7 +365,8 @@
         "handoff/_general/from-code/2026-08-15-operating-charter-and-measurement-rebuild.md",
         "handoff/_general/from-code/2026-08-25-f1-taxonomy-default.md",
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
-        "scripts/guard-production-write-access.mjs"
+        "scripts/guard-production-write-access.mjs",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -385,7 +396,8 @@
         "manifests-drafts/domain-email-provider-detect.yaml",
         "manifests-drafts/mexican-company-data.yaml",
         "manifests-drafts/product-offers-lookup.yaml",
-        "manifests-drafts/sec-edgar-name-search.yaml"
+        "manifests-drafts/sec-edgar-name-search.yaml",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -406,7 +418,8 @@
         "handoff/_general/from-code/2026-08-25-checkin-morning.md",
         "handoff/_general/from-code/2026-08-28-checkin-morning.md",
         "handoff/_general/from-code/2026-08-29-checkin-morning.md",
-        "handoff/_general/from-code/2026-08-30-checkin-morning.md"
+        "handoff/_general/from-code/2026-08-30-checkin-morning.md",
+        "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
@@ -504,6 +517,8 @@
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "manifests-drafts/mexican-company-data.yaml",
         "scripts/guard-production-write-access.mjs",
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-closure-register.test.mjs",
         "scripts/program-tracks.test.mjs"
       ]
     }

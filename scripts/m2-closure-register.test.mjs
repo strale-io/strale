@@ -542,7 +542,27 @@ test("declared source paths must be the ones the validator reads", () => {
   r.sources.formal_records.path = "README.md";
   r.sources.collision_registry.path = "README.md";
   r.sources.decision_archive.status_file = "README.md";
-  assert.equal(codes(r).filter((x) => x === "SOURCE_PATH_NOT_CANONICAL").length, 4);
+  r.sources.migration_plan.path = "README.md";
+  assert.equal(codes(r).filter((x) => x === "SOURCE_PATH_NOT_CANONICAL").length, 5);
+  // Pointing the plan elsewhere and quoting that file instead cannot pass.
+  const r2 = base();
+  r2.sources.migration_plan.path = "README.md";
+  r2.plan_statements = [{ location: "README.md", quote: "Trust and quality infrastructure for AI agents.", disposition: "merged", evidence: ["README.md"], rationale: "planted statement from a file that is not the plan" }];
+  r2.counts.plan_statements = { merged: 1, partially_merged: 0, superseded: 0, open: 0, total: 1 };
+  const c2 = codes(r2, withBase(null));
+  assert.ok(c2.includes("SOURCE_PATH_NOT_CANONICAL"), c2.join(","));
+});
+
+test("inventory dispositions must match the migration-map table", () => {
+  const r = base();
+  r.legacy_inventory.find((e) => e.path === "handoff").disposition = "unclear";
+  r.legacy_inventory.find((e) => e.path === "handoff").progress = "not_started";
+  resync(r);
+  has(r, "INVENTORY_DISPOSITION_MISMATCH");
+  const r2 = base();
+  r2.legacy_inventory.find((e) => e.path === "CLAUDE.md").disposition = "archive";
+  resync(r2);
+  has(r2, "INVENTORY_DISPOSITION_MISMATCH");
 });
 
 test("a cross-surface collision must not be a registry row, must carry its own id, and must be cited", () => {
@@ -658,6 +678,11 @@ test("rows that public evidence classifies cannot hide in the private projection
   r.next_decision_batch.private_candidates = { count: 2, digest: sha256([moved.page_id, "1".repeat(32)].sort().join("\n") + "\n") };
   const c = pcodes(r, rows);
   assert.ok(c.includes("PRIVATE_ROW_MUST_BE_PUBLIC"), c.join(","));
+  // A private row reusing a formal record id that has no Notion row (Git-native DEC-20260504-A) is rejected too.
+  const { r: r4, rows: rows4 } = syntheticPrivate();
+  rows4[0].id = "DEC-20260504-A";
+  const c4 = pcodes(r4, rows4);
+  assert.ok(c4.includes("PRIVATE_ROW_MUST_BE_PUBLIC"), c4.join(","));
   // DEC-20260422-A (cross-surface) and DEC-20260517-B (gap-cited) likewise.
   for (const id of ["DEC-20260422-A", "DEC-20260517-B"]) {
     const { r: r2, rows: rows2 } = syntheticPrivate();
