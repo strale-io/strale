@@ -27,6 +27,12 @@ const activate = (r, index) => {
   for (const t of r.tracks) if (t.status === "active") t.status = "queued";
   r.tracks[index].status = "active";
 };
+// The register's row order and which track is active change as work lands;
+// tests locate rows by status, never by position.
+const activeIdx = (r) => r.tracks.findIndex((t) => t.status === "active");
+const byId = (r, id) => r.tracks.find((t) => t.id === id);
+const idx = (r, id) => r.tracks.findIndex((t) => t.id === id);
+const queuedIdx = (r) => r.tracks.findIndex((t) => t.status === "queued");
 const finish = (t) => {
   t.status = "done";
   t.evidence = ["README.md"];
@@ -47,14 +53,15 @@ test("an unsupported status is rejected", () => {
 
 test("two active tracks are rejected", () => {
   const r = base();
-  r.tracks[1].status = "active";
-  r.tracks[1].resume_file = "README.md";
+  const q = r.tracks[queuedIdx(r)];
+  q.status = "active";
+  q.resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_COUNT"));
 });
 
 test("zero active tracks are rejected while the program is active", () => {
   const r = base();
-  r.tracks[0].status = "queued";
+  r.tracks[activeIdx(r)].status = "queued";
   assert.ok(codes(r).includes("ACTIVE_COUNT"));
 });
 
@@ -63,16 +70,16 @@ test("program_status paused: no active track, a gate must exist, nothing runnabl
   r.program_status = "paused";
   assert.ok(codes(r).includes("PAUSED_WITH_ACTIVE_TRACK"));
   for (const t of r.tracks) finish(t);
-  r.tracks[6].status = "founder_gated";
-  r.tracks[6].blocker = "founder yes on the exact reviewed commit";
-  r.tracks[6].evidence = [];
-  r.tracks[7].status = "queued";
-  r.tracks[7].evidence = [];
-  r.tracks[8].status = "queued";
-  r.tracks[8].evidence = [];
+  byId(r, "T7").status = "founder_gated";
+  byId(r, "T7").blocker = "founder yes on the exact reviewed commit";
+  byId(r, "T7").evidence = [];
+  byId(r, "T8").status = "queued";
+  byId(r, "T8").evidence = [];
+  byId(r, "T9").status = "queued";
+  byId(r, "T9").evidence = [];
   assert.deepEqual(codes(r), [], "a correctly paused program is valid");
-  r.tracks[6].status = "queued";
-  delete r.tracks[6].blocker;
+  byId(r, "T7").status = "queued";
+  delete byId(r, "T7").blocker;
   const c = codes(r);
   assert.ok(c.includes("PAUSED_WITHOUT_GATE"));
   assert.ok(c.includes("PAUSED_WITH_RUNNABLE_TRACK"), "T7's dependencies are done, so it is runnable");
@@ -158,37 +165,37 @@ test("an unknown dependency is rejected", () => {
 
 test("a self dependency is rejected", () => {
   const r = base();
-  r.tracks[1].depends_on = ["T2"];
+  byId(r, "T2").depends_on = ["T2"];
   assert.ok(codes(r).includes("SELF_DEPENDENCY"));
 });
 
 test("a dependency cycle is rejected", () => {
   const r = base();
-  r.tracks[0].depends_on = ["T2"];
-  r.tracks[1].depends_on = ["T1"];
+  byId(r, "T1").depends_on = ["T2"];
+  byId(r, "T2").depends_on = ["T1"];
   assert.ok(codes(r).includes("DEPENDENCY_CYCLE"));
 });
 
 test("an active track whose dependency is not done is rejected", () => {
   const r = base();
-  activate(r, 5); // T6 depends on T1 and T5, both open
-  r.tracks[5].resume_file = "README.md";
+  activate(r, idx(r, "T6")); // T6 depends on T5 and T10, both open
+  byId(r, "T6").resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_WITH_OPEN_DEPENDENCY"));
 });
 
 test("a done track whose dependency is not done is rejected", () => {
   const r = base();
-  finish(r.tracks[5]);
+  finish(byId(r, "T6"));
   assert.ok(codes(r).includes("DONE_WITH_OPEN_DEPENDENCY"));
 });
 
 test("a rehomed dependency does not satisfy an active track", () => {
   const r = base();
-  r.tracks[0].status = "rehomed";
-  r.tracks[0].rehomed_to = "docs/programs/README.md";
-  for (const i of [1, 3, 4]) finish(r.tracks[i]);
-  activate(r, 5);
-  r.tracks[5].resume_file = "README.md";
+  byId(r, "T10").status = "rehomed";
+  byId(r, "T10").rehomed_to = "docs/programs/README.md";
+  for (const id of ["T1", "T2", "T4", "T5"]) finish(byId(r, id));
+  activate(r, idx(r, "T6"));
+  byId(r, "T6").resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_WITH_OPEN_DEPENDENCY"));
 });
 
@@ -215,24 +222,28 @@ test("a blocker on a non-blocked track is rejected", () => {
 
 test("rehomed requires rehomed_to, and rehomed_to is rejected elsewhere", () => {
   const r = base();
-  r.tracks[1].status = "rehomed";
+  const q = r.tracks[queuedIdx(r)];
+  q.status = "rehomed";
   assert.ok(codes(r).includes("SCHEMA"));
-  r.tracks[1].rehomed_to = "docs/programs/README.md";
+  q.rehomed_to = "docs/programs/README.md";
   assert.deepEqual(codes(r), []);
   const r2 = base();
-  r2.tracks[1].rehomed_to = "docs/programs/README.md";
+  r2.tracks[queuedIdx(r2)].rehomed_to = "docs/programs/README.md";
   assert.ok(codes(r2).includes("SCHEMA"));
 });
 
 test("done requires evidence, and evidence must be a tracked regular file", () => {
   const r = base();
-  r.tracks[1].status = "done";
+  const q = r.tracks[queuedIdx(r)];
+  q.depends_on = [];
+  q.status = "done";
+  q.evidence = [];
   assert.ok(codes(r).includes("SCHEMA"), "empty evidence on a done track");
   for (const bad of ["docs/programs/does-not-exist.md", "docs", "../strale/README.md", "C:/Windows", "/etc/passwd", ".git"]) {
-    r.tracks[1].evidence = [bad];
+    q.evidence = [bad];
     assert.ok(codes(r).includes("EVIDENCE_INVALID"), `evidence ${bad} should be rejected`);
   }
-  r.tracks[1].evidence = ["README.md"];
+  q.evidence = ["README.md"];
   assert.deepEqual(codes(r), []);
 });
 
@@ -269,9 +280,9 @@ test("validateRegister applies the tracked set to resume files, evidence, and re
       program_status: "active",
       updated: "2026-09-02",
       tracks: [
-        { id: "T1", title: "one", status: "active", depends_on: [], owner: "session", next_action: "do the thing", resume_file: "resume.md", exit: ["done when"], evidence: [] },
-        { id: "T2", title: "two", status: "done", depends_on: [], owner: "session", next_action: "did the thing", resume_file: null, exit: ["done when"], evidence: ["evidence.md"] },
-        { id: "T3", title: "three", status: "rehomed", rehomed_to: "home.md", depends_on: [], owner: "session", next_action: "moved the thing", resume_file: null, exit: ["done when"], evidence: [] },
+        { id: "T1", title: "one", status: "active", gate: "none", depends_on: [], owner: "session", next_action: "do the thing", resume_file: "resume.md", exit: ["done when"], evidence: [] },
+        { id: "T2", title: "two", status: "done", gate: "none", depends_on: [], owner: "session", next_action: "did the thing", resume_file: null, exit: ["done when"], evidence: ["evidence.md"] },
+        { id: "T3", title: "three", status: "rehomed", gate: "none", rehomed_to: "home.md", depends_on: [], owner: "session", next_action: "moved the thing", resume_file: null, exit: ["done when"], evidence: [] },
       ],
     };
     const detail = validateRegister(register, { root: dir, relativePath: "tracks.yaml", schema, tracked: new Set(), programDir: "p" });
@@ -287,13 +298,14 @@ test("validateRegister applies the tracked set to resume files, evidence, and re
 
 test("an active track must have a resume file that is a tracked regular file", () => {
   const r = base();
-  r.tracks[0].resume_file = null;
+  const a = r.tracks[activeIdx(r)];
+  a.resume_file = null;
   assert.ok(codes(r).includes("ACTIVE_WITHOUT_RESUME_FILE"));
   for (const bad of ["handoff/_general/from-code/nope.md", "docs", ".git", "../x.md"]) {
-    r.tracks[0].resume_file = bad;
+    a.resume_file = bad;
     assert.ok(codes(r).includes("RESUME_FILE_INVALID"), `resume file ${bad} should be rejected`);
   }
-  r.tracks[0].resume_file = "   ";
+  a.resume_file = "   ";
   assert.ok(codes(r).includes("ACTIVE_WITHOUT_RESUME_FILE"), "whitespace resume file");
 });
 
@@ -313,6 +325,21 @@ test("an unknown field is rejected at both levels", () => {
   assert.ok(codes(r2).includes("SCHEMA"), "top-level");
 });
 
+test("every track declares a gate, and post-m2 tracks require exactly one m2-exit track", () => {
+  const r = base();
+  delete r.tracks[0].gate;
+  assert.ok(codes(r).includes("SCHEMA"));
+  const r2 = base();
+  r2.tracks[0].gate = "later";
+  assert.ok(codes(r2).includes("SCHEMA"));
+  const r3 = base();
+  byId(r3, "T10").gate = "m2";
+  assert.ok(codes(r3).includes("GATE_COUNT"));
+  const r4 = base();
+  byId(r4, "T2").gate = "m2-exit";
+  assert.ok(codes(r4).includes("GATE_COUNT"));
+});
+
 test("program directories must hold both files and a matching slug", () => {
   const dir = mkdtempSync(join(tmpdir(), "tracks-topology-"));
   try {
@@ -324,7 +351,7 @@ test("program directories must hold both files and a matching slug", () => {
     writeFileSync(join(dir, "docs/programs/alpha/PROGRAM.md"), "# alpha\n");
     // alpha: PROGRAM.md only
     // beta: register only, slug mismatch
-    const reg = `schema_version: 1\nprogram: not-beta\nprogram_status: active\nupdated: 2026-09-02\ntracks:\n  - id: T1\n    title: one\n    status: active\n    depends_on: []\n    owner: session\n    next_action: do the thing\n    resume_file: README.md\n    exit: [done when]\n    evidence: []\n`;
+    const reg = `schema_version: 1\nprogram: not-beta\nprogram_status: active\nupdated: 2026-09-02\ntracks:\n  - id: T1\n    title: one\n    status: active\n    gate: none\n    depends_on: []\n    owner: session\n    next_action: do the thing\n    resume_file: README.md\n    exit: [done when]\n    evidence: []\n`;
     writeFileSync(join(dir, "docs/programs/beta/tracks.yaml"), reg);
     writeFileSync(join(dir, "README.md"), "x");
     // gamma: both files, valid

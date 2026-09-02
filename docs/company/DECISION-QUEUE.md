@@ -14,6 +14,30 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-28** · `your_call` · owner Petter · raised 2026-09-02T02:30Z · no deadline — **may the row-level M2 Decision register become public?**
+The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the
+public repository's clear-text boundary exactly where M0 left it (the only
+new per-row artefacts are 24 hashes of titles that are not public; a handful
+of aggregate digests commit to the set as a whole): the public register
+lists only the 95 rows whose page id and Decision ID are already on `main`
+(71 already-public titles clear, 24 titles hashed; scopes and dates omitted), and the other 223 rows (identity
+fields only, titles hashed, no decision text) sit in the private archive
+repository. That is workable but clumsy: the next
+Decision batch is named by a count and a digest in public and by rows in
+private, and every future M2 batch will have to shuttle rows across.
+*What you are deciding:* whether page ids, Decision IDs, dates, statuses and
+scopes (never titles or bodies) of not-yet-migrated Decisions may live in the
+public repository. Page ids grant no access without workspace membership;
+Decision IDs are opaque labels. The M0 archive rule says raw exports stay
+private, and independent review read a row list as a widening of that rule,
+so it is your call, not mine.
+*If yes:* one PR moves the private rows into the public register (schema
+and validator changes included: public rows would then carry scope and date
+and become eligible for the next batch directly) and deletes the private
+file. *If no:* nothing changes; the private projection
+stays, and the operator script keeps verifying it. Nothing is blocked either
+way.
+
 **DQ-27** · `your_call` · owner Petter · raised 2026-08-30T07:00Z · no deadline — **two settled production settings I have no way to apply**
 Two services are recorded as answering faster than they really do, so requests
 to them are routed as if they will return instantly when they often cannot. The

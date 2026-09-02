@@ -8,6 +8,12 @@
 # Only `done` satisfies a dependency. `program_status` is active (exactly one
 # active track), paused (no active track; at least one founder_gated or blocked
 # track and nothing runnable), or complete (every track done or rehomed).
+# Every track declares `gate`: none (not sequenced by the migration), m2 (M2
+# work), m2-exit (the single M2 exit gate), post-m2 (M3 and later). The M2
+# closure register's validator refuses any post-m2 track that is active or
+# done while a blocking M2 gap remains, or that does not depend (transitively)
+# on the m2-exit track; adding a track cannot bypass this because the field
+# is required.
 schema_version: 1
 program: cto-readiness
 program_status: active
@@ -15,42 +21,41 @@ updated: 2026-09-02
 tracks:
   - id: T1
     title: M2 closure audit
-    status: active
+    status: done
+    gate: m2
     depends_on: []
     owner: session
     next_action: >
-      Design the disposition register schema under docs/project/schemas/,
-      classify all 15 legacy-authority inventory entries and every preserved
-      Decision source row, reconcile the migration plan's older "Next:" notes
-      against merged commits, and add the tests named in this track's exit
-      criteria. Sources beyond the resume_file: the private archive named in
-      docs/project/private-archive-status.json (repository, commit, and the
-      decisions export under archive/imports/notion/2026-08-31/data-sources/
-      inside that archive; read it with gh api, never copy it here); the
-      collision registry docs/decisions/id-collisions.yaml; the formal records
-      under docs/decisions/records/.
-    resume_file: handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md
+      Done. The remaining M2 work is the exit-gap list in
+      docs/project/m2-closure-register.yaml (G1, G2, G3, G9 blocking); the
+      next collision-free Decision batch is named there. The row-level
+      projection for rows not yet public lives in the private archive and is
+      verified with node scripts/m2-closure-verify-private-rows.mjs.
+    resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - schema-validated disposition register committed with exact counts per disposition
       - every inventory entry and Decision source row has a disposition, provenance, and rationale
       - explicit M2 exit-gap list and next collision-free Decision batch named
       - tests fail on missing entries, unsupported dispositions, invalid sources, duplicate identities, count drift, or silent removal
       - M1 bare inventory contract unchanged
-    evidence: []
+    evidence:
+      - docs/project/m2-closure-register.yaml
+      - handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
 
   - id: T2
     title: Repo hygiene sweep
-    status: queued
+    status: active
+    gate: none
     depends_on: []
     owner: session
     next_action: >
-      Recount at start (branches and worktrees change daily; the 2026-09-02
-      snapshot was 50 unmerged remote branches, 11 of them janitor rescue
-      snapshots, plus roughly thirty linked worktrees), then classify every
-      remote branch, every linked worktree, the unregistered strale-work
-      directory, and the dirty shared checkout. Delete what is verified
-      landed; list what must stay and why.
-    resume_file: null
+      Execute the stored plan: recount, then delete the branches whose merged
+      PR head equals the branch tip, archive-tag and delete the real unmerged
+      branches and one rescue snapshot per distinct content set, remove
+      worktrees whose branch is gone, return the shared checkout to main once
+      its uncommitted work is confirmed identical to its tagged snapshot, and
+      file the strale-work reports under archive/sessions.
+    resume_file: archive/sessions/2026-09-02-t2-repo-hygiene-sweep-plan.md
     exit:
       - every remote and local branch either deleted with landed-evidence or listed with a reason
       - every worktree either removed or mapped to an active session in WORKTREES.md
@@ -61,6 +66,7 @@ tracks:
   - id: T3
     title: Hygiene enforcement framework
     status: queued
+    gate: none
     depends_on: [T2]
     owner: session
     next_action: >
@@ -79,6 +85,7 @@ tracks:
   - id: T4
     title: Remediation program closure
     status: queued
+    gate: none
     depends_on: []
     owner: session
     next_action: >
@@ -99,6 +106,7 @@ tracks:
   - id: T5
     title: CTO-readable repository structure
     status: queued
+    gate: none
     depends_on: [T2, T4]
     owner: session
     next_action: >
@@ -114,10 +122,33 @@ tracks:
       - each deviation from migration plan section 5 is listed with a reason
     evidence: []
 
+  - id: T10
+    title: M2 exit-gap closure
+    status: queued
+    gate: m2-exit
+    depends_on: [T1]
+    owner: session
+    next_action: >
+      Close the blocking gaps listed in docs/project/m2-closure-register.yaml
+      (G1 pending rows, G2 Notion collisions, G3 the cross-surface collision,
+      G9 the closing review) through contradiction-checked Decision batches,
+      the collision identity mechanism, and one closing independent review of
+      the complete M2 candidate set. Start with the next batch the register
+      names. This track is the M2 exit gate: T6 cannot start before it is
+      done, and the closure register's validator refuses a state where this
+      track is done, or any post-m2 track is active or done, while a blocking
+      gap remains.
+    resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
+    exit:
+      - counts.exit_gaps.blocking in the closure register is 0
+      - the closing independent review of the full M2 candidate set is archived under archive/sessions
+    evidence: []
+
   - id: T6
     title: M3 repo-native workflows
     status: queued
-    depends_on: [T1, T5]
+    gate: post-m2
+    depends_on: [T1, T5, T10]
     owner: session
     next_action: >
       Per migration plan section 10 M3. First sub-batch is the
@@ -135,6 +166,7 @@ tracks:
   - id: T7
     title: M4 atomic authority cutover
     status: queued
+    gate: post-m2
     depends_on: [T3, T6]
     owner: session
     next_action: >
@@ -152,6 +184,7 @@ tracks:
   - id: T8
     title: M5 to M7 closeout
     status: queued
+    gate: post-m2
     depends_on: [T7]
     owner: session
     next_action: Per migration plan section 10 M5, M6, M7.
@@ -165,6 +198,7 @@ tracks:
   - id: T9
     title: Discovery and retrieval authority (WP16)
     status: queued
+    gate: post-m2
     depends_on: [T7]
     owner: session
     next_action: Open its own program plan under docs/programs/ when T7 is done.

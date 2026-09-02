@@ -68,15 +68,25 @@ register wins on any disagreement.
 | T3 | Hygiene enforcement | CI job flags branches older than seven days without an open PR and worktrees without a session; session-end rule deletes branch and worktree in the merging session; daily run reports and prunes rescue snapshots; `WORKTREES.md` describes reality. |
 | T4 | Remediation closure | WP10 acceptance recorded as ACCEPT, EXTEND, or FAIL; WP9 observation closed; WP12's proxy-hop fact established read-only; WP15 integration lane owns its database; WP17 ledger shipped or formally deferred; WP13 dependency triage run; WP14 blocker and WP16 program re-homed as their own rows. |
 | T5 | CTO-readable structure | `README.md` reads top-down for a stranger; `docs/` has one index; `archive/` and `handoff/` are indexed; root contains only top-level canon; the target information architecture in the migration plan section 5 is reached or each deviation is recorded. |
+| T10 | M2 exit-gap closure | The closure register's blocking gap count is 0 and the closing independent review of the M2 candidate set is archived. This is the M2 exit gate; T6 depends on it. |
 | T6 | M3 repo-native workflows | Per migration plan section 10 M3: Notion replacements for daily priorities, activity, vendor state; session start/end and `go` prepared against repo-native sources; protocol coverage manifest complete; nothing activated. |
 | T7 | M4 atomic cutover | Per migration plan section 10 M4. **Founder confirms the flip.** Entrypoints become peers, Notion consumers removed in one PR, guards blocking. |
 | T8 | M5 to M7 closeout | Legacy authorities archived, clean-session acceptance passed on both tools, plan archived with evidence. |
 | T9 | Discovery and retrieval (WP16) | Re-homed from remediation. Starts only after T7. Its own plan when opened. |
 
-Intended order: T1, T2, T3, T4, T5, T6, T7, T8, T9. Only `depends_on` in the
+Intended order: T1, T2, T3, T4, T5, T10, T6, T7, T8, T9. Only `depends_on` in the
 register is enforced: T2 and T4 do not depend on T1, so either may become the
 active track while T1 waits on review, provided T1 is marked `blocked` with the
 review named as its blocker. Nothing in T6 or later starts before T1 is done.
+
+Every track also declares a `gate` (`none`, `m2`, `m2-exit`, `post-m2`).
+The M2 closure register's validator reads this file and refuses any
+`post-m2` track that is active or done while a blocking M2 gap remains, or
+that does not depend on the `m2-exit` track. The declaration alone is not
+trusted: the closure register's validator carries a reviewed list of the
+tracks allowed outside the gate (T1 to T5), and any track not on that list is
+gated whatever it declares. Adding an independent track is a reviewed edit
+to that list.
 
 The register carries a `program_status`. While it is `active`, exactly one
 track is active. It becomes `paused` only when every runnable track is done
@@ -111,7 +121,13 @@ done.
 6. **Independent review.** A fresh, separate Codex task (`gpt-5.6-sol`,
    `xhigh`, read-only, closed after its verdict) reviews the exact final
    commit, register change included. Blocking findings are fixed and
-   re-reviewed; nothing ships on a FAIL.
+   re-reviewed; nothing ships on a FAIL. **While Codex is unavailable**
+   (founder instruction 2026-09-02: Codex quota exhausted), the independent
+   review is a fresh read-only Claude agent that did not author the batch,
+   given the same brief; the PR must say the review was same-provider, and
+   the first Codex session after quota returns re-reviews anything merged
+   under this fallback that touched money, compliance, production, or the
+   M4 cutover.
 7. **Ship.** Open PR, wait for CI, merge, verify `origin/main` carries the
    commit.
 8. **After merge.** Add a Journal entry while Notion remains authoritative,
