@@ -14,6 +14,30 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-29** · `your_call` · owner Petter · raised 2026-09-02T07:10Z · no deadline — **two credential files were deleted and only you can restore them**
+While cleaning up old worktrees, my script deleted the main project folder
+itself (the code and history came straight back from GitHub; nothing committed
+was lost, and production was never touched). Two files are not in git and are
+gone: `C:\Users\pette\Projects\strale\.env` and
+`C:\Users\pette\Projects\strale\apps\api\.env`. They held the local
+read-only database access and the API keys used for local smoke tests. No copy
+exists on this machine (searched every sibling folder).
+*What you need to do:* recreate both from your password manager or the Railway
+variables. The root `.env.example` lists that file's expected keys;
+`apps/api/` has no template (only `.env.test`), so its keys come from Railway
+or the password manager. Until then, local scripts
+that read the database or call vendors will fail; nothing in production is
+affected.
+*Companion note, no decision needed today:* two pieces of unmerged code are
+preserved under archive tags and can wait. The WP9 alerting isolation work
+lives in two tags: its committed branch under
+`archive/rescue-2026-09-02/remediation/wp9-artifacts` and its uncommitted
+edits (the isolation test and the `alerting.ts` changes) under
+`archive/branches/rescue-wip-2026-09-01-remediation-wp9-artifacts-37af338`.
+The vendor-control-tower edits are under
+`archive/rescue-2026-09-02/fix/vendor-control-tower`. Say the word if you want
+either finished.
+
 **DQ-28** · `your_call` · owner Petter · raised 2026-09-02T02:30Z · no deadline — **may the row-level M2 Decision register become public?**
 The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the
 public repository's clear-text boundary exactly where M0 left it (the only
