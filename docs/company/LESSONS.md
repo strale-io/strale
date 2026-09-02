@@ -864,6 +864,101 @@ bolting it onto an unrelated PR.
 
 ---
 
+### F12 · The shared checkout destroying its own history — **ROOT-CAUSE INVESTIGATION OPEN, opened on the incident that trips it**
+
+> One `.git` object store is shared by the primary checkout and every worktree
+> derived from it. A directory-level deletion anywhere in that structure takes
+> the history of *all* of them, and the files that survive survive as plain
+> files with no history attached.
+
+**Count: 5 by mechanism, 1 of them total.** Three partial tree corruptions on
+2026-08-14, in which ~1,000 tracked files under `apps/api/**` and `packages/**`
+vanished from disk while the index still listed them; the `node_modules`
+junction hazard, in which removing a worktree with `rm -rf` followed a Windows
+directory junction and deleted the main checkout's real `node_modules`; and, on
+**2026-09-02, the whole of `C:\Users\pette\Projects\strale` including `.git`**.
+All five share one mechanism — concurrent, directory-level operations against a
+structure that has exactly one object store — and CLAUDE.md's Shared-Checkout
+Rule already carried the first four. They were never gathered into a family, so
+the threshold was passed without anyone counting.
+
+#### Incident 5 (2026-09-02) — what is established, and what is not
+
+Established, each of it second-sourced:
+
+- Between roughly 06:05Z and 06:13Z the primary checkout was emptied. It is
+  not a partial corruption: the directory contained zero entries, `.git`
+  included. Observed directly, and confirmed by every git command from any
+  worktree failing with `not a git repository:
+  C:/Users/pette/Projects/strale/.git/worktrees/<name>` rather than with a
+  remote error.
+- **Every checkout of this repository on the machine was a worktree of that
+  one.** All 24 in `git worktree list` resolve their `.git` to a file pointing
+  into the deleted admin directory; not one is a full clone. So no local object
+  store for this repository survived anywhere.
+- **Working-tree files survived** in each worktree directory. Content is
+  intact; history is not.
+- The remote had already collapsed to `main` alone *before* the local
+  destruction — 36 branches on 2026-08-31, one at 06:05Z today. Verified twice
+  by `git ls-remote` and twice more, minutes apart, by `gh api`.
+- **Production was untouched throughout.** The deployed commit equals `main`'s
+  tip, CI is green, the paid rail answers its 402 challenge and the free tier
+  serves in 29 ms. Nothing customer-facing was ever at risk.
+
+Not established, and deliberately not asserted:
+
+- **What deleted it.** GitHub's events feed shows no bulk deletion, and that
+  feed is demonstrably incomplete — head branches deleted after 20:08Z on
+  09-01 produced no `DeleteEvent` at all — so it cannot be used to enumerate
+  or to exclude anything. The three `C:/tmp` worktrees are gone from disk as
+  well, which is consistent with a worktree-cleanup sweep that continued into
+  the primary, but their deletion cannot be dated and the inference is not
+  made here.
+- **Whether the two events share a cause.** The ordering is known; the
+  connection is not.
+
+#### The recovery, and why nothing was lost
+
+GitHub still served every deleted commit by SHA. The 28 branch tips recorded in
+`git worktree list` at the start of the run were pinned as
+`rescue/2026-09-02/<original-name>` before anything else was attempted, and all
+28 verified present afterwards. The two unmerged closed PRs (#356, #409) were
+checked separately and need no rescue. The primary checkout was then re-cloned
+and its dependencies reinstalled.
+
+The dated namespace is deliberate. These are not a revival of the branch
+graveyard B3 exists to clear, and they must not be treated as one: they are
+pins on objects that had exactly one copy left. Triaging them — merge, or
+delete having confirmed the content is on `main` by file comparison and not by
+commit count — is owed, with an owner and a deadline, and should happen from a
+checkout that can run `git cherry` against them.
+
+#### Root-cause workflow status
+
+1. **Common instrument: identified.** A single `.git` object store shared by
+   one primary checkout and every worktree, operated on concurrently by
+   sessions that delete directories.
+2. **Population: measured.** 24 worktree records, all history-less; 3 `C:/tmp`
+   worktrees absent from disk; 1 primary checkout emptied; 0 surviving local
+   object stores; 28 tips recovered; 0 commits lost.
+3. **Hypothesis: not yet formed.** Forming one requires knowing what ran, and
+   that is the open question. It should not be guessed at, and the candidate
+   mechanism above is recorded as a candidate.
+4–7. **Owed.** The repair direction that does not depend on the answer is
+   already visible and is the useful half: **the object store must stop being a
+   single point of failure.** A checkout whose history exists only inside
+   another checkout's `.git` is not a copy of anything. Independent clones, or
+   an unconditional push of every local branch that has no remote counterpart,
+   would each have made this incident a non-event — and the second is precisely
+   what the idea-lab janitor was doing when the 08-31 run correctly identified
+   it as undoing our deletions. Both cannot be right for the same branch, and
+   that tension is the design question this family has to answer.
+
+**State: OPEN.** Nothing here is fixed. What has been done is preservation and
+restoration, which is not the same thing.
+
+---
+
 ## How this file is maintained
 
 - Any session may add an incident to a family. No approval, no ceremony — one
