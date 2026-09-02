@@ -21,6 +21,11 @@ See .claude/PROTOCOL.md for full criteria and protocol definitions.
   verdicts remain valid historical evidence, but no new Claude-review backlog is
   created.
 
+**Amendment 2026-09-02 (founder, in session):** Codex quota is exhausted.
+Until it returns, the independent review in the batch loop is performed by a
+fresh read-only Claude agent that did not author the batch; PRs say so. The
+2026-09-01 override otherwise stands.
+
 ### Repo-native migration continuation — pre-cutover
 
 When a session is asked to continue the repo-native operating-model migration,

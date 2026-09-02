@@ -121,7 +121,13 @@ done.
 6. **Independent review.** A fresh, separate Codex task (`gpt-5.6-sol`,
    `xhigh`, read-only, closed after its verdict) reviews the exact final
    commit, register change included. Blocking findings are fixed and
-   re-reviewed; nothing ships on a FAIL.
+   re-reviewed; nothing ships on a FAIL. **While Codex is unavailable**
+   (founder instruction 2026-09-02: Codex quota exhausted), the independent
+   review is a fresh read-only Claude agent that did not author the batch,
+   given the same brief; the PR must say the review was same-provider, and
+   the first Codex session after quota returns re-reviews anything merged
+   under this fallback that touched money, compliance, production, or the
+   M4 cutover.
 7. **Ship.** Open PR, wait for CI, merge, verify `origin/main` carries the
    commit.
 8. **After merge.** Add a Journal entry while Notion remains authoritative,
