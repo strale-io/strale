@@ -31,8 +31,10 @@ public repository. Page ids grant no access without workspace membership;
 Decision IDs are opaque labels. The M0 archive rule says raw exports stay
 private, and independent review read a row list as a widening of that rule,
 so it is your call, not mine.
-*If yes:* one small PR moves the private rows into the public register and
-deletes the private file. *If no:* nothing changes; the private projection
+*If yes:* one PR moves the private rows into the public register (schema
+and validator changes included: public rows would then carry scope and date
+and become eligible for the next batch directly) and deletes the private
+file. *If no:* nothing changes; the private projection
 stays, and the operator script keeps verifying it. Nothing is blocked either
 way.
 

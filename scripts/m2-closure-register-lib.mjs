@@ -634,7 +634,10 @@ export function validateClosureRegister(register, context, { schema, relativePat
     ? readFileSync(resolve(context.root, planPath), "utf8")
     : null;
   const planText = planRaw === null ? null : normalizeWs(planRaw);
+  const seenLocations = new Set();
   for (const p of register.plan_statements) {
+    if (seenLocations.has(p.location)) finding("PLAN_STATEMENT_DUPLICATE", p.location);
+    seenLocations.add(p.location);
     checkEvidence(`plan statement ${p.location}`, p.evidence);
     if (planText !== null && !planText.includes(normalizeWs(p.quote))) finding("PLAN_QUOTE_NOT_FOUND", p.location);
   }
@@ -672,6 +675,16 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // The plan's M2 exit requires a closing independent review; until M2 closes,
   // a gap must always cover it.
   if (!covered.has("plan.review_route")) finding("EXIT_GAP_UNCOVERED", "plan.review_route has no gap (the closing review requirement cannot disappear)");
+  // Blocking is derived, not chosen: while any row is not yet reconciled or in
+  // an unresolved collision, and until the closing review exists, at least one
+  // BLOCKING gap must cover that bucket. Flipping every gap to non-blocking
+  // cannot open the M2 exit gate.
+  const blockingCovered = new Set();
+  for (const g of register.exit_gaps) if (g.blocking) for (const c of g.covers) blockingCovered.add(c);
+  for (const d of ["not_yet_reconciled", "unresolved_collision"]) {
+    if ((totals[d] ?? 0) > 0 && !blockingCovered.has(`decision_rows.${d}`)) finding("EXIT_GAP_NOT_BLOCKING", `decision_rows.${d} (${totals[d]} rows) is open but no blocking gap covers it`);
+  }
+  if (!blockingCovered.has("plan.review_route")) finding("EXIT_GAP_NOT_BLOCKING", "plan.review_route is open but no blocking gap covers it");
 
   // ---- Next batch: cutoff anchored to a public row; public eligibility exact.
   const nb = register.next_decision_batch;
@@ -713,6 +726,18 @@ export function validateClosureRegister(register, context, { schema, relativePat
     if (eligible(row) && !candidateIds.has(row.page_id)) finding("NEXT_BATCH_INCOMPLETE", `${row.id} is eligible but not listed`);
   }
   if (nb.private_candidates.count > privateCount) finding("NEXT_BATCH_PRIVATE_COUNT_EXCEEDS", `${nb.private_candidates.count} > ${privateCount}`);
+
+  // ---- Whole-file boundary: no page id or Decision ID anywhere in the register
+  // text (evidence URLs, prose, gaps) may be absent from the public set.
+  if (context.public?.available && context.root) {
+    const raw = readFileSync(resolve(context.root, relativePath), "utf8");
+    for (const m of raw.matchAll(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g)) {
+      if (!context.public.pageIds.has(m[0])) finding("REGISTER_IDENTITY_NOT_PUBLIC", `page id ${m[0]} appears in the register text but nowhere public`);
+    }
+    for (const m of raw.matchAll(/DEC-[0-9]{8}-[A-Za-z0-9-]+/g)) {
+      if (!context.public.ids.has(m[0])) finding("REGISTER_IDENTITY_NOT_PUBLIC", `id ${m[0]} appears in the register text but nowhere public`);
+    }
+  }
 
   // ---- The program's track register must respect the M2 exit gate.
   if (context.tracks) {

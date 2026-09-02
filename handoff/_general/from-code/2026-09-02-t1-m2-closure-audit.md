@@ -75,7 +75,17 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
   derivation rules in the operator script, one dead assertion), all applied.
 - Operator verification, run on this branch against the private archive:
   `ok: 318 rows verified against strale-io/strale-context-archive@24713c48; 7 private next-batch candidates`.
-- Second independent Codex review of the exact final commit: recorded in the PR.
+- Independent Codex reviews (gpt-5.6-sol, xhigh, read-only): seventeen
+  rounds on successive commits, each FAIL with findings that were applied
+  (identity binding, public boundary, derived dispositions, fail-closed
+  checks, the M2 exit gate on the track register); round 12 and round 14
+  returned PASS with non-blocking items, also applied. Codex quota ran out
+  on 2026-09-02 before the final commit.
+- **Independent review of the final commit was same-provider**: a fresh
+  read-only Claude agent that did not author the batch, per the 2026-09-02
+  fallback recorded in PROGRAM.md; verdict PASS, 0/0/0 new identities, all
+  suites green. The post-quota Codex re-review obligation does not apply:
+  this batch touches no money, compliance, production, or M4 file.
 
 ## What the next session should do
 

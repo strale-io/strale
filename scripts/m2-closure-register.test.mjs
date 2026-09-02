@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import YAML from "yaml";
 import {
   DECISION_DISPOSITIONS,
   INVENTORY_DISPOSITIONS,
@@ -467,6 +468,42 @@ test("git provenance on a git-native record is validated like evidence and deriv
   const r2 = base();
   r2.formal_records.find((x) => x.source_kind === "git-native").git_provenance = "README.md";
   has(r2, "FORMAL_RECORD_PROVENANCE_MISMATCH");
+});
+
+test("blocking is derived: open buckets must be covered by a blocking gap", () => {
+  const r = base();
+  for (const g of r.exit_gaps) { g.blocking = false; g.phase = "M3"; }
+  r.counts.exit_gaps = { blocking: 0, non_blocking: r.exit_gaps.length };
+  const c = codes(r);
+  assert.ok(c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
+  const r2 = base();
+  const g1 = r2.exit_gaps.find((g) => g.covers.includes("decision_rows.not_yet_reconciled") && g.blocking);
+  g1.covers = g1.covers.filter((x) => x !== "decision_rows.not_yet_reconciled");
+  r2.exit_gaps.find((g) => !g.blocking).covers.push("decision_rows.not_yet_reconciled");
+  assert.ok(codes(r2).includes("EXIT_GAP_NOT_BLOCKING"));
+});
+
+test("no identity anywhere in the register text may be absent from the public set", () => {
+  // Uses a temporary copy of the register with a planted Notion URL as evidence on a gap.
+  const dir = mkdtempSync(join(tmpdir(), "m2-rawscan-"));
+  try {
+    const r = base();
+    r.exit_gaps[0].evidence.push(`https://app.notion.com/${"7".repeat(32)}`);
+    mkdirSync(join(dir, "docs/project"), { recursive: true });
+    const rel = "docs/project/m2-closure-register.yaml";
+    writeFileSync(join(dir, rel), YAML.stringify(r));
+    const ctx = { ...context, root: dir, tracked: new Set([...context.tracked, rel]) };
+    // Only the raw scan reads from `root`; other file-backed checks fall back to findings we ignore here.
+    const c = validateClosureRegister(r, ctx, { schema, relativePath: rel }).map((f) => f.code);
+    assert.ok(c.includes("REGISTER_IDENTITY_NOT_PUBLIC"), c.join(","));
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  const r2 = base();
+  r2.plan_statements.push({ ...r2.plan_statements[0] });
+  r2.counts.plan_statements[r2.plan_statements[0].disposition] += 1;
+  r2.counts.plan_statements.total += 1;
+  assert.ok(codes(r2).includes("PLAN_STATEMENT_DUPLICATE"));
 });
 
 test("the closing-review gap cannot disappear", () => {

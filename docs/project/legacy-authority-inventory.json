@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "7bcb7bb10ce947d960af618cb2a8f12a53f4c9ecab6f13088f93e771df1bd159",
+      "sha256": "5b601c16ccf350b21d4e5f560356809532a016a2b174b5136f7409149ff4b063",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -63,7 +63,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "d06e6aed0679fe27f46a85754e25947a3c1609f9b979a97129aa244211555c96",
+      "sha256": "1c42fa20ed66358b3f0d617de6622478c47d4f3cf7122d7dfb335c481cda0d83",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -338,7 +338,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "c20bcfd49004c270f268ef40162360f38978d73019de54aabf2a554f599d3d66",
+      "sha256": "3bcf2309bd55a3e97d66b6a983de0e40c9cfdcce2d07b2c5b30c66469fcb208f",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -425,7 +425,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "124f93a339d32e1f1e49b6a7df6b342ada96af485a756d0cd1ebe92e6847700c",
+      "sha256": "c23bc08096400cac21f057b89bcddea9d797524be03a36265be9f1a7d3511d2b",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

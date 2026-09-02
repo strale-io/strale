@@ -34,8 +34,10 @@ section of CLAUDE.md for the history.)
 
 **Amendment 2026-09-02 (founder, in session):** Codex quota is exhausted.
 Until it returns, the independent review in the batch loop is performed by a
-fresh read-only Claude agent that did not author the batch; PRs say so. The
-2026-09-01 override otherwise stands.
+fresh read-only Claude agent that did not author the batch; PRs say so, and
+`docs/programs/cto-readiness/PROGRAM.md` batch-loop step 6 carries the
+re-review obligation once Codex returns. The 2026-09-01 override otherwise
+stands.
 
 ## Repo-native migration continuation — pre-cutover
 

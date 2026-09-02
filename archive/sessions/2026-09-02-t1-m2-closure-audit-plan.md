@@ -9,7 +9,7 @@ authority_active: false
 created_at: 2026-09-02
 owners:
   - claude-code
-review_route: author-self-verification-plus-fresh-codex-review
+review_route: author-self-verification-plus-fresh-codex-review; final commit reviewed by a fresh Claude agent under the 2026-09-02 Codex-unavailable fallback
 ---
 
 # T1 — M2 closure audit: stored plan
