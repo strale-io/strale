@@ -36,7 +36,11 @@ edits (the isolation test and the `alerting.ts` changes) under
 `archive/branches/rescue-wip-2026-09-01-remediation-wp9-artifacts-37af338`.
 The vendor-control-tower edits are under
 `archive/rescue-2026-09-02/fix/vendor-control-tower`. Say the word if you want
-either finished.
+either finished. One more folder on the machine is yours to call:
+`C:\Users\pette\Projects\strale-codex-handoff-v2` holds 61 website
+design and copy handoff documents that were never part of this repository;
+they belong with the website project. File them under `strale-frontend`, or
+drop them — no action until you say.
 
 **DQ-28** · `your_call` · owner Petter · raised 2026-09-02T02:30Z · no deadline — **may the row-level M2 Decision register become public?**
 The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the

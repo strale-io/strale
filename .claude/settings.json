@@ -1,0 +1,39 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/handoff-session-start.mjs",
+            "timeout": 60,
+            "statusMessage": "Orienting the session (checkout, active track, last handoff gate)..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/handoff-stop.mjs",
+            "timeout": 180,
+            "statusMessage": "Running the handoff gate (clean, pushed, one batch worktree, register updated)..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/guard-tree-integrity.mjs"
+          }
+        ]
+      }
+    ]
+  }
+}

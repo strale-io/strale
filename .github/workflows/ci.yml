@@ -292,6 +292,10 @@ jobs:
       # checked here rather than trusted. Tests cover the checker itself.
       - run: npm run programs:check
       - run: npm run programs:test
+      # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
+      # notify wrapper, and the git hooks all call the same checker. Its tests
+      # plant every failure mode in a throwaway repository.
+      - run: npm run handoff:test
       # Repo-native project-context layer (M1/M2 candidates, decision graph,
       # M2 closure register). The checker itself is warning-only by contract
       # until M4; its test suite is not, and it asserts the checked-in context
