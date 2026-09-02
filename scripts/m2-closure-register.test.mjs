@@ -1,5 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   DECISION_DISPOSITIONS,
   INVENTORY_DISPOSITIONS,
@@ -9,6 +13,7 @@ import {
   evidenceProblem,
   loadRegister,
   loadRegisterSchema,
+  publicIdentities,
   readBaseRegister,
   repoRootFrom,
   requiredPlanStatements,
@@ -61,6 +66,40 @@ const codesExcept = (register, ctx) => codes(register, ctx).filter((c) => !MANUF
 
 test("positive smoke test (not mutation evidence): the committed register is valid", () => {
   assert.deepEqual(checkClosureRegister(root), []);
+});
+
+test("the public-identity set excludes the register itself and reads the base ref, not the index", () => {
+  const dir = mkdtempSync(join(tmpdir(), "m2-public-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/project"), { recursive: true });
+    mkdirSync(join(dir, "docs/decisions"), { recursive: true });
+    const inBase = "a".repeat(32);
+    const onlyInRegister = "b".repeat(32);
+    const onlyInIndexDocs = "c".repeat(32);
+    const onlyInIndexDecisions = "d".repeat(32);
+    writeFileSync(join(dir, "docs/base.md"), `page ${inBase} DEC-20260101-A\n`);
+    writeFileSync(join(dir, "docs/project/m2-closure-register.yaml"), `page_id: ${onlyInRegister}\nid: DEC-20260102-B\n`);
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    run("update-ref", "refs/remotes/origin/main", "HEAD");
+    writeFileSync(join(dir, "docs/new.md"), `page ${onlyInIndexDocs} DEC-20260103-C\n`);
+    writeFileSync(join(dir, "docs/decisions/new-record.md"), `page ${onlyInIndexDecisions} DEC-20260104-D\n`);
+    run("add", "-A");
+    const pub = publicIdentities(dir);
+    assert.equal(pub.available, true);
+    assert.ok(pub.pageIds.has(inBase) && pub.ids.has("DEC-20260101-A"), "base-ref identities are public");
+    assert.ok(!pub.pageIds.has(onlyInRegister) && !pub.ids.has("DEC-20260102-B"), "the register cannot make an identity public");
+    assert.ok(!pub.pageIds.has(onlyInIndexDocs) && !pub.ids.has("DEC-20260103-C"), "a docs file added in the same PR cannot widen the boundary");
+    assert.ok(pub.pageIds.has(onlyInIndexDecisions) && pub.ids.has("DEC-20260104-D"), "a reviewed decision surface added in the same PR may");
+    assert.equal(publicIdentities(dir, "refs/heads/nope").available, false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  has(base(), "PUBLIC_BASE_UNAVAILABLE", { ...context, public: { available: false, ref: "nowhere", pageIds: new Set(), ids: new Set() } });
 });
 
 test("an unreadable base ref fails closed instead of skipping removal checks", () => {
@@ -133,9 +172,6 @@ test("private rows may not hold dispositions that are public by construction", (
   has(r, "DECISION_ROW_NOT_PUBLIC");
   const r2 = base();
   r2.private_rows.counts_by_disposition.not_yet_reconciled -= 1;
-  r2.private_rows.counts_by_disposition.unresolved_collision = 1;
-  lacks(r2, "PRIVATE_ROWS_PUBLIC_DISPOSITION");
-  r2.private_rows.counts_by_disposition.unresolved_collision = 0;
   r2.private_rows.counts_by_disposition.formally_migrated = 1;
   has(r2, "SCHEMA");
 });
@@ -415,11 +451,11 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
   r7.next_decision_batch.private_candidates.count = r7.private_rows.count + 1;
   has(r7, "NEXT_BATCH_PRIVATE_COUNT_EXCEEDS");
   const r8 = base();
-  const old = r8.decision_rows.find((x) => x.disposition === "not_yet_reconciled" && x.decided_at < r8.next_decision_batch.decided_on_or_after);
-  if (old) {
-    r8.next_decision_batch.candidates.push({ page_id: old.page_id, id: old.id, why: "planted old candidate" });
-    has(r8, "NEXT_BATCH_TOO_OLD");
-  }
+  const old = publicPending(r8);
+  old.decided_at = "2026-01-01";
+  resync(r8);
+  r8.next_decision_batch.candidates.push({ page_id: old.page_id, id: old.id, why: "planted old candidate" });
+  has(r8, "NEXT_BATCH_TOO_OLD");
 });
 
 test("every open bucket must be covered by an exit gap", () => {

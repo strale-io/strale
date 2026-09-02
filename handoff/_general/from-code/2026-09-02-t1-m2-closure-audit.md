@@ -30,14 +30,14 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
 
 | Section | Result |
 |---|---|
-| Legacy-authority inventory (15) | 6 migrated (4 partial, 2 not started), 7 archive, 2 obsolete, 0 unclear, 0 evidence-only |
+| Legacy-authority inventory (15) | 6 migrated (3 partial, 3 not started), 7 archive, 2 obsolete, 0 unclear, 0 evidence-only |
 | Decision source rows (318) | 23 formally migrated, 70 unresolved collision (69 Notion duplicates + 1 cross-surface), 1 resolved collision, 1 intentionally historical, 6 obsolete or superseded, 212 not yet reconciled, 5 unclear |
 | Of which public in the register | 95 rows (identity already on main); 71 carry a clear title (exactly the collision-registry strings), 24 a title hash |
 | Of which private | 223 rows (212 pending, 6 superseded, 5 unclear), counts and digest in the register, rows in the archive |
 | Formal records (27) | 23 with a Notion source row, 4 Git-native |
 | Plan forward statements (5) | 3 merged, 1 partially merged, 1 open (this audit) |
 | M2 exit gaps (9) | 4 blocking (G1 pending rows, G2 Notion collisions, G3 cross-surface `DEC-20260422-A`, G9 closing review), 5 non-blocking |
-| Next collision-free batch | 7 candidates, all in the private projection because their page ids are not yet public on main (count and digest in the register; the 2026-08-27 Austrian-registry decision and the six 2026-08-20 website decisions) |
+| Next collision-free batch | 7 candidates, all in the private projection because their page ids are not yet public on main (count and digest in the register) |
 
 ## Decisions taken in this batch (technical, mine)
 
@@ -67,7 +67,12 @@ Track T1 of the CTO-readiness program (`docs/programs/cto-readiness/tracks.yaml`
   hardened commit: FAIL, 4 blocking (identity not source-verified, title and
   metadata boundary, `handoff/` disposition, G8 phase deadlock), 1 should-fix
   (initial completeness), 2 nits; all applied in this version.
-- Second Codex review of the exact final commit: recorded in the PR.
+- Second same-tool self-check of the rework: PASS with 5 should-fix items
+  (counts wording, base-ref public check, exclusion test, private-row
+  derivation rules in the operator script, one dead assertion), all applied.
+- Operator verification, run on this branch against the private archive:
+  `ok: 318 rows verified against strale-io/strale-context-archive@24713c48; 7 private next-batch candidates`.
+- Second independent Codex review of the exact final commit: recorded in the PR.
 
 ## What the next session should do
 

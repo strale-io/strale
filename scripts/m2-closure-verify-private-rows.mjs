@@ -8,6 +8,8 @@
 // Exit 1 on any mismatch. Requires `gh` authenticated with read access to the
 // private archive repository named in the register. Nothing is written.
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import YAML from "yaml";
 import { canonicalDigest, loadRegister, repoRootFrom, sha256 } from "./m2-closure-register-lib.mjs";
 
@@ -71,7 +73,24 @@ for (const row of all) {
 }
 for (const p of identities.keys()) if (!seen.has(p)) fail(`export row ${p} missing from both projections`);
 
-// 4. Next-batch completeness over the private rows.
+// 4. Derivation rules over the private rows (CI can only check the public ones).
+const registryPageIds = new Set();
+for (const c of YAML.parse(readFileSync(resolve(root, "docs/decisions/id-collisions.yaml"), "utf8")).collisions ?? []) {
+  for (const r of c.records) registryPageIds.add(r.source_page_id);
+}
+for (const r of priv) {
+  if (registryPageIds.has(r.page_id)) fail(`${r.page_id} is a collision-registry row but is private`);
+  if (["formally_migrated", "resolved_collision"].includes(r.disposition)) fail(`${r.page_id} has a public-only disposition in the private file`);
+  if (r.disposition === "not_yet_reconciled" && r.historical_status !== "active") fail(`${r.page_id} pending but ${r.historical_status}`);
+  if (r.disposition === "obsolete_or_superseded" && !["superseded", "reversed"].includes(r.historical_status)) fail(`${r.page_id} obsolete but ${r.historical_status}`);
+  if (r.disposition === "unclear" && r.id) fail(`${r.page_id} unclear with id`);
+  if (r.disposition !== "unclear" && !r.id) fail(`${r.page_id} blank id not unclear`);
+  if (r.title !== undefined) fail(`${r.page_id} carries a clear title in the private file`);
+}
+
+// 5. Next-batch completeness over the private rows. Digest format: sorted
+// page ids joined by LF with a trailing LF, SHA-256 (the register's
+// next_decision_batch.private_candidates.digest).
 const nb = register.next_decision_batch;
 const allIdCounts = {};
 for (const r of all) if (r.id) allIdCounts[r.id] = (allIdCounts[r.id] ?? 0) + 1;

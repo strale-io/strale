@@ -39,7 +39,6 @@ export const DECISION_DISPOSITIONS = [
   "unclear",
 ];
 export const PLAN_DISPOSITIONS = ["merged", "partially_merged", "superseded", "open"];
-const PUBLIC_ONLY_DISPOSITIONS = new Set(["formally_migrated", "resolved_collision"]);
 const URL_EVIDENCE =
   /^https:\/\/(github\.com\/strale-io\/(strale|strale-context-archive)\/(pull\/[0-9]+|issues\/[0-9]+|commit\/[0-9a-f]{7,40})|app\.notion\.com\/(p\/)?[0-9a-f]{32})$/;
 // Forward-looking sentences in the migration plan that the register must reconcile.
@@ -93,18 +92,27 @@ function gitQuiet(root, args, opts = {}) {
 }
 
 /**
- * Identities (32-hex page ids, DEC-* ids) that appear in tracked text under the
- * public scopes, excluding the register. Read from the index, not the working
- * tree, so an uncommitted edit cannot widen the set.
+ * Identities (32-hex page ids, DEC-* ids) that are already public: present in
+ * tracked text under the public scopes on the BASE ref (so a PR cannot widen
+ * the boundary by adding a docs file alongside the register), or present in
+ * the reviewed decision surfaces (records, collision registry, decision
+ * README) in the index (so a batch that migrates a record can list its row in
+ * the same PR). The register itself is always excluded. Returns
+ * { available: false } when the base ref cannot be read.
  */
-export function publicIdentities(root) {
+export function publicIdentities(root, baseRef = "origin/main") {
   const pageIds = new Set();
   const ids = new Set();
-  for (const [re, set] of [[/[0-9a-f]{32}/g, pageIds], [/DEC-[0-9]{8}-[A-Za-z0-9-]+/g, ids]]) {
-    const out = gitQuiet(root, ["grep", "--cached", "-h", "-o", "-E", "-e", re.source, "--", ...PUBLIC_SCOPES, `:(exclude)${REGISTER_PATH}`]) ?? "";
-    for (const m of out.split(/\s+/)) if (m) set.add(m);
+  if (gitQuiet(root, ["rev-parse", "--verify", "--quiet", `${baseRef}^{commit}`]) === null) {
+    return { available: false, ref: baseRef, pageIds, ids };
   }
-  return { pageIds, ids };
+  const patterns = [["(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])", pageIds], ["DEC-[0-9]{8}-[A-Za-z0-9-]+", ids]];
+  for (const [pattern, set] of patterns) {
+    const fromBase = gitQuiet(root, ["grep", "-h", "-o", "-P", "-e", pattern, baseRef, "--", ...PUBLIC_SCOPES, `:(exclude)${REGISTER_PATH}`]) ?? "";
+    const fromIndex = gitQuiet(root, ["grep", "--cached", "-h", "-o", "-P", "-e", pattern, "--", "docs/decisions", `:(exclude)${REGISTER_PATH}`]) ?? "";
+    for (const m of `${fromBase}\n${fromIndex}`.split(/\s+/)) if (m) set.add(m);
+  }
+  return { available: true, ref: baseRef, pageIds, ids };
 }
 
 /** Front matter of every formal record: { record_key, id, evidence[] }. */
@@ -177,7 +185,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     archiveRepository: archiveStatus.repository ?? null,
     base: readBaseRegister(root, baseRef),
     isAncestor: (sha) => isAncestorOfHead(root, sha),
-    public: publicIdentities(root),
+    public: publicIdentities(root, baseRef),
   };
 }
 
@@ -242,6 +250,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
   };
 
+  if (context.public && context.public.available === false) {
+    finding("PUBLIC_BASE_UNAVAILABLE", `${context.public.ref} is not readable; the public-boundary check did not run`);
+  }
   if (context.isAncestor && !context.isAncestor(register.audited_main)) {
     finding("AUDITED_MAIN_NOT_ANCESTOR", register.audited_main);
   }
@@ -336,7 +347,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
 
     // Public boundary: identity must already be public elsewhere; a clear title
     // only where the collision registry publishes that exact string.
-    if (context.public) {
+    if (context.public && context.public.available !== false) {
       if (!context.public.pageIds.has(row.page_id)) finding("DECISION_ROW_NOT_PUBLIC", `${row.page_id}: page id not published outside the register`);
       if (row.id && !context.public.ids.has(row.id)) finding("DECISION_ROW_NOT_PUBLIC", `${row.page_id}: id ${row.id} not published outside the register`);
     }
@@ -397,10 +408,8 @@ export function validateClosureRegister(register, context, { schema, relativePat
       finding("FORMAL_RECORD_GIT_NATIVE_WITH_ROWS", fr.record_key);
     }
   }
-  // Private rows can never hold dispositions that are public by construction.
-  for (const d of Object.keys(register.private_rows.counts_by_disposition)) {
-    if (PUBLIC_ONLY_DISPOSITIONS.has(d)) finding("PRIVATE_ROWS_PUBLIC_DISPOSITION", d);
-  }
+  // Private rows can never hold dispositions that are public by construction;
+  // the schema's closed counts_by_disposition key set enforces this.
 
   // ---- Plan statements: every forward statement in the plan must be quoted, and every quote must exist.
   const planPath = register.sources.migration_plan.path;
@@ -417,7 +426,10 @@ export function validateClosureRegister(register, context, { schema, relativePat
     const quotes = register.plan_statements.map((p) => normalizeWs(p.quote));
     for (const s of requiredPlanStatements(planRaw)) {
       const head = s.text.slice(0, 60);
-      if (!quotes.some((q) => s.text.includes(q) || q.includes(head))) finding("PLAN_STATEMENT_UNRECONCILED", `${planPath}:${s.line} ${head}`);
+      // A quote reconciles a statement only if it covers the statement's opening
+      // (its first 60 characters) or is itself contained in the statement and at
+      // least 60 characters long; a ten-character fragment does not count.
+      if (!quotes.some((q) => q.includes(head) || (q.length >= 60 && s.text.includes(q)))) finding("PLAN_STATEMENT_UNRECONCILED", `${planPath}:${s.line} ${head}`);
     }
   }
 
@@ -446,6 +458,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
   const anchor = register.decision_rows.find((r) => r.id === nb.cutoff_anchor_id);
   if (!anchor) finding("NEXT_BATCH_ANCHOR_UNKNOWN", nb.cutoff_anchor_id);
   else if (anchor.decided_at !== nb.decided_on_or_after) finding("NEXT_BATCH_CUTOFF_MISMATCH", `${nb.decided_on_or_after} vs ${nb.cutoff_anchor_id} decided ${anchor.decided_at}`);
+  // Uniqueness is judged over the public rows plus the collision registry; every
+  // registry row is public (DECISION_ROW_MISSING_FROM_REGISTER), so this equals
+  // the all-rows rule the operator script applies to the private projection.
   const eligible = (row) =>
     row.disposition === "not_yet_reconciled" &&
     row.historical_status === "active" &&
