@@ -482,6 +482,47 @@ test("collision rows must agree with the collision registry", () => {
   has(r4, "DECISION_ROW_COLLISION_ROW_DISPOSITION_MISMATCH");
 });
 
+test("collision payloads are validated wherever they appear and forbidden elsewhere", () => {
+  // Cross-surface row flipped to resolved/documented_only.
+  const r = base();
+  const cross = r.decision_rows.find((x) => x.collision?.kind === "cross-surface");
+  cross.collision.resolution_status = "resolved";
+  cross.collision.row_disposition = "documented_only";
+  cross.disposition = "resolved_collision";
+  resync(r);
+  const c = codes(r);
+  assert.ok(c.includes("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH"), c.join(","));
+  // Migrated registry row (DEC-20260502-A) with a wrong collision payload.
+  const r2 = base();
+  const mig = r2.decision_rows.find((x) => x.disposition === "formally_migrated" && x.collision);
+  mig.collision.id = "DEC-19990101-Z";
+  mig.collision.resolution_status = "unresolved";
+  mig.collision.row_disposition = "unresolved";
+  const c2 = codes(r2);
+  assert.ok(c2.includes("DECISION_ROW_COLLISION_ID_MISMATCH"), c2.join(","));
+  assert.ok(c2.includes("DECISION_ROW_COLLISION_STATUS_MISMATCH"));
+  assert.ok(c2.includes("DECISION_ROW_COLLISION_ROW_DISPOSITION_MISMATCH"));
+  // Historical row given a fabricated payload.
+  const r3 = base();
+  row(r3, "intentionally_historical").collision = { id: "DEC-20260517-B", resolution_status: "unresolved", row_disposition: "unresolved", kind: "notion-duplicate" };
+  assert.ok(codes(r3).includes("DECISION_ROW_COLLISION_PAYLOAD_UNSUPPORTED"));
+  // Registry row stripped of its payload.
+  const r4 = base();
+  const reg = r4.decision_rows.find((x) => x.collision?.kind === "notion-duplicate" && x.disposition === "unresolved_collision");
+  delete reg.collision;
+  const c4 = codes(r4);
+  assert.ok(c4.includes("SCHEMA") || c4.includes("DECISION_ROW_COLLISION_PAYLOAD_EXPECTED"), c4.join(","));
+});
+
+test("declared source paths must be the ones the validator reads", () => {
+  const r = base();
+  r.sources.legacy_inventory.path = "README.md";
+  r.sources.formal_records.path = "README.md";
+  r.sources.collision_registry.path = "README.md";
+  r.sources.decision_archive.status_file = "README.md";
+  assert.equal(codes(r).filter((x) => x === "SOURCE_PATH_NOT_CANONICAL").length, 4);
+});
+
 test("a cross-surface collision must not be a registry row, must carry its own id, and must be cited", () => {
   const r = base();
   r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate").collision.kind = "cross-surface";

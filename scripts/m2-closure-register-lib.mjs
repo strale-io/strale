@@ -302,6 +302,15 @@ export function validateClosureRegister(register, context, { schema, relativePat
   if (context.isAncestor && !context.isAncestor(register.audited_main)) {
     finding("AUDITED_MAIN_NOT_ANCESTOR", register.audited_main);
   }
+  const canonicalPaths = {
+    "legacy_inventory.path": [register.sources.legacy_inventory.path, INVENTORY_PATH],
+    "formal_records.path": [register.sources.formal_records.path, RECORDS_DIR],
+    "collision_registry.path": [register.sources.collision_registry.path, COLLISIONS_PATH],
+    "decision_archive.status_file": [register.sources.decision_archive.status_file, ARCHIVE_STATUS_PATH],
+  };
+  for (const [k, [actual, expected]] of Object.entries(canonicalPaths)) {
+    if (actual !== expected) finding("SOURCE_PATH_NOT_CANONICAL", `sources.${k} is ${actual}; the validator reads ${expected}`);
+  }
   if (context.archiveCommit && register.sources.decision_archive.commit !== context.archiveCommit) {
     finding("ARCHIVE_COMMIT_MISMATCH", `${register.sources.decision_archive.commit} vs ${ARCHIVE_STATUS_PATH} ${context.archiveCommit}`);
   }
@@ -418,6 +427,20 @@ export function validateClosureRegister(register, context, { schema, relativePat
       finding("DECISION_ROW_RECORD_KEY_WITHOUT_MIGRATION", row.page_id);
     }
 
+    // A collision payload is legal only on registry rows (any disposition) and
+    // on the cross-surface row; wherever it appears it must match the registry
+    // exactly, and a cross-surface payload is always unresolved/unresolved.
+    if (row.collision && !col && row.collision.kind !== "cross-surface") finding("DECISION_ROW_COLLISION_PAYLOAD_UNSUPPORTED", `${row.page_id}: ${d} row carries a collision payload but is not a registry row`);
+    if (col && !row.collision) finding("DECISION_ROW_COLLISION_PAYLOAD_EXPECTED", `${row.page_id}: registry row without a collision payload`);
+    if (row.collision && col) {
+      if (row.collision.kind !== "notion-duplicate") finding("DECISION_ROW_COLLISION_ID_MISMATCH", `${row.page_id}: registry rows are notion-duplicate collisions`);
+      if (col.id !== row.collision.id) finding("DECISION_ROW_COLLISION_ID_MISMATCH", row.page_id);
+      if (col.resolution_status !== row.collision.resolution_status) finding("DECISION_ROW_COLLISION_STATUS_MISMATCH", row.page_id);
+      if (col.disposition !== row.collision.row_disposition) finding("DECISION_ROW_COLLISION_ROW_DISPOSITION_MISMATCH", row.page_id);
+    }
+    if (row.collision?.kind === "cross-surface" && (row.collision.resolution_status !== "unresolved" || row.collision.row_disposition !== "unresolved")) {
+      finding("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH", `${row.page_id}: a cross-surface collision is always unresolved/unresolved`);
+    }
     if (d === "unresolved_collision" || d === "resolved_collision") {
       if (row.collision.kind === "notion-duplicate") {
         if (!col) finding("DECISION_ROW_COLLISION_NOT_IN_REGISTRY", row.page_id);
