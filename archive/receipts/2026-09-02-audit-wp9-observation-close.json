@@ -1,0 +1,44 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "apps/api/scripts/wp9-observation-close.mjs",
+    "commit": "76241cc220e9a6140f703d591eb6ca94155c0804"
+  },
+  "at": "2026-09-02T21:50:00.000Z",
+  "inputs": {
+    "database": "production (Railway public proxy, ssl=false, max=1, SELECT only)",
+    "watch_opened": "2026-08-22T17:22:00Z",
+    "watch_closes_per_yaml": "2026-09-05",
+    "measurement_date": "2026-09-02",
+    "reference": "docs/remediation/packages/WP9.yaml \"Two-week watch\" section"
+  },
+  "summary": {
+    "suppressed_incomplete_evidence_count": 0,
+    "suppressed_incomplete_evidence_baseline": 0,
+    "invocation_fact_write_failed_count": 0,
+    "tick_heartbeats_observed": 17,
+    "ticks_with_facts_table_protected_false": 0,
+    "ticks_with_evidence_shortfalls_gt_0": 0,
+    "ticks_with_evidence_holes_gt_0": 0,
+    "capability_invocations_row_count": 2416,
+    "capability_invocations_first_seen": "2026-08-22T19:38:07.262Z",
+    "solution_step_only_slugs_observed": 0,
+    "transaction_id_total_rows": 2416,
+    "transaction_id_null_rows": 2416,
+    "transaction_id_null_pct": 100,
+    "days_observed_of_14": 11,
+    "verdict": "ACCEPTED_WITH_RESIDUALS"
+  },
+  "topic": "wp9-observation-close",
+  "raw": {
+    "note": "node apps/api/scripts/wp9-observation-close.mjs, full JSON output inlined below.",
+    "suppressed_incomplete_evidence": [ { "n": 0, "first_seen": null, "last_seen": null } ],
+    "invocation_fact_write_failed": [ { "n": 0 } ],
+    "tick_heartbeats_summary": "17 tick_complete events between 2026-08-22T17:58:15Z and 2026-09-02T09:42:22Z, every one facts_table_present=true, facts_table_protected=true, evidence_holes=0, evidence_shortfalls=0, mode=enforce.",
+    "capability_invocations_by_rail": [ { "rail": "x402_gateway", "n": 2334 }, { "rail": "v1_do", "n": 61 }, { "rail": "solution_step", "n": 17 }, { "rail": "onboarding", "n": 4 } ],
+    "solution_step_only_slugs": [],
+    "solution_step_only_slugs_meaning": "Zero solution_step-rail capability_invocations rows currently belong to a slug with no direct (non-solution_step) transaction traffic. This is WP9.yaml's also_watch item 1, described there as 'the single observation that proves WP9 works in production rather than on a fixture' -- it has not yet been observed live. Not an escalate_if condition and not one of WP9's six exit_condition_status entries (all already MET by test+mutation coverage per WP9.yaml), so its absence does not block closing the watch, but the live proof-in-production instance the package hoped to see during the two-week window has not occurred yet.",
+    "transaction_id_null_count": [ { "total": 2416, "null_count": 2416 } ],
+    "transaction_id_cross_check": "Matches PACKAGE-GRAPH.yaml WP9.transaction_id_linkage verbatim ('the column is null for 100% of writes'), second-sourcing the already-recorded residual rather than introducing a new number."
+  }
+}

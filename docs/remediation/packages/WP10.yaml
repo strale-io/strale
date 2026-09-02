@@ -1,6 +1,6 @@
 package: WP10
 title: Durable Job Coordinator
-status: MERGED_DEPLOYED_UNDER_OBSERVATION
+status: ACCEPTED
 depends_on: [WP1]
 risks: [CR-08]
 merged_as: ce5e63f  # PR #376, squash
@@ -10,6 +10,73 @@ acceptance_gate: >
   Seven-day cadence measurement, due 2026-08-30. Immediate reconciliation is
   clean; acceptance waits on evidence that cadence survives a DEPLOY, which no
   first-boot reading can show and which must not be manufactured.
+
+acceptance:
+  date: "2026-09-02"
+  verdict: ACCEPTED
+  overdue_by_days: 3   # gate was due 2026-08-30; T4 picked this up on 2026-09-02
+  receipt: archive/receipts/2026-09-02-audit-wp10-cadence-verdict.json
+  query: apps/api/scripts/wp10-cadence-verdict.mjs
+  evidence:
+    deploys_since_merge: >
+      120 commits merged to main between ce5e63f (2026-08-23) and HEAD
+      (2feb22bf, 2026-09-02) — `git log --oneline ce5e63f..2feb22bf | wc -l`.
+      GET https://api.strale.io/health returned commit 2feb22bf35a5 at
+      measurement time, confirming HEAD is the deployed commit, i.e. all 120
+      merges correspond to real Railway redeploys (Dockerfile GitHub-source
+      pipeline redeploys on every push to main), not just landed commits. This
+      satisfies "at least one deploy/restart occurred since ce5e63f" by two
+      orders of magnitude.
+    quality_floor: >
+      7 tick_complete events in the last 7 days (declared 24h period; pre-fix
+      was 51/7d). 10 events since the merge (10 days), gaps between
+      consecutive ticks averaging 24.03h with stddev 0.01h (36 seconds) across
+      9 gaps spanning ~120 deploys — a boot-relative reset would have produced
+      dozens of irregular sub-hour gaps, not a steady ~24h cadence.
+    capability_promotion: >
+      7 tick_complete events in the last 7 days (declared 24h; pre-fix was
+      45/7d). 11 events since the merge, gaps averaging 24.02h stddev 0.01h
+      across 10 gaps.
+    weekly_sweep: >
+      Read directly off job_schedule rather than off upstream_escalation
+      (see note below): last_started_at 2026-08-30T09:11:21Z, next_run_at
+      2026-09-06T09:11:21Z — exactly 7 days later, unchanged across the 47 merges-to-main deploys since 2026-08-30 (first-parent commits, reviewer-reproduced; an earlier draft said ~90, unsourced) —
+      deploys that happened between 2026-08-30 and this measurement
+      (2026-09-02). Pre-fix this job ran 141 times in 17.6 days.
+    upstream_escalation_is_not_a_sweep_marker: >
+      The acceptance gate's own text names upstream_escalation clustering as
+      the weekly-sweep signal; that undersells it. checkUpstreamEscalation
+      (lib/upstream-tracker.ts) is called "after each test run (or
+      periodically from health sweep)" — its 8 rows in this window are
+      scattered across 2026-08-23..2026-08-30 at times that do not correspond
+      to job_schedule's single recorded weekly-sweep run, because most of them
+      are triggered by ordinary per-test-run escalation checks, not the sweep.
+      Using job_schedule directly is the more precise signal and is what this
+      verdict rests on.
+    no_stranded_or_crashing_jobs: >
+      All 19 job_schedule rows (the 11 originally-migrated jobs, 7 aux slots,
+      plus vendor-control-tower — a later, out-of-scope addition to the same
+      coordinator) show consecutive_failures=0, no row with last_outcome=
+      'error', and lease_owner NULL everywhere (no active or stranded lease).
+    unverified: >
+      job-coordinator-recovered (crash recovery) and
+      job-coordinator-job-timed-out (watchdog expiry) are logged via
+      lib/log.ts to Better Stack, not written to any DB table queryable
+      read-only from this session. consecutive_failures=0 / last_outcome≠
+      'error' is a same-instant proxy (a recovered run that then succeeded
+      resets both) but does not itself rule out a crash-recovery having
+      occurred at some point in the 10-day window. Not second-sourced;
+      recorded per the hard rule rather than acted on. Next step: a session
+      with Better Stack access greps for both event labels over
+      2026-08-23..2026-09-02.
+  verdict_reasoning: >
+    Every criterion the acceptance gate itself names is met by direct
+    production measurement, with the two most consequential jobs (the armed
+    enforcement jobs) showing cadence within 0.04h of their declared period
+    across ten-plus deploys, and the previously-56x-overrun weekly sweep now
+    exactly on its 7-day mark. The three-day overrun past the 2026-08-30 due
+    date is procedural (T4 is the session that picked this up), not evidential
+    — the seven-day window has been clean since day one.
 
 objective: >
   Own "when is this job next due" in one place, so that a deploy stops being

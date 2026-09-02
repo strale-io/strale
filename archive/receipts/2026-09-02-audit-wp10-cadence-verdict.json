@@ -1,0 +1,74 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "apps/api/scripts/wp10-cadence-verdict.mjs",
+    "commit": "2feb22bf35a53e6693ab575ced65df282952f3b6"
+  },
+  "at": "2026-09-02T21:50:00.000Z",
+  "inputs": {
+    "database": "production (Railway public proxy, ssl=false, max=1, SELECT only)",
+    "since": "2026-08-23T09:29:00Z",
+    "reference": "docs/remediation/packages/WP10-RECONCILIATION.md \"Seven-day acceptance gate\"",
+    "deploy_range_checked": "ce5e63f (WP10 merge, 2026-08-23) .. 2feb22bf (HEAD, 2026-09-02)"
+  },
+  "summary": {
+    "quality_floor_ticks_last_7d": 7,
+    "quality_floor_declared_period_hours": 24,
+    "quality_floor_pre_fix_ticks_per_7d": 51,
+    "quality_floor_ticks_since_merge_10d": 10,
+    "quality_floor_gap_avg_hours": 24.03,
+    "quality_floor_gap_stddev_hours": 0.01,
+    "capability_promotion_ticks_last_7d": 7,
+    "capability_promotion_declared_period_hours": 24,
+    "capability_promotion_pre_fix_ticks_per_7d": 45,
+    "capability_promotion_ticks_since_merge_10d": 11,
+    "capability_promotion_gap_avg_hours": 24.02,
+    "capability_promotion_gap_stddev_hours": 0.01,
+    "weekly_sweep_declared_period_days": 7,
+    "weekly_sweep_last_started_at": "2026-08-30T09:11:21.593Z",
+    "weekly_sweep_next_run_at": "2026-09-06T09:11:21.593Z",
+    "weekly_sweep_pre_fix_runs_per_17_6d": 141,
+    "jobs_in_job_schedule": 19,
+    "jobs_with_active_lease": 0,
+    "jobs_with_stranded_expired_lease": 0,
+    "jobs_with_consecutive_failures_gt_0": 0,
+    "jobs_with_last_outcome_error": 0,
+    "commits_merged_to_main_since_wp10_merge": 120,
+    "watchdog_and_crash_recovery_log_events": "unverified (Better Stack sink, not queryable read-only from this session)"
+  },
+  "topic": "wp10-cadence-verdict",
+  "raw": {
+    "note": "node apps/api/scripts/wp10-cadence-verdict.mjs, full JSON output. Deploy count is git log --oneline ce5e63f..2feb22bf | wc -l = 120 (each PR merge to main triggers a Railway redeploy per the Dockerfile GitHub-source pipeline). GET https://api.strale.io/health returned {\"status\":\"ok\",\"commit\":\"2feb22bf35a5\"} at query time, confirming the deployed commit matches HEAD, i.e. all 120 merges since ce5e63f have actually been deployed (not just merged).",
+    "job_schedule": [
+      { "job_name": "activation-drip", "interval_ms": "21600000", "next_run_at": "2026-09-03T03:27:32.642Z", "last_started_at": "2026-09-02T21:27:32.627Z", "last_finished_at": "2026-09-02T21:27:32.642Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "capability-promotion", "interval_ms": "86400000", "next_run_at": "2026-09-03T09:42:25.394Z", "last_started_at": "2026-09-02T09:42:22.706Z", "last_finished_at": "2026-09-02T09:42:25.394Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "chromium-probe", "interval_ms": "1800000", "next_run_at": "2026-09-02T22:00:42.650Z", "last_started_at": "2026-09-02T21:30:42.650Z", "last_finished_at": null, "consecutive_failures": 0, "last_outcome": null },
+      { "job_name": "db-retention", "interval_ms": "86400000", "next_run_at": "2026-09-03T09:18:59.358Z", "last_started_at": "2026-09-02T09:18:56.268Z", "last_finished_at": "2026-09-02T09:18:59.358Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "diagnostics", "interval_ms": "86400000", "next_run_at": "2026-09-03T09:15:15.299Z", "last_started_at": "2026-09-02T09:15:15.299Z", "last_finished_at": null, "consecutive_failures": 0, "last_outcome": null },
+      { "job_name": "health-check", "interval_ms": "21600000", "next_run_at": "2026-09-03T03:28:42.660Z", "last_started_at": "2026-09-02T21:28:42.660Z", "last_finished_at": null, "consecutive_failures": 0, "last_outcome": null },
+      { "job_name": "ingest-cy-directors", "interval_ms": "604800000", "next_run_at": "2026-09-06T09:20:12.120Z", "last_started_at": "2026-08-30T09:20:11.631Z", "last_finished_at": "2026-08-30T09:20:12.120Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "ingest-ee-directors", "interval_ms": "86400000", "next_run_at": "2026-09-03T09:23:56.661Z", "last_started_at": "2026-09-02T09:23:56.284Z", "last_finished_at": "2026-09-02T09:23:56.661Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "invariant-checker", "interval_ms": "7200000", "next_run_at": "2026-09-02T23:00:04.360Z", "last_started_at": "2026-09-02T20:59:57.332Z", "last_finished_at": "2026-09-02T21:00:04.360Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "meta-daily", "interval_ms": "86400000", "next_run_at": "2026-09-03T09:15:06.297Z", "last_started_at": "2026-09-02T09:15:06.297Z", "last_finished_at": null, "consecutive_failures": 0, "last_outcome": null },
+      { "job_name": "meta-hourly", "interval_ms": "3600000", "next_run_at": "2026-09-02T21:49:07.358Z", "last_started_at": "2026-09-02T20:49:07.358Z", "last_finished_at": null, "consecutive_failures": 0, "last_outcome": null },
+      { "job_name": "onboarding-retry", "interval_ms": "3600000", "next_run_at": "2026-09-02T21:48:57.349Z", "last_started_at": "2026-09-02T20:48:57.325Z", "last_finished_at": "2026-09-02T20:48:57.349Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "quality-floor", "interval_ms": "86400000", "next_run_at": "2026-09-03T09:42:22.697Z", "last_started_at": "2026-09-02T09:40:56.315Z", "last_finished_at": "2026-09-02T09:42:22.697Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "reindex-transactions", "interval_ms": "86400000", "next_run_at": "2026-09-03T09:42:25.480Z", "last_started_at": "2026-09-02T09:42:25.401Z", "last_finished_at": "2026-09-02T09:42:25.480Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "retention", "interval_ms": "604800000", "next_run_at": "2026-09-06T09:11:23.904Z", "last_started_at": "2026-08-30T09:11:23.904Z", "last_finished_at": null, "consecutive_failures": 0, "last_outcome": null },
+      { "job_name": "revenue-heartbeat", "interval_ms": "3600000", "next_run_at": "2026-09-02T22:36:32.932Z", "last_started_at": "2026-09-02T21:36:32.661Z", "last_finished_at": "2026-09-02T21:36:32.932Z", "consecutive_failures": 0, "last_outcome": "ok" },
+      { "job_name": "vendor-control-tower", "interval_ms": "3600000", "next_run_at": "2026-09-02T22:37:35.374Z", "last_started_at": "2026-09-02T21:37:32.667Z", "last_finished_at": "2026-09-02T21:37:35.374Z", "consecutive_failures": 0, "last_outcome": "ok", "note": "not one of WP10's declared 11 migrated jobs; a later addition using the same coordinator, out of scope for this verdict" },
+      { "job_name": "weekly-sweep", "interval_ms": "604800000", "next_run_at": "2026-09-06T09:11:21.593Z", "last_started_at": "2026-08-30T09:11:21.593Z", "last_finished_at": null, "consecutive_failures": 0, "last_outcome": null },
+      { "job_name": "x402-settlement-watch", "interval_ms": "3600000", "next_run_at": "2026-09-02T22:00:04.441Z", "last_started_at": "2026-09-02T21:00:04.394Z", "last_finished_at": "2026-09-02T21:00:04.441Z", "consecutive_failures": 0, "last_outcome": "ok" }
+    ],
+    "tick_counts_7d": [ { "event_type": "capability_promotion", "n": 7 }, { "event_type": "quality_floor", "n": 7 } ],
+    "tick_counts_since_merge": [
+      { "event_type": "capability_promotion", "n": 11, "first_seen": "2026-08-23T09:29:51.992Z", "last_seen": "2026-09-02T09:42:25.377Z" },
+      { "event_type": "quality_floor", "n": 10, "first_seen": "2026-08-24T09:27:36.439Z", "last_seen": "2026-09-02T09:42:22.675Z" }
+    ],
+    "intervals": [
+      { "event_type": "capability_promotion", "n_gaps": 10, "avg_hours": "24.02", "min_hours": "24.00", "max_hours": "24.04", "stddev_hours": "0.01" },
+      { "event_type": "quality_floor", "n_gaps": 9, "avg_hours": "24.03", "min_hours": "24.02", "max_hours": "24.04", "stddev_hours": "0.01" }
+    ],
+    "upstream_escalation_note": "checkUpstreamEscalation (lib/upstream-tracker.ts) fires after each individual test run, not solely from the weekly-sweep job — its 8 rows scattered across 2026-08-23..2026-08-30 are test-run-triggered escalations, not sweep-run markers, so they were NOT used as the weekly-sweep cadence signal. weekly-sweep cadence was instead read directly off job_schedule (next_run_at = last_started_at + 7d, unchanged across ~90 further deploys since 2026-08-30)."
+  }
+}

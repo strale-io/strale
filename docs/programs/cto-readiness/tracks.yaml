@@ -16,7 +16,7 @@
 # is required.
 schema_version: 1
 program: cto-readiness
-program_status: active
+program_status: paused
 updated: 2026-09-02
 tracks:
   - id: T1
@@ -218,15 +218,17 @@ tracks:
 
   - id: T4
     title: Remediation program closure
-    status: active
+    status: done
     gate: none
     depends_on: []
     owner: session
     next_action: >
-      Record WP10's overdue seven-day cadence verdict from production evidence;
-      close WP9 observation; establish the Railway proxy-hop count read-only
-      for VERIFY-IP; decide WP15's database-lane item; ship or formally defer
-      WP17; run WP13's reachability triage; re-home WP14 and WP16.
+      Done 2026-09-02 (PR #493): WP10 accepted on production cadence
+      evidence, WP9 accepted with residuals, VERIFY-IP resolved (one proxy
+      hop), WP12 unblocked, WP13 triaged, WP15 assessed, WP17 deferred with
+      reopen triggers, WP14 as founder-gated track T16, PACKAGE-GRAPH
+      reconciled. Open for Petter: DECISION-BRIEFS.md (merge, supersede or
+      discard) and T16's evidence.
     resume_file: docs/remediation/CURRENT-STATE.md
     exit:
       - WP9 and WP10 carry a terminal status in their package files
@@ -235,7 +237,11 @@ tracks:
       - WP14 appears in tracks.yaml as founder_gated with the exact evidence requested
       - WP16 appears as T9 with its own plan pointer
       - PACKAGE-GRAPH.yaml reconciled against package files
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-02-t4-remediation-closure.md
+      - docs/remediation/packages/WP10.yaml
+      - docs/remediation/packages/WP9.yaml
+      - archive/receipts/2026-09-02-audit-wp10-cadence-verdict.json
 
   - id: T5
     title: CTO-readable repository structure
@@ -346,4 +352,41 @@ tracks:
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - own program plan and register exist
+    evidence: []
+
+  - id: T16
+    title: Legal & Data Policy Authority (WP14)
+    status: founder_gated
+    blocker: >
+      Founder-only under DEC-20260815-A (regulator-facing claims and anything
+      legally binding Moonlighter AB are Petter's alone) -- not a
+      Claude-closable gate. VERIFY-LEGAL needs, specifically: (1) the
+      Dilisense vendor role determination and DPA (reseller-classification
+      question open per project_dilisense_reseller_status; Basic+ tier
+      needed for a signed SA + DPA); (2) real user assent evidence -- the
+      signup UI presents no Terms while the backend stamps tos_accepted
+      unconditionally (FABLE-REAUDIT.md CR-16/CR-17), so either the flow
+      changes to show Terms before signup or the founder accepts the current
+      backend-only stamp as the intended design and says so; (3) sign-off on
+      the batched legal-text rewrites named in PACKAGE-GRAPH.yaml WP14's
+      checkin_b (Privacy retention wording, the "charged only on success"
+      solutions-page claim, Terms presentation at signup) -- each is a
+      customer-facing legal claim, which DEC-20260815-A reserves to Petter
+      even though the underlying code change is Claude's to make once the
+      wording is approved.
+    gate: none
+    depends_on: []
+    owner: petter
+    next_action: >
+      Awaiting Petter's decision on the three items in `blocker`. Once
+      received, the session doing the work reads docs/remediation/
+      PACKAGE-GRAPH.yaml WP14 (exit: runtime==docs==claims, client_meta/
+      payer_hash retention intentional, real assent) and WP0's deferred
+      publication-approval artifact (inherited_exit_conditions there) before
+      starting.
+    resume_file: docs/remediation/PACKAGE-GRAPH.yaml
+    exit:
+      - Dilisense role and DPA status resolved and recorded
+      - real assent evidence exists or the backend-only stamp is an explicit founder decision
+      - the three checkin_b legal-text rewrites have founder sign-off and are shipped
     evidence: []

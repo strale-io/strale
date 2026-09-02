@@ -1,8 +1,45 @@
 package: WP17
 title: Immutable capability-state change ledger
-status: SPECIFIED_NOT_STARTED
+status: DEFERRED
 depends_on: [WP8]
 risks: [CR-05]
+
+deferred:
+  date: "2026-09-02"
+  by: T4 (remediation program closure)
+  reason: >
+    A DB-level trigger writing an append-only ledger, plus a writer inventory
+    and permission narrowing, is real schema-and-migration engineering with
+    its own review cycle (independent adversarial review is a named exit
+    condition) -- not a status-and-evidence closure task. T4's brief is
+    explicit that this batch does not implement WP17; scoping a first slice
+    was the other option offered and is deliberately not taken either,
+    because the two deliverables this package names (the trigger + the
+    writer inventory) are not separable into a smaller first slice without
+    reproducing the open_questions_for_the_implementer's own warning: a
+    partial (recording-only, on some but not all scoped fields) ledger would
+    read as protection it does not provide, which is the exact failure mode
+    this package exists to close.
+  current_state_unchanged: >
+    The 2026-08-21 incident's underlying gap is still open: WP8's CHECK
+    constraint prevents ONE specific invalid state combination and detects it
+    if the constraint fails, but nothing answers WHO changed a capability's
+    state, WHEN, or on what authority, for any out-of-band write. The
+    execution-receipt programme (adjacent_workstreams in PACKAGE-GRAPH.yaml)
+    narrowed this to attribution-only by delivering the DETECTION half
+    (manifest snapshots proving a declaration changed between two
+    executions) -- that narrowing stands; WP17 is still the only thing that
+    would answer attribution.
+  reopens_when: >
+    Any ONE of: (a) a second out-of-band capability-state write is observed
+    in production (the 2026-08-21 incident recurring, which the three-strike
+    rule in docs/company/LESSONS.md would treat as a root-cause trigger on
+    its second occurrence for this specific mechanism); (b) a session is
+    explicitly scoped to implement it, budgeted for the trigger + migration +
+    adversarial review cycle as its own piece of work, not folded into a
+    closure or audit batch; (c) DEC-20260428-B-grade build work touches
+    capabilities/solutions state-change paths for an unrelated reason and can
+    absorb the writer-inventory half as a side effect.
 
 # SPECIFICATION ONLY. Deliberately not implemented alongside WP8 — the reviewer
 # was explicit that this must not be folded into a package already in review,

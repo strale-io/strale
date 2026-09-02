@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-215 files (188 with a recorded intent, 27 without).
+216 files (189 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md`](_general/from-code/2026-09-02-t5-cto-readable-structure.md) | make the repository readable top-down for a stranger in one pass — README.md, docs/README.md, archive/ and handoff/ i... |
+| 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t4-remediation-closure.md`](_general/from-code/2026-09-02-t4-remediation-closure.md) | Close six dated-or-open items in the remediation program (docs/remediation) |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t3-session-end-gate.md`](_general/from-code/2026-09-02-t3-session-end-gate.md) | make session end automatic and identical for Claude Code and Codex, so no session can leave uncommitted work, an unpu... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t2-repo-hygiene-sweep.md`](_general/from-code/2026-09-02-t2-repo-hygiene-sweep.md) | leave the repository with no stale branches, no stale worktrees, and every deletion backed by evidence, so both AI to... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t15-receipts-and-ledger.md`](_general/from-code/2026-09-02-t15-receipts-and-ledger.md) | Implement T15 — evidence receipts (`archive/receipts/`) and the |

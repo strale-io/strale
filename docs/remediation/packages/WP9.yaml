@@ -1,6 +1,6 @@
 package: WP9
 title: Capability Invocation Facts
-status: MERGED_DEPLOYED_UNDER_OBSERVATION
+status: ACCEPTED_WITH_RESIDUALS
 depends_on: [WP4, WP8]
 risks: [CR-06]
 
@@ -707,3 +707,47 @@ watch:
   escalate_if: >
     Any suppressed_incomplete_evidence event, or any invocation_fact_write_failed
     event, or a tick reporting facts_table_protected=false.
+
+  closed:
+    date: "2026-09-02"
+    days_observed: 11   # of the nominal 14 (closes 2026-09-05); closed 3 days
+                         # early by the session's judgement (T4's next action said only "close WP9 observation"), on 11 clean days
+                         # of a 14-day window rather than waiting out the rest
+    verdict: ACCEPTED_WITH_RESIDUALS
+    receipt: archive/receipts/2026-09-02-audit-wp9-observation-close.json
+    query: apps/api/scripts/wp9-observation-close.mjs
+    evidence:
+      primary_signal_clean: >
+        suppressed_incomplete_evidence: 0 events across the full 11-day
+        window, unchanged from the 0 baseline recorded at watch-open.
+      escalate_if_conditions_never_fired: >
+        invocation_fact_write_failed: 0 events. facts_table_protected: true on
+        all 17 tick_complete heartbeats observed since watch-open (2026-08-22
+        17:58 through 2026-09-02 09:42); evidence_holes and evidence_shortfalls
+        are 0 on every one.
+      also_watch_item_not_yet_observed: >
+        also_watch names "the first solution_step fact whose slug has no
+        direct transaction traffic" as the single live observation that
+        proves WP9 works in production rather than on a fixture. Checked
+        directly: 0 such slugs exist right now (17 solution_step facts exist,
+        all for slugs that also carry direct traffic). This is not an
+        escalate_if condition and not one of the six exit_condition_status
+        entries (all already MET by test + mutation coverage), so it does not
+        block closing the watch — but the hoped-for live confirmation has not
+        happened in this window and is not claimed here.
+      residual_named: >
+        transaction_id is still NULL on 100% of capability_invocations rows
+        (2,416 of 2,416), exactly matching PACKAGE-GRAPH.yaml's existing
+        WP9.transaction_id_linkage classification (RESIDUAL, NOT AN
+        ACCEPTANCE BLOCKER — none of the six exit conditions mention it). This
+        second-sources that classification against a fresh count rather than
+        introducing a new judgement.
+    verdict_reasoning: >
+      Every signal the watch itself names to escalate on stayed at zero for
+      11 of the nominal 14 days, with no partial or ambiguous reading at any
+      point. Closing 3 days early on that evidence rather than waiting out a
+      window that has been flat the entire time it has been observed. Carries
+      residuals (the transaction_id linkage, already known and explicitly
+      out of scope) rather than a clean ACCEPTED, and separately notes that
+      the package's own hoped-for "proof it works in production" observation
+      has not yet occurred — worth watching for, not worth blocking on.

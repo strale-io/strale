@@ -144,10 +144,15 @@ packages:
 
   WP9:
     title: Capability Invocation Facts
-    status: MERGED_DEPLOYED_UNDER_OBSERVATION
+    status: ACCEPTED_WITH_RESIDUALS
+    closed: "2026-09-02"
+    closure_record: docs/remediation/packages/WP9.yaml (watch.closed block)
     observation_exit: >
       The first solution_step fact whose slug has no direct transaction traffic
-      becoming quarantinable. Condition, not a date.
+      becoming quarantinable. Condition, not a date. NOT YET OBSERVED as of
+      closure (0 such slugs on 2,416 facts) -- does not block acceptance (not
+      an exit condition; see watch.closed.also_watch_item_not_yet_observed),
+      but the package's own hoped-for live confirmation has not happened.
     transaction_id_linkage: >
       RESIDUAL, NOT AN ACCEPTANCE BLOCKER. Checked against the package's own six
       exit conditions, none of which mention it: the column is null for 100% of
@@ -170,11 +175,22 @@ packages:
 
   WP12:
     title: Network/resource safety substrate
-    status: BLOCKED
-    blocked_by: VERIFY-IP
-    blocked_note: >
-      Reading the wrong X-Forwarded-For entry breaks every IP-keyed rate limit
-      at once. Confirm the Railway hop count first; do not infer it.
+    status: UNBLOCKED_NOT_YET_STARTED
+    status_date: "2026-09-02"
+    unblocked_by: >
+      VERIFY-IP resolved 2026-09-02 (empirical probe, high confidence): exactly
+      one proxy hop in front of api.strale.io (Railway's own edge, no CDN), and
+      client-supplied X-Forwarded-For / X-Real-IP values do NOT reach the app
+      -- Railway's edge overwrites them. The leftmost-XFF read is NOT
+      spoofable through this path, contradicting FABLE-REAUDIT.md's CR-19
+      framing. See verification_gates.VERIFY-IP below and
+      archive/receipts/2026-09-02-audit-verify-ip-proxy-hops.json.
+    remaining_scope_unaffected_by_verify_ip: >
+      The XFF-trust question was one exit condition of five. CIDR-based IP
+      guard (IPv6 gaps), connect-time re-check for raw-socket DNS rebinding,
+      and byte/pixel caps are real, unbuilt work independent of VERIFY-IP and
+      still NOT started. This package is unblocked, not accepted or scoped
+      down -- it needs its own implementation session.
     depends_on: [WP0]
     risks: [CR-11, CR-12, CR-19]
     review: {codex: required, fable: required}
@@ -182,8 +198,8 @@ packages:
 
   WP10:
     title: Durable Job Coordinator
-    status: MERGED_DEPLOYED_UNDER_OBSERVATION
-    acceptance_gate: "2026-08-30 — seven-day cadence measurement. Do not manufacture a deploy to satisfy it."
+    status: ACCEPTED
+    acceptance_gate: "2026-08-30 — seven-day cadence measurement. MET 2026-09-02 (3 days late, picked up by T4): docs/remediation/packages/WP10.yaml acceptance block, archive/receipts/2026-09-02-audit-wp10-cadence-verdict.json."
     depends_on: [WP1]
     risks: [CR-08]
     review: {codex: required, fable: optional}
@@ -229,7 +245,8 @@ packages:
 
   WP13:
     title: Supply chain
-    status: NOT_STARTED
+    status: TRIAGED_UPGRADE_PENDING
+    status_date: "2026-09-02"
     partially_superseded_by: [trusted-publishing, mcp-trust-fix, post-publish-smoke-test]
     superseded_note: >
       The publish-integrity half is closed: npm trusted publishing (PR #363,
@@ -238,13 +255,49 @@ packages:
       production contract smoke test mandatory after every publish. What
       remains is the dependency half, and VERIFY-DEP's reachability triage is
       the gate on it.
+    reachability_triage:
+      date: "2026-09-02"
+      receipt: archive/receipts/2026-09-02-audit-wp13-dependency-reachability.json
+      query: apps/api/scripts/wp13-dependency-triage.mjs
+      counted: "1 critical / 14 high / 7 moderate (untriaged) / 2 low (untriaged) -- root and apps/api npm audit counts agree, matching FABLE-REAUDIT.md's original count exactly"
+      reachable:
+        [
+          "@coinbase/cdp-sdk", "axios", "brace-expansion", "c2pa-node",
+          "drizzle-orm", "fast-uri", "form-data", "hono", "sharp", "undici",
+        ]
+      unreachable:
+        ["ip-address", "js-yaml", "path-to-regexp", "shell-quote", "ws"]
+      headline: >
+        The ONE critical advisory (shell-quote) is unreachable -- both paths
+        to it (c2pa-node's bundled npm-run-all, and drizzle-kit) are dev/build
+        CLI tooling never imported by apps/api/src at runtime. Of the 14 high
+        advisories, 5 are unreachable for the same reason (four route through
+        @modelcontextprotocol/sdk's unused express/OAuth transport or a
+        release-management CLI's own nested js-yaml, one of which is doubly
+        moot since the runtime-used js-yaml instance is already patched to
+        4.3.1 per commit 5da32514).
+      highest_priority_reachable: >
+        drizzle-orm (SQL injection via improperly escaped identifiers) -- a
+        direct dependency used throughout apps/api/src, semver-major fix
+        (0.38.4 -> 0.45.2+) needing its own scoped upgrade session under the
+        DEC-20260504-A regression-test discipline. hono (semver-minor,
+        cookie-name validation) is also reachable and load-bearing for auth,
+        with a non-major fix available -- a lower-risk first upgrade.
+      not_performed_here: >
+        This is a triage, not the upgrade. WP13's remaining exit work is: bump
+        the 10 reachable packages (prioritizing drizzle-orm and hono), verify
+        c2pa-node's nested vulnerable sharp copy separately from the already-
+        patched direct sharp dependency, and re-run npm audit to confirm.
+        Scoped to its own session per the task that opened this triage.
     depends_on: [VERIFY-DEP]
     risks: [CR-13, N8]
     review: {codex: required, fable: optional}
 
   WP17:
     title: Immutable capability-state change ledger
-    status: SPECIFIED_NOT_STARTED
+    status: DEFERRED
+    status_date: "2026-09-02"
+    deferred_record: docs/remediation/packages/WP17.yaml (deferred block)
     depends_on: [WP8]
     risks: [CR-05]
     note: >
@@ -261,7 +314,8 @@ packages:
 
   WP15:
     title: CI/runtime hygiene
-    status: PARTIALLY_SUPERSEDED
+    status: PARTIALLY_SUPERSEDED_DB_LANE_ASSESSED
+    status_date: "2026-09-02"
     superseded_by: production-authorization-incident-2026-08-22
     superseded_note: >
       guard-production-write-access.mjs, guard-worktree-isolation.mjs and the
@@ -270,30 +324,107 @@ packages:
       the integration lane should create and drop its own uniquely-named
       database, so disposability holds by construction rather than by
       row-count heuristics.
+    db_lane_assessment:
+      date: "2026-09-02"
+      files_read: [.github/workflows/ci.yml integration-db job, apps/api/scripts/assert-disposable-test-db.mjs]
+      finding: >
+        Partially satisfied, not closed. The integration-db job runs Postgres
+        as a GitHub Actions `services:` container -- a fresh, isolated process
+        provisioned per job run on its own runner VM and destroyed afterward,
+        which already gives real per-run infrastructure disposability, not
+        merely a heuristic. What is NOT present is the literal residual: the
+        lane always connects to one fixed database name (strale_test, from
+        POSTGRES_DB) within that container, rather than generating and
+        CREATE/DROP-ing a uniquely-named database itself. The only thing
+        standing between the lane and a shared/tunnelled production-pointed
+        DATABASE_URL_TEST is assert-disposable-test-db.mjs's row-count
+        heuristic (its own docstring: "Verified against production: refuses
+        on 340 capabilities and 899k transactions" -- a real, working
+        safety net, but a heuristic, not a structural impossibility).
+      why_not_closed_here: >
+        Implementing unique-name create/drop is a small, well-scoped CI
+        workflow change (e.g. DB name suffixed with ${{ github.run_id }},
+        an explicit CREATE DATABASE / DROP DATABASE step) but touches the CI
+        pipeline that every PR depends on -- scoped to its own session per
+        the Deploy Mechanism Verification Protocol (DEC-20260504-C) rather
+        than folded into this closure batch.
+      next_step: >
+        Suffix DATABASE_URL_TEST's database name with a run-unique token,
+        add explicit CREATE DATABASE before schema materialisation and DROP
+        DATABASE (or rely on the container's own destruction) after the job,
+        and keep assert-disposable-test-db.mjs as a second, independent
+        layer rather than removing it.
     depends_on: [WP1]
     risks: [CR-20, N7]
     inherited_exit_conditions:
       - "integration lane creates and drops its own uniquely-named database, so
          disposability holds by construction rather than by row-count heuristics
-         (Codex WP1 residual)"
+         (Codex WP1 residual) -- STILL OPEN, see db_lane_assessment above"
     review: {codex: required, fable: optional}
 
 verification_gates:
-  VERIFY-IP:    {status: OPEN, blocks: [WP12], note: "leftmost XFF confirmed spoofable; confirm Railway hop count"}
-  VERIFY-DEP:   {status: PARTIAL, blocks: [WP13], note: "1crit/14high/7mod/2low counted; reachability triage unrun"}
+  VERIFY-IP:
+    status: RESOLVED
+    resolved: "2026-09-02"
+    blocks: []   # was [WP12]; WP12 unblocked, see packages above
+    confidence: high
+    method: >
+      Empirical, not documentary. DNS: api.strale.io CNAMEs to a Railway-
+      generated *.up.railway.app hostname resolving straight to a Railway
+      edge IP -- no CDN hop. Response headers (Server: railway-hikari,
+      x-railway-edge: ams1) show only Railway's own edge, no cf-ray or other
+      CDN fingerprint. Decisive test: 3 POST /v1/do calls to the free-tier
+      email-validate capability from this machine -- no spoof, a single
+      spoofed X-Forwarded-For, and a multi-value spoofed X-Forwarded-For plus
+      a spoofed X-Real-IP -- all three produced the IDENTICAL ipHash in the
+      response's audit request_context, proving Railway's single edge hop
+      overwrites/strips client-supplied XFF and X-Real-IP rather than
+      appending to them. Script: apps/api/scripts/verify-ip-probe.mjs.
+      Receipt: archive/receipts/2026-09-02-audit-verify-ip-proxy-hops.json.
+    answer: >
+      Exactly ONE proxy hop (Railway's own edge; no Cloudflare/CDN in front
+      of api.strale.io). The leftmost X-Forwarded-For entry IS the true
+      client IP for requests through this path; client-supplied
+      X-Forwarded-For / X-Real-IP values cannot reach the application.
+      Current code (getClientIp, leftmost-XFF) is CORRECT and not spoofable
+      through this path.
+    note: >
+      Corrects FABLE-REAUDIT.md's CR-19 framing ("every extractor reads
+      leftmost XFF (spoofable)") for the topology as it actually exists.
+      Railway's own documentation is silent on XFF handling and its
+      community forum carries two directly contradictory staff answers on
+      the same question -- neither was relied on; the verdict rests on the
+      direct empirical test only. Caveat: single-machine, single-point-in-time
+      test against the public custom domain; does not cover Railway internal
+      private networking or a future platform-level change. See
+      docs/remediation/CURRENT-STATE.md "VERIFY-IP resolved" for the full
+      writeup.
+  VERIFY-DEP:
+    status: TRIAGE_COMPLETE
+    resolved: "2026-09-02"
+    blocks: []   # was [WP13]; triage done, upgrade work remains (see WP13.reachability_triage)
+    note: >
+      1 critical / 14 high counted (7 moderate / 2 low not triaged --
+      out of this pass's scope). Reachability triage run:
+      archive/receipts/2026-09-02-audit-wp13-dependency-reachability.json.
+      10 of 15 critical/high advisories reachable from the running API import
+      graph, including the sole critical's UNreachability (shell-quote, dev-
+      tooling-only) and the highest-value reachable finding (drizzle-orm SQL
+      injection, direct dependency). 5 unreachable, each with a traced reason
+      (unused MCP-SDK express/OAuth transport, or dev-CLI-only nesting).
   VERIFY-LEGAL: {status: OPEN, blocks: [WP14], note: "Dilisense role, DPA, assent evidence"}
   VERIFY-P3:
-    status: PARTIAL
+    status: COMPLETE
     complete:
       - "index / orphans / delisting / free-x402 / publication — production read-only, done at audit time"
       - "settlement — closed by WP5 (durable x402 payment state and its reconciler), ACCEPTED"
       - "process-kill — closed by WP10, which MEASURED the production restart interval at a 1.0h median rather than assuming one"
-    outstanding:
-      - "cadence — the measurement exists but its acceptance is WP10's seven-day gate, due 2026-08-30"
+      - "cadence — WP10's seven-day gate MET 2026-09-02: docs/remediation/packages/WP10.yaml acceptance block"
+    outstanding: []
     note: >
       Previously an undifferentiated PARTIAL, which read as though none of it
-      had moved. Three of the four deferred portions are in fact closed, and
-      the fourth is a dated gate rather than unstarted work.
+      had moved. All four deferred portions are now closed; the last
+      (cadence) closed 2026-09-02 via WP10's acceptance measurement.
 
 # Workstreams outside the master plan that changed its assumptions. Recorded
 # here because several of them narrowed or partly closed packages above, and a
