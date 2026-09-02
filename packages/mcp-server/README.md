@@ -255,7 +255,7 @@ npm run dev --workspace=packages/mcp-server
 
 1. Server starts and fetches capabilities, solutions, and trust data from the Strale API
 2. Eight meta-tools are registered: ping, getting_started, search, execute, methodology, trust_profile, balance, transaction
-3. Agents use `strale_search` to discover capabilities with input requirements and quality scores
+3. Agents use `strale_search` to discover capabilities with input requirements and pricing
 4. `strale_execute` sends `POST /v1/do` with `capability_slug` and `inputs`
 5. The response (output, price, latency, provenance, quality) is returned as structured text
 6. Async capabilities (>10s) return a transaction ID for polling
