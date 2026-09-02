@@ -143,134 +143,54 @@ Before your agent pays for any external API call, use `paid-api-preflight` to ve
 |------|:---:|-------------|
 | `strale_ping` | No | Health check. Returns server status, tool count, and capability count. |
 | `strale_getting_started` | No | Onboarding guide. Returns free capabilities available without an API key, usage steps, and signup link. |
-| `strale_search` | No | Search 250+ capabilities and 81 solutions by keyword or category. Returns matches with price, input fields, SQS score, quality grade, reliability grade, and execution guidance. |
-| `strale_execute` | No* | Execute any capability by slug. Returns output data, cost, latency, provenance, and dual-profile quality assessment. *Free-tier capabilities work without an API key. |
-| `strale_methodology` | No | Returns Strale's quality methodology — dual-profile scoring (QP + RP), SQS matrix, execution guidance, and test infrastructure. |
-| `strale_trust_profile` | No | Returns the full trust profile for any capability or solution — Quality Profile, Reliability Profile, SQS score, execution guidance, limitations, and badge status. |
+| `strale_search` | No | Search 250+ capabilities and 81 solutions by keyword or category. Returns matches with price, input fields, and geography. |
+| `strale_execute` | No* | Execute any capability by slug. Returns output data, cost, latency, and data provenance. *Free-tier capabilities work without an API key. |
+| `strale_methodology` | No | Returns Strale's trust methodology as a short reference document — test cadence, audit records, and provenance. |
+| `strale_trust_profile` | No | Returns the trust profile for any capability or solution — lifecycle state, last-tested timestamp, test history, known limitations, data source and provenance, and cost envelope. Exposes no single numeric quality score. |
 | `strale_balance` | Yes | Returns your wallet balance in EUR cents and EUR. |
 | `strale_transaction` | No* | Returns a past execution record by transaction ID: inputs, outputs, latency, price, provenance, and failure categorization. *Free-tier transactions accessible by ID only. |
 
-## Quality Scoring
+## Trust Data
 
-Strale uses a **dual-profile model** to score every capability:
+Strale does not publish a single numeric quality score. The dual-profile scoring engine (Quality Profile + Reliability Profile combined into a 0–100 SQS via a 5×5 matrix) was deleted 2026-05-05 (DEC-20260503-B). In its place:
 
-**Quality Profile (QP)** — measures code quality (stable over time, only changes when code changes):
-- Correctness (50%) — known-answer test pass rate
-- Schema conformance (31%) — output structure validity
-- Error handling (13%) — graceful failure behavior
-- Edge cases (6%) — boundary condition handling
-
-**Reliability Profile (RP)** — measures operational dependability (changes with live conditions):
-- `current_availability` — latest test run pass rate (is it working right now?)
-- `rolling_success` — recency-weighted success rate across last 10 runs (trend)
-- `upstream_health` — external dependency health from 30-day assessment
-- `latency` — p95 response time vs type-specific thresholds
-
-**SQS** (0–100) is derived from the 5×5 QP × RP matrix. A capability must score well on both dimensions to reach Excellent. For full methodology: call `strale_methodology` or visit [strale.dev/trust/methodology](https://strale.dev/trust/methodology).
+- `strale_methodology` returns a short reference document — test cadence, the audit trail, provenance fields, and capability lifecycle states.
+- `strale_trust_profile` returns the capability's trust profile: lifecycle state, last-tested timestamp, recent test history, known limitations, data source and provenance, and cost envelope.
 
 ### Search result fields
 
 ```json
 {
+  "type": "capability",
   "slug": "vat-validate",
   "name": "VAT Validate",
-  "sqs": 84,
-  "sqs_label": "Good",
-  "quality": "A",
-  "reliability": "B",
-  "trend": "stable",
-  "usable": true,
-  "strategy": "direct",
-  "price_cents": 2
+  "description": "Validate an EU VAT number via VIES",
+  "category": "compliance",
+  "geography": "eu",
+  "price": "€0.10",
+  "input_fields": "Required: vat_number (string)"
 }
-```
-
-### Trust profile fields
-
-```json
-{
-  "sqs": { "score": 84.8, "label": "Good", "trend": "stable" },
-  "quality_profile": {
-    "grade": "A",
-    "score": 97.5,
-    "label": "Code quality: A",
-    "factors": [
-      { "name": "correctness", "rate": 98.0, "weight": 50, "has_data": true },
-      { "name": "schema", "rate": 96.0, "weight": 31, "has_data": true }
-    ]
-  },
-  "reliability_profile": {
-    "grade": "B",
-    "score": 71.2,
-    "label": "Reliable",
-    "factors": [...]
-  },
-  "execution_guidance": {
-    "usable": true,
-    "strategy": "direct",
-    "confidence_after_strategy": 95,
-    "error_handling": { "distinguishable_errors": true, "retryable": ["timeout"], "permanent": ["invalid_vat"] },
-    "if_strategy_fails": null,
-    "recovery": { "estimated_hours": null, "next_test": "2026-03-16T06:00:00Z" },
-    "cost_envelope": { "primary_price": "€0.02", "worst_case_with_retries": "€0.06" }
-  }
-}
-```
-
-### Execution guidance
-
-The `execution_guidance` block is machine-readable agent guidance:
-
-| Field | Description |
-|-------|-------------|
-| `usable` | Whether the capability should be called. `false` means degraded — avoid unless fallback. |
-| `strategy` | `direct` / `retry_with_backoff` / `queue_for_later` / `unavailable` |
-| `confidence_after_strategy` | Expected success rate (%) if you follow the strategy |
-| `error_handling` | Which errors are retryable vs permanent |
-| `if_strategy_fails` | Fallback capability to try if the primary fails |
-| `recovery` | Estimated recovery time and next scheduled test |
-| `cost_envelope` | Price for single call and worst-case with retries |
-
-**Example agent logic:**
-
-```python
-trust = strale_trust_profile(slug="vat-validate")
-guidance = trust["execution_guidance"]
-
-if not guidance["usable"]:
-    fallback = guidance["if_strategy_fails"]
-    if fallback:
-        result = strale_execute(slug=fallback["fallback_capability"], ...)
-    else:
-        raise Exception(f"Capability degraded. Recovery: {guidance['recovery']}")
-elif guidance["strategy"] == "retry_with_backoff":
-    result = execute_with_retry(slug="vat-validate", max_attempts=3, ...)
-else:
-    result = strale_execute(slug="vat-validate", ...)
 ```
 
 ### Execute response fields
 
 ```json
 {
-  "status": "completed",
   "output": { ... },
-  "price_cents": 2,
+  "price_cents": 10,
   "latency_ms": 340,
-  "quality": {
-    "sqs": 84.8,
-    "label": "Good",
-    "quality_profile": "A",
-    "reliability_profile": "B",
-    "trend": "stable"
-  },
-  "execution_guidance": {
-    "usable": true,
-    "strategy": "direct",
-    "confidence_after_strategy": 95
-  }
+  "wallet_balance_cents": 1890,
+  "provenance": { "source": "VIES", "fetched_at": "2026-08-30T12:00:00Z" },
+  "transaction_id": "txn_...",
+  "next_steps": [
+    "Transaction ID recorded. Call strale_transaction with id \"txn_...\" to retrieve the full audit record.",
+    "Call strale_trust_profile with slug \"vat-validate\" to see how this source is tested and evidenced.",
+    "Call strale_search to find related capabilities."
+  ]
 }
 ```
+
+`price_cents`, `latency_ms`, `wallet_balance_cents`, `provenance`, and `transaction_id` are included whenever the underlying `/v1/do` response carries them; `next_steps` is always present. Neither this response nor `strale_search` results carry a quality or reliability score — call `strale_trust_profile` for the capability's test history and limitations instead.
 
 ## Solutions (bundled workflows)
 
@@ -314,11 +234,11 @@ These use free capabilities — no API key needed (KYB/Invoice solutions require
 
 ```
 Agent: strale_search(query: "swedish company")
-→ Returns: swedish-company-data | sqs: 83 | quality: A | reliability: B | usable: true | strategy: direct
+→ Returns: swedish-company-data | €0.80 | Required: company_name (string)
 
 Agent: strale_execute(slug: "swedish-company-data", inputs: { company_name: "Spotify AB" })
 → Returns: { output: { org_number: "5568401925", ... }, price_cents: 80, latency_ms: 2340,
-             quality: { sqs: 83.5, quality_profile: "A", reliability_profile: "B" } }
+             provenance: { source: "Bolagsverket Värdefulla datamängder API", fetched_at: "2026-08-30T12:00:00Z" } }
 ```
 
 ## Development
