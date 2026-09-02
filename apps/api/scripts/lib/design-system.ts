@@ -13,33 +13,23 @@
  * auto-inverted variant nobody reviewed. Every colour is therefore painted
  * explicitly, including the page background, so the page holds its own ground
  * on any host surface.
+ *
+ * The token values themselves are data, not code (T13, 2026-09-02): they
+ * live in design/tokens/active.json under surfaces["internal-reports"], and
+ * `TOKENS` below is generated from that file by
+ * scripts/generate-design-tokens.mjs into design-tokens.generated.ts, which
+ * this module imports and re-exports unchanged. Change a value by editing
+ * active.json (through the promotion flow in design/README.md — a decision
+ * record plus a file swap) and running `npm run design:tokens:generate`, not
+ * by editing the generated file. This file still authors the stylesheet
+ * itself (component classes have no representation in the token schema),
+ * which is why it — like the generated file — is exempt from
+ * `npm run design:check`'s off-token literal lint: this pair is the token
+ * source.
  */
 
-/** Design tokens. Change a value here and every generated page follows. */
-export const TOKENS = {
-  // Neutrals carry a slight cool bias toward the accent, so greys read as
-  // chosen rather than inherited.
-  bg: "#F5F6F9",
-  surface: "#FFFFFF",
-  raised: "#FAFBFC",
-  line: "#E7E9F0",
-  lineSoft: "#EFF1F6",
-  ink: "#151821",
-  ink2: "#3D4453",
-  muted: "#767E8E",
-  // One accent, used only for the primary data series and the active state.
-  // Blue, matched to the reference UI Petter selected 2026-08-15.
-  accent: "#2563EB",
-  accentSoft: "#E7F0FE",
-  accentLine: "#A8C7FA",
-  // Status colours are reserved for state and never reused as a data series.
-  good: "#177245",
-  goodSoft: "#E6F4EC",
-  warn: "#9A5B12",
-  warnSoft: "#FCF0E2",
-  crit: "#B3352C",
-  critSoft: "#FBEBEA",
-} as const;
+import { TOKENS } from "./design-tokens.generated.js";
+export { TOKENS };
 
 export const DESIGN_SYSTEM_CSS = `
 *{box-sizing:border-box}

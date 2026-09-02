@@ -1,0 +1,54 @@
+{
+  "name": "Codex handoff round 23",
+  "status": "exploring",
+  "supersedes": null,
+  "superseded_by": null,
+  "notes": "Design-system delta proposed alongside the round-23 homepage copy/strategy handoff: keeps the website's existing grammar (border/tonal separation before shadow, compact-desktop-first, color is not the sole state signal) but changes the type family, narrows blue to an identity accent rather than a default selected-state color, adds a restrained 'mineral' selection family, and tightens marketing section rhythm. Framed by its own doc as a revision of the existing system, not a replacement — evaluate it against both the live `website` surface and the quiet-material-v0.7 candidate, not in isolation. See design/PROVENANCE.md.",
+  "palette": {
+    "--color-ink-950": "#111214",
+    "--color-ink-800": "#26282B",
+    "--color-ink-600": "#6B6E72",
+    "--color-stone-300": "#D9DAD5",
+    "--color-stone-150": "#EAEAE6",
+    "--color-paper": "#F6F6F2",
+    "--color-white": "#FFFFFF",
+    "--color-blue-600": "#275DFF",
+    "--color-blue-300": "#79B9FF",
+    "--color-blue-100": "#E7F1FF",
+    "--color-mineral-700": "#4F6F69",
+    "--color-mineral-600": "#5F7C76",
+    "--color-mineral-100": "#F2F6F4"
+  },
+  "type": {
+    "families": {
+      "sans": "\"Instrument Sans\", system-ui, sans-serif",
+      "mono": "\"IBM Plex Mono\", monospace"
+    },
+    "scale": {
+      "marketing.display": { "wide": "72/70", "compact": "68/68", "tablet": "56/56", "mobile": "42/44", "micro": "39/41" },
+      "marketing.feature": { "wide": "58/58", "compact": "56/58", "tablet": "48/50", "mobile": "38/40", "micro": "36/38" },
+      "marketing.chapter": { "wide": "50/52", "compact": "48/50", "tablet": "42/44", "mobile": "32/34", "micro": "30/32" },
+      "marketing.subsection": { "wide": "44/46", "compact": "42/44", "tablet": "36/40", "mobile": "32/34", "micro": "30/32" },
+      "marketing.close": { "wide": "58/58", "compact": "56/58", "tablet": "46/48", "mobile": "36/38", "micro": "34/36" },
+      "product.feature-title": { "wide": "36/39", "compact": "34/38", "tablet": "32/36", "mobile": "30/34", "micro": "28/32" },
+      "lead": { "desktop": "19/29", "tablet": "18/27", "mobile": "18/27" },
+      "body": { "desktop": "17/26", "tablet": "17/26", "mobile": "16/24" },
+      "small": { "all": "14/20" },
+      "label": { "all": "12/16" },
+      "mono": { "desktop": "13/20", "mobile": "12/18" }
+    }
+  },
+  "spacing": [64, 88, 104, 120],
+  "radii": [0, 8, 16, 24, 32, "full"],
+  "shadows": [
+    "one principal proof shadow per viewport at most — no fixed value specified, borders/tonal separation preferred first"
+  ],
+  "motion": {
+    "note": "State-change-driven only; explicitly no decorative looping, fake typing, or scroll-jacking."
+  },
+  "provenance": {
+    "repo": "strale-frontend",
+    "source": "docs/handoffs/2026-08-23-codex-website-handoff-v2/05_DESIGN_SYSTEM_DELTA.md, 06_TYPOGRAPHY_SPEC.md",
+    "note": "Values transcribed from the '2.1 Structural colors — keep' and '2.2 Add a restrained mineral selection family' tables in 05_DESIGN_SYSTEM_DELTA.md, the section-rhythm change in its keep/change/retire table (spacing array here is that 64/88/104/120 rhythm, not a generic spacing scale — this handoff does not restate one), and the marketing/reading type ladder in 06_TYPOGRAPHY_SPEC.md section 2. Both docs are marked approved-for-Codex-handoff, decision-complete framing — that is a spec-authoring status, not a design/tokens/candidates status; this file's own `status` field is the one that governs promotion here."
+  }
+}

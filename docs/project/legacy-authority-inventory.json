@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "699f3f15c13436be81304101d909e9486d0607596b02686bc2d70d21641a71b5",
+      "sha256": "eef28ed9dda755a3d5bf9f25cdd2a15ad0ba89c2ca2e1c5cb29662402209ff1f",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -61,6 +61,7 @@
         "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
+        "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
@@ -68,7 +69,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "2d84c635499f073e7695713b2820bc58c60430f5a3a2f372260dc46fc191d3b3",
+      "sha256": "c3efcc79253c2b8c639f723b201335c9c9a4daef87d162e76d6a373d5c431ced",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -230,6 +231,7 @@
         "handoff/_general/from-code/2026-09-02-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
+        "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
@@ -355,7 +357,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "cff5606fe0d2b097f6643518caa362ca0134e6b3277d33de1b038069e9bf03d2",
+      "sha256": "a3f36f9edb21427eaf48b0584e95958f0cf547717b01321aa8dcbb90ad2116fa",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -377,6 +379,8 @@
         "archive/sessions/2026-09-02-t12-research-contract-plan.md",
         "archive/sessions/2026-09-02-t13-design-tokens-plan.md",
         "archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md",
+        "design/PROVENANCE.md",
+        "design/README.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/remediation/REMEDIATION-LEDGER.md",
@@ -387,6 +391,7 @@
         "handoff/_general/from-code/2026-08-25-f1-taxonomy-default.md",
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
+        "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/research-lib.mjs",
@@ -455,7 +460,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "a5c47cce63fae44cf16416378cca7234123648dae9846b673a637bfbb80aedd6",
+      "sha256": "eb20116f3c4f3562218a3f0f09595b68e1a6388055cf9157bc05d4fa9026ba4a",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -539,9 +544,15 @@
         "archive/sessions/audit-sqs-surfaces-20260505.md",
         "archive/sessions/handoff-from-code/2026-04-16-frontend-redesign-session1.md",
         "context7.json",
+        "design/PROVENANCE.md",
+        "design/README.md",
+        "design/explorations/2026-09-01-quiet-material-v0.7/README.md",
+        "design/tokens/candidates/codex-handoff-round-23.json",
+        "design/tokens/candidates/quiet-material-v0.7.json",
         "docs/company/CHARTER.md",
         "docs/company/DAILY-RUN.md",
         "docs/company/DECISION-QUEUE.md",
+        "docs/company/DESIGN-SYSTEM.md",
         "docs/company/GOALS.md",
         "docs/company/LESSONS.md",
         "docs/incidents/2026-08-22-production-authorization-failure.md",

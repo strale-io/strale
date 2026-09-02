@@ -1,0 +1,8 @@
+[
+  { "file": "apps/api/src/lib/digest-formatter.ts", "kind": "hex", "value": "#16a34a" },
+  { "file": "apps/api/src/lib/digest-formatter.ts", "kind": "hex", "value": "#65a30d" },
+  { "file": "apps/api/src/lib/digest-formatter.ts", "kind": "hex", "value": "#d97706" },
+  { "file": "apps/api/src/lib/digest-formatter.ts", "kind": "hex", "value": "#ea580c" },
+  { "file": "apps/api/src/lib/digest-formatter.ts", "kind": "hex", "value": "#dc2626" },
+  { "file": "apps/api/src/lib/digest-formatter.ts", "kind": "hex", "value": "#ffffff" }
+]
