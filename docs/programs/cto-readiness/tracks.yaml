@@ -54,12 +54,13 @@ tracks:
       is detached at origin/main because the check-in worktree holds main;
       T3 re-points the daily run and returns the trunk to main. Seven
       unmapped plain directories and three frontend orphan worktrees are
-      listed in the report for a reviewed decision in T3. See the report.
+      listed in the report for a reviewed decision in T3, with four plain
+      copies under C:/tmp found by the review. See the report.
     resume_file: archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md
     exit:
       - every remote and local branch either deleted with landed-evidence or listed with a reason
       - every worktree either removed or mapped to an active session in WORKTREES.md
-      - shared checkout on main, clean, its former uncommitted work preserved on a named branch
+      - shared checkout clean and idle at origin/main (back on main when T3 re-points the daily run), its former uncommitted work preserved under archive tags
       - rescue snapshots triaged; none silently discarded
     evidence:
       - archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md

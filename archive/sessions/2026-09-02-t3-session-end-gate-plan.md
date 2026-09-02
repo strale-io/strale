@@ -31,7 +31,9 @@ automatic; the founder will not remember to run a command.
    any worktree other than the allowed ones exists; a merged branch still
    exists locally or on the remote; or a session that changed code did not
    update the resume surface.
-2. **Claude Code hooks** (`.claude/settings.json`, committed): a SessionStart
+2. **Claude Code hooks** (`.claude/settings.json`, which T3 removes from
+   `.gitignore` and commits; machine-local overrides stay in the still-ignored
+   `settings.local.json`, so the file holds hooks only, never secrets): a SessionStart
    hook runs the orientation script (program register check plus a short
    "where we are" print); a Stop hook runs `handoff:check` and returns
    `{"decision":"block","reason":…}` on failure so the session keeps working
@@ -54,8 +56,8 @@ automatic; the founder will not remember to run a command.
   trunk (`C:\Users\pette\Projects\strale`, always on `main`, clean) plus one
   batch worktree whose path and branch are recorded in
   `.claude/session-worktree.json` (ignored). Every other worktree fails the
-  gate. `strale-wt-checkin` stays allowed until the daily run is re-pointed
-  (a T3 sub-item).
+  gate. `strale-wt-0902` (the check-in worktree that holds `main`) stays
+  allowed until the daily run is re-pointed (a T3 sub-item).
 - *Status doc.* The resume surface is `docs/programs/cto-readiness/tracks.yaml`
   (active track `next_action`) plus the active track's handoff. The gate
   requires that a commit range containing code changes also touches the

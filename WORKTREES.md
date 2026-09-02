@@ -6,7 +6,11 @@ automatic gate; until then it is enforced by hand.
 
 ## The rule
 
-At most two checkouts of this repository exist on the machine:
+Two kinds of checkout exist on the machine, and normally two checkouts in
+total: the trunk and one batch worktree. A second batch worktree may exist
+only while the previous batch's PR waits for its review verdict; the session
+that started the next batch merges that PR and removes its worktree before it
+ends (the T3 gate refuses to end a session otherwise).
 
 | Checkout | Path | Role |
 |---|---|---|

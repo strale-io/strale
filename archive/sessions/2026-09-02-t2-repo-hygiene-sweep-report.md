@@ -18,12 +18,12 @@ created_at: 2026-09-02
 
 | Surface | Before (2026-09-02 morning) | After |
 |---|---:|---:|
-| Remote branches other than `main` | 50 (then 28 rescue branches added by the morning check-in) | 0 |
+| Remote branches other than `main` | 52 (then 28 rescue branches added by the morning check-in) | 0 |
 | Archive tags (`archive/branches/*`, `archive/rescue-2026-09-02/*`) | 0 | 17 + 28 |
 | Local branches other than `main` | 57 | 1 (this batch) |
 | Linked worktrees | 30 | 2 (`strale-wt-0902`, the morning check-in's; `strale-wt-t2`, this batch) |
 | Dead plain-directory copies of merged Codex batches | 17 | 0 |
-| `strale-work` (not a checkout) | present | reports filed under `archive/sessions/strale-work-2026-08/`, directory removed |
+| `strale-work` (not a checkout) | present | every file verified byte-identical to a copy already tracked on `origin/main` (filed at `archive/sessions/<name>.md` on 2026-08-17; `WORKTREES.md` and `REVIEW_TEMPLATE.md` to their root/archive copies); directory removed, nothing imported |
 
 ## Incident during execution (F12, incident 5)
 
@@ -48,7 +48,7 @@ Created before any branch was deleted; each points at the branch's final tip.
 | `archive/branches/codex-docs-email-finder-provider-research-2026-08-31` | `b5427ef7` | no merged PR (never PR'd); preserve under an archive tag |
 | `archive/branches/codex-repo-native-operating-model` | `b2951094` | no merged PR (never PR'd); preserve under an archive tag |
 | `archive/branches/feat-phase-7a-it-stakeholders` | `8774fff0` | no merged PR (closed PR #135); preserve under an archive tag |
-| `archive/branches/fix-x402-body-limit` | `9be5959c` | PR #399 merged but 1 follow-up commit(s); cherry unlanded=1 |
+| `archive/branches/fix-x402-body-limit` | `9be5959c` | PR #399 merged but 1 follow-up commit(s); cherry unlanded=4 |
 | `archive/branches/remediation-program` | `e20205d9` | no merged PR (never PR'd); preserve under an archive tag |
 | `archive/branches/remediation-wp9-artifacts` | `fda70aba` | no merged PR (never PR'd); preserve under an archive tag |
 | `archive/branches/rescue-wip-2026-08-25-remediation-wp9-artifacts-258a877` | `258a8778` | janitor rescue snapshot; tag one per content set, then delete |
@@ -70,7 +70,7 @@ branches one to one (tips verified equal before the branches were deleted).
 
 | Branch | Tip | Evidence |
 |---|---|---|
-| `chore/regen-capabilities-catalog` | `75bb72a7` | PR #416 merged; only merge commits after the PR head |
+| `chore/regen-capabilities-catalog` | `75bb72a7` | PR #416 merged; tip is a rebased patch-equivalent of the merged head; content verified on main |
 | `codex/repo-native-foundation-m1` | `3501c354` | PR #446 merged 2026-08-31 at this tip |
 | `codex/repo-native-foundation-m1-clean` | `4989519a` | PR #447 merged 2026-08-31 at this tip |
 | `codex/repo-native-m1-closeout` | `973ebced` | PR #448 merged 2026-08-31 at this tip |
@@ -92,17 +92,17 @@ branches one to one (tips verified equal before the branches were deleted).
 | `feat/receipt-phase5` | `37331362` | PR #382 merged 2026-08-24 at this tip |
 | `feat/sync-field-allowlist` | `4caa0cca` | PR #420 merged 2026-08-28 at this tip |
 | `fix/a2a-raw-error` | `1f8dd32a` | PR #385 merged 2026-08-24 at this tip |
-| `fix/at-manifest-postmerge` | `bb749d0a` | PR #414 merged; only merge commits after the PR head |
+| `fix/at-manifest-postmerge` | `bb749d0a` | PR #414 merged; tip is a rebased patch-equivalent of the merged head; content verified on main |
 | `fix/audit-raw-error-leak` | `a4c37f29` | PR #384 merged 2026-08-24 at this tip |
-| `fix/drift-competitive-mentions` | `387f4ca1` | PR #413 merged; only merge commits after the PR head |
+| `fix/drift-competitive-mentions` | `387f4ca1` | PR #413 merged; tip is a rebased patch-equivalent of the merged head; content verified on main |
 | `fix/image-resize-format-validation` | `5588e82f` | PR #418 merged 2026-08-27 at this tip |
 | `fix/js-yaml-quadratic-dos` | `e9c23d55` | PR #389 merged; 1 follow-up commit(s); cherry unlanded=0 |
-| `fix/js-yaml-test-review-followup` | `0540f296` | PR #394 merged; only merge commits after the PR head |
-| `fix/kyb-vies-caller-vat` | `44dd738b` | PR #419 merged; only merge commits after the PR head |
+| `fix/js-yaml-test-review-followup` | `0540f296` | PR #394 merged; tip is a rebased patch-equivalent of the merged head; content verified on main |
+| `fix/kyb-vies-caller-vat` | `44dd738b` | PR #419 merged; tip is a rebased patch-equivalent of the merged head; content verified on main |
 | `fix/sanitize-hostname-leak` | `6a0a5bdb` | PR #383 merged 2026-08-23 at this tip |
 | `fix/sharp-libvips-cves` | `ff95371c` | PR #392 merged; 1 follow-up commit(s); cherry unlanded=0 |
-| `fix/sharp-test-review-followup` | `6a6cfd26` | PR #396 merged; only merge commits after the PR head |
-| `fix/sync-script-authority-fields` | `ee4e10ba` | PR #417 merged; only merge commits after the PR head |
+| `fix/sharp-test-review-followup` | `6a6cfd26` | PR #396 merged; tip is a rebased patch-equivalent of the merged head; content verified on main |
+| `fix/sync-script-authority-fields` | `ee4e10ba` | PR #417 merged; tip is a rebased patch-equivalent of the merged head; content verified on main |
 | `fix/vendor-restore-timestamp` | `bc3daac3` | PR #404 merged 2026-08-25 at this tip |
 | `fix/x402-geometry-and-413-followup` | `5dd2a609` | PR #411 merged 2026-08-27 at this tip |
 | `codex/docs-email-finder-provider-research-2026-08-31` | `b5427ef7` | preserved as archive/branches/codex-docs-email-finder-provider-research-2026-08-31 |
@@ -241,15 +241,26 @@ was not a registered worktree:
   `strale-frontend-website-redesign`: orphan worktrees of the **frontend**
   repository (their `.git` files point at a gitdir that no longer exists).
   Outside this repository's sweep; may hold unmerged website work; not touched.
+- `C:/tmp/strale-wt-docs`, `C:/tmp/strale-wt-docs3`, `C:/tmp/strale-wt-fixture`,
+  `C:/tmp/strale-wt-promote`: plain copies of this repository (no `.git`),
+  found by the independent review; not deleted, added to the T3 decision list
+  with the seven directories above.
+- `strale-frontend-codex-website-redesign-v2` (worktree of `strale-frontend`)
+  and `strale-context-archive-wt-m0` (worktree of `strale-context-archive`):
+  live worktrees of other repositories, untouched.
 - Separate repositories (`strale-beacon`, `strale-context-archive`,
   `strale-examples`, `strale-frontend`, `strale-public-remediation`): untouched.
 
 ## Founder-facing items
 
 - DQ-29: restore the root `.env` and `apps/api/.env` (deleted; no copy exists).
-- The WP9 alerting isolation work and the vendor-control-tower edits are
-  preserved under `archive/rescue-2026-09-02/remediation/wp9-artifacts` and
-  `archive/rescue-2026-09-02/fix/vendor-control-tower`; whether to finish or
+- The WP9 alerting isolation work is preserved in two tags: the committed
+  branch under `archive/rescue-2026-09-02/remediation/wp9-artifacts`
+  (`fda70aba`) and the 17 uncommitted edits (`alerting.ts`,
+  `alerting.isolation.test.ts`, the reconcile script, ten handoff drafts) under
+  `archive/branches/rescue-wip-2026-09-01-remediation-wp9-artifacts-37af338`
+  (`37af3383`, whose parent is `fda70aba`). The vendor-control-tower edits are
+  under `archive/rescue-2026-09-02/fix/vendor-control-tower`; whether to finish or
   drop them is a priority call, queued in DQ-29's companion note.
 - `feat/phase-7a-it-stakeholders` (Italian stakeholders capability, PR #135
   closed unmerged) is preserved under `archive/branches/feat-phase-7a-it-stakeholders`.

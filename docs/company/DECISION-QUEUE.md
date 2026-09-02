@@ -23,12 +23,20 @@ gone: `C:\Users\pette\Projects\strale\.env` and
 read-only database access and the API keys used for local smoke tests. No copy
 exists on this machine (searched every sibling folder).
 *What you need to do:* recreate both from your password manager or the Railway
-variables. `.env.example` lists the expected keys. Until then, local scripts
+variables. The root `.env.example` lists that file's expected keys;
+`apps/api/` has no template (only `.env.test`), so its keys come from Railway
+or the password manager. Until then, local scripts
 that read the database or call vendors will fail; nothing in production is
 affected.
 *Companion note, no decision needed today:* two pieces of unmerged code are
-preserved under archive tags and can wait: the WP9 alerting isolation work and
-the vendor-control-tower edits. Say the word if you want either finished.
+preserved under archive tags and can wait. The WP9 alerting isolation work
+lives in two tags: its committed branch under
+`archive/rescue-2026-09-02/remediation/wp9-artifacts` and its uncommitted
+edits (the isolation test and the `alerting.ts` changes) under
+`archive/branches/rescue-wip-2026-09-01-remediation-wp9-artifacts-37af338`.
+The vendor-control-tower edits are under
+`archive/rescue-2026-09-02/fix/vendor-control-tower`. Say the word if you want
+either finished.
 
 **DQ-28** · `your_call` · owner Petter · raised 2026-09-02T02:30Z · no deadline — **may the row-level M2 Decision register become public?**
 The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the

@@ -5,12 +5,13 @@ Intent: leave the repository with no stale branches, no stale worktrees, and eve
 Track T2 of the CTO-readiness program. Full record:
 `archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md`.
 
-- Remote branches other than `main`: 50 → 0 (plus the 28 rescue branches the
+- Remote branches other than `main`: 52 → 0 (plus the 28 rescue branches the
   morning check-in created, converted to tags). 45 archive tags preserve
   everything that was not provably landed.
 - Local branches: 57 → 1. Linked worktrees: 30 → 2. Seventeen dead directory
-  copies of merged Codex batches removed. `strale-work` reports filed under
-  `archive/sessions/strale-work-2026-08/`.
+  copies of merged Codex batches removed. `strale-work` removed after every
+  file was verified byte-identical to a copy already tracked on `origin/main`
+  (nothing imported).
 - `WORKTREES.md` rewritten to describe the allowed set (trunk plus one batch
   worktree) and the current exception.
 - Register: T2 done; T3 (automatic session-end gate) active with the founder's

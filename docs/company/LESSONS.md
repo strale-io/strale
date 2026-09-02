@@ -898,8 +898,8 @@ closed by direct evidence rather than inference. Step 4, the repair of the
 shared mechanism: (a) no deletion loop may take its targets from tool output
 without normalising both sides and reading back a dry run; (b) a refused
 `git worktree remove` is a stop, never a fallback to `rm -rf`; (c) untracked
-secrets (`.env`, `apps/api/.env`, `.claude/settings.json`) are copied aside
-before any bulk deletion, because they are the one thing GitHub cannot return.
+secrets (`.env`, `apps/api/.env`; `.claude/settings.json` until T3 tracks it)
+are copied aside before any bulk deletion, because they are the one thing GitHub cannot return.
 Step 5, the discriminating protection, is track T3's session-end gate, which
 refuses to end a session with an unregistered worktree present and installs
 `git` hooks that make the primary checkout's deletion visible at the next
@@ -928,7 +928,8 @@ Established, each of it second-sourced:
   tip, CI is green, the paid rail answers its 402 challenge and the free tier
   serves in 29 ms. Nothing customer-facing was ever at risk.
 
-Not established, and deliberately not asserted:
+Not established at the time of writing (the first paragraph below is
+superseded by "cause established" above, same day):
 
 - **What deleted it.** GitHub's events feed shows no bulk deletion, and that
   feed is demonstrably incomplete — head branches deleted after 20:08Z on
@@ -967,6 +968,9 @@ checkout that can run `git cherry` against them.
 3. **Hypothesis: not yet formed.** Forming one requires knowing what ran, and
    that is the open question. It should not be guessed at, and the candidate
    mechanism above is recorded as a candidate.
+   *Later the same day:* established — the T2 sweep script's own deletion
+   loop, see "Incident 5 — cause established" above. Step 4 (repair rules
+   a–c) is recorded there, implementation owed; step 5 is track T3.
 4–7. **Owed.** The repair direction that does not depend on the answer is
    already visible and is the useful half: **the object store must stop being a
    single point of failure.** A checkout whose history exists only inside
