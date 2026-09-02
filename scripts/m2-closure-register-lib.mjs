@@ -116,10 +116,14 @@ export function publicIdentities(root, baseRef = "origin/main") {
 }
 
 /**
- * Decision IDs that the live entrypoints use as Git-native protocol labels
- * (a heading that names a DEC id). A Notion row reusing such an id without a
- * formal record is a cross-surface collision by construction. Read from the
- * index so the set matches what the commit ships.
+ * Decision IDs that the live entrypoints use as Git-native protocol labels:
+ * a heading of the form "<Name> Protocol (DEC-…)", which is how a protocol
+ * introduced directly in Git carries its id. A Notion row reusing such an id
+ * without a formal record is a cross-surface collision by construction. A
+ * heading that merely mentions a Decision (for example a retired feature
+ * "(retired … DEC-…)") is a reference to that Decision, not a competing
+ * claim, and is deliberately not matched. Read from the index so the set
+ * matches what the commit ships.
  */
 export function gitNativeClaims(root) {
   const ids = new Set();
@@ -127,7 +131,7 @@ export function gitNativeClaims(root) {
     const text = gitQuiet(root, ["show", `:${file}`]) ?? "";
     for (const line of text.split(/\r?\n/)) {
       if (!/^#{1,6}\s/.test(line)) continue;
-      for (const m of line.matchAll(/DEC-[0-9]{8}-[A-Za-z0-9-]+/g)) ids.add(m[0]);
+      for (const m of line.matchAll(/Protocol\s*\((DEC-[0-9]{8}-[A-Za-z0-9-]+)\)/g)) ids.add(m[1]);
     }
   }
   return ids;
@@ -645,11 +649,22 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
 
   const registryPageIds = new Set();
   const collisionIds = new Set();
+  const registryPagesById = new Map();
   for (const c of collisions?.collisions ?? []) {
     collisionIds.add(c.id);
+    registryPagesById.set(c.id, new Set(c.records.map((r) => r.source_page_id)));
     for (const r of c.records) registryPageIds.add(r.source_page_id);
   }
   const publicPages = new Set(register.decision_rows.map((r) => r.page_id));
+  // Evidence that makes a row public by construction, when the caller supplies it.
+  const recordIds = new Set((context?.records ?? []).map((r) => r.id));
+  const recordCitations = new Map(); // page id -> record ids citing it
+  for (const rec of context?.records ?? []) for (const p of rec.pageIds ?? []) recordCitations.set(p, [...(recordCitations.get(p) ?? []), rec.id]);
+  const gapCited = new Set();
+  for (const set of context?.gapCitations?.values?.() ?? []) for (const p of set) gapCited.add(p);
+  const gitNative = context?.gitNativeClaims ?? new Set();
+  const pagesById = new Map();
+  for (const r of [...register.decision_rows, ...rows]) if (r.id) pagesById.set(r.id, new Set([...(pagesById.get(r.id) ?? []), r.page_id]));
   const seen = new Set();
   const idCounts = {};
   for (const r of register.decision_rows) if (r.id) idCounts[r.id] = (idCounts[r.id] ?? 0) + 1;
@@ -676,6 +691,10 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
       finding("PRIVATE_ROW_DERIVATION_MISMATCH", `${r.page_id}: ${r.disposition} but identity fields derive ${expected}`);
     }
     if (r.record_key) finding("PRIVATE_ROW_RECORD_KEY", r.page_id);
+    // Rows that public evidence already classifies cannot hide in the private projection.
+    if (r.id && (recordCitations.get(r.page_id) ?? []).includes(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: cited by a same-id formal record`);
+    if (r.id && gitNative.has(r.id) && !recordIds.has(r.id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: ${r.id} is a Git-native protocol label without a record (cross-surface collision)`);
+    if (gapCited.has(r.page_id)) finding("PRIVATE_ROW_MUST_BE_PUBLIC", `${r.page_id}: cited by an M2 gap report`);
     if (context) {
       for (const ev of r.evidence ?? []) {
         const problem = evidenceProblem(context, ev);
@@ -683,6 +702,16 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
       }
     }
     if (r.id && (idCounts[r.id] ?? 0) > 1 && !collisionIds.has(r.id)) finding("PRIVATE_ROW_UNREGISTERED_DUPLICATE_ID", `${r.page_id}: ${r.id} is shared by ${idCounts[r.id]} rows but is not in the collision registry`);
+  }
+  // Collision completeness is two-way: for every id the registry knows, the
+  // set of pages carrying that id across BOTH projections must equal the
+  // registry's record set; for every id duplicated across the projections,
+  // the registry must know it (checked above) and list exactly those pages.
+  for (const [id, registryPages] of registryPagesById) {
+    const actual = pagesById.get(id) ?? new Set();
+    const a = [...actual].sort().join(",");
+    const b = [...registryPages].sort().join(",");
+    if (a !== b) finding("COLLISION_SET_MISMATCH", `${id}: projections carry [${a}] but the registry lists [${b}]`);
   }
 
   const counts = {};

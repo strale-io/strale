@@ -539,6 +539,55 @@ test("every public disposition is derived from evidence; erasing a hand disposit
   assert.ok(context.gapCitations.size >= 1, "gap reports were found in the index");
 });
 
+test("rows that public evidence classifies cannot hide in the private projection", () => {
+  // DEC-20260423-A (record-cited) moved into the private projection as pending, everything re-synced.
+  const { r, rows } = syntheticPrivate();
+  const pub = r.decision_rows.find((x) => x.id === "DEC-20260423-A");
+  r.decision_rows = r.decision_rows.filter((x) => x !== pub);
+  r.formal_records = r.formal_records.filter((x) => x.record_key !== "DEC-20260423-A");
+  const moved = { page_id: pub.page_id, id: pub.id, title_sha256: pub.title_sha256 ?? sha256(pub.title), historical_status: "active", historical_scope: pub.historical_scope, decided_at: pub.decided_at, source_url: pub.source_url, disposition: "not_yet_reconciled", evidence: ["docs/project/private-archive-status.json"], rationale: "smuggled record-cited row for the projection test" };
+  rows.push(moved);
+  r.private_rows.count = rows.length;
+  r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, obsolete_or_superseded: 1, unclear: 1 };
+  r.private_rows.digest = canonicalDigest(rows);
+  r.digests.public_rows = { count: r.decision_rows.length, digest: canonicalDigest(r.decision_rows) };
+  r.digests.all_rows = { count: r.decision_rows.length + rows.length, digest: canonicalDigest([...r.decision_rows, ...rows]) };
+  r.next_decision_batch.private_candidates = { count: 2, digest: sha256([moved.page_id, "1".repeat(32)].sort().join("\n") + "\n") };
+  const c = pcodes(r, rows);
+  assert.ok(c.includes("PRIVATE_ROW_MUST_BE_PUBLIC"), c.join(","));
+  // DEC-20260422-A (cross-surface) and DEC-20260517-B (gap-cited) likewise.
+  for (const id of ["DEC-20260422-A", "DEC-20260517-B"]) {
+    const { r: r2, rows: rows2 } = syntheticPrivate();
+    const src = r2.decision_rows.find((x) => x.id === id);
+    r2.decision_rows = r2.decision_rows.filter((x) => x !== src);
+    rows2.push({ page_id: src.page_id, id: src.id, title_sha256: src.title_sha256 ?? sha256(src.title), historical_status: "active", historical_scope: src.historical_scope, decided_at: src.decided_at, source_url: src.source_url, disposition: "not_yet_reconciled", evidence: ["docs/project/private-archive-status.json"], rationale: "smuggled hand-classified row for the projection test" });
+    assert.ok(pcodes(r2, rows2).includes("PRIVATE_ROW_MUST_BE_PUBLIC"), id);
+  }
+});
+
+test("collision completeness is two-way across both projections", () => {
+  // Two private rows reuse a registered id with unregistered page ids, everything re-synced.
+  const { r, rows } = syntheticPrivate();
+  const registered = context.collisions.collisions[0].id;
+  rows[0].id = registered;
+  rows.push({ ...rows[0], page_id: "5".repeat(32), source_url: `https://app.notion.com/${"5".repeat(32)}`, title_sha256: sha256("v") });
+  r.private_rows.count = rows.length;
+  r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, obsolete_or_superseded: 1, unclear: 1 };
+  r.private_rows.digest = canonicalDigest(rows);
+  r.digests.all_rows = { count: r.decision_rows.length + rows.length, digest: canonicalDigest([...r.decision_rows, ...rows]) };
+  r.next_decision_batch.private_candidates = { count: 0, digest: sha256("\n") };
+  const c = pcodes(r, rows);
+  assert.ok(c.includes("COLLISION_SET_MISMATCH"), c.join(","));
+  assert.ok(!c.includes("PRIVATE_ROW_UNREGISTERED_DUPLICATE_ID"), "the id is registered; the page set is what is wrong");
+  // A registry row missing from the public projection is a set mismatch too.
+  const { r: r3, rows: rows3 } = syntheticPrivate();
+  const gone = r3.decision_rows.find((x) => x.collision?.kind === "notion-duplicate");
+  r3.decision_rows = r3.decision_rows.filter((x) => x !== gone);
+  r3.digests.public_rows = { count: r3.decision_rows.length, digest: canonicalDigest(r3.decision_rows) };
+  r3.digests.all_rows = { count: r3.decision_rows.length + rows3.length, digest: canonicalDigest([...r3.decision_rows, ...rows3]) };
+  assert.ok(pcodes(r3, rows3).includes("COLLISION_SET_MISMATCH"));
+});
+
 test("private evidence follows the same reference rules as public evidence", () => {
   const { r, rows } = syntheticPrivate();
   rows[0].evidence = ["xyz"];
