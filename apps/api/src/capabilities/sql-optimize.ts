@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
@@ -17,7 +18,7 @@ registerCapability("sql-optimize", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 2000,
     prompt: `Optimize this SQL query for performance. Dialect: ${dialect}. Return ONLY valid JSON.
 

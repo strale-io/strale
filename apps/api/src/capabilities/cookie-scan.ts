@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { extractJsonObject } from "./lib/llm-json.js";
@@ -177,7 +178,7 @@ registerCapability("cookie-scan", async (input: CapabilityInput) => {
 
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     max_tokens: 1500,
     messages: [
       {

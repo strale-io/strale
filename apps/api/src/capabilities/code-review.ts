@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
@@ -18,7 +19,7 @@ registerCapability("code-review", async (input: CapabilityInput) => {
 
   const client = new Anthropic({ apiKey });
   const r = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     max_tokens: 1500,
     messages: [
       {

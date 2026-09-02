@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
@@ -167,7 +168,7 @@ registerCapability("company-enrich", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const parsed = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 2000,
     prompt: `${EXTRACTION_PROMPT}\n\nDomain: ${domain}\n\n--- PAGE CONTENT ---\n${truncated}\n--- END ---`,
     truncationGuidance: "This domain's page produced more content than fits in one call.",

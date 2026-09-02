@@ -2,6 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonObject } from "./lib/llm-json.js";
 import { logError, logWarn } from "../lib/log.js";
+import { MODELS, promptDigest } from "../lib/models.js";
 
 // Cert-audit Y-10 — model pinning for replay determinism.
 // `claude-sonnet-4-6` is a moving alias; the same check_results passed
@@ -23,7 +24,7 @@ import { logError, logWarn } from "../lib/log.js";
 // override below is wired and will pin it. Run scripts/diag-risk-
 // narrative-model.ts to find the resolved snapshot from recent prod
 // calls before pinning.
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+const DEFAULT_MODEL = MODELS.capability_reasoning.id;
 const PINNED_MODEL = process.env.RISK_NARRATIVE_MODEL ?? DEFAULT_MODEL;
 
 // Cert-audit Y-10 — wording-rule enforcement. The system prompt
@@ -317,6 +318,7 @@ registerCapability("risk-narrative-generate", async (input: CapabilityInput) => 
         source: "claude-sonnet",
         model_requested: PINNED_MODEL,
         model_resolved: r.model,
+        prompt_sha256: promptDigest(SYSTEM_PROMPT),
         fetched_at: new Date().toISOString(),
       },
     };

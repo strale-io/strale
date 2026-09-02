@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import {
@@ -105,7 +106,7 @@ registerCapability("privacy-policy-analyze", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 2000,
     prompt: `Analyze this privacy policy page. Extract all key information about data handling, user rights, and compliance.
 

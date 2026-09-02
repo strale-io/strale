@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -77,7 +78,7 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 2000,
     prompt: `Extract customs duty information from this EU customs/TARIC page for HS code "${hsCode}"${originCountry ? ` from origin country "${originCountry}"` : ""}.
 

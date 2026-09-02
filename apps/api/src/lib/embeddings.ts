@@ -1,8 +1,9 @@
 // Direct HTTP calls to Voyage AI REST API (SDK has broken ESM exports)
 
 import { logWarn } from "./log.js";
+import { MODELS } from "./models.js";
 
-const MODEL = "voyage-3.5-lite";
+const MODEL = MODELS.embeddings.id;
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
 
 async function fetchWithRetry(

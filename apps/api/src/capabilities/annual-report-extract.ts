@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { CapabilityRefusalError } from "../lib/capability-refusal.js";
@@ -288,7 +289,7 @@ registerCapability(
     }
 
     const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model: MODELS.capability_default.id,
       max_tokens: 4000,
       messages,
     });

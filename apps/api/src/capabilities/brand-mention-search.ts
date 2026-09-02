@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -68,7 +69,7 @@ registerCapability("brand-mention-search", async (input: CapabilityInput) => {
   // JSON.parse failure downstream.
   const output = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 3000,
     prompt: `Analyze these search results for brand mentions. Return ONLY valid JSON.
 

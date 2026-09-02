@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { DigestData } from "./types.js";
 import { logError, logWarn } from "../log.js";
+import { MODELS } from "../models.js";
 
 export interface DigestAnalysis {
   situationAssessment: string;
@@ -125,7 +126,7 @@ export async function analyzeDigest(data: DigestData): Promise<DigestAnalysis> {
   try {
     const client = new Anthropic({ apiKey });
     const response = await client.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: MODELS.digest.id,
       max_tokens: 1500,
       messages: [{ role: "user", content: buildPrompt(data) }],
     });

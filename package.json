@@ -32,6 +32,8 @@
     "env:check": "node scripts/check-env.mjs",
     "env:test": "node --test scripts/env.test.mjs",
     "env:example": "node scripts/generate-env-example.mjs",
+    "models:check": "node apps/api/scripts/check-model-literals.mjs",
+    "models:test": "node --test apps/api/scripts/check-model-literals.test.mjs",
     "handoff:check": "node scripts/handoff/handoff-check.mjs",
     "handoff:test": "node --test scripts/handoff/handoff-check.test.mjs",
     "handoff:orient": "node scripts/handoff/orient.mjs",

@@ -1,3 +1,4 @@
+import { MODELS } from "./models.js";
 import { eq, and, asc, inArray, sql } from "drizzle-orm";
 import { SERVABLE_LIFECYCLE_STATES } from "./x402-eligibility.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -858,7 +859,7 @@ async function rerankWithClaude(
 
   try {
     const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
+      model: MODELS.capability_default.id,
       max_tokens: 1000,
       messages: [
         {

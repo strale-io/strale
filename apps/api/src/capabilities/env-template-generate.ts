@@ -1,3 +1,4 @@
+import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
@@ -76,7 +77,7 @@ registerCapability("env-template-generate", async (input: CapabilityInput) => {
   const client = new Anthropic({ apiKey });
   const parsed = await extractJsonWithLlm({
     client,
-    model: "claude-haiku-4-5-20251001",
+    model: MODELS.capability_default.id,
     maxTokens: 1500,
     prompt: `Generate a .env template with descriptions and examples for these environment variables. Return ONLY valid JSON.
 
