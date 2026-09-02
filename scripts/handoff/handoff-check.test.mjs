@@ -415,6 +415,10 @@ test("pre-push never refuses the push that deletes a landed branch, nor a routin
     git(r.trunk, "push", "-q", "origin", "main:refs/heads/old/a");
     git(r.trunk, "push", "-q", "origin", "main:refs/heads/old/b");
     const zeros = "0".repeat(40);
+    // unlanded code on the batch branch must not be judged by a delete-only push
+    writeFileSync(join(r.batch, "apps", "a.ts"), "export const a = 9;\n");
+    commitAll(r.batch, "feat: unlanded code");
+    git(r.batch, "push", "-q");
     const sha = git(r.batch, "rev-parse", "HEAD");
     const del = readPushRefs(`(delete) ${zeros} refs/heads/old/a ${sha}\n`);
     const deleting = await r.check(r.batch, { mode: "pre-push", pushedRefs: del, pushRanges: pushRangesFor(del), env: {} });
@@ -423,7 +427,7 @@ test("pre-push never refuses the push that deletes a landed branch, nor a routin
     assert.ok(deleting.warnings.some((w) => /\[merged-branch\] remote branch origin\/old\/b/.test(w)), "the other landed branch is a note");
     const routine = readPushRefs(`refs/heads/feat/x ${sha} refs/heads/feat/x ${sha}\n`);
     const backup = await r.check(r.batch, { mode: "pre-push", pushedRefs: routine, pushRanges: pushRangesFor(routine), env: {} });
-    assert.equal(backup.ok, true, JSON.stringify(backup));
+    assert.equal(backup.ok, true, JSON.stringify(backup), "an up-to-date ref pushes an empty range");
     const session = await r.check(r.batch);
     assert.ok(codes(session).includes("merged-branch"), "the session gate still fails on them");
   } finally { r.cleanup(); }

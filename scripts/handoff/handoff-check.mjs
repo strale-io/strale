@@ -446,6 +446,7 @@ export async function runChecks(options = {}) {
     if (options.range) ranges.push(options.range);
     else if (options.since) ranges.push(`${options.since}..HEAD`);
     else if (options.pushRanges?.length) ranges.push(...options.pushRanges);
+    else if (mode === "pre-push" && options.pushedRefs?.length) { /* a delete-only push carries no commits: nothing to judge */ }
     else if (branch && branch !== cfg.releaseBranch && releaseSha) ranges.push(`${releaseRef}...HEAD`);
     else {
       const upstream = git(["rev-parse", "--abbrev-ref", "@{upstream}"], { allowFail: true });

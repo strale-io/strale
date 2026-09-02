@@ -81,8 +81,9 @@ program. Programs are execution records, not project truth.
    orientation shows, and `.codex/hooks.json` blocks the stop the same way
    where the Codex hooks feature is on. A Codex session runs the check itself
    before its final turn and fixes what it lists.
-3. **Git hooks come with `npm ci`** (`prepare` runs `npm run hooks:install`,
-   which sets `core.hooksPath=.githooks` for every worktree of the clone):
+3. **Git hooks come with `npm ci`** (`prepare` runs the same installer as
+   `npm run hooks:install`, setting `core.hooksPath=.githooks` for every
+   worktree of the clone):
    pre-commit refuses a commit on `main` and an inventory-target edit without
    `npm run context:generate`; pre-push refuses a direct push to `main`.
    `main` changes only through reviewed PRs merged on GitHub; pushing the
