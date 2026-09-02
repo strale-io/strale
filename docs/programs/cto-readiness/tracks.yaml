@@ -102,15 +102,19 @@ tracks:
     depends_on: [T3]
     owner: session
     next_action: >
-      Merge the strale-frontend preservation PR (design candidates, handoff
-      docs, session-end gate, website register), verify both release assets
-      against SHA256SUMS.txt, then remove from the machine: the three orphan
-      frontend folders, strale-codex-handoff-v2, the Quiet Material folder and
-      its zip. File the monorepo direction (website redesign built as
-      apps/web in this repository) as DEC-20260902-A through the M2 decision
-      path — Notion Decisions DB entry plus closure-register row — once Petter
-      confirms the record text drafted in the T11 handoff. Then set this
-      track done and reactivate T4.
+      Everything but the decision filing is done (2026-09-02): strale-frontend
+      PR #22 merged, release preserve-2026-09-02 verified against
+      SHA256SUMS.txt, the three orphan folders, strale-codex-handoff-v2, the
+      Quiet Material folder and its zip removed, the archive repo's M0
+      worktree removed; Projects holds six repositories plus the recorded
+      codex/website-redesign-v2 worktree. Remaining: file the monorepo
+      direction as DEC-20260902-A through the M2 decision path (Notion
+      Decisions DB entry plus closure-register row) once Petter confirms
+      the draft in the T11 handoff; then set this track done with the
+      handoff as evidence and reactivate T4. Left for the next website
+      session: PR #5 on strale-frontend (open since May), the untracked
+      public/og-strale-final.png in the frontend trunk, and the untracked
+      review-evidence zip in the redesign-v2 worktree.
     resume_file: handoff/_general/from-code/2026-09-02-t11-website-hygiene.md
     exit:
       - every website folder outside a git checkout is preserved (tag or release asset with checksum) and removed
