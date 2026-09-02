@@ -486,6 +486,44 @@ The repair direction is a shared helper every gate routes its input through,
 rather than five separate edits — the local-fix pattern is what carried F1 to
 seven. Not started.
 
+**Standing rule, added 2026-09-02: no checker ships until it has failed on a
+planted case, and the plant is recorded in the PR.** A checker that has only
+ever been run against clean, already-correct input has never been shown to
+detect the thing it claims to guard — that is this family's exact definition,
+just discovered before merge instead of after. The requirement from this date
+forward: every new or materially modified checker's PR records at least one
+input engineered to violate the rule, shows the checker failing on it before
+the fix (or with the checker's own bug still in place), and shows it passing
+after. A checker whose PR shows only the clean pass has not demonstrated
+anything.
+
+The rule is not theoretical — the same day it was written, exactly this
+practice caught three bugs that a clean-pass-only PR would have shipped
+silently. Per `handoff/_general/from-code/2026-09-02-t13-design-tokens.md`
+(T13, design tokens as data): the spacing/radii off-scale check
+(`findPxViolations`) had a capturing group around the property-name
+alternation instead of the value, so it read `margin`/`padding`/`gap` out of
+the match instead of the px number — "the spacing/radii check would never
+have found a real violation," caught only because the planted "off-scale
+margin px value... fails" test failed against the real implementation before
+the fix; a second planted case in the same PR caught the hex-literal regex
+matching HTML numeric character references (`&#128202;`) as false-positive
+six-digit hex colors, since every digit in `128202` happens to be a valid hex
+digit. Per `handoff/_general/from-code/2026-09-02-t14-cheap-extras.md` (T14,
+claims register): the forbidden-claim scanner was hollow end to end — every
+register row is authored as `/pattern/`, but the matcher only compiled rows
+marked `is_regex` and even then kept the literal slashes, so **no forbidden
+claim could ever match prose, in production or in a passing test suite.**
+Found by planting three forbidden claims in `README.md` and watching the
+scanner report clean; fixed with a regression test that fails on the
+unpatched matcher.
+
+Three verified bugs, two checkers, one day, all three invisible to a
+clean-input pass and all three caught only because the PR was required to
+show a failing case first. That is the population this rule is drawn from —
+stated exactly as the two source handoffs record it, not rounded up to a
+larger count this file cannot verify.
+
 ### F6 · Stale or unsupported public claim
 
 > Something we tell the world that is no longer true, or was never quite true.
