@@ -214,6 +214,7 @@ test("a rehomed dependency does not satisfy an active track", () => {
   const r = base();
   byId(r, "T10").status = "rehomed";
   byId(r, "T10").rehomed_to = "docs/programs/README.md";
+  delete byId(r, "T10").blocker; // the committed row may be blocked (2026-09-02: Codex quota); a rehomed row carries no blocker
   for (const id of ["T1", "T2", "T4", "T5"]) finish(byId(r, id));
   activate(r, idx(r, "T6"));
   byId(r, "T6").resume_file = "README.md";
