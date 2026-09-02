@@ -63,6 +63,7 @@
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
+        "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
@@ -234,6 +235,7 @@
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
+        "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
@@ -398,6 +400,7 @@
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
+        "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "scripts/check-claims.mjs",
         "scripts/claims-lib.mjs",
         "scripts/guard-production-write-access.mjs",
@@ -469,7 +472,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "eb20116f3c4f3562218a3f0f09595b68e1a6388055cf9157bc05d4fa9026ba4a",
+      "sha256": "e645a0519842ba0e7c83c489cc055902e586aff4addabce60044f5c03d8fba07",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
