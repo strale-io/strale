@@ -157,6 +157,7 @@
         "archive/sessions/stranded-research-2026-05/rate-limit-and-ca-orchestration-concurrency-2026-05-15.md",
         "context7.json",
         "docs/company/CHARTER.md",
+        "docs/company/LESSONS.md",
         "docs/operations/operator-actions.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
@@ -218,6 +219,7 @@
         "handoff/_general/from-code/2026-09-01-m2-governance-reference-data-decision-batch.md",
         "handoff/_general/from-code/2026-09-01-m2-source-enumeration-decision-chain.md",
         "handoff/_general/from-code/2026-09-01-m2-vendor-evaluation-decision-and-methodology.md",
+        "handoff/_general/from-code/2026-09-02-checkin-morning.md",
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests-drafts/README.md",
@@ -338,7 +340,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "3bcf2309bd55a3e97d66b6a983de0e40c9cfdcce2d07b2c5b30c66469fcb208f",
+      "sha256": "e29c3a2aed6493104fcc417dfbe319923d02bbae76dea7472c11c3ca0265d898",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -419,13 +421,14 @@
         "handoff/_general/from-code/2026-08-28-checkin-morning.md",
         "handoff/_general/from-code/2026-08-29-checkin-morning.md",
         "handoff/_general/from-code/2026-08-30-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-02-checkin-morning.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "c23bc08096400cac21f057b89bcddea9d797524be03a36265be9f1a7d3511d2b",
+      "sha256": "e9a8451f60af554c17126d2033adc6134945edfecd831d4e06138d33681ae04b",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
