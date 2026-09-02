@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: cy-registry-build-path
+question: What is the build path for ingesting Cyprus's DRCOR company registry open data?
+date: 2026-05-07
+status: current
+sources:
+  - https://www.data.gov.cy/en/group/30
+  - https://efiling.drcor.mcit.gov.cy/DrcorPublic/SearchForm.aspx
+---
+
 # Cyprus Registry — Build Path Verification Memo
 
 **Date:** 2026-05-07

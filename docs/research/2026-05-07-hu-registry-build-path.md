@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: hu-registry-build-path
+question: What is the build path for Hungary's company registry, given no free government API and fixed-cost-only commercial wrappers?
+date: 2026-05-07
+status: current
+sources:
+  - https://www.e-cegjegyzek.hu/
+  - https://companyapi.hu/
+---
+
 # Hungary Registry — Build Path Verification Memo
 
 **Date:** 2026-05-07

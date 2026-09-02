@@ -1,3 +1,16 @@
+---
+doc_type: research
+type: vendor
+topic: ubo-aggregators-non-openownership-eu
+question: Is there a Tier-2-compliant, PAYG, embed-and-bill UBO data path for the eight EU jurisdictions not covered by free OpenOwnership sources?
+date: 2026-04-28
+status: current
+sources:
+  - https://www.kompany.com/kycapi
+  - https://www.creditsafe.com/us/en/product/terms/general-terms-and-conditions.html
+  - https://www.kyckr.com/blog/eu-ubo-register-access-for-obliged-entities-2025
+---
+
 # UBO Aggregator Research — Non-OpenOwnership EU Gap
 
 **Date:** 2026-04-28

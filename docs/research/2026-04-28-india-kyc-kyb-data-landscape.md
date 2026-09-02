@@ -1,3 +1,16 @@
+---
+doc_type: research
+type: market
+topic: india-kyc-kyb-data-landscape
+question: Does India's KYC/KYB data landscape clear Strale's Tier-2 scraping doctrine well enough to ship as Payee Assurance v1.5?
+date: 2026-04-28
+status: current
+sources:
+  - https://www.mca.gov.in/content/mca/global/en/mca/master-data/MDS.html
+  - https://developer.gst.gov.in/apiportal/
+  - https://uidai.gov.in/en/ecosystem/authentication-ecosystem.html
+---
+
 # India KYC / KYB Data Landscape — Source Research for Payee Assurance v1.5
 
 **Date:** 2026-04-28

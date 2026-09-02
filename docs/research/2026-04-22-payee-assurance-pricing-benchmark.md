@@ -1,4 +1,17 @@
 ---
+doc_type: research
+type: competitor
+topic: payee-assurance-pricing-benchmark
+question: What per-call flat price should Payee Assurance v1 launch at, based on COGS floor and a 25-vendor competitor comparison?
+date: 2026-04-22
+status: superseded
+superseded_by: 2026-04-28-payee-assurance-apples-to-apples-benchmark.md
+sources:
+  - https://www.notion.so/34a67c87082c814b8fb0e88f072b63ea
+  - https://www.notion.so/33c67c87082c817fac7cd9d7b6c44e40
+---
+
+---
 title: Payee Assurance pricing benchmark study
 date: 2026-04-22
 status: Draft — research synthesis, pending Petter review

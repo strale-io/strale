@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: nl-registry-build-path-verify
+question: Does the chosen NL registry data path (Company.info) still hold up under a fresh technical-viability probe, compared against the KVK direct API?
+date: 2026-05-07
+status: current
+sources:
+  - https://www.company.info/
+  - https://developers.kvk.nl/pricing
+---
+
 # NL registry build-path verification memo
 *Date: 2026-05-07. Spike branch: research/midrebuild-verify-spikes.*
 

@@ -59,6 +59,17 @@ track's `resume_file` names anything else that batch needs. The migration
 checkpoint above is the M2-through-M7 detail behind the `cto-readiness`
 program. Programs are execution records, not project truth.
 
+## Research and ideas — where each one lives
+
+Research goes to `docs/research/` in the dated, front-matter template
+(`docs/research/research.schema.json`), checked by `npm run research:check`:
+one `current` file per topic, reciprocal and acyclic supersession, resolvable
+links and sources, and no active decision record citing research that is not
+current. Research is evidence, never authority — a finding that changes
+direction produces a decision record, not a rewrite of the research file.
+Ideas go to `docs/company/IDEAS.md`, nowhere else — not a Journal entry, not a
+prose aside in a plan or handoff.
+
 ## Session contract — both tools, every session
 
 1. **Orient first.** Read `docs/programs/README.md`, then the active track's

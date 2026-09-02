@@ -1,4 +1,18 @@
 ---
+doc_type: research
+type: competitor
+topic: payee-assurance-pricing-benchmark
+question: What is the correct per-call price anchor for Payee Assurance v1 when benchmarked only against genuinely comparable multi-leg competitor APIs?
+date: 2026-04-28
+status: current
+supersedes:
+  - 2026-04-22-payee-assurance-pricing-benchmark.md
+sources:
+  - https://monitorpay.ai/pricing
+  - https://thekyb.com/pricing/
+---
+
+---
 title: Payee Assurance apples-to-apples pricing benchmark
 date: 2026-04-28
 status: Draft — replaces 2026-04-22 benchmark for pricing-anchor purposes

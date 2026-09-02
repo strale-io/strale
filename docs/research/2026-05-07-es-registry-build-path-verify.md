@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: es-registry-build-path-verify
+question: Does the chosen ES registry data path (opendata.registradores.org plus BORME plus sede.registradores.org self-build) still hold up under a fresh technical-viability probe?
+date: 2026-05-07
+status: current
+sources:
+  - https://boe.es/datosabiertos/api/api.php
+  - https://openapi.com/products/company-start-spain
+---
+
 # ES registry build-path verification memo
 *Date: 2026-05-07. Spike branch: research/midrebuild-verify-spikes.*
 

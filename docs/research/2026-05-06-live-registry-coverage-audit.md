@@ -1,3 +1,14 @@
+---
+doc_type: research
+type: registry
+topic: live-registry-coverage-audit
+question: Do Strale's 16 live European registry capabilities return a working, manifest-conformant response against a known-good test entity?
+date: 2026-05-06
+status: current
+sources:
+  - apps/api/src/scripts/audit-live-registries.ts
+---
+
 # Live European registry coverage audit — 2026-05-06
 
 Run started: `2026-05-06T07:11:51.941Z`

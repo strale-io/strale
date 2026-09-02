@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: vendor
+topic: vat-coverage-empirical
+question: What is the real-world success rate of Strale's vat-validate capability against VIES for one VAT number per Payee Assurance target country?
+date: 2026-04-28
+status: current
+sources:
+  - apps/api/src/capabilities/vat-validate.ts
+  - https://ec.europa.eu/taxation_customs/vies/
+---
+
 # Empirical VAT Coverage — 2026-04-27
 
 **Method:** One real-world VAT per Payee Assurance target country, called via Strale /v1/do → vat-validate. Throttled 1.5s between calls (VIES rate limit). v1.1 (US) has no VAT — sales tax instead, out of scope for this capability.

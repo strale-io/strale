@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: registry
+topic: lu-registry-build-path
+question: What is the build path for Luxembourg's LBR company registry, given no free API and a paid enterprise-only tier?
+date: 2026-05-07
+status: current
+sources:
+  - https://www.lbr.lu/
+  - https://data.public.lu/en/
+---
+
 # Luxembourg Registry — Build Path Verification Memo
 
 **Date:** 2026-05-07

@@ -1,4 +1,15 @@
 ---
+doc_type: research
+type: product
+topic: payee-assurance-two-tier-pricing
+question: Should Payee Assurance charge as a two-tier (onboarding plus monitoring) product or a single flat per-call price?
+date: 2026-04-22
+status: current
+sources:
+  - docs/research/2026-04-22-payee-assurance-pricing-benchmark.md
+---
+
+---
 title: Payee Assurance two-tier pricing — thinking document
 date: 2026-04-22
 status: Draft — thinking pass, no pricing decision taken

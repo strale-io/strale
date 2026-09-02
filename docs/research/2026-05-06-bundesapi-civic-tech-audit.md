@@ -1,3 +1,14 @@
+---
+doc_type: research
+type: vendor
+topic: bundesapi-civic-tech-audit
+question: Is the bundesAPI civic-tech stack a credible fallback data source for DE Counterparty Assurance if OpenRegister's audit-retention question can't be resolved?
+date: 2026-05-06
+status: current
+sources:
+  - https://github.com/bundesAPI
+---
+
 # bundesAPI civic-tech depth and integration audit
 
 **Date:** 2026-05-06

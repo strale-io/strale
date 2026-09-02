@@ -1,3 +1,14 @@
+---
+doc_type: research
+type: vendor
+topic: openapi-com-sandbox-eval
+question: Does Openapi.com's sandbox API return usable identity and financial data across Strale's target countries, and at what success rate and latency?
+date: 2026-05-06
+status: current
+sources:
+  - https://console.openapi.com/apis/company/info
+---
+
 # Openapi.com sandbox + production testing report
 
 **Date:** 2026-05-06

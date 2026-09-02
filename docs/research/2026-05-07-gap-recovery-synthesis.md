@@ -1,3 +1,17 @@
+---
+doc_type: research
+type: registry
+topic: eu-gap-recovery-synthesis
+question: Across the LU, BG, CY, and HU gap-recovery spikes, which countries close as Tier-1 self-build candidates and which stay in gap?
+date: 2026-05-07
+status: current
+sources:
+  - docs/research/2026-05-07-lu-registry-build-path.md
+  - docs/research/2026-05-07-bg-registry-build-path.md
+  - docs/research/2026-05-07-cy-registry-build-path.md
+  - docs/research/2026-05-07-hu-registry-build-path.md
+---
+
 # Gap-Recovery Candidates — Cross-Country Synthesis
 
 **Date:** 2026-05-07

@@ -1,3 +1,15 @@
+---
+doc_type: research
+type: vendor
+topic: at-compass-manz-vendor-diligence
+question: "Which Austrian BMJ-licensed Verrechnungsstelle should Strale re-engage for Firmenbuch data access: Compass HF Data, Manz, or a third candidate?"
+date: 2026-05-06
+status: current
+sources:
+  - https://api.wirtschaftscompass.at/en/prices
+  - https://www.justiz.gv.at/service/datenbanken/verrechnungsstellen.795.de.html
+---
+
 # Compass HF Data + Manz AT vendor diligence
 
 **Date:** 2026-05-06

@@ -1,3 +1,17 @@
+---
+doc_type: research
+type: registry
+topic: eu-gap8-registry-api-audit
+question: Which of the eight Gap-8 EU national registries (HU, SI, BG, RO, LU, SK, MT, CY) expose a free per-entity lookup API?
+date: 2026-04-30
+status: historical
+sources:
+  - https://www.e-cegjegyzek.hu/
+  - https://podatki.gov.si/dataset/poslovni-register-slovenije
+  - https://data.egov.bg
+  - https://data.gov.ro/api/3/action/package_search?q=onrc
+---
+
 # Gap-8 EU Registry APIs — Free Per-Entity Lookup Audit
 
 **Date:** 2026-04-30 (probes verified live)

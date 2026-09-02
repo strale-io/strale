@@ -1,3 +1,16 @@
+---
+doc_type: research
+type: vendor
+topic: litigation-bankruptcy-data-sources
+question: Which litigation and bankruptcy data vendors can supply a Tier-2-compliant, PAYG leg for Payee Assurance v1.1?
+date: 2026-04-28
+status: current
+sources:
+  - https://pacer.uscourts.gov/pacer-pricing-how-fees-work
+  - https://www.courtlistener.com/help/api/rest/
+  - https://www.docketalarm.com/api/
+---
+
 # Litigation & Bankruptcy Data Sources for Payee Assurance v1.1
 
 **Date:** 2026-04-28
