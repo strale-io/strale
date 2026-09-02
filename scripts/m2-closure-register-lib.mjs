@@ -566,7 +566,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
       // A row whose id is a Git-native claim (protocol label) or a formal record's
       // id, and which no same-id record cites, competes with that Git-native
       // meaning: a cross-surface collision.
-      const claimed = row.id && (context.gitNativeClaims.has(row.id) || recordIds.has(row.id)) && !recordCitedPages.has(row.page_id);
+      // Registry rows are governed by the registry (a resolved collision may
+      // legitimately share its id with the record that won it).
+      const claimed = row.id && (context.gitNativeClaims.has(row.id) || recordIds.has(row.id)) && !recordCitedPages.has(row.page_id) && !collisionRows.has(row.page_id);
       const labelled = row.disposition === "unresolved_collision" && row.collision?.kind === "cross-surface";
       if (claimed && !labelled) finding("DECISION_ROW_CROSS_SURFACE_EXPECTED", `${row.page_id}: ${row.id} is a Git-native protocol label without a record`);
       if (labelled && !claimed) finding("DECISION_ROW_CROSS_SURFACE_UNSUPPORTED", `${row.page_id}: ${row.id} is not a Git-native protocol label`);
