@@ -94,6 +94,23 @@ originating one to fill it.
 | `superseded/` | present: `superseded/manifests-drafts/` (T5, this track) | Matches the target's category; only one thing has been filed under it so far. | — |
 | `growth-ops/`, `submissions/` (not in the target) | present, unchanged | Predate the target tree (2026-04-18 stash resolution); the target's `archive/` listing is a category scheme, not a closed enumeration — these fit under a category the target doesn't happen to name explicitly (marketing/distribution-submission evidence). No action implied. | — |
 
+## docs/ subtrees that the target tree does not name
+
+Every existing `docs/` subtree absent from the migration plan's section 5
+tree, with where it belongs and who moves it. None moves in T5 (authority
+pre-cutover; the plan defers physical moves until link and code impact is
+known).
+
+| actual | closest target bucket | reason it is where it is | owner |
+| --- | --- | --- | --- |
+| `docs/design/` (execution-receipt phases 1–5) | `docs/architecture/` | Design and reconciliation record of the audit execution receipt; architecture bucket is not authored yet. | T6 |
+| `docs/diligence/` (Payee Assurance v1 source diligence, 4 files) | `docs/research/` (type `vendor`) | Research-shaped evidence written before the research contract; `research:check` reports research-looking files outside the contract as warnings for a migration batch. | T12 follow-up batch |
+| `docs/dpia/` (GDPR Art. 35 assessments per capability) | `docs/security/` | Compliance records; kept as their own subtree until the security bucket's contents are classified in M3. | T6 |
+| `docs/ide-rules/` (IDE rules for safe data handling) | `docs/product/` | A distribution surface linked from README.md; the product bucket is not authored yet. | T6 |
+| `docs/incidents/` (2026-08-22 production authorization failure) | `docs/security/` | Incident record referenced by LESSONS.md F10; moves with the security bucket. | T6 |
+| `docs/release/` (npm publishing procedure) | `docs/operations/runbooks/` | A runbook; `docs/operations/` has no `runbooks/` subdirectory yet (see the operations section above). | T6 |
+| `docs/smoke-tests/` (smoke-test procedure) | `docs/operations/runbooks/` | Same as above. | T6 |
+
 ## Summary
 
 Of the target's deviations, one class is genuinely open work (six protocol
