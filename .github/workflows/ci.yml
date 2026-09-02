@@ -308,6 +308,28 @@ jobs:
       # every failure mode in a throwaway repository.
       - run: npm run design:check
       - run: npm run design:test
+      # Environment manifest (T14, config/env-manifest.yaml): one row per
+      # distinct process.env.NAME read under apps/api/src, apps/api/scripts,
+      # packages, scripts — undocumented reads and dead rows both fail, and
+      # the generated .env.example / apps/api/.env.example must match what
+      # the manifest would produce. Tests plant every failure mode in a
+      # throwaway directory fixture.
+      - run: npm run env:check
+      - run: npm run env:test
+      # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
+      # Voyage/GPT model id lives in one place with a pinned_at date and a
+      # decision reference: fails on a model-id literal anywhere else in
+      # apps/api/src (outside *.test.ts), or a registry entry missing
+      # pinned_at/decision.
+      - run: npm run models:check
+      - run: npm run models:test
+      # Claims register (T14, docs/company/claims.yaml): validates the
+      # register, then scans README.md, packages/*/README.md, manifest
+      # description fields, and platform-facts.ts for `forbidden` claims
+      # (failing the build) and warns on `needs_evidence` claims whose
+      # evidence doesn't resolve.
+      - run: npm run claims:check
+      - run: npm run claims:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.

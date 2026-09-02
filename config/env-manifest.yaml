@@ -1,0 +1,1295 @@
+- name: ABN_LOOKUP_GUID
+  purpose: Australian Business Register (ABR) web-service GUID for au-company-data.
+  provider: Australian Business Register
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Free government registration at abr.business.gov.au/Tools/WebServices.
+- name: ADMIN_DASHBOARD_URL
+  purpose: Base URL for the internal admin dashboard, used to build a review link in dispute-notification emails.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  example_value: https://strale.dev
+- name: ADMIN_SECRET
+  purpose: Bearer secret protecting internal admin/dashboard endpoints.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - test
+    - local
+    - ci
+  set_in:
+    - railway
+    - .env
+    - workflow
+- name: ADZUNA_APP_ID
+  purpose: Adzuna job-search API app ID for job-board-search.
+  provider: Adzuna
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Free tier with registration.
+- name: ADZUNA_APP_KEY
+  purpose: Adzuna job-search API app key, paired with ADZUNA_APP_ID.
+  provider: Adzuna
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+- name: ALCHEMY_API_KEY
+  purpose: Alchemy Ethereum RPC key, one of several RPC endpoint providers in eth-rpc-endpoints.ts (rotates across providers to spread load and survive a restart).
+  provider: Alchemy
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Free tier typically sufficient for read-only RPC calls at this volume.
+- name: ALERT_ALLOW_IN_TEST
+  purpose: Test-only escape hatch letting alerting.ts fire for real inside a test process instead of the default no-op-in-test guard.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: ALERT_INFO_EMAIL
+  purpose: "Set to 'true' to restore emailing INFO-severity alerts (default: INFO-severity is logged only, reported later in the daily digest)."
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: ALERT_RECIPIENTS
+  purpose: Comma-separated override for who receives operational alert emails (defaults to petter@strale.io).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: ANTHROPIC_API_KEY
+  purpose: Claude API key powering every AI-synthesis capability (transparency_tag ai_generated/mixed) plus the CEO dashboard's plain-English rewrite and the daily digest. See apps/api/src/lib/models.ts for the pinned model ids this key calls.
+  provider: Anthropic
+  holder: petter
+  cost_class: metered
+  required_in:
+    - production
+    - test
+    - local
+  set_in:
+    - railway
+    - .env
+    - .env.test
+- name: API_BASE_URL
+  purpose: Base URL scripts/smoke-test.ts targets, defaulting to localhost:3000 for a local run.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: http://localhost:3000
+- name: AUDIT_FRONTEND_URL
+  purpose: Frontend base URL used specifically for audit-record links, falling back to FRONTEND_URL when unset.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: AUDIT_HMAC_SECRET
+  purpose: HMAC secret signing audit-trail URLs (EU AI Act compliance links). Must be at least 32 characters.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - test
+    - local
+    - ci
+  set_in:
+    - railway
+    - .env
+    - workflow
+- name: AUDIT_HMAC_SECRET_PREVIOUS
+  purpose: Previous HMAC secret, set only during a rotation window so tokens signed under the old secret still verify. Unset after the grace period.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  docs: docs/operations/hmac-rotation.md
+- name: AVIATIONSTACK_API_KEY
+  purpose: Aviationstack flight-data API key for flight-status.
+  provider: Aviationstack
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Freemium tier; upgrade path is metered.
+- name: BAG_API_KEY
+  purpose: Dutch BAG (Basisregistratie Adressen en Gebouwen) key for nl-bag-address.
+  provider: Kadaster (Dutch BAG)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Dutch government open-data API.
+- name: BEACON_SUPABASE_SERVICE_ROLE_KEY
+  purpose: Supabase service-role key for the Beacon project, paired with BEACON_SUPABASE_URL.
+  provider: Supabase (Beacon project)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: BEACON_SUPABASE_URL
+  purpose: Supabase project URL for 'Beacon' — a separate activity feed the daily digest folds in. Ownership/scope of the Beacon project itself is not established in this repo.
+  provider: Supabase (Beacon project)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Assumed Supabase free tier — not independently verified this session.
+- name: BETTER_STACK_SOURCE_TOKEN
+  purpose: Better Stack (Logtail) source token for structured log shipping. When unset, pino writes JSON to stdout, which Railway captures anyway.
+  provider: Better Stack
+  holder: petter
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: BOLAGSVERKET_CLIENT_ID
+  purpose: Bolagsverket (Swedish Companies Registration Office) OAuth client ID for swedish-company-data.
+  provider: Bolagsverket
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Cost tier not independently re-verified this session — flagged for confirmation, not assumed free with confidence.
+- name: BOLAGSVERKET_CLIENT_SECRET
+  purpose: Bolagsverket OAuth client secret, paired with BOLAGSVERKET_CLIENT_ID.
+  provider: Bolagsverket
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+- name: BROWSERLESS_API_KEY
+  purpose: Token the chromium service checks against (matches the Railway chromium service's own TOKEN env var), or a personal browserless.io account key for the cloud fallback.
+  provider: Browserless.io
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+- name: BROWSERLESS_URL
+  purpose: Headless-browser endpoint 47+ web-scraping capabilities depend on. Production points at the internal Railway chromium service; local dev runs the same image via docker-compose.
+  provider: Browserless.io
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Self-hosted chromium image on Railway (DEC-7), not the hosted browserless.io product; per project_vendor_cost_facts the free-hosted-plan fallback now also fits if ever needed.
+- name: CAPABILITY_PROMOTION_ENFORCE
+  purpose: "Feature flag: set to 'true' to make quarantine/promotion decisions in jobs/capability-promotion.ts take effect rather than log-only."
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: CBEAPI_KEY
+  purpose: Belgian CBE/KBO company-data vendor key for belgian-company-data.
+  provider: CBE API (Belgium)
+  holder: unknown
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Assumed paid third-party aggregator over the public CBE/KBO register — not independently verified this session.
+- name: CDP_API_KEY_ID
+  purpose: Coinbase Developer Platform API key ID for the x402 CDP facilitator (verify/settle USDC payments on Base).
+  provider: Coinbase CDP
+  holder: petter
+  cost_class: metered
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: "Per project_cdp_settlement_free_tier: 1,000 settlements/month free, then per-settlement fee. A prior gap in tracking this caused a 21h silent revenue outage."
+- name: CDP_API_KEY_SECRET
+  purpose: Coinbase Developer Platform API key secret, paired with CDP_API_KEY_ID.
+  provider: Coinbase CDP
+  holder: petter
+  cost_class: metered
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: COBALT_API_KEY
+  purpose: Cobalt Intelligence API key for us-company-data-cobalt (a US state-registry aggregator).
+  provider: Cobalt Intelligence
+  holder: unknown
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: CODEX_CWD
+  purpose: Working-directory hint from the Codex CLI's own turn-complete payload — not a Strale-owned variable; read by codex-notify.mjs to locate the repo when Codex doesn't pass one explicitly.
+  provider: Codex CLI (OpenAI)
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+- name: COMPANIES_HOUSE_API_KEY
+  purpose: UK Companies House API key for beneficial-ownership-lookup and related UK company-data capabilities.
+  provider: UK Companies House
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Official UK government API, free with registration.
+- name: COST_CLASS_MODE
+  purpose: Mode passed to the startup cost-class-taxonomy invariant check (assertCostClassTaxonomy).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: COURTLISTENER_API_TOKEN
+  purpose: CourtListener API token for us-court-search.
+  provider: CourtListener (Free Law Project)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Nonprofit, free API with registration.
+- name: CRASH_TEST_API_KEY
+  purpose: API key passed to the crash-testing child process.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: CRASH_TEST_DATABASE_URL
+  purpose: Database URL passed to the crash-testing child process (test-support/crash-child.ts), which deliberately kills the process mid-write to test crash-recovery invariants.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: CRASH_TEST_SLUG
+  purpose: Capability slug the crash-testing child process exercises.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: DATABASE_URL
+  purpose: Primary Postgres connection string for the API server (production and local dev).
+  provider: internal
+  holder: railway
+  cost_class: metered
+  required_in:
+    - production
+    - local
+    - ci
+  set_in:
+    - railway
+    - .env
+    - workflow
+  cost_note: Railway Postgres usage-based pricing; not a separate line item from compute.
+- name: DATABASE_URL_TEST
+  purpose: Postgres connection string for the integration test lane (WP1) — an ephemeral, disposable database, never production.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+    - ci
+  set_in:
+    - .env.test
+    - workflow
+- name: DATABASE_URL_UNPOOLED
+  purpose: Direct (session-mode, unpooled) Postgres connection string for scripts needing session-level features (e.g. advisory locks, LISTEN/NOTIFY) that a pooled DATABASE_URL doesn't support. Read only by an archived diagnostic script.
+  provider: internal
+  holder: railway
+  cost_class: metered
+  required_in:
+    - local
+  set_in:
+    - .env
+  cost_note: Same underlying Railway Postgres instance as DATABASE_URL.
+- name: DATABASE_URL_WRITE
+  purpose: "Production database write credential. Deliberately unset for autonomous sessions — see project_no_prod_write_grant: 'no prod write grant for autonomous sessions'. Only apps/api/src/lib/operator-db.ts is permitted to read it, gated by the production-authority model (DEC-20260822-B)."
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  docs: apps/api/src/lib/production-authority.ts
+- name: DILISENSE_API_KEY
+  purpose: Dilisense API key backing pep-check, adverse-media-check (primary), and (historically) sanctions-check — the single sanctions/PEP/adverse-media vendor per DEC-20260429-A.
+  provider: Dilisense
+  holder: petter
+  cost_class: subscription
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Basic+ tier required for the SA + DPA Strale needs — see project_dilisense_reseller_status.
+- name: EINSEARCH_API_KEY
+  purpose: "EIN-search vendor key for us-ein-match. Per project_vendor_cost_facts (2026-08-18 audit): no active subscription exists — this key is present in code but likely unset/inactive in production."
+  provider: EINsearch
+  holder: unknown
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: No active subscription as of the 2026-08-18 vendor audit.
+- name: EP_ONLINE_API_KEY
+  purpose: Dutch EP-Online (energy performance certificate registry) key for nl-energy-label.
+  provider: RVO EP-Online (Netherlands)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Dutch government open-data API, free with registration.
+- name: ERC8004_REGISTRY_ARB
+  purpose: ERC-8004 reputation registry contract address on Arbitrum.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: ERC8004_REGISTRY_BASE
+  purpose: ERC-8004 reputation registry contract address on Base.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: ERC8004_REGISTRY_ETH
+  purpose: ERC-8004 reputation registry contract address on Ethereum mainnet.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: ESORTCODE_API_KEY
+  purpose: UK sort-code / Confirmation-of-Payee vendor key for uk-cop-check.
+  provider: eSortCode (UK)
+  holder: unknown
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Assumed paid — not independently verified this session.
+- name: ETHERSCAN_API_KEY
+  purpose: Etherscan API key used by the shared etherscan-client for on-chain lookups across several web3-assurance evaluators.
+  provider: Etherscan
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Free tier with registration, rate-limited.
+- name: EUR_USD_RATE
+  purpose: Test-only override for the EUR/USD conversion rate used by x402-gateway pricing logic, so exchange-rate tests are deterministic.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: EXEC_HARD_TIMEOUT_MS
+  purpose: Capability executor hard timeout. Must stay below the reservation TTL (assertReservationTtlExceedsExecutionTimeout enforces this at boot).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  example_value: "300000"
+- name: FRONTEND_URL
+  purpose: Canonical frontend origin — used for CORS allow-list and building redirect/link URLs (Stripe checkout return, dispute links).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - test
+    - local
+    - ci
+  set_in:
+    - railway
+    - .env
+    - workflow
+- name: GEMI_API_KEY
+  purpose: Greek GEMI company-registry key for greek-company-data — the per-call parsing path opened by DEC-20260813-A.
+  provider: GEMI (Greece)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Cost tier not independently re-verified this session.
+- name: GITHUB_OUTPUT
+  purpose: GitHub Actions runtime-injected file path for writing step outputs. Not set by us — a workflow-provided variable.
+  provider: internal
+  holder: github-actions
+  cost_class: none
+  required_in:
+    - ci
+  set_in:
+    - workflow
+- name: GITHUB_TOKEN
+  purpose: Optional GitHub token used by the github-repo-compare capability to raise the unauthenticated GitHub API rate limit. Capability works without it, at the lower anonymous rate limit.
+  provider: GitHub
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: GitHub REST API is free; a token only raises the rate limit (60/hr anonymous -> 5000/hr authenticated).
+- name: HEALTH_DIGEST_EMAIL
+  purpose: Override recipient for the health-monitor digest email (defaults to admin@strale.io).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: HEALTH_DIGEST_FROM
+  purpose: "Override From: address for the health-monitor digest email."
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: HEALTH_MONITOR_INBOUND
+  purpose: Reply-To address for the health-monitor digest — email replies land on the reply-webhook route.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: HMRC_CLIENT_ID
+  purpose: HMRC (UK tax authority) OAuth client ID for production VAT lookups.
+  provider: HMRC (UK)
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Official UK government API, free with OAuth app registration.
+- name: HMRC_CLIENT_SECRET
+  purpose: HMRC OAuth client secret, paired with HMRC_CLIENT_ID.
+  provider: HMRC (UK)
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: HMRC_REQUESTER_VRN
+  purpose: Optional GB VAT registration number of the requester — when set, HMRC issues a consultation reference number Strale surfaces as source_reference for the audit trail.
+  provider: HMRC (UK)
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: HMRC_SANDBOX_CLIENT_ID
+  purpose: HMRC sandbox OAuth client ID, used when HMRC_USE_SANDBOX is true and by the archived sandbox-retest script.
+  provider: HMRC (UK)
+  holder: petter
+  cost_class: free
+  required_in:
+    - local
+  set_in:
+    - .env
+- name: HMRC_SANDBOX_CLIENT_SECRET
+  purpose: HMRC sandbox OAuth client secret, paired with HMRC_SANDBOX_CLIENT_ID.
+  provider: HMRC (UK)
+  holder: petter
+  cost_class: free
+  required_in:
+    - local
+  set_in:
+    - .env
+- name: HMRC_TEST_VRN
+  purpose: Canned VRN HMRC publishes for sandbox testing, used by the archived HMRC sandbox retest script. Defaults to HMRC's own documented example.
+  provider: HMRC (UK)
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: "553557817"
+- name: HMRC_USE_SANDBOX
+  purpose: Flag selecting HMRC sandbox vs production credentials/endpoint.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+- name: INTERNAL_SECRET
+  purpose: Optional bearer secret for scripts/smoke-test.ts's internal API calls, distinct from ADMIN_SECRET. Empty by default.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+- name: JINA_API_KEY
+  purpose: Jina AI Reader API key, an alternate readability/markdown extraction backend (lib/jina-reader.ts).
+  provider: Jina AI
+  holder: unknown
+  cost_class: metered
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: JUSTIZONLINE_API_KEY
+  purpose: JustizOnline IWG token for austrian-company-data (Firmenbuch HVD API). Passed as X-API-KEY; the WSDL 401s without it.
+  provider: JustizOnline / BRZ (Austria)
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Granted 2026-08-27 under the IWG reuse grant (CC BY 4.0) — see project_justizonline_iwg_token.
+- name: LEGACY_TOKEN_SUNSET_ISO
+  purpose: Override sunset date (ISO string) for legacy-format audit tokens — lets a security-driven early sunset (e.g. a discovered token-format leak) take effect without a redeploy.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: LOG_LEVEL
+  purpose: Pino log level (trace|debug|info|warn|error|fatal). Defaults to info.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  example_value: info
+- name: NODE_ENV
+  purpose: Standard Node environment flag; gates dev-only self-checks (e.g. iban-validate startup self-test) and pino transport pretty-printing.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - production
+    - test
+    - local
+    - ci
+  set_in:
+    - railway
+    - .env
+    - workflow
+  example_value: development
+- name: NOTION_API_KEY
+  purpose: "Notion integration token used by the daily digest to fetch Journal-entry activity. NOTE: a second, differently-named variable (NOTION_TOKEN) is used elsewhere for what appears to be the same integration — worth consolidating to one name."
+  provider: Notion
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: NOTION_TOKEN
+  purpose: Notion integration token used by check-vendor-roster-drift.ts and the weekly-drift workflow to query the Vendor Roster / Decisions databases. See NOTION_API_KEY note — likely the same underlying integration under a second name.
+  provider: Notion
+  holder: petter
+  cost_class: free
+  required_in:
+    - local
+    - ci
+  set_in:
+    - .env
+    - workflow
+- name: NULL_RATIO_RULE_ENABLED
+  purpose: Feature flag (DEC-20260409-A) enabling the null-output correctness tier in test-runner.ts. Defaults to disabled.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: OPENAPI_COM_API_TOKEN_PROD
+  purpose: Openapi.com API token, exchanged via OAuth scope-exchange for a short-lived Bearer token (NOT used directly as a Bearer key).
+  provider: Openapi.com
+  holder: petter
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: OPENAPI_COM_EMAIL
+  purpose: Openapi.com account email for the Tier-3 aggregator resolver backing 10 EU country capabilities.
+  provider: Openapi.com
+  holder: petter
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Gated off (OPENAPI_ENABLED=false) in production until the resale addendum countersignature lands (Openapi case 151296).
+- name: OPENAPI_ENABLED
+  purpose: Master kill-switch for the Openapi.com resolver. MUST stay 'false' in production until the resale addendum is countersigned — a legal-compliance gate, not a feature flag.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  example_value: "false"
+- name: OPENREGISTER_API_KEY
+  purpose: OpenRegister.de key for german-company-data.
+  provider: OpenRegister (Germany)
+  holder: unknown
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: PAGESPEED_API_KEY
+  purpose: Google PageSpeed Insights API key for the page-speed capability.
+  provider: Google
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Free Google Cloud API with a daily quota.
+- name: PG_IDLE_IN_TX_TIMEOUT_MS
+  purpose: Postgres idle_in_transaction_session_timeout applied to pooled connections — prevents an open transaction pinning a pool slot indefinitely.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  example_value: "60000"
+- name: PG_STATEMENT_TIMEOUT_MS
+  purpose: Postgres statement_timeout applied to pooled connections (overridable per-statement with SET LOCAL for long jobs like REINDEX CONCURRENTLY).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  example_value: "30000"
+- name: PORT
+  purpose: TCP port the Hono server listens on.
+  provider: internal
+  holder: railway
+  cost_class: none
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  example_value: "3000"
+- name: QUALITY_FLOOR_ENFORCE
+  purpose: "Feature flag: set to 'true' to make the quality-floor job's quarantine/deactivation proposals take effect. Per project_quality_floor_armed_in_prod, this is armed (true) in prod, not dry-run."
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  docs: docs/company/CHARTER.md
+- name: RAILWAY_GIT_COMMIT_SHA
+  purpose: Railway-injected build commit SHA, surfaced (truncated) on GET /health for deploy verification.
+  provider: Railway
+  holder: railway
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: RAILWAY_PUBLIC_DOMAIN
+  purpose: Railway-injected public domain for this service. Preferred over STRALE_BASE_URL when present (a2a.ts).
+  provider: Railway
+  holder: railway
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: RAILWAY_REPLICA_REGION
+  purpose: Railway-injected replica region, used to derive the EU AI Act data_jurisdiction / processing-location marker. Superseded by STRALE_PROCESSING_REGION as a manual override in some paths — both are read by the same resolver.
+  provider: Railway
+  holder: railway
+  cost_class: none
+  required_in:
+    - production
+    - test
+  set_in:
+    - railway
+- name: REKT_API_TOKEN
+  purpose: Rekt Database API token for the rekt-database web3-assurance evaluator (known-exploit lookups).
+  provider: Rekt Database
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Cost tier not independently re-verified this session.
+- name: REPLY_WEBHOOK_SECRET
+  purpose: Optional shared secret validating inbound requests to the health-monitor reply webhook.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: RESEND_API_KEY
+  purpose: Resend transactional-email API key for activation and health-digest emails.
+  provider: Resend
+  holder: petter
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: RISK_NARRATIVE_MODEL
+  purpose: Override for the pinned Claude model risk-narrative-generate uses (defaults to the models.ts registry pin). Kept as an env override for fast rollback; the registry entry (apps/api/src/lib/models.ts, role capability_reasoning) is the source of truth for the default.
+  provider: Anthropic
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  docs: apps/api/src/lib/models.ts
+- name: SDDA_API_CLIENT_ID
+  purpose: Latvian SDDA (Enterprise Register) OAuth client ID for latvian-company-data-sdda.
+  provider: SDDA (Latvia)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Cost tier not independently re-verified this session.
+- name: SDDA_API_CLIENT_SECRET
+  purpose: Latvian SDDA OAuth client secret, paired with SDDA_API_CLIENT_ID.
+  provider: SDDA (Latvia)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: SEC_API_IO_TOKEN
+  purpose: "sec-api.io token for us-sec-filings-extended. Per project_vendor_cost_facts (2026-08-18 audit): no active subscription exists."
+  provider: sec-api.io
+  holder: unknown
+  cost_class: subscription
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: No active subscription as of the 2026-08-18 vendor audit.
+- name: SERPER_API_KEY
+  purpose: Serper.dev (Google Search API) key — google-search capability, and the fallback path for adverse-media-check when Dilisense doesn't cover a query.
+  provider: Serper.dev
+  holder: petter
+  cost_class: metered
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Prepaid credit balance; per project_vendor_cost_facts the current credit batch expires ~2026-11-08.
+- name: SESSION_WINDOW_HOURS
+  purpose: Look-back window (hours) session-close-check.ts uses to find 'this session's' commits by the current git author.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: "6"
+- name: STARTUP_DB_RETRY_BUDGET_MS
+  purpose: Time budget for retrying the initial DB connection at boot before giving up.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: STRALE_API_KEY
+  purpose: API key strale-mcp (packages/mcp-server) uses when calling the public Strale API on the caller's behalf. Per user_api_key.md, the copy in the root .env is dead (matches no account, verified 2026-08-25) — rotation needs write access Petter alone holds.
+  provider: internal
+  holder: unknown
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  cost_note: The historical root .env value is confirmed dead; treat as needing a fresh key from Petter, not a rotation of the current one.
+- name: STRALE_API_URL
+  purpose: Base URL an archived diagnostic script (empirical-screening-coverage.ts) targets. Defaults to production.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: https://api.strale.io
+- name: STRALE_BASE_URL
+  purpose: This API's own public base URL — used to build self-referential links (A2A agent card, MCP client default) when RAILWAY_PUBLIC_DOMAIN isn't set.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  example_value: http://localhost:3000
+- name: STRALE_FRONTEND_PATH
+  purpose: Local filesystem path to the sibling strale-frontend checkout, read by check-platform-facts-drift.ts to scan frontend surfaces for stale vendor/count copy. Defaults to a hardcoded Windows path.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+    - ci
+  set_in:
+    - .env
+    - workflow
+- name: STRALE_MAX_PRICE_CENTS
+  purpose: Default max_price_cents ceiling used where a caller doesn't supply one (MCP server default request budget).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  example_value: "200"
+- name: STRALE_PROCESSING_REGION
+  purpose: Manual override for the EU AI Act processing-location marker when RAILWAY_REPLICA_REGION isn't authoritative (legacy alias, see processing-location.ts).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: STRALE_REQUIRE_INTEGRATION_DB
+  purpose: "Hard-fail flag: makes a missing DATABASE_URL_TEST a thrown error inside useTestDatabase() rather than a silent describe.skip, so an empty integration lane fails loudly instead of reporting green."
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+    - ci
+  set_in:
+    - .env.test
+    - workflow
+- name: STRALE_SMOKE_API_KEY
+  purpose: API key an archived smoke-test script (solution-execution-smoke.mts) uses to exercise solution execution end to end.
+  provider: internal
+  holder: unknown
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+- name: STRALE_TEST_API_KEY
+  purpose: API key used by archived/ad-hoc scripts (empirical-screening-coverage.ts, sweep-prod-catalog.ts fallback) to authenticate against the live API for read-style diagnostics.
+  provider: internal
+  holder: unknown
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+- name: STRIPE_SECRET_KEY
+  purpose: Stripe secret key for wallet top-up Checkout sessions. LIVE (sk_live_) in production, sk_test_ locally.
+  provider: Stripe
+  holder: petter
+  cost_class: metered
+  required_in:
+    - production
+    - test
+    - local
+  set_in:
+    - railway
+    - .env
+    - .env.test
+  cost_note: Stripe's standard per-transaction processing fee; no fixed subscription.
+- name: STRIPE_WEBHOOK_SECRET
+  purpose: Stripe webhook signing secret verifying checkout.session.completed events.
+  provider: Stripe
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+    - test
+    - local
+  set_in:
+    - railway
+    - .env
+    - .env.test
+- name: SUDREG_CLIENT_ID
+  purpose: Croatian Sudski registar (court register) OAuth client ID for croatian-company-data.
+  provider: Sudski registar (Croatia)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Cost tier not independently re-verified this session.
+- name: SUDREG_CLIENT_SECRET
+  purpose: Croatian Sudski registar OAuth client secret, paired with SUDREG_CLIENT_ID.
+  provider: Sudski registar (Croatia)
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: SWEEP_API_KEY
+  purpose: API key the production catalog sweep script authenticates with. Falls back to STRALE_TEST_API_KEY.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+- name: SWEEP_BASE_URL
+  purpose: Base URL the production catalog sweep script targets (apps/api/scripts/sweep-prod-catalog.ts). Defaults to production.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: https://strale-production.up.railway.app
+- name: SWEEP_BUDGET_CAP_CENTS
+  purpose: External-cost cap (cents) for one full-catalog production sweep. Defaults to 2500 (the €25 cap in DEC-20260812-A).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: "2500"
+  docs: docs/strategy/2026-08-12-platform-readiness-program.md
+- name: SWEEP_CONCURRENCY
+  purpose: Concurrent in-flight capability calls during a production sweep. Defaults to 1 — see project_prod_sweep_operational_notes (breaker threshold <=2 attempts/slug at concurrency 1).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: "1"
+- name: SWEEP_LAUNCH_DELAY_MS
+  purpose: Delay (ms) between launching successive sweep calls, to avoid bursting a single vendor.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - local
+  set_in:
+    - .env
+  example_value: "800"
+- name: TENDERLY_ACCESS_KEY
+  purpose: Tenderly access key, paired with TENDERLY_ACCOUNT/TENDERLY_PROJECT.
+  provider: Tenderly
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: TENDERLY_ACCOUNT
+  purpose: Tenderly account slug for the tenderly-simulation web3-assurance evaluator.
+  provider: Tenderly
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+  cost_note: Assumed free tier — not independently verified this session.
+- name: TENDERLY_PROJECT
+  purpose: Tenderly project slug, paired with TENDERLY_ACCOUNT.
+  provider: Tenderly
+  holder: unknown
+  cost_class: free
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: TREE_GUARD_THRESHOLD
+  purpose: Tracked-file-count threshold above which scripts/guard-tree-integrity.mjs treats a sudden drop as the Windows checkout-corruption bug (Shared-Checkout Rule) rather than a real deletion.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - local
+    - ci
+  set_in:
+    - .env
+    - workflow
+  example_value: "20"
+- name: VENDOR_CONTROL_TOWER_FORCE
+  purpose: Test-only flag forcing metered-vendor-fetch.test.ts's code path regardless of the ambient cost-class mode.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: VOYAGE_API_KEY
+  purpose: Voyage AI API key for capability-search embeddings (POST /v1/suggest).
+  provider: Voyage AI
+  holder: petter
+  cost_class: metered
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+- name: WEBHOOK_URL
+  purpose: Generic outbound webhook URL used by lib/webhook.ts for operational notifications.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: X402_CHALLENGE_VERSION
+  purpose: Which x402 challenge/response protocol version (1 or 2) the gateway advertises — a config switch so the version bump takes effect without a code change.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: X402_FACILITATOR_URL
+  purpose: "Legacy HTTP x402 facilitator URL, used only when no CDP credentials are configured. Read indirectly: resolveFacilitatorSelection(process.env as FacilitatorEnv) destructures it inside x402-gateway.ts rather than the literal `process.env.X402_FACILITATOR_URL` text this manifest's checker scans for."
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  read_indirectly: true
+  example_value: https://x402.org/facilitator
+- name: X402_GATEWAY_V2_PATH
+  purpose: Test-only override for the file path a static-analysis test (x402-gateway-v2.payer-hash.test.ts) reads the gateway source from.
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: X402_NETWORK
+  purpose: x402 v1 legacy network name ('base' | 'base-sepolia') for compatibility with the canonical x402-fetch client. Defaults to base-sepolia (testnet).
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+  example_value: base
+- name: X402_RECEIVING_ADDRESS
+  purpose: Set defensively by billing-parity.integration.test.ts under the apparent belief it configures x402. isX402Configured() only checks X402_WALLET_ADDRESS — no production code path reads this name, so this looks like a stale/dead reference inside the test rather than live config. Flagged here, not fixed (out of scope for this track).
+  provider: internal
+  holder: local-only
+  cost_class: none
+  required_in:
+    - test
+  set_in:
+    - .env.test
+- name: X402_WALLET_ADDRESS
+  purpose: Strale's own receiving wallet address for x402 payments. isX402Configured() gates the entire x402 payment path on this being set.
+  provider: internal
+  holder: petter
+  cost_class: none
+  required_in:
+    - production
+  set_in:
+    - railway
+- name: ZEFIX_PASSWORD
+  purpose: Zefix PublicREST API password, paired with ZEFIX_USERNAME.
+  provider: Zefix (Switzerland)
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+- name: ZEFIX_USERNAME
+  purpose: Zefix PublicREST API username for swiss-company-data.
+  provider: Zefix (Switzerland)
+  holder: petter
+  cost_class: free
+  required_in:
+    - production
+    - local
+  set_in:
+    - railway
+    - .env
+  cost_note: Free public registry, register at zefix.admin.ch/ZefixPublicREST.
