@@ -11,7 +11,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import YAML from "yaml";
-import { canonicalDigest, loadRegister, loadRegisterSchema, repoRootFrom, sha256, validatePrivateProjection } from "./m2-closure-register-lib.mjs";
+import { canonicalDigest, compareRowsToExport, loadRegister, loadRegisterSchema, repoRootFrom, validatePrivateProjection } from "./m2-closure-register-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const register = loadRegister(root);
@@ -51,28 +51,9 @@ const all = [...register.decision_rows, ...priv];
 const allDigest = canonicalDigest(all);
 if (allDigest !== register.digests.all_rows.digest) fail(`all-rows digest ${allDigest} != ${register.digests.all_rows.digest}`);
 
-// 3. Every projected row must match its raw export row field by field.
-const seen = new Set();
-for (const row of all) {
-  const src = identities.get(row.page_id);
-  if (!src) { fail(`row ${row.page_id} not in export`); continue; }
-  if (seen.has(row.page_id)) fail(`row ${row.page_id} listed twice`);
-  seen.add(row.page_id);
-  const expected = {
-    id: (src["userDefined:ID"] ?? "").trim() || null,
-    historical_status: src.Status ?? null,
-    historical_scope: src.Scope ?? null,
-    decided_at: (src["date:Date:start"] || src.createdTime).slice(0, 10),
-    title_hash: sha256(src.Decision ?? ""),
-  };
-  const actualHash = row.title_sha256 ?? sha256(row.title);
-  if (row.id !== expected.id) fail(`${row.page_id} id ${row.id} != ${expected.id}`);
-  if (row.historical_status !== expected.historical_status) fail(`${row.page_id} status`);
-  if (row.historical_scope !== expected.historical_scope) fail(`${row.page_id} scope`);
-  if (row.decided_at !== expected.decided_at) fail(`${row.page_id} date ${row.decided_at} != ${expected.decided_at}`);
-  if (actualHash !== expected.title_hash) fail(`${row.page_id} title hash`);
-}
-for (const p of identities.keys()) if (!seen.has(p)) fail(`export row ${p} missing from both projections`);
+// 3. Every projected row must match its raw export row field by field, and
+// every export row must be projected exactly once (pure, shared with tests).
+for (const f of compareRowsToExport(all, raw)) fail(`${f.code} ${f.detail}`);
 
 // 4. Everything about the private projection that CI cannot see: schema,
 // derivation rules, counts, digests, next-batch candidates. One pure function,

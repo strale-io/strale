@@ -10,6 +10,7 @@ import {
   buildContext,
   canonicalDigest,
   checkClosureRegister,
+  compareRowsToExport,
   evidenceProblem,
   loadRegister,
   loadRegisterSchema,
@@ -141,16 +142,34 @@ const syntheticPrivate = () => {
 };
 const pcodes = (r, rows) => validatePrivateProjection(r, rows, { schema, collisions: context.collisions }).map((f) => f.code);
 
-test("a coordinated identity edit that re-syncs the public digest passes CI but fails the private-projection check", () => {
+test("a coordinated identity edit that re-syncs every digest passes CI but fails the raw-export comparison", () => {
   const r = base();
   publicPending(r).decided_at = "2026-01-01";
   resync(r);
   assert.deepEqual(codesExcept(r), [], "CI cannot see the archive, so a resynced public register passes");
-  // The same edit against the projection: the all-rows digest no longer recomputes.
-  const { r: sr, rows } = syntheticPrivate();
-  rows[0].decided_at = "2026-01-01";
-  assert.ok(pcodes(sr, rows).includes("PRIVATE_DIGEST_MISMATCH"));
-  assert.ok(pcodes(sr, rows).includes("ALL_ROWS_DIGEST_MISMATCH"));
+  // Synthetic export rows as the archive stores them.
+  const exportRows = [
+    { url: `https://app.notion.com/${"1".repeat(32)}`, "userDefined:ID": "DEC-20260901-Q", Status: "active", Scope: "global", "date:Date:start": "2026-09-01", createdTime: "2026-09-01T00:00:00Z", Decision: "q" },
+    { url: `https://app.notion.com/${"2".repeat(32)}`, "userDefined:ID": "DEC-20260301-Q", Status: "superseded", Scope: "feature", "date:Date:start": "2026-03-01", createdTime: "2026-03-01T00:00:00Z", Decision: "s" },
+    { url: `https://app.notion.com/${"3".repeat(32)}`, "userDefined:ID": "", Status: "active", Scope: null, "date:Date:start": null, createdTime: "2026-04-02T09:00:00Z", Decision: "u" },
+  ];
+  const { rows } = syntheticPrivate();
+  assert.deepEqual(compareRowsToExport(rows, exportRows), []);
+  // Coordinated edit: change the date AND recompute every digest; only the export comparison can catch it.
+  const { r: sr, rows: mutated } = syntheticPrivate();
+  mutated[0].decided_at = "2026-01-01";
+  sr.private_rows.digest = canonicalDigest(mutated);
+  sr.digests.all_rows.digest = canonicalDigest([...sr.decision_rows, ...mutated]);
+  sr.next_decision_batch.private_candidates = { count: 0, digest: sha256("\n") }; // the moved date makes the row ineligible
+  assert.deepEqual(pcodes(sr, mutated), [], "digests and the batch were recomputed, so the projection validator is satisfied");
+  const c = compareRowsToExport(mutated, exportRows).map((f) => f.code);
+  assert.ok(c.includes("EXPORT_FIELD_MISMATCH"), c.join(","));
+  // A row dropped from both projections, and a wrong source_url, are caught too.
+  const c2 = compareRowsToExport(mutated.slice(1), exportRows).map((f) => f.code);
+  assert.ok(c2.includes("EXPORT_ROW_UNPROJECTED"));
+  const { rows: badUrl } = syntheticPrivate();
+  badUrl[0].source_url = `https://app.notion.com/${"9".repeat(32)}`;
+  assert.ok(compareRowsToExport(badUrl, exportRows).map((f) => f.code).includes("EXPORT_FIELD_MISMATCH"));
 });
 
 test("the private projection validator recomputes counts, digests, derivation rules, and the next batch", () => {
@@ -166,11 +185,11 @@ test("the private projection validator recomputes counts, digests, derivation ru
   b.r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, unclear: 1 };
   b.r.private_rows.digest = canonicalDigest(b.rows);
   b.r.digests.all_rows.digest = canonicalDigest([...b.r.decision_rows, ...b.rows]);
-  assert.ok(pcodes(b.r, b.rows).includes("PRIVATE_ROW_PENDING_NOT_ACTIVE"));
+  assert.ok(pcodes(b.r, b.rows).includes("PRIVATE_ROW_DERIVATION_MISMATCH"));
   // erased hand classification: an unclear row given an id
   const c = syntheticPrivate();
   c.rows[2].id = "DEC-20260402-E";
-  assert.ok(pcodes(c.r, c.rows).includes("PRIVATE_ROW_UNCLEAR_WITH_ID"));
+  assert.ok(pcodes(c.r, c.rows).includes("PRIVATE_ROW_DERIVATION_MISMATCH"));
   // erased next batch
   const d = syntheticPrivate();
   d.r.next_decision_batch.private_candidates = { count: 0, digest: sha256("\n") };
@@ -192,6 +211,30 @@ test("the private projection validator recomputes counts, digests, derivation ru
   const i = syntheticPrivate();
   i.rows[0].page_id = [...context.collisions.collisions[0].records][0].source_page_id;
   assert.ok(pcodes(i.r, i.rows).includes("PRIVATE_ROW_IN_REGISTRY"));
+  // hand disposition on a private row, with counts, digests, and next batch all recomputed
+  const j = syntheticPrivate();
+  j.rows[0].disposition = "intentionally_historical";
+  j.rows[0].evidence = ["archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md"];
+  j.r.private_rows.counts_by_disposition = { intentionally_historical: 1, obsolete_or_superseded: 1, unclear: 1 };
+  j.r.private_rows.digest = canonicalDigest(j.rows);
+  j.r.digests.all_rows.digest = canonicalDigest([...j.r.decision_rows, ...j.rows]);
+  j.r.next_decision_batch.private_candidates = { count: 0, digest: sha256("\n") };
+  const jc = pcodes(j.r, j.rows);
+  assert.ok(jc.includes("PRIVATE_ROW_HAND_DISPOSITION"), jc.join(","));
+  assert.ok(!jc.includes("PRIVATE_ROW_DERIVATION_MISMATCH"), "hand dispositions are reported once, as HAND_DISPOSITION");
+  // two private active rows sharing an unregistered id, everything recomputed
+  const k = syntheticPrivate();
+  k.rows[1] = { ...k.rows[0], page_id: "4".repeat(32), source_url: `https://app.notion.com/${"4".repeat(32)}`, title_sha256: sha256("t") };
+  k.r.private_rows.counts_by_disposition = { not_yet_reconciled: 2, unclear: 1 };
+  k.r.private_rows.digest = canonicalDigest(k.rows);
+  k.r.digests.all_rows.digest = canonicalDigest([...k.r.decision_rows, ...k.rows]);
+  k.r.next_decision_batch.private_candidates = { count: 0, digest: sha256("\n") };
+  const kc = pcodes(k.r, k.rows);
+  assert.ok(kc.includes("PRIVATE_ROW_UNREGISTERED_DUPLICATE_ID"), kc.join(","));
+  // wrong source_url
+  const l = syntheticPrivate();
+  l.rows[0].source_url = `https://app.notion.com/${"9".repeat(32)}`;
+  assert.ok(pcodes(l.r, l.rows).includes("PRIVATE_ROW_SOURCE_URL_MISMATCH"));
 });
 
 test("an identity that is not already public on main is rejected", () => {

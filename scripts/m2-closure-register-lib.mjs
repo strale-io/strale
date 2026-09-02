@@ -610,19 +610,28 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
   for (const r of register.decision_rows) if (r.id) idCounts[r.id] = (idCounts[r.id] ?? 0) + 1;
   for (const r of rows) if (r.id) idCounts[r.id] = (idCounts[r.id] ?? 0) + 1;
 
+  // A private row's disposition is fully determined by its identity fields:
+  // no id -> unclear; superseded or reversed -> obsolete_or_superseded;
+  // otherwise -> not_yet_reconciled. Hand dispositions (intentionally
+  // historical, cross-surface collision) need public evidence citing the page
+  // id, so they can only exist as public rows.
+  const expectedDisposition = (r) =>
+    !r.id ? "unclear" : ["superseded", "reversed"].includes(r.historical_status) ? "obsolete_or_superseded" : "not_yet_reconciled";
   for (const r of rows) {
     if (seen.has(r.page_id)) finding("PRIVATE_ROW_DUPLICATE", r.page_id);
     seen.add(r.page_id);
     if (publicPages.has(r.page_id)) finding("PRIVATE_ROW_ALSO_PUBLIC", r.page_id);
     if (registryPageIds.has(r.page_id)) finding("PRIVATE_ROW_IN_REGISTRY", r.page_id);
     if (r.title !== undefined) finding("PRIVATE_ROW_CLEAR_TITLE", r.page_id);
+    if (typeof r.source_url !== "string" || !r.source_url.endsWith(r.page_id)) finding("PRIVATE_ROW_SOURCE_URL_MISMATCH", r.page_id);
     if (["formally_migrated", "resolved_collision"].includes(r.disposition)) finding("PRIVATE_ROW_PUBLIC_DISPOSITION", `${r.page_id}: ${r.disposition}`);
-    if (r.disposition === "unresolved_collision" && r.collision?.kind !== "cross-surface") finding("PRIVATE_ROW_IN_REGISTRY", `${r.page_id}: notion-duplicate collisions are public by construction`);
-    if (r.disposition === "not_yet_reconciled" && r.historical_status !== "active") finding("PRIVATE_ROW_PENDING_NOT_ACTIVE", r.page_id);
-    if (r.disposition === "obsolete_or_superseded" && !["superseded", "reversed"].includes(r.historical_status)) finding("PRIVATE_ROW_OBSOLETE_BUT_ACTIVE", r.page_id);
-    if (r.disposition === "unclear" && r.id) finding("PRIVATE_ROW_UNCLEAR_WITH_ID", r.page_id);
-    if (r.disposition !== "unclear" && !r.id) finding("PRIVATE_ROW_BLANK_ID_NOT_UNCLEAR", r.page_id);
+    if (["intentionally_historical", "unresolved_collision"].includes(r.disposition)) finding("PRIVATE_ROW_HAND_DISPOSITION", `${r.page_id}: ${r.disposition} needs public evidence and must be a public row`);
+    const expected = expectedDisposition(r);
+    if (r.disposition !== expected && !["formally_migrated", "resolved_collision", "intentionally_historical", "unresolved_collision"].includes(r.disposition)) {
+      finding("PRIVATE_ROW_DERIVATION_MISMATCH", `${r.page_id}: ${r.disposition} but identity fields derive ${expected}`);
+    }
     if (r.record_key) finding("PRIVATE_ROW_RECORD_KEY", r.page_id);
+    if (r.id && (idCounts[r.id] ?? 0) > 1 && !collisionIds.has(r.id)) finding("PRIVATE_ROW_UNREGISTERED_DUPLICATE_ID", `${r.page_id}: ${r.id} is shared by ${idCounts[r.id]} rows but is not in the collision registry`);
   }
 
   const counts = {};
@@ -645,6 +654,43 @@ export function validatePrivateProjection(register, privateRows, { schema, colli
   const candidateDigest = sha256(eligible.map((r) => r.page_id).sort().join("\n") + "\n");
   if (eligible.length !== nb.private_candidates.count) finding("PRIVATE_NEXT_BATCH_COUNT_MISMATCH", `${eligible.length} eligible vs ${nb.private_candidates.count}`);
   if (candidateDigest !== nb.private_candidates.digest) finding("PRIVATE_NEXT_BATCH_DIGEST_MISMATCH", candidateDigest.slice(0, 12));
+  return findings;
+}
+
+/**
+ * Compare projected rows (public plus private) with the raw export rows as the
+ * archive stores them ({ url, "userDefined:ID", Status, Scope,
+ * "date:Date:start", createdTime, Decision }). Pure; used by the operator
+ * script with rows fetched over gh api and by tests with synthetic rows.
+ */
+export function compareRowsToExport(rows, exportRows) {
+  const findings = [];
+  const finding = (code, detail) => findings.push({ code, path: "archive export", detail });
+  const pid = (u) => ((u ?? "").replace(/-/g, "").match(/([0-9a-f]{32})/) ?? [])[1];
+  const identities = new Map(exportRows.map((r) => [pid(r.url), r]));
+  const seen = new Set();
+  for (const row of rows) {
+    const src = identities.get(row.page_id);
+    if (!src) { finding("EXPORT_ROW_MISSING", `${row.page_id} is not in the export`); continue; }
+    if (seen.has(row.page_id)) finding("EXPORT_ROW_DUPLICATE", row.page_id);
+    seen.add(row.page_id);
+    const expected = {
+      id: (src["userDefined:ID"] ?? "").trim() || null,
+      historical_status: src.Status ?? null,
+      historical_scope: src.Scope ?? null,
+      decided_at: (src["date:Date:start"] || src.createdTime).slice(0, 10),
+      title_hash: sha256(src.Decision ?? ""),
+      source_url: `https://app.notion.com/${row.page_id}`,
+    };
+    const actualHash = row.title_sha256 ?? sha256(row.title ?? "");
+    if (row.id !== expected.id) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} id ${row.id} != ${expected.id}`);
+    if (row.historical_status !== expected.historical_status) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} status`);
+    if (row.historical_scope !== expected.historical_scope) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} scope`);
+    if (row.decided_at !== expected.decided_at) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} date ${row.decided_at} != ${expected.decided_at}`);
+    if (actualHash !== expected.title_hash) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} title hash`);
+    if (row.source_url !== expected.source_url) finding("EXPORT_FIELD_MISMATCH", `${row.page_id} source_url`);
+  }
+  for (const p of identities.keys()) if (!seen.has(p)) finding("EXPORT_ROW_UNPROJECTED", `${p} is in the export but in neither projection`);
   return findings;
 }
 
