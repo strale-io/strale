@@ -39,6 +39,9 @@ export const DECISION_DISPOSITIONS = [
   "unclear",
 ];
 export const PLAN_DISPOSITIONS = ["merged", "partially_merged", "superseded", "open"];
+// The next-batch cutoff is the adoption of the readiness program: the formal
+// record with this id. The register may not choose another anchor.
+export const READINESS_ANCHOR_ID = "DEC-20260812-A";
 const URL_EVIDENCE =
   /^https:\/\/(github\.com\/strale-io\/(strale|strale-context-archive)\/(pull\/[0-9]+|issues\/[0-9]+|commit\/[0-9a-f]{7,40})|app\.notion\.com\/(p\/)?[0-9a-f]{32})$/;
 // Forward-looking sentences in the migration plan that the register must reconcile.
@@ -165,7 +168,7 @@ export function readFormalRecordSummaries(root) {
       const meta = match ? YAML.parse(match[1]) : {};
       const evidence = meta.evidence ?? [];
       const pageIds = [...new Set([...evidence.join("\n").replace(/-/g, "").matchAll(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g)].map((m) => m[0]))];
-      return { file: `${RECORDS_DIR}/${f}`, record_key: meta.record_key, id: meta.id, evidence, pageIds };
+      return { file: `${RECORDS_DIR}/${f}`, record_key: meta.record_key, id: meta.id, evidence, pageIds, decided_at: meta.decided_at ? String(meta.decided_at).slice(0, 10) : null };
     });
 }
 
@@ -557,9 +560,12 @@ export function validateClosureRegister(register, context, { schema, relativePat
 
   // ---- Next batch: cutoff anchored to a public row; public eligibility exact.
   const nb = register.next_decision_batch;
-  const anchor = register.decision_rows.find((r) => r.id === nb.cutoff_anchor_id);
-  if (!anchor) finding("NEXT_BATCH_ANCHOR_UNKNOWN", nb.cutoff_anchor_id);
-  else if (anchor.decided_at !== nb.decided_on_or_after) finding("NEXT_BATCH_CUTOFF_MISMATCH", `${nb.decided_on_or_after} vs ${nb.cutoff_anchor_id} decided ${anchor.decided_at}`);
+  if (nb.cutoff_anchor_id !== READINESS_ANCHOR_ID) finding("NEXT_BATCH_ANCHOR_NOT_READINESS", `${nb.cutoff_anchor_id} is not ${READINESS_ANCHOR_ID}`);
+  const anchorRecord = context.records.find((r) => r.id === READINESS_ANCHOR_ID);
+  const anchorRow = register.decision_rows.find((r) => r.id === READINESS_ANCHOR_ID);
+  if (!anchorRecord) finding("NEXT_BATCH_ANCHOR_UNKNOWN", `${READINESS_ANCHOR_ID} has no formal record`);
+  else if (anchorRecord.decided_at !== nb.decided_on_or_after) finding("NEXT_BATCH_CUTOFF_MISMATCH", `${nb.decided_on_or_after} vs record ${READINESS_ANCHOR_ID} decided ${anchorRecord.decided_at}`);
+  if (anchorRow && anchorRecord && anchorRow.decided_at !== anchorRecord.decided_at) finding("NEXT_BATCH_CUTOFF_MISMATCH", `row ${READINESS_ANCHOR_ID} decided ${anchorRow.decided_at} vs record ${anchorRecord.decided_at}`);
   // Uniqueness is judged over the public rows plus the collision registry; every
   // registry row is public (DECISION_ROW_MISSING_FROM_REGISTER), so this equals
   // the all-rows rule the operator script applies to the private projection.

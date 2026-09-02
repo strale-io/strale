@@ -676,7 +676,20 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
   has(r, "NEXT_BATCH_CUTOFF_MISMATCH");
   const r2 = base();
   r2.next_decision_batch.cutoff_anchor_id = "DEC-19990101-Z";
-  has(r2, "NEXT_BATCH_ANCHOR_UNKNOWN");
+  has(r2, "NEXT_BATCH_ANCHOR_NOT_READINESS");
+  // Substituting another valid public record as the anchor, with a matching date, is rejected.
+  const r2b = base();
+  r2b.next_decision_batch.cutoff_anchor_id = "DEC-20260815-A";
+  r2b.next_decision_batch.decided_on_or_after = "2026-08-15";
+  const c2b = codes(r2b);
+  assert.ok(c2b.includes("NEXT_BATCH_ANCHOR_NOT_READINESS"), c2b.join(","));
+  assert.ok(c2b.includes("NEXT_BATCH_CUTOFF_MISMATCH"));
+  // The cutoff comes from the record's front matter, not the register row.
+  const r2c = base();
+  r2c.decision_rows.find((x) => x.id === "DEC-20260812-A").decided_at = "2026-08-01";
+  r2c.next_decision_batch.decided_on_or_after = "2026-08-01";
+  resync(r2c);
+  assert.ok(codes(r2c).includes("NEXT_BATCH_CUTOFF_MISMATCH"));
   const r3 = base();
   publicPending(r3); // an eligible public row that the candidate list does not name
   has(r3, "NEXT_BATCH_INCOMPLETE");
