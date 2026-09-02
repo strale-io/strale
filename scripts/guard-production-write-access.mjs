@@ -76,6 +76,12 @@ const AUTHORISED_MENTIONS = [
   // credential — there is none to leak — and forbidding it would mean the
   // refusal path had no coverage, which is worse.
   "apps/api/src/lib/operator-db.test.ts",
+  // The environment manifest (track T14, 2026-09-02) documents every
+  // variable code reads, including this one, with its holder and the rule
+  // that only the authority module may obtain it. A YAML row cannot read
+  // the environment; env:check would fail without the row. One long-lived
+  // register, so it is named here rather than pattern-excluded.
+  "config/env-manifest.yaml",
 ];
 
 /**
