@@ -3,11 +3,17 @@ record_key: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
 id: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
 title: Approve Execution Coral and four-world responsive conformance
 status: active
-topic: website-redesign
+topic: website-use-case-worlds
 scope: design
 owner: petter
 decided_at: 2026-08-20
-relations: []
+relations:
+  - type: related_to
+    target: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
+  - type: related_to
+    target: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
+  - type: related_to
+    target: DEC-20260820-E-WEBSITE-SEARCH-WEB
 evidence:
   - https://app.notion.com/p/3c267c87082c81f98018f6fb4d90b2c1
   - strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/use-case-risk-verification-v1.7.md
@@ -65,7 +71,10 @@ and establish CI visual-diff baselines before release. Repository record:
 and `strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/round-09-four-world-responsive-review/four-world-conformance-report.md`,
 on the separate `codex/website-redesign` branch, commit `f704cb2`. This
 approval does not authorize website implementation, merge, deployment, or
-integration with concurrent backend work.
+integration with concurrent backend work. This record's three `related_to`
+edges record that it governs the four-world sequence that
+`DEC-20260820-C-WEBSITE-COMPANY-RESEARCH`, `DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION`,
+and `DEC-20260820-E-WEBSITE-SEARCH-WEB` establish.
 
 ## Reversal conditions
 

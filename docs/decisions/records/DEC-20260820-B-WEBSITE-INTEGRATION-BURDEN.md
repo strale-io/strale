@@ -3,13 +3,11 @@ record_key: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
 id: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
 title: Website homepage integration-burden section approved
 status: active
-topic: website-redesign
+topic: website-homepage-integration-section
 scope: design
 owner: petter
 decided_at: 2026-08-20
-relations:
-  - type: related_to
-    target: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
+relations: []
 evidence:
   - https://app.notion.com/p/3c267c87082c81ee9e7cc995b11f12d6
   - strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/
@@ -54,12 +52,7 @@ detail visibly separate avoids overstating what the shared contract covers.
 This design direction is approved for later implementation, preserved for
 this repository at `strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/`
 on the separate `codex/website-redesign` branch. No implementation,
-deployment, merge, or release is authorized by this decision. This record
-carries a `related_to` edge to `DEC-20260820-C-WEBSITE-COMPANY-RESEARCH` — the
-next homepage section in the same approval sequence — solely to keep the
-`website-redesign` topic's active records connected in the decision graph; it
-does not assert a stronger relationship than "part of the same homepage
-redesign sequence."
+deployment, merge, or release is authorized by this decision.
 
 ## Reversal conditions
 

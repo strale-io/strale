@@ -3,7 +3,7 @@ record_key: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
 id: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
 title: Website Enrichment & Validation use-case world approved
 status: active
-topic: website-redesign
+topic: website-use-case-worlds
 scope: design
 owner: petter
 decided_at: 2026-08-20

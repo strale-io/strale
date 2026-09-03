@@ -3,13 +3,11 @@ record_key: DEC-20260820-E-WEBSITE-SEARCH-WEB
 id: DEC-20260820-E-WEBSITE-SEARCH-WEB
 title: Website Search & Web Intelligence use-case world approved
 status: active
-topic: website-redesign
+topic: website-use-case-worlds
 scope: design
 owner: petter
 decided_at: 2026-08-20
-relations:
-  - type: related_to
-    target: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
+relations: []
 evidence:
   - https://app.notion.com/p/3c267c87082c812a8533d8eed592bb8f
   - strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/
@@ -57,12 +55,7 @@ four-world conformance review (completed and approved by
 `DEC-20260820-F-WEBSITE-RISK-RESPONSIVE`). Preserved for this repository at
 `strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/` on the
 separate `codex/website-redesign` branch. No implementation or outward
-release is authorized by this decision. This record also carries a
-`related_to` edge to `DEC-20260820-F-WEBSITE-RISK-RESPONSIVE` — the fourth
-use-case world that closes the reserved responsive review — solely to keep
-the `website-redesign` topic's active records connected in the decision
-graph; it does not assert a stronger relationship than "part of the same
-homepage redesign sequence."
+release is authorized by this decision.
 
 ## Reversal conditions
 

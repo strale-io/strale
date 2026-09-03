@@ -3,13 +3,11 @@ record_key: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
 id: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
 title: Website Company Research use-case world approved
 status: active
-topic: website-redesign
+topic: website-use-case-worlds
 scope: design
 owner: petter
 decided_at: 2026-08-20
-relations:
-  - type: related_to
-    target: DEC-20260820-E-WEBSITE-SEARCH-WEB
+relations: []
 evidence:
   - https://app.notion.com/p/3c267c87082c819d89afdd257de4a15f
   - strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/
@@ -53,12 +51,7 @@ worlds (Enrichment & Validation, Search & Web Intelligence, Risk &
 Verification each build on it). Preserved for this repository at
 `strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/` on the
 separate `codex/website-redesign` branch. No implementation, deployment,
-merge, or release is authorized by this decision. This record also carries a
-`related_to` edge to `DEC-20260820-E-WEBSITE-SEARCH-WEB` — the third
-use-case world in the same approval sequence — solely to keep the
-`website-redesign` topic's active records connected in the decision graph; it
-does not assert a stronger relationship than "part of the same homepage
-redesign sequence."
+merge, or release is authorized by this decision.
 
 ## Reversal conditions
 

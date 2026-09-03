@@ -3,13 +3,11 @@ record_key: DEC-20260820-A-WEBSITE-HERO
 id: DEC-20260820-A-WEBSITE-HERO
 title: Optical Reach hero with contract-backed product proof
 status: active
-topic: website-redesign
+topic: website-homepage-hero
 scope: design
 owner: petter
 decided_at: 2026-08-20
-relations:
-  - type: related_to
-    target: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
+relations: []
 evidence:
   - https://app.notion.com/p/3c267c87082c81e09187de8e0cd7fe46
   - strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/
@@ -63,11 +61,7 @@ design-only artifacts on the separate `codex/website-redesign` branch under
 `docs/website-redesign/homepage/`, preserved for this repository at
 `strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/`. No
 website implementation, merge, push, or deployment is authorized by this
-decision. This record carries a `related_to` edge to
-`DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN` — the next homepage section in the
-same approval sequence — solely to keep the `website-redesign` topic's active
-records connected in the decision graph; it does not assert a stronger
-relationship than "part of the same homepage redesign sequence."
+decision.
 
 ## Reversal conditions
 

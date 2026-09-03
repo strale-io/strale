@@ -16,6 +16,7 @@ import {
   M2_CANDIDATE_BANNER,
   M2_CANDIDATE_DOCUMENTS,
   M2_CANDIDATE_WORD_LIMITS,
+  M2_GENERATED_DOCUMENTS,
   OPERATOR_ACTIONS_SCHEMA,
   SKELETON_DOCUMENTS,
   buildInventory,
@@ -91,6 +92,34 @@ test("candidate document word budgets are enforced", () => {
   const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\n${overflow}\n`;
   assert.ok(
     validateCandidateDocument(file, content, docType).some(
+      (item) => item.code === "CANDIDATE_WORD_BUDGET_EXCEEDED",
+    ),
+  );
+});
+
+test("a hand-authored candidate document over its word budget is still rejected (planted-failure control)", () => {
+  const file = "docs/project/ROADMAP.md";
+  const docType = M2_CANDIDATE_DOCUMENTS[file];
+  const overflow = "word ".repeat(M2_CANDIDATE_WORD_LIMITS[file] + 1);
+  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\n${overflow}\n`;
+  assert.ok(
+    validateCandidateDocument(file, content, docType).some(
+      (item) => item.code === "CANDIDATE_WORD_BUDGET_EXCEEDED",
+    ),
+  );
+});
+
+test("a generated index far over 1,500 words is never word-budget-checked", () => {
+  const file = "docs/project/DECISIONS.md";
+  const docType = M2_GENERATED_DOCUMENTS[file];
+  // No entry for this file exists in M2_CANDIDATE_WORD_LIMITS at all (it is a
+  // generated index that grows with the register by construction), so this
+  // overflow is many times the old 1_500 hand-authored-document budget.
+  const overflow = "word ".repeat(6_000);
+  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\n${overflow}\n`;
+  assert.equal(Object.hasOwn(M2_CANDIDATE_WORD_LIMITS, file), false);
+  assert.ok(
+    !validateCandidateDocument(file, content, docType).some(
       (item) => item.code === "CANDIDATE_WORD_BUDGET_EXCEEDED",
     ),
   );
