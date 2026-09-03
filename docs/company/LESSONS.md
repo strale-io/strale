@@ -733,8 +733,14 @@ found the mandatory Vendor Control Tower step dead on arrival, and with it the
 > `scripts/guard-production-write-access.mjs` names the module in prose and an
 > allowlist and opens no handle at all, and the 14 write-path scripts call
 > `openOperatorWriteDb`, which throws in `productionWriteUrl()` on the absent
-> `DATABASE_URL_WRITE` *before* the TLS assertion is reached — already
-> inoperative for a separate documented reason. **A file list is not an impact
+> production write credential *before* the TLS assertion is reached — already
+> inoperative for a separate documented reason. (The credential is named in
+> prose rather than by its variable name because `guard-production-write-access`
+> refuses unauthorised textual references and caught this paragraph in CI. Its
+> allowlist is argued entry by entry and widening it to fit a sentence that can
+> simply be rewritten is the wrong trade — the guard is right. There is a
+> pleasing symmetry in the script this entry had wrongly listed as a casualty
+> being the one that caught the entry's own overreach.) **A file list is not an impact
 > list**, and inflating one by 2.5× inside the entry whose whole subject is
 > claiming more than the evidence supports is the family eating its own tail.
 > The number had already reached four documents when it was caught.

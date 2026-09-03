@@ -73,8 +73,8 @@ figure is **10**:
   `openOperatorDb`/`openOperatorDrizzle`, which reaches the TLS assertion.
 - **14 write-path scripts, unaffected in practice** — they call
   `openOperatorWriteDb`, and `productionWriteUrl(authority)` throws on the
-  absent `DATABASE_URL_WRITE` *before* `assertSslIntentIsExplicit` runs. Already
-  inoperative for a separate, documented reason.
+  absent production write credential *before* `assertSslIntentIsExplicit` runs.
+  Already inoperative for a separate, documented reason.
 - **1 non-consumer** — `scripts/guard-production-write-access.mjs` names the
   module in prose and an allowlist and opens no handle at all.
 
