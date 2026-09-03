@@ -60,10 +60,10 @@ digests:
   public_rows:
     count: 102
     digest: b38467b4367ad0f9013e360c443b7051ebd02a72ca109410ca1bedf24c6ee0ce
-    scope_date_digest: 96333816ade4068c0032c44c14469dc1f568d8a04c1bce6f7f2a89d493259f43
+    scope_date_digest: cdd11205577ac44b5f9d0adcb1c18c76dde7a8ac11418334e00adac122dbd3fd
   all_rows:
     count: 318
-    digest: c62aaf63cfb8f0ff38183c8f6a44aeef71fd993d5c295ff098e5369ff19928eb
+    digest: af86835e3e3ec85eaa21e63d53d3b01ff02ebadcc3a40652a23df9c724c8ef37
 counts:
   legacy_inventory:
     migrated: 6
@@ -1924,10 +1924,10 @@ decision_rows:
 private_rows:
   repository: strale-io/strale-context-archive
   visibility: private
-  commit: 3b0a3ea82e776d337577526b23d75cb460a891db
+  commit: 995cece3fe4abfb8b0bef0cccbd58191a6dab83c
   file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
   count: 216
-  digest: 41db58f553650a15826eb7f9e1f249fead1ab82aae155bdae47bb4dbbd8763c4
+  digest: bc4dfc20a982ce6e3c4fb295087deb5ca4534cf36810a69e8dd430bf75e15109
   counts_by_disposition:
     not_yet_reconciled: 205
     obsolete_or_superseded: 6
