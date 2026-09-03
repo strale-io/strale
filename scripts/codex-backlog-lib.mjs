@@ -30,7 +30,7 @@
  * What this cannot catch, and does not claim to: a batch that was never added.
  * Recording the debt is a process commitment; the checker guards the record.
  */
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve, sep } from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -64,8 +64,13 @@ export function decisionExists(root, id) {
   if (existsSync(resolve(root, "docs/decisions/records", `${id}.md`))) return true;
   try {
     // Fenced code blocks are examples, not records: a decision bullet typed
-    // inside ``` would otherwise count (fourth review).
-    const claude = readFileSync(resolve(root, "CLAUDE.md"), "utf8").replace(/^```[\s\S]*?^```/gm, "");
+    // inside a fence would otherwise count (fourth review). CommonMark
+    // fences are ``` or ~~~, may be indented up to three spaces, and an
+    // unclosed fence runs to the end of the file — the fifth review showed a
+    // lazy match that requires a closing fence strips nothing when the fence
+    // is never closed, which reopened exactly the hole. So: either marker,
+    // optional indent, and a missing close swallows the rest.
+    const claude = stripFences(readFileSync(resolve(root, "CLAUDE.md"), "utf8"));
     // A decision-list ENTRY: a bullet that starts with the bold id, as every
     // entry under "Active Decisions" / "Current Decisions" does. A bold
     // mention in passing anywhere else does not count — the third review
@@ -102,12 +107,27 @@ export function archivedEvidencePath(root, evidencePath) {
   let realArchive;
   let realFull;
   try {
+    // If archive/ ITSELF is a link, realArchive becomes the link's target
+    // and everything under it would validate — a committed symlink named
+    // `archive` (git mode 120000, possible on a Linux runner) would defeat
+    // the whole scheme (fifth review). The archive directory must be a real
+    // directory.
+    if (lstatSync(resolve(root, "archive")).isSymbolicLink()) return null;
     realArchive = realpathSync(resolve(root, "archive")) + sep;
     realFull = realpathSync(full);
   } catch {
     return null; // does not exist — the caller reports that
   }
+  // Hard links are out of scope on purpose: a hard link is a second name for
+  // the same inode, so the file genuinely is under archive/, and git cannot
+  // commit one — it can only arrive by hand on a local disk, where a forged
+  // local file is already outside this checker's threat model.
   return realFull.startsWith(realArchive) ? realFull : null;
+}
+
+/** Remove every fenced code block (``` or ~~~, indented up to 3 spaces, unclosed runs to EOF). */
+export function stripFences(text) {
+  return text.replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^ {0,3}\1[ \t]*$|(?![\s\S]))/gm, "");
 }
 
 /**

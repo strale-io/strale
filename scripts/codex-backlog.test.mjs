@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stringify } from "yaml";
-import { checkBacklog, BACKLOG_PATH } from "./codex-backlog-lib.mjs";
+import { checkBacklog, stripFences, BACKLOG_PATH } from "./codex-backlog-lib.mjs";
 
 const realRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -345,6 +345,36 @@ test("DECISION_UNKNOWN: a decision bullet inside a fenced code block does not co
   writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS + "\nExample:\n\n```markdown\n- **DEC-20260903-Z** (global, active): an example entry.\n```\n", "utf8");
   assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"));
   rmSync(dir, { recursive: true, force: true });
+});
+
+test("fence stripping: unclosed, tilde, and indented fences are all stripped; text after a closed fence survives", () => {
+  // Fifth review: a lazy match needing a closing fence stripped NOTHING when
+  // the fence was never closed, reopening the hole this was meant to close;
+  // ~~~ and indented fences were not recognised at all.
+  const kept = "- **DEC-20260903-A** real\n";
+  assert.equal(stripFences("```\n- **DEC-20260903-Z** in an unclosed fence\n" ), "");
+  assert.equal(stripFences("~~~md\n- **DEC-20260903-Z**\n~~~\n" + kept), "\n" + kept);
+  assert.equal(stripFences("   ```\n- **DEC-20260903-Z**\n   ```\n" + kept), "\n" + kept);
+  assert.equal(stripFences("```\nx\n```\n" + kept), "\n" + kept);
+  for (const fence of ["```\n- **DEC-20260903-Z** never closed\n", "~~~\n- **DEC-20260903-Z**\n~~~\n", "  ```\n- **DEC-20260903-Z**\n  ```\n"]) {
+    const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
+    writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS + "\n" + fence, "utf8");
+    assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"), JSON.stringify(fence));
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("VERDICT_EVIDENCE_MISSING: archive/ itself being a link is refused", () => {
+  const dir = makeFixture([
+    baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/v.md" }),
+  ]);
+  const elsewhere = mkdtempSync(join(tmpdir(), "codex-backlog-elsewhere-"));
+  writeFileSync(join(elsewhere, "v.md"), verdictText("PASS"), "utf8");
+  symlinkSync(elsewhere, join(dir, "archive"), "junction");
+  const r = checkBacklog(dir, clean);
+  assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING"), JSON.stringify(r.findings));
+  rmSync(dir, { recursive: true, force: true });
+  rmSync(elsewhere, { recursive: true, force: true });
 });
 
 test("DECISION_UNKNOWN: a bold mention outside the decision list does not count", () => {
