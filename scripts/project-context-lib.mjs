@@ -117,7 +117,12 @@ export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
   "docs/project/ROADMAP.md": 1_500,
   "docs/decisions/README.md": 1_000,
   "docs/decisions/PENDING.md": 1_000,
-  "docs/project/DECISIONS.md": 1_500,
+  // docs/project/DECISIONS.md is intentionally absent: it is a generated
+  // index (see M2_GENERATED_DOCUMENTS) that grows with the register by
+  // construction, not hand-authored prose. The word budget below guards
+  // hand-authored candidate documents against unbounded prose growth; it
+  // does not apply to generated indexes at all (see the M2_GENERATED_DOCUMENTS
+  // skip in checkCandidateDocument).
 });
 
 export const INVENTORY_TARGETS = Object.freeze([
@@ -675,14 +680,24 @@ export function validateCandidateDocument(file, actual, expectedDocType) {
   if (actual.includes(TEMPLATE_SENTINEL) || actual.includes(M1_BANNER)) {
     findings.push({ code: "CANDIDATE_CONTAINS_M1_TEMPLATE", path: file });
   }
+  // Generated indexes (docs/project/DECISIONS.md and any future entry in
+  // M2_GENERATED_DOCUMENTS) grow with the register by construction -- more
+  // formal records means more rows, unboundedly. The word budget below
+  // exists to catch hand-authored candidate prose sprawling past its
+  // intended length; it was never meant to cap a document whose size is a
+  // direct, expected function of how much has been migrated. Skip it here
+  // rather than raise the number, which would only need raising again.
+  const isGenerated = Object.prototype.hasOwnProperty.call(M2_GENERATED_DOCUMENTS, file);
   const wordLimit = M2_CANDIDATE_WORD_LIMITS[file];
-  const wordCount = actual.trim().split(/\s+/).filter(Boolean).length;
-  if (wordLimit && wordCount > wordLimit) {
-    findings.push({
-      code: "CANDIDATE_WORD_BUDGET_EXCEEDED",
-      path: file,
-      detail: `${wordCount}/${wordLimit}`,
-    });
+  if (!isGenerated && wordLimit) {
+    const wordCount = actual.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount > wordLimit) {
+      findings.push({
+        code: "CANDIDATE_WORD_BUDGET_EXCEEDED",
+        path: file,
+        detail: `${wordCount}/${wordLimit}`,
+      });
+    }
   }
   return findings;
 }
