@@ -16,7 +16,7 @@
 # is required.
 schema_version: 1
 program: cto-readiness
-program_status: paused
+program_status: active
 updated: 2026-09-02
 tracks:
   - id: T1
@@ -352,6 +352,33 @@ tracks:
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - own program plan and register exist
+    evidence: []
+
+  - id: T17
+    title: Dependency remediation (WP13)
+    status: active
+    gate: none
+    depends_on: [T4]
+    owner: session
+    next_action: >
+      Upgrade the ten packages T4's triage found reachable, in its stated
+      order and one batch per upgrade. First `hono` -- semver-minor,
+      load-bearing for auth, the lowest-risk of the ten and the one that
+      proves the process. Then `drizzle-orm` (0.38.4 -> 0.45.2+), a
+      semver-major on the ORM every query in apps/api/src goes through:
+      its own batch, its own regression tests, and a production read-only
+      check of the queries the release notes call out before merge. Then
+      the remaining eight. Each batch: bump, run the full suite, record a
+      receipt, and re-run `apps/api/scripts/wp13-dependency-triage.mjs` so
+      the advisory count in the receipt is derived and not retyped. The
+      five unreachable advisories, including the one critical, are NOT in
+      scope -- upgrading them is churn against no exposure, and the triage
+      says why per package.
+    resume_file: docs/remediation/PACKAGE-GRAPH.yaml
+    exit:
+      - the ten reachable advisories are cleared, or each remaining one has a recorded reason it cannot be
+      - a re-run of the triage script produces the new counts as a receipt
+      - WP13 status in PACKAGE-GRAPH.yaml moves off TRIAGED_UPGRADE_PENDING
     evidence: []
 
   - id: T16

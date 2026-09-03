@@ -14,6 +14,42 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-30** · `answered` · owner Petter · raised 2026-09-02T22:15Z · answered 2026-09-03 — **keep all five dormant vendor keys; buy nothing, cancel nothing**
+*Answered:* Petter, in chat: leave Cobalt, EINsearch and sec-api in place, he
+will activate them later; and keep the OpenSanctions and USPTO accounts rather
+than closing them, since we might need them.
+*What was recommended, and how it differs:* the 2026-09-02 tools review offered
+a binary on the first three — buy the subscription or deactivate the capability,
+because neither can work without one — and recommended removing the two unread
+keys and closing their accounts. Petter chose a third option on the first three
+and declined the second. **Both are safe, and the review's framing was
+narrower than it should have been.**
+*Verified before recording this, read-only against production:* the three US
+capabilities (`us-company-data-cobalt`, `us-ein-match`,
+`us-sec-filings-extended`) are dark. Each is `visible = false`,
+`x402_enabled = false`, `lifecycle_state = 'validating'`. Both routing paths in
+`apps/api/src/lib/matching.ts` require `visible = true`, including the one that
+takes an explicit capability name, so **no customer can reach them by any
+route** — not the catalogue, not automatic routing, not naming the slug, not the
+crypto rail. Across all time they have eleven executions between them, every one
+from the internal test harness, none successful, none since 2026-08-27. Leaving
+them in place costs nothing and exposes nobody. There is no deadline on the
+decision and no drift risk while `visible` stays false.
+*On the two unread keys:* `OPENSANCTIONS_API_KEY` and `USPTO_ODP_API_KEY` are
+set in Railway and read by no code — OpenSanctions was dropped as a vendor on
+2026-04-27, and nothing was ever built on the USPTO one. Keeping the accounts
+costs nothing; both are free tiers. Keeping the *keys* in Railway is the part
+worth naming: an unused live credential is still a live credential, and this
+company has already had six of them exposed for 176 days in public git history.
+The keys are not in git and Railway is not public, so the exposure here is small
+— but the honest framing is that we are trading a small standing risk for the
+convenience of not re-issuing a free key later. Recorded rather than argued:
+Petter's call, and reversible in a minute either way.
+*What was done to make this stick:* the environment manifest now carries a
+`retained_credentials` section naming both keys, why they are held and that
+nothing reads them, so the next audit reports them as a recorded decision
+instead of raising them again as a finding.
+
 **DQ-29** · `resolved` · owner Petter → Claude · raised 2026-09-02T07:10Z · resolved 2026-09-02T21:30Z — **two credential files were deleted and only you can restore them**
 *Resolution:* Petter asked the session to handle it. Both files were rebuilt
 from Railway's variables through the CLI (19 keys copied, values never shown
@@ -69,7 +105,29 @@ drop them — no action until you say.
 > Logged as LESSONS.md F7 incident 8. **DQ-29 stays `resolved`** — the rebuild
 > itself did happen and the two deliberate omissions it records still stand.
 
-**DQ-28** · `your_call` · owner Petter · raised 2026-09-02T02:30Z · no deadline — **may the row-level M2 Decision register become public?**
+**DQ-28** · `answered` · owner Petter · raised 2026-09-02T02:30Z · answered 2026-09-03 — **no: the row-level M2 Decision register stays private**
+*Answered:* Petter, in chat, asked for a recommendation and named the
+answer he was leaning to — private. The recommendation was private, and
+that is the branch taken. Marked `answered` rather than `decided` because
+the call was his; the M0 archive rule this protects is his rule.
+*Why private was the recommendation:* the argument for publishing is
+convenience — one register instead of two, and no shuttling of rows
+between them at each batch. That is a cost paid by me, roughly one extra
+step per batch, and there are few batches left. The argument against is
+that the row list is a complete inventory of the company's internal
+decisions by date and identifier: it says nothing about any one decision,
+but it says exactly how many exist, when they were taken and how fast
+they arrive, to anyone reading the public repository. That is not a
+secret worth much, and it is also not worth a permanent widening of a
+privacy boundary to save a session a mechanical step. A boundary moved
+outward for convenience is difficult to move back: the public repository
+keeps its history whatever a later file says.
+*What happens now:* nothing. Private is the null branch — the projection
+in the private archive repository stays as it is, the operator script
+keeps verifying it, and the public register keeps the 95 rows already on
+`main`. Nothing is blocked. Reversible at any time by the PR the original
+entry describes, which is still the whole change.
+*The question as it was put:*
 The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the
 public repository's clear-text boundary exactly where M0 left it (the only
 new per-row artefacts are 24 hashes of titles that are not public; a handful

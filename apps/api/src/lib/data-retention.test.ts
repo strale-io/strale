@@ -83,9 +83,13 @@ vi.mock("../db/index.js", () => ({
 
 vi.mock("./log.js", () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
-const { cleanupOldTestData, PII_RETENTION_DAYS, TRANSACTION_RETENTION_DAYS } = await import(
-  "./data-retention.js"
-);
+const {
+  cleanupOldTestData,
+  PII_RETENTION_DAYS,
+  TRANSACTION_RETENTION_DAYS,
+  HEALTH_EVENT_RETENTION_DAYS,
+  DURABLE_OVERRIDE_EVENT_TYPES,
+} = await import("./data-retention.js");
 
 beforeEach(() => {
   captured.length = 0;
@@ -234,5 +238,79 @@ describe("PII sweep selection scope", () => {
     expect(pii).not.toContain("integrity_hash =");
     expect(pii).not.toContain("previous_hash =");
     expect(pii).not.toContain("created_at =");
+  });
+});
+
+/**
+ * The durable-override retention tier.
+ *
+ * The 2026-08-22 stranded-row reconciliation wrote eleven
+ * `manual_reconciliation` events that are the only record of who mutated
+ * eleven production transactions and under what policy — ten of those
+ * transactions were already content-redacted and could not hold a closure
+ * note themselves. `purgeHealthMonitorEvents` deleted every event at 180 days
+ * unconditionally while the transactions live 1095, so from roughly
+ * 2027-02-18 the explanation would have vanished and the rows it explains
+ * would have remained. An independent review named it a permanent defect.
+ *
+ * Each test below fails against the pre-fix single-cutoff statement.
+ */
+describe("durable production-override records", () => {
+  it("outlive the operational window and reach the compliance one", () => {
+    expect(HEALTH_EVENT_RETENTION_DAYS).toBeLessThan(TRANSACTION_RETENTION_DAYS);
+  });
+
+  it("excludes reply_action, whose details carry an email address and body", () => {
+    // The tempting fix was `human_override = true`. reply_action also sets it
+    // and stores `from`, `subject` and `cleaned_text` — that fix would have
+    // extended personal-data retention from 180 days to three years.
+    expect(DURABLE_OVERRIDE_EVENT_TYPES).not.toContain("reply_action");
+    expect(DURABLE_OVERRIDE_EVENT_TYPES).toContain("manual_reconciliation");
+  });
+
+  it("the sweep applies two cutoffs to health_monitor_events, not one", async () => {
+    await cleanupOldTestData();
+    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
+    expect(stmt).toBeDefined();
+    expect(stmt).toContain("event_type IN");
+
+    // Two distinct timestamptz cutoffs in the one statement. Pre-fix there was
+    // exactly one, so this is the assertion that fails without the change.
+    const cutoffs = stmt.match(/::timestamptz/g) ?? [];
+    expect(cutoffs.length).toBe(2);
+  });
+
+  it("binds the durable window to the compliance window, not to 180 days", async () => {
+    const now = Date.now();
+    await cleanupOldTestData();
+    const call = captured.find((c) =>
+      c.strings.join(" ").includes("DELETE FROM health_monitor_events"),
+    )!;
+    const days = (call.params.filter((x) => typeof x === "string") as string[])
+      .filter((x) => /^\d{4}-\d{2}-\d{2}T/.test(x))
+      .map((x) => Math.round((now - Date.parse(x)) / 86_400_000))
+      .sort((a, b) => a - b);
+    expect(days).toEqual([HEALTH_EVENT_RETENTION_DAYS, TRANSACTION_RETENTION_DAYS]);
+  });
+
+  it("passes the event types as bind parameters, never inlined", async () => {
+    // A JS array bound into ANY() renders a row-value tuple Postgres rejects,
+    // and string-concatenating type names into the SQL would be the other
+    // wrong turn. sql.join emits one placeholder per type.
+    await cleanupOldTestData();
+    const call = captured.find((c) =>
+      c.strings.join(" ").includes("DELETE FROM health_monitor_events"),
+    )!;
+    for (const t of DURABLE_OVERRIDE_EVENT_TYPES) {
+      expect(call.params).toContain(t);
+      expect(call.strings.join(" ")).not.toContain(t);
+    }
+    expect(call.params.some((x) => Array.isArray(x))).toBe(false);
+  });
+
+  it("still self-throttles with a LIMIT (DEC-20260504-B)", async () => {
+    await cleanupOldTestData();
+    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
+    expect(stmt).toContain("LIMIT");
   });
 });

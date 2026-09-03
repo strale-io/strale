@@ -193,6 +193,35 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
  */
 export const INVOCATION_FACT_RETENTION_DAYS = 180;
 
+/** Ordinary operational events in `health_monitor_events`. */
+export const HEALTH_EVENT_RETENTION_DAYS = 180;
+
+/**
+ * Event types that are the durable record of a human-authorised production
+ * mutation, retained for TRANSACTION_RETENTION_DAYS rather than the
+ * operational 180.
+ *
+ * Why this exists: the 2026-08-22 stranded-row reconciliation wrote eleven
+ * `manual_reconciliation` rows — the ONLY record anywhere of who changed
+ * eleven production transactions and under what policy, because ten of the
+ * eleven were already content-redacted and could not carry a closure note in
+ * their own `error` column. Those rows explain transactions kept for 1095
+ * days; deleting the explanation at 180 would have left, from roughly
+ * 2027-02-18, ten rows reading `status='failed'` with an empty error and no
+ * record of why. An independent review named this as a permanent defect.
+ *
+ * Why it is a type allowlist and NOT `human_override = true`: `reply_action`
+ * events also carry `human_override`, and their `details` hold the sender
+ * address, subject and body of an inbound email. Retaining those for three
+ * years would extend personal-data retention by two and a half years to fix a
+ * bookkeeping problem. Membership here is therefore a deliberate per-type
+ * judgement that the payload is operational metadata only — add a type only
+ * after checking what its `details` actually carry.
+ */
+export const DURABLE_OVERRIDE_EVENT_TYPES = [
+  "manual_reconciliation",
+] as const;
+
 async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
   const db = getDb();
   // Block 0101 is defer-not-throw, so the table genuinely may not exist -- that
@@ -233,16 +262,35 @@ async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
   return deleted;
 }
 
-async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
+/**
+ * Delete operational events past `cutoff`, and durable production-override
+ * records only past the much later `durableCutoff`.
+ *
+ * The two windows are one statement so the batching and the LIMIT still bound
+ * a single sweep (DEC-20260504-B). The type list is interpolated as bind
+ * parameters via `sql.join`, never as a JS array into `ANY()` — that renders a
+ * row-value tuple Postgres rejects, and it has crash-looped boot before.
+ */
+async function purgeHealthMonitorEvents(
+  cutoff: Date,
+  durableCutoff: Date,
+): Promise<number> {
   const db = getDb();
   let deleted = 0;
   let batches = 0;
+  const durableTypes = sql.join(
+    DURABLE_OVERRIDE_EVENT_TYPES.map((t) => sql`${t}`),
+    sql`, `,
+  );
   while (true) {
     const result = await db.execute(sql`
       DELETE FROM health_monitor_events
       WHERE id IN (
         SELECT id FROM health_monitor_events
-        WHERE created_at < ${cutoff.toISOString()}::timestamptz
+        WHERE CASE WHEN event_type IN (${durableTypes})
+                   THEN created_at < ${durableCutoff.toISOString()}::timestamptz
+                   ELSE created_at < ${cutoff.toISOString()}::timestamptz
+              END
         LIMIT ${BATCH_SIZE}
       )
     `);
@@ -388,7 +436,9 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
  *   provenance) redacted at 90 days, whatever the capability
  * - transaction_quality: 3 years (paired with transactions)
  * - test_results: 90 days (operational)
- * - health_monitor_events: 180 days (operational)
+ * - health_monitor_events: 180 days (operational), except the durable
+ *   production-override records in DURABLE_OVERRIDE_EVENT_TYPES, which are
+ *   kept as long as the transactions they explain (3 years)
  *
  * Transactions with legal_hold = true are never deleted.
  */
@@ -400,7 +450,7 @@ export async function cleanupOldTestData(): Promise<void> {
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   const oneEightyDaysAgo = new Date(now);
-  oneEightyDaysAgo.setDate(oneEightyDaysAgo.getDate() - 180);
+  oneEightyDaysAgo.setDate(oneEightyDaysAgo.getDate() - HEALTH_EVENT_RETENTION_DAYS);
 
   // Compliance data — 3 year retention
   const threeYearsAgo = new Date(now);
@@ -421,7 +471,9 @@ export async function cleanupOldTestData(): Promise<void> {
   piiCutoff.setDate(piiCutoff.getDate() - PII_RETENTION_DAYS);
   const piiRedacted = await purgeCustomerContent(piiCutoff);
 
-  const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
+  // Durable production-override records ride the compliance window, not the
+  // operational one — see DURABLE_OVERRIDE_EVENT_TYPES.
+  const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo, threeYearsAgo);
 
   const invocationCutoff = new Date(now);
   invocationCutoff.setDate(invocationCutoff.getDate() - INVOCATION_FACT_RETENTION_DAYS);
