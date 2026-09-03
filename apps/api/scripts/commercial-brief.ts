@@ -169,6 +169,10 @@ async function main() {
   } else {
     for (const q of quiet) console.log(`  ${eur(q.cents).padStart(9)}  last bought ${q.daysQuiet}d ago`);
   }
+  // The lookback is clamped to the payer-identity instrument rather than the
+  // metric refused, so the narrowing has to be visible wherever the list is —
+  // an unqualified "2 have gone quiet" reads as a complete answer and is a floor.
+  if (quietM.status === "observed" && quietM.caveat) console.log(`  (${quietM.caveat})`);
 
   console.log("\n─── THE READING (this is what the brief carries) ───\n");
   for (const c of conclusions) {

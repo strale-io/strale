@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import {
   growth, interpret, startOfIsoWeek, elapsedDaysInIsoWeek, activatingSlugs,
+  resolveQuietLookback,
   type DiscreteWeek, type Concentration, type PayerFacts,
 } from "./commercial.js";
 
@@ -463,5 +464,50 @@ describe("activation is attributed only to genuinely new payers", () => {
     const out = activatingSlugs(facts, new Set(["b", "c"]));
     expect(out).toEqual([{ slug: "email-validate", payers: 2 }]);
     expect(out.some((s) => s.slug === "google-search"), "an existing buyer is not activated").toBe(false);
+  });
+});
+
+
+describe("the quiet-payer lookback is clamped to the instrument, not refused", () => {
+  // The bug: quietPayers shared concentration()'s guard, which demands the
+  // instrument cover the WHOLE requested lookback. Payer identity switched on
+  // 2026-08-15; a 90-day lookback therefore refused every call until
+  // mid-November, and the metric had never returned a value in production.
+  // Every case below returns "impossible" against that implementation, which
+  // is what makes them discriminating rather than decorative.
+  const ENABLED = new Date("2026-08-15T09:13:00Z");
+
+  it("narrows rather than refusing when the instrument starts inside the lookback", () => {
+    const r = resolveQuietLookback(new Date("2026-08-24T00:00:00Z"), 90, ENABLED);
+    expect(r.kind, "the old guard answered impossible here").toBe("narrowed");
+    if (r.kind === "narrowed") {
+      expect(r.from).toEqual(ENABLED);
+      // The requested start is kept so the caveat can say what was given up.
+      expect(r.requestedFrom.getTime()).toBeLessThan(ENABLED.getTime());
+    }
+  });
+
+  it("uses the full lookback once the instrument genuinely covers it", () => {
+    const r = resolveQuietLookback(new Date("2026-12-01T00:00:00Z"), 90, ENABLED);
+    expect(r.kind).toBe("full");
+    if (r.kind === "full") expect(r.from).toEqual(new Date("2026-09-02T00:00:00Z"));
+  });
+
+  it("still refuses when no covered time exists BEFORE the window", () => {
+    // The clamp must not degrade into "everyone looks new". With the
+    // instrument starting at or after the window there is no prior period a
+    // buyer could have been active in, so a narrowed answer would be false
+    // rather than weaker.
+    const sameInstant = resolveQuietLookback(ENABLED, 90, ENABLED);
+    expect(sameInstant.kind).toBe("impossible");
+    const insideWindow = resolveQuietLookback(new Date("2026-08-10T00:00:00Z"), 90, ENABLED);
+    expect(insideWindow.kind).toBe("impossible");
+  });
+
+  it("distinguishes an absent instrument from an unenabled one", () => {
+    expect(resolveQuietLookback(new Date("2026-08-24T00:00:00Z"), 90, undefined))
+      .toMatchObject({ kind: "impossible", absent: true });
+    expect(resolveQuietLookback(new Date("2026-08-24T00:00:00Z"), 90, null))
+      .toMatchObject({ kind: "impossible", absent: false });
   });
 });

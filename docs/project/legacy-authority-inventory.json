@@ -247,6 +247,7 @@
         "handoff/_general/from-code/2026-09-02-t15-receipts-and-ledger.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
+        "handoff/_general/from-code/2026-09-03-checkin-morning.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -372,7 +373,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "986b0fa0e21b816ecf9e20e7fd6aae4096f801233b81b81b189537eb3621948b",
+      "sha256": "dbf20be17e0b39b2a9653014525869be0ba783883453077dea9ee456d4e24e68",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -418,6 +419,7 @@
         "handoff/_general/from-code/2026-09-02-t13-design-tokens.md",
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
+        "handoff/_general/from-code/2026-09-03-checkin-morning.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -509,7 +511,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "9b91f72199eb18b64dd550aee6a7bd21d120ad76f39572832175a1889b07447d",
+      "sha256": "a5263ff13b6162c6849328fe9a7f9f2963e4d3f042190dbf7e5fa46e851f9864",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

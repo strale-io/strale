@@ -135,6 +135,31 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-09-03 — the "who has stopped buying" instrument returned a
+  value for the first time, and the buyer worth watching is not in it.**
+  `quietPayers` had never once answered: it demanded the payer-identity
+  instrument (2026-08-15) cover a full 90-day lookback, which it will not do
+  until mid-November. That refusal is right for `newPayers`/`returningPayers`
+  and wrong here, and the difference is the error direction — a pre-instrument
+  buyer reads as *new* (flattering, so gate it) but is simply *invisible* among
+  the quiet (pessimistic, so a narrowed lookback under-reports rather than
+  invents). The lookback is now clamped to the instrument and the narrowing
+  stated in the caveat. First reading over the last completed week: **one quiet
+  payer, €0.30, nine days silent** — a trial, not a buyer. Read it as a floor.
+
+  *What the metric deliberately cannot see yet, and it is the thing that
+  matters.* `provider@dlgt.io` — the card customer, and the only registered
+  buyer whose behaviour DQ-21 left as the sole instrument — **has bought nothing
+  since 2026-08-28**. Twelve of their calls were `competitor-compare` at €1.00,
+  which is the multi-entity-comparison evidence this file already leans on. Six
+  days against a previous longest gap of two. It does not appear above because
+  the metric judges the last *completed* week and 08-28 falls inside it; the
+  in-progress week is not judged, on purpose. **This is a fact, not yet a
+  verdict** — with three active days of history a gap is weak evidence, and the
+  week closing 2026-09-06 is what settles it. Corroborated independently by the
+  daily external-payer series, which ran at 4 distinct payers a day through
+  08-29 and reads 1 on both 09-02 and 09-03.
+
 - **Measured 2026-08-31 — the first honest week-over-week concentration
   comparison the company has ever been able to make, and dependence fell.**
   Two consecutive *completed* ISO weeks now sit entirely after the payer-identity

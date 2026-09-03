@@ -579,7 +579,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 7. Root cause of the branch-deletion arm found 2026-08-31 (incident 7).** A capability recorded as switched off that served errors for two
+**Count: 8. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 is a different arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -711,6 +711,34 @@ by something other than us, the check is not "is it true now" but "what would
 have to happen for this to stop being true, and does that thing run".* The same
 question is owed anywhere the daily run records a durable outcome — deleted
 branches, deactivated capabilities, revoked credentials.
+
+*Incident 8, 2026-09-03 — a repair verified through a different code path than
+the one it claimed to have fixed.* The primary checkout's `.env` files, destroyed
+in the F12 incident of 2026-09-02, were rebuilt from Railway the same evening and
+DQ-29 was closed with "the database answers read-only queries again". That
+sentence was true and the claim it was standing in for was not. Railway's own
+`DATABASE_URL` names its internal host and carries no `?sslmode=`; copied
+verbatim against the public proxy it is a URL that says nothing about TLS, and
+`operator-db.ts` has refused exactly that since PR #361. The next morning's run
+found the mandatory Vendor Control Tower step dead on arrival, and with it every
+one of the **25 operator scripts** that open a handle through that module —
+including `smoke-test.ts` and the whole quarantine/promotion lane.
+
+The verification was not skipped; it was aimed one path to the left. Drizzle's
+`getDb()` reads the same variable, applies no such assertion, and connected
+happily — so the dashboard and the commercial pack ran green all evening and all
+morning, which is why the gap survived a full run before anything noticed.
+
+*The transferable part, and it is not the one already written above.* The
+existing repair — verify against the system, and ask what would have to happen
+for the claim to stop being true — would not have caught this, because the claim
+never stopped being true. **Where one setting is consumed by more than one
+reader, verifying it through the most permissive reader proves nothing about the
+others.** A credential, a URL or a flag is restored when the *strictest* consumer
+accepts it, and the check should be aimed there. Repaired durably rather than
+locally: the environment manifest now states the `?sslmode=` requirement on both
+Postgres rows, so the generated `.env.example` files carry it and the next
+rebuild from Railway cannot repeat the omission silently.
 
 **State: INVESTIGATION DUE.**
 The pattern in all four: the record was written by the actor who *intended* the

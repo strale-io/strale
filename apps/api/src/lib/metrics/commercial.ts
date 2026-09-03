@@ -29,7 +29,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import type { Measurement, Window } from "./types.js";
-import { coversWindow, evidenceFor } from "./instruments.js";
+import { coversWindow, evidenceFor, INSTRUMENTS } from "./instruments.js";
 import { externalCustomers } from "./populations.js";
 import { ACTOR_KEY_SQL } from "./actor-identity.js";
 
@@ -394,6 +394,53 @@ export async function concentration(
 export interface QuietPayer { key: string; cents: number; lastSeen: string; daysQuiet: number }
 
 /**
+ * Where the "has this buyer stopped?" lookback may legitimately start.
+ *
+ * `quietPayers` used to share `concentration()`'s guard: refuse outright unless
+ * the instrument covered the whole requested lookback. With a 90-day lookback
+ * and payer identity switched on 2026-08-15 that answers `unavailable` until
+ * mid-November, and it did — the metric has never once returned a value, while
+ * "who has gone quiet" is the question the concentration reading most needs.
+ *
+ * The refusal is right for `newPayers`/`returningPayers` and wrong here, and
+ * the difference is which way each one errs. Before the instrument existed a
+ * buyer carries no identity, so:
+ *
+ *   - a returning buyer is absent from the prior set and reads as **new** — the
+ *     flattering direction, which is why that pair stays gated (F2);
+ *   - a quiet buyer is absent from the prior set and so is never reported at
+ *     all — the pessimistic direction. Narrowing the lookback to the instrument
+ *     can only *miss* a quiet payer, never invent one.
+ *
+ * So the lookback is clamped to the instrument rather than the metric refused,
+ * and the narrowing is stated in the caveat instead of being silent. A shorter
+ * lookback than asked for is a weaker instrument, not a wrong one.
+ */
+export type QuietLookback =
+  | { kind: "full"; from: Date }
+  | { kind: "narrowed"; from: Date; requestedFrom: Date; enabledAt: Date }
+  | { kind: "impossible"; enabledAt: Date | null; absent: boolean };
+
+export function resolveQuietLookback(
+  windowFrom: Date,
+  lookbackDays: number,
+  enabledAt: Date | null | undefined,
+): QuietLookback {
+  const requestedFrom = new Date(windowFrom.getTime() - lookbackDays * 86_400_000);
+  if (enabledAt === undefined) return { kind: "impossible", enabledAt: null, absent: true };
+  if (enabledAt === null) return { kind: "impossible", enabledAt: null, absent: false };
+  if (enabledAt <= requestedFrom) return { kind: "full", from: requestedFrom };
+  // The clamp is only worth anything if some covered time remains BEFORE the
+  // window. An instrument that switched on inside (or after) the window leaves
+  // no prior period to have been active in, and "everyone looks new" is not a
+  // narrower answer, it is a different and false one.
+  if (enabledAt < windowFrom) {
+    return { kind: "narrowed", from: enabledAt, requestedFrom, enabledAt };
+  }
+  return { kind: "impossible", enabledAt, absent: false };
+}
+
+/**
  * Payers who bought before the window and have not bought inside it.
  *
  * Deliberately not called "churn". At this volume a buyer who skips a week has
@@ -403,19 +450,20 @@ export interface QuietPayer { key: string; cents: number; lastSeen: string; days
 export async function quietPayers(
   w: Window, lookbackDays = 90, minCents = 20,
 ): Promise<Measurement<QuietPayer[]>> {
-  const lookbackFrom = new Date(w.from.getTime() - lookbackDays * 86_400_000);
-  const guard = coversWindow("x402_payer_identity", lookbackFrom);
-  if (!guard.ok) {
+  const enabledAt = INSTRUMENTS["x402_payer_identity"]?.enabledAt;
+  const lookback = resolveQuietLookback(w.from, lookbackDays, enabledAt);
+  if (lookback.kind === "impossible") {
     return {
       status: "unavailable", population: "external_customers", requestedWindow: w,
-      availableWindow: guard.enabledAt
-        ? { from: guard.enabledAt, to: w.to, label: `since ${isoDate(guard.enabledAt)}` }
+      availableWindow: lookback.enabledAt
+        ? { from: lookback.enabledAt, to: w.to, label: `since ${isoDate(lookback.enabledAt)}` }
         : undefined,
-      reason: guard.absent
+      reason: lookback.absent
         ? { kind: "instrument_absent", instrument: "x402_payer_identity" }
-        : { kind: "instrument_too_young", instrument: "x402_payer_identity", enabledAt: guard.enabledAt },
+        : { kind: "instrument_too_young", instrument: "x402_payer_identity", enabledAt: lookback.enabledAt },
     };
   }
+  const lookbackFrom = lookback.from;
   const r = await rows<{ actor_key: string | null; cents: string; last_seen: string }>(sql`
     SELECT ${sql.raw(ACTOR_KEY_SQL)} AS actor_key,
            COALESCE(SUM(t.price_cents), 0)::int AS cents,
@@ -444,6 +492,9 @@ export async function quietPayers(
   return {
     status: "observed", value, window: w, population: "external_customers",
     instruments: evidenceFor(["x402_payer_identity"]),
+    caveat: lookback.kind === "narrowed"
+      ? `Looks back only to ${isoDate(lookback.enabledAt)}, when payer identity began recording, instead of the ${lookbackDays} days asked for. A buyer whose last purchase predates that date cannot appear here, so this is a floor on how many have gone quiet, never a ceiling.`
+      : undefined,
   };
 }
 
