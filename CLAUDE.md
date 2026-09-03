@@ -33,13 +33,18 @@ Codex costs more than proceeding.** Work does not stop for the quota, and no
 track may be blocked on the Codex review path alone. The fresh read-only
 Claude agent remains the independent review; **every batch that would
 otherwise have gone to Codex is recorded in
-`docs/programs/codex-review-backlog.yaml`** and stays there until a Codex
-verdict closes it. `npm run codex:check` refuses a row naming a commit the
-repository does not have, a row marked reviewed without a verdict, and a row
-still pending past `policy.review_by` — so the debt cannot quietly become
-never. When Codex returns, drain that register before starting work that adds
-to it. A Codex FAIL on merged work opens a remediation batch; it does not
-revert anything automatically.
+`docs/programs/codex-review-backlog.yaml`**. A row closes only by a Codex
+verdict archived under `archive/` and cited by path, or by a founder waiver
+naming its decision. `npm run codex:check` enforces that against git, not
+prose: compared with the merge-base on `main`, a row may not be deleted, move
+backward, reopen once closed, change its commit or its recorded verdict, or
+have `policy.review_by` pushed later without a founder decision; on the file
+itself it refuses a commit the repository lacks, a reviewed row with no
+archived evidence, a waiver by anyone but Petter, and a row still pending
+past `review_by`. The one thing it cannot see is a batch never added, which
+remains a process commitment. When Codex returns, drain the register before
+starting work that adds to it. A Codex FAIL on merged work opens a
+remediation batch; it does not revert anything automatically.
 
 ### Repo-native migration continuation — pre-cutover
 

@@ -35,6 +35,28 @@ Each row carries `why_codex` — why a Claude-only review is *least* adequate
 here — and `what_to_attack`, so the reviewer starts where the risk is rather
 than reading the diff top to bottom.
 
+## The review that made it real
+
+The first version validated only the file's shape, and the independent review
+drained it to green five ways with no Codex review happening — waive the row
+with "looks fine to me", fabricate a verdict, delete the row, push
+`review_by` to 2099, empty the file. Every one is an edit to the file, so the
+checker now compares the file against its merge-base on `main`, the same
+git-fact discipline the receipts checker applies. A row cannot vanish, a
+status moves forward only and a closed row is terminal, a commit and a
+recorded verdict are immutable, the date cannot move later without a founder
+decision naming the extension, closing as reviewed needs an archived verdict
+that exists on disk, and waiving is Petter's alone. Each drain is planted in a
+real throwaway repository and refused; the honest close — forward, with
+evidence — passes.
+
+Also from that review: a shallow clone reports a commit as *unverifiable*
+rather than *missing* (a false failure on every build would be worse than no
+check), the mandatory resume note in `PROGRAM.md` no longer says T10 is
+blocked, and the prose in this register's header and in `CLAUDE.md` now
+claims exactly what the code enforces and names the one thing it cannot: a
+batch never added.
+
 ## What is in it
 
 | Row | Priority | Why it needs a different model |

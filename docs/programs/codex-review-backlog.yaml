@@ -6,11 +6,18 @@
 # would otherwise have gone to Codex is recorded here until it does.
 #
 # This is a debt register, not a to-do list. A row is added by the session
-# that merges the work, not by the session that plans it, and is closed only
-# by a Codex verdict — never by the passage of time or by a second Claude
-# review. `npm run codex:check` refuses a row that names a commit git does not
-# have, a `reviewed` row with no verdict, and a row still `pending` after its
-# `review_by` date.
+# that merges the work, not by the session that plans it. A row closes one of
+# two ways: a Codex verdict, archived under archive/ and cited by path, or a
+# waiver by the founder naming the decision. Never by time passing, never by
+# a second Claude review, and — enforced against git, not asserted — never by
+# editing this file back. `npm run codex:check` compares the register with
+# its merge-base on main and refuses a deleted row, a status that moves
+# backward or reopens a closed row, a changed commit, an edited verdict, and a
+# review date pushed later without a founder decision; on the file itself it
+# refuses a commit git does not have, a reviewed row with no archived
+# evidence, a waiver by anyone but the founder, and a row still pending after
+# `review_by`. What it cannot see is a batch never added; that stays a
+# process commitment.
 #
 # Drain order is `priority`, then oldest first. Highest first: these are the
 # ones where a Claude-only review is least adequate.

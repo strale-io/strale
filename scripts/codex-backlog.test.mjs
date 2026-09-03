@@ -3,7 +3,10 @@
 //
 // The standing rule (LESSONS F5): no checker ships until it has failed on a
 // planted case. A register that records a debt is worth exactly as much as the
-// check that refuses to let it rot.
+// check that refuses to let it rot — and the first version of this checker
+// was drained to green five ways by an independent review, because it read
+// only the file's shape. The HISTORY tests below plant each of those five
+// drains in a real git repository and assert the checker refuses them.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -30,22 +33,55 @@ function baseEntry(overrides = {}) {
   };
 }
 
+const POLICY = { decision: "DEC-20260903-A", raised: "2026-09-03", review_by: "2026-09-07" };
+
+function registerText(entries, policy = {}) {
+  return stringify({ schema_version: 1, policy: { ...POLICY, ...policy }, entries });
+}
+
+/** Shape-only fixture: no git, history rules skipped. */
 function makeFixture(entries, policy = {}) {
   const dir = mkdtempSync(join(tmpdir(), "codex-backlog-"));
   mkdirSync(join(dir, dirname(BACKLOG_PATH)), { recursive: true });
-  writeFileSync(
-    join(dir, BACKLOG_PATH),
-    stringify({
-      schema_version: 1,
-      policy: { decision: "DEC-20260903-A", raised: "2026-09-03", review_by: "2026-09-07", ...policy },
-      entries,
-    }),
-    "utf8",
-  );
+  writeFileSync(join(dir, BACKLOG_PATH), registerText(entries, policy), "utf8");
   return dir;
 }
 
 const clean = { today: "2026-09-04", gitAvailable: false };
+
+function git(dir, ...args) {
+  return execFileSync("git", args, { cwd: dir, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+}
+
+/**
+ * History fixture: a real repository with the register committed on `main`,
+ * then edited on a branch. `checkBacklog` compares HEAD against the
+ * merge-base with `main`, exactly as CI compares against origin/main.
+ */
+function makeHistoryFixture(baseEntries, headEntries, { basePolicy = {}, headPolicy = {}, extraFiles = {} } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), "codex-backlog-git-"));
+  git(dir, "init", "-q", "-b", "main");
+  git(dir, "config", "user.email", "t@example.com");
+  git(dir, "config", "user.name", "t");
+  mkdirSync(join(dir, dirname(BACKLOG_PATH)), { recursive: true });
+  writeFileSync(join(dir, BACKLOG_PATH), registerText(baseEntries, basePolicy), "utf8");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "-m", "base");
+  git(dir, "switch", "-q", "-c", "work");
+  for (const [rel, content] of Object.entries(extraFiles)) {
+    mkdirSync(join(dir, dirname(rel)), { recursive: true });
+    writeFileSync(join(dir, rel), content, "utf8");
+  }
+  writeFileSync(join(dir, BACKLOG_PATH), registerText(headEntries, headPolicy), "utf8");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "--allow-empty", "-m", "edit");
+  return dir;
+}
+
+const history = { today: "2026-09-04", baseRef: "main" };
+const codes = (r) => r.findings.map((f) => f.code);
+
+// ── shape ────────────────────────────────────────────────────────────────────
 
 test("a well-formed pending row before the review date passes", () => {
   const dir = makeFixture([baseEntry()]);
@@ -54,51 +90,108 @@ test("a well-formed pending row before the review date passes", () => {
 });
 
 test("REVIEW_OVERDUE: still pending after the review date", () => {
-  // The whole point of the register. Without this it is a note nobody re-reads.
   const dir = makeFixture([baseEntry()]);
   const { findings } = checkBacklog(dir, { today: "2026-09-08", gitAvailable: false });
   assert.ok(findings.some((f) => f.code === "REVIEW_OVERDUE" && f.detail.includes("CX-1")), JSON.stringify(findings));
   rmSync(dir, { recursive: true, force: true });
 });
 
-test("a reviewed row is not overdue, whatever the date", () => {
+test("the review date itself is not overdue; the day after is", () => {
+  const dir = makeFixture([baseEntry()]);
+  assert.equal(codes(checkBacklog(dir, { today: "2026-09-07", gitAvailable: false })).includes("REVIEW_OVERDUE"), false);
+  assert.equal(codes(checkBacklog(dir, { today: "2026-09-08", gitAvailable: false })).includes("REVIEW_OVERDUE"), true);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("a reviewed row with an archived verdict is not overdue, whatever the date", () => {
   const dir = makeFixture([
-    baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07" }),
+    baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/sessions/cx-1.md" }),
   ]);
-  const { findings } = checkBacklog(dir, { today: "2026-09-30", gitAvailable: false });
-  assert.deepEqual(findings, []);
+  mkdirSync(join(dir, "archive/sessions"), { recursive: true });
+  writeFileSync(join(dir, "archive/sessions/cx-1.md"), "VERDICT: PASS\n", "utf8");
+  assert.deepEqual(checkBacklog(dir, { today: "2026-09-30", gitAvailable: false }).findings, []);
   rmSync(dir, { recursive: true, force: true });
 });
 
-test("VERDICT_MISSING: reviewed with no verdict", () => {
-  // "Reviewed" without a verdict means somebody said so, which is the shape
-  // this register exists to refuse.
-  const dir = makeFixture([baseEntry({ status: "reviewed" })]);
-  const { findings } = checkBacklog(dir, clean);
-  assert.ok(findings.some((f) => f.code === "VERDICT_MISSING"), JSON.stringify(findings));
+test("VERDICT_MISSING: reviewed with no verdict, or a verdict with no date", () => {
+  const dir = makeFixture([
+    baseEntry({ id: "CX-1", status: "reviewed", codex_evidence: "archive/x.md" }),
+    baseEntry({ id: "CX-2", status: "reviewed", codex_verdict: "FAIL", codex_evidence: "archive/x.md" }),
+  ]);
+  const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "VERDICT_MISSING").map((f) => f.detail).join(" | ");
+  assert.match(found, /CX-1 is reviewed but codex_verdict/);
+  assert.match(found, /CX-2 is reviewed but codex_reviewed_on/);
   rmSync(dir, { recursive: true, force: true });
 });
 
-test("VERDICT_MISSING: reviewed with a verdict but no date", () => {
-  const dir = makeFixture([baseEntry({ status: "reviewed", codex_verdict: "FAIL" })]);
-  const { findings } = checkBacklog(dir, clean);
-  assert.ok(findings.some((f) => f.code === "VERDICT_MISSING" && f.detail.includes("reviewed_on")), JSON.stringify(findings));
+test("VERDICT_EVIDENCE_MISSING: a status flip with no archived verdict is somebody saying so", () => {
+  // The fabricate-a-verdict drain. Status, verdict and date are all the
+  // right shape; nothing on disk backs them.
+  const dir = makeFixture([baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-03" })]);
+  assert.ok(codes(checkBacklog(dir, clean)).includes("VERDICT_EVIDENCE_MISSING"));
+  // Naming a path that does not exist is the same claim.
+  const dir2 = makeFixture([baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-03", codex_evidence: "archive/sessions/nope.md" })]);
+  assert.ok(checkBacklog(dir2, clean).findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING" && f.detail.includes("does not exist")));
+  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir2, { recursive: true, force: true });
+});
+
+test("WAIVER_UNAUTHORISED: a waiver needs a reason, the founder, and a decision", () => {
+  // The waive-it drain: 'looks fine to me' closed the highest-priority row.
+  const dir = makeFixture([
+    baseEntry({ id: "CX-1", status: "waived" }),
+    baseEntry({ id: "CX-2", status: "waived", waived_reason: "looks fine to me" }),
+    baseEntry({ id: "CX-3", status: "waived", waived_reason: "r", waived_by: "claude", waived_decision: "DEC-20260903-B" }),
+  ]);
+  const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "WAIVER_UNAUTHORISED").map((f) => f.detail).join(" | ");
+  assert.match(found, /CX-1 is waived with no waived_reason/);
+  assert.match(found, /CX-2 is waived but waived_by is null/);
+  assert.match(found, /CX-3 is waived but waived_by is "claude"/);
   rmSync(dir, { recursive: true, force: true });
 });
 
-test("WAIVER_UNEXPLAINED: waived with no reason", () => {
-  const dir = makeFixture([baseEntry({ status: "waived" })]);
-  const { findings } = checkBacklog(dir, clean);
-  assert.ok(findings.some((f) => f.code === "WAIVER_UNEXPLAINED"), JSON.stringify(findings));
+test("a founder waiver naming its decision passes", () => {
+  const dir = makeFixture([
+    baseEntry({ status: "waived", waived_reason: "superseded by the rewrite", waived_by: "petter", waived_decision: "DEC-20260903-B" }),
+  ]);
+  assert.deepEqual(checkBacklog(dir, clean).findings, []);
   rmSync(dir, { recursive: true, force: true });
 });
 
 test("COMMIT_MISSING: the row names a commit this repository does not have", () => {
   const dir = makeFixture([baseEntry({ commit: "0000000" })]);
-  execFileSync("git", ["init", "-q", dir], { stdio: ["pipe", "pipe", "pipe"] });
-  const { findings } = checkBacklog(dir, { today: "2026-09-04" });
+  git(dir, "init", "-q");
+  git(dir, "config", "user.email", "t@example.com");
+  git(dir, "config", "user.name", "t");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "-m", "x");
+  const { findings } = checkBacklog(dir, { today: "2026-09-04", skipHistory: true });
   assert.ok(findings.some((f) => f.code === "COMMIT_MISSING"), JSON.stringify(findings));
   rmSync(dir, { recursive: true, force: true });
+});
+
+test("a shallow checkout reports the commit as unverifiable, not missing", () => {
+  // A false COMMIT_MISSING failing every build would be worse than no check.
+  const src = mkdtempSync(join(tmpdir(), "codex-backlog-src-"));
+  git(src, "init", "-q", "-b", "main");
+  git(src, "config", "user.email", "t@example.com");
+  git(src, "config", "user.name", "t");
+  writeFileSync(join(src, "a.txt"), "1\n", "utf8");
+  git(src, "add", "-A");
+  git(src, "commit", "-q", "-m", "one");
+  const first = git(src, "rev-parse", "HEAD");
+  writeFileSync(join(src, "a.txt"), "2\n", "utf8");
+  git(src, "commit", "-q", "-am", "two");
+  const shallow = mkdtempSync(join(tmpdir(), "codex-backlog-shallow-"));
+  rmSync(shallow, { recursive: true, force: true });
+  execFileSync("git", ["clone", "-q", "--depth", "1", `file:///${src.replace(/\\/g, "/")}`, shallow], { stdio: ["pipe", "pipe", "pipe"] });
+  mkdirSync(join(shallow, dirname(BACKLOG_PATH)), { recursive: true });
+  writeFileSync(join(shallow, BACKLOG_PATH), registerText([baseEntry({ commit: first.slice(0, 8) })]), "utf8");
+  const r = checkBacklog(shallow, { today: "2026-09-04", skipHistory: true });
+  assert.equal(codes(r).includes("COMMIT_MISSING"), false, JSON.stringify(r.findings));
+  assert.ok(r.warnings.some((w) => w.code === "COMMIT_UNVERIFIABLE"), JSON.stringify(r.warnings));
+  rmSync(src, { recursive: true, force: true });
+  rmSync(shallow, { recursive: true, force: true });
 });
 
 test("ENTRY_INVALID: a missing required field, an unknown status, a bad date", () => {
@@ -107,8 +200,7 @@ test("ENTRY_INVALID: a missing required field, an unknown status, a bad date", (
     baseEntry({ id: "CX-2", status: "probably-fine" }),
     baseEntry({ id: "CX-3", merged: "September" }),
   ]);
-  const { findings } = checkBacklog(dir, clean);
-  const details = findings.filter((f) => f.code === "ENTRY_INVALID").map((f) => f.detail).join(" | ");
+  const details = checkBacklog(dir, clean).findings.filter((f) => f.code === "ENTRY_INVALID").map((f) => f.detail).join(" | ");
   assert.match(details, /CX-1 is missing why_codex/);
   assert.match(details, /CX-2 has status probably-fine/);
   assert.match(details, /CX-3 merged must be/);
@@ -117,15 +209,119 @@ test("ENTRY_INVALID: a missing required field, an unknown status, a bad date", (
 
 test("DUPLICATE_ID: the same id twice", () => {
   const dir = makeFixture([baseEntry(), baseEntry()]);
-  const { findings } = checkBacklog(dir, clean);
-  assert.ok(findings.some((f) => f.code === "DUPLICATE_ID"), JSON.stringify(findings));
+  assert.ok(codes(checkBacklog(dir, clean)).includes("DUPLICATE_ID"));
   rmSync(dir, { recursive: true, force: true });
 });
 
-test("POLICY_INVALID: no review date means nothing can ever be overdue", () => {
+test("POLICY_INVALID: no review date, or a decision that is not a decision id", () => {
   const dir = makeFixture([baseEntry()], { review_by: "soon" });
-  const { findings } = checkBacklog(dir, clean);
-  assert.ok(findings.some((f) => f.code === "POLICY_INVALID"), JSON.stringify(findings));
+  assert.ok(codes(checkBacklog(dir, clean)).includes("POLICY_INVALID"));
+  const dir2 = makeFixture([baseEntry()], { decision: "the founder said so" });
+  assert.ok(checkBacklog(dir2, clean).findings.some((f) => f.code === "POLICY_INVALID" && f.detail.includes("decision id")));
+  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir2, { recursive: true, force: true });
+});
+
+// ── history: the five drains ────────────────────────────────────────────────
+
+test("history: an unchanged register passes against its base", () => {
+  const dir = makeHistoryFixture([baseEntry()], [baseEntry()]);
+  const r = checkBacklog(dir, history);
+  assert.deepEqual(r.findings.filter((f) => f.code !== "COMMIT_MISSING"), [], JSON.stringify(r.findings));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("ROW_DELETED: a row that existed at the base is gone", () => {
+  const dir = makeHistoryFixture([baseEntry({ id: "CX-1" }), baseEntry({ id: "CX-2" })], [baseEntry({ id: "CX-2" })]);
+  assert.ok(checkBacklog(dir, history).findings.some((f) => f.code === "ROW_DELETED" && f.detail.includes("CX-1")));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("ROW_DELETED: emptying the register is the maximal deletion", () => {
+  const dir = makeHistoryFixture([baseEntry({ id: "CX-1" }), baseEntry({ id: "CX-2" })], []);
+  const deleted = checkBacklog(dir, history).findings.filter((f) => f.code === "ROW_DELETED");
+  assert.equal(deleted.length, 2, JSON.stringify(deleted));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("STATUS_REGRESSED: a row moves backward, or a closed row is reopened or re-closed", () => {
+  const closed = baseEntry({ status: "reviewed", codex_verdict: "FAIL", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/v.md" });
+  const dir = makeHistoryFixture(
+    [baseEntry({ id: "CX-1", status: "in_review" }), { ...closed, id: "CX-2" }, { ...closed, id: "CX-3" }],
+    [
+      baseEntry({ id: "CX-1", status: "pending" }),
+      baseEntry({ id: "CX-2", status: "pending" }),
+      { ...closed, id: "CX-3", codex_verdict: "PASS" },
+    ],
+    { extraFiles: { "archive/v.md": "VERDICT: FAIL\n" } },
+  );
+  const found = checkBacklog(dir, history).findings.filter((f) => f.code === "STATUS_REGRESSED").map((f) => f.detail).join(" | ");
+  assert.match(found, /CX-1 moved from in_review back to pending/);
+  assert.match(found, /CX-2 was closed as reviewed and is now pending/);
+  assert.match(found, /CX-3 changed codex_verdict from "FAIL" to "PASS"/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("history: moving a row forward with archived evidence is the honest close, and passes", () => {
+  const dir = makeHistoryFixture(
+    [baseEntry()],
+    [baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/sessions/cx-1.md" })],
+    { extraFiles: { "archive/sessions/cx-1.md": "VERDICT: PASS\n" } },
+  );
+  const r = checkBacklog(dir, { ...history, today: "2026-09-30" });
+  assert.deepEqual(r.findings.filter((f) => f.code !== "COMMIT_MISSING"), [], JSON.stringify(r.findings));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("COMMIT_CHANGED: a row now names a different commit", () => {
+  const dir = makeHistoryFixture([baseEntry({ commit: "aaaaaaa" })], [baseEntry({ commit: "bbbbbbb" })]);
+  assert.ok(codes(checkBacklog(dir, history)).includes("COMMIT_CHANGED"));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("REVIEW_DATE_MOVED: pushing the date out defuses every row at once", () => {
+  const dir = makeHistoryFixture([baseEntry()], [baseEntry()], { headPolicy: { review_by: "2099-01-01" } });
+  const r = checkBacklog(dir, { ...history, today: "2030-01-01" });
+  assert.ok(codes(r).includes("REVIEW_DATE_MOVED"), JSON.stringify(r.findings));
+  // ...and the original date still governs overdue-ness in the meantime.
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("an extension that names a founder decision and a reason is allowed", () => {
+  const dir = makeHistoryFixture([baseEntry()], [baseEntry()], {
+    headPolicy: { review_by: "2026-09-14", review_by_extension: { decision: "DEC-20260907-A", reason: "quota return slipped a week" } },
+  });
+  assert.equal(codes(checkBacklog(dir, history)).includes("REVIEW_DATE_MOVED"), false);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("history: a stale branch missing rows main added later is not a deletion", () => {
+  // Compare against the merge-base, not the tip of main, or every branch cut
+  // before a new row was added would fail.
+  const dir = makeHistoryFixture([baseEntry({ id: "CX-1" })], [baseEntry({ id: "CX-1" })]);
+  git(dir, "switch", "-q", "main");
+  writeFileSync(join(dir, BACKLOG_PATH), registerText([baseEntry({ id: "CX-1" }), baseEntry({ id: "CX-2" })]), "utf8");
+  git(dir, "commit", "-q", "-am", "main adds CX-2");
+  git(dir, "switch", "-q", "work");
+  assert.equal(codes(checkBacklog(dir, history)).includes("ROW_DELETED"), false);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("history: first introduction (no register at the base) skips history rules", () => {
+  const dir = mkdtempSync(join(tmpdir(), "codex-backlog-intro-"));
+  git(dir, "init", "-q", "-b", "main");
+  git(dir, "config", "user.email", "t@example.com");
+  git(dir, "config", "user.name", "t");
+  writeFileSync(join(dir, "README.md"), "x\n", "utf8");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "-m", "base");
+  git(dir, "switch", "-q", "-c", "work");
+  mkdirSync(join(dir, dirname(BACKLOG_PATH)), { recursive: true });
+  writeFileSync(join(dir, BACKLOG_PATH), registerText([baseEntry()]), "utf8");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-q", "-m", "introduce");
+  const r = checkBacklog(dir, history);
+  assert.deepEqual(r.findings.filter((f) => f.code !== "COMMIT_MISSING"), [], JSON.stringify(r.findings));
   rmSync(dir, { recursive: true, force: true });
 });
 

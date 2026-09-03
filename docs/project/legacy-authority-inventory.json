@@ -75,7 +75,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "7d1f594ea8be5c07b25f49489cf2fba66d3e83ca6a1521a4f6368a5555647e0b",
+      "sha256": "65f5c7b8740b4a0b5b671ea68830574ae91e624e4dba0b99cceb9ac8a924539b",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -256,6 +256,7 @@
         "manifests/sanctions-check.yaml",
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
+        "scripts/codex-backlog-lib.mjs",
         "scripts/guard-tree-integrity.mjs",
         "scripts/guard-worktree-isolation.mjs",
         "scripts/handoff/handoff-check.test.mjs",
@@ -515,7 +516,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f7c81c485a4a52c626370d0244fc6c2fa6d93eeb6d80ef4d5cf7aab3f8b68665",
+      "sha256": "53805cac940b6573b34e8601ec379ece9d2b8d76f50430889134daa32e4ef355",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
