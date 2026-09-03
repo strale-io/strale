@@ -77,8 +77,21 @@ incomplete:
   in the repository. The content of a field that does not yet exist cannot be
   verified.
 
-The list is now the two types with rows in production and every writer read:
-`manual_reconciliation` and `capability_promotion`. `suspension_override` and
+The list is now the two types with rows in production:
+`manual_reconciliation` and `capability_promotion`.
+
+**"Every writer read" was itself an overstatement, and the third review proved
+it against production.** Of the two `capability_promotion` rows with
+`human_override`, the 2026-08-22 one matches the ledgered migration block byte
+for byte; the 2026-08-17 `web-extract` one matches neither named writer and no
+writer anywhere in this repository's history. It was written by a one-off run
+against production that was never committed — exactly the shape of
+`manual_reconciliation`'s own script, which is likewise absent from every
+branch. A grep cannot survey what is not in the repository. Both facts are now
+in the code rather than implied away, and they are the argument for the
+`human_override` conjunct carrying the weight: an uncommitted writer can put
+any payload under any type name, so the type list narrows the blast radius and
+is not a guarantee about content. `suspension_override` and
 `auto_fix` are left out too, though their single writers are verified static —
 the argument for them is speculative, and the argument against admitting a type
 on an incomplete writer survey is precisely what this paragraph records. The
@@ -152,14 +165,45 @@ thought of is not the same as enumerating the readers.
   402 challenge to pay for it. Zero rows satisfy that combination today, so it
   was latent, not live.
 
-Every one of these now filters `visible`. Eight tests assert on the predicate
-the routes send to Postgres — rendered through drizzle's dialect rather than
-through a stub that returns rows regardless of the filter — and on the three
-rail predicates directly. Each guard is mutation-proved: dropping the agent
-card's filter fails 1, the detail route's 2, `llms-full.txt`'s 1, the rail
-predicate's 2, the payable predicate's 3. **The earlier claim that "removing
-either visible filter fails 2" was wrong for the agent card, where it is 1** —
-the same overstatement this change corrects elsewhere.
+**Nor was five all of them.** A third independent review enumerated again and
+found two more, live in production, and reproduced them with `curl`:
+
+- `GET /v1/solutions` and `GET /v1/solutions/:slug` disclose withdrawn
+  capabilities through the solutions that bundle them. Eight active solutions
+  had a step pointing at one; three of those solutions are on the x402 rail.
+- The detail route's `extends_with` lookup filtered **nothing at all** — not
+  even `is_active` — and returned slug, name, description, price and category
+  for whatever the column named. About twenty active solutions point at a
+  withdrawn capability that way.
+- `POST /v1/suggest` shares the same join, and the names reach the response as
+  `extra_description`: "also includes …".
+
+Execution was never at risk on any of them: `solution-executor.ts` re-reads
+each step through `isServableCapability` and marks a withdrawn one
+`platform_withheld` rather than running it. The step joins now carry the
+visibility requirement, which also means a withdrawn step stops counting
+toward the advertised `step_count` — the honest number, since that step will
+not run.
+
+**Three passes at one enumeration, three passes that missed something.** That
+is the finding worth keeping, above any individual route. Each pass fixed what
+it had found and believed itself done; the surface that broke the claim each
+time was one nobody had thought to list. The rule that would have worked is
+mechanical rather than diligent: enumerate every query against the table and
+classify each one, rather than following the trail of the surfaces you already
+know about.
+
+Ten tests now assert on the predicate the routes send to Postgres — rendered
+through drizzle's dialect rather than through a stub that returns rows
+regardless of the filter — and on the three rail predicates directly. Each
+guard is mutation-proved: agent card 1, detail route 2, `llms-full.txt` 1,
+solutions 2, rail predicate 2, payable predicate 2. **Two of my own counts were
+wrong and the review caught both**: "removing either visible filter fails 2"
+was 1 for the agent card, and "payable predicate 3" is 2. The retention suite
+is 23 tests, not the 21 the previous commit claimed. All three were
+undercounts rather than overstatements of discrimination, which makes them
+sloppy rather than misleading — in a change whose whole subject is verifying
+counts.
 
 **2. `set_in` in the environment manifest was fiction on a third of its rows.**
 It is the field naming where each value actually lives, and no check ever read

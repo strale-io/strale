@@ -267,7 +267,17 @@ async function loadCatalog(): Promise<CatalogItem[]> {
               capabilityName: capabilities.name,
             })
             .from(solutionSteps)
-            .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
+            // Same withdrawal rule as GET /v1/solutions. These names reach the
+            // public response as `extra_description`: "also includes …", so a
+            // withdrawn capability was being suggested by name to a caller
+            // whenever it shared a solution with a matched one.
+            .innerJoin(
+              capabilities,
+              and(
+                eq(solutionSteps.capabilitySlug, capabilities.slug),
+                eq(capabilities.visible, true),
+              ),
+            )
             .where(inArray(solutionSteps.solutionId, solIds))
             .orderBy(solutionSteps.solutionId, asc(solutionSteps.stepOrder))
         : [];

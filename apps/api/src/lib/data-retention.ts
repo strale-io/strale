@@ -230,12 +230,34 @@ export const HEALTH_EVENT_RETENTION_DAYS = 180;
  * only, for EVERY writer of that type — see the exclusions recorded below.
  */
 export const DURABLE_OVERRIDE_EVENT_TYPES = [
-  // Written once, by apps/api/scripts/reconcile-stranded-executing.ts. Details
-  // are transaction id, before/after status, price, refund, policy, script.
+  // Written once, by apps/api/scripts/reconcile-stranded-executing.ts —
+  // which is NOT in this repository on any branch. It was an incident-specific
+  // script run directly against production on 2026-08-22 and never committed
+  // (see handoff/_general/from-code/2026-08-25-f1-taxonomy-default.md). The
+  // eleven rows it wrote were inspected directly in the database: transaction
+  // id, before/after status, price, refund, policy, script. Naming a path that
+  // cannot be opened would be misleading without this.
   "manual_reconciliation",
-  // Two writers, both enumerated: jobs/capability-promotion.ts (structured
-  // fields only, and human_override = false there) and one ledgered block in
+  // Writers in the repository: jobs/capability-promotion.ts (structured
+  // fields, and human_override = false at all four of its insert sites, so it
+  // cannot produce a durable row) and one ledgered block in
   // lib/startup-migrations.ts whose payload is a static literal.
+  //
+  // **The repository is not the whole survey, and this is the third time that
+  // has bitten.** Production holds two human_override rows of this type; the
+  // 2026-08-22 one matches the ledgered block byte for byte, and the
+  // 2026-08-17 `web-extract` one matches neither writer and no writer in the
+  // history of this repository. It was written by a one-off run against
+  // production that was never committed — the same shape as
+  // manual_reconciliation's own script, which is also absent from every
+  // branch (see below). Its payload was read when this was found and is an
+  // operational narrative, but nobody reviewed it as "operational metadata
+  // only" before it was written, and a grep cannot survey what is not here.
+  //
+  // That is the argument for the human_override conjunct doing the real work
+  // rather than the type list: an uncommitted writer can produce any payload
+  // it likes under a type name, so the type list narrows the blast radius but
+  // cannot be treated as a guarantee about content.
   "capability_promotion",
 ] as const;
 

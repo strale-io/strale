@@ -21,6 +21,11 @@
  *    readers is the discipline; fixing the two you thought of is not.
  *  - `GET /.well-known/mcp.json` counted withdrawn capabilities into the
  *    number it advertises.
+ *  - `GET /v1/solutions` and its detail route disclosed them a third way, via
+ *    the solutions that bundle them — found by a THIRD independent review,
+ *    after two passes at the same enumeration. Eight active solutions had a
+ *    withdrawn step; about twenty pointed at one through `extends_with`, a
+ *    lookup that filtered nothing at all, not even `is_active`.
  *
  * These tests assert on the predicate the route actually sends to Postgres,
  * rendered through drizzle's own dialect, rather than on a stub's return
@@ -49,20 +54,34 @@ function makeDbStub(rows: unknown[] = []) {
     return {
       limit: () => Promise.resolve(rows),
       orderBy: () => Promise.resolve(rows),
+      innerJoin: () => Promise.resolve(rows),
+      leftJoin: () => Promise.resolve(rows),
       then: promise.then.bind(promise),
       catch: promise.catch.bind(promise),
       finally: promise.finally.bind(promise),
     };
   };
+  // A join's ON clause is a predicate too, and two of the surfaces below put
+  // the visibility requirement there rather than in the WHERE — so the stub
+  // has to capture both or the assertion passes vacuously.
+  const chain = () => ({
+    where: (clause: unknown) => {
+      captured.push(clause);
+      return result();
+    },
+    innerJoin: (_t: unknown, on: unknown) => {
+      captured.push(on);
+      return chain();
+    },
+    leftJoin: (_t: unknown, on: unknown) => {
+      captured.push(on);
+      return chain();
+    },
+    orderBy: () => Promise.resolve(rows),
+    limit: () => Promise.resolve(rows),
+  });
   return {
-    select: () => ({
-      from: () => ({
-        where: (clause: unknown) => {
-          captured.push(clause);
-          return result();
-        },
-      }),
-    }),
+    select: () => ({ from: () => chain() }),
     execute: () => Promise.resolve([]),
   };
 }
@@ -124,6 +143,45 @@ describe("GET /.well-known/mcp.json", () => {
     const capabilityQuery = captured.map(rendered).find((p) => p.includes("marketplace_eligible"));
     expect(capabilityQuery, `no capability query captured: ${JSON.stringify(captured.map(rendered))}`).toBeDefined();
     expect(capabilityQuery).toContain("visible");
+  });
+});
+
+describe("GET /v1/solutions", () => {
+  it("does not describe a step whose capability is withdrawn", async () => {
+    // One solution must come back, or solIds is empty and the step query the
+    // test is about never runs — a vacuous pass.
+    vi.doMock("../db/index.js", () => ({
+      getDb: () => makeDbStub([{ id: "s1", slug: "x", extendsWith: [] }]),
+    }));
+    const { solutionsRoute } = await import("./solutions.js");
+    await solutionsRoute.request("/");
+
+    const joinOn = captured.map(rendered).find((x) => x.includes("solution_steps"));
+    expect(joinOn, `no step join captured: ${JSON.stringify(captured.map(rendered))}`).toBeDefined();
+    expect(joinOn).toContain("visible");
+  });
+});
+
+describe("GET /v1/solutions/:slug", () => {
+  it("filters both the step join and the extends_with lookup", async () => {
+    // extends_with had no filter at all — not even is_active — and returned
+    // slug, name, description, price and category for whatever the column
+    // named.
+    vi.doMock("../db/index.js", () => ({
+      getDb: () => makeDbStub([{ id: "s1", slug: "x", extendsWith: ["a-cap"] }]),
+    }));
+    const { solutionsRoute } = await import("./solutions.js");
+    await solutionsRoute.request("/some-solution");
+
+    const predicates = captured.map(rendered);
+    const stepJoin = predicates.find((x) => x.includes("solution_steps"));
+    expect(stepJoin, JSON.stringify(predicates)).toBeDefined();
+    expect(stepJoin).toContain("visible");
+
+    const extendsLookup = predicates.find((x) => x.includes("in") && x.includes("slug") && !x.includes("solution_steps"));
+    expect(extendsLookup, `no extends_with lookup: ${JSON.stringify(predicates)}`).toBeDefined();
+    expect(extendsLookup).toContain("visible");
+    expect(extendsLookup).toContain("is_active");
   });
 });
 
