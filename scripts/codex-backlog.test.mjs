@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -303,6 +303,47 @@ test("VERDICT_EVIDENCE_MISSING: a `..` segment escapes archive/ and is refused",
   const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "VERDICT_EVIDENCE_MISSING").map((f) => f.detail).join(" | ");
   assert.match(found, /CX-1 cites archive\/\.\.\/notes\/fake\.md, which is not a path inside archive\//);
   assert.match(found, /CX-2 cites .* which is not a path inside archive\//);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("VERDICT_EVIDENCE_MISSING: a link inside archive/ that points outside is refused", () => {
+  // Fourth review: `..` was refused but a junction placed inside archive/
+  // and pointing at a directory outside passed the lexical check, and the
+  // forged verdict behind it was read. Containment is judged on real paths.
+  const dir = makeFixture([
+    baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/link/forged.md" }),
+  ]);
+  const outside = mkdtempSync(join(tmpdir(), "codex-backlog-outside-"));
+  writeFileSync(join(outside, "forged.md"), verdictText("PASS"), "utf8");
+  mkdirSync(join(dir, "archive"), { recursive: true });
+  try {
+    symlinkSync(outside, join(dir, "archive", "link"), "junction");
+  } catch (error) {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
+    throw new Error(`could not create a directory link in the fixture: ${error}`);
+  }
+  const r = checkBacklog(dir, clean);
+  assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING" && /link that leaves archive/.test(f.detail)), JSON.stringify(r.findings));
+  rmSync(dir, { recursive: true, force: true });
+  rmSync(outside, { recursive: true, force: true });
+});
+
+test("a link inside archive/ that stays inside archive/ is allowed", () => {
+  const dir = makeFixture([
+    baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/alias/v.md" }),
+  ]);
+  mkdirSync(join(dir, "archive", "real"), { recursive: true });
+  writeFileSync(join(dir, "archive", "real", "v.md"), verdictText("PASS"), "utf8");
+  symlinkSync(join(dir, "archive", "real"), join(dir, "archive", "alias"), "junction");
+  assert.deepEqual(checkBacklog(dir, clean).findings, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("DECISION_UNKNOWN: a decision bullet inside a fenced code block does not count", () => {
+  const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
+  writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS + "\nExample:\n\n```markdown\n- **DEC-20260903-Z** (global, active): an example entry.\n```\n", "utf8");
+  assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"));
   rmSync(dir, { recursive: true, force: true });
 });
 

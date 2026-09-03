@@ -30,7 +30,7 @@
  * What this cannot catch, and does not claim to: a batch that was never added.
  * Recording the debt is a process commitment; the checker guards the record.
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { resolve, sep } from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -63,7 +63,9 @@ export function decisionExists(root, id) {
   if (!DECISION_ID.test(String(id ?? ""))) return false;
   if (existsSync(resolve(root, "docs/decisions/records", `${id}.md`))) return true;
   try {
-    const claude = readFileSync(resolve(root, "CLAUDE.md"), "utf8");
+    // Fenced code blocks are examples, not records: a decision bullet typed
+    // inside ``` would otherwise count (fourth review).
+    const claude = readFileSync(resolve(root, "CLAUDE.md"), "utf8").replace(/^```[\s\S]*?^```/gm, "");
     // A decision-list ENTRY: a bullet that starts with the bold id, as every
     // entry under "Active Decisions" / "Current Decisions" does. A bold
     // mention in passing anywhere else does not count — the third review
@@ -85,10 +87,27 @@ export function decisionExists(root, id) {
  */
 export function archivedEvidencePath(root, evidencePath) {
   if (typeof evidencePath !== "string" || evidencePath.length === 0) return null;
+  // Control characters and surrounding whitespace are never part of a real
+  // path; refusing them costs nothing.
+  if (/[\u0000-\u001f]/.test(evidencePath) || evidencePath !== evidencePath.trim()) return null;
   if (evidencePath.split(/[\\/]/).includes("..")) return null;
-  const archiveDir = resolve(root, "archive") + sep;
   const full = resolve(root, evidencePath);
-  return full.startsWith(archiveDir) ? full : null;
+  if (!full.startsWith(resolve(root, "archive") + sep)) return null;
+  // Lexical containment is not containment: a symlink or junction placed
+  // INSIDE archive/ and pointing outside passed the check above and the
+  // file it named was read (fourth review, demonstrated end to end). Compare
+  // real paths — realpath follows every link, so a link that leaves
+  // archive/ resolves outside it and is refused, and one that stays inside
+  // is fine.
+  let realArchive;
+  let realFull;
+  try {
+    realArchive = realpathSync(resolve(root, "archive")) + sep;
+    realFull = realpathSync(full);
+  } catch {
+    return null; // does not exist — the caller reports that
+  }
+  return realFull.startsWith(realArchive) ? realFull : null;
 }
 
 /**
@@ -98,7 +117,11 @@ export function archivedEvidencePath(root, evidencePath) {
  */
 export function verdictFileMatches(root, evidencePath, verdict, commit) {
   const full = archivedEvidencePath(root, evidencePath);
-  if (!full) return { ok: false, why: "is not a path inside archive/ (a `..` segment or an escape is refused)" };
+  if (!full) {
+    const lexical = typeof evidencePath === "string" && resolve(root, evidencePath).startsWith(resolve(root, "archive") + sep) && !evidencePath.split(/[\\/]/).includes("..");
+    if (lexical && !existsSync(resolve(root, evidencePath))) return { ok: false, why: "does not exist" };
+    return { ok: false, why: "is not a path inside archive/ (a `..` segment, an escape, or a link that leaves archive/ is refused)" };
+  }
   let text;
   try {
     text = readFileSync(full, "utf8");
