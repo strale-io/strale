@@ -121,6 +121,22 @@ the identical finding** — an instrument faithfully reporting a deliberate
 commercial choice. Does not reach the brief. Second-sourced against production:
 `german-company-data` is absent from `GET /v1/capabilities` (297 listed).
 
+> **CORRECTED 2026-09-03, same day — that second-sourcing was one reader, and
+> the withdrawal does not hold.** `german-company-data` *is* published to
+> anonymous callers by `/.well-known/agent-card.json`, whose handler filters on
+> `is_active` and `marketplace_eligible` and never on `visible`. Measured
+> against production: the card carries 413 skills against 297 capabilities plus
+> 107 solutions, and **exactly 10** ids are on the card and absent from the
+> catalogue — including the founder-queued `uk-gazette-notice-search` (DQ-14
+> item 2), which fails on every call. Two of the ten, `page-speed-test` (DQ-27's
+> subject) and `danish-company-data`, are also served at HTTP 200 with full
+> schemas by `GET /v1/capabilities/:slug` while the list endpoint hides them.
+> None is x402-enabled, so nothing can be bought; the defect is disclosure, not
+> billing. Raised by a concurrent session's independent review and reproduced
+> here before being recorded. The code fix is that session's and is deliberately
+> not duplicated. Logged against LESSONS.md F7 incident 8, which this session
+> wrote four hours earlier and whose lesson this is a textbook instance of.
+
 Six WARNINGs, all pre-existing and unchanged: `esortcode` finite credits with no
 balance endpoint; `anthropic` and `cdp` declaring spend monitoring that has never
 reported a reading; `cobalt-intelligence`, `einsearch`, `sec-api-io` paid/finite
