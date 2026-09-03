@@ -41,6 +41,44 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-5
+    subject: "PR #500 — M2 batch: 2026-08 operating-window rows, seven formal candidate records"
+    commit: 7d6343e1
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Decision-record fidelity is exactly the work the 2026-09-01 routing
+      reserved for Codex: the doctrine batch failed its first Codex review
+      for over-compression, and Codex mapped the collision identity plan
+      these records now rely on. A Claude review passed this batch; the
+      model that set the bar should confirm it.
+    what_to_attack: >
+      Each record's five sections against its Notion source for any dropped
+      boundary, option or number; the topic split and the four relation
+      edges (only source-stated ones are allowed); and the closure register's
+      arithmetic and digests, including the private half via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS, one nit (an accurate forward reference)
+  - id: CX-4
+    subject: "PR #499 — hono 4.12.8 -> 4.13.5, WP13 batch 1"
+    commit: 2a2519f0
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      A framework minor upgrade on the request path of every endpoint. The
+      Claude review reproduced the audit numbers and reachability by grep and
+      read the changelog; a different model reading the same changelog for
+      behaviour this app depends on (c.res reassignment in middleware,
+      bodyLimit, cors, HTTPException) is cheap insurance on a change that
+      touches everything.
+    what_to_attack: >
+      apps/api/src/routes/x402-body-limit.test.ts's re-scoped case (is it
+      still discriminating, or has it become a tautology now that the
+      framework refuses the body itself?), and any hono 4.13 behaviour change
+      under the /v1/public/ops/* response-rewriting middleware in app.ts.
+    claude_verdicts: 1 round, PASS, two nits applied
   - id: CX-1
     subject: "PR #494 — withdrawn capabilities must not be advertised anywhere"
     commit: 0daa93c9

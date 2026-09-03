@@ -95,21 +95,21 @@ const codes = (r) => r.findings.map((f) => f.code);
 test("a well-formed pending row before the review date passes", () => {
   const dir = makeFixture([baseEntry()]);
   assert.deepEqual(checkBacklog(dir, clean).findings, []);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("REVIEW_OVERDUE: still pending after the review date", () => {
   const dir = makeFixture([baseEntry()]);
   const { findings } = checkBacklog(dir, { today: "2026-09-08", gitAvailable: false });
   assert.ok(findings.some((f) => f.code === "REVIEW_OVERDUE" && f.detail.includes("CX-1")), JSON.stringify(findings));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("the review date itself is not overdue; the day after is", () => {
   const dir = makeFixture([baseEntry()]);
   assert.equal(codes(checkBacklog(dir, { today: "2026-09-07", gitAvailable: false })).includes("REVIEW_OVERDUE"), false);
   assert.equal(codes(checkBacklog(dir, { today: "2026-09-08", gitAvailable: false })).includes("REVIEW_OVERDUE"), true);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("a reviewed row with an archived verdict is not overdue, whatever the date", () => {
@@ -119,7 +119,7 @@ test("a reviewed row with an archived verdict is not overdue, whatever the date"
   mkdirSync(join(dir, "archive/sessions"), { recursive: true });
   writeFileSync(join(dir, "archive/sessions/cx-1.md"), verdictText("PASS"), "utf8");
   assert.deepEqual(checkBacklog(dir, { today: "2026-09-30", gitAvailable: false }).findings, []);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("VERDICT_MISSING: reviewed with no verdict, or a verdict with no date", () => {
@@ -130,7 +130,7 @@ test("VERDICT_MISSING: reviewed with no verdict, or a verdict with no date", () 
   const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "VERDICT_MISSING").map((f) => f.detail).join(" | ");
   assert.match(found, /CX-1 is reviewed but codex_verdict/);
   assert.match(found, /CX-2 is reviewed but codex_reviewed_on/);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("VERDICT_EVIDENCE_MISSING: a status flip with no archived verdict is somebody saying so", () => {
@@ -141,8 +141,8 @@ test("VERDICT_EVIDENCE_MISSING: a status flip with no archived verdict is somebo
   // Naming a path that does not exist is the same claim.
   const dir2 = makeFixture([baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-03", codex_evidence: "archive/sessions/nope.md" })]);
   assert.ok(checkBacklog(dir2, clean).findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING" && f.detail.includes("does not exist")));
-  rmSync(dir, { recursive: true, force: true });
-  rmSync(dir2, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  rmSync(dir2, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("WAIVER_UNAUTHORISED: a waiver needs a reason, the founder, and a decision", () => {
@@ -156,7 +156,7 @@ test("WAIVER_UNAUTHORISED: a waiver needs a reason, the founder, and a decision"
   assert.match(found, /CX-1 is waived with no waived_reason/);
   assert.match(found, /CX-2 is waived but waived_by is null/);
   assert.match(found, /CX-3 is waived but waived_by is "claude"/);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("a founder waiver naming its decision passes", () => {
@@ -164,7 +164,7 @@ test("a founder waiver naming its decision passes", () => {
     baseEntry({ status: "waived", waived_reason: "superseded by the rewrite", waived_by: "petter", waived_decision: "DEC-20260903-B" }),
   ]);
   assert.deepEqual(checkBacklog(dir, clean).findings, []);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("COMMIT_MISSING: the row names a commit this repository does not have", () => {
@@ -176,7 +176,7 @@ test("COMMIT_MISSING: the row names a commit this repository does not have", () 
   git(dir, "commit", "-q", "-m", "x");
   const { findings } = checkBacklog(dir, { today: "2026-09-04", skipHistory: true });
   assert.ok(findings.some((f) => f.code === "COMMIT_MISSING"), JSON.stringify(findings));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("a shallow checkout reports the commit as unverifiable, not missing", () => {
@@ -192,15 +192,15 @@ test("a shallow checkout reports the commit as unverifiable, not missing", () =>
   writeFileSync(join(src, "a.txt"), "2\n", "utf8");
   git(src, "commit", "-q", "-am", "two");
   const shallow = mkdtempSync(join(tmpdir(), "codex-backlog-shallow-"));
-  rmSync(shallow, { recursive: true, force: true });
+  rmSync(shallow, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   execFileSync("git", ["clone", "-q", "--depth", "1", `file:///${src.replace(/\\/g, "/")}`, shallow], { stdio: ["pipe", "pipe", "pipe"] });
   mkdirSync(join(shallow, dirname(BACKLOG_PATH)), { recursive: true });
   writeFileSync(join(shallow, BACKLOG_PATH), registerText([baseEntry({ commit: first.slice(0, 8) })]), "utf8");
   const r = checkBacklog(shallow, { today: "2026-09-04", skipHistory: true });
   assert.equal(codes(r).includes("COMMIT_MISSING"), false, JSON.stringify(r.findings));
   assert.ok(r.warnings.some((w) => w.code === "COMMIT_UNVERIFIABLE"), JSON.stringify(r.warnings));
-  rmSync(src, { recursive: true, force: true });
-  rmSync(shallow, { recursive: true, force: true });
+  rmSync(src, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  rmSync(shallow, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("ENTRY_INVALID: a missing required field, an unknown status, a bad date", () => {
@@ -213,13 +213,13 @@ test("ENTRY_INVALID: a missing required field, an unknown status, a bad date", (
   assert.match(details, /CX-1 is missing why_codex/);
   assert.match(details, /CX-2 has status probably-fine/);
   assert.match(details, /CX-3 merged must be/);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("DUPLICATE_ID: the same id twice", () => {
   const dir = makeFixture([baseEntry(), baseEntry()]);
   assert.ok(codes(checkBacklog(dir, clean)).includes("DUPLICATE_ID"));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("POLICY_INVALID: no review date, or a decision that is not a decision id", () => {
@@ -227,8 +227,8 @@ test("POLICY_INVALID: no review date, or a decision that is not a decision id", 
   assert.ok(codes(checkBacklog(dir, clean)).includes("POLICY_INVALID"));
   const dir2 = makeFixture([baseEntry()], { decision: "the founder said so" });
   assert.ok(checkBacklog(dir2, clean).findings.some((f) => f.code === "POLICY_INVALID" && f.detail.includes("decision id")));
-  rmSync(dir, { recursive: true, force: true });
-  rmSync(dir2, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  rmSync(dir2, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 // ── the fabrication drains the second review found ──────────────────────────
@@ -238,7 +238,7 @@ test("DECISION_UNKNOWN: a well-formed policy.decision this repository does not r
   // format check is not an existence check.
   const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
   assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("a decision recorded as a formal record is known even if CLAUDE.md does not name it", () => {
@@ -246,7 +246,7 @@ test("a decision recorded as a formal record is known even if CLAUDE.md does not
   mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
   writeFileSync(join(dir, "docs/decisions/records/DEC-20260101-Q.md"), "---\nid: DEC-20260101-Q\n---\n", "utf8");
   assert.deepEqual(checkBacklog(dir, clean).findings, []);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("WAIVER_UNAUTHORISED: a founder waiver citing a decision that does not exist", () => {
@@ -254,7 +254,7 @@ test("WAIVER_UNAUTHORISED: a founder waiver citing a decision that does not exis
     baseEntry({ status: "waived", waived_reason: "r", waived_by: "petter", waived_decision: "DEC-20260903-Z" }),
   ]);
   assert.ok(checkBacklog(dir, clean).findings.some((f) => f.code === "WAIVER_UNAUTHORISED" && f.detail.includes("does not record")));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("VERDICT_EVIDENCE_MISSING: an existing archive file that is not a verdict for this row", () => {
@@ -264,7 +264,7 @@ test("VERDICT_EVIDENCE_MISSING: an existing archive file that is not a verdict f
   writeFileSync(join(dir, "archive/README.md"), "# Archive index\n", "utf8");
   const r = checkBacklog(dir, clean);
   assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING" && f.detail.includes("VERDICT: PASS")), JSON.stringify(r.findings));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("VERDICT_EVIDENCE_MISSING: a verdict file for a different verdict, or a different commit", () => {
@@ -278,7 +278,7 @@ test("VERDICT_EVIDENCE_MISSING: a verdict file for a different verdict, or a dif
   const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "VERDICT_EVIDENCE_MISSING").map((f) => f.detail).join(" | ");
   assert.match(found, /CX-1 cites archive\/a.md, which does not contain a line "VERDICT: PASS"/);
   assert.match(found, /CX-2 cites archive\/b.md, which does not mention commit deadbee/);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("REVIEW_DATE_MOVED: an extension citing a decision that does not exist", () => {
@@ -287,7 +287,7 @@ test("REVIEW_DATE_MOVED: an extension citing a decision that does not exist", ()
   });
   const r = checkBacklog(dir, { ...history, today: "2030-01-01" });
   assert.ok(r.findings.some((f) => f.code === "REVIEW_DATE_MOVED" && f.detail.includes("does not record")), JSON.stringify(r.findings));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("VERDICT_EVIDENCE_MISSING: a `..` segment escapes archive/ and is refused", () => {
@@ -303,7 +303,7 @@ test("VERDICT_EVIDENCE_MISSING: a `..` segment escapes archive/ and is refused",
   const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "VERDICT_EVIDENCE_MISSING").map((f) => f.detail).join(" | ");
   assert.match(found, /CX-1 cites archive\/\.\.\/notes\/fake\.md, which is not a path inside archive\//);
   assert.match(found, /CX-2 cites .* which is not a path inside archive\//);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("VERDICT_EVIDENCE_MISSING: a link inside archive/ that points outside is refused", () => {
@@ -319,14 +319,14 @@ test("VERDICT_EVIDENCE_MISSING: a link inside archive/ that points outside is re
   try {
     symlinkSync(outside, join(dir, "archive", "link"), "junction");
   } catch (error) {
-    rmSync(dir, { recursive: true, force: true });
-    rmSync(outside, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    rmSync(outside, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
     throw new Error(`could not create a directory link in the fixture: ${error}`);
   }
   const r = checkBacklog(dir, clean);
   assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING" && /link that leaves archive/.test(f.detail)), JSON.stringify(r.findings));
-  rmSync(dir, { recursive: true, force: true });
-  rmSync(outside, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  rmSync(outside, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("a link inside archive/ that stays inside archive/ is allowed", () => {
@@ -337,14 +337,14 @@ test("a link inside archive/ that stays inside archive/ is allowed", () => {
   writeFileSync(join(dir, "archive", "real", "v.md"), verdictText("PASS"), "utf8");
   symlinkSync(join(dir, "archive", "real"), join(dir, "archive", "alias"), "junction");
   assert.deepEqual(checkBacklog(dir, clean).findings, []);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("DECISION_UNKNOWN: a decision bullet inside a fenced code block does not count", () => {
   const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
   writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS + "\nExample:\n\n```markdown\n- **DEC-20260903-Z** (global, active): an example entry.\n```\n", "utf8");
   assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("fence stripping: unclosed, tilde, and indented fences are all stripped; text after a closed fence survives", () => {
@@ -360,7 +360,7 @@ test("fence stripping: unclosed, tilde, and indented fences are all stripped; te
     const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
     writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS + "\n" + fence, "utf8");
     assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"), JSON.stringify(fence));
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 });
 
@@ -373,8 +373,8 @@ test("VERDICT_EVIDENCE_MISSING: archive/ itself being a link is refused", () => 
   symlinkSync(elsewhere, join(dir, "archive"), "junction");
   const r = checkBacklog(dir, clean);
   assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING"), JSON.stringify(r.findings));
-  rmSync(dir, { recursive: true, force: true });
-  rmSync(elsewhere, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  rmSync(elsewhere, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("DECISION_UNKNOWN: a bold mention outside the decision list does not count", () => {
@@ -384,7 +384,7 @@ test("DECISION_UNKNOWN: a bold mention outside the decision list does not count"
   const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
   writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS + "\nSome appendix note mentioning **DEC-20260903-Z** in passing.\n", "utf8");
   assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 // ── history: the five drains ────────────────────────────────────────────────
@@ -393,20 +393,20 @@ test("history: an unchanged register passes against its base", () => {
   const dir = makeHistoryFixture([baseEntry()], [baseEntry()]);
   const r = checkBacklog(dir, history);
   assert.deepEqual(r.findings.filter((f) => f.code !== "COMMIT_MISSING"), [], JSON.stringify(r.findings));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("ROW_DELETED: a row that existed at the base is gone", () => {
   const dir = makeHistoryFixture([baseEntry({ id: "CX-1" }), baseEntry({ id: "CX-2" })], [baseEntry({ id: "CX-2" })]);
   assert.ok(checkBacklog(dir, history).findings.some((f) => f.code === "ROW_DELETED" && f.detail.includes("CX-1")));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("ROW_DELETED: emptying the register is the maximal deletion", () => {
   const dir = makeHistoryFixture([baseEntry({ id: "CX-1" }), baseEntry({ id: "CX-2" })], []);
   const deleted = checkBacklog(dir, history).findings.filter((f) => f.code === "ROW_DELETED");
   assert.equal(deleted.length, 2, JSON.stringify(deleted));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("STATUS_REGRESSED: a row moves backward, or a closed row is reopened or re-closed", () => {
@@ -424,7 +424,7 @@ test("STATUS_REGRESSED: a row moves backward, or a closed row is reopened or re-
   assert.match(found, /CX-1 moved from in_review back to pending/);
   assert.match(found, /CX-2 was closed as reviewed and is now pending/);
   assert.match(found, /CX-3 changed codex_verdict from "FAIL" to "PASS"/);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("history: moving a row forward with archived evidence is the honest close, and passes", () => {
@@ -435,13 +435,13 @@ test("history: moving a row forward with archived evidence is the honest close, 
   );
   const r = checkBacklog(dir, { ...history, today: "2026-09-30" });
   assert.deepEqual(r.findings.filter((f) => f.code !== "COMMIT_MISSING"), [], JSON.stringify(r.findings));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("COMMIT_CHANGED: a row now names a different commit", () => {
   const dir = makeHistoryFixture([baseEntry({ commit: "aaaaaaa" })], [baseEntry({ commit: "bbbbbbb" })]);
   assert.ok(codes(checkBacklog(dir, history)).includes("COMMIT_CHANGED"));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("REVIEW_DATE_MOVED: pushing the date out defuses every row at once", () => {
@@ -449,7 +449,7 @@ test("REVIEW_DATE_MOVED: pushing the date out defuses every row at once", () => 
   const r = checkBacklog(dir, { ...history, today: "2030-01-01" });
   assert.ok(codes(r).includes("REVIEW_DATE_MOVED"), JSON.stringify(r.findings));
   // ...and the original date still governs overdue-ness in the meantime.
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("an extension that names a founder decision and a reason is allowed", () => {
@@ -457,7 +457,7 @@ test("an extension that names a founder decision and a reason is allowed", () =>
     headPolicy: { review_by: "2026-09-14", review_by_extension: { decision: "DEC-20260907-A", reason: "quota return slipped a week" } },
   });
   assert.equal(codes(checkBacklog(dir, history)).includes("REVIEW_DATE_MOVED"), false);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("history: a stale branch missing rows main added later is not a deletion", () => {
@@ -469,7 +469,7 @@ test("history: a stale branch missing rows main added later is not a deletion", 
   git(dir, "commit", "-q", "-am", "main adds CX-2");
   git(dir, "switch", "-q", "work");
   assert.equal(codes(checkBacklog(dir, history)).includes("ROW_DELETED"), false);
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("history: first introduction (no register at the base) skips history rules", () => {
@@ -488,7 +488,7 @@ test("history: first introduction (no register at the base) skips history rules"
   git(dir, "commit", "-q", "-m", "introduce");
   const r = checkBacklog(dir, history);
   assert.deepEqual(r.findings.filter((f) => f.code !== "COMMIT_MISSING"), [], JSON.stringify(r.findings));
-  rmSync(dir, { recursive: true, force: true });
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("real repo: the backlog is currently clean", () => {
