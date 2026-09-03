@@ -119,6 +119,26 @@ describe("pruneWithdrawn", () => {
     expect(out.events).toHaveLength(1);
   });
 
+  it("drops a slug-KEYED map entry, not just a slug-valued field", () => {
+    // GET /v1/public/ops/trust/capabilities/batch answers with a map keyed by
+    // slug. A guard that only inspected values walked straight past it — the
+    // live endpoint returned page-speed-test's badge and pass rate today.
+    // Found by fetching the endpoint, not by reading the pruner.
+    const body = {
+      "page-speed-test": { badge: "strale_tested", pass_rate: 100 },
+      "email-validate": { badge: "strale_tested", pass_rate: 100 },
+    };
+    const out = pruneWithdrawn(body, sets) as Record<string, unknown>;
+    expect(Object.keys(out)).toEqual(["email-validate"]);
+  });
+
+  it("keeps a solution-keyed map entry whose name collides with a withdrawn capability", () => {
+    const collided = { ...sets, withdrawn: new Set([...sets.withdrawn, "website-health"]) };
+    const body = { "website-health": { badge: "strale_tested", capabilities_total: 3 } };
+    const out = pruneWithdrawn(body, collided) as Record<string, unknown>;
+    expect(Object.keys(out)).toEqual(["website-health"]);
+  });
+
   it("does not drop a SOLUTION that shares a name with a withdrawn capability", () => {
     // `slug` is a generic key: a solutions payload uses it for the solution's
     // own slug, and the two tables are separate namespaces. No collision

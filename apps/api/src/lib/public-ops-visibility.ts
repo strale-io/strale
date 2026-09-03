@@ -114,10 +114,16 @@ function slugOf(node: unknown, sets: WithdrawalSets): string | null {
 /**
  * Remove every node naming a withdrawn capability.
  *
- * Array elements are dropped. An object that names one at its root is the
- * caller asking about it directly, which `redactWithdrawn` reports separately
- * so the route can answer 404 rather than an empty shell — a 200 with the
- * fields blanked still confirms the slug exists.
+ * Array elements are dropped, and so are object ENTRIES whose key is a
+ * withdrawn slug — `/v1/public/ops/trust/capabilities/batch` answers with a
+ * map keyed by slug (`{"page-speed-test": {badge, pass_rate, …}}`), so a guard
+ * that only inspected values walked straight past it. Found by fetching the
+ * endpoint rather than by reading the pruner, which is the same lesson this
+ * whole change keeps relearning.
+ *
+ * An object that names one at its root is the caller asking about it
+ * directly; the middleware answers 404 for that rather than an empty shell,
+ * because a 200 with the fields blanked still confirms the slug exists.
  */
 export function pruneWithdrawn(node: unknown, sets: WithdrawalSets): unknown {
   if (Array.isArray(node)) {
@@ -131,6 +137,11 @@ export function pruneWithdrawn(node: unknown, sets: WithdrawalSets): unknown {
   if (isRecord(node)) {
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(node)) {
+      // A key that is a withdrawn capability slug is a slug-keyed map entry.
+      // The solution namespace is respected here too: a solutions batch keyed
+      // by solution slug must survive even if a capability of that name is
+      // withdrawn.
+      if (sets.withdrawn.has(key) && !sets.solutionSlugs.has(key)) continue;
       out[key] = pruneWithdrawn(value, sets);
     }
     return out;

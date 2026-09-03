@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { testSuites, solutions, solutionSteps } from "../db/schema.js";
+import { testSuites, solutions, solutionSteps, capabilities } from "../db/schema.js";
 import { apiError } from "../lib/errors.js";
 
 /**
@@ -156,6 +156,17 @@ publicTrustRoute.get("/solutions/batch", async (c) => {
     .select({ solutionSlug: solutions.slug, capabilitySlug: solutionSteps.capabilitySlug })
     .from(solutionSteps)
     .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
+    // A withdrawn step is not part of the count a customer is shown.
+    // capabilities_total read 3 for website-health on 2026-09-03 while the
+    // solution's own endpoint reported 2 — the same number disagreeing with
+    // itself on one page, which is what these filters exist to stop.
+    .innerJoin(
+      capabilities,
+      and(
+        eq(solutionSteps.capabilitySlug, capabilities.slug),
+        eq(capabilities.visible, true),
+      ),
+    )
     .where(inArray(solutions.slug, slugs));
 
   const bySolution = new Map<string, string[]>();

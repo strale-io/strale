@@ -571,10 +571,13 @@ app.use("/v1/public/ops/*", async (c, next) => {
   try {
     const body = await res.clone().json();
     const pruned = pruneWithdrawn(body, withdrawalSets);
-    c.res = new Response(JSON.stringify(pruned), {
-      status: res.status,
-      headers: res.headers,
-    });
+    // Copy the headers but DROP content-length: the pruned body is shorter
+    // than the original, and a stale length makes the client wait for bytes
+    // that never arrive. Every public-ops endpoint hung on exactly this until
+    // routes/public-trust.test.ts timed out and said so.
+    const headers = new Headers(res.headers);
+    headers.delete("content-length");
+    c.res = new Response(JSON.stringify(pruned), { status: res.status, headers });
   } catch {
     // A body we cannot parse is a body we cannot vet. Refuse rather than
     // forward it — this surface is small and entirely JSON, so this is a bug
