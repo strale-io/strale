@@ -362,25 +362,25 @@ tracks:
     depends_on: [T4]
     owner: session
     next_action: >
-      Upgrade the ten packages T4's triage found reachable, in its stated
-      order and one batch per upgrade. First `hono` -- semver-minor,
-      load-bearing for auth, the lowest-risk of the ten and the one that
-      proves the process. Then `drizzle-orm` (0.38.4 -> 0.45.2+), a
-      semver-major on the ORM every query in apps/api/src goes through:
-      its own batch, its own regression tests, and a production read-only
-      check of the queries the release notes call out before merge. Then
-      the remaining eight. Each batch: bump, run the full suite, record a
-      receipt, and re-run `apps/api/scripts/wp13-dependency-triage.mjs` so
-      the advisory count in the receipt is derived and not retyped. The
-      five unreachable advisories, including the one critical, are NOT in
-      scope -- upgrading them is churn against no exposure, and the triage
-      says why per package.
+      Batch 1 done (PR #499, hono 4.12.8 -> 4.13.5): the audit fell 24 -> 23,
+      the hono entry that folded 27 advisories is gone, and the HIGH CORS
+      advisory was shown never exploitable here (all three cors() sites set
+      origin explicitly, none sets credentials). Next: drizzle-orm 0.38.4 ->
+      0.45.2+, a semver-major on the ORM every query goes through -- its own
+      batch under DEC-20260504-A: read the release notes for query-builder
+      and bind-shape changes, run the full apps/api suite plus
+      data-retention and startup-migration tests, and check the queries the
+      notes call out against production read-only before merge. Then the
+      remaining eight reachable advisories, one batch each, re-running
+      apps/api/scripts/wp13-dependency-triage.mjs into a receipt after each.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - the ten reachable advisories are cleared, or each remaining one has a recorded reason it cannot be
       - a re-run of the triage script produces the new counts as a receipt
       - WP13 status in PACKAGE-GRAPH.yaml moves off TRIAGED_UPGRADE_PENDING
-    evidence: []
+    evidence: 
+      - archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json
+      - handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md
 
   - id: T16
     title: Legal & Data Policy Authority (WP14)

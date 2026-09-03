@@ -41,6 +41,25 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-4
+    subject: "PR #499 — hono 4.12.8 -> 4.13.5, WP13 batch 1"
+    commit: 2a2519f0
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      A framework minor upgrade on the request path of every endpoint. The
+      Claude review reproduced the audit numbers and reachability by grep and
+      read the changelog; a different model reading the same changelog for
+      behaviour this app depends on (c.res reassignment in middleware,
+      bodyLimit, cors, HTTPException) is cheap insurance on a change that
+      touches everything.
+    what_to_attack: >
+      apps/api/src/routes/x402-body-limit.test.ts's re-scoped case (is it
+      still discriminating, or has it become a tautology now that the
+      framework refuses the body itself?), and any hono 4.13 behaviour change
+      under the /v1/public/ops/* response-rewriting middleware in app.ts.
+    claude_verdicts: 1 round, PASS, two nits applied
   - id: CX-1
     subject: "PR #494 — withdrawn capabilities must not be advertised anywhere"
     commit: 0daa93c9
