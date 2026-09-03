@@ -750,6 +750,31 @@ The verification was not skipped; it was aimed one path to the left. Drizzle's
 happily — so the dashboard and the commercial pack ran green all evening and all
 morning, which is why the gap survived a full run before anything noticed.
 
+*The same lesson recurred four hours later, in this entry's own session.* The
+morning run wrote, as evidence the OpenRegister suspension was holding:
+"Second-sourced against production: `german-company-data` is absent from
+`GET /v1/capabilities` (297 listed)." True, and incomplete in precisely the
+shape described below. A second public reader — the anonymous A2A agent card at
+`/.well-known/agent-card.json` — was advertising it the whole time, because that
+handler filters on `is_active` and `marketplace_eligible` and never on
+`visible`. Measured: the card carries 413 skills against 297 capabilities plus
+107 solutions, and diffing them leaves **exactly 10** ids public on the card and
+absent from the catalogue, `german-company-data` and the founder-queued
+`uk-gazette-notice-search` among them. Two of the ten — `page-speed-test` and
+`danish-company-data` — are additionally served at HTTP 200 with full schemas by
+`GET /v1/capabilities/:slug` while the list endpoint hides them.
+
+Found by a concurrent session's independent review and reproduced here against
+production before being written down. The code fix belongs to that session and
+is not this entry's subject. What belongs here is that **the session which wrote
+"verifying through the most permissive reader proves nothing about the others"
+then verified a withdrawal through one public reader and called it
+second-sourced.** Writing the lesson down did not prevent the next instance —
+the same thing incident 7 found about the branch-deletion arm. The operative
+form is narrower than the lesson and worth stating as a rule: *when a record is
+withdrawn, enumerate the surfaces that publish it and check each one.* A
+catalogue has more than one front door.
+
 *The transferable part, and it is not the one already written above.* The
 existing repair — verify against the system, and ask what would have to happen
 for the claim to stop being true — would not have caught this, because the claim
