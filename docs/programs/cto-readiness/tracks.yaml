@@ -278,7 +278,7 @@ tracks:
       Batch 1 done (PR #500): the seven 2026-08 operating-window rows are
       formal candidate records, the private projection is at 216 rows in
       the archive (995cece3), and the operator verifier passes. Next batch:
-      the G1 classification rule. Of 205 not_yet_reconciled rows, 82 are
+      the G1 classification rule. Of 205 not_yet_reconciled rows, 76 are
       feature-scoped and predate the readiness program; G1's own
       closes_when admits an explicitly reviewed rule classifying those as
       evidence-only. Write that rule as a decision record with the exact
