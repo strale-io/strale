@@ -192,15 +192,15 @@ test("a shallow checkout reports the commit as unverifiable, not missing", () =>
   writeFileSync(join(src, "a.txt"), "2\n", "utf8");
   git(src, "commit", "-q", "-am", "two");
   const shallow = mkdtempSync(join(tmpdir(), "codex-backlog-shallow-"));
-  rmSync(shallow, { recursive: true, force: true });
+  rmSync(shallow, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   execFileSync("git", ["clone", "-q", "--depth", "1", `file:///${src.replace(/\\/g, "/")}`, shallow], { stdio: ["pipe", "pipe", "pipe"] });
   mkdirSync(join(shallow, dirname(BACKLOG_PATH)), { recursive: true });
   writeFileSync(join(shallow, BACKLOG_PATH), registerText([baseEntry({ commit: first.slice(0, 8) })]), "utf8");
   const r = checkBacklog(shallow, { today: "2026-09-04", skipHistory: true });
   assert.equal(codes(r).includes("COMMIT_MISSING"), false, JSON.stringify(r.findings));
   assert.ok(r.warnings.some((w) => w.code === "COMMIT_UNVERIFIABLE"), JSON.stringify(r.warnings));
-  rmSync(src, { recursive: true, force: true });
-  rmSync(shallow, { recursive: true, force: true });
+  rmSync(src, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  rmSync(shallow, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("ENTRY_INVALID: a missing required field, an unknown status, a bad date", () => {
@@ -320,13 +320,13 @@ test("VERDICT_EVIDENCE_MISSING: a link inside archive/ that points outside is re
     symlinkSync(outside, join(dir, "archive", "link"), "junction");
   } catch (error) {
     rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-    rmSync(outside, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
     throw new Error(`could not create a directory link in the fixture: ${error}`);
   }
   const r = checkBacklog(dir, clean);
   assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING" && /link that leaves archive/.test(f.detail)), JSON.stringify(r.findings));
   rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-  rmSync(outside, { recursive: true, force: true });
+  rmSync(outside, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("a link inside archive/ that stays inside archive/ is allowed", () => {
@@ -374,7 +374,7 @@ test("VERDICT_EVIDENCE_MISSING: archive/ itself being a link is refused", () => 
   const r = checkBacklog(dir, clean);
   assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING"), JSON.stringify(r.findings));
   rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-  rmSync(elsewhere, { recursive: true, force: true });
+  rmSync(elsewhere, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 });
 
 test("DECISION_UNKNOWN: a bold mention outside the decision list does not count", () => {
