@@ -411,6 +411,7 @@
         "docs/remediation/packages/WP17.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/x402-listing.md",
+        "handoff/README.md",
         "handoff/_general/from-code/2026-08-15-checkin-defects-and-eureg-rebuild.md",
         "handoff/_general/from-code/2026-08-15-operating-charter-and-measurement-rebuild.md",
         "handoff/_general/from-code/2026-08-25-f1-taxonomy-default.md",
@@ -511,7 +512,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "a5263ff13b6162c6849328fe9a7f9f2963e4d3f042190dbf7e5fa46e851f9864",
+      "sha256": "e3bc2f51e4dd678b272fc4fba2079ff6ba6c361b4bf080c9624659d6cc252982",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
