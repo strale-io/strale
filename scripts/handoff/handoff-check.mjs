@@ -50,9 +50,12 @@
 // reports; the fixes are for the session to apply.
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+/** Line separator for `git status --porcelain` output, LF or CRLF. */
+const SPLIT_LINES = new RegExp(String.fromCharCode(13) + '?' + String.fromCharCode(10));
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -158,8 +161,15 @@ function diffNames(git, args) {
 
 function statusPaths(git) {
   const out = git(["status", "--porcelain", "--untracked-files=all"], { allowFail: true }) ?? "";
-  return out.split("\n").filter(Boolean).map((l) => {
-    const p = l.slice(3).trim();
+  return out.split(SPLIT_LINES).filter(Boolean).map((l) => {
+    // Porcelain v1 emits "XY path", two status characters then a space. This
+    // used to slice a fixed 3 characters, which was one too many for the FIRST
+    // line of every unstaged change: makeGit trims the whole output, and an
+    // unstaged modification's status field begins with a space, so the trim
+    // ate it. Every `dirty` finding has therefore been naming its first path
+    // with the first character missing — "cripts/handoff/handoff-check.mjs".
+    // Match the status field instead of counting characters.
+    const p = l.replace(/^[ MADRCUT?!]{1,2}\s+/, "").trim();
     const arrow = p.indexOf(" -> ");
     return arrow >= 0 ? p.slice(arrow + 4) : p;
   });
@@ -326,10 +336,38 @@ export async function runChecks(options = {}) {
     }
   }
 
+  /**
+   * How recently the dirty tree was touched, as a parenthetical.
+   *
+   * A tree dirty for four seconds and one dirty for four days are different
+   * situations and the finding could not previously tell them apart. This does
+   * not gate anything — a stale dirty worktree is still not this session's to
+   * delete — it just gives the reader the fact they need to judge.
+   */
+  function describeAge(worktreePath, dirtyPaths) {
+    let newest = 0;
+    for (const line of dirtyPaths.slice(0, 50)) {
+      // porcelain lines are "XY path"; a rename carries " -> ", take the target
+      const rel = line.slice(2).trim().split(" -> ").pop();
+      if (!rel) continue;
+      try {
+        const t = statSync(resolve(worktreePath, rel.replace(/^"|"$/g, ""))).mtimeMs;
+        if (t > newest) newest = t;
+      } catch { /* deleted path, or unreadable — not a reason to fail */ }
+    }
+    if (!newest) return "";
+    const mins = Math.round((Date.now() - newest) / 60000);
+    if (mins < 1) return ", touched seconds ago";
+    if (mins < 90) return `, touched ${mins} minute(s) ago`;
+    const hours = Math.round(mins / 60);
+    return hours < 48 ? `, last touched ${hours} hour(s) ago` : `, last touched ${Math.round(hours / 24)} day(s) ago`;
+  }
+
   // ── worktrees ──────────────────────────────────────────────────────────
   const batch = [];
   let knownCount = 0;
   let agentCount = 0;
+  let liveCount = 0;
   if (mode !== "pre-commit") {
     for (const wt of worktrees) {
       const n = normalizePath(wt.path);
@@ -339,10 +377,54 @@ export async function runChecks(options = {}) {
       // Shared-Checkout Rule for any editing agent) live under
       // <worktree>/.claude/worktrees/ and belong to a running session.
       if (n.includes("/.claude/worktrees/")) { agentCount += 1; continue; }
+
+      // A dirty worktree is somebody's live work, whatever its head state —
+      // and cleanliness proves nothing in the other direction.
+      //
+      // This finding used to be head-state-only, and twice on 2026-09-03 it
+      // told a session to `git worktree remove` a directory that was in active
+      // use — once a rebase in progress carrying an unpushed commit, once a
+      // review agent midway through a fail-before check with the source file
+      // mutated and its backup beside it. Both times the instruction would
+      // have destroyed work, and both times it was disobeyed by a session that
+      // checked first. A detached HEAD is what an abandoned checkout looks
+      // like AND what live work looks like; the discriminator is whether the
+      // tree is clean.
+      //
+      // The specific evidence is deliberately not keyed on: the mutated file
+      // and backup suffix changed between two observations minutes apart, so a
+      // rule naming paths or suffixes would be brittle. Any uncommitted path
+      // counts.
+      //
+      // This is sound in ONE direction only. Dirty proves live; clean proves
+      // nothing. The same review worktree went clean at 10:41 while still in
+      // use, between finishing its mutations and writing its verdict — a
+      // window of minutes, and exactly when a stop hook is most likely to
+      // fire. So the fix text below never asserts a clean worktree is idle,
+      // and liveness is not a thing this gate can decide from the filesystem:
+      // head state, cleanliness and mtime are each proxies that fail in one
+      // direction. What it can always say truthfully is that a worktree is not
+      // this session's to remove.
+      const dirtyPaths = (git(["-C", wt.path, "status", "--porcelain", "--untracked-files=all"], { allowFail: true }) ?? "")
+        .split(SPLIT_LINES).map((l) => l.trim()).filter(Boolean);
+
+      if (dirtyPaths.length && wt.detached) {
+        // Detached AND dirty is the shape a tool makes for itself — an agent's
+        // scratch checkout, a rebase mid-flight. It is not a batch, so it does
+        // not count toward the one-batch limit, and it is never removed here.
+        liveCount += 1;
+        note(`worktree ${wt.path} is detached with ${dirtyPaths.length} uncommitted path(s)${describeAge(wt.path, dirtyPaths)}: live work, not an abandoned checkout — do NOT remove it. The session that owns it clears it when it finishes.`);
+        continue;
+      }
+
       batch.push(wt);
       if (wt.detached || wt.branch === cfg.releaseBranch) {
-        hygiene("worktree", `worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`})`,
-          `the trunk is the only checkout that idles: git -C ${worktrees[0]?.path ?? toplevel} worktree remove ${wt.path} (never rm -rf; delete any node_modules junction inside first)`);
+        if (dirtyPaths.length) {
+          note(`worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`}) but carries ${dirtyPaths.length} uncommitted path(s)${describeAge(wt.path, dirtyPaths)}: live work — commit or move it, do NOT remove the worktree.`);
+        } else {
+          hygiene("worktree", `worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`})${describeAge(wt.path, [])}`,
+            `if no session is using it, remove it from the trunk: git -C ${worktrees[0]?.path ?? toplevel} worktree remove ${wt.path} (never rm -rf; delete any node_modules junction inside first). A clean tree is NOT proof it is idle — an agent between two steps looks exactly like an abandoned checkout — so if it is not yours, ask its owner rather than removing it.`);
+        }
       }
     }
     if (batch.length > cfg.maxBatchWorktrees) {
@@ -351,6 +433,7 @@ export async function runChecks(options = {}) {
     }
     if (knownCount) note(`${knownCount} worktree(s) recorded in scripts/handoff/baseline.json wait for a founder decision; nothing is deleted without it`);
     if (agentCount) note(`${agentCount} Claude Code agent worktree(s) under .claude/worktrees/ belong to a running session (prune with apps/api/scripts/prune-claude-worktrees.ts once it is over)`);
+    if (liveCount) note(`${liveCount} detached worktree(s) carry uncommitted work and are excluded from the batch count; none may be removed by this session`);
     if (mode === "session") {
       for (const wt of worktrees) {
         if (normalizePath(wt.path) === me || wt.bare) continue;
