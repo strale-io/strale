@@ -169,6 +169,41 @@ describe("pruneWithdrawn", () => {
     expect(out.steps).toHaveLength(0);
   });
 
+  it("drops a withdrawn slug from a plain string array", () => {
+    // Platform-level rows carry arrays of slugs with no wrapping object:
+    // quality_floor's details are {quarantined: ["page-speed-test"]} and
+    // meta_monitoring's are {affected: [...]}. Measured against production:
+    // 6,475 rows name a withdrawn capability while belonging to something
+    // else or to nothing at all, so dropping rows by owner never saw them.
+    const body = { details: { quarantined: ["page-speed-test", "email-validate"] } };
+    const out = pruneWithdrawn(body, sets) as typeof body;
+    expect(out.details.quarantined).toEqual(["email-validate"]);
+  });
+
+  it("redacts a withdrawn slug inside free text", () => {
+    const body = {
+      action_taken: "1 capability_health row(s) have lying-breaker shape: danish-company-data",
+    };
+    const out = pruneWithdrawn(body, sets) as typeof body;
+    expect(out.action_taken).not.toContain("danish-company-data");
+    expect(out.action_taken).toContain("[withdrawn]");
+    // The sentence survives — these strings are operational narrative a
+    // reader still wants, so redact rather than delete.
+    expect(out.action_taken).toContain("lying-breaker shape");
+  });
+
+  it("does not mangle a visible slug that extends a withdrawn one", () => {
+    const body = { action_taken: "page-speed-test-v2 passed" };
+    const out = pruneWithdrawn(body, sets) as typeof body;
+    expect(out.action_taken).toBe("page-speed-test-v2 passed");
+  });
+
+  it("redacts a withdrawn slug at the very start of a string", () => {
+    const body = { note: "page-speed-test was quarantined" };
+    const out = pruneWithdrawn(body, sets) as typeof body;
+    expect(out.note).toBe("[withdrawn] was quarantined");
+  });
+
   it("is a no-op when nothing is withdrawn", () => {
     const body = { capabilities: [{ slug: "page-speed-test" }] };
     expect(pruneWithdrawn(body, { ...sets, withdrawn: new Set() })).toEqual(body);

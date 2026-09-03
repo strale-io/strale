@@ -215,6 +215,33 @@ The generalisable form: **when the question is "can this leak", guard the
 output, not the input.** A rule about queries is bounded by the tables you
 thought to check. A rule about responses is bounded by the boundary itself.
 
+**And then the guard needed three rounds of its own**, every defect found by
+fetching the endpoint rather than re-reading the guard:
+
+1. `/trust/capabilities/batch` answers with a map **keyed** by slug, and the
+   pruner only inspected slugs as values.
+2. The rewritten `Response` copied `content-length` from the original onto a
+   shorter body. Hono's `app.request()` hands the object back and never checks
+   it, so CI could not see it; a real server would have stalled or truncated
+   every pruned response.
+3. Slugs live in **plain string arrays and in free text**, not only in
+   slug-bearing objects. Measured against production: **6,475 rows** in
+   `health_monitor_events` name a withdrawn capability in `action_taken` or
+   `details` while belonging to something else or to nothing —
+   `quarantined: ["page-speed-test"]`, `affected: [...]`, and prose naming the
+   slug outright. Dropping rows by owner never touched one of them.
+
+That last one is the same shape as the finding that produced the guard, one
+level down: I fixed the shapes I had thought of and called it complete. The
+count is the useful part — not "a few edge cases" but two thirds of the events
+table's recent history.
+
+**A `slug` that is a bare string in an array is now dropped, and a slug inside
+prose is replaced with `[withdrawn]`**, bounded on slug characters so a visible
+`page-speed-test-v2` survives a withdrawn `page-speed-test`. The sentence is
+kept rather than deleted: these strings are operational narrative a reader
+still wants.
+
 Ten tests now assert on the predicate the routes send to Postgres — rendered
 through drizzle's dialect rather than through a stub that returns rows
 regardless of the filter — and on the three rail predicates directly. Each

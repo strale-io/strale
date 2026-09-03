@@ -88,6 +88,39 @@ export async function withdrawnSlugs(): Promise<WithdrawalSets> {
   }
 }
 
+/**
+ * Replace a withdrawn slug wherever it appears inside free text.
+ *
+ * Measured, not guessed: 6,475 rows in `health_monitor_events` name a
+ * withdrawn capability in `action_taken` or `details` while belonging to
+ * something else, or to nothing —
+ * `"1 capability_health row(s) have lying-breaker shape …: danish-company-data"`,
+ * and platform-level ticks whose details carry the slug in prose. Dropping
+ * rows by owner never touched them.
+ *
+ * Bounded on slug characters so a visible `page-speed-test-v2` is not mangled
+ * by a withdrawn `page-speed-test`; the replacement keeps the sentence
+ * readable rather than deleting it, because these strings are operational
+ * narrative a reader still wants.
+ */
+function redactSlugsInText(text: string, sets: WithdrawalSets): string {
+  if (text.length === 0) return text;
+  let out = text;
+  for (const slug of sets.withdrawn) {
+    if (sets.solutionSlugs.has(slug)) continue;
+    if (!out.includes(slug)) continue;
+    out = out.replace(
+      new RegExp(`(^|[^a-z0-9-])${escapeForRegExp(slug)}(?![a-z0-9-])`, "g"),
+      "$1[withdrawn]",
+    );
+  }
+  return out;
+}
+
+function escapeForRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** True when `value` is a plain object we should walk into. */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -126,9 +159,16 @@ function slugOf(node: unknown, sets: WithdrawalSets): string | null {
  * because a 200 with the fields blanked still confirms the slug exists.
  */
 export function pruneWithdrawn(node: unknown, sets: WithdrawalSets): unknown {
+  if (typeof node === "string") return redactSlugsInText(node, sets);
   if (Array.isArray(node)) {
     return node
       .filter((item) => {
+        // A bare string element: platform-level rows carry arrays of slugs
+        // (`quarantined: ["page-speed-test"]`, `affected: [...]`) with no
+        // wrapping object for slugOf to read.
+        if (typeof item === "string") {
+          return !(sets.withdrawn.has(item) && !sets.solutionSlugs.has(item));
+        }
         const slug = slugOf(item, sets);
         return !(slug && sets.withdrawn.has(slug));
       })
