@@ -231,8 +231,12 @@ export const HEALTH_EVENT_RETENTION_DAYS = 180;
  */
 export const DURABLE_OVERRIDE_EVENT_TYPES = [
   // Written once, by apps/api/scripts/reconcile-stranded-executing.ts —
-  // which is NOT in this repository on any branch. It was an incident-specific
-  // script run directly against production on 2026-08-22 and never committed
+  // which is on no live branch. Drafts of it were committed three times on
+  // 2026-08-22 to what was then remediation/wp9-artifacts, since retired to
+  // archive/branches/remediation-wp9-artifacts and not an ancestor of main;
+  // the last of those drafts says in its own docstring that its --apply path
+  // had not run, so even the archived copy may not be what executed. Treat the
+  // path as unopenable from a normal branch survey
   // (see handoff/_general/from-code/2026-08-25-f1-taxonomy-default.md). The
   // eleven rows it wrote were inspected directly in the database: transaction
   // id, before/after status, price, refund, policy, script. Naming a path that

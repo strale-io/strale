@@ -40,6 +40,11 @@ import { internalOnboardingRoute } from "./routes/internal-onboarding.js";
 import { publicTrustRoute } from "./routes/public-trust.js";
 import { x402GatewayV2, getX402Manifest, getX402WellKnownResources, getX402OpenApiPaths } from "./routes/x402-gateway-v2.js";
 import { mcpServerCardRoute } from "./routes/mcp-server-card.js";
+import {
+  withdrawnSlugs,
+  requestNamesWithdrawn,
+  pruneWithdrawn,
+} from "./lib/public-ops-visibility.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
 import { recordDiscoveryHit } from "./lib/attribution.js";
@@ -534,7 +539,51 @@ const PUBLIC_OPS_ALLOWLIST: RegExp[] = [
 app.use("/v1/public/ops/*", async (c, next) => {
   if (c.req.method !== "GET") return c.notFound();
   if (!PUBLIC_OPS_ALLOWLIST.some((re) => re.test(c.req.path))) return c.notFound();
-  return next();
+
+  // Withdrawal guard. These routers are shared with /v1/internal/*, where an
+  // operator must see withdrawn capabilities, so the filter belongs at the
+  // boundary rather than in the handlers — the same reason the allowlist does.
+  //
+  // It guards the RESPONSE, not the queries. Four review rounds chased
+  // "does this query filter visible" through ~90 reads of the capabilities
+  // table; the fourth found four leaks no such grep could reach, because
+  // health_monitor_events, test_suites, test_results and solution_steps all
+  // carry capability_slug as a bare string and never join to capabilities at
+  // all. Whatever a handler produces, and however it produced it, a withdrawn
+  // slug does not cross this line — including from a route added later by
+  // someone who never read this comment.
+  const withdrawn = await withdrawnSlugs();
+  if (withdrawn.size > 0) {
+    const query = c.req.query();
+    if (requestNamesWithdrawn(c.req.path, query, withdrawn)) {
+      // 404 rather than a pruned body: a 200 with the fields blanked still
+      // confirms the slug exists.
+      return c.notFound();
+    }
+  }
+
+  await next();
+
+  if (withdrawn.size === 0) return;
+  const res = c.res;
+  if (!res || res.status !== 200) return;
+  if (!(res.headers.get("content-type") ?? "").includes("application/json")) return;
+  try {
+    const body = await res.clone().json();
+    const pruned = pruneWithdrawn(body, withdrawn);
+    c.res = new Response(JSON.stringify(pruned), {
+      status: res.status,
+      headers: res.headers,
+    });
+  } catch {
+    // A body we cannot parse is a body we cannot vet. Refuse rather than
+    // forward it — this surface is small and entirely JSON, so this is a bug
+    // signal, not a routine path.
+    c.res = new Response(JSON.stringify({ error: "not_available" }), {
+      status: 503,
+      headers: { "content-type": "application/json" },
+    });
+  }
 });
 
 // Mount the public-ops dashboards. Same routers as /v1/internal/* — the

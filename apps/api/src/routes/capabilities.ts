@@ -227,6 +227,16 @@ capabilitiesRoute.get("/:slug", async (c) => {
         })
         .from(solutionSteps)
         .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
+        // Same rule as GET /v1/solutions: a withdrawn step is not part of the
+        // count a customer is shown. Without this, part_of_solutions[]
+        // .step_count disagreed with the count the solution itself reports.
+        .innerJoin(
+          capabilities,
+          and(
+            eq(solutionSteps.capabilitySlug, capabilities.slug),
+            eq(capabilities.visible, true),
+          ),
+        )
         .where(inArray(solutions.slug, solSlugs))
         .groupBy(solutions.slug)
     : [];

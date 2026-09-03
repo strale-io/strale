@@ -250,9 +250,21 @@ export async function getRelatedSolutions(
   // For each other solution, count shared capabilities and total steps
   const solsWithSteps = await Promise.all(
     allSols.map(async (sol) => {
+      // Withdrawn steps do not count. This reaches the public response as
+      // related_solutions[].step_count on GET /v1/solutions/:slug, so leaving
+      // it raw meant the same solution advertised two different step counts
+      // on one page — the filtered one in its own body, the inflated one in a
+      // related card.
       const steps = await db
         .select({ capabilitySlug: solutionSteps.capabilitySlug })
         .from(solutionSteps)
+        .innerJoin(
+          capabilities,
+          and(
+            eq(solutionSteps.capabilitySlug, capabilities.slug),
+            eq(capabilities.visible, true),
+          ),
+        )
         .where(eq(solutionSteps.solutionId, sol.id));
       const sharedCount = steps.filter((s) => thisCapSlugs.has(s.capabilitySlug)).length;
       return { ...sol, sharedCount, stepCount: steps.length };

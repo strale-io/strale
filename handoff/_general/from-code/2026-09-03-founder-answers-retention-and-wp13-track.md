@@ -185,25 +185,53 @@ visibility requirement, which also means a withdrawn step stops counting
 toward the advertised `step_count` — the honest number, since that step will
 not run.
 
-**Three passes at one enumeration, three passes that missed something.** That
-is the finding worth keeping, above any individual route. Each pass fixed what
-it had found and believed itself done; the surface that broke the claim each
-time was one nobody had thought to list. The rule that would have worked is
-mechanical rather than diligent: enumerate every query against the table and
-classify each one, rather than following the trail of the surfaces you already
-know about.
+**Four passes at one enumeration, four passes that missed something — and the
+fourth disproved the rule the third had proposed.** I wrote that the fix was
+mechanical: enumerate every query against the `capabilities` table. The fourth
+review did exactly that, found about ninety such reads, and then found four
+more leaks that **none of them touch**. `/v1/public/ops/events`,
+`/onboarding/readiness`, `/limitations/solutions/:slug`,
+`/tests/solutions/:slug` and `/tests/capabilities/:slug/example-output` read
+`health_monitor_events`, `test_suites`, `test_results` and `solution_steps` —
+tables that carry `capability_slug` as a bare string with no foreign key and no
+join to `capabilities` at all. A grep of one table cannot see them, and the
+next table to carry a slug would have been invisible too. Chained, they
+defeated the whole fix: enumerate every slug from the readiness endpoint, pull
+the quarantine reason from the events feed, pull real output from
+example-output, confirm bundle membership from either solutions endpoint. All
+unauthenticated, all reproduced live.
+
+**So the guard moved from the queries to the boundary.** `/v1/public/ops/*`
+now prunes any withdrawn slug out of the response, whatever handler produced it
+and from whichever table, and answers 404 when the request names one directly.
+That is one place instead of ninety, it covers the tables nobody thought to
+grep, and it survives a route added later by someone who never reads any of
+this. It sits beside the allowlist because `app.ts` already treats the
+allowlist rather than the router as the access boundary — and because the same
+routers serve `/v1/internal/*`, where an operator must still see withdrawn
+capabilities.
+
+The generalisable form: **when the question is "can this leak", guard the
+output, not the input.** A rule about queries is bounded by the tables you
+thought to check. A rule about responses is bounded by the boundary itself.
 
 Ten tests now assert on the predicate the routes send to Postgres — rendered
 through drizzle's dialect rather than through a stub that returns rows
 regardless of the filter — and on the three rail predicates directly. Each
-guard is mutation-proved: agent card 1, detail route 2, `llms-full.txt` 1,
-solutions 2, rail predicate 2, payable predicate 2. **Two of my own counts were
-wrong and the review caught both**: "removing either visible filter fails 2"
-was 1 for the agent card, and "payable predicate 3" is 2. The retention suite
-is 23 tests, not the 21 the previous commit claimed. All three were
-undercounts rather than overstatements of discrimination, which makes them
-sloppy rather than misleading — in a change whose whole subject is verifying
-counts.
+guard is mutation-proved, stated in one unit — **tests that fail when that one
+filter is removed**: agent card 1, capability detail 2, `llms-full.txt` 1,
+each of the two solution joins 1, `extends_with` 1, rail predicate 2, payable
+predicate 2, response guard 4 for the pruner and 2 for the path check.
+
+**Four of my own counts have now been wrong and review caught every one.**
+"Removing either visible filter fails 2" was 1 for the agent card. "Payable
+predicate 3" is 2. The retention suite is 23 tests, not 21. And "solutions 2"
+was a test count sitting in a list of failure counts — the guards are
+effective, all four removals are caught, but the number meant something
+different from its five neighbours in the same sentence. Also measured wrong:
+active solutions change their advertised step count: not eight but
+**nine**, re-derived here against production. The sub-claim that three are on
+the x402 rail was right.
 
 **2. `set_in` in the environment manifest was fiction on a third of its rows.**
 It is the field naming where each value actually lives, and no check ever read

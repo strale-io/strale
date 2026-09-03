@@ -52,7 +52,7 @@ solutionsRoute.get("/", async (c) => {
         // A solution may not describe a step the platform has withdrawn.
         // `solution_steps` names capabilities by slug, so the join was
         // disclosing withdrawn ones through the solution that bundles them —
-        // eight active solutions had such a step on 2026-09-03, three of them
+        // nine active solutions had such a step on 2026-09-03, three of them
         // on the x402 rail. Execution was never at risk: solution-executor.ts
         // re-reads each step through isServableCapability and marks a
         // withdrawn one `platform_withheld` instead of running it. Putting the
@@ -155,7 +155,7 @@ solutionsRoute.get("/:slug", async (c) => {
         // A solution may not describe a step the platform has withdrawn.
         // `solution_steps` names capabilities by slug, so the join was
         // disclosing withdrawn ones through the solution that bundles them —
-        // eight active solutions had such a step on 2026-09-03, three of them
+        // nine active solutions had such a step on 2026-09-03, three of them
         // on the x402 rail. Execution was never at risk: solution-executor.ts
         // re-reads each step through isServableCapability and marks a
         // withdrawn one `platform_withheld` instead of running it. Putting the
