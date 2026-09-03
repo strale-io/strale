@@ -720,9 +720,24 @@ sentence was true and the claim it was standing in for was not. Railway's own
 `DATABASE_URL` names its internal host and carries no `?sslmode=`; copied
 verbatim against the public proxy it is a URL that says nothing about TLS, and
 `operator-db.ts` has refused exactly that since PR #361. The next morning's run
-found the mandatory Vendor Control Tower step dead on arrival, and with it every
-one of the **25 operator scripts** that open a handle through that module —
-including `smoke-test.ts` and the whole quarantine/promotion lane.
+found the mandatory Vendor Control Tower step dead on arrival, and with it the
+**10 read-path operator scripts** that open a handle through that module —
+`vendor-control-tower-report`, `smoke-test`, `since-last-ext`,
+`lifecycle-transition`, `validate-capability`, `onboard`,
+`audit-execution-routing`, `dry-run-fix-latency`, `f1-failure-attribution`,
+`sweep-duplicate-suites`.
+
+> *Corrected the same day, before merge, by the independent review.* The first
+> version of this paragraph said **25** scripts, taken from `grep -rl operator-db`
+> without asking what each match did. Three of those matches are not casualties:
+> `scripts/guard-production-write-access.mjs` names the module in prose and an
+> allowlist and opens no handle at all, and the 14 write-path scripts call
+> `openOperatorWriteDb`, which throws in `productionWriteUrl()` on the absent
+> `DATABASE_URL_WRITE` *before* the TLS assertion is reached — already
+> inoperative for a separate documented reason. **A file list is not an impact
+> list**, and inflating one by 2.5× inside the entry whose whole subject is
+> claiming more than the evidence supports is the family eating its own tail.
+> The number had already reached four documents when it was caught.
 
 The verification was not skipped; it was aimed one path to the left. Drizzle's
 `getDb()` reads the same variable, applies no such assertion, and connected

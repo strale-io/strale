@@ -19,7 +19,7 @@ production writes, no branch switching in the trunk, no stash.
 | CI on main | green (CI + Coverage matrix) · Open PRs: **0** · stale remote branches: **0** |
 | Vendor tower | ACTION NEEDED — 4 CRITICAL, all OpenRegister, all known and by design |
 | Repo hygiene | 0 red · 1 yellow (today's handoff, this file) |
-| **New this morning** | **the mandatory vendor-tower step was dead; 25 operator scripts with it** |
+| **New this morning** | **the mandatory vendor-tower step was dead; 9 more read-path operator scripts with it** |
 
 ## Step A — measure
 
@@ -44,7 +44,7 @@ artefact GOALS.md has rejected twice. It is not a finding.
 
 ## Step B — overnight health
 
-### B0 — the vendor tower would not run, and neither would 24 other scripts
+### B0 — the vendor tower would not run, and neither would 9 other read-path scripts
 
 `npm run vendor:status` — DAILY-RUN.md step B, mandatory — failed immediately:
 
@@ -60,19 +60,36 @@ F12 incident and rebuilt from Railway that evening (DQ-29, file mtime
 carries no `?sslmode=`; copied verbatim against the public proxy it is a URL
 silent about TLS, which `operator-db.ts` has refused since PR #361 (`340f5806`).
 
-**Blast radius, enumerated rather than estimated:** `grep -rl operator-db` over
-`apps/api/{scripts,src}` and `scripts/` returns **26 files, 25 of them
-executable operator scripts** — `vendor-control-tower-report.ts`,
-`smoke-test.ts`, `lifecycle-transition.ts`, `onboard.ts`,
-`reset-circuit-breaker.ts`, `validate-capability.ts`, the whole
-sync-manifest family, and `scripts/guard-production-write-access.mjs`.
+**Blast radius — first counted wrong, corrected before merge.** `grep -rl
+operator-db` over `apps/api/{scripts,src}` and `scripts/` returns 26 files, 25
+of them executable, and this record originally reported all 25 as casualties.
+The independent review asked what each match actually *does*, and the honest
+figure is **10**:
+
+- **10 read-path scripts, genuinely dead** — `vendor-control-tower-report`,
+  `smoke-test`, `since-last-ext`, `lifecycle-transition`, `validate-capability`,
+  `onboard`, `audit-execution-routing`, `dry-run-fix-latency`,
+  `f1-failure-attribution`, `sweep-duplicate-suites`. They call
+  `openOperatorDb`/`openOperatorDrizzle`, which reaches the TLS assertion.
+- **14 write-path scripts, unaffected in practice** — they call
+  `openOperatorWriteDb`, and `productionWriteUrl(authority)` throws on the
+  absent `DATABASE_URL_WRITE` *before* `assertSslIntentIsExplicit` runs. Already
+  inoperative for a separate, documented reason.
+- **1 non-consumer** — `scripts/guard-production-write-access.mjs` names the
+  module in prose and an allowlist and opens no handle at all.
+
+**A file list is not an impact list.** Inflating one by 2.5× inside the write-up
+whose entire subject is a claim that outran its evidence is worth recording as
+such; it had reached four documents before the review caught it. Verified by
+classifying every match with `grep -o "openOperator[A-Za-z]*"` rather than by
+re-reading the file list.
 
 **Why it survived a full night and a full run.** Drizzle's `getDb()` reads the
 same variable and applies no such assertion, so `ceo-dashboard.ts` and
 `commercial-brief.ts` connected happily — the evening's verification
 ("the database answers read-only queries again") went through the permissive
-reader and was true, while the strict reader every operator script uses was
-refusing. Nothing in production was affected at any point.
+reader and was true, while the strict reader the read-path operator scripts use
+was refusing. Nothing in production was affected at any point.
 
 **Repaired, in two places.**
 
@@ -278,3 +295,47 @@ across the operator scripts.
    their own. No action, but verify rather than assume.
 3. Nothing else is queued. Zero open PRs, zero stale branches, zero worktrees
    after this one is removed.
+
+## Independent review
+
+Reviewed by a fresh read-only Claude agent that did not author the batch (the
+2026-09-02 founder amendment; the Codex re-review obligation stands in the
+programme file). Verdict **ACCEPT WITH FINDINGS**, nine findings. It confirmed
+the safety argument for the clamp by construction — raising the lookback's lower
+bound shrinks the candidate set monotonically, leaves the `active` window
+untouched, can only reduce a `SUM` past the `minCents` filter, and cannot move a
+`MAX` that survives, so `daysQuiet` is identical for everyone still included.
+No path invents a quiet payer.
+
+All nine were addressed rather than noted. The three that mattered:
+
+1. **The qualifier never reached the reading.** `interpret()` and the `--json`
+   path both take the value and never the `Measurement`, so the one sentence a
+   founder reads was emitted unqualified while the caveat sat one level up —
+   the exact failure `Measurement` exists to prevent, in the change whose own
+   justification was "the narrowing is stated in the caveat". Fixed by making
+   `narrowedSince` part of the **value** (`QuietRead`) rather than a note beside
+   it, so the list cannot be rendered without it; the attrition sentence now
+   carries the floor and the spend-window qualifier, and the JSON carries both.
+   Verified in production output.
+2. **Only 1 of the 4 original tests discriminated, and the test file said all
+   four did.** True — the handoff said 1, the commit message and an in-file
+   comment said 4. The comment now names the discriminator and says plainly that
+   the other three are regression fences, not evidence. A test file asserting
+   its own rigour is F5 in miniature.
+3. **The blast radius was inflated 2.5×** — see B0 above. Corrected in this
+   record, LESSONS.md, DECISION-QUEUE.md, and the CEO brief.
+
+Also fixed: the caveat blamed the whole loss on wallet-payer identity when
+`ACTOR_KEY_SQL` resolves account buyers from `user_id`, recorded far earlier —
+so the clamp hides card payers too, and the caveat now says so; the euro figure
+is a window sum and the sort key, now stated; a `requestedFrom >= windowFrom`
+guard so the "covered time before the window" invariant holds on both paths;
+`INSTRUMENTS` is no longer indexed directly (a new `instrumentEnabledAt()` in
+`instruments.ts` keeps instrument reasoning in one module, deliberately *not* as
+a general clamped guard — a reusable "cover what you can" helper would be reached
+for by `newPayers`, where narrowing is unsafe); and the brief's "buying more than
+ever" superlative, which one comparison does not support.
+
+Two new tests cover findings 1 and 4, both **verified failing** against the
+un-fixed state (2 failed / 41 passed), then passing (43/43).

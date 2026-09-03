@@ -74,6 +74,24 @@ export const INSTRUMENTS: Record<string, InstrumentSpec> = {
 };
 
 /**
+ * When an instrument started recording, or `null` if it never did / does not
+ * exist. Callers that must *reason about* the boundary rather than merely be
+ * refused at it use this instead of indexing `INSTRUMENTS` themselves, so that
+ * "what does this instrument cover" has exactly one answer in the codebase.
+ *
+ * Deliberately NOT a clamped variant of `coversWindow`. A general
+ * "cover as much as you can" helper would be reached for by metrics where
+ * narrowing is unsafe — `newPayers` narrows in the flattering direction and
+ * must keep refusing — and the safety argument for narrowing is always local to
+ * the metric. So the boundary is exposed and each metric argues its own case.
+ */
+export function instrumentEnabledAt(instrumentId: string): Date | null | undefined {
+  const spec = INSTRUMENTS[instrumentId];
+  if (!spec) return undefined;
+  return spec.enabledAt;
+}
+
+/**
  * Whether an instrument can answer a window. This is the guard that all five
  * August failures needed and none of them had.
  */

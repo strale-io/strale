@@ -83,11 +83,18 @@ async function main() {
     : await concentration(priorFull, priorFactsM.value.payers, priorFactsM.value.unattributedCents);
 
   const quietM = await quietPayers(lastFull);
-  const quiet = quietM.status === "unavailable" ? null : quietM.value;
+  // The lookback is clamped to the payer-identity instrument rather than the
+  // metric refused, so the narrowing travels with the claim rather than sitting
+  // beside it: `interpret()` writes the sentence a founder reads and the JSON is
+  // what any other consumer sees, and printing the caveat only on the
+  // interactive path left both of those unqualified.
+  const quiet = quietM.status === "unavailable" ? null : quietM.value.payers;
+  const quietNarrowedSince = quietM.status === "unavailable" ? null : quietM.value.narrowedSince;
+  const quietCaveat = quietM.status === "observed" ? quietM.caveat ?? null : null;
 
   const slugs = conc ? activatingSlugs(facts, conc.newPayerKeys) : [];
   const conclusions = interpret({
-    weeks, growth: g, concentration: conc, quiet, activatingSlugs: slugs,
+    weeks, growth: g, concentration: conc, quiet, quietNarrowedSince, activatingSlugs: slugs,
     // Only when BOTH windows are comparable. The prior week straddles the day
     // payer identity switched on, so its share is a share of two days' worth of
     // visibility; presenting the move would invent a trend out of coverage.
@@ -98,7 +105,10 @@ async function main() {
     console.log(JSON.stringify({
       weeks, growth: g,
       concentration: conc ? { ...conc, newPayerKeys: [...conc.newPayerKeys] } : null,
-      quiet, activatingSlugs: slugs, conclusions,
+      quiet,
+      quietNarrowedSince: quietNarrowedSince ? quietNarrowedSince.toISOString() : null,
+      quietCaveat,
+      activatingSlugs: slugs, conclusions,
     }, null, 2));
     return;
   }

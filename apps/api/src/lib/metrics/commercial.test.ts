@@ -473,8 +473,16 @@ describe("the quiet-payer lookback is clamped to the instrument, not refused", (
   // instrument cover the WHOLE requested lookback. Payer identity switched on
   // 2026-08-15; a 90-day lookback therefore refused every call until
   // mid-November, and the metric had never returned a value in production.
-  // Every case below returns "impossible" against that implementation, which
-  // is what makes them discriminating rather than decorative.
+  //
+  // Exactly ONE case below discriminates against that implementation — the
+  // first, which the old guard answered "impossible" and this one answers
+  // "narrowed". It was verified failing before the clamp and passing after.
+  // The other three pin the boundary the clamp must NOT cross and agree with
+  // the old behaviour by construction; they are regression fences, not
+  // evidence for the change, and an earlier version of this comment claimed
+  // all four discriminated. Saying so was the F5 failure in miniature: a test
+  // file asserting its own rigour. They earn their place by being the cases
+  // that would go wrong if someone later "simplified" the refusal away.
   const ENABLED = new Date("2026-08-15T09:13:00Z");
 
   it("narrows rather than refusing when the instrument starts inside the lookback", () => {
@@ -509,5 +517,58 @@ describe("the quiet-payer lookback is clamped to the instrument, not refused", (
       .toMatchObject({ kind: "impossible", absent: true });
     expect(resolveQuietLookback(new Date("2026-08-24T00:00:00Z"), 90, null))
       .toMatchObject({ kind: "impossible", absent: false });
+  });
+
+  it("refuses a lookback that reaches into or past the window itself", () => {
+    // A zero or negative lookback puts the prior period at or after the window
+    // start: empty or inverted. Reporting `observed: []` there renders an
+    // absence of evidence as evidence of absence — nobody has gone quiet
+    // because nobody could have been seen. Unreachable from the shipped caller
+    // (default 90 days), guarded because the invariant is stated
+    // unconditionally.
+    const w = new Date("2026-08-24T00:00:00Z");
+    expect(resolveQuietLookback(w, 0, ENABLED).kind).toBe("impossible");
+    expect(resolveQuietLookback(w, -7, ENABLED).kind).toBe("impossible");
+    // ...and it must not swallow the ordinary cases on the way past: a
+    // one-day lookback here sits entirely after the instrument and is `full`,
+    // and the ninety-day default still narrows.
+    expect(resolveQuietLookback(w, 1, ENABLED).kind).toBe("full");
+    expect(resolveQuietLookback(w, 90, ENABLED).kind).toBe("narrowed");
+  });
+});
+
+describe("the quiet-payer sentence carries its own narrowing", () => {
+  // The qualifier used to live only on the Measurement wrapper, which
+  // `interpret()` never receives — so the one sentence a founder actually reads
+  // was emitted unqualified while the caveat sat one level up. That is the
+  // exact shape `Measurement` exists to prevent, and it took an independent
+  // review to spot it. These two cases fail against the version that took a
+  // bare QuietPayer[].
+  const quiet = [{ key: "x402:v1:abc", cents: 30, lastSeen: "2026-08-15T00:00:00Z", daysQuiet: 9 }];
+  const base = {
+    weeks: [week("2026-08-24", 7303), week("2026-08-17", 6631)],
+    concentration: conc(),
+    activatingSlugs: [],
+    priorTopShare: null,
+  };
+
+  it("says the count is a floor when the lookback was narrowed", () => {
+    const cs = interpret({
+      ...base, growth: growth(base.weeks), quiet,
+      quietNarrowedSince: new Date("2026-08-15T09:13:00Z"),
+    });
+    const attrition = cs.find((c) => c.topic === "attrition");
+    expect(attrition, "the attrition conclusion must exist to be qualified").toBeDefined();
+    expect(attrition!.text).toContain("2026-08-15");
+    expect(attrition!.text).toMatch(/floor/);
+    // The amount is a window sum, not a lifetime, and the sentence must say so.
+    expect(attrition!.text).toMatch(/lifetime/);
+  });
+
+  it("adds no qualifier when the full lookback was covered", () => {
+    const cs = interpret({ ...base, growth: growth(base.weeks), quiet, quietNarrowedSince: null });
+    const attrition = cs.find((c) => c.topic === "attrition");
+    expect(attrition!.text).not.toMatch(/floor|lifetime/);
+    expect(attrition!.text).toContain("gone quiet");
   });
 });
