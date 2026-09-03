@@ -270,27 +270,34 @@ tracks:
 
   - id: T10
     title: M2 exit-gap closure
-    status: queued
+    status: active
     gate: m2-exit
     depends_on: [T1]
     owner: session
     next_action: >
-      Close the blocking gaps listed in docs/project/m2-closure-register.yaml
-      (G1 pending rows, G2 Notion collisions, G3 the cross-surface collision,
-      G9 the closing review) through contradiction-checked Decision batches,
-      the collision identity mechanism, and one closing independent review of
-      the complete M2 candidate set. Start with the next batch the register
-      names. Unblocked 2026-09-03 by DEC-20260903-A: the closing review is a
-      fresh read-only Claude agent, and the batch is recorded in
-      docs/programs/codex-review-backlog.yaml for Codex re-review. This track
-      is the M2 exit gate: T6 cannot start before it is done, and the closure
-      register's validator refuses a state where this track is done, or any
-      post-m2 track is active or done, while a blocking gap remains.
+      Batch 1 done (PR #500): the seven 2026-08 operating-window rows are
+      formal candidate records, the private projection is at 216 rows in
+      the archive (995cece3), and the operator verifier passes. Next batch:
+      the G1 classification rule. Of 205 not_yet_reconciled rows, 82 are
+      feature-scoped and predate the readiness program; G1's own
+      closes_when admits an explicitly reviewed rule classifying those as
+      evidence-only. Write that rule as a decision record with the exact
+      predicate (historical_scope = feature AND decided_at < 2026-08-12 AND
+      not collided), have the private projection's dispositions move under
+      it by script rather than by hand, and put it through independent
+      review before any row moves. Then G3's cross-surface identity (a
+      source-qualified key for the Git-native DEC-20260422-A claim), then
+      G2's 34 collisions one at a time, then G9's closing review. This
+      track is the M2 exit gate: the closure register's validator refuses
+      a state where it is done, or any post-m2 track is active or done,
+      while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
       - the closing independent review of the full M2 candidate set is archived under archive/sessions
-    evidence: []
+    evidence: 
+      - handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md
+      - docs/project/m2-closure-register.yaml
 
   - id: T6
     title: M3 repo-native workflows
