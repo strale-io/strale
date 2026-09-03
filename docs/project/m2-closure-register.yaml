@@ -1853,7 +1853,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3c267c87082c812a8533d8eed592bb8f
   id: DEC-20260820-E-WEBSITE-SEARCH-WEB
-  title_sha256: df87f62ebc5642cee00d7368af1b1c74664aa9bc56ec65ca47e0f899f75a6bdf
+  title_sha256: 02c9c191514343389ddedf919e48e767db26ac82bf01c741387e570aff80f56d
   historical_status: active
   source_url: https://app.notion.com/3c267c87082c812a8533d8eed592bb8f
   record_key: DEC-20260820-E-WEBSITE-SEARCH-WEB
@@ -1863,7 +1863,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3c267c87082c8132adcce02b453b63cb
   id: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
-  title_sha256: 836854e9c91bb8207bc7b5b084e09050a0511acaa343e947bf136e96f27bb837
+  title_sha256: f95277521ac779932003c69877704ba6c4644089b545f386265e19521ad660d3
   historical_status: active
   source_url: https://app.notion.com/3c267c87082c8132adcce02b453b63cb
   record_key: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
@@ -1873,7 +1873,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3c267c87082c819d89afdd257de4a15f
   id: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
-  title_sha256: f1dec011e672a4d0648b89bc649a2ac01bd2fbd69cf802da416abe3ffab03542
+  title_sha256: 58b79875a863d1002d8047955f9e6bffcb7c474255c656973b0d3228b86e150b
   historical_status: active
   source_url: https://app.notion.com/3c267c87082c819d89afdd257de4a15f
   record_key: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
@@ -1883,7 +1883,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3c267c87082c81e09187de8e0cd7fe46
   id: DEC-20260820-A-WEBSITE-HERO
-  title_sha256: 72fb71c4b27a6c2fb560cfe9ada9dcade365323086fd31113c6b46fc7642af6e
+  title_sha256: 2108da58c8bc28ec2c1b0b11b80057dcbca80688e1a59b34d23b6ce4b8635460
   historical_status: active
   source_url: https://app.notion.com/3c267c87082c81e09187de8e0cd7fe46
   record_key: DEC-20260820-A-WEBSITE-HERO
@@ -1893,7 +1893,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3c267c87082c81ee9e7cc995b11f12d6
   id: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
-  title_sha256: 39cb0fd3e1c5fa6e03758362371c289e355f68308517ca00639757f0206c54d5
+  title_sha256: 9b8b9619174481c3303c386685d1cb8fb255e33462ebad4d84c693b427c4b6b7
   historical_status: active
   source_url: https://app.notion.com/3c267c87082c81ee9e7cc995b11f12d6
   record_key: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
@@ -1903,7 +1903,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3c267c87082c81f98018f6fb4d90b2c1
   id: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
-  title_sha256: d3c49d0e227f6488774c40d8de55426647c77f827828513dcbfcb07e3c7d704a
+  title_sha256: a6885e8607edd240401cec64e696051daffecbd1dd81715fa393d86f961c686e
   historical_status: active
   source_url: https://app.notion.com/3c267c87082c81f98018f6fb4d90b2c1
   record_key: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
@@ -1913,7 +1913,7 @@ decision_rows:
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 3c967c87082c81be9ebac7982b89a36a
   id: DEC-20260827-A
-  title_sha256: cf94c9e0844ff54f3ffaf82cf6e3f17e650e97ef8bc47d8be5a920ac372a2b92
+  title_sha256: 241a1685d5d86bf9374d0c21a28cadccc4f34b47e45125107b0a7d27c644c254
   historical_status: active
   source_url: https://app.notion.com/3c967c87082c81be9ebac7982b89a36a
   record_key: DEC-20260827-A
