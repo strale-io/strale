@@ -5,7 +5,7 @@
 // clears it.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -217,6 +217,139 @@ test("a detached extra worktree fails as holding no batch branch", async () => {
     const result = await r.check(r.batch);
     const f = result.failures.filter((x) => x.code === "worktree");
     assert.ok(f.some((x) => /holds no batch branch \(detached HEAD\)/.test(x.message)), JSON.stringify(result));
+  } finally { r.cleanup(); }
+});
+
+// ── A worktree the gate does not own ────────────────────────────────────────
+// On 2026-09-03 this finding told a session three times to `git worktree
+// remove` a directory in active use: once a rebase in progress carrying an
+// unpushed commit, twice a review agent mid-check. A detached HEAD is what an
+// abandoned checkout looks like AND what live work looks like. Each time the
+// instruction was disobeyed by a session that checked first; had it been
+// followed, work would have been destroyed.
+
+test("a detached worktree with uncommitted work is never reported as removable", async () => {
+  const r = makeRepo();
+  try {
+    const live = join(r.dir, "live");
+    git(r.trunk, "worktree", "add", "-q", "--detach", live, "main");
+    writeFileSync(join(live, "apps", "a.ts"), "export const a = 2; // mid-edit\n");
+
+    const result = await r.check(r.batch);
+    const removal = result.failures.filter((x) => x.code === "worktree" && normalizePath(x.message).includes(normalizePath(live)));
+    assert.deepEqual(removal, [], `must not instruct removal: ${JSON.stringify(result.failures)}`);
+    assert.ok(
+      result.warnings.some((w) => normalizePath(w).includes(normalizePath(live)) && /do NOT remove it/.test(w)),
+      `expected a live-work warning, got ${JSON.stringify(result.warnings)}`,
+    );
+  } finally { r.cleanup(); }
+});
+
+test("a detached worktree with uncommitted work does not count toward the batch limit", async () => {
+  // It is a tool's scratch checkout, not a second batch. Counting it made the
+  // gate demand the removal of exactly the thing it must not remove.
+  const r = makeRepo();
+  try {
+    const live = join(r.dir, "live");
+    git(r.trunk, "worktree", "add", "-q", "--detach", live, "main");
+    writeFileSync(join(live, "apps", "a.ts"), "export const a = 2;\n");
+    const result = await r.check(r.batch);
+    assert.ok(
+      !result.failures.some((x) => /batch worktrees exist/.test(x.message)),
+      JSON.stringify(result.failures),
+    );
+    assert.ok(result.warnings.some((w) => /excluded from the batch count/.test(w)));
+  } finally { r.cleanup(); }
+});
+
+test("a detached dirty worktree older than the stale threshold becomes a finding", async () => {
+  // Staleness is the only thing separating a scratch checkout in use from one
+  // abandoned. Computing it and then reporting it in prose, as the first
+  // version did, left the category unbounded and invisible to
+  // `baseline --write`, which harvests failures only. Past the threshold it
+  // fails — but the fix still does not say remove.
+  const r = makeRepo();
+  try {
+    const stale = join(r.dir, "stale");
+    git(r.trunk, "worktree", "add", "-q", "--detach", stale, "main");
+    const f = join(stale, "apps", "a.ts");
+    writeFileSync(f, "export const a = 2;\n");
+    const old = new Date(Date.now() - 72 * 3600 * 1000);
+    utimesSync(f, old, old);
+
+    const result = await r.check(r.batch);
+    const finding = result.failures.find(
+      (x) => x.code === "worktree" && normalizePath(x.message).includes(normalizePath(stale)),
+    );
+    assert.ok(finding, `expected a stale finding, got ${JSON.stringify(result)}`);
+    assert.match(finding.message, /too old to be a live session's/);
+    assert.match(finding.message, /day\(s\) ago/);
+    // Still never the bare imperative that caused the incident.
+    assert.ok(!/^remove it/.test(finding.fix), finding.fix);
+    assert.match(finding.fix, /find out whose it is/);
+    assert.match(finding.fix, /save the diff/);
+  } finally { r.cleanup(); }
+});
+
+test("a freshly touched detached dirty worktree stays a note", async () => {
+  const r = makeRepo();
+  try {
+    const fresh = join(r.dir, "fresh");
+    git(r.trunk, "worktree", "add", "-q", "--detach", fresh, "main");
+    writeFileSync(join(fresh, "apps", "a.ts"), "export const a = 2;\n");
+    const result = await r.check(r.batch);
+    assert.ok(
+      !result.failures.some((x) => normalizePath(x.message).includes(normalizePath(fresh))),
+      JSON.stringify(result.failures),
+    );
+  } finally { r.cleanup(); }
+});
+
+test("a worktree reported as live work is not also reported a second time", async () => {
+  // Two notes fired for the same worktree saying almost the same thing.
+  const r = makeRepo();
+  try {
+    const live = join(r.dir, "live");
+    git(r.trunk, "worktree", "add", "-q", "--detach", live, "main");
+    writeFileSync(join(live, "apps", "a.ts"), "export const a = 2;\n");
+    const result = await r.check(r.batch);
+    const mentions = result.warnings.filter((w) =>
+      normalizePath(w).includes(normalizePath(live)),
+    );
+    assert.equal(mentions.length, 1, JSON.stringify(mentions));
+  } finally { r.cleanup(); }
+});
+
+test("a clean detached worktree still fails, but the fix refuses to call it idle", async () => {
+  // Cleanliness is sound in one direction only: dirty proves live, clean
+  // proves nothing. The same review worktree went clean while still in use,
+  // between finishing its mutations and writing its verdict.
+  const r = makeRepo();
+  try {
+    const idle = join(r.dir, "idle");
+    git(r.trunk, "worktree", "add", "-q", "--detach", idle, "main");
+    const result = await r.check(r.batch);
+    const f = result.failures.find((x) => x.code === "worktree" && normalizePath(x.message).includes(normalizePath(idle)));
+    assert.ok(f, JSON.stringify(result.failures));
+    assert.match(f.message, /holds no batch branch \(detached HEAD\)/);
+    assert.match(f.fix, /A clean tree is NOT proof it is idle/);
+    assert.match(f.fix, /ask its owner rather than removing it/);
+  } finally { r.cleanup(); }
+});
+
+test("the dirty finding names the first path in full", async () => {
+  // git status --porcelain writes " M path" for an unstaged change, and the
+  // git helper trims the whole output, eating that leading space. A fixed
+  // 3-character slice therefore removed the first character of the FIRST path
+  // in every dirty finding: "cripts/handoff/handoff-check.mjs".
+  const r = makeRepo();
+  try {
+    writeFileSync(join(r.batch, "apps", "a.ts"), "export const a = 3;\n");
+    const result = await r.check(r.batch);
+    const f = finding(result, "dirty");
+    assert.ok(f, JSON.stringify(result.failures));
+    assert.match(f.message, /apps\/a\.ts/);
+    assert.ok(!/pps\/a\.ts/.test(f.message.replace(/apps\/a\.ts/g, "")), f.message);
   } finally { r.cleanup(); }
 });
 

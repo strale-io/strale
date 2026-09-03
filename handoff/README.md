@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-217 files (190 with a recorded intent, 27 without).
+218 files (191 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-03 | [`handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md`](_general/from-code/2026-09-03-handoff-gate-live-worktree.md) | stop the session-end gate instructing the destruction of live work, after it did so three times in one session. |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-checkin-morning.md`](_general/from-code/2026-09-03-checkin-morning.md) | Run the 2026-09-03 morning operating session per docs/company/DAILY-RUN.md — |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md`](_general/from-code/2026-09-02-t5-cto-readable-structure.md) | make the repository readable top-down for a stranger in one pass — README.md, docs/README.md, archive/ and handoff/ i... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t4-remediation-closure.md`](_general/from-code/2026-09-02-t4-remediation-closure.md) | Close six dated-or-open items in the remediation program (docs/remediation) |
