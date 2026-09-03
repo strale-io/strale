@@ -68,7 +68,7 @@ This test deliberately reconstructs the app's **pre-fix** buggy shape (a bare
 Hono app with `bodyLimit` on a chunked/no-`Content-Length` stream) as a "FAIL-BEFORE"
 pinning test, per the swallow-visibility discipline in DEC-20260504-A — it exists to prove
 what the old bug looked like, contrasted against the sibling test
-`"rethrowing the abort produces a 413"`.
+`"rethrows a BodyLimitError instead of falling through to query params"` — the one that exercises the real gateway; the synthetic `"rethrowing the abort produces a 413"` proves only the framework path.
 
 Under `hono@4.13.5` the same swallow-shaped handler now returns `413` instead of `200` —
 hono itself closed the underlying chunked-`bodyLimit`-bypass at the framework level. This
@@ -90,7 +90,7 @@ stale. It is renamed to `"swallowing the abort no longer reports 200: hono 4.13.
 the oversized body itself"`, now asserts `413`, and its comment documents what it used to
 prove, that hono <4.12.16 returned 200 here (the bug), that 4.13.5 refuses it at the
 middleware, and that the gateway's rethrow stays as defence in depth, proved by the
-sibling `"rethrowing the abort produces a 413"` test. `x402-body-limit.test.ts` now passes
+gateway test `"rethrows a BodyLimitError instead of falling through to query params"` (the synthetic `"rethrowing the abort produces a 413"` proves the framework path, not the gateway). `x402-body-limit.test.ts` now passes
 18/18, confirmed deterministic across two isolated runs.
 
 ## Reachability — the HIGH CORS advisory
