@@ -45,17 +45,69 @@ anywhere.
 Fixed in `apps/api/src/lib/data-retention.ts`: `DURABLE_OVERRIDE_EVENT_TYPES`
 rides the compliance window, everything else keeps 180 days.
 
-**Deliberately not fixed by exempting `human_override = true`**, which was the
-obvious form. `reply_action` events also set that flag, and their `details`
-carry an inbound email's sender address, subject and body — the broad fix would
-have extended personal-data retention from 180 days to three years to solve a
-bookkeeping problem. Production today holds thirteen `human_override` rows: the
-eleven reconciliations and two capability promotions. No `reply_action` row
-exists yet; the code path does.
+The rule is **the type list AND `human_override`**, and each conjunct rules out
+the other's simpler form. `human_override` alone sweeps in `reply_action`,
+whose `details` carry an inbound email's sender address, subject and body — a
+two-and-a-half-year extension of personal-data retention to fix a bookkeeping
+problem. The type list alone sweeps in the automated writers that share these
+type names: the promotion job emits `capability_promotion` on every run, and
+production already holds 114 such rows against 2 human ones. Both conjuncts
+were needed and only one was in the first version.
 
-Six regression tests, each failing against the pre-fix single-cutoff statement.
+*Found by the independent review, and it was right.* The first version keyed on
+the type alone and listed only `manual_reconciliation`, which left the two
+human-authorised `capability_promotion` rows on the same 180-day countdown the
+change exists to stop — rows this very handoff had counted and then not
+protected. The allowlist now carries every event type whose payload was read
+and found to be operational metadata only.
+
+Eight tests. Five discriminate: they fail against a mutant that defines the
+constants correctly and never wires them into the query, and one fails
+specifically when the `human_override` conjunct is dropped. Three assert on the
+exported constants and would pass either way; they are kept and labelled as
+non-discriminating rather than counted as regression guards. **The first version
+of this file claimed six discriminating tests when three discriminated** — the
+review checked the claim and disproved it, which is the F5 shape inside the
+change that documents F5.
+
 The event types are bound via `sql.join`, never a JS array into `ANY()` — that
 renders a row-value tuple Postgres rejects and has crash-looped boot before.
+
+## Defect 3 — two public surfaces advertised capabilities the platform had withdrawn
+
+**Not mine, live in production, and found only because a claim I wrote was too
+strong.** DQ-30 first said no customer could reach the three dark US
+capabilities "by any route" and listed four. The review checked by fetching the
+surfaces instead of reading the code, and found a fifth.
+
+`GET /.well-known/agent-card.json` is the machine-readable storefront an agent
+reads to decide what to buy, and the most-fetched machine surface the platform
+has. Its query filtered `is_active` and `marketplace_eligible` and never
+`visible`. It was listing **ten invisible capabilities** by name, description
+and price to any anonymous caller: the three dark US ones,
+`german-company-data` (**suspended**), `page-speed-test` and
+`danish-company-data` (**quarantined by the quality floor**),
+`uk-gazette-notice-search` (DQ-14 item 2 — fails on every call because the
+upstream errors for everyone), `page-exists`, `google-news-search` and
+`serp-related-questions`. Independently reproduced by the concurrent check-in
+session, which diffed the card's 413 skills against the 297 capabilities and
+107 solutions in the public catalogue and got the same ten.
+
+`GET /v1/capabilities/:slug` had the same gap. Eight of the ten 404 anyway on
+their lifecycle state; **`page-speed-test` and `danish-company-data` returned
+200 with the full payload including input and output schemas**, while the list
+endpoint at the same path prefix had always hidden them.
+
+Nothing was purchasable through either: all ten are `x402_enabled = false` and
+both routing paths already required `visible = true`. The defect is disclosure,
+and it defeats the quality floor's own mechanism — the floor withdraws a
+capability by setting `visible = false`, so without this fix it withdrew it
+everywhere except the surface agents actually read.
+
+Both queries now filter `visible`. Three tests assert on the predicate the
+routes send to Postgres, rendered through drizzle's dialect rather than through
+a stub that returns rows regardless of the filter; two of the three fail when
+either filter is removed.
 
 **2. `set_in` in the environment manifest was fiction on a third of its rows.**
 It is the field naming where each value actually lives, and no check ever read
@@ -78,6 +130,19 @@ the manifest header now carries the audit date and how to redo it.
 
 Three `holder` values were also false (`API_BASE_URL`, `EUR_USD_RATE`,
 `NODE_ENV` said `local-only`; Railway sets all three).
+
+## Defect 4 — the session-end gate invites the destructive reading
+
+Noted, not fixed here. The gate reports a worktree with a detached HEAD as
+"holds no batch branch" and prints `git worktree remove` as the fix. A rebase in
+progress looks exactly like that, and this session had one, with an unpushed
+commit in it. The concurrent check-in session read the instruction, checked
+`git branch -r --contains`, found the commit on no remote, and declined to obey
+— which is the only reason the work survived. A gate whose printed fix destroys
+live work when its inference is wrong needs a discriminator, and there are two
+cheap ones: a commit on no remote, or a `rebase-merge` / `rebase-apply`
+directory in the git dir. Out of scope for this branch and left for its own
+change rather than widening one already under review.
 
 ## T17 — dependency remediation, and why the program is active again
 

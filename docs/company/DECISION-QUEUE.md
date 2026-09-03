@@ -29,12 +29,28 @@ capabilities (`us-company-data-cobalt`, `us-ein-match`,
 `us-sec-filings-extended`) are dark. Each is `visible = false`,
 `x402_enabled = false`, `lifecycle_state = 'validating'`. Both routing paths in
 `apps/api/src/lib/matching.ts` require `visible = true`, including the one that
-takes an explicit capability name, so **no customer can reach them by any
-route** — not the catalogue, not automatic routing, not naming the slug, not the
+takes an explicit capability name, so **nobody can execute them or be charged
+for them by any route** — not automatic routing, not naming the slug, not the
 crypto rail. Across all time they have eleven executions between them, every one
-from the internal test harness, none successful, none since 2026-08-27. Leaving
-them in place costs nothing and exposes nobody. There is no deadline on the
-decision and no drift risk while `visible` stays false.
+from the internal test harness, none successful, none since 2026-08-27. There is
+no deadline on the decision and no drift risk while `visible` stays false.
+
+*Correction, before this entry was merged.* The sentence above first read "no
+customer can reach them by any route", listing four routes. **That was wrong,
+and the independent review caught it by fetching the surfaces rather than
+reading the code.** A fifth public route existed: the agent card at
+`/.well-known/agent-card.json`, the machine-readable storefront an agent reads
+to decide what to buy, filtered on `is_active` and `marketplace_eligible` and
+never on `visible`. It was advertising all three by name, description and price
+to any anonymous caller — along with seven more, including one the platform had
+*suspended* and the service that fails on every call. `GET /v1/capabilities/:slug`
+had the same gap and served two quarantined capabilities with their full
+schemas. Both are fixed in the same change as this entry. **Nothing was
+purchasable at any point** and no billing path was open; what was wrong was the
+claim and the disclosure. Recording it because the failure here was mine and
+generalisable: I verified a "cannot be reached" claim by reading the code path I
+already had in mind, and a public surface I had not enumerated was answering
+differently. Enumerate the readers, then check them.
 *On the two unread keys:* `OPENSANCTIONS_API_KEY` and `USPTO_ODP_API_KEY` are
 set in Railway and read by no code — OpenSanctions was dropped as a vendor on
 2026-04-27, and nothing was ever built on the USPTO one. Keeping the accounts

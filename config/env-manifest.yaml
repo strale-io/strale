@@ -10,8 +10,9 @@
 # really is in Railway needs a credential CI must not hold, so it is an
 # operator audit. The `railway` element of every row below was last verified
 # on 2026-09-02 against `railway variables --json` on the `strale` service
-# (names only, values never read) — that audit removed a false Railway claim
-# from 43 of 127 rows. Re-verify the same way after any change to the
+# (names only, values never read) — that audit corrected 46 of 127 rows: it
+# removed a false Railway claim from 43 and added a missing one to 3.
+# Re-verify the same way after any change to the
 # service's variables, and update this date when you do. The `.env`,
 # `.env.test` and `workflow` elements are NOT covered by that audit: they
 # describe developer machines and workflow secrets, and carry whatever the
@@ -983,7 +984,7 @@
 - name: STRALE_API_KEY
   purpose: API key strale-mcp (packages/mcp-server) uses when calling the public Strale API on the caller's behalf. Per user_api_key.md, the copy in the root .env is dead (matches no account, verified 2026-08-25) — rotation needs write access Petter alone holds.
   provider: internal
-  holder: local-only
+  holder: railway
   cost_class: none
   required_in:
     - local

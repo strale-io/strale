@@ -134,6 +134,30 @@ test("SET_IN_NONE_WITH_OTHERS: 'none' cannot be combined with a place", () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test("REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE: needed in prod, configured only locally", () => {
+  // The false negative the independent review of #494 found in the first
+  // version: SET_IN_NONE_BUT_REQUIRED catches only the literal [none], and
+  // this — required in production, set only on a developer machine — is the
+  // commoner real mistake.
+  const dir = makeFixture([baseRow({ required_in: ["production"], set_in: [".env"] })], {
+    "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.ok(findings.some((f) => f.code === "REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE" && f.detail.includes("FOO_API_KEY")));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("required only locally and set only locally is fine", () => {
+  const dir = makeFixture([baseRow({ required_in: ["local"], set_in: [".env"] })], {
+    "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.deepEqual(findings, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test("RETIRED_BUT_REQUIRED: a retired variable nothing reads cannot be required", () => {
   const dir = makeFixture([baseRow({ retired: "2026-01-01", required_in: ["production"] })], {
     "apps/api/src/capabilities/foo.ts": `// no env read here

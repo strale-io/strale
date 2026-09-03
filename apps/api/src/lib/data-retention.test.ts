@@ -253,9 +253,16 @@ describe("PII sweep selection scope", () => {
  * 2027-02-18 the explanation would have vanished and the rows it explains
  * would have remained. An independent review named it a permanent defect.
  *
- * Each test below fails against the pre-fix single-cutoff statement.
+ * The independent review of #494 checked this claim and found it false as
+ * first written: three of the six tests here assert on the exported constants
+ * or on a LIMIT that predates the change, so they pass against a mutant whose
+ * constants are right and whose query was never wired up. They are kept —
+ * they pin the constants against a careless edit — but they are labelled for
+ * what they are, and the discriminating tests are grouped separately below.
+ * A test that cannot fail is not evidence, and saying six when three is the
+ * F5 shape in the file that documents it.
  */
-describe("durable production-override records", () => {
+describe("durable production-override records — constants (do not discriminate)", () => {
   it("outlive the operational window and reach the compliance one", () => {
     expect(HEALTH_EVENT_RETENTION_DAYS).toBeLessThan(TRANSACTION_RETENTION_DAYS);
   });
@@ -268,6 +275,14 @@ describe("durable production-override records", () => {
     expect(DURABLE_OVERRIDE_EVENT_TYPES).toContain("manual_reconciliation");
   });
 
+});
+
+/**
+ * These fail against the pre-fix statement, and against a mutant that defines
+ * the constants correctly but never wires them into the query. Verified by
+ * reverting each half in turn.
+ */
+describe("durable production-override records — the emitted query", () => {
   it("the sweep applies two cutoffs to health_monitor_events, not one", async () => {
     await cleanupOldTestData();
     const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
@@ -306,6 +321,30 @@ describe("durable production-override records", () => {
       expect(call.strings.join(" ")).not.toContain(t);
     }
     expect(call.params.some((x) => Array.isArray(x))).toBe(false);
+  });
+
+  it("requires the human_override flag as well as the type", async () => {
+    // Both conjuncts are load-bearing and each rules out the other's simpler
+    // form. Without the flag, the automated writers that share these type
+    // names ride the compliance window too: the promotion job emits
+    // capability_promotion on every run and production already holds 114 such
+    // rows against 2 human ones. Without the type list, reply_action's email
+    // bodies do.
+    await cleanupOldTestData();
+    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
+    expect(stmt).toContain("human_override");
+    expect(stmt).toMatch(/human_override\s+AND\s+event_type IN/);
+  });
+
+  it("names every durable type in the statement's bind parameters", async () => {
+    await cleanupOldTestData();
+    const call = captured.find((c) =>
+      c.strings.join(" ").includes("DELETE FROM health_monitor_events"),
+    )!;
+    // One placeholder per type, and every declared type actually reaches the
+    // driver — a list that grew without the query growing would fail here.
+    for (const t of DURABLE_OVERRIDE_EVENT_TYPES) expect(call.params).toContain(t);
+    expect(call.params).not.toContain("reply_action");
   });
 
   it("still self-throttles with a LIMIT (DEC-20260504-B)", async () => {

@@ -331,6 +331,21 @@ footnote. If a fourth lands, open the investigation.
 > A test, gate or check that passes whether or not the thing it guards is
 > working.
 
+**Shared shape with F7 incident 8 — named here once, referenced there.** The
+two families stay separate and their mechanisms are different: F5 is a check
+that never ran the thing it names, F7 incident 8 is a check that ran against a
+consumer whose acceptance did not entail the others'. What they have in common
+is the reading, not the mechanism — **the signal's scope was narrower than the
+proposition its reader took it for.** In both, a green is produced honestly and
+then believed to mean more than it measured.
+
+*The discriminating question, because the shape is not actionable without one:*
+**what would have to be true for this green to be false, and did I test that?**
+It has a dress per family. For F5: *would this check fail if the thing it claims
+to verify were broken?* For F7 incident 8: *which consumers read this setting,
+and did the strictest one accept it?* Same question. A reader who agrees with
+the paragraph above and does not ask one of these has changed nothing.
+
 **Count: 9 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, and incident 9 is the same checkout still being the cause.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
@@ -781,7 +796,10 @@ for the claim to stop being true — would not have caught this, because the cla
 never stopped being true. **Where one setting is consumed by more than one
 reader, verifying it through the most permissive reader proves nothing about the
 others.** A credential, a URL or a flag is restored when the *strictest* consumer
-accepts it, and the check should be aimed there. Repaired durably rather than
+accepts it, and the check should be aimed there — *which consumers read this,
+and did the strictest one accept it* is this family's dress of the question
+named under F5, whose incidents share this one's reading error and not its
+mechanism. Repaired durably rather than
 locally: the environment manifest now states the `?sslmode=` requirement on both
 Postgres rows, so the generated `.env.example` files carry it and the next
 rebuild from Railway cannot repeat the omission silently.

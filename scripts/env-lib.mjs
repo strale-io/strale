@@ -225,9 +225,15 @@ export function checkDeadRows(usages, rows) {
  * carrying a `cost_note` in the same row that said so in words. A register
  * nothing verifies is a register that will be wrong.
  *
- * These three are the contradictions provable from the file alone. Membership
+ * These four are the contradictions provable from the file alone. Membership
  * of `railway` cannot be checked in CI — that needs a credential CI must not
  * have — so it stays an operator audit, dated in the manifest header.
+ *
+ * SET_IN_NONE_BUT_REQUIRED catches only the literal `set_in: [none]` case; the
+ * commoner real mistake is a variable required in production and configured
+ * only on a developer machine, which is why
+ * REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE exists alongside it. Found by the
+ * independent review of #494 as a false negative in the first version.
  */
 export function checkRowContradictions(rows) {
   const findings = [];
@@ -249,6 +255,14 @@ export function checkRowContradictions(rows) {
         code: "SET_IN_NONE_WITH_OTHERS",
         file: MANIFEST_PATH,
         detail: `${row.name} has set_in: [${setIn.join(", ")}] — 'none' means configured nowhere and cannot be combined with a place. Drop 'none', or drop the rest.`,
+      });
+    }
+
+    if (requiredIn.includes("production") && !setIn.includes("railway")) {
+      findings.push({
+        code: "REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE",
+        file: MANIFEST_PATH,
+        detail: `${row.name} is required_in: [production] but set_in: [${setIn.join(", ")}] — production runs on Railway, so a variable it needs must be set there. Either it is not really required in production, or production is missing it.`,
       });
     }
 

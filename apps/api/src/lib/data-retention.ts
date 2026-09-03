@@ -197,9 +197,9 @@ export const INVOCATION_FACT_RETENTION_DAYS = 180;
 export const HEALTH_EVENT_RETENTION_DAYS = 180;
 
 /**
- * Event types that are the durable record of a human-authorised production
- * mutation, retained for TRANSACTION_RETENTION_DAYS rather than the
- * operational 180.
+ * Event types whose `human_override = true` rows are the durable record of a
+ * human-authorised production mutation, retained for
+ * TRANSACTION_RETENTION_DAYS rather than the operational 180.
  *
  * Why this exists: the 2026-08-22 stranded-row reconciliation wrote eleven
  * `manual_reconciliation` rows — the ONLY record anywhere of who changed
@@ -210,16 +210,39 @@ export const HEALTH_EVENT_RETENTION_DAYS = 180;
  * 2027-02-18, ten rows reading `status='failed'` with an empty error and no
  * record of why. An independent review named this as a permanent defect.
  *
- * Why it is a type allowlist and NOT `human_override = true`: `reply_action`
- * events also carry `human_override`, and their `details` hold the sender
- * address, subject and body of an inbound email. Retaining those for three
- * years would extend personal-data retention by two and a half years to fix a
- * bookkeeping problem. Membership here is therefore a deliberate per-type
- * judgement that the payload is operational metadata only — add a type only
- * after checking what its `details` actually carry.
+ * BOTH conditions are load-bearing, and each rules out the other's simpler
+ * form. Neither alone is correct:
+ *
+ *  - `human_override` alone would sweep in `reply_action`, whose `details`
+ *    hold the sender address, subject and body of an inbound email —
+ *    extending personal-data retention by two and a half years to fix a
+ *    bookkeeping problem.
+ *  - The type list alone would sweep in the automated writers that share
+ *    these type names. `capability_promotion` is the live case: the
+ *    promotion job (`jobs/capability-promotion.ts`) emits it on every run
+ *    and production already holds 114 such rows against 2 human ones.
+ *    `lifecycle_transition` and `auto_fix` have the same shape.
+ *
+ * So the rule is: this type list AND the flag. Production satisfies both on
+ * exactly 13 rows today — the 11 reconciliations and 2 capability promotions.
+ *
+ * Adding a type is a judgement that its `details` carry operational metadata
+ * only. Check the payload of every writer of that type before adding it, not
+ * just the human-authorised one.
  */
 export const DURABLE_OVERRIDE_EVENT_TYPES = [
   "manual_reconciliation",
+  // Every writer below is in routes/reply-webhook.ts or the promotion job;
+  // each payload was read and carries ids, slugs, states and a
+  // `triggered_by` label — no personal data. reply_action is deliberately
+  // absent and must stay absent.
+  "capability_promotion",
+  "proposal_approved",
+  "proposal_rejected",
+  "proposal_acknowledged",
+  "suspension_override",
+  "lifecycle_transition",
+  "auto_fix",
 ] as const;
 
 async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
@@ -264,7 +287,12 @@ async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
 
 /**
  * Delete operational events past `cutoff`, and durable production-override
- * records only past the much later `durableCutoff`.
+ * records — `human_override` rows of a DURABLE_OVERRIDE_EVENT_TYPES type —
+ * only past the much later `durableCutoff`.
+ *
+ * `human_override` is NOT NULL DEFAULT false in the schema, so the conjunct
+ * needs no null guard; an automated row of a listed type takes the ELSE
+ * branch and is still deleted at the operational window.
  *
  * The two windows are one statement so the batching and the LIMIT still bound
  * a single sweep (DEC-20260504-B). The type list is interpolated as bind
@@ -287,7 +315,7 @@ async function purgeHealthMonitorEvents(
       DELETE FROM health_monitor_events
       WHERE id IN (
         SELECT id FROM health_monitor_events
-        WHERE CASE WHEN event_type IN (${durableTypes})
+        WHERE CASE WHEN human_override AND event_type IN (${durableTypes})
                    THEN created_at < ${durableCutoff.toISOString()}::timestamptz
                    ELSE created_at < ${cutoff.toISOString()}::timestamptz
               END
@@ -436,9 +464,9 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
  *   provenance) redacted at 90 days, whatever the capability
  * - transaction_quality: 3 years (paired with transactions)
  * - test_results: 90 days (operational)
- * - health_monitor_events: 180 days (operational), except the durable
- *   production-override records in DURABLE_OVERRIDE_EVENT_TYPES, which are
- *   kept as long as the transactions they explain (3 years)
+ * - health_monitor_events: 180 days (operational), except human_override rows
+ *   of a DURABLE_OVERRIDE_EVENT_TYPES type, which are kept as long as the
+ *   transactions they explain (3 years)
  *
  * Transactions with legal_hold = true are never deleted.
  */
