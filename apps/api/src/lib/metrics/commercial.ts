@@ -29,7 +29,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import type { Measurement, Window } from "./types.js";
-import { coversWindow, evidenceFor } from "./instruments.js";
+import { coversWindow, evidenceFor, instrumentEnabledAt } from "./instruments.js";
 import { externalCustomers } from "./populations.js";
 import { ACTOR_KEY_SQL } from "./actor-identity.js";
 
@@ -394,28 +394,132 @@ export async function concentration(
 export interface QuietPayer { key: string; cents: number; lastSeen: string; daysQuiet: number }
 
 /**
+ * Where the "has this buyer stopped?" lookback may legitimately start.
+ *
+ * `quietPayers` used to share `concentration()`'s guard: refuse outright unless
+ * the instrument covered the whole requested lookback. With a 90-day lookback
+ * and payer identity switched on 2026-08-15 that answers `unavailable` until
+ * mid-November, and it did — the metric has never once returned a value, while
+ * "who has gone quiet" is the question the concentration reading most needs.
+ *
+ * The refusal is right for `newPayers`/`returningPayers` and wrong here, and
+ * the difference is which way each one errs. Before the instrument existed a
+ * buyer carries no identity, so:
+ *
+ *   - a returning buyer is absent from the prior set and reads as **new** — the
+ *     flattering direction, which is why that pair stays gated (F2);
+ *   - a quiet buyer is absent from the prior set and so is never reported at
+ *     all — the pessimistic direction. Narrowing the lookback to the instrument
+ *     can only *miss* a quiet payer, never invent one.
+ *
+ * So the lookback is clamped to the instrument rather than the metric refused,
+ * and the narrowing is stated in the caveat instead of being silent. A shorter
+ * lookback than asked for is a weaker instrument, not a wrong one.
+ */
+export type QuietLookback =
+  | { kind: "full"; from: Date }
+  | { kind: "narrowed"; from: Date; requestedFrom: Date; enabledAt: Date }
+  | { kind: "impossible"; enabledAt: Date | null; absent: boolean };
+
+export function resolveQuietLookback(
+  windowFrom: Date,
+  lookbackDays: number,
+  enabledAt: Date | null | undefined,
+): QuietLookback {
+  const requestedFrom = new Date(windowFrom.getTime() - lookbackDays * 86_400_000);
+  if (enabledAt === undefined) return { kind: "impossible", enabledAt: null, absent: true };
+  if (enabledAt === null) return { kind: "impossible", enabledAt: null, absent: false };
+  // The invariant is "there is covered time BEFORE the window", and it has to
+  // hold on this path too. A lookback of zero or less puts `requestedFrom` at or
+  // after `windowFrom`: an empty or inverted prior period, which would report
+  // `observed: []` and an uncaveated "none" — an absence of evidence rendered as
+  // evidence of absence. Not reachable from the shipped caller (default 90);
+  // guarded because the comment below claims it unconditionally.
+  if (requestedFrom >= windowFrom) return { kind: "impossible", enabledAt, absent: false };
+  if (enabledAt <= requestedFrom) return { kind: "full", from: requestedFrom };
+  // The clamp is only worth anything if some covered time remains BEFORE the
+  // window. An instrument that switched on inside (or after) the window leaves
+  // no prior period to have been active in, and "everyone looks new" is not a
+  // narrower answer, it is a different and false one.
+  if (enabledAt < windowFrom) {
+    return { kind: "narrowed", from: enabledAt, requestedFrom, enabledAt };
+  }
+  return { kind: "impossible", enabledAt, absent: false };
+}
+
+/**
+ * What the narrowing actually costs the reader — all of it, not the flattering half.
+ *
+ * The first version of this sentence said only that the count is a floor. Two
+ * further things are true and were silent, and an independent review caught
+ * both:
+ *
+ *  - **It is a modelling choice, not purely the instrument's limit.**
+ *    `ACTOR_KEY_SQL` resolves an account buyer from `user_id`, which has been
+ *    recorded since long before the wallet-identity instrument existed. Gating
+ *    the whole metric on `x402_payer_identity` therefore also hides card payers
+ *    whose last purchase predates it, for whom no instrument gap exists. Still
+ *    conservative — it drops rows, never adds them — but attributing the loss
+ *    entirely to "when payer identity began recording" overstates how forced it
+ *    is.
+ *  - **The euro figure is a window sum, not a lifetime.** It is also the sort
+ *    key, so the ordering is an ordering of spend inside the narrowed window.
+ */
+function narrowedCaveat(
+  lookback: Extract<QuietLookback, { kind: "narrowed" }>,
+  lookbackDays: number,
+): string {
+  const since = isoDate(lookback.enabledAt);
+  return (
+    `Looks back only to ${since} instead of the ${lookbackDays} days asked for, ` +
+    `so this is a floor on how many buyers have gone quiet, never a ceiling. ` +
+    `Two consequences worth stating: the amounts shown are spend since ${since} ` +
+    `rather than lifetime totals, and they order the list; and the cut-off is ` +
+    `pinned to wallet-payer identity, so an account buyer whose last purchase ` +
+    `predates ${since} is hidden too even though their identity was always recorded.`
+  );
+}
+
+/**
  * Payers who bought before the window and have not bought inside it.
  *
  * Deliberately not called "churn". At this volume a buyer who skips a week has
  * not left, and calling it churn would invite a retention response to a
  * scheduling artefact. `daysQuiet` is the number the reader should judge on.
  */
+/**
+ * The quiet list and, inseparably, how far back it could actually see.
+ *
+ * `narrowedSince` is part of the *value*, not a note attached beside it. It was
+ * originally carried only in `Measurement.caveat`, and an independent review
+ * found the consequence: `interpret()` and the `--json` path both take the
+ * value and never the wrapper, so the founder-facing sentence and the machine
+ * consumer were both emitted unqualified. Putting it in the value makes it
+ * impossible to render the list without having been handed the qualifier.
+ */
+export interface QuietRead {
+  payers: QuietPayer[];
+  /** Null when the full requested lookback was covered. */
+  narrowedSince: Date | null;
+}
+
 export async function quietPayers(
   w: Window, lookbackDays = 90, minCents = 20,
-): Promise<Measurement<QuietPayer[]>> {
-  const lookbackFrom = new Date(w.from.getTime() - lookbackDays * 86_400_000);
-  const guard = coversWindow("x402_payer_identity", lookbackFrom);
-  if (!guard.ok) {
+): Promise<Measurement<QuietRead>> {
+  const enabledAt = instrumentEnabledAt("x402_payer_identity");
+  const lookback = resolveQuietLookback(w.from, lookbackDays, enabledAt);
+  if (lookback.kind === "impossible") {
     return {
       status: "unavailable", population: "external_customers", requestedWindow: w,
-      availableWindow: guard.enabledAt
-        ? { from: guard.enabledAt, to: w.to, label: `since ${isoDate(guard.enabledAt)}` }
+      availableWindow: lookback.enabledAt
+        ? { from: lookback.enabledAt, to: w.to, label: `since ${isoDate(lookback.enabledAt)}` }
         : undefined,
-      reason: guard.absent
+      reason: lookback.absent
         ? { kind: "instrument_absent", instrument: "x402_payer_identity" }
-        : { kind: "instrument_too_young", instrument: "x402_payer_identity", enabledAt: guard.enabledAt },
+        : { kind: "instrument_too_young", instrument: "x402_payer_identity", enabledAt: lookback.enabledAt },
     };
   }
+  const lookbackFrom = lookback.from;
   const r = await rows<{ actor_key: string | null; cents: string; last_seen: string }>(sql`
     SELECT ${sql.raw(ACTOR_KEY_SQL)} AS actor_key,
            COALESCE(SUM(t.price_cents), 0)::int AS cents,
@@ -432,7 +536,7 @@ export async function quietPayers(
       AND t.created_at >= ${iso(w.from)} AND t.created_at <= ${iso(w.to)}
       AND ${externalCustomers("t")}`);
   const stillHere = new Set(active.map((x) => x.actor_key).filter(Boolean));
-  const value = r
+  const payers = r
     .filter((x) => x.actor_key !== null && !stillHere.has(x.actor_key) && Number(x.cents) >= minCents)
     .map((x) => ({
       key: x.actor_key!,
@@ -442,8 +546,11 @@ export async function quietPayers(
     }))
     .sort((a, b) => b.cents - a.cents);
   return {
-    status: "observed", value, window: w, population: "external_customers",
+    status: "observed",
+    value: { payers, narrowedSince: lookback.kind === "narrowed" ? lookback.enabledAt : null },
+    window: w, population: "external_customers",
     instruments: evidenceFor(["x402_payer_identity"]),
+    caveat: lookback.kind === "narrowed" ? narrowedCaveat(lookback, lookbackDays) : undefined,
   };
 }
 
@@ -463,6 +570,14 @@ export interface CommercialRead {
   growth: GrowthVerdict;
   concentration: Concentration | null;
   quiet: QuietPayer[] | null;
+  /**
+   * When the quiet list was computed over a narrowed lookback, the date it
+   * actually reaches back to. Serialised alongside `quiet` so the JSON consumer
+   * cannot render the list without the qualifier — the `Measurement.caveat` it
+   * comes from lives on a wrapper this shape drops.
+   */
+  quietNarrowedSince: string | null;
+  quietCaveat: string | null;
   activatingSlugs: Array<{ slug: string; payers: number }>;
   conclusions: Conclusion[];
 }
@@ -483,6 +598,19 @@ export function interpret(input: {
   growth: GrowthVerdict;
   concentration: Concentration | null;
   quiet: QuietPayer[] | null;
+  /**
+   * The date a narrowed quiet-payer lookback actually reaches back to, or null
+   * when the lookback was full.
+   *
+   * The attrition sentence below is read by a non-technical founder and is the
+   * only form of this finding that reaches him. Emitting it unqualified while
+   * the qualifier sat on a wrapper this function never receives is exactly the
+   * failure `Measurement` was introduced to prevent ("a caller renders `value`
+   * and the flag goes unread — which is how '1 paying customer' reached a
+   * dashboard"). Passing it here rather than printing it beside the list is
+   * what makes the qualifier travel with the claim.
+   */
+  quietNarrowedSince?: Date | null;
   activatingSlugs: Array<{ slug: string; payers: number }>;
   /**
    * Last period's largest-buyer share, and ONLY when both periods are
@@ -645,9 +773,12 @@ export function interpret(input: {
   // 5. Attrition.
   if (input.quiet && input.quiet.length > 0) {
     const worst = input.quiet[0]!;
+    const since = input.quietNarrowedSince
+      ? ` This counts only buyers seen since ${isoDate(input.quietNarrowedSince)}, so it is a floor, and the amount is their spend since then rather than a lifetime total.`
+      : "";
     out.push({
       topic: "attrition",
-      text: `${input.quiet.length} previously paying buyer${input.quiet.length === 1 ? " has" : "s have"} gone quiet; the largest of them spent ${eur(worst.cents)} and last bought ${worst.daysQuiet} days ago.`,
+      text: `${input.quiet.length} previously paying buyer${input.quiet.length === 1 ? " has" : "s have"} gone quiet; the largest of them spent ${eur(worst.cents)} and last bought ${worst.daysQuiet} days ago.${since}`,
     });
   }
 

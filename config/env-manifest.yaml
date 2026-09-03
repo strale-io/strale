@@ -359,7 +359,13 @@
   set_in:
     - .env.test
 - name: DATABASE_URL
-  purpose: Primary Postgres connection string for the API server (production and local dev).
+  purpose: >-
+    Primary Postgres connection string for the API server (production and local
+    dev). A non-loopback host MUST carry an explicit `?sslmode=` — `disable` for
+    the Railway public proxy (metro.proxy.rlwy.net terminates no TLS), `require`
+    for a host that does. Operator scripts refuse to open a handle without it, so
+    a value copied verbatim out of Railway (whose internal host needs no suffix)
+    silently disables every local operator script until the suffix is added.
   provider: internal
   holder: railway
   cost_class: metered
@@ -384,7 +390,9 @@
     - .env.test
     - workflow
 - name: DATABASE_URL_UNPOOLED
-  purpose: Direct (session-mode, unpooled) Postgres connection string for scripts needing session-level features (e.g. advisory locks, LISTEN/NOTIFY) that a pooled DATABASE_URL doesn't support. Read only by an archived diagnostic script.
+  purpose: >-
+    Carries the same explicit `?sslmode=` requirement as DATABASE_URL. Direct
+    (session-mode, unpooled) Postgres connection string for scripts needing session-level features (e.g. advisory locks, LISTEN/NOTIFY) that a pooled DATABASE_URL doesn't support. Read only by an archived diagnostic script.
   provider: internal
   holder: railway
   cost_class: metered

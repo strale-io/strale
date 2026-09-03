@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-216 files (189 with a recorded intent, 27 without).
+217 files (190 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-03 | [`handoff/_general/from-code/2026-09-03-checkin-morning.md`](_general/from-code/2026-09-03-checkin-morning.md) | Run the 2026-09-03 morning operating session per docs/company/DAILY-RUN.md — |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md`](_general/from-code/2026-09-02-t5-cto-readable-structure.md) | make the repository readable top-down for a stranger in one pass — README.md, docs/README.md, archive/ and handoff/ i... |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t4-remediation-closure.md`](_general/from-code/2026-09-02-t4-remediation-closure.md) | Close six dated-or-open items in the remediation program (docs/remediation) |
 | 2026-09-02 | [`handoff/_general/from-code/2026-09-02-t3-session-end-gate.md`](_general/from-code/2026-09-02-t3-session-end-gate.md) | make session end automatic and identical for Claude Code and Codex, so no session can leave uncommitted work, an unpu... |

@@ -52,6 +52,23 @@ design and copy handoff documents that were never part of this repository;
 they belong with the website project. File them under `strale-frontend`, or
 drop them — no action until you say.
 
+> **CORRECTION, added 2026-09-03 — the rebuild was incomplete, and "the database
+> answers read-only queries again" was verified through the wrong reader.**
+> Left as written above, per the annotate-never-rewrite rule. Railway's own
+> connection string names its internal host and says nothing about TLS; copied
+> verbatim against the public proxy it is rejected by the operator database
+> module, which has required an explicit setting since August. Drizzle's handle
+> applies no such check, so the sentence above was literally true while the ten
+> read-path operator scripts — including the mandatory morning vendor report and
+> the smoke test — were dead. (Corrected before merge: an earlier draft said 25,
+> which counted every file mentioning the module rather than every file broken by
+> it.) Repaired 2026-09-03 in the local files (not tracked,
+> so nothing to review) and durably in the environment manifest, which now states
+> the requirement so the generated example files carry it and the next rebuild
+> cannot omit it silently. Nothing in production was affected at any point.
+> Logged as LESSONS.md F7 incident 8. **DQ-29 stays `resolved`** — the rebuild
+> itself did happen and the two deliberate omissions it records still stand.
+
 **DQ-28** · `your_call` · owner Petter · raised 2026-09-02T02:30Z · no deadline — **may the row-level M2 Decision register become public?**
 The M2 closure audit classifies all 318 preserved Notion Decisions. I kept the
 public repository's clear-text boundary exactly where M0 left it (the only
