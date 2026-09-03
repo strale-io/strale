@@ -50,7 +50,9 @@
     "handoff:orient": "node scripts/handoff/orient.mjs",
     "handoff:baseline": "node scripts/handoff/handoff-check.mjs baseline",
     "hooks:install": "node scripts/handoff/install-hooks.mjs",
-    "prepare": "node scripts/handoff/install-hooks.mjs || exit 0"
+    "prepare": "node scripts/handoff/install-hooks.mjs || exit 0",
+    "codex:check": "node scripts/check-codex-backlog.mjs",
+    "codex:test": "node --test scripts/codex-backlog.test.mjs"
   },
   "license": "MIT",
   "engines": {

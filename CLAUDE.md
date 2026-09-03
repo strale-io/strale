@@ -28,6 +28,19 @@ fresh read-only Claude agent that did not author the batch; PRs say so, and
 re-review obligation once Codex returns. The 2026-09-01 override otherwise
 stands.
 
+**Amendment 2026-09-03 (founder, in session) — DEC-20260903-A. Waiting for
+Codex costs more than proceeding.** Work does not stop for the quota, and no
+track may be blocked on the Codex review path alone. The fresh read-only
+Claude agent remains the independent review; **every batch that would
+otherwise have gone to Codex is recorded in
+`docs/programs/codex-review-backlog.yaml`** and stays there until a Codex
+verdict closes it. `npm run codex:check` refuses a row naming a commit the
+repository does not have, a row marked reviewed without a verdict, and a row
+still pending past `policy.review_by` — so the debt cannot quietly become
+never. When Codex returns, drain that register before starting work that adds
+to it. A Codex FAIL on merged work opens a remediation batch; it does not
+revert anything automatically.
+
 ### Repo-native migration continuation — pre-cutover
 
 When a session is asked to continue the repo-native operating-model migration,

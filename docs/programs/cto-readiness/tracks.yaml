@@ -270,8 +270,7 @@ tracks:
 
   - id: T10
     title: M2 exit-gap closure
-    status: blocked
-    blocker: the collision-checked Decision batches and the closing M2 review use the Codex review path (review routing 2026-09-01); Codex quota is exhausted until 2026-09-07
+    status: queued
     gate: m2-exit
     depends_on: [T1]
     owner: session
@@ -281,10 +280,12 @@ tracks:
       G9 the closing review) through contradiction-checked Decision batches,
       the collision identity mechanism, and one closing independent review of
       the complete M2 candidate set. Start with the next batch the register
-      names. This track is the M2 exit gate: T6 cannot start before it is
-      done, and the closure register's validator refuses a state where this
-      track is done, or any post-m2 track is active or done, while a blocking
-      gap remains.
+      names. Unblocked 2026-09-03 by DEC-20260903-A: the closing review is a
+      fresh read-only Claude agent, and the batch is recorded in
+      docs/programs/codex-review-backlog.yaml for Codex re-review. This track
+      is the M2 exit gate: T6 cannot start before it is done, and the closure
+      register's validator refuses a state where this track is done, or any
+      post-m2 track is active or done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0

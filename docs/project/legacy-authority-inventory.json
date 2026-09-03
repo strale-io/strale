@@ -75,7 +75,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "101172545172884afb3152236cd165314be6f3e544ca72c0fccd30e05186de0e",
+      "sha256": "7d1f594ea8be5c07b25f49489cf2fba66d3e83ca6a1521a4f6368a5555647e0b",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -248,6 +248,7 @@
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-03-codex-review-backlog.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -514,7 +515,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "e4de4ebba17f08338e8d52ee6afc05edc16a68164efdc0eab3017fc1fc045a40",
+      "sha256": "f7c81c485a4a52c626370d0244fc6c2fa6d93eeb6d80ef4d5cf7aab3f8b68665",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

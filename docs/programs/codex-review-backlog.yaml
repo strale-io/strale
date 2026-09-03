@@ -1,0 +1,88 @@
+# Work that shipped without the Codex review path, and owes it.
+#
+# Founder decision 2026-09-03: the Codex quota is out until 2026-09-07 and
+# waiting costs more than proceeding. Work continues, reviewed by a fresh
+# read-only Claude agent that did not author the batch, and every batch that
+# would otherwise have gone to Codex is recorded here until it does.
+#
+# This is a debt register, not a to-do list. A row is added by the session
+# that merges the work, not by the session that plans it, and is closed only
+# by a Codex verdict — never by the passage of time or by a second Claude
+# review. `npm run codex:check` refuses a row that names a commit git does not
+# have, a `reviewed` row with no verdict, and a row still `pending` after its
+# `review_by` date.
+#
+# Drain order is `priority`, then oldest first. Highest first: these are the
+# ones where a Claude-only review is least adequate.
+
+schema_version: 1
+policy:
+  decision: DEC-20260903-A
+  raised: "2026-09-03"
+  review_by: "2026-09-07"
+  routing: >
+    Until Codex returns, a fresh read-only Claude agent that did not author
+    the batch performs the independent review, and the batch is recorded
+    here. When Codex returns, drain this register before starting new work
+    that would add to it. A Codex verdict of FAIL on merged work opens a
+    remediation batch; it does not revert automatically.
+
+entries:
+  - id: CX-1
+    subject: "PR #494 — withdrawn capabilities must not be advertised anywhere"
+    commit: 0daa93c9
+    merged: "2026-09-03"
+    priority: high
+    status: pending
+    why_codex: >
+      The largest single change of the day and the one where a Claude-only
+      review is least adequate: five consecutive Claude rounds each returned
+      FAIL, and the fourth disproved the fix strategy the third had built.
+      That pattern is evidence the surface is hard to reason about, not that
+      the fifth round finally exhausted it.
+    what_to_attack: >
+      apps/api/src/lib/public-ops-visibility.ts and its middleware in app.ts.
+      It rewrites every /v1/public/ops/* JSON response. Ask what a withdrawn
+      slug can still ride out on — an unrecognised key, a nested details
+      blob, a base64 or URL-encoded field, a number-keyed map — and whether
+      the prose redaction can corrupt a legitimate payload. Then ask whether
+      the guard can drop something a live page needs; the website consumes
+      four of these endpoints and no review has loaded a page.
+    claude_verdicts: 5 rounds, all FAIL, all findings addressed
+
+  - id: CX-2
+    subject: "PR #497 — the session gate stopped instructing removal of live worktrees"
+    commit: 1f4339f2
+    merged: "2026-09-03"
+    priority: medium
+    status: pending
+    why_codex: >
+      It weakens a safety gate on purpose. The reasoning is that the gate was
+      wrong about what a state licensed rather than wrong about the state,
+      but a second opinion on a check that now fails less often is worth
+      having from a different model.
+    what_to_attack: >
+      Whether the detached-and-dirty exemption lets abandoned worktrees
+      accumulate in practice, and whether the 48-hour staleness escalation is
+      reachable in a real session's lifetime.
+    claude_verdicts: 2 rounds, PASS both, should-fixes applied
+
+  - id: CX-3
+    subject: "Retention: durable production-override records ride the compliance window"
+    commit: 0daa93c9
+    merged: "2026-09-03"
+    priority: high
+    status: pending
+    why_codex: >
+      It changes how long personal data can live. Two Claude rounds got the
+      predicate wrong in opposite directions — one left records unprotected,
+      the next admitted a type carrying admin-typed free text and would have
+      extended that field from 180 days to 1095. A third opinion on a
+      retention rule is cheap insurance.
+    what_to_attack: >
+      DURABLE_OVERRIDE_EVENT_TYPES in apps/api/src/lib/data-retention.ts.
+      Enumerate every writer of both admitted types, including scripts never
+      committed to this repository, and say whether any payload can carry
+      personal data. The comment claims two writers; a production row exists
+      that matches neither.
+    claude_verdicts: caught and corrected twice by review
