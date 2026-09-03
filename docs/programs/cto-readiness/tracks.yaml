@@ -364,7 +364,7 @@ tracks:
 
   - id: T17
     title: Dependency remediation (WP13)
-    status: active
+    status: queued
     gate: none
     depends_on: [T4]
     owner: session
