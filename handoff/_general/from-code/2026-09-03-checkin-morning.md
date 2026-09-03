@@ -243,6 +243,14 @@ Green: `env:check`, `models:check`, `claims:check`, `docs:check`,
 `npm --workspace=packages/mcp-server run build`, without which four unrelated
 `routes/mcp.ts` errors appear); `commercial.test.ts` 40/40.
 
+**CI caught one thing this run's local check set did not.** The list above is
+every `*:check` register plus the typecheck, and it is not the whole gate:
+`node scripts/generate-archive-index.mjs --check` is a separate CI step, and
+adding today's operating record made `handoff/README.md` stale. Fixed in
+`a83393b3` (index and project context regenerated and staged together). Worth
+knowing for the next run — running the ten registers is not the same as running
+what CI runs, and the generated-index steps are the gap.
+
 **`npm test` is not conclusive on this machine and CI is the real gate.**
 The apps/api suite reports about 15 failing files locally *at a commit CI
 reports green for both workflows*, and — measured, not assumed — the failing set
