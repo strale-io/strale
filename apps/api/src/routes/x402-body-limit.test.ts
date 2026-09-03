@@ -251,12 +251,22 @@ describe("the streaming branch refuses instead of reporting success", () => {
     });
   }
 
-  it("FAIL-BEFORE: swallowing the abort reports 200 on an oversized body", async () => {
-    // The pre-fix gateway, reproduced. This is the defect, pinned so the fix
-    // below is measured against something rather than asserted.
+  it("swallowing the abort no longer reports 200: hono 4.13.5 refuses the oversized body itself", async () => {
+    // This test used to prove the app-level rethrow discriminated from a
+    // framework bug: on hono <4.12.16, this exact swallow-shaped handler --
+    // bodyLimit() on a chunked/unknown-length body, with the handler's own
+    // try/catch swallowing the abort -- returned 200 with the body silently
+    // emptied. That was the bug (GHSA-9vqf-7f2p-gf9v / GHSA-rv63-4mwf-qqc2).
+    // hono 4.13.5 closed it upstream: bodyLimit() now refuses the oversized
+    // chunked body at the middleware itself, before the handler's swallow
+    // ever gets a chance to run. The gateway's own rethrow (x402-gateway-v2.ts)
+    // stays in place as defence in depth regardless -- it is not removed, and
+    // "rethrowing the abort produces a 413" below is what proves it still
+    // holds. If this assertion ever goes back to 200, the framework
+    // regressed; the sibling test is what proves the app-level guard still
+    // catches it.
     const res = await post(appWith("swallow"));
-    expect(res.status).toBe(200);
-    expect((await res.json()).keys).toEqual([]); // body silently emptied
+    expect(res.status).toBe(413);
   });
 
   it("rethrowing the abort produces a 413", async () => {

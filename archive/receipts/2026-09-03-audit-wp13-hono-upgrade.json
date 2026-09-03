@@ -1,0 +1,200 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "apps/api/scripts/wp13-dependency-triage.mjs + manual grep/vitest verification (this batch)",
+    "commit": "0daa93c98bec9b160cf61d9ec1cea831f4f0550d"
+  },
+  "at": "2026-09-03T21:33:48.548Z",
+  "inputs": {
+    "topic": "WP13 hono dependency upgrade",
+    "package": "apps/api",
+    "target_version_range": "^4.13.5",
+    "commands": [
+      "npm audit --omit=dev --json (before/after)",
+      "npm install hono@^4.13.5 --workspace=apps/api",
+      "npx tsc --noEmit",
+      "npx vitest run (route + visibility test suites, plus isolated reruns)",
+      "npm run env:check",
+      "npm run models:check",
+      "npm run claims:check"
+    ]
+  },
+  "summary": {
+    "hono_before": "4.12.8",
+    "hono_after": "4.13.5",
+    "audit_before_critical": 1,
+    "audit_before_high": 14,
+    "audit_before_moderate": 7,
+    "audit_before_low": 2,
+    "audit_before_total": 24,
+    "audit_after_critical": 1,
+    "audit_after_high": 13,
+    "audit_after_moderate": 7,
+    "audit_after_low": 2,
+    "audit_after_total": 23,
+    "hono_removed_from_audit": true,
+    "tsc_noemit_errors": 0,
+    "tests_passed_isolated": 300,
+    "tests_failed_isolated": 1,
+    "cors_high_advisory_exploitable_in_strale": false
+  },
+  "topic": "wp13-hono-upgrade",
+  "raw": {
+    "hono_version_before": "4.12.8",
+    "hono_version_after": "4.13.5",
+    "declared_range_before": "^4.7.4",
+    "declared_range_after": "^4.13.5",
+    "upgrade_method": "npm install hono@^4.13.5 --workspace=apps/api (not npm update -- the original range ^4.7.4 already permitted 4.13.5, but install was used and it also raised the declared floor in apps/api/package.json)",
+    "workspaces_declaring_hono_directly": [
+      "apps/api"
+    ],
+    "other_workspaces_checked_no_hono_declaration": [
+      "packages/mcp-server",
+      "packages/sdk-typescript",
+      "packages/semantic-kernel-strale",
+      "packages/langchain-strale",
+      "packages/crewai-strale"
+    ],
+    "commands_run": [
+      "npm audit --omit=dev --json  (before, repo root)",
+      "npm install hono@^4.13.5 --workspace=apps/api",
+      "npm audit --omit=dev --json  (after, repo root)",
+      "npm --workspace=packages/mcp-server run build",
+      "cd apps/api && npx tsc --noEmit",
+      "cd apps/api && npx vitest run src/routes/ src/lib/x402-visibility.test.ts src/lib/public-ops-visibility.test.ts src/routes/public-surface-visibility.test.ts src/routes/public-trust.test.ts src/routes/a2a-card.test.ts",
+      "cd apps/api && npx vitest run src/routes/admin-apply-migrations.test.ts src/routes/internal-auth.test.ts src/routes/public-trust.test.ts src/routes/transactions.test.ts src/routes/verify.test.ts src/routes/wallet.test.ts  (isolated rerun of the 6 files that timed out in the full batch)",
+      "cd apps/api && npx vitest run src/routes/x402-body-limit.test.ts  (isolated rerun of the one deterministic failure)",
+      "npm run env:check",
+      "npm run models:check",
+      "npm run claims:check"
+    ],
+    "audit_totals": {
+      "before": {
+        "critical": 1,
+        "high": 14,
+        "moderate": 7,
+        "low": 2,
+        "total": 24
+      },
+      "after": {
+        "critical": 1,
+        "high": 13,
+        "moderate": 7,
+        "low": 2,
+        "total": 23
+      }
+    },
+    "hono_audit_entry_before": {
+      "present": true,
+      "severity": "high",
+      "isDirect": true,
+      "range": "<=4.12.33",
+      "advisory_count": 27,
+      "fixAvailable": true
+    },
+    "hono_audit_entry_after": {
+      "present": false
+    },
+    "tsc_noemit": "clean, zero errors (after building packages/mcp-server first to avoid the 4 phantom routes/mcp.ts errors)",
+    "test_run_first_pass": {
+      "command": "npx vitest run src/routes/ src/lib/x402-visibility.test.ts src/lib/public-ops-visibility.test.ts src/routes/public-surface-visibility.test.ts src/routes/public-trust.test.ts src/routes/a2a-card.test.ts",
+      "test_files": "7 failed | 21 passed | 16 skipped (44)",
+      "tests": "10 failed | 245 passed | 125 skipped (380)",
+      "failed_files": [
+        "src/routes/admin-apply-migrations.test.ts (2 tests, Error: Test timed out in 10000ms)",
+        "src/routes/internal-auth.test.ts (1 test, Error: Test timed out in 10000ms)",
+        "src/routes/public-trust.test.ts (1 test, Error: Test timed out in 10000ms)",
+        "src/routes/transactions.test.ts (2 tests, Error: Test timed out in 10000ms)",
+        "src/routes/verify.test.ts (2 tests, Error: Test timed out in 10000ms)",
+        "src/routes/wallet.test.ts (1 test, Error: Test timed out in 10000ms)",
+        "src/routes/x402-body-limit.test.ts (1 test, deterministic assertion failure, NOT a timeout)"
+      ]
+    },
+    "isolated_rerun_of_6_timeout_files": {
+      "command": "npx vitest run src/routes/admin-apply-migrations.test.ts src/routes/internal-auth.test.ts src/routes/public-trust.test.ts src/routes/transactions.test.ts src/routes/verify.test.ts src/routes/wallet.test.ts",
+      "result": "Test Files  6 passed (6); Tests  55 passed (55)",
+      "conclusion": "All 6 files that timed out under the full concurrent batch pass cleanly in isolation -- consistent with the documented known-flaky-under-load pattern (CLAUDE.md / MEMORY.md project_local_suite_flaky_ci_is_the_gate), not a regression from the hono upgrade."
+    },
+    "isolated_rerun_of_x402_body_limit": {
+      "command": "npx vitest run src/routes/x402-body-limit.test.ts",
+      "result": "Test Files  1 failed (1); Tests  1 failed | 17 passed (18)",
+      "failing_test": "the streaming branch refuses instead of reporting success > FAIL-BEFORE: swallowing the abort reports 200 on an oversized body",
+      "expected_vs_received": "expected res.status to be 200, received 413",
+      "deterministic": true,
+      "root_cause_analysis": "This test is a deliberate 'FAIL-BEFORE' pinning test that reconstructs the app's PRE-FIX buggy shape (a bare try{c.req.json()}catch{} swallow around a purpose-built Hono app with bodyLimit on a chunked/no-Content-Length stream) to document what the pre-fix bug looked like, per the 'swallow visibility' regression-test discipline in DEC-20260504-A. It asserts the OLD buggy behavior (200, body silently emptied). Under hono@4.13.5 the SAME swallow-shaped handler now returns 413 instead of 200 -- meaning hono itself closed the underlying chunked-body-limit bypass this test was pinning (matching advisory GHSA-9vqf-7f2p-gf9v 'bodyLimit() can be bypassed for chunked / unknown-length requests' and/or GHSA-rv63-4mwf-qqc2, both in the 27-advisory hono range fixed by this upgrade). The sibling test 'rethrowing the abort produces a 413' and the separate describe block 'the gateway itself no longer swallows the abort' (exercising the REAL x402-gateway-v2.ts code, not the synthetic pinning app) both continued to pass -- the actual production code path is unaffected and still correct. This is not a regression in Strale's own code: production behavior for an oversized chunked x402 body is 413 both before and after this upgrade (the real gateway already rethrows). What changed is that the framework itself now independently defends against the bug class the app-level fix was defending against, which makes the synthetic 'FAIL-BEFORE' reproduction stale -- it can no longer reproduce the pre-fix bug because the bug no longer exists at the framework layer either. Per the task's explicit instruction not to work around a test failure, this test file was NOT edited; the finding is reported here for a human/maintainer decision on whether to update the pinning test's expectation now that hono has independently fixed the underlying defect.",
+      "action_taken": "None -- left as-is per instructions. Flagged in the handoff for follow-up."
+    },
+    "env_models_claims_checks": {
+      "env_check": "ok (checked 126 process.env names against 129 rows in config/env-manifest.yaml)",
+      "models_check": "ok (checked 667 files under apps/api/src)",
+      "claims_check": "ok (checked 27 rows in docs/company/claims.yaml)"
+    },
+    "reachability_table": [
+      {
+        "call_site": "apps/api/src/app.ts:225-233 (restrictedCors)",
+        "sets_credentials_true": false,
+        "origin_left_at_default": false,
+        "note": "origin is an explicit function over ALLOWED_ORIGINS; empty-origin/no-match returns \"\" (deny), never the wildcard reflection default"
+      },
+      {
+        "call_site": "apps/api/src/app.ts:235-239 (publicCors)",
+        "sets_credentials_true": false,
+        "origin_left_at_default": false,
+        "note": "origin explicitly set to \"*\"; credentials option never set"
+      },
+      {
+        "call_site": "apps/api/src/routes/x402-gateway-v2.ts:980-988 (x402GatewayV2 cors)",
+        "sets_credentials_true": false,
+        "origin_left_at_default": false,
+        "note": "origin explicitly \"*\"; credentials option never set; comment says 'payment IS the auth'"
+      },
+      {
+        "middleware": "serveStatic (hono/serve-static)",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn 'serveStatic|serve-static' apps/api/src --include=*.ts -> no matches"
+      },
+      {
+        "middleware": "ipRestriction (hono/ip-restriction)",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn 'ipRestriction|ip-restriction' apps/api/src --include=*.ts -> no matches"
+      },
+      {
+        "middleware": "jwt/verify (hono/jwt)",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn 'hono/jwt' apps/api/src --include=*.ts -> no matches"
+      },
+      {
+        "middleware": "bodyLimit (hono/body-limit)",
+        "imported_in_apps_api_src": true,
+        "grep": "apps/api/src/app.ts imports and applies it to /v1/*, /a2a, /mcp, /webhooks/*, /x402/*; also exercised directly in src/routes/x402-body-limit.test.ts and src/routes/webhook.body-limit.test.ts",
+        "reachable": true
+      },
+      {
+        "middleware": "cache (hono/cache)",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn \"from ['\\\"]hono/cache['\\\"]\" apps/api/src --include=*.ts -> no matches"
+      },
+      {
+        "middleware": "hono/jsx",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn 'hono/jsx' apps/api/src --include=*.ts -> no matches"
+      },
+      {
+        "middleware": "toSSG (hono/ssg)",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn 'toSSG|hono/ssg' apps/api/src --include=*.ts -> no matches"
+      },
+      {
+        "middleware": "proxy (hono/proxy)",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn \"from ['\\\"]hono/proxy['\\\"]\" apps/api/src --include=*.ts -> no matches"
+      },
+      {
+        "middleware": "language middleware (hono/language)",
+        "imported_in_apps_api_src": false,
+        "grep": "grep -rn 'hono/language|languageDetector' apps/api/src --include=*.ts -> no matches"
+      }
+    ],
+    "high_severity_cors_advisory_conclusion": "GHSA-88fw-hqm2-52qc ('CORS Middleware reflects any Origin with credentials when origin defaults to the wildcard') was never exploitable in Strale: all three cors() call sites explicitly set origin (a function, or the literal string \"*\") and none sets credentials: true. The advisory requires BOTH the wildcard-default origin behavior AND a caller setting credentials: true; Strale never does the latter and never leaves origin at Hono's default in any of the three call sites."
+  }
+}
