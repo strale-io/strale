@@ -552,10 +552,10 @@ app.use("/v1/public/ops/*", async (c, next) => {
   // all. Whatever a handler produces, and however it produced it, a withdrawn
   // slug does not cross this line — including from a route added later by
   // someone who never read this comment.
-  const withdrawn = await withdrawnSlugs();
-  if (withdrawn.size > 0) {
+  const withdrawalSets = await withdrawnSlugs();
+  if (withdrawalSets.withdrawn.size > 0) {
     const query = c.req.query();
-    if (requestNamesWithdrawn(c.req.path, query, withdrawn)) {
+    if (requestNamesWithdrawn(c.req.path, query, withdrawalSets)) {
       // 404 rather than a pruned body: a 200 with the fields blanked still
       // confirms the slug exists.
       return c.notFound();
@@ -564,13 +564,13 @@ app.use("/v1/public/ops/*", async (c, next) => {
 
   await next();
 
-  if (withdrawn.size === 0) return;
+  if (withdrawalSets.withdrawn.size === 0) return;
   const res = c.res;
   if (!res || res.status !== 200) return;
   if (!(res.headers.get("content-type") ?? "").includes("application/json")) return;
   try {
     const body = await res.clone().json();
-    const pruned = pruneWithdrawn(body, withdrawn);
+    const pruned = pruneWithdrawn(body, withdrawalSets);
     c.res = new Response(JSON.stringify(pruned), {
       status: res.status,
       headers: res.headers,
