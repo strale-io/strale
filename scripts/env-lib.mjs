@@ -216,6 +216,67 @@ export function checkDeadRows(usages, rows) {
   return findings;
 }
 
+/**
+ * Internal contradictions between a row's own fields.
+ *
+ * `set_in` is free-form data no check ever read, and it drifted: on 2026-09-02
+ * an audit of `railway variables` found 43 of 127 rows claiming
+ * `set_in: [railway]` for a variable Railway does not hold, several of them
+ * carrying a `cost_note` in the same row that said so in words. A register
+ * nothing verifies is a register that will be wrong.
+ *
+ * These four are the contradictions provable from the file alone. Membership
+ * of `railway` cannot be checked in CI — that needs a credential CI must not
+ * have — so it stays an operator audit, dated in the manifest header.
+ *
+ * SET_IN_NONE_BUT_REQUIRED catches only the literal `set_in: [none]` case; the
+ * commoner real mistake is a variable required in production and configured
+ * only on a developer machine, which is why
+ * REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE exists alongside it. Found by the
+ * independent review of #494 as a false negative in the first version.
+ */
+export function checkRowContradictions(rows) {
+  const findings = [];
+  for (const row of rows) {
+    const setIn = row.set_in ?? [];
+    const requiredIn = row.required_in ?? [];
+    const nowhere = setIn.length === 1 && setIn[0] === "none";
+
+    if (nowhere && requiredIn.length > 0) {
+      findings.push({
+        code: "SET_IN_NONE_BUT_REQUIRED",
+        file: MANIFEST_PATH,
+        detail: `${row.name} is set_in: [none] but required_in: [${requiredIn.join(", ")}] — nothing configures it, yet the register says something fails without it. One of the two is wrong.`,
+      });
+    }
+
+    if (setIn.includes("none") && setIn.length > 1) {
+      findings.push({
+        code: "SET_IN_NONE_WITH_OTHERS",
+        file: MANIFEST_PATH,
+        detail: `${row.name} has set_in: [${setIn.join(", ")}] — 'none' means configured nowhere and cannot be combined with a place. Drop 'none', or drop the rest.`,
+      });
+    }
+
+    if (requiredIn.includes("production") && !setIn.includes("railway")) {
+      findings.push({
+        code: "REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE",
+        file: MANIFEST_PATH,
+        detail: `${row.name} is required_in: [production] but set_in: [${setIn.join(", ")}] — production runs on Railway, so a variable it needs must be set there. Either it is not really required in production, or production is missing it.`,
+      });
+    }
+
+    if (row.retired && requiredIn.length > 0) {
+      findings.push({
+        code: "RETIRED_BUT_REQUIRED",
+        file: MANIFEST_PATH,
+        detail: `${row.name} is retired: ${row.retired} but required_in: [${requiredIn.join(", ")}] — a retired variable is one no code reads, so nothing can require it.`,
+      });
+    }
+  }
+  return findings;
+}
+
 /** Duplicate names within the manifest itself — a schema can't see this (each row is independently valid). */
 export function checkDuplicateNames(rows) {
   const findings = [];
@@ -235,7 +296,7 @@ export function checkDuplicateNames(rows) {
   return findings;
 }
 
-/** Runs every T14 environment-manifest check (schema + undocumented + dead rows + duplicates). Example-file staleness is checked separately by the CLI, which also regenerates. */
+/** Runs every T14 environment-manifest check (schema + undocumented + dead rows + duplicates + row contradictions). Example-file staleness is checked separately by the CLI, which also regenerates. */
 export function checkAllEnv(root) {
   const findings = [];
   const { findings: schemaFindings, manifest: rows, valid } = checkSchema(root);
@@ -247,6 +308,7 @@ export function checkAllEnv(root) {
     findings.push(...checkUndocumented(usages, rows));
     findings.push(...checkDeadRows(usages, rows));
     findings.push(...checkDuplicateNames(rows));
+    findings.push(...checkRowContradictions(rows));
   }
 
   return { findings, usageCount: usages.size, rowCount: rows.length };

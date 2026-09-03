@@ -97,6 +97,91 @@ test("a read_indirectly row for an unread name is exempt from DEAD_ENV_ROW", () 
   rmSync(dir, { recursive: true, force: true });
 });
 
+// ── Row contradictions ──────────────────────────────────────────────────────
+// `set_in` was data no check ever read, and it drifted: the 2026-09-02 Railway
+// audit found 43 of 127 rows claiming a Railway value for a variable Railway
+// does not hold. Membership of Railway is not checkable in CI (it needs a
+// credential CI must not have), but a row that contradicts itself is. Each
+// mode below is planted and must fail; the clean counterpart must pass.
+
+test("SET_IN_NONE_BUT_REQUIRED: nothing sets it, yet something requires it", () => {
+  const dir = makeFixture([baseRow({ set_in: ["none"], required_in: ["production"] })], {
+    "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.ok(findings.some((f) => f.code === "SET_IN_NONE_BUT_REQUIRED" && f.detail.includes("FOO_API_KEY")));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("set_in: [none] with an empty required_in is fine — an optional, unset variable", () => {
+  const dir = makeFixture([baseRow({ set_in: ["none"], required_in: [] })], {
+    "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.deepEqual(findings, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("SET_IN_NONE_WITH_OTHERS: 'none' cannot be combined with a place", () => {
+  const dir = makeFixture([baseRow({ set_in: ["none", "railway"], required_in: [] })], {
+    "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.ok(findings.some((f) => f.code === "SET_IN_NONE_WITH_OTHERS" && f.detail.includes("FOO_API_KEY")));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE: needed in prod, configured only locally", () => {
+  // The false negative the independent review of #494 found in the first
+  // version: SET_IN_NONE_BUT_REQUIRED catches only the literal [none], and
+  // this — required in production, set only on a developer machine — is the
+  // commoner real mistake.
+  const dir = makeFixture([baseRow({ required_in: ["production"], set_in: [".env"] })], {
+    "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.ok(findings.some((f) => f.code === "REQUIRED_IN_PRODUCTION_BUT_NOT_SET_THERE" && f.detail.includes("FOO_API_KEY")));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("required only locally and set only locally is fine", () => {
+  const dir = makeFixture([baseRow({ required_in: ["local"], set_in: [".env"] })], {
+    "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.deepEqual(findings, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("RETIRED_BUT_REQUIRED: a retired variable nothing reads cannot be required", () => {
+  const dir = makeFixture([baseRow({ retired: "2026-01-01", required_in: ["production"] })], {
+    "apps/api/src/capabilities/foo.ts": `// no env read here
+`,
+  });
+  const { findings } = checkAllEnv(dir);
+  assert.ok(findings.some((f) => f.code === "RETIRED_BUT_REQUIRED" && f.detail.includes("FOO_API_KEY")));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("a retired row with an empty required_in is the shape held credentials use", () => {
+  // OPENSANCTIONS_API_KEY / USPTO_ODP_API_KEY (DQ-30): still set in Railway,
+  // read by nothing, kept on purpose. This must stay a clean pass, or the
+  // decision to hold them turns into a permanent CI failure.
+  const dir = makeFixture(
+    [baseRow({ retired: "2026-04-27", required_in: [], set_in: ["railway"] })],
+    { "apps/api/src/capabilities/foo.ts": `// no env read here
+` },
+  );
+  const { findings } = checkAllEnv(dir);
+  assert.deepEqual(findings, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test("DUPLICATE_ENV_ROW: same name appears twice", () => {
   const dir = makeFixture([baseRow(), baseRow()], {
     "apps/api/src/capabilities/foo.ts": `const key = process.env.FOO_API_KEY;\n`,

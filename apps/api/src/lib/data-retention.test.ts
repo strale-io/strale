@@ -83,9 +83,13 @@ vi.mock("../db/index.js", () => ({
 
 vi.mock("./log.js", () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
-const { cleanupOldTestData, PII_RETENTION_DAYS, TRANSACTION_RETENTION_DAYS } = await import(
-  "./data-retention.js"
-);
+const {
+  cleanupOldTestData,
+  PII_RETENTION_DAYS,
+  TRANSACTION_RETENTION_DAYS,
+  HEALTH_EVENT_RETENTION_DAYS,
+  DURABLE_OVERRIDE_EVENT_TYPES,
+} = await import("./data-retention.js");
 
 beforeEach(() => {
   captured.length = 0;
@@ -235,4 +239,151 @@ describe("PII sweep selection scope", () => {
     expect(pii).not.toContain("previous_hash =");
     expect(pii).not.toContain("created_at =");
   });
+});
+
+/**
+ * The durable-override retention tier.
+ *
+ * The 2026-08-22 stranded-row reconciliation wrote eleven
+ * `manual_reconciliation` events that are the only record of who mutated
+ * eleven production transactions and under what policy — ten of those
+ * transactions were already content-redacted and could not hold a closure
+ * note themselves. `purgeHealthMonitorEvents` deleted every event at 180 days
+ * unconditionally while the transactions live 1095, so from roughly
+ * 2027-02-18 the explanation would have vanished and the rows it explains
+ * would have remained. An independent review named it a permanent defect.
+ *
+ * The independent review of #494 checked this claim and found it false as
+ * first written: three of the six tests here assert on the exported constants
+ * or on a LIMIT that predates the change, so they pass against a mutant whose
+ * constants are right and whose query was never wired up. They are kept —
+ * they pin the constants against a careless edit — but they are labelled for
+ * what they are, and the discriminating tests are grouped separately below.
+ * A test that cannot fail is not evidence, and saying six when three is the
+ * F5 shape in the file that documents it.
+ */
+describe("durable production-override records — constants (do not discriminate)", () => {
+  it("still self-throttles with a LIMIT (DEC-20260504-B)", async () => {
+    // Grouped here, not with the emitted-query tests: the LIMIT predates this
+    // change, so this passes against every mutant of it. It guards LIMIT
+    // removal and nothing else. It sat in the discriminating group under a
+    // docstring claiming otherwise until the second review checked.
+    await cleanupOldTestData();
+    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
+    expect(stmt).toContain("LIMIT");
+  });
+  it("outlive the operational window and reach the compliance one", () => {
+    expect(HEALTH_EVENT_RETENTION_DAYS).toBeLessThan(TRANSACTION_RETENTION_DAYS);
+  });
+
+  it("excludes reply_action, whose details carry an email address and body", () => {
+    // The tempting fix was `human_override = true`. reply_action also sets it
+    // and stores `from`, `subject` and `cleaned_text` — that fix would have
+    // extended personal-data retention from 180 days to three years.
+    expect(DURABLE_OVERRIDE_EVENT_TYPES).not.toContain("reply_action");
+    expect(DURABLE_OVERRIDE_EVENT_TYPES).toContain("manual_reconciliation");
+  });
+
+  it("excludes lifecycle_transition, which carries admin-supplied free text", () => {
+    // The second version of this change admitted it on the strength of
+    // reply-webhook's structured writer. routes/internal-health-monitor.ts
+    // writes the same type at five more sites with human_override = true, and
+    // its suspend endpoint puts `body?.reason` — unbounded, unsanitised admin
+    // text — into details.reason. Admitting the type moved that field from 180
+    // days to 1095: the same failure reply_action is excluded for, through a
+    // door the writer survey never opened.
+    expect(DURABLE_OVERRIDE_EVENT_TYPES).not.toContain("lifecycle_transition");
+  });
+
+  it("excludes the proposal_* types, whose copied field has no writer to inspect", () => {
+    // Each copies proposal_description out of a proposal_created row, and no
+    // writer of proposal_created exists in the repository. The content of a
+    // field that does not yet exist cannot be verified, so the type cannot be
+    // admitted on the strength of its other keys.
+    for (const t of ["proposal_approved", "proposal_rejected", "proposal_acknowledged"]) {
+      expect(DURABLE_OVERRIDE_EVENT_TYPES).not.toContain(t);
+    }
+  });
+
+  it("admits only the two types with rows in production and every writer read", () => {
+    // Kept deliberately minimal. The version that listed eight was assembled
+    // from one writer per type; two of those surveys were wrong.
+    expect([...DURABLE_OVERRIDE_EVENT_TYPES].sort()).toEqual([
+      "capability_promotion",
+      "manual_reconciliation",
+    ]);
+  });
+
+});
+
+/**
+ * These fail against the pre-fix statement, and against a mutant that defines
+ * the constants correctly but never wires them into the query. Verified by
+ * reverting each half in turn.
+ */
+describe("durable production-override records — the emitted query", () => {
+  it("the sweep applies two cutoffs to health_monitor_events, not one", async () => {
+    await cleanupOldTestData();
+    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
+    expect(stmt).toBeDefined();
+    expect(stmt).toContain("event_type IN");
+
+    // Two distinct timestamptz cutoffs in the one statement. Pre-fix there was
+    // exactly one, so this is the assertion that fails without the change.
+    const cutoffs = stmt.match(/::timestamptz/g) ?? [];
+    expect(cutoffs.length).toBe(2);
+  });
+
+  it("binds the durable window to the compliance window, not to 180 days", async () => {
+    const now = Date.now();
+    await cleanupOldTestData();
+    const call = captured.find((c) =>
+      c.strings.join(" ").includes("DELETE FROM health_monitor_events"),
+    )!;
+    const days = (call.params.filter((x) => typeof x === "string") as string[])
+      .filter((x) => /^\d{4}-\d{2}-\d{2}T/.test(x))
+      .map((x) => Math.round((now - Date.parse(x)) / 86_400_000))
+      .sort((a, b) => a - b);
+    expect(days).toEqual([HEALTH_EVENT_RETENTION_DAYS, TRANSACTION_RETENTION_DAYS]);
+  });
+
+  it("passes the event types as bind parameters, never inlined", async () => {
+    // A JS array bound into ANY() renders a row-value tuple Postgres rejects,
+    // and string-concatenating type names into the SQL would be the other
+    // wrong turn. sql.join emits one placeholder per type.
+    await cleanupOldTestData();
+    const call = captured.find((c) =>
+      c.strings.join(" ").includes("DELETE FROM health_monitor_events"),
+    )!;
+    for (const t of DURABLE_OVERRIDE_EVENT_TYPES) {
+      expect(call.params).toContain(t);
+      expect(call.strings.join(" ")).not.toContain(t);
+    }
+    expect(call.params.some((x) => Array.isArray(x))).toBe(false);
+  });
+
+  it("requires the human_override flag as well as the type", async () => {
+    // Both conjuncts are load-bearing and each rules out the other's simpler
+    // form. Without the flag, the automated writers that share these type
+    // names ride the compliance window too: the promotion job emits
+    // capability_promotion on every run and production already holds 114 such
+    // rows against 2 human ones. Without the type list, reply_action's email
+    // bodies do.
+    await cleanupOldTestData();
+    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
+    expect(stmt).toContain("human_override");
+    expect(stmt).toMatch(/human_override\s+AND\s+event_type IN/);
+  });
+
+  it("names every durable type in the statement's bind parameters", async () => {
+    await cleanupOldTestData();
+    const call = captured.find((c) =>
+      c.strings.join(" ").includes("DELETE FROM health_monitor_events"),
+    )!;
+    // One placeholder per type, and every declared type actually reaches the
+    // driver — a list that grew without the query growing would fail here.
+    for (const t of DURABLE_OVERRIDE_EVENT_TYPES) expect(call.params).toContain(t);
+    expect(call.params).not.toContain("reply_action");
+  });
+
 });

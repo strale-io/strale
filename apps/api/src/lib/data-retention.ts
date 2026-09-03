@@ -193,6 +193,108 @@ async function purgeTransactions(cutoff: Date): Promise<number> {
  */
 export const INVOCATION_FACT_RETENTION_DAYS = 180;
 
+/** Ordinary operational events in `health_monitor_events`. */
+export const HEALTH_EVENT_RETENTION_DAYS = 180;
+
+/**
+ * Event types whose `human_override = true` rows are the durable record of a
+ * human-authorised production mutation, retained for
+ * TRANSACTION_RETENTION_DAYS rather than the operational 180.
+ *
+ * Why this exists: the 2026-08-22 stranded-row reconciliation wrote eleven
+ * `manual_reconciliation` rows — the ONLY record anywhere of who changed
+ * eleven production transactions and under what policy, because ten of the
+ * eleven were already content-redacted and could not carry a closure note in
+ * their own `error` column. Those rows explain transactions kept for 1095
+ * days; deleting the explanation at 180 would have left, from roughly
+ * 2027-02-18, ten rows reading `status='failed'` with an empty error and no
+ * record of why. An independent review named this as a permanent defect.
+ *
+ * BOTH conditions are load-bearing, and each rules out the other's simpler
+ * form. Neither alone is correct:
+ *
+ *  - `human_override` alone would sweep in `reply_action`, whose `details`
+ *    hold the sender address, subject and body of an inbound email —
+ *    extending personal-data retention by two and a half years to fix a
+ *    bookkeeping problem.
+ *  - The type list alone would sweep in the automated writers that share
+ *    these type names. `capability_promotion` is the live case: the
+ *    promotion job (`jobs/capability-promotion.ts`) emits it on every run
+ *    and production already holds 114 such rows against 2 human ones.
+ *    `lifecycle_transition` and `auto_fix` have the same shape.
+ *
+ * So the rule is: this type list AND the flag. Production satisfies both on
+ * exactly 13 rows today — the 11 reconciliations and 2 capability promotions.
+ *
+ * Adding a type is a judgement that its `details` carry operational metadata
+ * only, for EVERY writer of that type — see the exclusions recorded below.
+ */
+export const DURABLE_OVERRIDE_EVENT_TYPES = [
+  // Written once, by apps/api/scripts/reconcile-stranded-executing.ts —
+  // which is on no live branch. Drafts of it were committed three times on
+  // 2026-08-22 to what was then remediation/wp9-artifacts, since retired to
+  // archive/branches/remediation-wp9-artifacts and not an ancestor of main;
+  // the last of those drafts says in its own docstring that its --apply path
+  // had not run, so even the archived copy may not be what executed. Treat the
+  // path as unopenable from a normal branch survey
+  // (see handoff/_general/from-code/2026-08-25-f1-taxonomy-default.md). The
+  // eleven rows it wrote were inspected directly in the database: transaction
+  // id, before/after status, price, refund, policy, script. Naming a path that
+  // cannot be opened would be misleading without this.
+  "manual_reconciliation",
+  // Writers in the repository: jobs/capability-promotion.ts (structured
+  // fields, and human_override = false at all four of its insert sites, so it
+  // cannot produce a durable row) and one ledgered block in
+  // lib/startup-migrations.ts whose payload is a static literal.
+  //
+  // **The repository is not the whole survey, and this is the third time that
+  // has bitten.** Production holds two human_override rows of this type; the
+  // 2026-08-22 one matches the ledgered block byte for byte, and the
+  // 2026-08-17 `web-extract` one matches neither writer and no writer in the
+  // history of this repository. It was written by a one-off run against
+  // production that was never committed — the same shape as
+  // manual_reconciliation's own script, which is also absent from every
+  // branch (see below). Its payload was read when this was found and is an
+  // operational narrative, but nobody reviewed it as "operational metadata
+  // only" before it was written, and a grep cannot survey what is not here.
+  //
+  // That is the argument for the human_override conjunct doing the real work
+  // rather than the type list: an uncommitted writer can produce any payload
+  // it likes under a type name, so the type list narrows the blast radius but
+  // cannot be treated as a guarantee about content.
+  "capability_promotion",
+] as const;
+
+/**
+ * Types deliberately NOT in the list above, with the reason, because the first
+ * version of this change added five of them on a reading of their reply-webhook
+ * writers alone and an independent review found that reading incomplete:
+ *
+ *  - `reply_action` — `details` hold an inbound email's sender, subject and
+ *    body. Never add it.
+ *  - `lifecycle_transition` — reply-webhook's writer is structured, but
+ *    routes/internal-health-monitor.ts writes this type at five more sites,
+ *    all with `human_override: true`, and one of them (the suspend endpoint)
+ *    puts `body?.reason` — admin-supplied free text, unbounded and
+ *    unsanitised — into `details.reason`. Adding the type moved that field
+ *    from 180 days to 1095. That is the same failure `reply_action` is
+ *    excluded for, through a door the first version never opened.
+ *  - `proposal_approved` / `proposal_rejected` / `proposal_acknowledged` —
+ *    each copies `proposal_description` out of a `proposal_created` row, and
+ *    no writer of `proposal_created` exists anywhere in the repository. The
+ *    content of a field that does not yet exist cannot be verified, so the
+ *    type cannot be admitted on the strength of its other keys.
+ *  - `suspension_override`, `auto_fix` — single writer each, payload verified
+ *    static, and zero rows in production. Left out because the argument for
+ *    them is speculative and the argument against adding a type on an
+ *    incomplete writer survey is exactly what this block records.
+ *
+ * **Adding a type means enumerating every writer of that type string in the
+ * repository and reading each payload** — not reading the writer you happen to
+ * have in mind. Grep the literal, including raw `INSERT INTO
+ * health_monitor_events`, not just `logHealthEvent`.
+ */
+
 async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
   const db = getDb();
   // Block 0101 is defer-not-throw, so the table genuinely may not exist -- that
@@ -233,16 +335,40 @@ async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
   return deleted;
 }
 
-async function purgeHealthMonitorEvents(cutoff: Date): Promise<number> {
+/**
+ * Delete operational events past `cutoff`, and durable production-override
+ * records — `human_override` rows of a DURABLE_OVERRIDE_EVENT_TYPES type —
+ * only past the much later `durableCutoff`.
+ *
+ * `human_override` is NOT NULL DEFAULT false in the schema, so the conjunct
+ * needs no null guard; an automated row of a listed type takes the ELSE
+ * branch and is still deleted at the operational window.
+ *
+ * The two windows are one statement so the batching and the LIMIT still bound
+ * a single sweep (DEC-20260504-B). The type list is interpolated as bind
+ * parameters via `sql.join`, never as a JS array into `ANY()` — that renders a
+ * row-value tuple Postgres rejects, and it has crash-looped boot before.
+ */
+async function purgeHealthMonitorEvents(
+  cutoff: Date,
+  durableCutoff: Date,
+): Promise<number> {
   const db = getDb();
   let deleted = 0;
   let batches = 0;
+  const durableTypes = sql.join(
+    DURABLE_OVERRIDE_EVENT_TYPES.map((t) => sql`${t}`),
+    sql`, `,
+  );
   while (true) {
     const result = await db.execute(sql`
       DELETE FROM health_monitor_events
       WHERE id IN (
         SELECT id FROM health_monitor_events
-        WHERE created_at < ${cutoff.toISOString()}::timestamptz
+        WHERE CASE WHEN human_override AND event_type IN (${durableTypes})
+                   THEN created_at < ${durableCutoff.toISOString()}::timestamptz
+                   ELSE created_at < ${cutoff.toISOString()}::timestamptz
+              END
         LIMIT ${BATCH_SIZE}
       )
     `);
@@ -388,7 +514,9 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
  *   provenance) redacted at 90 days, whatever the capability
  * - transaction_quality: 3 years (paired with transactions)
  * - test_results: 90 days (operational)
- * - health_monitor_events: 180 days (operational)
+ * - health_monitor_events: 180 days (operational), except human_override rows
+ *   of a DURABLE_OVERRIDE_EVENT_TYPES type, which are kept as long as the
+ *   transactions they explain (3 years)
  *
  * Transactions with legal_hold = true are never deleted.
  */
@@ -400,7 +528,7 @@ export async function cleanupOldTestData(): Promise<void> {
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
   const oneEightyDaysAgo = new Date(now);
-  oneEightyDaysAgo.setDate(oneEightyDaysAgo.getDate() - 180);
+  oneEightyDaysAgo.setDate(oneEightyDaysAgo.getDate() - HEALTH_EVENT_RETENTION_DAYS);
 
   // Compliance data — 3 year retention
   const threeYearsAgo = new Date(now);
@@ -421,7 +549,9 @@ export async function cleanupOldTestData(): Promise<void> {
   piiCutoff.setDate(piiCutoff.getDate() - PII_RETENTION_DAYS);
   const piiRedacted = await purgeCustomerContent(piiCutoff);
 
-  const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo);
+  // Durable production-override records ride the compliance window, not the
+  // operational one — see DURABLE_OVERRIDE_EVENT_TYPES.
+  const eventsDeleted = await purgeHealthMonitorEvents(oneEightyDaysAgo, threeYearsAgo);
 
   const invocationCutoff = new Date(now);
   invocationCutoff.setDate(invocationCutoff.getDate() - INVOCATION_FACT_RETENTION_DAYS);

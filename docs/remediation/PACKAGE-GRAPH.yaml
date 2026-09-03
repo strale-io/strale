@@ -283,6 +283,10 @@ packages:
         DEC-20260504-A regression-test discipline. hono (semver-minor,
         cookie-name validation) is also reachable and load-bearing for auth,
         with a non-major fix available -- a lower-risk first upgrade.
+      upgrade_track: >
+        Program track T17 in docs/programs/cto-readiness/tracks.yaml, opened
+        2026-09-03. Its next_action carries the order and the per-batch
+        discipline; this block stays the evidence it works from.
       not_performed_here: >
         This is a triage, not the upgrade. WP13's remaining exit work is: bump
         the 10 reachable packages (prioritizing drizzle-orm and hono), verify

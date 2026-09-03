@@ -49,7 +49,23 @@ solutionsRoute.get("/", async (c) => {
           dataSource: capabilities.dataSource,
         })
         .from(solutionSteps)
-        .leftJoin(capabilities, eq(solutionSteps.capabilitySlug, capabilities.slug))
+        // A solution may not describe a step the platform has withdrawn.
+        // `solution_steps` names capabilities by slug, so the join was
+        // disclosing withdrawn ones through the solution that bundles them —
+        // nine active solutions had such a step on 2026-09-03, three of them
+        // on the x402 rail. Execution was never at risk: solution-executor.ts
+        // re-reads each step through isServableCapability and marks a
+        // withdrawn one `platform_withheld` instead of running it. Putting the
+        // condition in the join means a withdrawn step also stops counting
+        // toward `step_count`, which is the honest number — that step will not
+        // run.
+        .innerJoin(
+          capabilities,
+          and(
+            eq(solutionSteps.capabilitySlug, capabilities.slug),
+            eq(capabilities.visible, true),
+          ),
+        )
         .where(inArray(solutionSteps.solutionId, solIds))
         .orderBy(solutionSteps.solutionId, asc(solutionSteps.stepOrder))
     : [];
@@ -136,9 +152,22 @@ solutionsRoute.get("/:slug", async (c) => {
       dataSource: capabilities.dataSource,
     })
     .from(solutionSteps)
-    .leftJoin(
+        // A solution may not describe a step the platform has withdrawn.
+        // `solution_steps` names capabilities by slug, so the join was
+        // disclosing withdrawn ones through the solution that bundles them —
+        // nine active solutions had such a step on 2026-09-03, three of them
+        // on the x402 rail. Execution was never at risk: solution-executor.ts
+        // re-reads each step through isServableCapability and marks a
+        // withdrawn one `platform_withheld` instead of running it. Putting the
+        // condition in the join means a withdrawn step also stops counting
+        // toward `step_count`, which is the honest number — that step will not
+        // run.
+    .innerJoin(
       capabilities,
-      eq(solutionSteps.capabilitySlug, capabilities.slug),
+      and(
+        eq(solutionSteps.capabilitySlug, capabilities.slug),
+        eq(capabilities.visible, true),
+      ),
     )
     .where(eq(solutionSteps.solutionId, sol.id))
     .orderBy(asc(solutionSteps.stepOrder));
@@ -155,7 +184,17 @@ solutionsRoute.get("/:slug", async (c) => {
           category: capabilities.category,
         })
         .from(capabilities)
-        .where(inArray(capabilities.slug, extendsSlugs))
+        // This lookup had no filter whatsoever — not even is_active — and
+        // returned slug, name, description, price and category for whatever
+        // the column named. Around twenty active solutions pointed at a
+        // withdrawn capability here on 2026-09-03.
+        .where(
+          and(
+            inArray(capabilities.slug, extendsSlugs),
+            eq(capabilities.isActive, true),
+            eq(capabilities.visible, true),
+          ),
+        )
     : [];
 
   // Related solutions: smart matching (shared capabilities > same geo > same category)

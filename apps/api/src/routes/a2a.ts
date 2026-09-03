@@ -192,6 +192,18 @@ export async function buildAgentCard(): Promise<{ card: object; etag: string }> 
         eq(capabilities.isActive, true),
         // strale.dev surfacing per DEC-20260503-A.
         eq(capabilities.marketplaceEligible, true),
+        // A withdrawn capability may not be advertised. This card is the
+        // public, unauthenticated offer surface an agent reads to decide what
+        // to buy, and it was the one catalogue that never checked `visible`:
+        // on 2026-09-03 it listed ten invisible capabilities by name,
+        // description and price, including `german-company-data` (suspended)
+        // and the two the quality floor had quarantined. Nothing was buyable —
+        // all ten are x402_enabled = false, and both routing paths in
+        // lib/matching.ts already required visible = true — so the defect was
+        // disclosure, not a billing path. Quarantine works by setting
+        // visible = false, so without this the floor withdraws a capability
+        // everywhere except the surface agents actually read.
+        eq(capabilities.visible, true),
       ),
     );
 

@@ -167,6 +167,16 @@ async function ensureCache(): Promise<void> {
         // Only serve active or probation capabilities via x402
         // Block degraded/suspended to prevent serving known-broken capabilities
         inArray(capabilities.lifecycleState, ["active", "probation"]),
+        // The platform's primary withdrawal action. This rail was blind to it:
+        // POST /v1/internal/capabilities/:slug/unpublish sets visible = false
+        // and touches neither x402_enabled nor lifecycle_state, so an
+        // unpublished capability that was already on the rail stayed listed
+        // AND payable. No row satisfied that combination on 2026-09-03, so the
+        // gap was latent — but it is an execution and billing path, not a
+        // disclosure one, and isServableCapability one file over already
+        // carries a comment saying that omitting this made a predicate blind
+        // to exactly this action.
+        eq(capabilities.visible, true),
       ));
 
     const newCapCache = new Map<string, X402Capability>();
@@ -1466,6 +1476,7 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
         isActive: capabilities.isActive,
         x402Enabled: capabilities.x402Enabled,
         marketplaceEligible: capabilities.marketplaceEligible,
+        visible: capabilities.visible,
         lifecycleState: capabilities.lifecycleState,
       })
       .from(capabilities)

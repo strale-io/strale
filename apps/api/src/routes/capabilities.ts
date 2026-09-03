@@ -149,6 +149,15 @@ capabilitiesRoute.get("/:slug", async (c) => {
         eq(capabilities.isActive, true),
         // strale.dev surfacing per DEC-20260503-A.
         eq(capabilities.marketplaceEligible, true),
+        // Matches the list endpoint above, which has always filtered this.
+        // Without it the detail view outlived the listing: a quarantined
+        // capability vanished from GET /v1/capabilities and still answered
+        // GET /v1/capabilities/:slug with 200 and its full payload — name,
+        // price, input and output schemas. Verified against production on
+        // 2026-09-03 for `page-speed-test` and `danish-company-data`, both
+        // quarantined (visible = false, lifecycle_state = 'active'). They now
+        // 404, which is what the list already implied.
+        eq(capabilities.visible, true),
         inArray(capabilities.lifecycleState, ["active", "degraded"]),
       ),
     )
@@ -218,6 +227,16 @@ capabilitiesRoute.get("/:slug", async (c) => {
         })
         .from(solutionSteps)
         .innerJoin(solutions, eq(solutionSteps.solutionId, solutions.id))
+        // Same rule as GET /v1/solutions: a withdrawn step is not part of the
+        // count a customer is shown. Without this, part_of_solutions[]
+        // .step_count disagreed with the count the solution itself reports.
+        .innerJoin(
+          capabilities,
+          and(
+            eq(solutionSteps.capabilitySlug, capabilities.slug),
+            eq(capabilities.visible, true),
+          ),
+        )
         .where(inArray(solutions.slug, solSlugs))
         .groupBy(solutions.slug)
     : [];

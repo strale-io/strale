@@ -19,10 +19,14 @@ review_route: author-self-verification-plus-fresh-codex-review
 > **State on 2026-09-02, end of the founder's authority plan.** Every
 > track the founder approved that day is done (T3, T11–T15, T5). The
 > `.env` files were rebuilt from Railway the same evening (DQ-29 resolved)
-> and T4 closed the remediation program on production evidence. The
-> program is paused: T10 waits for the Codex quota (2026-09-07), T16 waits
-> for the founder's evidence. The next session sets one of them `active`
-> once its blocker clears and follows its `next_action`.
+> and T4 closed the remediation program on production evidence.
+>
+> **Active: T17, dependency remediation.** T4's triage established which of
+> the 24 open advisories are actually reachable from running code; T17 is the
+> upgrade work that follows from it, and it needs nothing from Codex and
+> nothing from the founder. T10 still waits for the Codex quota (2026-09-07)
+> and T16 for the founder's legal evidence; both stay blocked, and every
+> queued track still sits behind T10.
 
 Any fresh session, **Claude Code or Codex**, resumes this program by starting
 here and following only the pointers below:

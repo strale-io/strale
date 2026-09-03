@@ -46,6 +46,7 @@ export const TRACKS_OUTSIDE_M2_GATE = Object.freeze({
   T14: "none", // cheap extras: env manifest, model registry, claims register (reviewed 2026-09-02: founder plan milestone 4, no M2 dependency)
   T15: "none", // test receipts and migration ledger (reviewed 2026-09-02: survey second wave; evidence conventions, no M2 dependency)
   T16: "none", // legal & data policy authority / WP14 (added 2026-09-02 by T4: founder_gated on DEC-20260815-A legal/regulator-facing decisions -- Dilisense DPA, real assent, checkin_b legal-text sign-off; independent of M2 repo-native-authority migration)
+  T17: "none", // dependency remediation / WP13 (added 2026-09-03: upgrades the 10 advisories T4's triage found reachable; package.json and lockfile work, no M2 dependency)
 });
 
 /**

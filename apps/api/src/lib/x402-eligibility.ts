@@ -34,6 +34,13 @@ export interface X402EligibilityFields {
   isFreeTier: boolean | null;
   x402Enabled: boolean;
   marketplaceEligible: boolean;
+  /**
+   * The platform's primary withdrawal action, and the field this interface
+   * lacked until 2026-09-03 while `ServabilityFields` below carried it with a
+   * comment explaining why omitting it makes a predicate blind. Every rail now
+   * asks the same question.
+   */
+  visible: boolean;
   lifecycleState: string;
 }
 
@@ -49,6 +56,10 @@ export function isX402PayableCapability(cap: X402EligibilityFields): boolean {
   if (cap.isFreeTier) return false;
   if (!cap.x402Enabled) return false;
   if (!cap.marketplaceEligible) return false;
+  // A withdrawn capability may not be offered for payment. Without this, an
+  // anonymous caller naming the slug of a capability the platform had
+  // unpublished was answered with a 402 payment challenge for it.
+  if (!cap.visible) return false;
   return (X402_PAYABLE_LIFECYCLE_STATES as readonly string[]).includes(
     cap.lifecycleState,
   );
@@ -137,11 +148,18 @@ export function isX402RailEligible(cap: {
   isActive: boolean;
   x402Enabled: boolean;
   marketplaceEligible: boolean;
+  visible: boolean;
   lifecycleState: string;
 }): boolean {
   if (!cap.isActive) return false;
   if (!cap.x402Enabled) return false;
   if (!cap.marketplaceEligible) return false;
+  // Mirrors the catalogue filter, which is the whole point of this function —
+  // the SQL and the runtime check must not drift. Added 2026-09-03 with the
+  // catalogue's own visible filter; before that this predicate had no notion
+  // of the platform's primary withdrawal action while its sibling
+  // isServableCapability did.
+  if (!cap.visible) return false;
   return (X402_PAYABLE_LIFECYCLE_STATES as readonly string[]).includes(
     cap.lifecycleState,
   );
