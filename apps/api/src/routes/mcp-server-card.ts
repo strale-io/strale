@@ -32,6 +32,11 @@ async function buildCard(): Promise<object> {
         eq(capabilities.isActive, true),
         // strale.dev surfacing per DEC-20260503-A.
         eq(capabilities.marketplaceEligible, true),
+        // Counted withdrawn capabilities, so the advertised number was up to
+        // ten too high. No capability is named here — only the count — but a
+        // public claim about how many services exist has to match the number a
+        // reader can actually see.
+        eq(capabilities.visible, true),
       ),
     );
   const count = rows.length;

@@ -263,6 +263,15 @@ describe("PII sweep selection scope", () => {
  * F5 shape in the file that documents it.
  */
 describe("durable production-override records — constants (do not discriminate)", () => {
+  it("still self-throttles with a LIMIT (DEC-20260504-B)", async () => {
+    // Grouped here, not with the emitted-query tests: the LIMIT predates this
+    // change, so this passes against every mutant of it. It guards LIMIT
+    // removal and nothing else. It sat in the discriminating group under a
+    // docstring claiming otherwise until the second review checked.
+    await cleanupOldTestData();
+    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
+    expect(stmt).toContain("LIMIT");
+  });
   it("outlive the operational window and reach the compliance one", () => {
     expect(HEALTH_EVENT_RETENTION_DAYS).toBeLessThan(TRANSACTION_RETENTION_DAYS);
   });
@@ -273,6 +282,36 @@ describe("durable production-override records — constants (do not discriminate
     // extended personal-data retention from 180 days to three years.
     expect(DURABLE_OVERRIDE_EVENT_TYPES).not.toContain("reply_action");
     expect(DURABLE_OVERRIDE_EVENT_TYPES).toContain("manual_reconciliation");
+  });
+
+  it("excludes lifecycle_transition, which carries admin-supplied free text", () => {
+    // The second version of this change admitted it on the strength of
+    // reply-webhook's structured writer. routes/internal-health-monitor.ts
+    // writes the same type at five more sites with human_override = true, and
+    // its suspend endpoint puts `body?.reason` — unbounded, unsanitised admin
+    // text — into details.reason. Admitting the type moved that field from 180
+    // days to 1095: the same failure reply_action is excluded for, through a
+    // door the writer survey never opened.
+    expect(DURABLE_OVERRIDE_EVENT_TYPES).not.toContain("lifecycle_transition");
+  });
+
+  it("excludes the proposal_* types, whose copied field has no writer to inspect", () => {
+    // Each copies proposal_description out of a proposal_created row, and no
+    // writer of proposal_created exists in the repository. The content of a
+    // field that does not yet exist cannot be verified, so the type cannot be
+    // admitted on the strength of its other keys.
+    for (const t of ["proposal_approved", "proposal_rejected", "proposal_acknowledged"]) {
+      expect(DURABLE_OVERRIDE_EVENT_TYPES).not.toContain(t);
+    }
+  });
+
+  it("admits only the two types with rows in production and every writer read", () => {
+    // Kept deliberately minimal. The version that listed eight was assembled
+    // from one writer per type; two of those surveys were wrong.
+    expect([...DURABLE_OVERRIDE_EVENT_TYPES].sort()).toEqual([
+      "capability_promotion",
+      "manual_reconciliation",
+    ]);
   });
 
 });
@@ -347,9 +386,4 @@ describe("durable production-override records — the emitted query", () => {
     expect(call.params).not.toContain("reply_action");
   });
 
-  it("still self-throttles with a LIMIT (DEC-20260504-B)", async () => {
-    await cleanupOldTestData();
-    const stmt = statements().find((x) => x.includes("DELETE FROM health_monitor_events"))!;
-    expect(stmt).toContain("LIMIT");
-  });
 });

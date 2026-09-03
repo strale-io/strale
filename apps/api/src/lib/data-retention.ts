@@ -227,23 +227,47 @@ export const HEALTH_EVENT_RETENTION_DAYS = 180;
  * exactly 13 rows today — the 11 reconciliations and 2 capability promotions.
  *
  * Adding a type is a judgement that its `details` carry operational metadata
- * only. Check the payload of every writer of that type before adding it, not
- * just the human-authorised one.
+ * only, for EVERY writer of that type — see the exclusions recorded below.
  */
 export const DURABLE_OVERRIDE_EVENT_TYPES = [
+  // Written once, by apps/api/scripts/reconcile-stranded-executing.ts. Details
+  // are transaction id, before/after status, price, refund, policy, script.
   "manual_reconciliation",
-  // Every writer below is in routes/reply-webhook.ts or the promotion job;
-  // each payload was read and carries ids, slugs, states and a
-  // `triggered_by` label — no personal data. reply_action is deliberately
-  // absent and must stay absent.
+  // Two writers, both enumerated: jobs/capability-promotion.ts (structured
+  // fields only, and human_override = false there) and one ledgered block in
+  // lib/startup-migrations.ts whose payload is a static literal.
   "capability_promotion",
-  "proposal_approved",
-  "proposal_rejected",
-  "proposal_acknowledged",
-  "suspension_override",
-  "lifecycle_transition",
-  "auto_fix",
 ] as const;
+
+/**
+ * Types deliberately NOT in the list above, with the reason, because the first
+ * version of this change added five of them on a reading of their reply-webhook
+ * writers alone and an independent review found that reading incomplete:
+ *
+ *  - `reply_action` — `details` hold an inbound email's sender, subject and
+ *    body. Never add it.
+ *  - `lifecycle_transition` — reply-webhook's writer is structured, but
+ *    routes/internal-health-monitor.ts writes this type at five more sites,
+ *    all with `human_override: true`, and one of them (the suspend endpoint)
+ *    puts `body?.reason` — admin-supplied free text, unbounded and
+ *    unsanitised — into `details.reason`. Adding the type moved that field
+ *    from 180 days to 1095. That is the same failure `reply_action` is
+ *    excluded for, through a door the first version never opened.
+ *  - `proposal_approved` / `proposal_rejected` / `proposal_acknowledged` —
+ *    each copies `proposal_description` out of a `proposal_created` row, and
+ *    no writer of `proposal_created` exists anywhere in the repository. The
+ *    content of a field that does not yet exist cannot be verified, so the
+ *    type cannot be admitted on the strength of its other keys.
+ *  - `suspension_override`, `auto_fix` — single writer each, payload verified
+ *    static, and zero rows in production. Left out because the argument for
+ *    them is speculative and the argument against adding a type on an
+ *    incomplete writer survey is exactly what this block records.
+ *
+ * **Adding a type means enumerating every writer of that type string in the
+ * repository and reading each payload** — not reading the writer you happen to
+ * have in mind. Grep the literal, including raw `INSERT INTO
+ * health_monitor_events`, not just `logHealthEvent`.
+ */
 
 async function purgeCapabilityInvocations(factCutoff: Date): Promise<number> {
   const db = getDb();

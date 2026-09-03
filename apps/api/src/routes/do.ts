@@ -321,6 +321,7 @@ async function anonymousPaidRefusal(
     isFreeTier: boolean | null;
     x402Enabled: boolean;
     marketplaceEligible: boolean;
+    visible: boolean;
     lifecycleState: string;
   },
 ) {
@@ -829,11 +830,15 @@ doRoute.post(
         isActive: capabilities.isActive,
         priceCents: capabilities.priceCents,
         name: capabilities.name,
-        // x402 rail eligibility (WP0 §3.1) — these four decide whether the
+        // x402 rail eligibility (WP0 §3.1) — these decide whether the
         // capability may be paid for with USDC. Consumed by
-        // isX402PayableCapability; do not gate on isActive alone.
+        // isX402PayableCapability; do not gate on isActive alone. This lookup
+        // is by slug with no filter, so `visible` has to come from here: it is
+        // the only thing standing between an anonymous caller naming a
+        // withdrawn slug and a 402 challenge to pay for it.
         x402Enabled: capabilities.x402Enabled,
         marketplaceEligible: capabilities.marketplaceEligible,
+        visible: capabilities.visible,
         lifecycleState: capabilities.lifecycleState,
       })
       .from(capabilities)

@@ -15,6 +15,12 @@
  *  - `GET /v1/capabilities/:slug` had the same gap, so a quarantined
  *    capability vanished from the list endpoint and still answered 200 with
  *    its full payload including input and output schemas.
+ *  - `GET /llms-full.txt`, the machine-readable capability listing written for
+ *    language models, had it too — found by an independent review AFTER the
+ *    first two were fixed, still live, listing the same ten. Enumerating the
+ *    readers is the discipline; fixing the two you thought of is not.
+ *  - `GET /.well-known/mcp.json` counted withdrawn capabilities into the
+ *    number it advertises.
  *
  * These tests assert on the predicate the route actually sends to Postgres,
  * rendered through drizzle's own dialect, rather than on a stub's return
@@ -86,6 +92,38 @@ describe("GET /.well-known/agent-card.json", () => {
     expect(capabilityPredicate).toContain("marketplace_eligible");
     // The one it did not. This is the assertion that fails without the fix.
     expect(capabilityPredicate).toContain("visible");
+  });
+});
+
+describe("GET /llms-full.txt", () => {
+  it("asks Postgres for visible capabilities only", async () => {
+    vi.doMock("../db/index.js", () => ({ getDb: () => makeDbStub([]) }));
+    vi.doMock("../lib/platform-facts.js", () => ({
+      computePlatformFacts: () => Promise.resolve({
+        capability_counts: { active_visible: 0 },
+        countries: { company_data_active: [] },
+        free_tier_slugs: [],
+      }),
+    }));
+    const { llmsTxtRoute } = await import("./llms-txt.js");
+    await llmsTxtRoute.request("/llms-full.txt");
+
+    const capabilityQuery = captured.map(rendered).find((p) => p.includes("marketplace_eligible"));
+    expect(capabilityQuery, `no capability query captured: ${JSON.stringify(captured.map(rendered))}`).toBeDefined();
+    expect(capabilityQuery).toContain("is_active");
+    expect(capabilityQuery).toContain("visible");
+  });
+});
+
+describe("GET /.well-known/mcp.json", () => {
+  it("counts visible capabilities only", async () => {
+    vi.doMock("../db/index.js", () => ({ getDb: () => makeDbStub([]) }));
+    const { mcpServerCardRoute } = await import("./mcp-server-card.js");
+    await mcpServerCardRoute.request("/");
+
+    const capabilityQuery = captured.map(rendered).find((p) => p.includes("marketplace_eligible"));
+    expect(capabilityQuery, `no capability query captured: ${JSON.stringify(captured.map(rendered))}`).toBeDefined();
+    expect(capabilityQuery).toContain("visible");
   });
 });
 

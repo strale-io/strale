@@ -173,6 +173,11 @@ async function buildFullText(): Promise<string> {
         eq(capabilities.isActive, true),
         // strale.dev surfacing per DEC-20260503-A.
         eq(capabilities.marketplaceEligible, true),
+        // A withdrawn capability may not be advertised. This file is public,
+        // unauthenticated and written for machines to read; on 2026-09-03 it
+        // listed the same ten invisible capabilities as the agent card,
+        // including one suspended and two quarantined by the quality floor.
+        eq(capabilities.visible, true),
       ),
     );
 

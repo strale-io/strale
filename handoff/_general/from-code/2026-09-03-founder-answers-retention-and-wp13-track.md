@@ -61,14 +61,38 @@ change exists to stop — rows this very handoff had counted and then not
 protected. The allowlist now carries every event type whose payload was read
 and found to be operational metadata only.
 
-Eight tests. Five discriminate: they fail against a mutant that defines the
+**The second review found the type list wrong too, in the opposite direction.**
+The first version keyed on type alone and listed one type. The second added
+seven, assembled by reading one writer per type — and two of those surveys were
+incomplete:
+
+- `lifecycle_transition` has five more writers in
+  `routes/internal-health-monitor.ts`, all with `human_override: true`, and the
+  suspend endpoint puts `body?.reason` — unbounded, unsanitised admin free text
+  — straight into `details.reason`. Admitting the type moved that field from
+  180 days to 1095. **That is the same failure `reply_action` is excluded for,
+  through a door the survey never opened.**
+- The three `proposal_*` types each copy `proposal_description` out of a
+  `proposal_created` row, and no writer of `proposal_created` exists anywhere
+  in the repository. The content of a field that does not yet exist cannot be
+  verified.
+
+The list is now the two types with rows in production and every writer read:
+`manual_reconciliation` and `capability_promotion`. `suspension_override` and
+`auto_fix` are left out too, though their single writers are verified static —
+the argument for them is speculative, and the argument against admitting a type
+on an incomplete writer survey is precisely what this paragraph records. The
+exclusions and their reasons are in the code, not just here.
+
+Nine tests. The discriminating ones fail against a mutant that defines the
 constants correctly and never wires them into the query, and one fails
-specifically when the `human_override` conjunct is dropped. Three assert on the
-exported constants and would pass either way; they are kept and labelled as
+specifically when the `human_override` conjunct is dropped. Four assert on the
+exported constants and would pass either way; they are kept and grouped as
 non-discriminating rather than counted as regression guards. **The first version
-of this file claimed six discriminating tests when three discriminated** — the
-review checked the claim and disproved it, which is the F5 shape inside the
-change that documents F5.
+of this file claimed six discriminating tests when three discriminated**, and
+the second left the LIMIT test inside the discriminating group under a docstring
+that claimed it discriminated. Both were caught by review; both are the F5 shape
+inside the change that documents F5.
 
 The event types are bound via `sql.join`, never a JS array into `ANY()` — that
 renders a row-value tuple Postgres rejects and has crash-looped boot before.
@@ -104,10 +128,38 @@ and it defeats the quality floor's own mechanism — the floor withdraws a
 capability by setting `visible = false`, so without this fix it withdrew it
 everywhere except the surface agents actually read.
 
-Both queries now filter `visible`. Three tests assert on the predicate the
-routes send to Postgres, rendered through drizzle's dialect rather than through
-a stub that returns rows regardless of the filter; two of the three fail when
-either filter is removed.
+**Two surfaces was not all of them.** The second independent review enumerated
+the rest and found three more, which is the whole lesson: fixing the two you
+thought of is not the same as enumerating the readers.
+
+- `GET /llms-full.txt` — the machine-readable capability listing written for
+  language models, public and unauthenticated, listing the same ten. Confirmed
+  live before fixing.
+- `GET /.well-known/mcp.json` — counts withdrawn capabilities into the number
+  of services it advertises. No capability is named, but the count was up to
+  ten too high.
+- The **x402 rail**, which is not a disclosure path but an execution and
+  billing one. The catalogue query, `isX402RailEligible` and
+  `isX402PayableCapability` all had no notion of `visible`, while
+  `isServableCapability` in the same file carries a comment saying that
+  omitting it makes a predicate blind to the platform's primary delisting
+  action. The rail was safe only by coincidence — the quality floor clears
+  `visible` and `x402_enabled` together. `POST /v1/internal/capabilities/:slug/
+  unpublish` does not: it sets `visible = false` alone, so an unpublished
+  capability already on the rail stayed listed **and payable**. And the
+  unauthenticated `/v1/do` gate looks a capability up by slug with no filter at
+  all, so an anonymous caller naming a withdrawn slug would have been handed a
+  402 challenge to pay for it. Zero rows satisfy that combination today, so it
+  was latent, not live.
+
+Every one of these now filters `visible`. Eight tests assert on the predicate
+the routes send to Postgres — rendered through drizzle's dialect rather than
+through a stub that returns rows regardless of the filter — and on the three
+rail predicates directly. Each guard is mutation-proved: dropping the agent
+card's filter fails 1, the detail route's 2, `llms-full.txt`'s 1, the rail
+predicate's 2, the payable predicate's 3. **The earlier claim that "removing
+either visible filter fails 2" was wrong for the agent card, where it is 1** —
+the same overstatement this change corrects elsewhere.
 
 **2. `set_in` in the environment manifest was fiction on a third of its rows.**
 It is the field naming where each value actually lives, and no check ever read
