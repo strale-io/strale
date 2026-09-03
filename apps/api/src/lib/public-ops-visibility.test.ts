@@ -23,6 +23,9 @@ const sets = {
   at: Date.now(),
   withdrawn: new Set(["page-speed-test", "danish-company-data", "german-company-data"]),
   solutionSlugs: new Set(["kyb-complete-de", "invoice-verify-de", "website-health"]),
+  // Most of this surface is capability-only; the solution exemption is
+  // switched on per request by isSolutionScopedPath.
+  solutionScoped: true,
 };
 
 describe("requestNamesWithdrawn", () => {
@@ -169,6 +172,37 @@ describe("pruneWithdrawn", () => {
     expect(out.steps).toHaveLength(0);
   });
 
+  it("handles the invariant-checker shapes the review traced to real emitters", () => {
+    // checkDataSourceCompleteness writes capability_slug NULL with the slugs
+    // in details.slugs and in action_taken; checkPartialQuarantineState pins
+    // capability_slug to slugs[0] only, so the row survives the moment that
+    // one capability is restored while its siblings stay withdrawn.
+    const body = {
+      events: [
+        {
+          event_type: "invariant_alert",
+          capability_slug: null,
+          action_taken: "2 active capability(s) have no data_source: email-validate, page-speed-test",
+          details: { check: "data_source_completeness", slugs: ["email-validate", "page-speed-test"] },
+        },
+        {
+          event_type: "invariant_alert",
+          capability_slug: "email-validate",
+          action_taken: "partial quarantine: danish-company-data, german-company-data",
+          details: { slugs: ["danish-company-data", "german-company-data"] },
+        },
+      ],
+    };
+    const out = pruneWithdrawn(body, sets) as typeof body;
+    const blob = JSON.stringify(out);
+    for (const withdrawnSlug of ["page-speed-test", "danish-company-data", "german-company-data"]) {
+      expect(blob, `${withdrawnSlug} survived`).not.toContain(withdrawnSlug);
+    }
+    // The visible capability and the narrative around it both survive.
+    expect(blob).toContain("email-validate");
+    expect(blob).toContain("have no data_source");
+  });
+
   it("drops a withdrawn slug from a plain string array", () => {
     // Platform-level rows carry arrays of slugs with no wrapping object:
     // quality_floor's details are {quarantined: ["page-speed-test"]} and
@@ -202,6 +236,24 @@ describe("pruneWithdrawn", () => {
     const body = { note: "page-speed-test was quarantined" };
     const out = pruneWithdrawn(body, sets) as typeof body;
     expect(out.note).toBe("[withdrawn] was quarantined");
+  });
+
+  it("does NOT exempt a solution name on a capability-only endpoint", () => {
+    // The fifth review's finding, and it is the over-pruning fix causing an
+    // under-pruning leak. /onboarding/readiness returns capability-shaped
+    // objects keyed by a bare `slug` and has no solution concept at all, so
+    // exempting a name that happens to match a solution would leave a
+    // withdrawn capability disclosed. No collision exists today; the platform
+    // mints both slugs from the same kebab-case pool, so nothing keeps it
+    // that way.
+    const capabilityOnly = {
+      ...sets,
+      solutionScoped: false,
+      withdrawn: new Set([...sets.withdrawn, "website-health"]),
+    };
+    const body = { capabilities: [{ slug: "website-health", ready: true }] };
+    const out = pruneWithdrawn(body, capabilityOnly) as typeof body;
+    expect(out.capabilities).toHaveLength(0);
   });
 
   it("is a no-op when nothing is withdrawn", () => {

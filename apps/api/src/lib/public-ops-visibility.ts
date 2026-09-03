@@ -38,7 +38,7 @@ import { log } from "./log.js";
  * there only because the quality floor happens to clear two flags together,
  * and the unpublish endpoint clears one. So the guard does not rely on it.
  */
-let cache: { at: number; withdrawn: Set<string>; solutionSlugs: Set<string> } | null = null;
+let cache: WithdrawalSets | null = null;
 const CACHE_TTL_MS = 60_000;
 
 /** Keys whose value is a capability slug somewhere in the public-ops surface. */
@@ -49,6 +49,23 @@ export interface WithdrawalSets {
   at: number;
   withdrawn: Set<string>;
   solutionSlugs: Set<string>;
+  /**
+   * Whether a bare `slug` on this response may name a solution.
+   *
+   * The exemption that stops a solutions payload being pruned is wrong on an
+   * endpoint that has no solutions in it. `/onboarding/readiness` returns
+   * capability-shaped objects keyed by a bare `slug` and has no solution
+   * concept at all, so exempting a name that happens to match a solution
+   * would leave a withdrawn capability disclosed — the over-pruning fix
+   * causing an under-pruning leak. Scope it to the paths where solutions
+   * actually appear. Defaults false: a guard errs toward pruning.
+   */
+  solutionScoped: boolean;
+}
+
+/** Paths whose payloads can legitimately carry a solution's own `slug`. */
+export function isSolutionScopedPath(path: string): boolean {
+  return path.includes("/solutions");
 }
 
 export function resetWithdrawnCacheForTests(): void {
@@ -75,6 +92,7 @@ export async function withdrawnSlugs(): Promise<WithdrawalSets> {
       at: now,
       withdrawn: new Set((caps as unknown as Array<{ slug: string }>).map((r) => r.slug)),
       solutionSlugs: new Set((sols as unknown as Array<{ slug: string }>).map((r) => r.slug)),
+      solutionScoped: false,
     };
     return cache;
   } catch (error) {
@@ -107,7 +125,7 @@ function redactSlugsInText(text: string, sets: WithdrawalSets): string {
   if (text.length === 0) return text;
   let out = text;
   for (const slug of sets.withdrawn) {
-    if (sets.solutionSlugs.has(slug)) continue;
+    if (sets.solutionScoped && sets.solutionSlugs.has(slug)) continue;
     if (!out.includes(slug)) continue;
     out = out.replace(
       new RegExp(`(^|[^a-z0-9-])${escapeForRegExp(slug)}(?![a-z0-9-])`, "g"),
@@ -138,7 +156,7 @@ function slugOf(node: unknown, sets: WithdrawalSets): string | null {
   for (const key of SLUG_KEYS) {
     const v = node[key];
     if (typeof v !== "string" || v.length === 0) continue;
-    if (key === "slug" && sets.solutionSlugs.has(v)) return null;
+    if (key === "slug" && sets.solutionScoped && sets.solutionSlugs.has(v)) return null;
     return v;
   }
   return null;
@@ -167,7 +185,8 @@ export function pruneWithdrawn(node: unknown, sets: WithdrawalSets): unknown {
         // (`quarantined: ["page-speed-test"]`, `affected: [...]`) with no
         // wrapping object for slugOf to read.
         if (typeof item === "string") {
-          return !(sets.withdrawn.has(item) && !sets.solutionSlugs.has(item));
+          const exempt = sets.solutionScoped && sets.solutionSlugs.has(item);
+          return !(sets.withdrawn.has(item) && !exempt);
         }
         const slug = slugOf(item, sets);
         return !(slug && sets.withdrawn.has(slug));
@@ -181,7 +200,7 @@ export function pruneWithdrawn(node: unknown, sets: WithdrawalSets): unknown {
       // The solution namespace is respected here too: a solutions batch keyed
       // by solution slug must survive even if a capability of that name is
       // withdrawn.
-      if (sets.withdrawn.has(key) && !sets.solutionSlugs.has(key)) continue;
+      if (sets.withdrawn.has(key) && !(sets.solutionScoped && sets.solutionSlugs.has(key))) continue;
       out[key] = pruneWithdrawn(value, sets);
     }
     return out;

@@ -44,6 +44,7 @@ import {
   withdrawnSlugs,
   requestNamesWithdrawn,
   pruneWithdrawn,
+  isSolutionScopedPath,
 } from "./lib/public-ops-visibility.js";
 import { aiCatalogRoute } from "./routes/ai-catalog.js";
 import { llmsTxtRoute } from "./routes/llms-txt.js";
@@ -552,7 +553,14 @@ app.use("/v1/public/ops/*", async (c, next) => {
   // all. Whatever a handler produces, and however it produced it, a withdrawn
   // slug does not cross this line — including from a route added later by
   // someone who never read this comment.
-  const withdrawalSets = await withdrawnSlugs();
+  const cached = await withdrawnSlugs();
+  // The solution exemption applies only where solutions actually appear; on a
+  // capability-only endpoint it would turn the over-pruning fix into an
+  // under-pruning leak.
+  const withdrawalSets = {
+    ...cached,
+    solutionScoped: isSolutionScopedPath(c.req.path),
+  };
   if (withdrawalSets.withdrawn.size > 0) {
     const query = c.req.query();
     if (requestNamesWithdrawn(c.req.path, query, withdrawalSets)) {
