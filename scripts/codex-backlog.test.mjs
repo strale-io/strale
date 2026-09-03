@@ -40,11 +40,19 @@ function registerText(entries, policy = {}) {
 }
 
 /** Shape-only fixture: no git, history rules skipped. */
+const KNOWN_DECISIONS = "#### Current Decisions\n- **DEC-20260903-A** (global, active): ship without Codex.\n- **DEC-20260903-B** (global, active): a waiver.\n- **DEC-20260907-A** (global, active): an extension.\n";
+
 function makeFixture(entries, policy = {}) {
   const dir = mkdtempSync(join(tmpdir(), "codex-backlog-"));
   mkdirSync(join(dir, dirname(BACKLOG_PATH)), { recursive: true });
   writeFileSync(join(dir, BACKLOG_PATH), registerText(entries, policy), "utf8");
+  writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS, "utf8");
   return dir;
+}
+
+/** An archived verdict for a row: says the verdict and names the commit. */
+function verdictText(verdict, commit = "deadbee") {
+  return `# Codex review of ${commit}\n\nFindings: none.\n\nVERDICT: ${verdict}\n`;
 }
 
 const clean = { today: "2026-09-04", gitAvailable: false };
@@ -65,6 +73,7 @@ function makeHistoryFixture(baseEntries, headEntries, { basePolicy = {}, headPol
   git(dir, "config", "user.name", "t");
   mkdirSync(join(dir, dirname(BACKLOG_PATH)), { recursive: true });
   writeFileSync(join(dir, BACKLOG_PATH), registerText(baseEntries, basePolicy), "utf8");
+  writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS, "utf8");
   git(dir, "add", "-A");
   git(dir, "commit", "-q", "-m", "base");
   git(dir, "switch", "-q", "-c", "work");
@@ -108,7 +117,7 @@ test("a reviewed row with an archived verdict is not overdue, whatever the date"
     baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/sessions/cx-1.md" }),
   ]);
   mkdirSync(join(dir, "archive/sessions"), { recursive: true });
-  writeFileSync(join(dir, "archive/sessions/cx-1.md"), "VERDICT: PASS\n", "utf8");
+  writeFileSync(join(dir, "archive/sessions/cx-1.md"), verdictText("PASS"), "utf8");
   assert.deepEqual(checkBacklog(dir, { today: "2026-09-30", gitAvailable: false }).findings, []);
   rmSync(dir, { recursive: true, force: true });
 });
@@ -222,6 +231,65 @@ test("POLICY_INVALID: no review date, or a decision that is not a decision id", 
   rmSync(dir2, { recursive: true, force: true });
 });
 
+// ── the fabrication drains the second review found ──────────────────────────
+
+test("DECISION_UNKNOWN: a well-formed policy.decision this repository does not record", () => {
+  // The second review fabricated DEC-20260903-Z and the checker accepted it. A
+  // format check is not an existence check.
+  const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
+  assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("a decision recorded as a formal record is known even if CLAUDE.md does not name it", () => {
+  const dir = makeFixture([baseEntry()], { decision: "DEC-20260101-Q" });
+  mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+  writeFileSync(join(dir, "docs/decisions/records/DEC-20260101-Q.md"), "---\nid: DEC-20260101-Q\n---\n", "utf8");
+  assert.deepEqual(checkBacklog(dir, clean).findings, []);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("WAIVER_UNAUTHORISED: a founder waiver citing a decision that does not exist", () => {
+  const dir = makeFixture([
+    baseEntry({ status: "waived", waived_reason: "r", waived_by: "petter", waived_decision: "DEC-20260903-Z" }),
+  ]);
+  assert.ok(checkBacklog(dir, clean).findings.some((f) => f.code === "WAIVER_UNAUTHORISED" && f.detail.includes("does not record")));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("VERDICT_EVIDENCE_MISSING: an existing archive file that is not a verdict for this row", () => {
+  // archive/README.md closed the highest-priority row in the second review.
+  const dir = makeFixture([baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/README.md" })]);
+  mkdirSync(join(dir, "archive"), { recursive: true });
+  writeFileSync(join(dir, "archive/README.md"), "# Archive index\n", "utf8");
+  const r = checkBacklog(dir, clean);
+  assert.ok(r.findings.some((f) => f.code === "VERDICT_EVIDENCE_MISSING" && f.detail.includes("VERDICT: PASS")), JSON.stringify(r.findings));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("VERDICT_EVIDENCE_MISSING: a verdict file for a different verdict, or a different commit", () => {
+  const dir = makeFixture([
+    baseEntry({ id: "CX-1", status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/a.md" }),
+    baseEntry({ id: "CX-2", status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/b.md" }),
+  ]);
+  mkdirSync(join(dir, "archive"), { recursive: true });
+  writeFileSync(join(dir, "archive/a.md"), verdictText("FAIL"), "utf8");
+  writeFileSync(join(dir, "archive/b.md"), verdictText("PASS", "0123456"), "utf8");
+  const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "VERDICT_EVIDENCE_MISSING").map((f) => f.detail).join(" | ");
+  assert.match(found, /CX-1 cites archive\/a.md, which does not contain a line "VERDICT: PASS"/);
+  assert.match(found, /CX-2 cites archive\/b.md, which does not mention commit deadbee/);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("REVIEW_DATE_MOVED: an extension citing a decision that does not exist", () => {
+  const dir = makeHistoryFixture([baseEntry()], [baseEntry()], {
+    headPolicy: { review_by: "2099-01-01", review_by_extension: { decision: "DEC-20260903-Z", reason: "quota return slipped" } },
+  });
+  const r = checkBacklog(dir, { ...history, today: "2030-01-01" });
+  assert.ok(r.findings.some((f) => f.code === "REVIEW_DATE_MOVED" && f.detail.includes("does not record")), JSON.stringify(r.findings));
+  rmSync(dir, { recursive: true, force: true });
+});
+
 // ── history: the five drains ────────────────────────────────────────────────
 
 test("history: an unchanged register passes against its base", () => {
@@ -253,7 +321,7 @@ test("STATUS_REGRESSED: a row moves backward, or a closed row is reopened or re-
       baseEntry({ id: "CX-2", status: "pending" }),
       { ...closed, id: "CX-3", codex_verdict: "PASS" },
     ],
-    { extraFiles: { "archive/v.md": "VERDICT: FAIL\n" } },
+    { extraFiles: { "archive/v.md": verdictText("FAIL") } },
   );
   const found = checkBacklog(dir, history).findings.filter((f) => f.code === "STATUS_REGRESSED").map((f) => f.detail).join(" | ");
   assert.match(found, /CX-1 moved from in_review back to pending/);
@@ -266,7 +334,7 @@ test("history: moving a row forward with archived evidence is the honest close, 
   const dir = makeHistoryFixture(
     [baseEntry()],
     [baseEntry({ status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/sessions/cx-1.md" })],
-    { extraFiles: { "archive/sessions/cx-1.md": "VERDICT: PASS\n" } },
+    { extraFiles: { "archive/sessions/cx-1.md": verdictText("PASS") } },
   );
   const r = checkBacklog(dir, { ...history, today: "2026-09-30" });
   assert.deepEqual(r.findings.filter((f) => f.code !== "COMMIT_MISSING"), [], JSON.stringify(r.findings));
@@ -313,6 +381,7 @@ test("history: first introduction (no register at the base) skips history rules"
   git(dir, "config", "user.email", "t@example.com");
   git(dir, "config", "user.name", "t");
   writeFileSync(join(dir, "README.md"), "x\n", "utf8");
+  writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS, "utf8");
   git(dir, "add", "-A");
   git(dir, "commit", "-q", "-m", "base");
   git(dir, "switch", "-q", "-c", "work");

@@ -75,7 +75,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "65f5c7b8740b4a0b5b671ea68830574ae91e624e4dba0b99cceb9ac8a924539b",
+      "sha256": "381b6d1be8035f6a5fac88b42b9f95449569d1c3ada7016475769440672e7504",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -179,6 +179,7 @@
         "docs/company/CHARTER.md",
         "docs/company/LESSONS.md",
         "docs/operations/operator-actions.yaml",
+        "docs/programs/codex-review-backlog.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/remediation/FABLE-REAUDIT.md",
@@ -257,6 +258,7 @@
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
         "scripts/codex-backlog-lib.mjs",
+        "scripts/codex-backlog.test.mjs",
         "scripts/guard-tree-integrity.mjs",
         "scripts/guard-worktree-isolation.mjs",
         "scripts/handoff/handoff-check.test.mjs",

@@ -39,10 +39,12 @@ naming its decision. `npm run codex:check` enforces that against git, not
 prose: compared with the merge-base on `main`, a row may not be deleted, move
 backward, reopen once closed, change its commit or its recorded verdict, or
 have `policy.review_by` pushed later without a founder decision; on the file
-itself it refuses a commit the repository lacks, a reviewed row with no
-archived evidence, a waiver by anyone but Petter, and a row still pending
-past `review_by`. The one thing it cannot see is a batch never added, which
-remains a process commitment. When Codex returns, drain the register before
+itself it refuses a commit the repository lacks, a reviewed row whose
+evidence file is not a verdict for it, a waiver by anyone but Petter, a
+decision id this repository does not record, and a row still pending past
+`review_by`. Two things it cannot see: a batch never added, and a drain that
+reaches `main` through review — the base moves forward on merge, so the
+pull-request review guards that, as it does for receipts. When Codex returns, drain the register before
 starting work that adds to it. A Codex FAIL on merged work opens a
 remediation batch; it does not revert anything automatically.
 
@@ -284,6 +286,7 @@ strale/
 - **DEC-20260428-B** (global, active): Engineering bar for Strale-built data services (sanctions/PEP, UBO, adverse media, future registry self-builds). Codifies regulatory-grade requirements: versioned dataset with stale-data circuit breaker, source-list manifest per response, Merkle-rooted ingest, match explainability, confidence buckets, dispute endpoint with disposition tracking, replay capability, golden test suite, canary deploys, per-list kill switches, GDPR Art. 22 compliance, threat-model document and public methodology page mandatory before production. AI synthesis steps (e.g. risk-narrative-generate) must require per-flag source citation, "screening checks found" framing, and never assert facts not present in input. Pairs with DEC-20260428-A.
 
 #### Current Decisions (September 2026)
+- **DEC-20260903-A** (global, active): **Work does not stop for the Codex quota; the review debt is a checked register.** Directed by Petter 2026-09-03. Amends the 2026-09-01 review-routing override and its 2026-09-02 amendment: the fresh read-only Claude agent remains the independent review, no track may be blocked on the Codex review path alone, and every batch that would otherwise have gone to Codex is recorded in `docs/programs/codex-review-backlog.yaml` until a Codex verdict archived under `archive/` closes it or Petter waives it naming a decision. Enforced against git by `npm run codex:check`. Notion Decisions DB entry filed 2026-09-03; full text in the Review routing section above.
 - **DEC-20260902-A** (global, active): **The website redesign is built inside this repository as `apps/web` (monorepo).** Directed by Petter 2026-09-02. Preserve first, then build: `strale-frontend` was swept and its design material preserved (release `preserve-2026-09-02`, archive tags, tracked candidates) and is kept, not extended, until the `apps/web` site serves production. Design-token work lands in `apps/web`. Reversal: a new record if Cloudflare Pages cannot build from a monorepo subdirectory or the site source must stay private. Notion Decisions DB entry filed 2026-09-02; repo-native record follows through the M2 closure path.
 
 #### Current Decisions (August 2026)

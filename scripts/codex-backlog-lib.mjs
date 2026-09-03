@@ -48,6 +48,50 @@ const DECISION_ID = /^DEC-\d{8}-[A-Z]$/;
 /** The only person who may waive a Codex re-review (CLAUDE.md review routing). */
 const WAIVER_AUTHORITY = "petter";
 
+/**
+ * Does this decision id name a decision the repository actually records?
+ *
+ * The second review of #498 fabricated `DEC-20260903-Z`, put it in
+ * `review_by_extension.decision`, and pushed the date to 2099: green. A
+ * format check is not an existence check. A decision is real here when it
+ * has a formal record under docs/decisions/records/ or is named as a bold
+ * heading in CLAUDE.md's decision list — the two places this repository
+ * records decisions on main. Notion is not consulted: CI cannot reach it, and
+ * a check that only works on one machine is the F5 shape.
+ */
+export function decisionExists(root, id) {
+  if (!DECISION_ID.test(String(id ?? ""))) return false;
+  if (existsSync(resolve(root, "docs/decisions/records", `${id}.md`))) return true;
+  try {
+    const claude = readFileSync(resolve(root, "CLAUDE.md"), "utf8");
+    return new RegExp(`\\*\\*${id}\\*\\*`).test(claude);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Is this file an archived verdict FOR this row? It must say VERDICT: <the
+ * recorded verdict> and name the row's commit. Existence alone let
+ * `archive/README.md` close the highest-priority row.
+ */
+export function verdictFileMatches(root, evidencePath, verdict, commit) {
+  let text;
+  try {
+    text = readFileSync(resolve(root, evidencePath), "utf8");
+  } catch {
+    return { ok: false, why: "does not exist" };
+  }
+  if (!new RegExp(`^\\s*VERDICT:\\s*${verdict}\\s*$`, "m").test(text)) {
+    return { ok: false, why: `does not contain a line "VERDICT: ${verdict}"` };
+  }
+  const sha = String(commit ?? "").slice(0, 7);
+  if (sha && !text.includes(sha)) {
+    return { ok: false, why: `does not mention commit ${commit}` };
+  }
+  return { ok: true };
+}
+
 export function loadBacklog(root) {
   return parseYaml(readFileSync(resolve(root, BACKLOG_PATH), "utf8"));
 }
@@ -136,6 +180,8 @@ export function checkBacklog(root, options = {}) {
   }
   if (!DECISION_ID.test(String(policy.decision ?? ""))) {
     add("POLICY_INVALID", `policy.decision must be a decision id (DEC-YYYYMMDD-X) naming the founder decision that authorised shipping without Codex; got ${JSON.stringify(policy.decision ?? null)}`);
+  } else if (!decisionExists(root, policy.decision)) {
+    add("DECISION_UNKNOWN", `policy.decision ${policy.decision} is not recorded in this repository (no docs/decisions/records/${policy.decision}.md and no **${policy.decision}** in CLAUDE.md) — a well-formed id is not a decision`);
   }
 
   const entries = Array.isArray(doc.entries) ? doc.entries : [];
@@ -192,8 +238,11 @@ export function checkBacklog(root, options = {}) {
       const evidence = entry.codex_evidence;
       if (typeof evidence !== "string" || !/^archive\//.test(evidence)) {
         add("VERDICT_EVIDENCE_MISSING", `${id} is reviewed but codex_evidence does not name an archived verdict under archive/ — a review with no archived verdict is somebody saying so`);
-      } else if (!existsSync(resolve(root, evidence))) {
-        add("VERDICT_EVIDENCE_MISSING", `${id} cites ${evidence}, which does not exist`);
+      } else if (VERDICTS.has(String(entry.codex_verdict))) {
+        // Content, not existence: any pre-existing file under archive/ closed
+        // the highest-priority row in the second review.
+        const m = verdictFileMatches(root, evidence, String(entry.codex_verdict), entry.commit);
+        if (!m.ok) add("VERDICT_EVIDENCE_MISSING", `${id} cites ${evidence}, which ${m.why} — an archived verdict says VERDICT: ${entry.codex_verdict} and names the commit it reviewed`);
       }
     }
 
@@ -205,6 +254,8 @@ export function checkBacklog(root, options = {}) {
       }
       if (!DECISION_ID.test(String(entry.waived_decision ?? ""))) {
         add("WAIVER_UNAUTHORISED", `${id} is waived without waived_decision naming the founder decision (DEC-YYYYMMDD-X)`);
+      } else if (!decisionExists(root, entry.waived_decision)) {
+        add("WAIVER_UNAUTHORISED", `${id} is waived citing ${entry.waived_decision}, which this repository does not record — a well-formed id is not a decision`);
       }
     }
 
@@ -260,6 +311,8 @@ export function checkBacklog(root, options = {}) {
         const ext = policy.review_by_extension ?? {};
         if (!DECISION_ID.test(String(ext.decision ?? "")) || !ext.reason) {
           add("REVIEW_DATE_MOVED", `policy.review_by moved from ${prevDate} to ${nextDate} without policy.review_by_extension naming a founder decision and a reason — moving the date is the cheapest way to defuse every row at once`);
+        } else if (!decisionExists(root, ext.decision)) {
+          add("REVIEW_DATE_MOVED", `policy.review_by moved from ${prevDate} to ${nextDate} citing ${ext.decision}, which this repository does not record — the second review fabricated exactly such an id and the date moved`);
         }
       }
     }

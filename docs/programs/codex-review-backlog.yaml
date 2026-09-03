@@ -14,10 +14,14 @@
 # its merge-base on main and refuses a deleted row, a status that moves
 # backward or reopens a closed row, a changed commit, an edited verdict, and a
 # review date pushed later without a founder decision; on the file itself it
-# refuses a commit git does not have, a reviewed row with no archived
-# evidence, a waiver by anyone but the founder, and a row still pending after
-# `review_by`. What it cannot see is a batch never added; that stays a
-# process commitment.
+# refuses a commit git does not have, a reviewed row whose evidence file
+# is not a verdict for it (it must say VERDICT: <verdict> and name the
+# commit), a waiver by anyone but the founder, a decision id this repository
+# does not record (a formal record or a bold entry in CLAUDE.md), and a row
+# still pending after `review_by`. Two things it cannot see: a batch never
+# added, and a drain that reaches main through review — the base moves
+# forward when a merge lands, so the pull-request review is the guard
+# there, as it is for receipts.
 #
 # Drain order is `priority`, then oldest first. Highest first: these are the
 # ones where a Claude-only review is least adequate.
