@@ -49,12 +49,14 @@ folded hono entry), matching expectation.
   documented "local suite flaky under concurrent load" pattern (project memory:
   `project_local_suite_flaky_ci_is_the_gate`), not a hono-upgrade regression.
 - Re-ran `x402-body-limit.test.ts` alone twice — same deterministic result both times: 17
-  passed / 1 failed (not a timeout).
+  passed / 1 failed (not a timeout). Re-scoped the one failing test to assert hono's new
+  behavior instead of the old bug it could no longer reproduce (see finding below); after
+  that change the file passes 18/18, twice in a row.
 - `npm run env:check` — ok (126 env names checked against 129 manifest rows).
 - `npm run models:check` — ok (667 files checked).
 - `npm run claims:check` — ok (27 claim rows checked).
 
-## Finding — one test's expectation is now stale (NOT a regression; not fixed here)
+## Finding — one test's expectation was stale, re-scoped in this session (NOT a regression)
 
 `src/routes/x402-body-limit.test.ts`, test
 `"the streaming branch refuses instead of reporting success" > "FAIL-BEFORE: swallowing the
@@ -83,11 +85,13 @@ Confirmed this is not a production regression:
 - What changed is that hono itself now independently defends against the bug class the
   app-level fix defends against — a strict improvement, not a break.
 
-Per the task's explicit instruction not to work around a test failure, **the test file was
-not edited**. The `FAIL-BEFORE` pinning test's expectation (`200`) is now stale given the
-framework no longer reproduces the pinned bug even in the deliberately-broken synthetic
-handler; whether to update it to assert `413` (or otherwise re-scope what it pins) is a
-maintainer call, not made here.
+**Update (architect decision, same session):** the test was re-scoped rather than left
+stale. It is renamed to `"swallowing the abort no longer reports 200: hono 4.13.5 refuses
+the oversized body itself"`, now asserts `413`, and its comment documents what it used to
+prove, that hono <4.12.16 returned 200 here (the bug), that 4.13.5 refuses it at the
+middleware, and that the gateway's rethrow stays as defence in depth, proved by the
+sibling `"rethrowing the abort produces a 413"` test. `x402-body-limit.test.ts` now passes
+18/18, confirmed deterministic across two isolated runs.
 
 ## Reachability — the HIGH CORS advisory
 
@@ -148,8 +152,8 @@ passes (6 receipts checked, ok; the 7 warnings printed are pre-existing
   `ws`) and the other 4 reachable-but-not-hono advisories (`@coinbase/cdp-sdk`, `axios`,
   `brace-expansion`, `c2pa-node`, `fast-uri`, `form-data`, `sharp`, `undici`) are untouched
   — out of scope for this batch, which was hono only.
-- The stale `FAIL-BEFORE` test expectation in `x402-body-limit.test.ts` (see finding above)
-  — flagged, not edited.
+- (Removed from this list in a follow-up: the `x402-body-limit.test.ts` FAIL-BEFORE test
+  expectation was re-scoped in this session per an architect decision — see finding above.)
 
 ## Anything undone / could not verify
 
