@@ -117,7 +117,13 @@ export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
   "docs/project/ROADMAP.md": 1_500,
   "docs/decisions/README.md": 1_000,
   "docs/decisions/PENDING.md": 1_000,
-  "docs/project/DECISIONS.md": 1_500,
+  // Raised from 1_500 in the 2026-08 operating-window batch (7 new formal
+  // records): the prior limit had only 8 words of headroom left after the
+  // previous batch, so any further batch of more than one active record was
+  // guaranteed to exceed it structurally, not from bloat. 1_900 gives
+  // multi-record headroom again; revisit if this index keeps growing faster
+  // than records retire to superseded.
+  "docs/project/DECISIONS.md": 1_900,
 });
 
 export const INVENTORY_TARGETS = Object.freeze([

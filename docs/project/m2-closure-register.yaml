@@ -45,7 +45,7 @@ sources:
     status_file: docs/project/private-archive-status.json
   formal_records:
     path: docs/decisions/records
-    record_count: 27
+    record_count: 34
   collision_registry:
     path: docs/decisions/id-collisions.yaml
     collision_count: 35
@@ -58,8 +58,8 @@ digests:
     = SHA-256 over sorted page_id|historical_scope|decided_at lines (LF-joined, trailing LF), recomputed
     from the archive by the operator script
   public_rows:
-    count: 95
-    digest: b131f4b5a5bec52f0850908d55d5e17dc79f64981cb2b97cb97269b59f84f4fc
+    count: 102
+    digest: b38467b4367ad0f9013e360c443b7051ebd02a72ca109410ca1bedf24c6ee0ce
     scope_date_digest: 96333816ade4068c0032c44c14469dc1f568d8a04c1bce6f7f2a89d493259f43
   all_rows:
     count: 318
@@ -74,10 +74,10 @@ counts:
     unclear: 0
   decision_rows:
     unresolved_collision: 70
-    formally_migrated: 23
+    formally_migrated: 30
     resolved_collision: 1
     intentionally_historical: 1
-    not_yet_reconciled: 212
+    not_yet_reconciled: 205
     obsolete_or_superseded: 6
     unclear: 5
     total: 318
@@ -456,6 +456,41 @@ formal_records:
   source_kind: git-native
   source_rows: []
   git_provenance: archive/sessions/2026-09-01-context-pack-evidence-manifest.json
+- record_key: DEC-20260820-A-WEBSITE-HERO
+  id: DEC-20260820-A-WEBSITE-HERO
+  source_kind: notion-row
+  source_rows:
+  - 3c267c87082c81e09187de8e0cd7fe46
+- record_key: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
+  id: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
+  source_kind: notion-row
+  source_rows:
+  - 3c267c87082c81ee9e7cc995b11f12d6
+- record_key: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
+  id: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
+  source_kind: notion-row
+  source_rows:
+  - 3c267c87082c819d89afdd257de4a15f
+- record_key: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
+  id: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
+  source_kind: notion-row
+  source_rows:
+  - 3c267c87082c8132adcce02b453b63cb
+- record_key: DEC-20260820-E-WEBSITE-SEARCH-WEB
+  id: DEC-20260820-E-WEBSITE-SEARCH-WEB
+  source_kind: notion-row
+  source_rows:
+  - 3c267c87082c812a8533d8eed592bb8f
+- record_key: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
+  id: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
+  source_kind: notion-row
+  source_rows:
+  - 3c267c87082c81f98018f6fb4d90b2c1
+- record_key: DEC-20260827-A
+  id: DEC-20260827-A
+  source_kind: notion-row
+  source_rows:
+  - 3c967c87082c81be9ebac7982b89a36a
 decision_rows:
 - page_id: 31267c87082c81279b14f3859f6f2038
   id: DEC-20260225-P-c5d6
@@ -1816,15 +1851,85 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260815-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 3c267c87082c812a8533d8eed592bb8f
+  id: DEC-20260820-E-WEBSITE-SEARCH-WEB
+  title_sha256: df87f62ebc5642cee00d7368af1b1c74664aa9bc56ec65ca47e0f899f75a6bdf
+  historical_status: active
+  source_url: https://app.notion.com/3c267c87082c812a8533d8eed592bb8f
+  record_key: DEC-20260820-E-WEBSITE-SEARCH-WEB
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260820-E-WEBSITE-SEARCH-WEB.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 3c267c87082c8132adcce02b453b63cb
+  id: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
+  title_sha256: 836854e9c91bb8207bc7b5b084e09050a0511acaa343e947bf136e96f27bb837
+  historical_status: active
+  source_url: https://app.notion.com/3c267c87082c8132adcce02b453b63cb
+  record_key: DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 3c267c87082c819d89afdd257de4a15f
+  id: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
+  title_sha256: f1dec011e672a4d0648b89bc649a2ac01bd2fbd69cf802da416abe3ffab03542
+  historical_status: active
+  source_url: https://app.notion.com/3c267c87082c819d89afdd257de4a15f
+  record_key: DEC-20260820-C-WEBSITE-COMPANY-RESEARCH
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260820-C-WEBSITE-COMPANY-RESEARCH.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 3c267c87082c81e09187de8e0cd7fe46
+  id: DEC-20260820-A-WEBSITE-HERO
+  title_sha256: 72fb71c4b27a6c2fb560cfe9ada9dcade365323086fd31113c6b46fc7642af6e
+  historical_status: active
+  source_url: https://app.notion.com/3c267c87082c81e09187de8e0cd7fe46
+  record_key: DEC-20260820-A-WEBSITE-HERO
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260820-A-WEBSITE-HERO.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 3c267c87082c81ee9e7cc995b11f12d6
+  id: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
+  title_sha256: 39cb0fd3e1c5fa6e03758362371c289e355f68308517ca00639757f0206c54d5
+  historical_status: active
+  source_url: https://app.notion.com/3c267c87082c81ee9e7cc995b11f12d6
+  record_key: DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 3c267c87082c81f98018f6fb4d90b2c1
+  id: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
+  title_sha256: d3c49d0e227f6488774c40d8de55426647c77f827828513dcbfcb07e3c7d704a
+  historical_status: active
+  source_url: https://app.notion.com/3c267c87082c81f98018f6fb4d90b2c1
+  record_key: DEC-20260820-F-WEBSITE-RISK-RESPONSIVE
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260820-F-WEBSITE-RISK-RESPONSIVE.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 3c967c87082c81be9ebac7982b89a36a
+  id: DEC-20260827-A
+  title_sha256: cf94c9e0844ff54f3ffaf82cf6e3f17e650e97ef8bc47d8be5a920ac372a2b92
+  historical_status: active
+  source_url: https://app.notion.com/3c967c87082c81be9ebac7982b89a36a
+  record_key: DEC-20260827-A
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260827-A.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 private_rows:
   repository: strale-io/strale-context-archive
   visibility: private
   commit: 3b0a3ea82e776d337577526b23d75cb460a891db
   file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
-  count: 223
+  count: 216
   digest: 41db58f553650a15826eb7f9e1f249fead1ab82aae155bdae47bb4dbbd8763c4
   counts_by_disposition:
-    not_yet_reconciled: 212
+    not_yet_reconciled: 205
     obsolete_or_superseded: 6
     unclear: 5
   verification: node scripts/m2-closure-verify-private-rows.mjs recomputes this digest, the all_rows digest,
@@ -2026,5 +2131,5 @@ next_decision_batch:
   cutoff_anchor_id: DEC-20260812-A
   candidates: []
   private_candidates:
-    count: 7
-    digest: 3c7254da7bc1ca5e5d6a7efac074aa3c7064ce67e3e0a9d5a432163fd15ee877
+    count: 0
+    digest: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
