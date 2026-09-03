@@ -75,7 +75,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "101172545172884afb3152236cd165314be6f3e544ca72c0fccd30e05186de0e",
+      "sha256": "0ca911852c5b33c77c9b81382c28dd68db4f38775b544f0d040179187db68229",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -179,6 +179,7 @@
         "docs/company/CHARTER.md",
         "docs/company/LESSONS.md",
         "docs/operations/operator-actions.yaml",
+        "docs/programs/codex-review-backlog.yaml",
         "docs/programs/cto-readiness/PROGRAM.md",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/remediation/FABLE-REAUDIT.md",
@@ -248,6 +249,7 @@
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-03-codex-review-backlog.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -255,6 +257,8 @@
         "manifests/sanctions-check.yaml",
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
+        "scripts/codex-backlog-lib.mjs",
+        "scripts/codex-backlog.test.mjs",
         "scripts/guard-tree-integrity.mjs",
         "scripts/guard-worktree-isolation.mjs",
         "scripts/handoff/handoff-check.test.mjs",
@@ -514,7 +518,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "e4de4ebba17f08338e8d52ee6afc05edc16a68164efdc0eab3017fc1fc045a40",
+      "sha256": "3b1935a397c06a7e3d85018575e2c0f3b5df64312eebd6a6ee00725e1d808dd9",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

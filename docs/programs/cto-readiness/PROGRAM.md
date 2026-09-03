@@ -24,9 +24,15 @@ review_route: author-self-verification-plus-fresh-codex-review
 > **Active: T17, dependency remediation.** T4's triage established which of
 > the 24 open advisories are actually reachable from running code; T17 is the
 > upgrade work that follows from it, and it needs nothing from Codex and
-> nothing from the founder. T10 still waits for the Codex quota (2026-09-07)
-> and T16 for the founder's legal evidence; both stay blocked, and every
-> queued track still sits behind T10.
+> nothing from the founder.
+>
+> **T10 is runnable again (2026-09-03, DEC-20260903-A).** It was blocked only
+> because its closing review was reserved for Codex; the founder decided
+> waiting costs more than proceeding. Its review is a fresh read-only Claude
+> agent and the batch is recorded in `docs/programs/codex-review-backlog.yaml`
+> for Codex when the quota returns. Every queued track still sits behind T10,
+> which makes it the higher-leverage of the two runnable tracks. T16 stays
+> founder-gated on legal evidence.
 
 Any fresh session, **Claude Code or Codex**, resumes this program by starting
 here and following only the pointers below:

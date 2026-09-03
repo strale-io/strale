@@ -357,6 +357,14 @@ jobs:
       # fixture.
       - run: npm run migrations:check
       - run: npm run migrations:test
+      # Codex re-review backlog (DEC-20260903-A): work that shipped without
+      # the Codex review path while its quota was out. The check knows the
+      # date — a row still pending after policy.review_by fails the build, so
+      # "we'll get Codex to look at it later" cannot quietly become never.
+      # Closing a row needs a verdict, not a status change. Tests plant every
+      # failure mode in a throwaway fixture.
+      - run: npm run codex:check
+      - run: npm run codex:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.
