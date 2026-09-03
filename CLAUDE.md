@@ -42,9 +42,11 @@ have `policy.review_by` pushed later without a founder decision; on the file
 itself it refuses a commit the repository lacks, a reviewed row whose
 evidence file is not a verdict for it, a waiver by anyone but Petter, a
 decision id this repository does not record, and a row still pending past
-`review_by`. Two things it cannot see: a batch never added, and a drain that
-reaches `main` through review — the base moves forward on merge, so the
-pull-request review guards that, as it does for receipts. When Codex returns, drain the register before
+`review_by`. Three things it cannot see, and the pull-request review guards
+each: a batch never added; a drain that reaches `main` through review (the
+base moves forward on merge, as for receipts); and a decision entry added to
+this file in the same change that cites it — the checker proves a decision
+is *recorded in a reviewed file*, not that the founder made it. When Codex returns, drain the register before
 starting work that adds to it. A Codex FAIL on merged work opens a
 remediation batch; it does not revert anything automatically.
 

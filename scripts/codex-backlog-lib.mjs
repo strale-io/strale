@@ -32,7 +32,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
+import { resolve, sep } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 export const BACKLOG_PATH = "docs/programs/codex-review-backlog.yaml";
@@ -64,10 +64,31 @@ export function decisionExists(root, id) {
   if (existsSync(resolve(root, "docs/decisions/records", `${id}.md`))) return true;
   try {
     const claude = readFileSync(resolve(root, "CLAUDE.md"), "utf8");
-    return new RegExp(`\\*\\*${id}\\*\\*`).test(claude);
+    // A decision-list ENTRY: a bullet that starts with the bold id, as every
+    // entry under "Active Decisions" / "Current Decisions" does. A bold
+    // mention in passing anywhere else does not count — the third review
+    // satisfied the first version with a throwaway appendix sentence.
+    return new RegExp(`^- \\*\\*${id}\\*\\*`, "m").test(claude);
   } catch {
     return false;
   }
+}
+
+/**
+ * Resolve an evidence path and refuse anything that escapes `<root>/archive/`.
+ *
+ * The prefix test `/^archive\//` was the whole containment in the second
+ * version, and `archive/../notes/fake-verdict.md` passed it — the third
+ * review closed the highest-priority row that way, and escaped the
+ * repository entirely with enough `..`. Containment is a property of the
+ * resolved path, not of its first eight characters.
+ */
+export function archivedEvidencePath(root, evidencePath) {
+  if (typeof evidencePath !== "string" || evidencePath.length === 0) return null;
+  if (evidencePath.split(/[\\/]/).includes("..")) return null;
+  const archiveDir = resolve(root, "archive") + sep;
+  const full = resolve(root, evidencePath);
+  return full.startsWith(archiveDir) ? full : null;
 }
 
 /**
@@ -76,9 +97,11 @@ export function decisionExists(root, id) {
  * `archive/README.md` close the highest-priority row.
  */
 export function verdictFileMatches(root, evidencePath, verdict, commit) {
+  const full = archivedEvidencePath(root, evidencePath);
+  if (!full) return { ok: false, why: "is not a path inside archive/ (a `..` segment or an escape is refused)" };
   let text;
   try {
-    text = readFileSync(resolve(root, evidencePath), "utf8");
+    text = readFileSync(full, "utf8");
   } catch {
     return { ok: false, why: "does not exist" };
   }

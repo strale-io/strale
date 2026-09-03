@@ -57,6 +57,21 @@ blocked, and the prose in this register's header and in `CLAUDE.md` now
 claims exactly what the code enforces and names the one thing it cannot: a
 batch never added.
 
+## Round three
+
+The third review found that `codex_evidence: archive/../notes/fake.md`
+passed the `archive/` prefix test and was read from wherever it pointed —
+including outside the repository. Containment is now a property of the
+resolved path: any `..` segment is refused, and the resolved file must sit
+under `<root>/archive/`. It also showed a bold decision id anywhere in
+`CLAUDE.md` satisfied the existence check — a throwaway appendix sentence
+would do — so the lookup now requires a list entry, a bullet that starts with
+the bold id. And it judged, correctly, that the prose should say what this
+check proves: that a decision is recorded in a reviewed file, not that the
+founder made it. A decision entry added in the same change that cites it is
+caught by the pull-request review, not by the checker, and the header now
+says so.
+
 ## What is in it
 
 | Row | Priority | Why it needs a different model |

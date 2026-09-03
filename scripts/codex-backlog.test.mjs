@@ -290,6 +290,32 @@ test("REVIEW_DATE_MOVED: an extension citing a decision that does not exist", ()
   rmSync(dir, { recursive: true, force: true });
 });
 
+test("VERDICT_EVIDENCE_MISSING: a `..` segment escapes archive/ and is refused", () => {
+  // The third review: archive/../notes/fake-verdict.md passed the prefix
+  // regex and closed the highest-priority row; enough `..` left the
+  // repository entirely. Containment is a property of the resolved path.
+  const dir = makeFixture([
+    baseEntry({ id: "CX-1", status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/../notes/fake.md" }),
+    baseEntry({ id: "CX-2", status: "reviewed", codex_verdict: "PASS", codex_reviewed_on: "2026-09-07", codex_evidence: "archive/../../../../tmp/evil.md" }),
+  ]);
+  mkdirSync(join(dir, "notes"), { recursive: true });
+  writeFileSync(join(dir, "notes/fake.md"), verdictText("PASS"), "utf8");
+  const found = checkBacklog(dir, clean).findings.filter((f) => f.code === "VERDICT_EVIDENCE_MISSING").map((f) => f.detail).join(" | ");
+  assert.match(found, /CX-1 cites archive\/\.\.\/notes\/fake\.md, which is not a path inside archive\//);
+  assert.match(found, /CX-2 cites .* which is not a path inside archive\//);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+test("DECISION_UNKNOWN: a bold mention outside the decision list does not count", () => {
+  // The third review satisfied the first existence check with a throwaway
+  // appendix sentence. Only a list entry — a bullet starting with the bold
+  // id — records a decision.
+  const dir = makeFixture([baseEntry()], { decision: "DEC-20260903-Z" });
+  writeFileSync(join(dir, "CLAUDE.md"), KNOWN_DECISIONS + "\nSome appendix note mentioning **DEC-20260903-Z** in passing.\n", "utf8");
+  assert.ok(codes(checkBacklog(dir, clean)).includes("DECISION_UNKNOWN"));
+  rmSync(dir, { recursive: true, force: true });
+});
+
 // ── history: the five drains ────────────────────────────────────────────────
 
 test("history: an unchanged register passes against its base", () => {

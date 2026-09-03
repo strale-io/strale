@@ -18,10 +18,12 @@
 # is not a verdict for it (it must say VERDICT: <verdict> and name the
 # commit), a waiver by anyone but the founder, a decision id this repository
 # does not record (a formal record or a bold entry in CLAUDE.md), and a row
-# still pending after `review_by`. Two things it cannot see: a batch never
-# added, and a drain that reaches main through review — the base moves
-# forward when a merge lands, so the pull-request review is the guard
-# there, as it is for receipts.
+# still pending after `review_by`. Three things it cannot see, and the
+# pull-request review is the guard for each: a batch never added; a drain
+# that reaches main through review (the base moves forward when a merge
+# lands, as it does for receipts); and a decision entry added to CLAUDE.md
+# in the same change that cites it — the checker proves a decision is
+# recorded in a reviewed file, not that the founder made it.
 #
 # Drain order is `priority`, then oldest first. Highest first: these are the
 # ones where a Claude-only review is least adequate.
