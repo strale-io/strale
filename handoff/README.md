@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-220 files (193 with a recorded intent, 27 without).
+221 files (194 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-03 | [`handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md`](_general/from-code/2026-09-03-t17-hono-upgrade.md) | Program track T17 / WP13 first batch — upgrade `hono` in `apps/api` to close its 27 |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md`](_general/from-code/2026-09-03-handoff-gate-live-worktree.md) | stop the session-end gate instructing the destruction of live work, after it did so three times in one session. |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-founder-answers-retention-and-wp13-track.md`](_general/from-code/2026-09-03-founder-answers-retention-and-wp13-track.md) | record the founder's answers of 2026-09-03 on the dormant vendor keys, the decision briefs and DQ-28; fix the two def... |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-codex-review-backlog.md`](_general/from-code/2026-09-03-codex-review-backlog.md) | act on the founder's decision that waiting for the Codex quota costs more than proceeding, by making the resulting re... |
