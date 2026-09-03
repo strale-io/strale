@@ -373,7 +373,13 @@ export async function runChecks(options = {}) {
     const mins = Math.round(hours * 60);
     if (mins < 1) return ", touched seconds ago";
     if (mins < 90) return `, touched ${mins} minute(s) ago`;
-    const whole = Math.round(hours);
+    // Derived from the rounded minutes, not from the raw hours. 90 minutes is
+    // exactly 1.5 hours, so rounding once instead of twice flips the label
+    // across a ~30-second window just under the boundary. Cosmetic — the
+    // escalation below reads the unrounded float — but the split into
+    // dirtyAgeHours + formatter changed it by accident, and an accidental
+    // change is worth undoing even when it is invisible.
+    const whole = Math.round(mins / 60);
     return whole < 48
       ? `, last touched ${whole} hour(s) ago`
       : `, last touched ${Math.round(whole / 24)} day(s) ago`;

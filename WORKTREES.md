@@ -31,9 +31,10 @@ tolerates them without counting or recording them: a detached HEAD with
 uncommitted changes — a rebase mid-flight, a review agent running a
 fail-before check. They are nobody's batch, so the one-batch limit ignores
 them, and **no session removes one it does not own**. On 2026-09-03 the gate
-told a session to remove such a directory three times; each time it was in
-active use, and each time the instruction was refused by a session that
-checked first.
+told a session to remove such a directory twice; a third time it named the
+same review's checkout after it had gone clean, which is the separate case
+below. Each time the directory was in active use, and each time the
+instruction was refused by a session that checked first.
 
 Two things follow, and they are enforced rather than merely written down:
 
