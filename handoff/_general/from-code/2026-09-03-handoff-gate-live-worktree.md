@@ -59,6 +59,37 @@ Four tests, all planted. Removing the live-work branch fails two of them
 test asserts the fix text refuses to call the worktree idle. The path test
 asserts the first path survives intact. 34/34 pass.
 
+## Independent review, and what it changed
+
+VERDICT PASS, with two should-fixes that are applied here rather than deferred.
+
+**Staleness was computed and thrown away.** The first version reported the age
+of the dirty tree in prose and did nothing with it, so a scratch checkout
+touched seconds ago and one abandoned a fortnight ago got the same toothless
+note — and because the category produced only warnings, `baseline --write`
+(which harvests failures) could not see it either. It was therefore unbounded
+*and* invisible to the one register that tracks tolerated extras. The reviewer
+reproduced it: five abandoned detached-dirty worktrees, gate passes clean.
+Past `staleWorktreeHours` (48) it is now a finding — still never "remove it",
+but "find out whose it is, save the diff first", which fails and so cannot
+accumulate silently.
+
+**WORKTREES.md did not describe the category this change creates.** A document
+that defines the worktree model should say what the model now tolerates, rather
+than leaving the policy in code comments. Written up there.
+
+Also from the review: the two notes for one worktree are deduplicated; the
+`SPLIT_LINES` regex is a plain literal again (its roundabout
+`String.fromCharCode` construction was a shell-escaping workaround that got
+committed, not a design choice, and the reviewer measured that this
+environment emits pure LF anyway); the one caller still splitting on plain
+`"
+"` now uses it too; and `describeAge` no longer takes an argument it can
+only ever be called with empty.
+
+Three more planted tests: the stale escalation, the fresh case staying a note,
+and the dedupe. 37/37. Each fails when its own behaviour is reverted.
+
 ## Not done
 
 - No attempt to make the gate decide liveness. It cannot, and pretending

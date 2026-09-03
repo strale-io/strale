@@ -54,8 +54,12 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Line separator for `git status --porcelain` output, LF or CRLF. */
-const SPLIT_LINES = new RegExp(String.fromCharCode(13) + '?' + String.fromCharCode(10));
+/**
+ * Line separator for `git status --porcelain` output. Review measured this
+ * environment and found pure LF with no CR bytes in any case; the `\r?` is
+ * defensive for a git configured to emit CRLF, not an observed condition.
+ */
+const SPLIT_LINES = /\r?\n/;
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -79,6 +83,11 @@ export const DEFAULTS = Object.freeze({
     "Dockerfile",
   ],
   maxBatchWorktrees: 1,
+  // After this, a detached worktree with uncommitted work stops being
+  // read as a live session's and becomes a finding. Long enough that a
+  // slow review or an overnight rebase is never disturbed; short enough
+  // that an abandoned one cannot sit unnoticed for a week.
+  staleWorktreeHours: 48,
   minNextAction: 10,
 });
 
@@ -344,7 +353,7 @@ export async function runChecks(options = {}) {
    * not gate anything — a stale dirty worktree is still not this session's to
    * delete — it just gives the reader the fact they need to judge.
    */
-  function describeAge(worktreePath, dirtyPaths) {
+  function dirtyAgeHours(worktreePath, dirtyPaths) {
     let newest = 0;
     for (const line of dirtyPaths.slice(0, 50)) {
       // porcelain lines are "XY path"; a rename carries " -> ", take the target
@@ -355,16 +364,24 @@ export async function runChecks(options = {}) {
         if (t > newest) newest = t;
       } catch { /* deleted path, or unreadable — not a reason to fail */ }
     }
-    if (!newest) return "";
-    const mins = Math.round((Date.now() - newest) / 60000);
+    return newest ? (Date.now() - newest) / 3_600_000 : null;
+  }
+
+  function describeAge(worktreePath, dirtyPaths) {
+    const hours = dirtyAgeHours(worktreePath, dirtyPaths);
+    if (hours === null) return "";
+    const mins = Math.round(hours * 60);
     if (mins < 1) return ", touched seconds ago";
     if (mins < 90) return `, touched ${mins} minute(s) ago`;
-    const hours = Math.round(mins / 60);
-    return hours < 48 ? `, last touched ${hours} hour(s) ago` : `, last touched ${Math.round(hours / 24)} day(s) ago`;
+    const whole = Math.round(hours);
+    return whole < 48
+      ? `, last touched ${whole} hour(s) ago`
+      : `, last touched ${Math.round(whole / 24)} day(s) ago`;
   }
 
   // ── worktrees ──────────────────────────────────────────────────────────
   const batch = [];
+  const reported = new Set();
   let knownCount = 0;
   let agentCount = 0;
   let liveCount = 0;
@@ -412,8 +429,25 @@ export async function runChecks(options = {}) {
         // Detached AND dirty is the shape a tool makes for itself — an agent's
         // scratch checkout, a rebase mid-flight. It is not a batch, so it does
         // not count toward the one-batch limit, and it is never removed here.
+        //
+        // Staleness is the one thing that separates a scratch checkout in use
+        // from one abandoned, and it is used rather than merely reported: past
+        // STALE_WORKTREE_HOURS this becomes a finding, because "not this
+        // session's to delete" stops being true once no session is plausibly
+        // alive to own it. The finding still does not say remove — it says
+        // find out whose it is — but it fails, so it cannot accumulate
+        // silently. Without this the category was unbounded AND invisible to
+        // `baseline --write`, which harvests failures only.
         liveCount += 1;
-        note(`worktree ${wt.path} is detached with ${dirtyPaths.length} uncommitted path(s)${describeAge(wt.path, dirtyPaths)}: live work, not an abandoned checkout — do NOT remove it. The session that owns it clears it when it finishes.`);
+        reported.add(n);
+        const ageHours = dirtyAgeHours(wt.path, dirtyPaths);
+        const age = describeAge(wt.path, dirtyPaths);
+        if (ageHours !== null && ageHours > cfg.staleWorktreeHours) {
+          hygiene("worktree", `worktree ${wt.path} is detached with ${dirtyPaths.length} uncommitted path(s)${age} — too old to be a live session's`,
+            `find out whose it is before touching it: its uncommitted work is not in git anywhere. If it is genuinely abandoned, save the diff (git -C ${wt.path} diff > <somewhere>.patch) and then remove it; if it is still wanted, record it in scripts/handoff/baseline.json with a reason.`);
+        } else {
+          note(`worktree ${wt.path} is detached with ${dirtyPaths.length} uncommitted path(s)${age}: live work, not an abandoned checkout — do NOT remove it. The session that owns it clears it when it finishes.`);
+        }
         continue;
       }
 
@@ -422,7 +456,7 @@ export async function runChecks(options = {}) {
         if (dirtyPaths.length) {
           note(`worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`}) but carries ${dirtyPaths.length} uncommitted path(s)${describeAge(wt.path, dirtyPaths)}: live work — commit or move it, do NOT remove the worktree.`);
         } else {
-          hygiene("worktree", `worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`})${describeAge(wt.path, [])}`,
+          hygiene("worktree", `worktree ${wt.path} holds no batch branch (${wt.detached ? "detached HEAD" : `on ${cfg.releaseBranch}`})`,
             `if no session is using it, remove it from the trunk: git -C ${worktrees[0]?.path ?? toplevel} worktree remove ${wt.path} (never rm -rf; delete any node_modules junction inside first). A clean tree is NOT proof it is idle — an agent between two steps looks exactly like an abandoned checkout — so if it is not yours, ask its owner rather than removing it.`);
         }
       }
@@ -438,8 +472,12 @@ export async function runChecks(options = {}) {
       for (const wt of worktrees) {
         if (normalizePath(wt.path) === me || wt.bare) continue;
         const dirty = git(["-C", wt.path, "status", "--porcelain", "--untracked-files=all"], { allowFail: true });
-        const count = dirty ? dirty.split("\n").filter(Boolean).length : 0;
-        if (count) note(`worktree ${wt.path} carries ${count} uncommitted path(s); the session that owns it must clear them before it ends`);
+        const count = dirty ? dirty.split(SPLIT_LINES).filter(Boolean).length : 0;
+        // Skip the ones the worktree loop above already reported, or the same
+        // worktree gets two notes saying almost the same thing.
+        if (count && !reported.has(normalizePath(wt.path))) {
+          note(`worktree ${wt.path} carries ${count} uncommitted path(s); the session that owns it must clear them before it ends`);
+        }
       }
     }
   }

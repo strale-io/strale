@@ -26,6 +26,30 @@ worktrees as notes and never deletes them. The scheduled morning check-in
 works like any batch: `strale-wt-checkin` on `chore/checkin-<date>`, merged
 through a PR and removed afterwards.
 
+**Scratch checkouts a tool makes for itself** are a fourth kind, and the model
+tolerates them without counting or recording them: a detached HEAD with
+uncommitted changes — a rebase mid-flight, a review agent running a
+fail-before check. They are nobody's batch, so the one-batch limit ignores
+them, and **no session removes one it does not own**. On 2026-09-03 the gate
+told a session to remove such a directory three times; each time it was in
+active use, and each time the instruction was refused by a session that
+checked first.
+
+Two things follow, and they are enforced rather than merely written down:
+
+- **Dirty proves live. Clean proves nothing.** A scratch checkout goes clean
+  the moment a review stops editing and starts writing its verdict. The gate
+  therefore never claims a clean worktree is idle, and never prints a bare
+  "remove it".
+- **Staleness is the only signal that separates in-use from abandoned.** Past
+  48 hours (`staleWorktreeHours`) the gate escalates from a note to a finding.
+  The finding still does not say remove — it says find out whose it is, save
+  the diff first, and either delete it or record it in `baseline.json`. Its
+  uncommitted work exists nowhere else.
+
+If you are the owner, clear your own scratch checkout when you finish; that is
+what keeps the category from needing a rule with teeth.
+
 Creating a worktree:
 
     git worktree add -b <type>/<name> C:\Users\pette\Projects\strale-wt-<track> origin/main

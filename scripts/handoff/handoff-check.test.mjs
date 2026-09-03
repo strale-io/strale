@@ -5,7 +5,7 @@
 // clears it.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -259,6 +259,64 @@ test("a detached worktree with uncommitted work does not count toward the batch 
       JSON.stringify(result.failures),
     );
     assert.ok(result.warnings.some((w) => /excluded from the batch count/.test(w)));
+  } finally { r.cleanup(); }
+});
+
+test("a detached dirty worktree older than the stale threshold becomes a finding", async () => {
+  // Staleness is the only thing separating a scratch checkout in use from one
+  // abandoned. Computing it and then reporting it in prose, as the first
+  // version did, left the category unbounded and invisible to
+  // `baseline --write`, which harvests failures only. Past the threshold it
+  // fails — but the fix still does not say remove.
+  const r = makeRepo();
+  try {
+    const stale = join(r.dir, "stale");
+    git(r.trunk, "worktree", "add", "-q", "--detach", stale, "main");
+    const f = join(stale, "apps", "a.ts");
+    writeFileSync(f, "export const a = 2;\n");
+    const old = new Date(Date.now() - 72 * 3600 * 1000);
+    utimesSync(f, old, old);
+
+    const result = await r.check(r.batch);
+    const finding = result.failures.find(
+      (x) => x.code === "worktree" && normalizePath(x.message).includes(normalizePath(stale)),
+    );
+    assert.ok(finding, `expected a stale finding, got ${JSON.stringify(result)}`);
+    assert.match(finding.message, /too old to be a live session's/);
+    assert.match(finding.message, /day\(s\) ago/);
+    // Still never the bare imperative that caused the incident.
+    assert.ok(!/^remove it/.test(finding.fix), finding.fix);
+    assert.match(finding.fix, /find out whose it is/);
+    assert.match(finding.fix, /save the diff/);
+  } finally { r.cleanup(); }
+});
+
+test("a freshly touched detached dirty worktree stays a note", async () => {
+  const r = makeRepo();
+  try {
+    const fresh = join(r.dir, "fresh");
+    git(r.trunk, "worktree", "add", "-q", "--detach", fresh, "main");
+    writeFileSync(join(fresh, "apps", "a.ts"), "export const a = 2;\n");
+    const result = await r.check(r.batch);
+    assert.ok(
+      !result.failures.some((x) => normalizePath(x.message).includes(normalizePath(fresh))),
+      JSON.stringify(result.failures),
+    );
+  } finally { r.cleanup(); }
+});
+
+test("a worktree reported as live work is not also reported a second time", async () => {
+  // Two notes fired for the same worktree saying almost the same thing.
+  const r = makeRepo();
+  try {
+    const live = join(r.dir, "live");
+    git(r.trunk, "worktree", "add", "-q", "--detach", live, "main");
+    writeFileSync(join(live, "apps", "a.ts"), "export const a = 2;\n");
+    const result = await r.check(r.batch);
+    const mentions = result.warnings.filter((w) =>
+      normalizePath(w).includes(normalizePath(live)),
+    );
+    assert.equal(mentions.length, 1, JSON.stringify(mentions));
   } finally { r.cleanup(); }
 });
 
