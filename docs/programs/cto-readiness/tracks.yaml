@@ -275,18 +275,18 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 9 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526). Batch 9 migrated the six SQS-era trust-display
-      decisions with what survives stated per record; one code finding:
-      computeTrustGrade in apps/api/src/lib/trust-grade.ts is dead code
-      under a Combined Trust Grade heading (cleanup candidate). Private
-      projection 115 rows at archive efb96d69; operator verifier passes. G1
-      holds 104 rows (103 global, 1 temporary). Blocking gaps: G1, G2, G9.
-      Next: batch 10, the distribution and x402-rail decisions
-      (DEC-20260313-F, DEC-20260324-A, DEC-20260324-C, DEC-20260330-B,
-      DEC-20260404-A, DEC-20260416-A), then the Counterparty Assurance v1
-      group (retired framing under DEC-20260812-A), then the vendor and
-      registry group, then G2's 34 collisions one at a time, then G9's
+      Batches 1 to 10 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529). Batch 10 migrated the six distribution and
+      x402-rail decisions; two findings for To-dos: server.json and
+      packages/mcp-server/package.json disagree on the MCP server version,
+      and context7.json rule 12 still cites the deleted GET /v1/quality/:slug.
+      Private projection 109 rows at archive df544ab6; operator verifier
+      passes. G1 holds 98 rows (97 global, 1 temporary). Blocking gaps: G1,
+      G2, G9. Next: batch 11, the Counterparty Assurance v1 group
+      (DEC-20260515-A, DEC-20260515-B, DEC-20260515-C, DEC-20260518-A,
+      DEC-20260518-B, DEC-20260518-C, DEC-20260518-D), whose product framing
+      DEC-20260812-A retired, so each record states that; then the vendor
+      and registry group, then G2's 34 collisions one at a time, then G9's
       closing review. This track is the M2 exit gate: the closure
       register's validator refuses a state where it is done, or any
       post-m2 track is active or done, while a blocking gap remains.
@@ -333,6 +333,13 @@ tracks:
       - docs/decisions/records/DEC-20260316-B.md
       - docs/decisions/records/DEC-20260323-A.md
       - handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md
+      - docs/decisions/records/DEC-20260313-F.md
+      - docs/decisions/records/DEC-20260324-A.md
+      - docs/decisions/records/DEC-20260324-C.md
+      - docs/decisions/records/DEC-20260330-B.md
+      - docs/decisions/records/DEC-20260404-A.md
+      - docs/decisions/records/DEC-20260416-A.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md
 
   - id: T6
     title: M3 repo-native workflows
