@@ -271,6 +271,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md",
+        "handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -453,6 +454,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
+        "handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -546,7 +548,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "dcc47504a93079c327f9e274005ceb942c7785cff2b25453fa1fcae276e586e2",
+      "sha256": "1fcec1c44b151ccf9862bf7b494aebc44ac0db1f350a07401d440a458fc3e604",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
