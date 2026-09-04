@@ -8,14 +8,14 @@ there and already not enough.
 
 `makeHistoryFixture` (and the two other ad-hoc git-init helpers in the same test file) build
 a real repository via `execFileSync` and run `git commit`/`git switch` synchronously. Modern
-git's `git commit` invokes `git gc --auto --quiet` as part of its own machinery, and — with
-`gc.autoDetach` true, which is git's default off Windows — that spawns a background child the
+git's `git commit` invokes `git gc --auto --quiet` as part of its own machinery, and, with
+`gc.autoDetach` true, which is git's default off Windows, that spawns a background child the
 parent `git commit` process does not wait for. `git maintenance run --auto` (also invoked from
 `git commit` since git 2.30, gated by `maintenance.auto`, default true) takes
 `.git/objects/maintenance.lock` while it runs. Either process can still be writing under
 `.git/objects/` after the synchronous test helper has already returned and moved on to
 `rmSync`. `rmSync`'s own retry (`maxRetries: 5, retryDelay: 200`, already present before this
-fix) races that late writer and loses often enough on a Linux CI runner to flake — the
+fix) races that late writer and loses often enough on a Linux CI runner to flake, the
 directory is non-empty at the moment of `rmdir(".git")` because the detached child recreated
 an entry after `rmSync` had already unlinked it.
 
@@ -24,10 +24,10 @@ Confirmed by reading, not guessing:
   `maintenance.auto`, `maintenance.autoDetach` as real, currently-documented config knobs; none
   is set in a fixture repo before this fix, so all four ran at their defaults.
 - `scripts/codex-backlog-lib.mjs`'s `checkBacklog` shells out only via `execFileSync` (one call
-  site, line ~166) — it never spawns anything asynchronously. The race is entirely a
+  site, line ~166), it never spawns anything asynchronously. The race is entirely a
   fixture-repository concern in the test file, not in the library under test.
 - The test file's own `rmSync` calls already carried `maxRetries: 5, retryDelay: 200` before
-  this session; the bug report is correct that retries alone were not fixing it — a bounded
+  this session; the bug report is correct that retries alone were not fixing it, a bounded
   retry loses to a late writer whose finish time isn't bounded by the retry budget.
 
 ## Fix (`scripts/codex-backlog.test.mjs` only; `codex-backlog-lib.mjs` untouched)
@@ -44,7 +44,7 @@ Confirmed by reading, not guessing:
    backoff (`maxRetries: 10, retryDelay: 300`) for the residual case that (1) doesn't fully
    close, and on `ENOTEMPTY`/`EBUSY`/`EPERM` after that retry budget, warns to stderr and
    leaves the directory on disk instead of failing the test over a teardown artifact. Any
-   other error still throws — this only swallows the exact race class, not real bugs.
+   other error still throws, this only swallows the exact race class, not real bugs.
 3. **Every fixture's cleanup is registered with `t.after(...)`** immediately after the
    directory is created, instead of a trailing `rmSync` call at the end of the test body. A
    `t.after` callback runs even when an assertion in the test body throws, closing the leak the
@@ -53,29 +53,29 @@ Confirmed by reading, not guessing:
 
 ## Proof
 
-**After the fix**, `node --test scripts/codex-backlog.test.mjs` run 20 times in a loop: 20/20
-runs, 37/37 tests passing each time, zero failures. A second 20-run loop after restoring the
-fixed file (post-repro-attempt) also came back 20/20 clean. Full per-run pass/fail lines for
-both loops are in the PR body.
+**After the fix**, the suite was run in a loop on the PR head and every run was clean; the
+per-run pass and fail figures are in the receipt
+`archive/receipts/2026-09-04-test-run-codex-backlog-teardown-loop.json` (written by the loop
+itself, never edited). The PR body carries the worker's own two earlier loops, which agree.
 
 **Reproduction attempt against the pre-fix file**: to test the instruction's premise that "if
-it does not reproduce on Windows, say so plainly," I restored `scripts/codex-backlog.test.mjs`
-to its pre-fix content (`git show HEAD:scripts/codex-backlog.test.mjs`) and ran it 40 times in
-a loop on this machine. Result: 40/40 runs, zero failures — **did not reproduce on Windows**.
+it does not reproduce on Windows, say so plainly," the file was restored to its pre-fix content
+(`git show HEAD:scripts/codex-backlog.test.mjs`) and run in a 40-iteration loop on this
+machine. Result: no failure in any iteration, so the race **did not reproduce on Windows**.
 This is expected, not a sign the root-cause read is wrong: the CI failure is on a Linux
 runner, and Git for Windows backgrounds `gc --auto` through a different mechanism
 (`CreateProcess`/job objects rather than `fork()`), which can finish detaching and writing on a
 different timescale than Linux's `fork()`-based detach; this machine's small, fast fixture
-repos (2-3 commits, well under any `gc.auto` object-count threshold) may also simply not
-trigger the same lock-contention window as whatever CI's runner and object counts produce. The
-fix removes the mechanism (no fixture ever spawns background git at all) rather than relying on
+repos (2 to 3 commits, well under any `gc.auto` object-count threshold) may also simply not
+trigger the same lock-contention window as CI's runner and object counts produce. The fix
+removes the mechanism (no fixture ever spawns background git at all) rather than relying on
 reproducing the race locally to prove it, per the root-cause analysis above.
 
-Both `npm run codex:test` and `npm run codex:check` pass locally (see PR body for output).
+Both `npm run codex:test` and `npm run codex:check` pass locally (see the PR body for output).
 
 ## What I could not verify
 
-- Could not reproduce the original CI failure locally (see above) — the fix is justified by
+- Could not reproduce the original CI failure locally (see above), the fix is justified by
   reading git's own documented auto-maintenance behavior and the CI failure signature, not by
   a local repro.
 - Did not touch `scripts/codex-backlog-lib.mjs`; confirmed by reading that it has exactly one
@@ -86,7 +86,7 @@ Both `npm run codex:test` and `npm run codex:check` pass locally (see PR body fo
 - Worked only in the existing worktree `.claude/worktrees/agent-adb9c5ca5b05e831d` on
   `fix/codex-backlog-test-teardown-race`, cut from `origin/main` at `de1d28fa`. No branch
   switching in the main tree; no `git stash` used.
-- This is a test-infrastructure fix, not a capability/decision/distribution change — the
+- This is a test-infrastructure fix, not a capability/decision/distribution change, the
   Capability Onboarding, Distribution PR, Audit-Follow-up, Bulk-Operation, and Deploy-Mechanism
   protocols do not apply.
 - `/go` code-review gate: not run as a separate step in this session; the equivalent
