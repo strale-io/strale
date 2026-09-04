@@ -253,6 +253,7 @@
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
         "handoff/_general/from-code/2026-09-03-codex-review-backlog.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md",
         "handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -523,7 +524,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "83c70336d5dccb500fcc369110e9f9aa0da1287abd531e182cbb4b7dfe8d57a4",
+      "sha256": "319a6de78dd4e94b71126d046e90a8134bacf100ac49dca0dea17467225302f2",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

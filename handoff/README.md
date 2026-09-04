@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-224 files (197 with a recorded intent, 27 without).
+225 files (198 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md`](_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md) | land T10 (M2 exit-gap closure) batch 5 — capability lifecycle patterns — three `not_yet_reconciled`, `historical_scop... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md`](_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md) | land T10 (M2 exit-gap closure) batch 4 — the first global-scope-row batch — three engineering-convention Decision row... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md`](_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md) | land the first batch of T10 (M2 exit-gap closure) — the seven decision rows the closure register names as its next ba... |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md`](_general/from-code/2026-09-03-t17-hono-upgrade.md) | Program track T17 / WP13 first batch — upgrade `hono` in `apps/api` to close its 27 |
