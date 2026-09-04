@@ -102,6 +102,39 @@ describe("callerClass — the TypeScript twin", () => {
     expect(callerClass("SYSTEM@STRALE.INTERNAL", true)).toBe("harness");
   });
 
+  /**
+   * The one pair that genuinely could drift, and originally had no test.
+   *
+   * `callerClass` lowercases (via `isInternalAccountEmail`); Postgres `LIKE`
+   * and `=` on a `varchar` column do not. So for `SYSTEM@STRALE.INTERNAL` the
+   * TypeScript twin said `harness` while the SQL said `account` — the two
+   * halves of a partition whose stated thesis is that they cannot disagree.
+   * Latent rather than live (every production `users.email` is lower-case, and
+   * both auth write paths lower-case on insert), and the first writer that
+   * does not lower-case would have made it real, silently, in the predicate
+   * that gates the quality floor.
+   *
+   * The structural tests above render both sides and compare them, which
+   * proves they are built from the same subquery — and could not see this,
+   * because both sides were rendering the same *case-sensitive* SQL. This
+   * test crosses the boundary the others do not: it asserts the SQL folds
+   * case, which is what makes the TS twin's answer the same answer.
+   */
+  it("agrees with the SQL on case — the twin and the query fold identically", () => {
+    const rendered = render(callerClassSql("t")).sql;
+    // Every email comparison in the emitted SQL folds the column's case.
+    const comparisons = rendered.match(/[A-Za-z_.()]*email[)]?\s*(?:LIKE|=)/gi) ?? [];
+    expect(comparisons.length).toBeGreaterThan(0);
+    for (const c of comparisons) expect(c.toLowerCase()).toContain("lower(email)");
+    // And the TS twin agrees on the mixed-case form for every rule we have.
+    for (const suffix of INTERNAL_EMAIL_SUFFIXES) {
+      expect(callerClass(`Someone${suffix.toUpperCase()}`, true)).toBe("harness");
+    }
+    for (const email of EXTRA_EXCLUDED_EMAILS) {
+      expect(callerClass(email.toUpperCase(), true)).toBe("harness");
+    }
+  });
+
   it("names all three classes and nothing else", () => {
     expect([...CALLER_CLASSES].sort()).toEqual(["account", "anonymous", "harness"]);
   });

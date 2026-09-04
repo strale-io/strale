@@ -169,9 +169,13 @@ entire lifetimes:
 *deliberately* sending malformed input — these are its own negative tests. **No
 customer has ever seen any of the three errors.**
 
-**Second-sourced two ways**, per the standing rule: an ad-hoc caller-class
-partition, and then independently by `who-called.ts` (written afterwards) run
-against production. Both return the same three rows. The instrument was also
+**Second-sourced three ways.** An ad-hoc caller-class partition; then
+`who-called.ts` (written afterwards) run against production; then — the one that
+counts, since the first two share an author — the independent reviewer's own raw
+join over `transactions ⋈ capabilities ⋈ users`, using neither `populations.ts`
+nor `who-called.ts`, which returned 808 / 806 / 811 and confirmed that no email
+other than `system@strale.internal`, and no anonymous row, appears for any of
+the three errors in their entire lifetimes. The instrument was also
 checked *against a positive control*, so that a uniform zero could not be mistaken
 for a broken tool: `competitor-compare` over 30 days returns 7 harness and **10
 registered-account** calls, and `redirect-trace` returns 12 anonymous.
@@ -181,12 +185,41 @@ assertion over arbitrary wire JSON, and crashing on a declared contract violatio
 is a real defect worth fixing. What is wrong is the recorded reason, in a merged
 PR body where it would later be cited as evidence of customer harm.
 
-**The one place customer impact did exist, which the PR did not name.**
-`redirect-trace`'s `max_redirects` bug reached real callers through a *different*
-string: `Too many redirects (>0) — refusing to follow further` was served to **2
-anonymous x402 calls**, against 644 from the harness. Same root cause, so the fix
-covers it — but it is not the error the table cites, and none of the table's own
-three rows carries any customer impact.
+**RETRACTED — this paragraph originally claimed a customer impact that does not
+exist.** It read: *"`redirect-trace`'s `max_redirects` bug reached real callers
+through a different string: `Too many redirects (>0)` was served to 2 anonymous
+x402 calls, against 644 from the harness. Same root cause, so the fix covers
+it."* That is wrong, and the independent review returned **FAIL** on it before
+this batch merged. Left visible rather than deleted, per annotate-never-rewrite.
+
+Three disproofs, any one sufficient:
+
+1. **Both callers sent valid numbers.** Rows `2d966d0c` (2026-06-05) and
+   `8438e9a8` (2026-08-12) carry `max_redirects: 5` and `max_redirects: 10`.
+   Pre-#502, `Math.min(Number(x ?? 20), 30)` gives 5 and 10 — the loop runs and
+   the NaN/0 path is never reached.
+2. **The `(>0)` is not the caller's parameter.** `redirect-trace.ts` calls
+   `safeFetch(..., { maxRedirects: 0, returnOnRedirectCap: true })`; the `0` is
+   safeFetch's own internal cap. The executor's docstring records exactly this
+   history.
+3. **The timeline rules it out.** `returnOnRedirectCap` landed in #318 on
+   2026-08-18. Of 646 `Too many redirects%` rows on `redirect-trace`, the last
+   is `2026-08-17T21:40:57Z` and **none** exists after 2026-08-18 — extinct 17
+   days before #502 merged.
+
+**The correct statement is stronger than the retracted one:** no customer was
+ever affected by any error PR #502 fixed, `redirect-trace` included.
+
+*How it happened, and it is the same failure as the finding, not a second one.*
+`who-called.ts` renders those two rows as `Starting URL: [service]` — the
+production sanitizer redacts URLs for external callers, while the harness rows
+immediately above show their real `httpbin.org` URLs. The error string alone
+could not say what those callers sent; `transactions.input` had to be opened,
+and was not. A matching error string on a matching slug was taken for a matching
+cause. **The transferable rule is not about populations: an instrument built to
+stop one inference outrunning its evidence will still serve a display that
+invites a different one, and the answer to a redacted field is to open the
+record it was redacted from — never to reason from what survived redaction.**
 
 **Why this is F2 and not carelessness.** The query was correct; its population was
 everybody. F2's own standing rule already covered it — "any business number
@@ -272,6 +305,79 @@ this machine and CI is the gate; it was not run as a verdict.
   its stated justification was wrong.
 - No production write of any kind.
 
+## Independent review
+
+Reviewed by a fresh read-only Claude agent that did not author the batch (the
+2026-09-02 founder amendment; the Codex re-review obligation stands and is
+recorded as CX-8). **Verdict: FAIL**, one BLOCKING finding, three SHOULD_FIX,
+three NOTE. The FAIL was correct and is the reason this record carries a
+retraction above.
+
+**BLOCKING — the "customer impact the PR did not name" was a misattribution.**
+Retracted above and on #502. The reviewer's argument was three independent
+disproofs; each was reproduced here before acting, not accepted on its say-so —
+the two rows' `input` payloads read directly from `transactions`, the
+`maxRedirects: 0` call site and its docstring read in `redirect-trace.ts`, and
+the extinction date confirmed by `max(created_at)` over all 646 rows. A batch
+whose subject is a claim outrunning its evidence cannot ship one, and this one
+had already been published as a *correction*, which is the highest-credibility
+position a wrong claim can occupy.
+
+**SHOULD_FIX 1 — the twin and the SQL disagreed on case, and a test enshrined
+half of it.** `callerClass()` lowercases via `isInternalAccountEmail()`;
+`LIKE`/`=` on a `varchar` column does not. Verified in production:
+`SELECT 'SYSTEM@STRALE.INTERNAL' LIKE '%@strale.internal'` returns **false**. So
+the twin said `harness` where the SQL said `account` — in a file whose stated
+thesis is that the two cannot disagree, with nine tests none of which crossed
+that boundary. Latent, not live (0 mixed-case, 0 untrimmed, 0 NULL emails across
+65 users; both auth write paths lower-case on insert), and it matters because
+this predicate gates the quality floor: the first writer that does not fold case
+would start counting an internal account against capability completion rates.
+Fixed at the single source — `internalAccountEmailExclusionSql()` now folds
+`lower(email)` — which fixes `quality-aggregation.ts` and `externalCustomers()`
+with it. New test crosses the boundary; **mutation-proved**, the fold removed
+and 2 tests went red (the new one, and the pre-existing
+`internal-accounts.test.ts` shape assertion, which caught the change on its
+own — a pre-existing test discriminating against a new change is the cheapest
+evidence there is).
+
+**SHOULD_FIX 2 — a docstring naming a function the file did not import.** The
+comment claimed both sides were built from `internalAccountEmailExclusionSql()`;
+neither was, so the tree carried **two** SQL definitions of "ours" while the
+comment a reader would trust said one. Fixed by making it true rather than by
+editing the comment: `internalUserIds()` now delegates to that function.
+
+**SHOULD_FIX 3 — `who-called.ts`'s closing line counted calls, not impact.** It
+summed every non-harness row, so 9 completed + 3 failed printed as "12
+customer-facing call(s)" — in a tool built to stop "13 calls" being read as "13
+customers", the one line that read exactly that way. Now splits total and
+failed, and says "no customer call reached this at all" when the class is empty.
+Verified against production.
+
+**NOTES, and what was done with each.** (a) The signup miscount in the brief was
+already corrected mid-review by `9183a49a`; the reviewer measured the same two
+ISO-week signups independently. (b) F2's replay is deferred a fourth time and
+the reviewer is right that DEC-20260822-A makes the investigation automatic at
+three, not optional at ten — recording the debt is not paying it. It is carried
+to the next session as the first item rather than dressed up. (c)
+`who-called.ts` is outside the typecheck; self-reported, unchanged.
+
+**What the reviewer verified independently and found sound:** the
+`externalCustomers()` refactor renders byte-identical modulo one newline with
+identical binds in identical order, so the admitted set is *identical*, not
+similar; the `NOT IN`/NULL trap cannot fire because `users.id` is the primary
+key; the three caller classes are exhaustive and mutually exclusive, and the
+hunted orphan-`user_id` case cannot arise because
+`transactions_user_id_users_id_fk` has no `ON DELETE` (measured: 0 such rows) —
+and were it to arise it resolves to `account`, the conservative direction for
+this instrument; GDPR-erased users become `redacted-<uuid>@deleted.local` and
+classify as `account`, also correct; the whole-database distribution is harness
+1,017,893 / anonymous 12,135 / account 97, i.e. **98.8% harness**, which is the
+first direct measurement of the "~98%" this repository has been asserting from
+memory; and the `PgDialect` render test is not hollow — the literal SQL comes
+from our own template strings, so a drizzle formatting change fails it loudly
+rather than passing it vacuously.
+
 ## Next session
 
 1. **2026-09-06 is still the date that matters.** The 08-31 week closes; it is the
@@ -292,6 +398,10 @@ this machine and CI is the gate; it was not run as a verdict.
    Caught by measuring instead of inheriting yesterday's sentence.
 4. OpenRegister credits reset 2026-09-06T23:40Z; the four DE listings return on
    their own. Verify rather than assume.
-5. F2's replay is still owed, unchanged since incident 7: re-derive the five
-   2026-08-15 conclusions through `lib/metrics` and confirm each now refuses or
-   changes. Incident 10 is an argument for it, not a substitute.
+5. **F2's replay, first not last.** Owed since incident 7 and now deferred a
+   fourth time: re-derive the five 2026-08-15 conclusions through `lib/metrics`
+   and confirm each now refuses or changes. DEC-20260822-A makes the root-cause
+   investigation *automatic* at three incidents; the family is at ten and today
+   produced two more instances inside one session — the finding, and my own
+   retracted correction. Recording the debt again is what the last three
+   sessions did.

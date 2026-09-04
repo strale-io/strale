@@ -98,8 +98,23 @@ async function main() {
         console.log(`        ${String(r.n).padStart(4)} × ${r.err}`);
       }
     }
-    const external = group.filter((r) => r.klass !== "harness").reduce((s, r) => s + r.n, 0);
-    console.log(`    → ${external === 0 ? "NO customer has ever been affected in this window" : `${external} customer-facing call(s)`}\n`);
+    // Split, not summed. An earlier version printed one total of every
+    // non-harness row — so a slug with 9 completed and 3 failed customer calls
+    // closed with "12 customer-facing call(s)", which in a tool built to stop
+    // "13 calls" being read as "13 customers affected" is the one line that
+    // reads exactly that way. Impact is the failed half; the completed half is
+    // ordinary business. Caught by review, 2026-09-04.
+    const ext = group.filter((r) => r.klass !== "harness");
+    const extAll = ext.reduce((s, r) => s + r.n, 0);
+    const extOk = ext.filter((r) => r.status === "completed").reduce((s, r) => s + r.n, 0);
+    const extBad = extAll - extOk;
+    console.log(
+      extAll === 0
+        ? "    → no customer call reached this at all in this window\n"
+        : extBad === 0
+          ? `    → ${extAll} customer call(s), NONE of which failed\n`
+          : `    → ${extAll} customer call(s), of which ${extBad} failed\n`,
+    );
   }
 }
 

@@ -11,8 +11,7 @@
  */
 import { sql, type SQL } from "drizzle-orm";
 import {
-  INTERNAL_EMAIL_LIKE_PATTERNS,
-  EXTRA_EXCLUDED_EMAILS,
+  internalAccountEmailExclusionSql,
   isInternalAccountEmail,
 } from "../internal-accounts.js";
 
@@ -28,15 +27,13 @@ export function externalCustomers(alias = "t"): SQL {
  * and both the filter and the partition are expressed against it.
  */
 export function internalUserIds(): SQL {
-  // OR-chains rather than `LIKE ANY(array)`: a JS array does not bind as a
-  // Postgres array through drizzle's sql template, and the driver rejects it
-  // with "op ANY/ALL (array) requires array on right side". Explicit chains
-  // are portable across both call styles and read the same in a query log.
-  const likeAny = sql.join(
-    INTERNAL_EMAIL_LIKE_PATTERNS.map((p) => sql`email LIKE ${p}`), sql` OR `);
-  const eqAny = sql.join(
-    EXTRA_EXCLUDED_EMAILS.map((e) => sql`email = ${e}`), sql` OR `);
-  return sql`SELECT id FROM users WHERE (${likeAny}) OR (${eqAny})`;
+  // Delegates to `internalAccountEmailExclusionSql()` rather than rebuilding
+  // the OR-chain. An earlier version of this function inlined its own copy,
+  // which put two SQL definitions of "ours" in the tree while the comment
+  // above claimed there was one — review caught the docstring naming a
+  // function the file did not import. One definition, or the sentence is a
+  // lie the next reader will trust.
+  return sql`SELECT id FROM users WHERE ${internalAccountEmailExclusionSql()}`;
 }
 
 /**

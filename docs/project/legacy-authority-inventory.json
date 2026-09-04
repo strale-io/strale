@@ -379,7 +379,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "842bba619c1f2d1e94ab83ce593c2f2513d8fe42cd266132d3fa3236463d1f76",
+      "sha256": "e502c12ab3314fb6ea25307fad7c1510e5f6024aaf19dd27824fb8f164525a1e",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -522,7 +522,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "b6f8bba6af3ac1250c376bfee107d2bd3a56995445cecfddd71f7d6d5e3e0826",
+      "sha256": "96c4b8b39d21093f166854ba5657ddd242eca70495c36214b706493083379583",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

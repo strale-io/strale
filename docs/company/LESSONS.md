@@ -314,9 +314,36 @@ callers, back to 2026-05-29. No customer has ever seen any of the three errors.
 The fix itself is correct and stays merged — an `as string[]` cast is not a
 check, and crashing on a declared contract violation is a real defect. What was
 wrong was the reason recorded for it, in a merged PR body where it would be
-cited later. Corrected on the PR, and the one place customer impact did exist is
-now named there: `redirect-trace`'s `max_redirects` bug reached 2 anonymous x402
-calls through a *different* error string, which the table did not mention.
+cited later. Corrected on the PR.
+
+**And then the correction was itself wrong, in the same shape, and that is the
+half of this incident worth keeping.** The first correction claimed one place
+customer impact *did* exist: that `redirect-trace`'s `max_redirects` bug had
+served `Too many redirects (>0)` to 2 anonymous x402 calls, "same root cause, so
+the fix covers it". Retracted the same morning, caught by the independent review
+of the batch carrying the correction, which returned FAIL on exactly this.
+Three disproofs, any one sufficient: both callers sent **valid** numbers
+(`max_redirects: 5` and `10`, so the NaN/0 path is never reached); the `(>0)`
+is `safeFetch`'s own hardcoded internal cap, not the caller's parameter, and
+`redirect-trace.ts`'s docstring says so; and the error class went extinct on
+2026-08-17 when `returnOnRedirectCap` landed in #318, **17 days before** the fix
+now credited with covering it. The true statement is stronger than the false
+one: no customer was ever affected by anything PR #502 fixed, full stop.
+
+*How it happened, because it is not a second failure but the same one.*
+`who-called.ts` rendered those two rows as `Starting URL: [service]` — the
+production error sanitizer redacts URLs for external callers, while the harness
+rows directly above showed their real URLs. The string alone could not say what
+those callers sent; `transactions.input` had to be read, and was not. A matching
+error string on a matching slug was taken for a matching cause. **The generalisation
+is not about populations at all: an instrument built to stop one inference from
+outrunning its evidence will happily serve a display that invites a different
+one, and the fix for a redacted field is to open the record it was redacted
+from, never to reason from what survived redaction.** The tool's closing line —
+which summed every non-harness row, printing "12 customer-facing call(s)" for 9
+completed and 3 failed — has been split into total and failed, because in a tool
+built to stop "13 calls" reading as "13 customers" that was the one line that
+read exactly that way.
 
 *Why this is F2 and not carelessness.* The query was correct. Its population was
 everybody. This family's own standing rule — "any business number computed
