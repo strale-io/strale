@@ -41,6 +41,26 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-7
+    subject: "PR #503 — G1 rule (DEC-20260904-A): 76 pre-readiness feature-scoped rows become evidence-only"
+    commit: 90c1c798
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      A classification rule moved 76 rows out of migration scope in one step.
+      The Claude review recomputed the population and digests independently
+      and mutation-tested the predicate; the model that set the fidelity bar
+      for decision records should confirm the rule's predicate and reversal
+      condition are the right boundary, not merely correctly applied.
+    what_to_attack: >
+      The predicate itself (is "feature-scoped and pre-2026-08-12" the honest
+      boundary for evidence-only, or does it sweep in rows with live
+      authority?), the 76-row population against the private projection at
+      995cece3, the record's Consequences and Reversal sections, and the
+      register's arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS
   - id: CX-5
     subject: "PR #500 — M2 batch: 2026-08 operating-window rows, seven formal candidate records"
     commit: 7d6343e1

@@ -275,22 +275,19 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batch 1 done (PR #500): the seven 2026-08 operating-window rows are
-      formal candidate records, the private projection is at 216 rows in
-      the archive (995cece3), and the operator verifier passes. Next batch:
-      the G1 classification rule. Of 205 not_yet_reconciled rows, 76 are
-      feature-scoped and predate the readiness program; G1's own
-      closes_when admits an explicitly reviewed rule classifying those as
-      evidence-only. Write that rule as a decision record with the exact
-      predicate (historical_scope = feature AND decided_at < 2026-08-12 AND
-      not collided), have the private projection's dispositions move under
-      it by script rather than by hand, and put it through independent
-      review before any row moves. Then G3's cross-surface identity (a
+      Batches 1 and 2 done (PRs #500, #503). Batch 2 applied the G1 rule
+      (DEC-20260904-A): 76 pre-readiness feature-scoped rows are
+      intentionally_historical in the public register, cited by the gap
+      report, and the private projection is 140 rows at archive db6634c6.
+      The operator verifier passes. G1 now holds 129 rows (128 global, 1
+      temporary), all pre-readiness, which the rule does not cover: they
+      are contradiction-checked batch work, grouped by topic, smallest
+      coherent group first. Next: G3's cross-surface identity (a
       source-qualified key for the Git-native DEC-20260422-A claim), then
-      G2's 34 collisions one at a time, then G9's closing review. This
-      track is the M2 exit gate: the closure register's validator refuses
-      a state where it is done, or any post-m2 track is active or done,
-      while a blocking gap remains.
+      the first global-row batch, then G2's 34 collisions one at a time,
+      then G9's closing review. This track is the M2 exit gate: the
+      closure register's validator refuses a state where it is done, or
+      any post-m2 track is active or done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -298,6 +295,8 @@ tracks:
     evidence: 
       - handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md
       - docs/project/m2-closure-register.yaml
+      - docs/decisions/records/DEC-20260904-A.md
+      - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
 
   - id: T6
     title: M3 repo-native workflows
