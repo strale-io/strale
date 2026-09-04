@@ -39,6 +39,16 @@ describe("academic-paper-search / paper-details (OpenAlex)", () => {
     expect(resolveWorkIdentifier("not-a-doi")).toBeNull();
   });
 
+  it("rejects DOIs whose path segments would be collapsed by URL normalisation (round-2 review of #518)", async () => {
+    for (const bad of ["10.1000/../../../../etc/passwd", "10.1000/./x", "10.1000//x", "10.1000/a/..", `10.1000/${"x".repeat(300)}`]) {
+      expect(resolveWorkIdentifier(bad)).toBeNull();
+      await expect(details({ doi: bad })).rejects.toThrow(/does not look like a DOI/);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+    // Dots inside a segment are ordinary DOI characters and stay allowed.
+    expect(resolveWorkIdentifier("10.1093/nar/gkab1049.v2")).toEqual({ kind: "doi", id: "10.1093/nar/gkab1049.v2" });
+  });
+
   it("search refuses an empty query without calling upstream", async () => {
     await expect(search({ query: " " })).rejects.toThrow(/'query' is required/);
     expect(fetchMock).not.toHaveBeenCalled();

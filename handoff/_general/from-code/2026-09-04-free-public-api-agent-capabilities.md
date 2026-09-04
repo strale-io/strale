@@ -85,3 +85,10 @@ a test seam resets it and the test seeds its own fixtures. Should-fix, both appl
 `www.sec.gov` is now its own health-probed provider, and the manifest declares `anyOf: [ticker | cik]`
 so the route-level structured 400 fires. Receipt after fixes:
 `archive/receipts/2026-09-04-test-run-free-public-api-capabilities-r2.json`.
+
+Round 2 (fresh agent): FAIL on one remaining must-fix in the same code path — a DOI with `.`/`..`
+segments (`10.1000/../../../../etc/passwd`) was collapsed by URL dot-segment normalisation and
+reached the wire as `GET /works/etc/passwd` on the OpenAlex host. Fixed: a DOI is refused when any
+`/`-separated segment is empty, `.` or `..`, or the id exceeds 200 characters; regression test covers
+those inputs and keeps dotted suffixes like `gkab1049.v2` allowed. Round-1 items confirmed fixed.
+Receipt: `archive/receipts/2026-09-04-test-run-free-public-api-capabilities-r3.json`.

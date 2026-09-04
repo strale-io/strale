@@ -16,13 +16,28 @@ const USER_AGENT = `Strale/1.0 (${CONTACT})`;
 const DOI_RE = /\b10\.\d{4,9}\/[^\s"<>?#&]+/i;
 const OPENALEX_ID_RE = /^W\d{4,}$/i;
 
+const MAX_DOI_CHARS = 200;
+
+/**
+ * A DOI's `/`-separated segments must all be real: `.` and `..` would be
+ * collapsed by URL dot-segment normalisation and walk the request out of
+ * `/works/https://doi.org/…` onto an arbitrary path of the OpenAlex host
+ * (round-2 review of #518: `10.1000/../../../../etc/passwd` reached the wire
+ * as `GET /works/etc/passwd`). An empty segment (`//`) is refused too.
+ */
+function hasSafeSegments(doi: string): boolean {
+  return doi.split("/").every((s) => s.length > 0 && s !== "." && s !== "..");
+}
+
 /** Accept a bare DOI, a doi.org URL, or an OpenAlex work id; return the API path segment. */
 export function resolveWorkIdentifier(raw: string): { kind: "doi" | "openalex"; id: string } | null {
   const value = raw.trim();
   if (OPENALEX_ID_RE.test(value)) return { kind: "openalex", id: value.toUpperCase() };
   const m = value.match(DOI_RE);
-  if (m) return { kind: "doi", id: m[0].replace(/[.,;)]+$/, "").toLowerCase() };
-  return null;
+  if (!m) return null;
+  const id = m[0].replace(/[.,;)]+$/, "").toLowerCase();
+  if (id.length > MAX_DOI_CHARS || !hasSafeSegments(id)) return null;
+  return { kind: "doi", id };
 }
 
 /** Percent-encode every path segment of a DOI while keeping its structural slashes. */
