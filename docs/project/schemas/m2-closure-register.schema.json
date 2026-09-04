@@ -137,7 +137,7 @@
         "additionalProperties": false,
         "required": ["record_key", "id", "source_kind", "source_rows"],
         "properties": {
-          "record_key": { "type": "string", "minLength": 1 },
+          "record_key": { "type": "string", "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$", "maxLength": 120 },
           "id": { "type": "string", "minLength": 1 },
           "source_kind": { "enum": ["notion-row", "git-native"] },
           "source_rows": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/pageId" } },
@@ -298,7 +298,7 @@
         "disposition": {
           "enum": ["formally_migrated", "unresolved_collision", "resolved_collision", "intentionally_historical", "obsolete_or_superseded", "not_yet_reconciled", "unclear"]
         },
-        "record_key": { "type": "string", "minLength": 1 },
+        "record_key": { "type": "string", "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$", "maxLength": 120 },
         "collision": {
           "type": "object",
           "additionalProperties": false,

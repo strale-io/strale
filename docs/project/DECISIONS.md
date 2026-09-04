@@ -55,6 +55,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260827-A`](../decisions/records/DEC-20260827-A.md) — austrian-company-data migrates to the official Firmenbuch via JustizOnline IWG/HVD API | `DEC-20260827-A` | active | `registry-integration` | global | petter | 2026-08-27 |
 | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) — Treat the context pack as complete founder input and make reconciliation M2 work | `DEC-20260901-A` | active | `project-memory-system-of-record` | global | petter | 2026-09-01 |
 | [`DEC-20260904-A`](../decisions/records/DEC-20260904-A.md) — Pre-readiness feature-scoped M2 decision rows are evidence-only | `DEC-20260904-A` | active | `m2-closure-register-classification` | operational | claude | 2026-09-04 |
+| [`DEC-20260904-B`](../decisions/records/DEC-20260904-B.md) — Cross-surface identity mechanism for the M2 closure register (git-qualified record keys) | `DEC-20260904-B` | active | `m2-closure-register-cross-surface-identity` | operational | claude | 2026-09-04 |
 
 ## Non-active decisions
 

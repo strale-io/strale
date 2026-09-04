@@ -562,6 +562,56 @@ test("unambiguous record keys and filenames cannot diverge from display IDs", ()
   );
 });
 
+test("the record-key grammar also accepts a git-qualified key, symmetric to --notion-", () => {
+  const sha = "3b25658736bfed53eec52c8acf2619dacd54d1f5";
+  const gitQualified = record({
+    id: "DEC-20260812-A",
+    recordKey: `DEC-20260812-A--git-${sha.slice(0, 7)}`,
+  });
+  // The schema pattern accepts the shape; no DECISION_SCHEMA_INVALID for the
+  // record_key field.
+  assert.ok(
+    !validateDecisionRecords([gitQualified]).some(
+      (item) => item.code === "DECISION_SCHEMA_INVALID" && item.detail.includes("record_key"),
+    ),
+  );
+
+  // Refused: fewer than 7 hex digits.
+  const shortSha = record({ id: "DEC-20260812-A", recordKey: "DEC-20260812-A--git-abcdef" });
+  assert.ok(
+    validateDecisionRecords([shortSha]).some(
+      (item) => item.code === "DECISION_SCHEMA_INVALID",
+    ),
+  );
+
+  // Refused: uppercase hex.
+  const upperSha = record({ id: "DEC-20260812-A", recordKey: "DEC-20260812-A--git-ABCDEFG" });
+  assert.ok(
+    validateDecisionRecords([upperSha]).some(
+      (item) => item.code === "DECISION_SCHEMA_INVALID",
+    ),
+  );
+
+  // OPEN QUESTION (reported, not resolved here): validateDecisionRecords's
+  // "unqualified mismatch" rule only recognizes a qualified key when its bare
+  // id is in the collision registry passed in (docs/decisions/id-collisions.yaml,
+  // notion-duplicate collisions only). A cross-surface collision id (like
+  // DEC-20260422-A) never appears there by design (see
+  // archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md), so a
+  // future git-qualified record for a cross-surface id is still rejected here
+  // as DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH even though the closure
+  // register's own mechanism (scripts/m2-closure-register-lib.mjs) accepts
+  // it. This module's collision-awareness is out of this brief's scope
+  // (stage 1 mechanism only); stage 2, which will actually create such a
+  // record, needs to either extend this module's collidedIds source or
+  // accept the mismatch. Documented here rather than fixed silently.
+  assert.ok(
+    validateDecisionRecords([gitQualified]).some(
+      (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
+    ),
+  );
+});
+
 test("record keys are portable across case-insensitive filesystems", () => {
   const caseConflict = [
     record({ id: "DEC-CASE-A", topic: "upper-case" }),

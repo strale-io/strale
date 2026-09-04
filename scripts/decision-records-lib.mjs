@@ -23,7 +23,7 @@ export const DECISION_INDEX_CANDIDATE_BANNER =
 
 const DECISION_ID_PATTERN = "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$";
 const DECISION_RECORD_KEY_PATTERN =
-  "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$";
+  "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$";
 const NOTION_PAGE_ID_PATTERN = "^[0-9a-f]{32}$";
 const REQUIRED_COLLISION_MIGRATION_CORRECTIONS = new Map([
   ["DEC-20260502-A", ["DEC-20260812-A"]],

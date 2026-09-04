@@ -31,6 +31,15 @@ never an ambiguous display ID. The candidate index at
 `docs/project/DECISIONS.md` is generated and supplies inverse views such as
 `superseded_by` and `amended_by`.
 
+A record key may instead be qualified `--git-<sha>`, naming the commit (7 to
+40 lowercase hex characters) that introduced the id directly in Git. It
+asserts that the record's provenance is that commit rather than a Notion
+page, and is checked the same way: the commit must be an ancestor of the
+current history. A cross-surface collision, where a Notion row and a
+Git-native claim share one id, resolves to two distinct qualified keys (one
+`--notion-`, one `--git-`) or to an evidence-only, documented disposition; it
+never resolves to the bare id either way.
+
 Historical source rows that reuse an ID are preserved in
 `id-collisions.yaml`. Each row carries its immutable Notion page identity and a
 disposition. An unresolved collision keeps every row at `unresolved` and
