@@ -447,6 +447,18 @@ export function validateClosureRegister(register, context, { schema, relativePat
     finding("SOURCE_COUNT_DRIFT", `formal_records.record_count ${register.sources.formal_records.record_count} vs ${context.records.length}`);
   }
 
+  // ---- A bare collided id is never a record key. Cross-surface collision ids
+  // (from decision_rows[].collision.kind === "cross-surface") join the
+  // existing notion-duplicate rule. Computed before the git-qualified-key
+  // loop below, which also needs it: a git-qualified key is legitimate only
+  // for an id the register actually claims as a cross-surface collision.
+  const crossSurfaceCollisionIds = new Set(
+    register.decision_rows.filter((r) => r.collision?.kind === "cross-surface").map((r) => r.collision.id),
+  );
+  for (const fr of register.formal_records) {
+    if (crossSurfaceCollisionIds.has(fr.record_key)) finding("RECORD_KEY_BARE_CROSS_SURFACE_ID", `${fr.record_key} is a cross-surface collision id and may not be used bare as a record key`);
+  }
+
   // ---- Git-qualified record keys (`DEC-…--git-<sha>`), symmetric to the
   // `--notion-<page id>` qualifier. A git-qualified record asserts that its id
   // was introduced directly in Git at a specific commit, never a free choice:
@@ -456,6 +468,15 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // (possibly abbreviated) sha prefixes, and which must be an ancestor of
   // HEAD. When git is unavailable the ancestry finding is warning-class
   // (COMMIT_UNVERIFIABLE), not a hard failure.
+  //
+  // A git-qualified key is legitimate only when the register carries a
+  // decision row claiming its id as a cross-surface collision
+  // (collision.kind: cross-surface, collision.id === the record's id);
+  // otherwise the qualifier is unclaimed and the key must stay bare
+  // (RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE). A git-native decision whose id is
+  // not a cross-surface collision (e.g. DEC-20260504-A) keeps a bare key;
+  // the qualifier exists to disambiguate an id also claimed on another
+  // surface, not to mark "this record came from Git".
   for (const fr of register.formal_records) {
     const gitKey = GIT_QUALIFIED_RECORD_KEY.exec(fr.record_key);
     if (!gitKey) continue;
@@ -463,6 +484,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
     if (fr.id !== baseId) finding("RECORD_GIT_KEY_ID_MISMATCH", `${fr.record_key}: id ${fr.id} does not equal the key with its --git- qualifier removed (${baseId})`);
     if (fr.source_kind !== "git-native" || (fr.source_rows ?? []).length > 0) {
       finding("RECORD_GIT_KEY_SOURCE_KIND", `${fr.record_key}: a git-qualified record must be source_kind git-native with source_rows []`);
+    }
+    if (!crossSurfaceCollisionIds.has(baseId)) {
+      finding("RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE", `${fr.record_key}: no decision row claims ${baseId} as a cross-surface collision; the --git- qualifier is unclaimed`);
     }
     const actual = recordByKey.get(fr.record_key);
     if (!actual) continue; // FORMAL_RECORD_UNKNOWN already reported
@@ -475,16 +499,6 @@ export function validateClosureRegister(register, context, { schema, relativePat
     } else {
       finding("COMMIT_UNVERIFIABLE", `${fr.record_key}: git is unavailable; ${commitMatch[1]} could not be checked against HEAD`);
     }
-  }
-
-  // ---- A bare collided id is never a record key. Cross-surface collision ids
-  // (from decision_rows[].collision.kind === "cross-surface") join the
-  // existing notion-duplicate rule.
-  const crossSurfaceCollisionIds = new Set(
-    register.decision_rows.filter((r) => r.collision?.kind === "cross-surface").map((r) => r.collision.id),
-  );
-  for (const fr of register.formal_records) {
-    if (crossSurfaceCollisionIds.has(fr.record_key)) finding("RECORD_KEY_BARE_CROSS_SURFACE_ID", `${fr.record_key} is a cross-surface collision id and may not be used bare as a record key`);
   }
 
   // ---- Collision registry facts.

@@ -38,7 +38,9 @@ page, and is checked the same way: the commit must be an ancestor of the
 current history. A cross-surface collision, where a Notion row and a
 Git-native claim share one id, resolves to two distinct qualified keys (one
 `--notion-`, one `--git-`) or to an evidence-only, documented disposition; it
-never resolves to the bare id either way.
+never resolves to the bare id either way, and a `--git-` key's legitimacy
+rests on the closure register claiming its id as a cross-surface collision,
+not on `id-collisions.yaml`, which records only notion-duplicate collisions.
 
 Historical source rows that reuse an ID are preserved in
 `id-collisions.yaml`. Each row carries its immutable Notion page identity and a

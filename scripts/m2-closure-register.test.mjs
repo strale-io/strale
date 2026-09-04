@@ -962,6 +962,43 @@ test("a git-qualified record must have id, source_kind, source_rows, and provena
   assert.ok(!c.includes("RECORD_GIT_KEY_NOT_ANCESTOR"), c.join(","));
 });
 
+test("a git-qualified record key is legitimate only when a decision row claims its id as a cross-surface collision", () => {
+  // DEC-20260422-A carries a cross-surface collision row in the committed
+  // register (fixture-verified elsewhere in this file); a git-qualified
+  // record for it must not trip RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE.
+  const claimed = base();
+  assert.ok(
+    claimed.decision_rows.some((x) => x.collision?.kind === "cross-surface" && x.collision.id === "DEC-20260422-A"),
+    "fixture precondition: DEC-20260422-A must already be a cross-surface collision id in the committed register",
+  );
+  claimed.formal_records.push({
+    record_key: "DEC-20260422-A--git-31ca662e9",
+    id: "DEC-20260422-A",
+    source_kind: "git-native",
+    source_rows: [],
+    git_provenance: "https://github.com/strale-io/strale/commit/31ca662e92d996d9d8a3ee150ce6f924d5419707",
+  });
+  lacks(claimed, "RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE");
+
+  // DEC-20260504-A has no cross-surface decision row (it is a plain
+  // git-native decision, per the existing "bare collided id" test below);
+  // planting the same shape of git-qualified record for it must fail this
+  // check specifically, proving the check actually discriminates.
+  const unclaimed = base();
+  assert.ok(
+    !unclaimed.decision_rows.some((x) => x.collision?.kind === "cross-surface" && x.collision.id === "DEC-20260504-A"),
+    "fixture precondition: DEC-20260504-A must not be a cross-surface collision id in the committed register",
+  );
+  unclaimed.formal_records.push({
+    record_key: "DEC-20260504-A--git-31ca662e9",
+    id: "DEC-20260504-A",
+    source_kind: "git-native",
+    source_rows: [],
+    git_provenance: "https://github.com/strale-io/strale/commit/31ca662e92d996d9d8a3ee150ce6f924d5419707",
+  });
+  has(unclaimed, "RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE");
+});
+
 test("a bare collided id is never a record key, including cross-surface collision ids", () => {
   const r = base();
   r.formal_records.push({ record_key: "DEC-20260422-A", id: "DEC-20260422-A", source_kind: "git-native", source_rows: [], git_provenance: "archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md" });

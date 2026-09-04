@@ -592,23 +592,50 @@ test("the record-key grammar also accepts a git-qualified key, symmetric to --no
     ),
   );
 
-  // OPEN QUESTION (reported, not resolved here): validateDecisionRecords's
-  // "unqualified mismatch" rule only recognizes a qualified key when its bare
-  // id is in the collision registry passed in (docs/decisions/id-collisions.yaml,
-  // notion-duplicate collisions only). A cross-surface collision id (like
-  // DEC-20260422-A) never appears there by design (see
-  // archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md), so a
-  // future git-qualified record for a cross-surface id is still rejected here
-  // as DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH even though the closure
-  // register's own mechanism (scripts/m2-closure-register-lib.mjs) accepts
-  // it. This module's collision-awareness is out of this brief's scope
-  // (stage 1 mechanism only); stage 2, which will actually create such a
-  // record, needs to either extend this module's collidedIds source or
-  // accept the mismatch. Documented here rather than fixed silently.
+  // Decided (DEC-20260904-B, this test file): a --git- qualified key's
+  // legitimacy is not gated on its bare id appearing in the notion-duplicate
+  // collision registry (docs/decisions/id-collisions.yaml); that registry
+  // only ever records notion-duplicate collisions, and a cross-surface
+  // collision id (like DEC-20260422-A) never appears there by design (see
+  // archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md). A
+  // git-qualified key's legitimacy is the closure validator's job
+  // (scripts/m2-closure-register-lib.mjs), which checks id, source_kind,
+  // provenance, and ancestry. So even with an empty collision registry (no
+  // collision registered for DEC-20260812-A here), a git-qualified key for
+  // it must not trip DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH.
   assert.ok(
-    validateDecisionRecords([gitQualified]).some(
+    !validateDecisionRecords([gitQualified]).some(
       (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
     ),
+  );
+});
+
+test("a --git- key for an id absent from the collision registry passes; a --notion- key for the same absent id still fails", () => {
+  // Cross-surface ids are never in the notion-duplicate collision registry by
+  // design, so this uses an id with no collision entry at all; the
+  // registry passed is empty.
+  const registry = { collisions: [] };
+
+  const gitQualified = record({
+    id: "DEC-20260422-A",
+    recordKey: "DEC-20260422-A--git-7a555131",
+  });
+  assert.ok(
+    !validateDecisionRecords([gitQualified], registry).some(
+      (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
+    ),
+    "a --git- qualified key must not require a registered collision",
+  );
+
+  const notionQualified = record({
+    id: "DEC-20260422-A",
+    recordKey: "DEC-20260422-A--notion-11111111111111111111111111111111",
+  });
+  assert.ok(
+    validateDecisionRecords([notionQualified], registry).some(
+      (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
+    ),
+    "a --notion- qualified key must still require a registered collision",
   );
 });
 
