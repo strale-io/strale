@@ -8,7 +8,7 @@ Start at [the brand and website program](../../../docs/programs/brand-website/PR
 
 ## Findings and evidence
 
-The [research](../../../docs/research/2026-09-05-brand-foundation-discovery.md) records the source-backed product and design findings. Detailed commercial measurements and the positioning recommendation are in the private [assessment](https://github.com/strale-io/strale-context-archive/blob/7d3fd428a93da43a7298305cc237abd7b10af1f0/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). The [receipt](../../../archive/receipts/2026-09-04-audit-brand-foundation-discovery.json) commits to the anonymised measurement files by digest. No customer request or response bodies were extracted.
+The [research](../../../docs/research/2026-09-05-brand-foundation-discovery.md) records the source-backed product and design findings. Detailed commercial measurements and the positioning recommendation are in the private [assessment](https://github.com/strale-io/strale-context-archive/blob/94051a311da77151f6b05988438830c315dd3449/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). The [receipt](../../../archive/receipts/2026-09-04-audit-brand-foundation-discovery.json) commits to the anonymised measurement files by digest. No customer request or response bodies were extracted.
 
 The founder has no first-hand knowledge of the largest buyer's business or motivation. Behaviour supports use-case hypotheses; do not invent a persona or derive outreach from telemetry.
 

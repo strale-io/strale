@@ -27,7 +27,7 @@ sources:
 
 # Brand foundation discovery
 
-Research, not adopted positioning, approved public copy, or a replacement design system. Commissioned by the founder on 5 September 2026. The [program](../programs/brand-website/PROGRAM.md) is the continuation entry point. Detailed commercial evidence and the recommendation for founder discussion are in the private [assessment](https://github.com/strale-io/strale-context-archive/blob/7d3fd428a93da43a7298305cc237abd7b10af1f0/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md).
+Research, not adopted positioning, approved public copy, or a replacement design system. Commissioned by the founder on 5 September 2026. The [program](../programs/brand-website/PROGRAM.md) is the continuation entry point. Detailed commercial evidence and the recommendation for founder discussion are in the private [assessment](https://github.com/strale-io/strale-context-archive/blob/94051a311da77151f6b05988438830c315dd3449/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md).
 
 ## What was examined
 
@@ -57,7 +57,7 @@ The August plan's inference that a missing browser origin means a website is onl
 
 The [receipt rollout record](../design/execution-receipt/README.md) explicitly states that receipts are produced but not served by an endpoint. This is compatible with the existence of older audit retrieval and server-operated chain verification. It does not establish a customer-exportable independent verification product. The [receipt spec](../design/execution-receipt/PHASE-2-SPEC.md) explicitly excludes source correctness and issuer authentication from what an unsigned digest proves.
 
-There is a concrete source-level parity gap: [the x402 route](../../apps/api/src/routes/x402-gateway-v2.ts) returns executor provenance in `_meta.provenance`, while `recordX402Transaction` does not persist that executor provenance into the dedicated transaction field. The audit builder still writes a declared `data_source`; absence of the dedicated field must not be described as absence of all source information. The [receipt settlement code](../../apps/api/src/lib/receipt/settle.ts) derives source observation from stored provenance. Scope and persistence need checking together before making stronger historical evidence claims.
+There is a concrete source-level parity gap: [the fresh x402 capability success path](../../apps/api/src/routes/x402-gateway-v2.ts) includes executor provenance in `_meta.provenance`, while solution and cached replay responses omit it. `recordX402Transaction` also does not persist executor provenance into the dedicated transaction field. The audit builder still writes a declared `data_source`; absence of the dedicated field must not be described as absence of all source information. The [receipt settlement code](../../apps/api/src/lib/receipt/settle.ts) derives source observation from stored provenance. The production aggregation captured no HTTP response bodies and does not establish response coverage. Scope and persistence need checking together before making stronger historical evidence claims.
 
 None of these features traces the entire agent, explains its reasoning, or observes work performed outside Strale.
 

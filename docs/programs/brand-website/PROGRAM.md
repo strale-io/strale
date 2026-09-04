@@ -13,7 +13,7 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
-Read [tracks.yaml](tracks.yaml), then [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and the private [positioning assessment](https://github.com/strale-io/strale-context-archive/blob/7d3fd428a93da43a7298305cc237abd7b10af1f0/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). The initial research is complete. The next step is the founder's discussion of the concrete positioning recommendation, followed by an adopted short creative brief through the existing decision process. Do not jump straight to homepage implementation or generate a replacement asset library.
+Read [tracks.yaml](tracks.yaml), then [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and the private [positioning assessment](https://github.com/strale-io/strale-context-archive/blob/94051a311da77151f6b05988438830c315dd3449/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). The initial research is complete. The next step is the founder's discussion of the concrete positioning recommendation, followed by an adopted short creative brief through the existing decision process. Do not jump straight to homepage implementation or generate a replacement asset library.
 
 The founder has no first-hand knowledge of the largest customer's business or motivation. Do not invent that persona or request telemetry-derived outreach. Buying behaviour supports hypotheses, not customer identity or voice-of-customer quotes.
 
