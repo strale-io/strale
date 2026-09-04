@@ -262,6 +262,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
@@ -448,6 +449,7 @@
         "handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
@@ -492,6 +494,7 @@
         "handoff/_general/from-code/2026-08-18-quality-program-phase4-close.md",
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
@@ -541,7 +544,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "4ff3bd41caa2d326eb75d4cef2a6b12f1da749917ae0064d40401045b34c82de",
+      "sha256": "1fd82af1f006a6dbfc8315e6b7a454529363da13f548c2c362d9d6ffd93dfae1",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
