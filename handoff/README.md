@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-237 files (210 with a recorded intent, 27 without).
+238 files (211 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -28,6 +28,7 @@
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md`](_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md) | land T10 (M2 exit-gap closure) batch 10, six distribution-and-x402-rail Decision rows (DEC-20260313-F Official MCP Re... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md`](_general/from-code/2026-09-04-free-public-api-agent-capabilities.md) | Add eight keyless, free-upstream capabilities that the platform's largest x402 buyer |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-free-api-capabilities-onboarded.md`](_general/from-code/2026-09-04-free-api-capabilities-onboarded.md) | Close the "not done" item of `2026-09-04-free-public-api-agent-capabilities.md` — the eight |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md`](_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md) | Fix the intermittent CI teardown failure in `scripts/codex-backlog.test.mjs` |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-ci-docs-only-fast-path.md`](_general/from-code/2026-09-04-ci-docs-only-fast-path.md) | add a documentation-only fast path to `.github/workflows/ci.yml` so PRs |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md`](_general/from-code/2026-09-03-t17-hono-upgrade.md) | Program track T17 / WP13 first batch — upgrade `hono` in `apps/api` to close its 27 |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md`](_general/from-code/2026-09-03-handoff-gate-live-worktree.md) | stop the session-end gate instructing the destruction of live work, after it did so three times in one session. |
