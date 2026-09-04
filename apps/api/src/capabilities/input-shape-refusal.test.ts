@@ -19,7 +19,7 @@
  * network call, so the test needs no fixtures and no upstream.
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { getExecutor } from "./index.js";
 
 beforeAll(async () => {
@@ -143,13 +143,23 @@ describe("shapes the first pass missed", () => {
   it("github-actions-generate still applies its defaults when triggers is absent", async () => {
     // The fix must not turn "absent" into "refused" — absence still means
     // ["push", "pull_request"]. Reaching the LLM call proves the input was
-    // accepted; no key is configured in test, so that is where it stops.
-    const err = await refusalFrom("github-actions-generate", {
-      language: "typescript",
-    });
+    // accepted, and the missing-key error is where it stops.
+    //
+    // The key is stubbed empty rather than assumed absent: CI happens not to
+    // set ANTHROPIC_API_KEY today, but a test whose safety rests on that would
+    // start making real, billed Anthropic calls the day someone adds the
+    // secret — silently, and on every run.
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    try {
+      const err = await refusalFrom("github-actions-generate", {
+        language: "typescript",
+      });
 
-    expect(err.message).not.toMatch(/'triggers'/);
-    expect(err.message).toMatch(/ANTHROPIC_API_KEY/);
+      expect(err.message).not.toMatch(/'triggers'/);
+      expect(err.message).toMatch(/ANTHROPIC_API_KEY/);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("fake-data-generate refuses a bare string for 'fields'", async () => {
