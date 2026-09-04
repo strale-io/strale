@@ -270,29 +270,25 @@ tracks:
 
   - id: T10
     title: M2 exit-gap closure
-    status: blocked
-    blocker: >
-      Waiting on the independent review of G3 stage 1 (the cross-surface
-      identity mechanism, branch docs/m2-g3-cross-surface-mechanism, DEC-20260904-B).
-      T17 runs in the review window per PROGRAM.md; T10 resumes as the active
-      track the moment the verdict lands, and stage 2 follows.
+    status: active
     gate: m2-exit
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 and 2 done (PRs #500, #503). Batch 2 applied the G1 rule
-      (DEC-20260904-A): 76 pre-readiness feature-scoped rows are
-      intentionally_historical in the public register, cited by the gap
-      report, and the private projection is 140 rows at archive db6634c6.
-      The operator verifier passes. G1 now holds 129 rows (128 global, 1
-      temporary), all pre-readiness, which the rule does not cover: they
-      are contradiction-checked batch work, grouped by topic, smallest
-      coherent group first. Next: G3's cross-surface identity (a
-      source-qualified key for the Git-native DEC-20260422-A claim), then
-      the first global-row batch, then G2's 34 collisions one at a time,
-      then G9's closing review. This track is the M2 exit gate: the
-      closure register's validator refuses a state where it is done, or
-      any post-m2 track is active or done, while a blocking gap remains.
+      Batches 1 to 3 done (PRs #500, #503, #509, #511). G3 is closed: the
+      cross-surface identity mechanism (DEC-20260904-B, git-qualified
+      record keys) landed first, then DEC-20260422-A resolved into the
+      protocol record DEC-20260422-A--git-3b256587 and an evidence-only
+      Notion row. Blocking gaps 4 -> 3 (G1, G2, G9). Next batch: the first
+      global-row batch under G1. Of the 129 not_yet_reconciled rows, 128
+      are global scope; the orchestrator groups them by topic from the
+      private projection and briefs the smallest coherent group first,
+      each row migrated to a record or classified with evidence,
+      contradiction-checked against the active records, independent
+      review before merge. Then G2's 34 collisions one at a time, then
+      G9's closing review. This track is the M2 exit gate: the closure
+      register's validator refuses a state where it is done, or any
+      post-m2 track is active or done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -302,6 +298,9 @@ tracks:
       - docs/project/m2-closure-register.yaml
       - docs/decisions/records/DEC-20260904-A.md
       - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+      - docs/decisions/records/DEC-20260904-B.md
+      - docs/decisions/records/DEC-20260422-A--git-3b256587.md
+      - archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md
 
   - id: T6
     title: M3 repo-native workflows
@@ -368,7 +367,16 @@ tracks:
 
   - id: T17
     title: Dependency remediation (WP13)
-    status: active
+    status: blocked
+    blocker: >
+      PR #510 (drizzle-orm 0.38.4 -> 0.45.2) failed CI and its independent
+      review: drizzle 0.44+ wraps driver errors in DrizzleQueryError, so
+      readers of err.code (account-service isUniqueViolation, app.ts
+      classifyError) and message-matching integration tests stopped seeing
+      the Postgres error. A worker is fixing it on the same branch
+      (apps/api/src/lib/db-error.ts, regression tests, corrected receipt);
+      the fix goes through a fresh review and CI before merge. T10 runs
+      in that window per PROGRAM.md.
     gate: none
     depends_on: [T4]
     owner: session
