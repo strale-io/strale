@@ -275,28 +275,29 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 14 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529, #532, #537, #539, #542). Batch 14 migrated
-      the fourteen MVP launch and scaling rows of 2026-02-25/27 (fuzzy
-      input, TED, the review synthesis, MVP live, EU AI Act columns, the
-      13 and 35 capability expansions, provider growth phases, the
-      provider-hosted execution model, the deferrals, composable units,
-      protocol networks, the 20-step build sequence); each Consequences
-      section states what the code and later decisions did with it, the
-      largest finding being that no LLM fuzzy-input path exists in
-      swedish-company-data although CLAUDE.md still lists that decision
-      as active. Private projection 62 rows at archive
-      589d0bfe; operator verifier passes. G1 holds 51 rows (50 global, 1
+      Batches 1 to 15 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529, #532, #537, #539, #542, #544). Batch 15
+      migrated the fourteen March 2026 launch-month rows from
+      DEC-20260302-C to DEC-20260314-C (homepage positioning, dependency
+      monitoring, ranking transparency, the web-provider layer, the test
+      audit, SQS design and spec, detail-page order, legal disclaimers,
+      the completeness rule, the Trust navbar link, the communication
+      gate, Dev.to first, multi-LLM evaluation); Consequences state the
+      SQS deletion, that no ranking-explanation page or blog route exists,
+      and that none of the eight finance capabilities the disclaimer row
+      named exist today. The brief's assumption that DEC-20260308-1 is the
+      SQS Constitution was wrong (it is the EUR pricing record) and the
+      worker made no edge. Private projection 48 rows at archive
+      201b0c40; operator verifier passes. G1 holds 37 rows (36 global, 1
       temporary). Blocking gaps: G1, G2, G9. Loop since 2026-09-04
       evening: private half committed and register bumped before review,
       auto-merge armed after PASS, batches of 10 to 14 rows, docs-only
-      PRs take the CI fast path (#533). Next: batch 15, the March 2026
-      rows from DEC-20260302-C to DEC-20260314-C (fourteen), then batch
-      16 (the remaining March rows), then the April to May rows in two
-      batches, then G2's 34 collisions one at a time, then G9's closing
-      review. This track is the M2 exit gate: the closure register's
-      validator refuses a state where it is done, or any post-m2 track is
-      active or done, while a blocking gap remains.
+      PRs take the CI fast path (#533). Next: batch 16, the remaining
+      twelve March rows (DEC-20260314-F to DEC-20260329-A), then the
+      April to May rows in two batches, then G2's 34 collisions one at a
+      time, then G9's closing review. This track is the M2 exit gate: the
+      closure register's validator refuses a state where it is done, or
+      any post-m2 track is active or done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -398,6 +399,21 @@ tracks:
       - docs/decisions/records/DEC-20260227-P-s9t0.md
       - docs/decisions/records/DEC-20260227-P-u1v2.md
       - handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md
+      - docs/decisions/records/DEC-20260302-C.md
+      - docs/decisions/records/DEC-20260302-D.md
+      - docs/decisions/records/DEC-20260303-C.md
+      - docs/decisions/records/DEC-20260305-E.md
+      - docs/decisions/records/DEC-20260305-F.md
+      - docs/decisions/records/DEC-20260306-G.md
+      - docs/decisions/records/DEC-20260306-H.md
+      - docs/decisions/records/DEC-20260309-H.md
+      - docs/decisions/records/DEC-20260310-E.md
+      - docs/decisions/records/DEC-20260310-F.md
+      - docs/decisions/records/DEC-20260313-E.md
+      - docs/decisions/records/DEC-20260314-A.md
+      - docs/decisions/records/DEC-20260314-B.md
+      - docs/decisions/records/DEC-20260314-C.md
+      - handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md
 
   - id: T6
     title: M3 repo-native workflows
