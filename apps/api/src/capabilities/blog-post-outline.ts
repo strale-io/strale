@@ -2,6 +2,7 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 registerCapability("blog-post-outline", async (input: CapabilityInput) => {
   const topic = ((input.topic as string) ?? (input.task as string) ?? "").trim();
@@ -9,7 +10,7 @@ registerCapability("blog-post-outline", async (input: CapabilityInput) => {
 
   const targetAudience = ((input.target_audience as string) ?? "general developers").trim();
   const tone = ((input.tone as string) ?? "professional").trim();
-  const keywords = (input.keywords as string[]) ?? [];
+  const keywords = readStringArray(input.keywords, "keywords");
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");

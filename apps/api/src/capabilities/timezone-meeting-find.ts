@@ -1,7 +1,8 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 registerCapability("timezone-meeting-find", async (input: CapabilityInput) => {
-  const timezones = (input.timezones as string[]) ?? [];
+  const timezones = readStringArray(input.timezones, "timezones");
   if (timezones.length < 2) throw new Error("'timezones' must contain at least 2 timezone names.");
 
   const preferredHours = ((input.preferred_hours as string) ?? "09:00-17:00").trim();

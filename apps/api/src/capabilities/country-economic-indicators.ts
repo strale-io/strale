@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 /**
  * Country economic indicators — World Bank Indicators (WDI) API. Official,
@@ -97,15 +98,21 @@ registerCapability("country-economic-indicators", async (input: CapabilityInput)
     throw new Error("'year' must be a 4-digit year.");
   }
 
+  // Absent still means "use the defaults". What changes is that an
+  // `indicators` the caller DID send but shaped wrongly is now refused rather
+  // than silently discarded — the old `Array.isArray(...)` test fell through
+  // to DEFAULT_INDICATORS, so a caller passing a bare string got a successful,
+  // billed response about indicators they never asked for.
+  const requestedIndicators = readStringArray(input.indicators, "indicators");
   let requestedKeys = DEFAULT_INDICATORS;
-  if (Array.isArray(input.indicators) && input.indicators.length > 0) {
-    const invalid = (input.indicators as string[]).filter((k) => !INDICATOR_MAP[k]);
+  if (requestedIndicators.length > 0) {
+    const invalid = requestedIndicators.filter((k) => !INDICATOR_MAP[k]);
     if (invalid.length > 0) {
       throw new Error(
         `Unknown indicator key(s): ${invalid.join(", ")}. Valid keys: ${Object.keys(INDICATOR_MAP).join(", ")}.`,
       );
     }
-    requestedKeys = input.indicators as string[];
+    requestedKeys = requestedIndicators;
   }
 
   const results = await Promise.all(

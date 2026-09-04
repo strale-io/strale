@@ -2,12 +2,13 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 registerCapability("regex-generate", async (input: CapabilityInput) => {
   const description = ((input.description as string) ?? (input.task as string) ?? "").trim();
   if (!description) throw new Error("'description' is required. Describe what you want to match.");
 
-  const testStrings = (input.test_strings as string[]) ?? [];
+  const testStrings = readStringArray(input.test_strings, "test_strings");
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
