@@ -10,6 +10,7 @@
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
+        ".github/workflows/ci.yml",
         "CLAUDE.md",
         "README.md",
         "archive/sessions/2026-08-31-m1-clean-extraction-review-claude.md",
@@ -85,6 +86,7 @@
         ".claude/RUNBOOK.md",
         ".claude/commands/end-session.md",
         ".claude/skills/go/SKILL.md",
+        ".github/workflows/ci.yml",
         ".gitignore",
         "AGENTS.md",
         "README.md",
@@ -534,7 +536,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "5bd0fa5889ff4f3bfadb18b178ffe43dffdd35595624b13e7606fc9400c25898",
+      "sha256": "8f00da6ce8dda3568d098552286e2055d132d0d6f770310eefe75e77460dcefd",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
