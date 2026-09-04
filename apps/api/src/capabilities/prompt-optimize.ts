@@ -2,6 +2,7 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 // Output-token ceiling for a single optimization pass. Kept conservatively below
 // the model's maximum output so we never request more than it can return.
@@ -27,8 +28,8 @@ registerCapability("prompt-optimize", async (input: CapabilityInput) => {
   }
 
   const taskDescription = ((input.task_description as string) ?? "").trim();
-  const goodExamples = (input.good_examples as string[]) ?? [];
-  const badExamples = (input.bad_examples as string[]) ?? [];
+  const goodExamples = readStringArray(input.good_examples, "good_examples");
+  const badExamples = readStringArray(input.bad_examples, "bad_examples");
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");

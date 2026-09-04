@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 // Standard gitignore templates by language/framework/IDE
 const TEMPLATES: Record<string, string[]> = {
@@ -32,9 +33,9 @@ const TEMPLATES: Record<string, string[]> = {
 };
 
 registerCapability("gitignore-generate", async (input: CapabilityInput) => {
-  const languages = (input.languages as string[]) ?? [];
-  const frameworks = (input.frameworks as string[]) ?? [];
-  const ides = (input.ides as string[]) ?? [];
+  const languages = readStringArray(input.languages, "languages");
+  const frameworks = readStringArray(input.frameworks, "frameworks");
+  const ides = readStringArray(input.ides, "ides");
 
   if (languages.length === 0 && frameworks.length === 0 && ides.length === 0) {
     throw new Error("At least one of 'languages', 'frameworks', or 'ides' is required.");
