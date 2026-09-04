@@ -17,7 +17,10 @@ name: CI
 # 'false'`. Every REGISTER step (the small `*:check` / `*:test` registers —
 # programs, research, design, env, models, claims, docs, archive index,
 # receipts, migrations, codex backlog, context, handoff, and the
-# check-shape-contracts.mjs drift check) runs unconditionally on every PR,
+# check-shape-contracts.mjs drift check, plus the content scanners that
+# read docs/ and handoff/ or manifest data: check-no-committed-secrets,
+# check-pii, check-ceo-brief, check-manifest-guaranteed-consistency) runs
+# unconditionally on every PR,
 # in the same order as before this change, because those scripts read
 # docs/config content that a docs-only PR can itself change and none of
 # them import the built packages. A push to `main` always sets
@@ -317,16 +320,14 @@ jobs:
       # CODE (the linter itself lives in apps/api/src/lib, not a *:check
       # register script — see the classification note in the PR body for
       # the tradeoff this leaves open on a docs/company/briefs/-only PR).
-      - if: needs.classify.outputs.docs_only == 'false'
-        run: npx tsx apps/api/scripts/check-ceo-brief.ts
+      - run: npx tsx apps/api/scripts/check-ceo-brief.ts
       # No credential in a recognised vendor token format may reach a tracked
       # file. Scans tracked files only — the public history is what matters,
       # and history is not retractable. Added 2026-08-22.
       # CODE (scans every tracked file, code and docs alike, for secrets —
       # kept as CODE per the explicit classification list rather than
       # reclassified to REGISTER; see the PR body).
-      - if: needs.classify.outputs.docs_only == 'false'
-        run: node apps/api/scripts/check-no-committed-secrets.mjs
+      - run: node apps/api/scripts/check-no-committed-secrets.mjs
       # Phase A0b CI lint (wired 2026-08-17, Phase 2 T2.2 — written
       # 2026-08-12 but never wired in): apps/api/scripts/*.{ts,mts,mjs} must route
       # executor invocation through guardedExecute/assertGuardedAllow, not
@@ -354,8 +355,7 @@ jobs:
       # CODE (cross-checks manifests/*.yaml against the runtime sentinel in
       # apps/api/src/lib — not one of the explicitly named register/shape
       # checks, so kept as CODE; see the PR body).
-      - if: needs.classify.outputs.docs_only == 'false'
-        run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
+      - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
       # PII guard (renamed + widened 2026-08-14, was check-manifest-pii.mjs).
       # scrubFixture()/PII_ARRAY_FIELDS run at CAPTURE time on executor
       # output; manifests are hand-authored, so an example pasted from a
@@ -376,8 +376,7 @@ jobs:
       # its many targets, so a docs-only PR does lose PII-scan coverage on
       # this fast path. That tradeoff is named explicitly in the PR body
       # rather than silently accepted; see "anything left open" there.
-      - if: needs.classify.outputs.docs_only == 'false'
-        run: node apps/api/scripts/check-pii.mjs --strict
+      - run: node apps/api/scripts/check-pii.mjs --strict
       # Tier-coverage gate (STRICT since 2026-08-17 — zero unallowlisted findings). For each manifest with a
       # captured response fixture at apps/api/test/fixtures/tier-coverage/
       # <slug>.json, compares empirical wire-shape against manifest
