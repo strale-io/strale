@@ -114,9 +114,10 @@ Finished with `Remove-Item -Recurse` only after confirming there were no outward
 links; then `git worktree prune`; then the branch.
 
 `GET /health` returned `0308e99bb339`, equal to the `origin/main` tip at session
-start. Both merges land after that reading, so the deployed commit is
-legitimately behind main now and Railway will catch up; **not verified after the
-merges**, and the next session should confirm rather than assume.
+start. Re-read after both merges landed: **`90c1c798c417`, equal to the new
+`origin/main` tip** — Railway deployed both without intervention. Checked rather
+than assumed, because a failed Railway deploy does not cut over and `/health` can
+lag `main` for a long time with no outage to signal it.
 
 ### B2b — hygiene
 
@@ -283,8 +284,12 @@ this machine and CI is the gate; it was not run as a verdict.
    are genuinely exhaustive over `transactions` as it exists in production, and
    whether the `PgDialect` render test would survive drizzle changing its SQL
    formatting.
-3. **Confirm the deployed commit caught up.** `GET /health` was read before both
-   merges landed; verify against `origin/main` rather than assume.
+3. **Signups, if anyone quotes them:** two this week (`toolkits@composio.dev`
+   09-02, `2000.aman.sinha@gmail.com` 09-01) and one the week before
+   (`jakub.harvanik123@gmail.com` 08-28), **all three at zero calls**. Measured
+   this morning rather than carried over: an earlier draft of the brief said
+   "three this week", which is three in eight days, not three in the ISO week.
+   Caught by measuring instead of inheriting yesterday's sentence.
 4. OpenRegister credits reset 2026-09-06T23:40Z; the four DE listings return on
    their own. Verify rather than assume.
 5. F2's replay is still owed, unchanged since incident 7: re-derive the five
