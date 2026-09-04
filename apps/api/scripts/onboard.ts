@@ -332,7 +332,7 @@ function checkFieldAssertion(
     case "gte":
       return { pass: typeof actual === "number" && typeof ef.value === "number" && actual >= ef.value, actual };
     case "type":
-      return { pass: typeof actual === ef.value, actual };
+      return { pass: (Array.isArray(actual) ? "array" : typeof actual) === ef.value, actual };
     default:
       return { pass: true, actual }; // unknown operator — skip
   }
