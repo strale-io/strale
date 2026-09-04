@@ -155,7 +155,7 @@ exists on the PR head).
 - `digests.public_rows.count`: 256 -> 270; `digest` and
   `scope_date_digest` both recomputed (the scope/date digest via `gh api`
   against the archive export at `sources.decision_archive.commit`,
-  `24713c48`, binding all 270 public rows — the CI-invisible check this
+  `24713c48`, binding all 270 public rows, the CI-invisible check this
   batch's brief and batch 13's lesson both require).
 - `digests.all_rows.count`: unchanged at 318; `digest` recomputed (moving
   14 rows from private to public changes their `disposition` field, which
@@ -179,22 +179,22 @@ exists on the PR head).
 
 ## Checks run (all pass unless noted)
 
-- `node --test scripts/decision-records.test.mjs` — every test passed,
+- `node --test scripts/decision-records.test.mjs`, every test passed,
   including the full repository-candidate and merge-base-immutability
   check.
 - `npm run archive:index` (before `context:generate`, per the brief).
 - `npm run context:generate` run twice with a `git add -A` staged between,
   per the inventory-regenerate lesson; both runs produced identical
   output on the second pass.
-- `npm run context:check` — "warning-only... no warnings."
-- `npm run context:test` — every test passed, including "the checked-in
+- `npm run context:check`, "warning-only... no warnings."
+- `npm run context:test`, every test passed, including "the checked-in
   repository context is warning-clean" and "the repository decision
   candidates and merge-base immutability checks pass" against the live
   edited register and the fourteen new record files.
-- `node apps/api/scripts/check-pii.mjs --strict` — clean.
-- `node apps/api/scripts/check-no-committed-secrets.mjs` — clean (2709
+- `node apps/api/scripts/check-pii.mjs --strict`, clean.
+- `node apps/api/scripts/check-no-committed-secrets.mjs`, clean (2709
   tracked files scanned).
-- `npm run receipts:check` — `ok receipts contract` (after correcting six
+- `npm run receipts:check`, `ok receipts contract` (after correcting six
   records' frontend evidence entries from a bare `strale-frontend/<path>`
   form, which the checker's `DANGLING_EVIDENCE` rule does not resolve, to
   the cross-repo form `strale-io/strale-frontend@<sha>:<path>` the
@@ -202,24 +202,24 @@ exists on the PR head).
   batch 8's `DEC-20260820-*-WEBSITE-*` records already use). The 7 warn
   lines about bare test counts in unrelated 2026-09-02/03 handoffs
   predate this batch and are not touched by it.
-- `npm run codex:check` — `ok codex re-review backlog` (21 rows, all
+- `npm run codex:check`, `ok codex re-review backlog` (21 rows, all
   pre-existing; this batch adds no new row, since `docs/programs/**` is
-  out of scope for this batch per its own constraints — a codex-backlog
+  out of scope for this batch per its own constraints, a codex-backlog
   entry for this PR, if one is required per DEC-20260903-A, is a
   separate session's job, consistent with batch 14 also not having one).
-- `npm run programs:check` — `ok docs/programs/cto-readiness/tracks.yaml`.
+- `npm run programs:check`, `ok docs/programs/cto-readiness/tracks.yaml`.
 - Local `validatePrivateProjection` (imported from
   `scripts/m2-closure-register-lib.mjs`) run against the register on this
   branch plus the new `batch15.yaml` private file: **0 findings**.
 - `node scripts/m2-closure-verify-private-rows.mjs` (the operator
   verifier, which fetches the private file at the register's
   `private_rows.commit` over `gh api` rather than from this batch's
-  scratchpad output): **91 failures, all in the expected classes** —
+  scratchpad output): **91 failures, all in the expected classes** , 
   `PRIVATE_ROW_ALSO_PUBLIC`, `PRIVATE_ROW_ALREADY_PUBLIC`,
   `PRIVATE_ROW_MUST_BE_PUBLIC`, `PRIVATE_ROW_UNREGISTERED_DUPLICATE_ID`
   (14 each, one per migrated row, because the archive commit still lists
   them as `not_yet_reconciled`), plus `PRIVATE_COUNT_MISMATCH` (x2),
-  `PRIVATE_DIGEST_MISMATCH`, and `ALL_ROWS_DIGEST_MISMATCH` — the exact
+  `PRIVATE_DIGEST_MISMATCH`, and `ALL_ROWS_DIGEST_MISMATCH`, the exact
   "private count/digest classes" the brief anticipates, and none of them
   a scope/date-digest failure. This resolves only when the archive
   repository's private file is updated out-of-band to remove the
@@ -244,3 +244,14 @@ G1 now stands at 37 preserved rows (36 global, 1 temporary) still
 `not_yet_reconciled`. The next T10 batch continues the same 14-row cadence
 against the remaining March 2026 rows (roughly the second half of the
 month) per the program's usual selection order.
+
+## Orchestrator addendum (after this handoff was written)
+
+The private half (48 rows) was committed to the archive repository at
+`201b0c4009e01572829ce8ebe21d15849734f9ea` and `private_rows.commit` in
+the register was bumped to it in this same PR, per the loop change of
+2026-09-04 (private half committed and register pinned before the
+independent review). The statements above that the pin was left at
+`589d0bfe...` and that the operator verifier reported failures in the
+private count and digest classes describe the worker's state before
+that step; at the PR head the verifier prints `ok`.
