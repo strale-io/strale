@@ -1,0 +1,114 @@
+slug: arxiv-search
+name: arXiv Search
+description: >-
+  Search arXiv preprints by keyword with optional category filter: title, abstract, authors, dates, categories,
+  DOI and PDF link, sorted by relevance or date.
+category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1200
+known_rate_limit:
+  value: 20
+  unit: per_minute
+  source_url: https://info.arxiv.org/help/api/tou.html
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Free-text search across title, abstract and authors. At least 2 characters.
+    limit:
+      type: integer
+      description: "Results to return, 1-25. Default: 10"
+    sort:
+      type: string
+      description: "relevance (default), date (newest submitted first) or updated (most recently revised first)"
+    category:
+      type: string
+      description: Restrict to an arXiv category such as cs.CL, stat.ML or astro-ph.GA
+output_schema:
+  type: object
+  example:
+    query: transformer attention
+    category: null
+    total_results: 258539
+    returned: 1
+    papers:
+      - arxiv_id: "2209.15001"
+        version: 3
+        title: Dilated Neighborhood Attention Transformer
+        summary: Transformers are quickly becoming one of the most heavily applied deep learning architectures...
+        authors:
+          - Ali Hassani
+        published: "2022-09-29T17:57:08Z"
+        updated: "2023-01-16T18:58:58Z"
+        primary_category: cs.CV
+        categories:
+          - cs.CV
+        doi: null
+        abs_url: http://arxiv.org/abs/2209.15001v3
+        pdf_url: https://arxiv.org/pdf/2209.15001v3
+  properties:
+    query:
+      type: string
+    total_results:
+      type: number
+    returned:
+      type: number
+    papers:
+      type: array
+data_source: arXiv API (Cornell University)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      query: attention is all you need
+      limit: 3
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: papers
+        operator: not_null
+        reliability: guaranteed
+      - field: papers
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: attention is all you need
+    limit: 1
+output_field_reliability:
+  query: guaranteed
+  category: common
+  total_results: guaranteed
+  returned: guaranteed
+  papers: guaranteed
+limitations:
+  - title: arXiv asks clients to space requests about 3 seconds apart
+    text: >-
+      Bursts above roughly 20 requests per minute are answered with HTTP 429/503 and surfaced as a retryable
+      upstream error; the platform does not queue on the caller's behalf.
+    category: availability
+    severity: info
+    workaround: Space calls out or batch several terms into one query.
+  - title: Relevance ranking is arXiv's own and is weakest on very short queries
+    text: One- or two-word queries return large, loosely ranked result sets; total_results is arXiv's estimate.
+    category: accuracy
+    severity: info
+    workaround: Add a category filter or use sort=date for recency.

@@ -1,0 +1,153 @@
+slug: sec-edgar-filings
+name: SEC EDGAR Filings
+description: >-
+  List a US public company's recent SEC filings by ticker or CIK, with form type filter, dates, accession
+  numbers, document links, SIC code and business address.
+category: company-data
+cost_class: free_quota
+quota_window: daily
+quota_cap: 36000
+known_rate_limit:
+  value: 10
+  unit: per_second
+  source_url: https://www.sec.gov/os/accessing-edgar-data
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    ticker:
+      type: string
+      description: Exchange ticker symbol, e.g. AAPL (required unless cik is given)
+    cik:
+      type: string
+      description: SEC Central Index Key, e.g. 320193 (required unless ticker is given)
+    form_type:
+      type: string
+      description: Only return this form type, e.g. 10-K, 10-Q, 8-K, 4, S-1
+    limit:
+      type: integer
+      description: "Filings to return, 1-50. Default: 20"
+  anyOf:
+    - required:
+        - ticker
+    - required:
+        - cik
+output_schema:
+  type: object
+  example:
+    cik: 320193
+    name: Apple Inc.
+    ticker: AAPL
+    tickers:
+      - AAPL
+    exchanges:
+      - Nasdaq
+    entity_type: operating
+    sic_code: "3571"
+    sic_description: Electronic Computers
+    state_of_incorporation: CA
+    fiscal_year_end: "0926"
+    filer_category: Large accelerated filer
+    business_address:
+      street: ONE APPLE PARK WAY
+      city: CUPERTINO
+      state_or_country: CA
+      zip: "95014"
+    form_filter: 10-K
+    recent_filings_available: 1000
+    returned: 1
+    filings:
+      - form: 10-K
+        filing_date: "2025-10-31"
+        report_date: "2025-09-27"
+        accession_number: 0000320193-25-000079
+        primary_document: aapl-20250927.htm
+        description: 10-K
+        items: null
+        url: https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm
+        index_url: https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/
+    edgar_url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193
+  properties:
+    cik:
+      type: number
+    name:
+      type: string
+    filings:
+      type: array
+    returned:
+      type: number
+    sic_description:
+      type: string
+    edgar_url:
+      type: string
+data_source: U.S. Securities and Exchange Commission EDGAR
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: US
+test_fixtures:
+  known_answer:
+    input:
+      ticker: AAPL
+      form_type: 10-K
+      limit: 3
+    expected_fields:
+      - field: cik
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: not_null
+        reliability: guaranteed
+      - field: name
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: filings
+        operator: not_null
+        reliability: guaranteed
+      - field: filings
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: edgar_url
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    cik: "320193"
+    limit: 1
+output_field_reliability:
+  cik: guaranteed
+  name: guaranteed
+  ticker: common
+  tickers: guaranteed
+  exchanges: common
+  entity_type: common
+  sic_code: common
+  sic_description: common
+  state_of_incorporation: common
+  fiscal_year_end: common
+  filer_category: common
+  business_address: common
+  form_filter: common
+  recent_filings_available: guaranteed
+  returned: guaranteed
+  filings: guaranteed
+  edgar_url: guaranteed
+limitations:
+  - title: Only the filer's most recent ~1,000 filings are searched
+    text: >-
+      EDGAR's submissions endpoint returns the latest 1,000 filings inline; older filings for prolific filers
+      are in paginated archives this capability does not walk.
+    category: coverage
+    severity: info
+    workaround: Use edgar_url for the full history, or narrow with form_type.
+  - title: Ticker lookup covers SEC-registered listed companies only
+    text: >-
+      Private companies, funds without a ticker and foreign filers without a US listing must be queried by CIK.
+      The ticker index is refreshed daily.
+    category: coverage
+    severity: info
+    workaround: Find the CIK on edgar_url's company search and pass cik instead.

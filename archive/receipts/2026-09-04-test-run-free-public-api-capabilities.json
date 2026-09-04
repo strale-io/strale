@@ -1,0 +1,402 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "47d69050dd20b9966def84e2213338c1080ad107"
+  },
+  "at": "2026-09-04T12:31:03.912Z",
+  "inputs": {
+    "source": "vitest-new-caps.json"
+  },
+  "summary": {
+    "numTotalTestSuites": 12,
+    "numPassedTestSuites": 12,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 25,
+    "numPassedTests": 25,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "startTime": 1788525061049,
+    "success": true
+  },
+  "topic": "free-public-api-capabilities",
+  "raw": {
+    "numTotalTestSuites": 12,
+    "numPassedTestSuites": 12,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 25,
+    "numPassedTests": 25,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1788525061049,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "academic-paper-search / paper-details (OpenAlex)"
+            ],
+            "fullName": "academic-paper-search / paper-details (OpenAlex) rebuilds an abstract from the inverted index in position order, bounded",
+            "status": "passed",
+            "title": "rebuilds an abstract from the inverted index in position order, bounded",
+            "duration": 2.2030000000000314,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "academic-paper-search / paper-details (OpenAlex)"
+            ],
+            "fullName": "academic-paper-search / paper-details (OpenAlex) accepts a bare DOI, a doi.org URL, and an OpenAlex id; rejects noise",
+            "status": "passed",
+            "title": "accepts a bare DOI, a doi.org URL, and an OpenAlex id; rejects noise",
+            "duration": 1.0548000000000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "academic-paper-search / paper-details (OpenAlex)"
+            ],
+            "fullName": "academic-paper-search / paper-details (OpenAlex) search refuses an empty query without calling upstream",
+            "status": "passed",
+            "title": "search refuses an empty query without calling upstream",
+            "duration": 1.540900000000022,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "academic-paper-search / paper-details (OpenAlex)"
+            ],
+            "fullName": "academic-paper-search / paper-details (OpenAlex) search passes filters and the polite-pool mailto, and flattens works to the documented shape",
+            "status": "passed",
+            "title": "search passes filters and the polite-pool mailto, and flattens works to the documented shape",
+            "duration": 47.43979999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "academic-paper-search / paper-details (OpenAlex)"
+            ],
+            "fullName": "academic-paper-search / paper-details (OpenAlex) details turns an OpenAlex 404 into a clear not-found error",
+            "status": "passed",
+            "title": "details turns an OpenAlex 404 into a clear not-found error",
+            "duration": 0.7557000000000471,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "academic-paper-search / paper-details (OpenAlex)"
+            ],
+            "fullName": "academic-paper-search / paper-details (OpenAlex) details returns author institutions, open-access status and counts",
+            "status": "passed",
+            "title": "details returns author institutions, open-access status and counts",
+            "duration": 0.7305999999999813,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1788525061514,
+        "endTime": 1788525061567.7307,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale-wt-x402caps/apps/api/src/capabilities/academic-paper-search.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "arxiv-search"
+            ],
+            "fullName": "arxiv-search parses an Atom entry without an XML library: id, version, whitespace-folded title, entities, authors, categories, pdf, doi",
+            "status": "passed",
+            "title": "parses an Atom entry without an XML library: id, version, whitespace-folded title, entities, authors, categories, pdf, doi",
+            "duration": 3.9598000000000297,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "arxiv-search"
+            ],
+            "fullName": "arxiv-search refuses a missing query before any upstream call",
+            "status": "passed",
+            "title": "refuses a missing query before any upstream call",
+            "duration": 1.4329999999999927,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "arxiv-search"
+            ],
+            "fullName": "arxiv-search builds an https export.arxiv.org query with the category ANDed in, and returns the documented shape",
+            "status": "passed",
+            "title": "builds an https export.arxiv.org query with the category ANDed in, and returns the documented shape",
+            "duration": 43.89949999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "arxiv-search"
+            ],
+            "fullName": "arxiv-search surfaces arXiv throttling as a retryable upstream error, not a parse crash",
+            "status": "passed",
+            "title": "surfaces arXiv throttling as a retryable upstream error, not a parse crash",
+            "duration": 0.5689000000000419,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1788525061504,
+        "endTime": 1788525061553.5688,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale-wt-x402caps/apps/api/src/capabilities/arxiv-search.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "pubmed-search"
+            ],
+            "fullName": "free public-API batch pubmed-search refuses a bad date shape and an empty query before calling NCBI",
+            "status": "passed",
+            "title": "refuses a bad date shape and an empty query before calling NCBI",
+            "duration": 3.61749999999995,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "pubmed-search"
+            ],
+            "fullName": "free public-API batch pubmed-search runs esearch then esummary, and maps ids to articles in search order with DOI and PMC ids",
+            "status": "passed",
+            "title": "runs esearch then esummary, and maps ids to articles in search order with DOI and PMC ids",
+            "duration": 48.483600000000024,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "pubmed-search"
+            ],
+            "fullName": "free public-API batch pubmed-search an empty id list makes exactly one upstream call and returns zero articles",
+            "status": "passed",
+            "title": "an empty id list makes exactly one upstream call and returns zero articles",
+            "duration": 0.5552999999999884,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "hacker-news-search"
+            ],
+            "fullName": "free public-API batch hacker-news-search uses search_by_date for sort=date, tags for type, and strips HTML from comment text",
+            "status": "passed",
+            "title": "uses search_by_date for sort=date, tags for type, and strips HTML from comment text",
+            "duration": 0.8781999999999925,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "hacker-news-search"
+            ],
+            "fullName": "free public-API batch hacker-news-search refuses an empty query",
+            "status": "passed",
+            "title": "refuses an empty query",
+            "duration": 0.3895999999999731,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "cve-details"
+            ],
+            "fullName": "free public-API batch cve-details validates the CVE id shape before calling NVD",
+            "status": "passed",
+            "title": "validates the CVE id shape before calling NVD",
+            "duration": 0.7203999999999837,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "cve-details"
+            ],
+            "fullName": "free public-API batch cve-details prefers CVSS 3.1 over 2.0, flattens CWE ids, and reports KEV status",
+            "status": "passed",
+            "title": "prefers CVSS 3.1 over 2.0, flattens CWE ids, and reports KEV status",
+            "duration": 1.2626999999999953,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "cve-details"
+            ],
+            "fullName": "free public-API batch cve-details an empty vulnerabilities array is a not-found, and 429 is a retryable throttle",
+            "status": "passed",
+            "title": "an empty vulnerabilities array is a not-found, and 429 is a retryable throttle",
+            "duration": 0.7296000000000049,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "usgs-earthquake-search"
+            ],
+            "fullName": "free public-API batch usgs-earthquake-search requires latitude and longitude together and validates dates",
+            "status": "passed",
+            "title": "requires latitude and longitude together and validates dates",
+            "duration": 0.7666000000000395,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "free public-API batch",
+              "usgs-earthquake-search"
+            ],
+            "fullName": "free public-API batch usgs-earthquake-search defaults to a 30-day window, passes a radius search through, and flattens GeoJSON features",
+            "status": "passed",
+            "title": "defaults to a 30-day window, passes a radius search through, and flattens GeoJSON features",
+            "duration": 0.8781999999999925,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1788525061533,
+        "endTime": 1788525061590.8782,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale-wt-x402caps/apps/api/src/capabilities/free-public-api-capabilities.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "sec-edgar-filings"
+            ],
+            "fullName": "sec-edgar-filings refuses when neither ticker nor cik is given, before any upstream call",
+            "status": "passed",
+            "title": "refuses when neither ticker nor cik is given, before any upstream call",
+            "duration": 3.286700000000053,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "sec-edgar-filings"
+            ],
+            "fullName": "sec-edgar-filings resolves a ticker through the SEC index, sends the fair-access User-Agent, filters by form and builds document URLs",
+            "status": "passed",
+            "title": "resolves a ticker through the SEC index, sends the fair-access User-Agent, filters by form and builds document URLs",
+            "duration": 46.509199999999964,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "sec-edgar-filings"
+            ],
+            "fullName": "sec-edgar-filings reuses the cached ticker index on a second call, and returns all forms when unfiltered",
+            "status": "passed",
+            "title": "reuses the cached ticker index on a second call, and returns all forms when unfiltered",
+            "duration": 1.1370999999999754,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "sec-edgar-filings"
+            ],
+            "fullName": "sec-edgar-filings names an unknown ticker and suggests the CIK route",
+            "status": "passed",
+            "title": "names an unknown ticker and suggests the CIK route",
+            "duration": 0.3269999999999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "sec-edgar-filings"
+            ],
+            "fullName": "sec-edgar-filings a CIK that EDGAR does not know is a clear not-found, and 8-K items are surfaced",
+            "status": "passed",
+            "title": "a CIK that EDGAR does not know is a clear not-found, and 8-K items are surfaced",
+            "duration": 0.8526000000000522,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1788525061504,
+        "endTime": 1788525061555.8525,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale-wt-x402caps/apps/api/src/capabilities/sec-edgar-filings.test.ts"
+      }
+    ]
+  }
+}

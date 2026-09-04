@@ -1,0 +1,116 @@
+slug: hacker-news-search
+name: Hacker News Search
+description: >-
+  Search Hacker News stories and comments via the official Algolia API: title, URL, points, author, comment
+  count, date and text, by relevance or date.
+category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 9600
+known_rate_limit:
+  value: 160
+  unit: per_minute
+  source_url: https://hn.algolia.com/api
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Search terms. At least 2 characters.
+    type:
+      type: string
+      description: "story (default), comment, or all"
+    sort:
+      type: string
+      description: relevance (default) or date
+    limit:
+      type: integer
+      description: "Results to return, 1-30. Default: 10"
+    since_days:
+      type: integer
+      description: Only items created within the last N days
+output_schema:
+  type: object
+  example:
+    query: deno
+    type: story
+    sort: relevance
+    total_results: 34746
+    returned: 1
+    results:
+      - id: "23172483"
+        type: story
+        title: Deno 1.0
+        url: https://deno.land/v1
+        hn_url: https://news.ycombinator.com/item?id=23172483
+        author: 0xedb
+        points: 2081
+        num_comments: 583
+        created_at: "2020-05-13T22:18:14Z"
+        text: null
+        story_id: 23172483
+  properties:
+    query:
+      type: string
+    type:
+      type: string
+    total_results:
+      type: number
+    returned:
+      type: number
+    results:
+      type: array
+data_source: Hacker News Search API (Algolia)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      query: deno 1.0
+      limit: 3
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: results
+        operator: not_null
+        reliability: guaranteed
+      - field: results
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: deno 1.0
+    limit: 1
+output_field_reliability:
+  query: guaranteed
+  type: guaranteed
+  sort: guaranteed
+  total_results: guaranteed
+  returned: guaranteed
+  results: guaranteed
+limitations:
+  - title: Comment and story text is truncated at 500 characters
+    text: Long self-posts and comments are clipped; the hn_url points at the full item.
+    category: coverage
+    severity: info
+    workaround: Fetch hn_url with url-to-text for the complete thread.
+  - title: Search index, not the live site
+    text: Algolia indexes items within minutes of posting, but points and comment counts can lag the live page.
+    category: freshness
+    severity: info
+    workaround: null
