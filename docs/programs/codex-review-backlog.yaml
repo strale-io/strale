@@ -61,6 +61,35 @@ entries:
       register's arithmetic and digests via
       scripts/m2-closure-verify-private-rows.mjs.
     claude_verdicts: 1 round, PASS
+  - id: CX-6
+    subject: "PR #502 — capability input-shape guards: wrong-shaped list input must refuse, not crash"
+    commit: bd755ea8
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      The Claude review of the first pass was the thing that caught the real
+      defect, and that is precisely the argument for a second model here. The
+      authoring session fixed the three executors production had exposed and
+      wrote a guard test keyed on the `?? []` idiom; the reviewer found that
+      two live capabilities carried the identical crash while that guard
+      stayed green, and re-scanning on the cast found four more. One green
+      gate that could not see its own failure mode is exactly the class
+      LESSONS.md F5 tracks, and the widened guard has not itself been read by
+      anyone but its author and one Claude reviewer.
+    what_to_attack: >
+      The regex in apps/api/src/lib/capability-input.guard.test.ts — it is a
+      source scan, and its docstring claims only to close the copy-paste path,
+      not every spelling. Find a shape it still misses (the destructured and
+      aliased locals are named as known gaps; look for others). Then
+      country-economic-indicators.ts, the one deliberate behaviour change: a
+      non-array `indicators` used to fall through to DEFAULT_INDICATORS and
+      bill a successful response about indicators the caller never asked for,
+      and now refuses — confirm no caller depended on the old fallback. Also
+      check that readArray's `[]`-for-absent contract did not turn a
+      previously-thrown "required" error into a silent success at any of the
+      12 call sites.
+    claude_verdicts: 1 round, PASS WITH FINDINGS, findings acted on (scope widened from 3 files to 9)
   - id: CX-5
     subject: "PR #500 — M2 batch: 2026-08 operating-window rows, seven formal candidate records"
     commit: 7d6343e1
