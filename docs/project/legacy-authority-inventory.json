@@ -70,6 +70,7 @@
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "scripts/m2-closure-register-lib.mjs"
@@ -258,6 +259,7 @@
         "handoff/_general/from-code/2026-09-03-codex-review-backlog.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
@@ -443,6 +445,7 @@
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
         "handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
@@ -536,7 +539,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "559575938578535f6ee002cebddaef1cac00af1424aed0261623b4512fa13bfb",
+      "sha256": "26548154d0a2006fc7fdc4fb041dc6fe320366f4c7abfd2864a20d8217300498",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
