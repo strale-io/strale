@@ -45,7 +45,7 @@ sources:
     status_file: docs/project/private-archive-status.json
   formal_records:
     path: docs/decisions/records
-    record_count: 62
+    record_count: 68
   collision_registry:
     path: docs/decisions/id-collisions.yaml
     collision_count: 35
@@ -58,12 +58,12 @@ digests:
     = SHA-256 over sorted page_id|historical_scope|decided_at lines (LF-joined, trailing LF), recomputed
     from the archive by the operator script
   public_rows:
-    count: 203
-    digest: daf02f8f883c0da8091d7c949ba23f8e391d5046c9cd9232923d45766dc92b24
-    scope_date_digest: 7742c8632dc09a58c1a71fa286b14f7d751bf98c4dfceedec3396d6e1c36a837
+    count: 209
+    digest: d5d0713343651c8ce863b2f913f7d5ac96026df81827efdd90a1b6c568c68b98
+    scope_date_digest: f9b2012784ac59f1f474df7c6eaa574c2f2ae2f2400d2edf301849a9cb7af2e7
   all_rows:
     count: 318
-    digest: 5582ff5e07bd8b2ab9d625b7c497182825d51c4d7e33c062fc1016a2f0039aa7
+    digest: 719bdad929c51f542d9d81e66145252d63631bcc5599b48aaaaa689a1a2225bb
 counts:
   legacy_inventory:
     migrated: 6
@@ -74,10 +74,10 @@ counts:
     unclear: 0
   decision_rows:
     unresolved_collision: 69
-    formally_migrated: 55
+    formally_migrated: 61
     resolved_collision: 2
     intentionally_historical: 77
-    not_yet_reconciled: 104
+    not_yet_reconciled: 98
     obsolete_or_superseded: 6
     unclear: 5
     total: 318
@@ -631,6 +631,36 @@ formal_records:
   source_kind: notion-row
   source_rows:
   - 32c67c87082c81719ea5f67617482c43
+- record_key: DEC-20260313-F
+  id: DEC-20260313-F
+  source_kind: notion-row
+  source_rows:
+  - 32267c87082c8130a425fca08317488a
+- record_key: DEC-20260324-A
+  id: DEC-20260324-A
+  source_kind: notion-row
+  source_rows:
+  - 32d67c87082c81dd9c53dfd6ce1ffc9c
+- record_key: DEC-20260324-C
+  id: DEC-20260324-C
+  source_kind: notion-row
+  source_rows:
+  - 32d67c87082c81e18ee2cf6b26226f1c
+- record_key: DEC-20260330-B
+  id: DEC-20260330-B
+  source_kind: notion-row
+  source_rows:
+  - 33367c87082c8138bdbdd4dd20af3ca0
+- record_key: DEC-20260404-A
+  id: DEC-20260404-A
+  source_kind: notion-row
+  source_rows:
+  - 33867c87082c8116aa2ae2a1c6d2cad4
+- record_key: DEC-20260416-A
+  id: DEC-20260416-A
+  source_kind: notion-row
+  source_rows:
+  - 34467c87082c81208727dab42331cae4
 decision_rows:
 - page_id: 31267c87082c81279b14f3859f6f2038
   id: DEC-20260225-P-c5d6
@@ -3073,15 +3103,75 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260323-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 32267c87082c8130a425fca08317488a
+  id: DEC-20260313-F
+  title_sha256: 64a6b82da22f0ec8bb0fe9ccf2503f87cbe6dbb5610af62ba272116e32b8e90c
+  historical_status: active
+  source_url: https://app.notion.com/32267c87082c8130a425fca08317488a
+  record_key: DEC-20260313-F
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260313-F.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 32d67c87082c81dd9c53dfd6ce1ffc9c
+  id: DEC-20260324-A
+  title_sha256: 05120bb34284705c036af98efb457e380f264b5d7fb40e9ad9632a56f6188134
+  historical_status: active
+  source_url: https://app.notion.com/32d67c87082c81dd9c53dfd6ce1ffc9c
+  record_key: DEC-20260324-A
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260324-A.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 32d67c87082c81e18ee2cf6b26226f1c
+  id: DEC-20260324-C
+  title_sha256: 97d144c78361e776af0669e6a80660d7bd990f9d69752b42c7c53f7096eb09ec
+  historical_status: active
+  source_url: https://app.notion.com/32d67c87082c81e18ee2cf6b26226f1c
+  record_key: DEC-20260324-C
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260324-C.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 33367c87082c8138bdbdd4dd20af3ca0
+  id: DEC-20260330-B
+  title_sha256: 1a2a7faabd4d13796484f886c69c9f1a9f4b29845cdace26f7b94373495f8dc1
+  historical_status: active
+  source_url: https://app.notion.com/33367c87082c8138bdbdd4dd20af3ca0
+  record_key: DEC-20260330-B
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260330-B.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 33867c87082c8116aa2ae2a1c6d2cad4
+  id: DEC-20260404-A
+  title_sha256: 6721a97bce45377e7c51549ea87839d60eddcea9d80249a4c5d80f7490ba5e0d
+  historical_status: active
+  source_url: https://app.notion.com/33867c87082c8116aa2ae2a1c6d2cad4
+  record_key: DEC-20260404-A
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260404-A.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 34467c87082c81208727dab42331cae4
+  id: DEC-20260416-A
+  title_sha256: 67c8935f12fd80921e06df9ecd69831e59446139d04997cd1a00ce24fb765389
+  historical_status: active
+  source_url: https://app.notion.com/34467c87082c81208727dab42331cae4
+  record_key: DEC-20260416-A
+  disposition: formally_migrated
+  evidence:
+  - docs/decisions/records/DEC-20260416-A.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 private_rows:
   repository: strale-io/strale-context-archive
   visibility: private
   commit: efb96d69f8db210d050132008dbd255b909179d3
   file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
-  count: 115
-  digest: 7fbcf9446adf639de5539cd3e12fa477095ea1a2ecb8baa7a8d000e6d7f4995c
+  count: 109
+  digest: 193e43c6ead8bde9bd826fd0285c5b9ca10ec0997092229424ad3cb797e0bd45
   counts_by_disposition:
-    not_yet_reconciled: 104
+    not_yet_reconciled: 98
     obsolete_or_superseded: 6
     unclear: 5
   verification: node scripts/m2-closure-verify-private-rows.mjs recomputes this digest, the all_rows digest,
@@ -3155,7 +3245,7 @@ plan_statements:
     gaps it lists are the remaining M2 work.
 exit_gaps:
 - id: G1
-  gap: 104 preserved Decision rows (103 global, 1 temporary) carry a unique ID but
+  gap: 98 preserved Decision rows (97 global, 1 temporary) carry a unique ID but
     no formal record, collision entry, or deferral decision. 76 pre-readiness feature-scoped rows
     were classified evidence-only by DEC-20260904-A. T10 batch 4 formally migrated three
     engineering-convention rows (DEC-20260419-A, DEC-20260420-A, DEC-20260511-C). T10 batch 5
@@ -3166,7 +3256,9 @@ exit_gaps:
     DEC-20260411-A, DEC-20260513-E). T10 batch 8 formally migrated five capability-onboarding-pipeline
     rows (DEC-20260309-G, DEC-20260318-A, DEC-20260318-B, DEC-20260320-A, DEC-20260411-B). T10 batch 9
     formally migrated six trust-and-quality display rows (DEC-20260305-G, DEC-20260306-D,
-    DEC-20260313-C, DEC-20260316-A, DEC-20260316-B, DEC-20260323-A).
+    DEC-20260313-C, DEC-20260316-A, DEC-20260316-B, DEC-20260323-A). T10 batch 10 formally migrated
+    six distribution-and-x402-rail rows (DEC-20260313-F, DEC-20260324-A, DEC-20260324-C,
+    DEC-20260330-B, DEC-20260404-A, DEC-20260416-A).
   blocking: true
   owner: session
   phase: M2
@@ -3205,6 +3297,12 @@ exit_gaps:
   - docs/decisions/records/DEC-20260316-A.md
   - docs/decisions/records/DEC-20260316-B.md
   - docs/decisions/records/DEC-20260323-A.md
+  - docs/decisions/records/DEC-20260313-F.md
+  - docs/decisions/records/DEC-20260324-A.md
+  - docs/decisions/records/DEC-20260324-C.md
+  - docs/decisions/records/DEC-20260330-B.md
+  - docs/decisions/records/DEC-20260404-A.md
+  - docs/decisions/records/DEC-20260416-A.md
 - id: G2
   gap: 34 historical IDs reused across 69 Notion rows remain unresolved in the collision registry and
     are excluded from formal records and relation targets.
