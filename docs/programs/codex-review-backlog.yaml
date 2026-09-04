@@ -41,6 +41,29 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-23
+    subject: "PR #544 — M2 batch 15: fourteen March 2026 launch-month decisions (DEC-20260302-C/D, DEC-20260303-C, DEC-20260305-E/F, DEC-20260306-G/H, DEC-20260309-H, DEC-20260310-E/F, DEC-20260313-E, DEC-20260314-A/B/C) migrated to formal candidate records"
+    commit: fdb38591
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Fourteen launch-month records whose Consequences sections judge what
+      the SQS deletion and later work did with each (no ranking-explanation
+      page, no blog route, no disclaimer field on today's risk
+      capabilities, 36 web-provider importers against the row's 47). Six
+      records cite the frontend by commit-qualified cross-repo path.
+      Whether each claim is traced to code and each cross-repo sha resolves
+      is the Codex judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (web-provider.ts and its importers,
+      dependency-manifest.ts, daily-digest.ts, seller-rank.ts, suggest.ts,
+      onboard.ts, the frontend Header, Methodology, Index, CapabilityDetail
+      and Terms pages at the cited shas); the single relation edge; the
+      register arithmetic and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-22
     subject: "PR #542 — M2 batch 14: fourteen MVP launch and scaling decisions of 2026-02-25/27 (DEC-20260225-P-m5n6/o7p8/y1z2, DEC-20260226-P-q1r2/s3t4/u5v6/w7x8, DEC-20260227-P-a1b2/i9j0/m3n4/o5p6/q7r8/s9t0/u1v2) migrated to formal candidate records"
     commit: cc936d78
