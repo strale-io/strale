@@ -275,19 +275,19 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 4 done (PRs #500, #503, #509, #511, #513). Batch 4 migrated
-      the three engineering-convention rows (structured logging,
-      hand-written migrations, in-TS startup migrations) to formal
-      candidate records; the private projection is 137 rows at archive
-      8ec76446 and the operator verifier passes. G1 holds 126 rows (125
-      global, 1 temporary). Blocking gaps: G1, G2, G9. Next: batch 5, the
-      capability lifecycle patterns (retirement, park, tombstone:
-      DEC-20260421-J, DEC-20260421-L, DEC-20260422-B), same method: records
-      with full fidelity, contradiction-checked against the live code and
-      active records, independent review, private half committed by the
-      orchestrator. Then the next coherent global group (provenance and
-      jurisdiction semantics), then G2's 34 collisions one at a time, then
-      G9's closing review. This track is the M2 exit gate: the closure
+      Batches 1 to 6 done (PRs #500, #503, #509, #511, #513, #515, #517).
+      Batch 6 migrated the provenance and jurisdiction rows; the private
+      projection is 131 rows at archive 8f331de9 and the operator verifier
+      passes. G1 holds 120 rows (119 global, 1 temporary). Blocking gaps:
+      G1, G2, G9. One finding to act on outside T10: DEC-20260425-A's
+      Option B mechanism (manifest-declared jurisdictions feeding
+      data_jurisdiction) was never implemented; getProcessingJurisdictions()
+      still runs the capabilityType/transparencyTag heuristic (filed as a
+      To-do). Next: batch 7, the five pricing decisions (DEC-20260302-A-0001,
+      DEC-20260308-1, DEC-20260320-F, DEC-20260411-A, DEC-20260513-E), which
+      carry live contradictions with today's vendor basis and prices; then
+      the onboarding-pipeline group, then G2's 34 collisions one at a time,
+      then G9's closing review. This track is the M2 exit gate: the closure
       register's validator refuses a state where it is done, or any
       post-m2 track is active or done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
@@ -306,6 +306,14 @@ tracks:
       - docs/decisions/records/DEC-20260420-A.md
       - docs/decisions/records/DEC-20260511-C.md
       - handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md
+      - docs/decisions/records/DEC-20260421-J.md
+      - docs/decisions/records/DEC-20260421-L.md
+      - docs/decisions/records/DEC-20260422-B.md
+      - docs/decisions/records/DEC-20260422-D.md
+      - docs/decisions/records/DEC-20260425-A.md
+      - docs/decisions/records/DEC-20260425-B.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md
 
   - id: T6
     title: M3 repo-native workflows
