@@ -41,6 +41,42 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-13
+    subject: "PR #517 — M2 batch 6: provenance and jurisdiction rows (DEC-20260422-D, DEC-20260425-A, DEC-20260425-B) migrated to formal candidate records"
+    commit: 167e46e0
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      DEC-20260425-A's record states that the decision's core mechanism
+      (manifest-declared jurisdictions) was never implemented and that the
+      audit field is still derived by a heuristic. A record that says its
+      own decision did not ship is exactly where a second model should check
+      the claim and the wording against the source and the code.
+    what_to_attack: >
+      DEC-20260425-A's five-option Rationale for any dropped reason; the
+      "status on 2026-09-04" block against apps/api/src/lib/provenance-builder.ts
+      getProcessingJurisdictions(); the affirms edge to DEC-20260425-B; the
+      22-executor provenance-field count; the register arithmetic and digests
+      via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, FAIL on a stale index and one omitted relation, both applied by the orchestrator before merge
+  - id: CX-12
+    subject: "PR #515 — M2 batch 5: capability lifecycle patterns (DEC-20260421-J, DEC-20260421-L, DEC-20260422-B) migrated to formal candidate records"
+    commit: fa869015
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Three operating patterns transcribed with a contradiction the worker
+      found itself: the exemplar retired capability was reactivated eight
+      days later. Whether the records state that honestly without rewriting
+      the historical Decision text is a fidelity judgement for Codex.
+    what_to_attack: >
+      The numbered steps, the Type 1 to 5 tree and the four tombstone reasons
+      against the sources; the bd25bc57 reactivation claim; the amends and
+      related_to edges; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (one nit)
   - id: CX-11
     subject: "PR #510 — drizzle-orm 0.38.4 -> 0.45.2 (T17 batch 2), with the DrizzleQueryError unwrap module and five routed readers"
     commit: 47d69050
