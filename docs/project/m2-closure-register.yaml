@@ -45,7 +45,7 @@ sources:
     status_file: docs/project/private-archive-status.json
   formal_records:
     path: docs/decisions/records
-    record_count: 36
+    record_count: 37
   collision_registry:
     path: docs/decisions/id-collisions.yaml
     collision_count: 35
@@ -59,11 +59,11 @@ digests:
     from the archive by the operator script
   public_rows:
     count: 178
-    digest: a1941e1295b6b84ca2fb7b8259d908779a4387d13f74b2f29eec5ef227ccd2ce
+    digest: 0427b22ce2d8914cd64e9534fb8b5a411fc2d595972f20e15f0591b0fd2b1511
     scope_date_digest: 52b5d297eefff2282c280db7d2afd76dca1afb787821b2165ad8b4c17fd1e714
   all_rows:
     count: 318
-    digest: 8118d505320b1b7b4696085563f4a041c01457bee6b0a4d500fc1575035f49c4
+    digest: 4d073667103733e8609fb3dd42fb67c3c4ab61c9f2823983cbb99e043c175022
 counts:
   legacy_inventory:
     migrated: 6
@@ -73,9 +73,9 @@ counts:
     evidence-only: 0
     unclear: 0
   decision_rows:
-    unresolved_collision: 70
+    unresolved_collision: 69
     formally_migrated: 30
-    resolved_collision: 1
+    resolved_collision: 2
     intentionally_historical: 77
     not_yet_reconciled: 129
     obsolete_or_superseded: 6
@@ -88,8 +88,8 @@ counts:
     total: 5
     superseded: 0
   exit_gaps:
-    blocking: 4
-    non_blocking: 5
+    blocking: 3
+    non_blocking: 6
 legacy_inventory:
 - path: AGENTS.md
   owner_area: root-agent-entrypoint
@@ -326,6 +326,11 @@ formal_records:
   source_kind: notion-row
   source_rows:
   - 32967c87082c81b7a8ccd169b431f99c
+- record_key: DEC-20260422-A--git-3b256587
+  id: DEC-20260422-A
+  source_kind: git-native
+  source_rows: []
+  git_provenance: https://github.com/strale-io/strale/commit/3b25658736bfed53eec52c8acf2619dacd54d1f5
 - record_key: DEC-20260422-C
   id: DEC-20260422-C
   source_kind: notion-row
@@ -1301,15 +1306,17 @@ decision_rows:
   source_url: https://app.notion.com/34967c87082c81ffacfbd04b59df64fe
   collision:
     id: DEC-20260422-A
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: documented_only
     kind: cross-surface
-  disposition: unresolved_collision
+  disposition: resolved_collision
   evidence:
   - archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md
-  rationale: Single Notion row whose ID also names the Git-native Distribution PR Integrity Protocol;
-    the Notion-only collision registry cannot represent it, so no formal record or relation target may
-    use this ID until a cross-surface identity mechanism exists.
+  - archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md
+  rationale: Both cross-surface meanings now have distinct identities. The Git-native Distribution PR
+    Integrity Protocol has its own git-qualified record, DEC-20260422-A--git-3b256587, whose evidence
+    names the introducing commit. This Notion row is documented-only under the gap report cited above.
+    The bare id DEC-20260422-A remains untargetable either way.
 - page_id: 34967c87082c81ec8c4dd04c40ba5685
   id: DEC-20260422-C
   title_sha256: 328d666e12c61750b629d94ddb11787b4b9e0563e27aacacc3350a3a6e13566e
@@ -2803,9 +2810,14 @@ exit_gaps:
   - docs/decisions/id-collisions.yaml
   - archive/sessions/2026-09-01-decision-collision-identity-plan.md
 - id: G3
-  gap: 'DEC-20260422-A collides across surfaces: one Notion row and one Git-native protocol claim share
-    the ID, and the Notion-only registry cannot represent it.'
-  blocking: true
+  gap: 'Resolved. DEC-20260422-A collided across surfaces: one Notion row and one Git-native protocol
+    claim shared the ID, and the Notion-only registry could not represent it. The DEC-20260904-B identity
+    mechanism was applied: the Git-native Distribution PR Integrity Protocol now has its own git-qualified
+    record, DEC-20260422-A--git-3b256587, and the Notion row is documented-only under a dedicated gap
+    report. The schema''s exit_gaps object has no separate closed state distinct from blocking: false;
+    this gap is recorded resolved by its rewritten text and non-blocking status, not a schema field.
+    The bare id DEC-20260422-A remains untargetable.'
+  blocking: false
   owner: session
   phase: M2
   covers:
@@ -2815,6 +2827,8 @@ exit_gaps:
   evidence:
   - archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md
   - docs/decisions/records/DEC-20260904-B.md
+  - docs/decisions/records/DEC-20260422-A--git-3b256587.md
+  - archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md
 - id: G4
   gap: Four formal records (DEC-20260504-A, DEC-20260822-A, DEC-20260831-A, DEC-20260901-A) have no Notion
     source row and rest on Git provenance alone.

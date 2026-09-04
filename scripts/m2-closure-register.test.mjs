@@ -559,15 +559,23 @@ test("collision rows must agree with the collision registry", () => {
 });
 
 test("collision payloads are validated wherever they appear and forbidden elsewhere", () => {
-  // Cross-surface row flipped to resolved/documented_only.
+  // Cross-surface row given an invalid resolution_status/row_disposition
+  // combination (resolved/unresolved is neither the always-valid
+  // unresolved/unresolved nor the eligible resolved/documented_only pair),
+  // with disposition left inconsistent with what the entrypoints derive.
+  // The DEC-20260422-A row is resolved on disk in this register (a
+  // git-qualified record and a citing gap report both exist), so this test
+  // targets the invalid-combination rule itself rather than eligibility;
+  // eligibility for resolved/documented_only is covered by "cross-surface
+  // rows resolve only with a git-qualified record for the collision id and
+  // a gap-report citation" below.
   const r = base();
   const cross = r.decision_rows.find((x) => x.collision?.kind === "cross-surface");
   cross.collision.resolution_status = "resolved";
-  cross.collision.row_disposition = "documented_only";
-  cross.disposition = "resolved_collision";
+  cross.collision.row_disposition = "unresolved";
+  cross.disposition = "unresolved_collision";
   resync(r);
   const c = codes(r);
-  // No git-qualified record exists for this collision id, so resolution is not eligible.
   assert.ok(c.includes("DECISION_ROW_CROSS_SURFACE_STATE_INVALID"), c.join(","));
   assert.ok(c.includes("DECISION_ROW_DERIVATION_MISMATCH"), c.join(","));
   // Migrated registry row (DEC-20260502-A) with a wrong collision payload.
@@ -1010,61 +1018,56 @@ test("a bare collided id is never a record key, including cross-surface collisio
 });
 
 test("cross-surface rows resolve only with a git-qualified record for the collision id and a gap-report citation", () => {
-  const gitRecord = gitQualifiedSummary({
-    record_key: "DEC-20260422-A--git-3b25658",
-    id: "DEC-20260422-A",
-    evidence: ["https://github.com/strale-io/strale/commit/3b25658736bfed53eec52c8acf2619dacd54d1f5"],
-    decided_at: "2026-09-04",
-  });
-  const withGitRecord = withRecord(gitRecord);
+  // Stage 2 (this batch) actually resolved DEC-20260422-A: a git-qualified
+  // record (docs/decisions/records/DEC-20260422-A--git-3b256587.md) and a
+  // citing gap report (archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md)
+  // both exist on disk, so the committed register's row is already the
+  // resolved/documented_only case. This test exercises the mechanism's
+  // other branches against that committed state, rather than against a
+  // synthetic record injected only into the test context.
   const crossRow = (r) => r.decision_rows.find((x) => x.collision?.kind === "cross-surface");
-  const resolve = (r) => {
+  const setState = (r, resolutionStatus, rowDisposition, disposition) => {
     const cross = crossRow(r);
-    cross.collision.resolution_status = "resolved";
-    cross.collision.row_disposition = "documented_only";
-    cross.disposition = "resolved_collision";
+    cross.collision.resolution_status = resolutionStatus;
+    cross.collision.row_disposition = rowDisposition;
+    cross.disposition = disposition;
     resync(r);
     return cross;
   };
+  // A context with no formal record for DEC-20260422-A, simulating "no
+  // git-qualified record exists" without touching the real files.
+  const withoutGitRecord = { ...context, records: context.records.filter((rec) => rec.id !== "DEC-20260422-A") };
 
-  // unresolved/unresolved is always valid, with or without the git-qualified record.
+  // The committed state -- resolved/documented_only -- is valid and matches the derivation.
   lacks(base(), "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
   lacks(base(), "DECISION_ROW_DERIVATION_MISMATCH");
-  lacks(base(), "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withGitRecord);
 
-  // With the git-qualified record in place, the still-unresolved committed row
-  // is now a derivation mismatch: (a) and (b) both hold, so resolved_collision
-  // is expected.
-  has(base(), "DECISION_ROW_DERIVATION_MISMATCH", withGitRecord);
+  // unresolved/unresolved is a valid combination in isolation, but with the
+  // real record and the citing gap report both in place, the row is
+  // eligible to resolve and leaving it unresolved is now a derivation
+  // mismatch.
+  const stillUnresolved = base();
+  setState(stillUnresolved, "unresolved", "unresolved", "unresolved_collision");
+  lacks(stillUnresolved, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  has(stillUnresolved, "DECISION_ROW_DERIVATION_MISMATCH");
 
   // Missing (a): resolved/documented_only without any git-qualified record for the id.
-  const missingA = base();
-  resolve(missingA);
-  has(missingA, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  has(base(), "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withoutGitRecord);
 
   // Missing (b): the git-qualified record exists, but the row's own evidence
   // does not cite a gap report naming this page id.
   const missingB = base();
-  const crossB = resolve(missingB);
+  const crossB = crossRow(missingB);
   crossB.evidence = ["docs/decisions/README.md"];
   resync(missingB);
-  has(missingB, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withGitRecord);
-
-  // Both (a) and (b): resolved/documented_only is valid, and matches the derivation.
-  const both = base();
-  resolve(both);
-  lacks(both, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withGitRecord);
-  lacks(both, "DECISION_ROW_DERIVATION_MISMATCH", withGitRecord);
+  has(missingB, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  has(missingB, "DECISION_ROW_NOT_CITED_BY_EVIDENCE");
 
   // row_disposition formal_record is refused on a cross-surface row in this stage,
   // even with (a) and (b) satisfied.
   const formalRecord = base();
-  const crossF = crossRow(formalRecord);
-  crossF.collision.resolution_status = "resolved";
-  crossF.collision.row_disposition = "formal_record";
-  crossF.disposition = "resolved_collision";
-  resync(formalRecord);
-  has(formalRecord, "CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED", withGitRecord);
+  setState(formalRecord, "resolved", "formal_record", "resolved_collision");
+  has(formalRecord, "CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED");
 
   // Any other resolution_status/row_disposition combination is invalid.
   const other = base();
@@ -1072,6 +1075,43 @@ test("cross-surface rows resolve only with a git-qualified record for the collis
   crossO.collision.resolution_status = "resolved";
   crossO.collision.row_disposition = "unresolved";
   has(other, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+});
+
+test("the committed DEC-20260422-A row derives resolved_collision from a real git record and a real gap-report citation", () => {
+  // Regression guard for the G3 stage-2 resolution: the real committed
+  // register, the real formal record file, and the real gap report must
+  // together derive resolved_collision -- not merely declare it -- so a
+  // future edit that drops either the git-qualified record or the row's
+  // gap-report citation is caught by DECISION_ROW_DERIVATION_MISMATCH
+  // rather than silently passing because the row's own fields still say
+  // resolved_collision.
+  const committed = base();
+  const cross = committed.decision_rows.find((x) => x.id === "DEC-20260422-A");
+  assert.ok(cross, "DEC-20260422-A must be a public decision row");
+  assert.equal(cross.collision.kind, "cross-surface");
+  assert.equal(cross.disposition, "resolved_collision");
+  assert.equal(cross.collision.resolution_status, "resolved");
+  assert.equal(cross.collision.row_disposition, "documented_only");
+  lacks(committed, "DECISION_ROW_DERIVATION_MISMATCH");
+  lacks(committed, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+
+  // Dropping every evidence entry that cites this row's page id (while its
+  // fields still claim resolved_collision) must be rejected: this is the
+  // fail-first case for this test, run manually against a copy with the
+  // gap-report citation removed before the resolution landed, and it must
+  // fail the same way here. (The 2026-09-01 report also names this page id,
+  // so both citing entries must go for eligibility to actually break.)
+  const droppedCitation = base();
+  const crossDropped = droppedCitation.decision_rows.find((x) => x.id === "DEC-20260422-A");
+  crossDropped.evidence = ["docs/decisions/README.md"];
+  resync(droppedCitation);
+  has(droppedCitation, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  has(droppedCitation, "DECISION_ROW_DERIVATION_MISMATCH");
+
+  // Dropping the git-qualified record itself (context-only, real files
+  // untouched) must be rejected the same way.
+  const withoutGitRecord = { ...context, records: context.records.filter((rec) => rec.id !== "DEC-20260422-A") };
+  has(committed, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withoutGitRecord);
 });
 
 test("unclear rows have no id and blank-id rows are unclear", () => {
