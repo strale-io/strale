@@ -41,6 +41,28 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-22
+    subject: "PR #542 — M2 batch 14: fourteen MVP launch and scaling decisions of 2026-02-25/27 (DEC-20260225-P-m5n6/o7p8/y1z2, DEC-20260226-P-q1r2/s3t4/u5v6/w7x8, DEC-20260227-P-a1b2/i9j0/m3n4/o5p6/q7r8/s9t0/u1v2) migrated to formal candidate records"
+    commit: cc936d78
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Fourteen founding-week records whose Consequences sections judge what
+      survived (no LLM fuzzy input despite CLAUDE.md, TED shipped, the EU AI
+      Act columns and their writer, provider growth never executed, no
+      reputation engine, no Visa TAP). Six relation edges, two of them
+      beyond the brief's list. Whether each claim is traced to code rather
+      than remembered, and whether each edge is source-stated, is the Codex
+      judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (swedish-company-data.ts, ted-procurement
+      manifest, schema.ts and do.ts, the SDK package.json, the MCP and A2A
+      surfaces); the six relation edges; the register arithmetic and the
+      recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-21
     subject: "PR #539 — M2 batch 13: fourteen founding decisions of 2026-02-24/25 (DEC-20260224-P-a1b2/c3d4/e5f6/g7h8, DEC-20260225-P-a3b4/e7f8/g9h0/i1j2/k3l4/m1n2/q3r4/s5t6/u7v8/w9x0) migrated to formal candidate records"
     commit: 8ebfafa9
