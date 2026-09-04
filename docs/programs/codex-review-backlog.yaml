@@ -41,6 +41,25 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-21
+    subject: "PR #539 — M2 batch 13: fourteen founding decisions of 2026-02-24/25 (DEC-20260224-P-a1b2/c3d4/e5f6/g7h8, DEC-20260225-P-a3b4/e7f8/g9h0/i1j2/k3l4/m1n2/q3r4/s5t6/u7v8/w9x0) migrated to formal candidate records"
+    commit: 8ebfafa9
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Fourteen founding-era records whose Consequences sections judge what
+      survived of each decision (the pivot, the seed set, the payment
+      architecture, keypair identity, provider-lite). Whether each "status
+      on 2026-09-04" claim is traced to code or a later record rather than
+      remembered is the Codex judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (manifests, x402 gateway, auth, langchain
+      packages, solutions route, VOICE.md, claims.yaml); the relation edges;
+      the register arithmetic and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-20
     subject: "PR #537 — M2 batch 12: twelve vendor and registry sourcing decisions (DEC-20260320-E, DEC-20260405-A, DEC-20260505-G/H, DEC-20260506-G, DEC-20260507-D/E/F/G/H, DEC-20260508-A/D) migrated to formal candidate records"
     commit: e4b6376a

@@ -275,25 +275,27 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 12 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529, #532, #537). Batch 12 migrated the twelve
-      vendor and registry sourcing decisions and surfaced that the shipped
-      sourcing diverged from several of them: Swedish data moved to
-      Bolagsverket on 2026-04-22 although the row says parked; BG, CY, LU
-      and HU shipped on the Openapi.com aggregator, gated off pending case
-      151296, instead of the decided self-build or deferral; Implisense
-      and Kyckr have no code; the OpenRegister billed tier is unrecorded.
-      Private projection 90 rows at archive 8a852ff7; operator verifier
-      passes. G1 holds 79 rows (78 global, 1 temporary). Blocking gaps:
-      G1, G2, G9. Loop since 2026-09-04 evening: private half committed
-      and register bumped before review, auto-merge armed after PASS,
-      batches of 10 to 14 rows, docs-only PRs take the CI fast path
-      (#533). Next: batch 13, the next 10 to 14 not_yet_reconciled global
-      rows by theme (read the private projection at private_rows.commit),
-      then G2's 34 collisions one at a time, then G9's closing review.
-      This track is the M2 exit gate: the closure register's validator
-      refuses a state where it is done, or any post-m2 track is active or
-      done, while a blocking gap remains.
+      Batches 1 to 13 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529, #532, #537, #539). Batch 13 migrated the
+      fourteen founding decisions of 2026-02-24/25 (priority hierarchy,
+      first vertical, differentiator, name, seed capabilities, LangChain
+      fallback tool, provider-lite model, bundles, positioning, the
+      commerce-protocol pivot, crypto stance, payment architecture,
+      TypeScript); each Consequences section states what later decisions
+      and the code did with it. Private projection 76 rows at archive
+      b843fca1; operator verifier passes. G1 holds 65 rows (64 global, 1
+      temporary). Blocking gaps: G1, G2, G9. Loop since 2026-09-04
+      evening: private half committed and register bumped before review,
+      auto-merge armed after PASS, batches of 10 to 14 rows, docs-only
+      PRs take the CI fast path (#533). Next: batch 14, the fourteen MVP
+      launch and scaling rows of 2026-02-25/27 (DEC-20260225-P-m5n6,
+      -o7p8, -y1z2, DEC-20260226-P-q1r2, -s3t4, -u5v6, -w7x8,
+      DEC-20260227-P-a1b2, -i9j0, -m3n4, -o5p6, -q7r8, -s9t0, -u1v2),
+      then the March to May rows by theme, then G2's 34 collisions one at
+      a time, then G9's closing review. This track is the M2 exit gate:
+      the closure register's validator refuses a state where it is done,
+      or any post-m2 track is active or done, while a blocking gap
+      remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -365,6 +367,21 @@ tracks:
       - docs/decisions/records/DEC-20260508-A.md
       - docs/decisions/records/DEC-20260508-D.md
       - handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md
+      - docs/decisions/records/DEC-20260224-P-a1b2.md
+      - docs/decisions/records/DEC-20260224-P-c3d4.md
+      - docs/decisions/records/DEC-20260224-P-e5f6.md
+      - docs/decisions/records/DEC-20260224-P-g7h8.md
+      - docs/decisions/records/DEC-20260225-P-a3b4.md
+      - docs/decisions/records/DEC-20260225-P-e7f8.md
+      - docs/decisions/records/DEC-20260225-P-g9h0.md
+      - docs/decisions/records/DEC-20260225-P-i1j2.md
+      - docs/decisions/records/DEC-20260225-P-k3l4.md
+      - docs/decisions/records/DEC-20260225-P-m1n2.md
+      - docs/decisions/records/DEC-20260225-P-q3r4.md
+      - docs/decisions/records/DEC-20260225-P-s5t6.md
+      - docs/decisions/records/DEC-20260225-P-u7v8.md
+      - docs/decisions/records/DEC-20260225-P-w9x0.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md
 
   - id: T6
     title: M3 repo-native workflows

@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-237 files (210 with a recorded intent, 27 without).
+239 files (212 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -22,12 +22,14 @@
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md`](_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md) | land T10 (M2 exit-gap closure) batch 5 — capability lifecycle patterns — three `not_yet_reconciled`, `historical_scop... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md`](_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md) | land T10 (M2 exit-gap closure) batch 4 — the first global-scope-row batch — three engineering-convention Decision row... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md`](_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md) | land the first batch of T10 (M2 exit-gap closure) — the seven decision rows the closure register names as its next ba... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md`](_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md) | land T10 (M2 exit-gap closure) batch 14, fourteen founding Decision |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md`](_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md) | land T10 (M2 exit-gap closure) batch 13, fourteen founding Decision |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md`](_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md) | land T10 (M2 exit-gap closure) batch 12, twelve vendor and registry |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md`](_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md) | land T10 (M2 exit-gap closure) batch 11, seven Counterparty |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md`](_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md) | land T10 (M2 exit-gap closure) batch 10, six distribution-and-x402-rail Decision rows (DEC-20260313-F Official MCP Re... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md`](_general/from-code/2026-09-04-free-public-api-agent-capabilities.md) | Add eight keyless, free-upstream capabilities that the platform's largest x402 buyer |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-free-api-capabilities-onboarded.md`](_general/from-code/2026-09-04-free-api-capabilities-onboarded.md) | Close the "not done" item of `2026-09-04-free-public-api-agent-capabilities.md` — the eight |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md`](_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md) | Fix the intermittent CI teardown failure in `scripts/codex-backlog.test.mjs` |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-ci-docs-only-fast-path.md`](_general/from-code/2026-09-04-ci-docs-only-fast-path.md) | add a documentation-only fast path to `.github/workflows/ci.yml` so PRs |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md`](_general/from-code/2026-09-03-t17-hono-upgrade.md) | Program track T17 / WP13 first batch — upgrade `hono` in `apps/api` to close its 27 |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md`](_general/from-code/2026-09-03-handoff-gate-live-worktree.md) | stop the session-end gate instructing the destruction of live work, after it did so three times in one session. |
