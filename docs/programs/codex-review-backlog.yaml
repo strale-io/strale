@@ -41,6 +41,26 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-10
+    subject: "PR #513 — M2 batch 4: three engineering-convention rows (DEC-20260419-A, DEC-20260420-A, DEC-20260511-C) migrated to formal candidate records"
+    commit: 8b124678
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Decision-record fidelity is the work the 2026-09-01 routing reserved
+      for Codex. These three records transcribe engineering conventions that
+      the code still enforces, and one of them (DEC-20260511-C) carries a
+      dated contradiction with today's tree (drizzle-kit back for the CI
+      test lane only). Whether that contradiction is stated honestly and
+      completely is a judgement worth a second model.
+    what_to_attack: >
+      Each record's five sections against its Notion source for any dropped
+      rule, path, commit id or option; the DEC-20260511-C "status on
+      2026-09-04" block against apps/api/drizzle.config.ts, package.json and
+      .github/workflows/ci.yml; the single affirms edge; the register
+      arithmetic and digests via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (three nits)
   - id: CX-9
     subject: "PR #511 — DEC-20260422-A cross-surface collision resolved (G3 stage 2): protocol record DEC-20260422-A--git-3b256587, Notion row evidence-only"
     commit: cf20869f

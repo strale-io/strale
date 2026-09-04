@@ -275,17 +275,18 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 3 done (PRs #500, #503, #509, #511). G3 is closed: the
-      cross-surface identity mechanism (DEC-20260904-B, git-qualified
-      record keys) landed first, then DEC-20260422-A resolved into the
-      protocol record DEC-20260422-A--git-3b256587 and an evidence-only
-      Notion row. Blocking gaps 4 -> 3 (G1, G2, G9). Next batch: the first
-      global-row batch under G1. Of the 129 not_yet_reconciled rows, 128
-      are global scope; the orchestrator groups them by topic from the
-      private projection and briefs the smallest coherent group first,
-      each row migrated to a record or classified with evidence,
-      contradiction-checked against the active records, independent
-      review before merge. Then G2's 34 collisions one at a time, then
+      Batches 1 to 4 done (PRs #500, #503, #509, #511, #513). Batch 4 migrated
+      the three engineering-convention rows (structured logging,
+      hand-written migrations, in-TS startup migrations) to formal
+      candidate records; the private projection is 137 rows at archive
+      8ec76446 and the operator verifier passes. G1 holds 126 rows (125
+      global, 1 temporary). Blocking gaps: G1, G2, G9. Next: batch 5, the
+      capability lifecycle patterns (retirement, park, tombstone:
+      DEC-20260421-J, DEC-20260421-L, DEC-20260422-B), same method: records
+      with full fidelity, contradiction-checked against the live code and
+      active records, independent review, private half committed by the
+      orchestrator. Then the next coherent global group (provenance and
+      jurisdiction semantics), then G2's 34 collisions one at a time, then
       G9's closing review. This track is the M2 exit gate: the closure
       register's validator refuses a state where it is done, or any
       post-m2 track is active or done, while a blocking gap remains.
@@ -301,6 +302,10 @@ tracks:
       - docs/decisions/records/DEC-20260904-B.md
       - docs/decisions/records/DEC-20260422-A--git-3b256587.md
       - archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md
+      - docs/decisions/records/DEC-20260419-A.md
+      - docs/decisions/records/DEC-20260420-A.md
+      - docs/decisions/records/DEC-20260511-C.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md
 
   - id: T6
     title: M3 repo-native workflows
