@@ -23,3 +23,5 @@ Rules:
 - Any session, Claude Code or Codex, resumes a program by starting at its
   `PROGRAM.md` **Resume here** section and following its pointers: the register,
   then the active track's `resume_file`. Chat history is never required.
+
+<!-- ci fast-path proof (b): throwaway line, will be reverted -->

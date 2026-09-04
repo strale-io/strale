@@ -2,6 +2,8 @@
  * Unwraps drizzle-orm's query-error wrapper so callers can read the real
  * Postgres error underneath.
  *
+ * (ci fast-path proof (b): harmless comment-only edit, will be reverted)
+ *
  * Since drizzle-orm 0.44.0, every query path (`db.execute`, `tx.execute`,
  * the query builder, transactions) rethrows driver errors wrapped in
  * `DrizzleQueryError` (node_modules/drizzle-orm/errors.js): a generic
