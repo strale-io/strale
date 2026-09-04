@@ -2,13 +2,14 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readArray } from "../lib/capability-input.js";
 
 registerCapability("context-window-optimize", async (input: CapabilityInput) => {
-  const documents = input.documents as Array<{ id: string; text: string }> | undefined;
+  const documents = readArray(input.documents, "documents") as Array<{ id: string; text: string }>;
   const query = ((input.query as string) ?? "").trim();
   const maxTokens = (input.max_tokens as number) ?? 4000;
 
-  if (!documents || !Array.isArray(documents) || documents.length === 0) {
+  if (documents.length === 0) {
     throw new Error("'documents' (array of {id, text} objects) is required.");
   }
   if (!query) throw new Error("'query' is required.");

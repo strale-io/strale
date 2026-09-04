@@ -2,6 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { TOS_REFUSAL_MARKER } from "../lib/tos-blocklist.js";
+import { readBoundedInt } from "../lib/capability-input.js";
 import { logWarn } from "../lib/log.js";
 
 /**
@@ -31,7 +32,16 @@ registerCapability("redirect-trace", async (input: CapabilityInput) => {
   }
   await validateUrl(url);
 
-  const maxRedirects = Math.min(Number(input.max_redirects ?? 20), 30);
+  // Clamped to at least 1 so the trace loop below always runs at least once.
+  // `Math.min(Number(x), 30)` returned NaN for a non-numeric max_redirects and
+  // 0 for max_redirects: 0; `step <= NaN` and `step <= 0` are both false, so the
+  // loop never ran, `chain` stayed empty, and the `finalEntry.url` read after it
+  // threw "Cannot read properties of undefined" — a 500 instead of a refusal.
+  const maxRedirects = readBoundedInt(input.max_redirects, "max_redirects", {
+    min: 1,
+    max: 30,
+    fallback: 20,
+  });
   const chain: { step: number; url: string; status_code: number; status_text: string; location: string | null; server: string | null; latency_ms: number }[] = [];
 
   let currentUrl = url;

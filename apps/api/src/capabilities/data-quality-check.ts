@@ -1,10 +1,17 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readArray } from "../lib/capability-input.js";
 
 registerCapability("data-quality-check", async (input: CapabilityInput) => {
-  const data = input.data as Array<Record<string, unknown>> | undefined;
-  const rules = (input.rules as Array<{ field: string; check: string; min?: number; max?: number; pattern?: string }>) ?? [];
+  const data = readArray(input.data, "data") as Array<Record<string, unknown>>;
+  const rules = readArray(input.rules, "rules") as Array<{
+    field: string;
+    check: string;
+    min?: number;
+    max?: number;
+    pattern?: string;
+  }>;
 
-  if (!data || !Array.isArray(data) || data.length === 0) {
+  if (data.length === 0) {
     throw new Error("'data' (JSON array of objects) is required.");
   }
 

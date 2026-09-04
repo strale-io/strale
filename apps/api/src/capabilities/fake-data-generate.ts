@@ -2,21 +2,22 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readArray } from "../lib/capability-input.js";
 
 registerCapability("fake-data-generate", async (input: CapabilityInput) => {
   const schema = input.schema;
-  const fields = input.fields as Array<{ name: string; type: string; constraints?: string }> | undefined;
+  const fields = readArray(input.fields, "fields") as Array<{ name: string; type: string; constraints?: string }>;
   const count = Math.min(Math.max((input.count as number) ?? 10, 1), 1000);
   const locale = ((input.locale as string) ?? "en").trim();
 
-  if (!schema && !fields) throw new Error("'schema' (JSON Schema) or 'fields' (array of {name, type}) is required.");
+  if (!schema && fields.length === 0) throw new Error("'schema' (JSON Schema) or 'fields' (array of {name, type}) is required.");
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");
 
   const schemaDesc = schema
     ? `JSON Schema:\n${JSON.stringify(schema, null, 2).slice(0, 3000)}`
-    : `Fields:\n${(fields ?? []).map((f) => `- ${f.name}: ${f.type}${f.constraints ? ` (${f.constraints})` : ""}`).join("\n")}`;
+    : `Fields:\n${fields.map((f) => `- ${f.name}: ${f.type}${f.constraints ? ` (${f.constraints})` : ""}`).join("\n")}`;
 
   const client = new Anthropic({ apiKey });
   const output = await extractJsonWithLlm({

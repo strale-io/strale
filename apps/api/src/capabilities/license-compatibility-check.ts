@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 // ── License knowledge base ────────────────────────────────────────────────────
 
@@ -215,8 +216,8 @@ function isGpl3Only(spdx: string): boolean {
 // ── Capability registration ───────────────────────────────────────────────────
 
 registerCapability("license-compatibility-check", async (input: CapabilityInput) => {
-  const rawLicenses = input.licenses as string[] | undefined;
-  if (!rawLicenses || !Array.isArray(rawLicenses) || rawLicenses.length === 0) {
+  const rawLicenses = readStringArray(input.licenses, "licenses");
+  if (rawLicenses.length === 0) {
     throw new Error("'licenses' is required — provide an array of SPDX license identifiers (e.g. ['MIT', 'Apache-2.0']).");
   }
 

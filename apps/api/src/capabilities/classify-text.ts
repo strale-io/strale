@@ -2,6 +2,7 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 registerCapability("classify-text", async (input: CapabilityInput) => {
   const text = ((input.text as string) ?? (input.task as string) ?? "").trim();
@@ -9,8 +10,8 @@ registerCapability("classify-text", async (input: CapabilityInput) => {
     throw new Error("'text' is required. Provide text to classify.");
   }
 
-  const categories = input.categories as string[] | undefined;
-  const categoriesStr = categories?.length
+  const categories = readStringArray(input.categories, "categories");
+  const categoriesStr = categories.length
     ? `Classify into one of these categories: ${categories.join(", ")}`
     : "Determine the most appropriate categories for this text";
 

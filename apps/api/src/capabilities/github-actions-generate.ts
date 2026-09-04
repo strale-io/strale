@@ -2,14 +2,17 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 registerCapability("github-actions-generate", async (input: CapabilityInput) => {
   const language = ((input.language as string) ?? (input.task as string) ?? "").trim();
   if (!language) throw new Error("'language' is required.");
 
   const framework = ((input.framework as string) ?? "").trim();
-  const triggers = (input.triggers as string[]) ?? ["push", "pull_request"];
-  const steps = (input.steps as string[]) ?? ["install", "lint", "test", "build"];
+  const requestedTriggers = readStringArray(input.triggers, "triggers");
+  const triggers = requestedTriggers.length > 0 ? requestedTriggers : ["push", "pull_request"];
+  const requestedSteps = readStringArray(input.steps, "steps");
+  const steps = requestedSteps.length > 0 ? requestedSteps : ["install", "lint", "test", "build"];
   const nodeVersion = ((input.node_version as string) ?? "").trim();
   const pythonVersion = ((input.python_version as string) ?? "").trim();
   const deployTarget = ((input.deploy_target as string) ?? "").trim();
