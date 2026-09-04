@@ -16,6 +16,23 @@ function pgError(message: string, code: string): Error {
   return Object.assign(new Error(message), { code });
 }
 
+/**
+ * Shapes an error the way postgres-js's real `PostgresError` looks: a
+ * SQLSTATE `code` PLUS the `severity`/`routine` fields postgres-js always
+ * sets. This is what the fallback (non-`DrizzleQueryError`) unwrap
+ * heuristic in db-error.ts requires since the round-three narrowing —
+ * a bare `{ code }` is no longer enough (see the `EPIPE`/`EINTR`
+ * rejected-shape test below for why).
+ */
+function postgresLikeError(message: string, code: string): Error {
+  return Object.assign(new Error(message), {
+    name: "PostgresError",
+    code,
+    severity: "ERROR",
+    routine: "errorFinish",
+  });
+}
+
 describe("db-error", () => {
   describe("unwrapDbError", () => {
     it("unwraps a real DrizzleQueryError down to its cause", () => {
@@ -35,8 +52,14 @@ describe("db-error", () => {
       expect(unwrapDbError(generic)).toBe(generic);
     });
 
-    it("unwraps a non-DrizzleQueryError object shaped like the wrapper (cause carrying a SQLSTATE)", () => {
-      const inner = pgError("foreign key violation", "23503");
+    it("unwraps a non-DrizzleQueryError object shaped like the wrapper (cause is a PostgresError-like SQLSTATE)", () => {
+      const inner = postgresLikeError("foreign key violation", "23503");
+      const lookalike = Object.assign(new Error("Failed query: ..."), { cause: inner });
+      expect(unwrapDbError(lookalike)).toBe(inner);
+    });
+
+    it("unwraps a non-DrizzleQueryError lookalike when the cause is named PostgresError even without severity/routine", () => {
+      const inner = Object.assign(new Error("dup"), { name: "PostgresError", code: "23505" });
       const lookalike = Object.assign(new Error("Failed query: ..."), { cause: inner });
       expect(unwrapDbError(lookalike)).toBe(inner);
     });
@@ -46,6 +69,28 @@ describe("db-error", () => {
         cause: new Error("inner, but no code at all"),
       });
       expect(unwrapDbError(withNonDbCause)).toBe(withNonDbCause);
+    });
+
+    // Round three (rejected shape): the fallback heuristic previously
+    // unwrapped ANY object with a cause.code matching the 5-char SQLSTATE
+    // regex — but Node system error codes like "EPIPE" and "EINTR" are
+    // ALSO exactly 5 uppercase letters, so a plain wrapper around an
+    // unrelated Node error (nothing to do with Postgres) was silently
+    // misidentified as a DB wrapper and unwrapped. Fails against the
+    // pre-narrowing heuristic (which returns `epipeErr`, not
+    // `withEpipeCause`); passes once the heuristic also requires a
+    // PostgresError-like shape (name, or severity/routine alongside the
+    // code).
+    it("does NOT unwrap a lookalike whose cause carries a Node system error code (EPIPE), not a real Postgres SQLSTATE", () => {
+      const epipeErr = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+      const withEpipeCause = Object.assign(new Error("Failed query: ..."), { cause: epipeErr });
+      expect(unwrapDbError(withEpipeCause)).toBe(withEpipeCause);
+    });
+
+    it("does NOT unwrap a lookalike whose cause carries EINTR", () => {
+      const eintrErr = Object.assign(new Error("interrupted"), { code: "EINTR" });
+      const withEintrCause = Object.assign(new Error("Failed query: ..."), { cause: eintrErr });
+      expect(unwrapDbError(withEintrCause)).toBe(withEintrCause);
     });
 
     it("passes through non-objects (null, undefined, string, number) unchanged", () => {

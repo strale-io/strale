@@ -301,3 +301,91 @@ passed | 314 skipped (4068 tests), both runs. `tsc --noEmit` clean. `migrations:
 `env:check`, `models:check`, `claims:check`, `receipts:check`, `context:check`, `context:test`
 all pass (`context:check` shows two pre-existing `WARN` lines on
 `docs/project/legacy-authority-inventory.json`, unrelated to this batch and warning-only).
+
+## Round three (2026-09-04, same PR, second follow-up session)
+
+The second independent review found two more raw `.code` reads on money paths the round-two sweep
+missed, and one weakness in `db-error.ts`'s own fallback heuristic. All three fixed; the round-two
+receipt (`-corrected`, not yet on `main`) is superseded by `-final`, which this section, not the
+earlier one, is now authoritative for.
+
+**The two missed sites (both money paths, both cert-audit-numbered).**
+
+1. `apps/api/src/routes/do.ts` ~line 2245 (cert-audit Y-5, the wallet-transaction catch): read
+   `(err as { code?: string }).code` to recognize Postgres `25P03`/`55P03` and answer a clean 503
+   `timeout_exceeded` instead of a 500. Post-0.44 the wrapper has no `.code` of its own, so this
+   read always returned `undefined` and every wallet-tx timeout fell through to a raw 500 instead
+   of the documented clean timeout response. Routed through `pgErrorCode(err)`.
+2. `apps/api/src/jobs/settlement-reconciler.ts` ~line 239: read
+   `(err as { code?: string } | null)?.code` to recognize `23505` on the x402 recovery-row insert
+   as "another replica already recovered this" (a benign race, discharged) rather than a real
+   failure. Post-0.44 this also always read `undefined`, so a benign cross-replica race on the
+   recovery insert would have logged as `settlement-reconcile-item-failed` on every tick two
+   replicas happened to collide. Routed through `pgErrorCode(err)`.
+
+**The heuristic weakness (`db-error.ts`).** The fallback (non-`DrizzleQueryError`) path in
+`unwrapDbError` unwrapped ANY object whose `cause.code` matched the 5-char SQLSTATE regex
+(`/^[0-9A-Z]{5}$/`). That regex also matches several Node.js system error codes that happen to be
+exactly 5 uppercase letters — `EPIPE`, `EINTR` — so a plain wrapper around an unrelated Node error
+(nothing to do with Postgres) would have been misidentified as a DB wrapper and silently unwrapped.
+Narrowed: the fallback now also requires the cause to look like a postgres-js `PostgresError` —
+either `cause.name === "PostgresError"`, or the SQLSTATE-shaped `code` accompanied by a `severity`
+or `routine` field, both of which postgres-js always sets and a bare Node system error never has.
+
+**New/changed tests, each shown failing against the pre-fix code first** (same swap-and-restore
+method as round two — `git show HEAD:<path>` copied to a scratchpad file, swapped in, restored from
+the scratchpad backup after confirming the fail; never `git checkout <branch> --`):
+
+- `src/lib/db-error.test.ts`: 2 new tests reject the EPIPE/EINTR lookalike shapes (fail pre-fix
+  with `expected Error: write EPIPE ... to be Error: Failed query: ...` — the old heuristic
+  unwrapped them), 2 more assert the accepted `PostgresError`-shaped lookalikes still unwrap. 16
+  tests total, all pass post-fix.
+- `src/routes/do.core.test.ts`: 1 new test ("wallet-transaction timeout (postgres 25P03/55P03 via
+  DrizzleQueryError)") drives the wallet-lock `.for("update")` call to reject with a
+  `DrizzleQueryError` wrapping a 55P03 cause. Fails pre-fix (`expected 500 to be 503`), passes
+  post-fix (503 `timeout_exceeded`, `details.postgres_code: "55P03"`, executor never called).
+- `src/jobs/settlement-reconciler.test.ts` (new file — none existed for this job): 2 tests. The
+  23505-race test fails pre-fix (`expected +0 to be 1` — the race fell through to `summary.failed`
+  and a `settlement-reconcile-item-failed` log instead of `summary.discharged`), passes post-fix.
+  A second test pins that a genuinely different SQLSTATE (`08006`, connection terminated) still
+  counts as a real failure and still logs — the fix routes the code correctly, it does not
+  suppress every DB error.
+
+**Completeness sweep (grep patterns, full hit list with verdicts).** Every pattern from the
+follow-up brief, run against `apps/api/src` and `apps/api/scripts`, excluding `*.test.ts`:
+
+| Pattern | Hits (non-test) | Verdict |
+|---|---|---|
+| `\.code\b` | `app.ts` (classifyError, unwrapped-first), `account-service.ts` (isUniqueViolation, via pgErrorCode), `startup-db-retry.ts` (isTransientDbConnectError, via unwrapDbError), `do.ts` (this round, now via pgErrorCode), `settlement-reconciler.ts` (this round, now via pgErrorCode), `db-error.ts` (the module itself), `trial-eligibility.ts:453`, `safe-fetch.ts:43`, `startup-domain-check.ts:86`, plus ~25 unrelated capability-response-field hits (`slovak-company-data.ts`, `belgian-company-data.ts`, `c2pa-inspect.ts`, `incoterms-explain.ts`, `openapi-resolver.ts`, etc.) | routed / unaffected — see per-site rows below |
+| `as { code` / `as {code` / `code?: string }` | `app.ts:95` (routed, reads the already-unwrapped `e`), `db-error.ts:66,102` (the module's own internals), `trial-eligibility.ts:453` (unaffected — DNS) | routed / unaffected |
+| `pgCode` | `settlement-reconciler.ts:243-244` (this round, routed) | routed |
+| `sqlState` | no hits | n/a |
+| `'23505'` / `"23505"` | `app.ts:101` (routed, consumes unwrapped code), `settlement-reconciler.ts:244` (this round, routed), `account-service.ts:43` (`UNIQUE_VIOLATION` constant, consumed via `pgErrorCode` at `account-service.ts:66`) | routed |
+| `'25P03'` / `"25P03"`, `'55P03'` / `"55P03"` | `app.ts:105-106` (routed), `do.ts:2243-2244,2251-2252` (this round, routed) | routed |
+| `'40001'` / `"40001"` | `app.ts:108` (routed, `db_serialization_failure` label) | routed |
+| `'57014'` / `"57014"` | `app.ts:107` (routed), `startup-db-retry.ts:91` (routed, consumes unwrapped code) | routed |
+| `.message.includes(` | `app.ts:125,132` (routed — `e` is the unwrapped error; 132 is AbortError, unrelated to DB), remainder (`adverse-media-check.ts`, `beneficial-ownership-lookup.ts`, `openapi-resolver.ts`, `redirect-trace.ts`, `url-to-markdown.ts`, `url-validator.ts` x2) all check application-level messages their own code threw — never a driver/DB error | routed / unaffected |
+| `.message.match(` | no hits | n/a |
+| `/already exists/` | no hits | n/a |
+| `instanceof PostgresError` | no hits outside this session's new `db-error.test.ts` | n/a |
+| `.cause` | `app.ts:89` (comment), `account-service.ts:66` (comment), `db-error.ts` (the module's own internals), `startup-db-retry.ts:76` (comment), `x402-settlement-intent.ts:147` (sets `.cause` on a custom error class it constructs — not reading a caught DB error's code), `do.ts:1397` (same pattern, `FreeTierCheckUnavailable`), `scripts/archive/diag-browserless-probe.ts:61` (prints `err.cause` for an HTTP-fetch diagnostic, not DB) | routed / unaffected |
+
+No further sites found. `trial-eligibility.ts:453` and `startup-domain-check.ts:86` both read
+`NodeJS.ErrnoException.code` off a `dns.resolve*`/`dns.lookup` rejection (`ENOTFOUND`/`ENODATA`) —
+DNS resolver codes, structurally unrelated to a drizzle/Postgres call, confirmed by reading both
+functions' full bodies. `safe-fetch.ts:43` *sets* a custom `err.code = "ESSRFBLOCKED"` on an error
+it constructs itself (SSRF guard) — not a read of a caught DB error's code.
+
+**The receipt.** `archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade-corrected.json` was
+deleted (it had not reached `main` and its completeness claim was wrong — it missed the two sites
+above) and replaced by `archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade-final.json`, written
+via `npm run receipt`, carrying this round's wrapper finding, all five routed sites (the three from
+round two plus the two above), the sweep patterns and verdicts, and two fresh
+`npm audit --omit=dev --json` runs.
+
+**Gates.** `npm --workspace=packages/mcp-server run build`, `cd apps/api && npx tsc --noEmit`,
+`cd apps/api && npx vitest run` (full suite, plus an isolated re-run of any timing-flaky file),
+`npm run migrations:check`, `env:check`, `models:check`, `claims:check`, `receipts:check`,
+`npm run archive:index` (run before `context:generate`, per the brief), `context:check`,
+`context:test`, `node scripts/generate-archive-index.mjs --check` — results in this session's own
+final report rather than restated here a third time.

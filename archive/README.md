@@ -73,7 +73,7 @@ classification table.
 | subtree | files | newest (by filename date) |
 | --- | --- | --- |
 | `archive/growth-ops/` | 23 | _(no dated filenames)_ |
-| `archive/receipts/` | 9 | `2026-09-04-audit-wp13-drizzle-upgrade-corrected.json` (2026-09-04) |
+| `archive/receipts/` | 9 | `2026-09-04-audit-wp13-drizzle-upgrade-final.json` (2026-09-04) |
 | `archive/sessions/` | 228 | `2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md` (2026-09-04) |
 | `archive/submissions/` | 12 | _(no dated filenames)_ |
 | `archive/superseded/` | 6 | _(no dated filenames)_ |

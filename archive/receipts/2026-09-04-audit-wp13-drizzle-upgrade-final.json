@@ -1,0 +1,140 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "06ed697d72c018748493910e7bf45f2eac2eede4"
+  },
+  "at": "2026-09-04T09:51:19.869Z",
+  "inputs": {
+    "pr": 510,
+    "round": 3,
+    "topic": "drizzle-orm 0.44+ DrizzleQueryError wrapper follow-up, second independent review findings",
+    "supersedes": "archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade-corrected.json"
+  },
+  "summary": {
+    "ok": true,
+    "routed_sites_count": 5,
+    "new_tests_count": 7,
+    "new_test_files": 1,
+    "audit_before_total": 22,
+    "audit_after_total": 22,
+    "sweep_patterns_count": 18,
+    "vitest_tests_passed": 3744,
+    "vitest_tests_skipped": 328
+  },
+  "topic": "wp13-drizzle-upgrade-final",
+  "raw": {
+    "ok": true,
+    "wrapper_finding": "drizzle-orm 0.44+ wraps every driver error in DrizzleQueryError (node_modules/drizzle-orm/errors.js) with no .code of its own; the real Postgres SQLSTATE is only reachable at .cause. Reading err.code directly on a caught DB error silently reads the wrapper instead of the driver error post-upgrade.",
+    "routed_sites": [
+      {
+        "file": "apps/api/src/lib/account-service.ts",
+        "function": "isUniqueViolation",
+        "batch": "round two",
+        "before": "read err.code directly",
+        "after": "pgErrorCode(err)"
+      },
+      {
+        "file": "apps/api/src/app.ts",
+        "function": "classifyError",
+        "batch": "round two",
+        "before": "read err.code / err.message directly",
+        "after": "unwrapDbError(err) first, then classifies the unwrapped error; adds wrapped:true only when a layer was actually peeled"
+      },
+      {
+        "file": "apps/api/src/lib/startup-db-retry.ts",
+        "function": "isTransientDbConnectError",
+        "batch": "round two",
+        "before": "read err.code directly",
+        "after": "unwrapDbError(err) first"
+      },
+      {
+        "file": "apps/api/src/routes/do.ts",
+        "function": "executeSync wallet-transaction catch (cert-audit Y-5)",
+        "batch": "round three",
+        "before": "read (err as { code?: string }).code directly for 25P03/55P03",
+        "after": "pgErrorCode(err)"
+      },
+      {
+        "file": "apps/api/src/jobs/settlement-reconciler.ts",
+        "function": "reconcileSettlementsOnce item-level catch",
+        "batch": "round three",
+        "before": "read (err as { code?: string } | null)?.code directly for 23505",
+        "after": "pgErrorCode(err)"
+      }
+    ],
+    "heuristic_narrowing": {
+      "file": "apps/api/src/lib/db-error.ts",
+      "function": "hasSqlstateCause (fallback path in unwrapDbError)",
+      "problem": "unwrapped ANY object whose cause.code matched the 5-char SQLSTATE regex; EPIPE and EINTR are Node system error codes that also match that regex, so a plain wrapper around an unrelated Node error was misidentified as a DB wrapper and silently unwrapped",
+      "fix": "fallback now also requires the cause to look like a postgres-js PostgresError: cause.name === 'PostgresError', or the SQLSTATE-shaped code accompanied by a severity or routine field (both of which postgres-js always sets and a bare Node system error never has)"
+    },
+    "new_or_changed_tests": [
+      {
+        "file": "apps/api/src/lib/db-error.test.ts",
+        "new_tests": 4,
+        "total_tests": 16,
+        "fail_first_evidence": "2 EPIPE/EINTR rejected-shape tests failed against the pre-narrowing heuristic (returned the inner Node-error object instead of the outer wrapper unchanged)"
+      },
+      {
+        "file": "apps/api/src/routes/do.core.test.ts",
+        "new_tests": 1,
+        "fail_first_evidence": "wallet-transaction timeout test: expected 503 to be 503 // pre-fix received 500 (the pgErrorCode read found undefined on the wrapper)"
+      },
+      {
+        "file": "apps/api/src/jobs/settlement-reconciler.test.ts",
+        "new_file": true,
+        "new_tests": 2,
+        "fail_first_evidence": "23505-race test: expected summary.discharged to be 1, pre-fix received 0 (fell through to summary.failed and a settlement-reconcile-item-failed log)"
+      }
+    ],
+    "sweep_patterns": [
+      "\\.code\\b",
+      "as { code",
+      "as {code",
+      "code?: string }",
+      "pgCode",
+      "sqlState",
+      "'23505'",
+      "\"23505\"",
+      "'25P03'",
+      "\"25P03\"",
+      "'55P03'",
+      "\"55P03\"",
+      "'40001'",
+      "\"40001\"",
+      "'57014'",
+      "\"57014\"",
+      ".message.includes(",
+      ".message.match(",
+      "/already exists/",
+      "instanceof PostgresError",
+      ".cause"
+    ],
+    "sweep_scope": "apps/api/src and apps/api/scripts, excluding *.test.ts",
+    "sweep_result": "no unrouted DB-wrapper-affected site found; two Node-side false positives (dns resolver codes in trial-eligibility.ts and startup-domain-check.ts) and one custom-error-code setter (safe-fetch.ts SSRF guard) confirmed unaffected by reading their full function bodies",
+    "audit_before": {
+      "info": 0,
+      "low": 2,
+      "moderate": 7,
+      "high": 12,
+      "critical": 1,
+      "total": 22
+    },
+    "audit_after": {
+      "info": 0,
+      "low": 2,
+      "moderate": 7,
+      "high": 12,
+      "critical": 1,
+      "total": 22
+    },
+    "audit_note": "no dependency changes in this round-three commit; both runs are the current post-drizzle-upgrade baseline, confirming this batch made no dependency-version changes",
+    "superseded_receipt": "archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade-corrected.json (deleted this commit; never reached main; its completeness claim was wrong -- missed the do.ts and settlement-reconciler.ts sites)",
+    "vitest_full_suite": {
+      "test_files": "255 passed | 30 skipped (288 total, 3 flaky-under-load files isolated and re-run green)",
+      "tests": "3744 passed | 328 skipped (4074 total, 2074 initial fails both isolated-reproduced-green)",
+      "note": "3 files failed under concurrent-file load on the first full run (ssrf-bucket-a.test.ts, internal-auth.test.ts, public-trust.test.ts) -- all pass isolated, matching the documented local-suite-flaky-CI-is-the-gate pattern; none touch drizzle-orm or db-error.ts"
+    }
+  }
+}

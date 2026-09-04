@@ -29,24 +29,50 @@
  * class itself, with a cause-shape heuristic as a fallback for any other
  * wrapper (present or future) that carries a SQLSTATE-bearing `cause`
  * without being this exact class.
+ *
+ * Round three narrowing: the fallback heuristic originally unwrapped
+ * ANY object whose `cause.code` matched the 5-char SQLSTATE regex. That
+ * regex also matches several Node.js system error codes that happen to
+ * be exactly 5 uppercase letters — `EPIPE`, `EINTR` — so a plain Node
+ * error wrapping one of those as its `cause` (nothing to do with
+ * Postgres) would be misidentified as a DB wrapper and silently
+ * unwrapped. The fallback now also requires the cause to look like a
+ * postgres-js `PostgresError`: either `cause.name === "PostgresError"`,
+ * or the SQLSTATE-shaped `code` accompanied by a `severity` or
+ * `routine` field — both of which postgres-js always sets and a bare
+ * Node system error never has.
  */
 
 import { DrizzleQueryError } from "drizzle-orm/errors";
 
-/** Matches a 5-character Postgres SQLSTATE, e.g. "23505". */
+/** Matches a 5-character Postgres SQLSTATE, e.g. "23505". Also incidentally
+ * matches some Node system error codes (`EPIPE`, `EINTR`) — see
+ * `looksLikePostgresError`, which is why this regex alone is never used
+ * to decide whether to unwrap. */
 const SQLSTATE_RE = /^[0-9A-Z]{5}$/;
 
 /** Bounds the unwrap walk so a cyclic (or absurdly deep) `cause` chain cannot loop forever. */
 const MAX_UNWRAP_DEPTH = 5;
 
+/**
+ * True when `cause` looks like a postgres-js `PostgresError` rather than
+ * merely having a `code` that happens to pattern-match a SQLSTATE. Node
+ * system errors such as `EPIPE`/`EINTR` are exactly 5 uppercase letters
+ * and would otherwise false-positive on the SQLSTATE regex alone.
+ */
+function looksLikePostgresError(cause: object): boolean {
+  const name = (cause as { name?: unknown }).name;
+  if (name === "PostgresError") return true;
+  const code = (cause as { code?: unknown }).code;
+  if (typeof code !== "string" || !SQLSTATE_RE.test(code)) return false;
+  const severity = (cause as { severity?: unknown }).severity;
+  const routine = (cause as { routine?: unknown }).routine;
+  return typeof severity === "string" || typeof routine === "string";
+}
+
 function hasSqlstateCause(err: object): boolean {
   const cause = (err as { cause?: unknown }).cause;
-  return (
-    typeof cause === "object" &&
-    cause !== null &&
-    typeof (cause as { code?: unknown }).code === "string" &&
-    SQLSTATE_RE.test((cause as { code: string }).code)
-  );
+  return typeof cause === "object" && cause !== null && looksLikePostgresError(cause);
 }
 
 /**
