@@ -24,6 +24,8 @@ The Decision column shows the historical display ID. Internal record keys are th
 
 | Decision | Internal record key | Status | Topic | Scope | Owner | Decided |
 |---|---|---|---|---|---|---|
+| [`DEC-20260419-A`](../decisions/records/DEC-20260419-A.md) — Structured logging standard: Pino + request-context middleware, label kebab-case, named fields only | `DEC-20260419-A` | active | `structured-logging-standard` | technical | petter | 2026-04-19 |
+| [`DEC-20260420-A`](../decisions/records/DEC-20260420-A.md) — Hand-write Drizzle migrations; abandon drizzle-kit generate | `DEC-20260420-A` | active | `hand-written-drizzle-migrations` | technical | petter | 2026-04-20 |
 | [`DEC-20260422-A`](../decisions/records/DEC-20260422-A--git-3b256587.md) — Distribution PR Integrity Protocol | `DEC-20260422-A--git-3b256587` | active | `distribution-pr-integrity` | global | petter | 2026-04-22 |
 | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) — Close capability-onboarding bypasses with staged structural remediation | `DEC-20260423-A` | active | `capability-onboarding` | global | petter | 2026-04-23 |
 | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) — Use the revised manifest-driven capability onboarding pipeline | `DEC-20260423-B` | active | `capability-onboarding` | global | petter | 2026-04-23 |
@@ -38,6 +40,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260504-A`](../decisions/records/DEC-20260504-A.md) — Require regression coverage for audit follow-up and money-critical code paths | `DEC-20260504-A` | active | `audit-follow-up-test-coverage` | global | petter | 2026-05-04 |
 | [`DEC-20260504-B`](../decisions/records/DEC-20260504-B.md) — Require a controlled workload-resumption plan for long-silent bulk operations | `DEC-20260504-B` | active | `deploy-safety` | global | petter | 2026-05-04 |
 | [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) — Verify deploy-pipeline reachability and the resulting production effect | `DEC-20260504-C` | active | `deploy-safety` | global | petter | 2026-05-04 |
+| [`DEC-20260511-C`](../decisions/records/DEC-20260511-C.md) — In-TS startup-migrations as the official schema-change convention | `DEC-20260511-C` | active | `startup-migrations-convention` | technical | petter | 2026-05-11 |
 | [`DEC-20260511-D`](../decisions/records/DEC-20260511-D.md) — Require production vendor evaluations to follow an evolving empirical methodology | `DEC-20260511-D` | active | `vendor-evaluation` | global | petter | 2026-05-11 |
 | [`DEC-20260517-A`](../decisions/records/DEC-20260517-A.md) — Make repository YAML canonical for structured Provider-Coverage reference data | `DEC-20260517-A` | active | `reference-data-authority` | global | petter | 2026-05-17 |
 | [`DEC-20260518-E`](../decisions/records/DEC-20260518-E.md) — Require exhaustive source enumeration before declaring a country path blocked | `DEC-20260518-E` | active | `source-enumeration` | global | petter | 2026-05-18 |
@@ -72,6 +75,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | Target | Target key | Generated inverse | Source | Source key |
 |---|---|---|---|---|
 | [`DEC-20260320-B`](../decisions/records/DEC-20260320-B.md) | `DEC-20260320-B` | `superseded_by` | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) | `DEC-20260423-B` |
+| [`DEC-20260420-A`](../decisions/records/DEC-20260420-A.md) | `DEC-20260420-A` | `affirmed_by` | [`DEC-20260511-C`](../decisions/records/DEC-20260511-C.md) | `DEC-20260511-C` |
 | [`DEC-20260422-C`](../decisions/records/DEC-20260422-C.md) | `DEC-20260422-C` | `superseded_by` | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) | `DEC-20260423-A` |
 | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) | `DEC-20260423-A` | `related_from` | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) | `DEC-20260423-B` |
 | [`DEC-20260427-A`](../decisions/records/DEC-20260427-A.md) | `DEC-20260427-A` | `related_from` | [`DEC-20260427-B`](../decisions/records/DEC-20260427-B.md) | `DEC-20260427-B` |
