@@ -27,6 +27,9 @@ beforeAll(async () => {
   await import("./gitignore-generate.js");
   await import("./timezone-meeting-find.js");
   await import("./redirect-trace.js");
+  await import("./classify-text.js");
+  await import("./github-actions-generate.js");
+  await import("./fake-data-generate.js");
 });
 
 /** Run an executor and return the error it threw, or fail loudly. */
@@ -101,5 +104,59 @@ describe("wrong-shaped input produces a refusal, not a TypeError", () => {
   it("redirect-trace still refuses a missing url before touching the network", async () => {
     const err = await refusalFrom("redirect-trace", {});
     expect(err.message).toMatch(/'url' \(URL to trace\) is required/);
+  });
+});
+
+/*
+ * Found by independent review of the first pass, not by the production log.
+ *
+ * The original guard keyed on the `?? []` idiom, so it missed every instance
+ * that defaulted differently — and two live capabilities carried the identical
+ * crash while the guard stayed green. These pin the shapes that slipped
+ * through, because the near-miss is the part most likely to come back.
+ */
+describe("shapes the first pass missed", () => {
+  it("classify-text refuses a bare string for 'categories'", async () => {
+    // No `??` clause at all, so `categories?.length` was 8 for "billing"
+    // and `.join` threw.
+    const err = await refusalFrom("classify-text", {
+      text: "some text to classify",
+      categories: "billing",
+    });
+
+    expect(err.message).toMatch(/'categories' must be an array of strings/);
+    expect(err.message).not.toMatch(/join is not a function/);
+  });
+
+  it("github-actions-generate refuses a bare string for 'triggers'", async () => {
+    // Defaulted to a non-empty literal rather than [], which is the only
+    // reason the first guard did not see it.
+    const err = await refusalFrom("github-actions-generate", {
+      language: "typescript",
+      triggers: "push",
+    });
+
+    expect(err.message).toMatch(/'triggers' must be an array of strings/);
+    expect(err.message).not.toMatch(/join is not a function/);
+  });
+
+  it("github-actions-generate still applies its defaults when triggers is absent", async () => {
+    // The fix must not turn "absent" into "refused" — absence still means
+    // ["push", "pull_request"]. Reaching the LLM call proves the input was
+    // accepted; no key is configured in test, so that is where it stops.
+    const err = await refusalFrom("github-actions-generate", {
+      language: "typescript",
+    });
+
+    expect(err.message).not.toMatch(/'triggers'/);
+    expect(err.message).toMatch(/ANTHROPIC_API_KEY/);
+  });
+
+  it("fake-data-generate refuses a bare string for 'fields'", async () => {
+    // `(fields ?? []).map(...)` — the `??` never fired for a string, so .map threw.
+    const err = await refusalFrom("fake-data-generate", { fields: "name" });
+
+    expect(err.message).toMatch(/'fields' must be an array/);
+    expect(err.message).not.toMatch(/map is not a function/);
   });
 });

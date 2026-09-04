@@ -1,4 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { readStringArray } from "../lib/capability-input.js";
 
 registerCapability("deduplicate", async (input: CapabilityInput) => {
   const data = input.data ?? input.items;
@@ -20,7 +21,9 @@ registerCapability("deduplicate", async (input: CapabilityInput) => {
     };
   }
 
-  const matchFields = (input.match_fields as string[]) ?? Object.keys(rows[0] ?? {});
+  const requestedMatchFields = readStringArray(input.match_fields, "match_fields");
+  const matchFields =
+    requestedMatchFields.length > 0 ? requestedMatchFields : Object.keys(rows[0] ?? {});
   const threshold = Number(input.threshold ?? 0.8);
 
   const deduplicated: Record<string, unknown>[] = [];

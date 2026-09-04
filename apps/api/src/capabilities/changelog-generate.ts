@@ -2,16 +2,17 @@ import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { readArray } from "../lib/capability-input.js";
 
 registerCapability("changelog-generate", async (input: CapabilityInput) => {
-  const commits = input.commits as Array<{ message: string; author?: string; date?: string }> | undefined;
+  const commits = readArray(input.commits, "commits") as Array<{ message: string; author?: string; date?: string }>;
   const rawLog = (input.raw_log as string)?.trim() ?? (input.git_log as string)?.trim();
   const format = ((input.format as string) ?? "keep_a_changelog").trim();
 
-  if (!commits && !rawLog) throw new Error("'commits' (array) or 'raw_log' (git log text) is required.");
+  if (commits.length === 0 && !rawLog) throw new Error("'commits' (array) or 'raw_log' (git log text) is required.");
 
   let commitText = "";
-  if (commits && Array.isArray(commits)) {
+  if (commits.length > 0) {
     commitText = commits.map((c) => {
       const parts = [c.message];
       if (c.author) parts.push(`by ${c.author}`);

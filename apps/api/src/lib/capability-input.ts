@@ -33,6 +33,34 @@ function describe(value: unknown): string {
 }
 
 /**
+ * Read a list-shaped input without constraining its element type.
+ *
+ * For lists of objects (rule sets, row batches), where a `for…of` over a
+ * wrongly-supplied string silently iterates its characters instead of
+ * throwing — the same defect wearing a quieter mask, producing plausible
+ * nonsense rather than a crash.
+ *
+ * Absent (`undefined`/`null`) yields `[]` — absence is the caller's business,
+ * and the executor's own required-field check decides whether that is fatal.
+ */
+export function readArray(
+  value: unknown,
+  field: string,
+  hint?: string,
+): unknown[] {
+  if (value === undefined || value === null) return [];
+
+  if (!Array.isArray(value)) {
+    throw new InputShapeError(
+      `'${field}' must be an array, but received ${describe(value)}.` +
+        `${hint ? ` ${hint}` : ""}`,
+    );
+  }
+
+  return value;
+}
+
+/**
  * Read a list-of-strings input.
  *
  * Absent (`undefined`/`null`) yields `[]` — absence is the caller's business,
