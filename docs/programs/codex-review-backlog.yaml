@@ -41,6 +41,25 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-19
+    subject: "PR #532 — M2 batch 11: seven Counterparty Assurance v1 decisions (DEC-20260515-A/B/C, DEC-20260518-A/B/C/D) migrated to formal candidate records"
+    commit: 7ca52b3c
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Seven records for a product framing the readiness program retired;
+      each states the retirement and what survives in code. The batch also
+      carries four relation edges, one of them the orchestrator's reading of
+      a "partial supersession" as amends. Fidelity and relation typing are
+      Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source; the amends edge from
+      DEC-20260515-A to DEC-20260430-A (partial supersession, target stays
+      active); the code claims about Cobalt, us-court-search, ubo_availability
+      and the missing Digiteal handler; the register arithmetic and digests
+      via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-18
     subject: "PR #529 — M2 batch 10: six distribution and x402-rail decisions (DEC-20260313-F, DEC-20260324-A, DEC-20260324-C, DEC-20260330-B, DEC-20260404-A, DEC-20260416-A) migrated to formal candidate records"
     commit: d858a695
