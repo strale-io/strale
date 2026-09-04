@@ -1,6 +1,11 @@
 {
   "canonicalWorktree": "C:/Users/pette/Projects/strale",
   "recordedAt": "2026-09-02",
-  "knownWorktrees": [],
+  "knownWorktrees": [
+    {
+      "path": "C:/Users/pette/Projects/strale-wt-checkin",
+      "reason": "Live concurrent session as of 2026-09-04 06:40Z: 37 files modified in the preceding 15 minutes and uncommitted docs/company/LESSONS.md. Recorded so a session that does not own it cannot satisfy the one-batch rule by deleting another session's uncommitted work. TRANSIENT -- remove this entry once that session has landed its work; it is not a founder-decision item."
+    }
+  ],
   "knownBranches": []
 }
