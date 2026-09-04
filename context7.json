@@ -3,7 +3,7 @@
   "url": "https://context7.com/strale-io/strale",
   "public_key": "pk_rMxlusz19MVyNK5nvT1m3",
   "projectTitle": "Strale",
-  "description": "Trust layer for AI agents. 250+ verified data capabilities (IBAN validation, email validation, company registries, sanctions screening, web scraping, lead enrichment) with quality scores, audit trails, and data provenance. Free tier available — no API key needed.",
+  "description": "Trust layer for AI agents. 250+ verified data capabilities (IBAN validation, email validation, company registries, sanctions screening, web scraping, lead enrichment) with per-capability trust data, audit trails, and data provenance. Free tier available — no API key needed.",
   "folders": [
     "docs",
     "packages/sdk-typescript",
@@ -58,6 +58,6 @@
     "Python SDK: pip install straleio | TypeScript SDK: npm install straleio",
     "The npm package is 'straleio' (not 'strale'). The MCP server package is 'strale-mcp'.",
     "API keys start with 'sk_live_'. Base URL is https://api.strale.io.",
-    "Every capability has a Strale Quality Score (SQS) from 0-100. Check via GET /v1/quality/:slug."
+    "There is no single 0-100 quality score anymore (the SQS engine and GET /v1/quality/:slug were removed 2026-05-05). Per-capability trust data (tested, pass_rate, last_tested_at) is public at GET /v1/public/ops/trust/capabilities/batch?slugs=slug1,slug2, and every /v1/do response carries a provenance + audit trail. Platform-wide counts and facts: GET /v1/platform/facts."
   ]
 }
