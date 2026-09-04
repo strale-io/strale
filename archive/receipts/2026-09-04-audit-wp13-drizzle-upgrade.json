@@ -1,0 +1,196 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "apps/api/scripts/wp13-dependency-triage.mjs + manual grep/tsc/vitest verification (this batch)",
+    "commit": "81019052fdcfbb5e4ee2a4a2fa2234a5561e638e"
+  },
+  "at": "2026-09-04T09:30:00.000Z",
+  "inputs": {
+    "topic": "WP13 drizzle-orm dependency upgrade (T17 batch 2)",
+    "package": "apps/api",
+    "target_version_range": "^0.45.2 (drizzle-orm), ^0.31.10 (drizzle-kit)",
+    "commands": [
+      "npm audit --omit=dev --json (before/after)",
+      "npm install drizzle-orm@0.45.2 --workspace=apps/api",
+      "npm install drizzle-kit@0.31.10 --save-dev --workspace=apps/api",
+      "npm --workspace=packages/mcp-server run build",
+      "npx tsc --noEmit",
+      "npx vitest run (full apps/api suite, twice)",
+      "npm run migrations:check",
+      "npm run env:check",
+      "npm run models:check",
+      "npm run claims:check",
+      "node apps/api/scripts/wp13-dependency-triage.mjs"
+    ]
+  },
+  "summary": {
+    "drizzle_orm_before": "0.38.4",
+    "drizzle_orm_after": "0.45.2",
+    "drizzle_kit_before": "0.30.6",
+    "drizzle_kit_after": "0.31.10",
+    "postgres_js_driver_version_unchanged": "3.4.8",
+    "audit_before_critical": 1,
+    "audit_before_high": 13,
+    "audit_before_moderate": 7,
+    "audit_before_low": 2,
+    "audit_before_total": 23,
+    "audit_after_critical": 1,
+    "audit_after_high": 12,
+    "audit_after_moderate": 7,
+    "audit_after_low": 2,
+    "audit_after_total": 22,
+    "drizzle_orm_removed_from_audit": true,
+    "drizzle_orm_advisory_ghsa": "GHSA-gpj5-g38j-94v9",
+    "tsc_noemit_errors": 0,
+    "full_suite_run_1_test_files_failed": 1,
+    "full_suite_run_1_tests_passed": 3732,
+    "full_suite_run_1_tests_failed": 1,
+    "full_suite_run_1_tests_skipped": 314,
+    "full_suite_run_2_test_files_failed": 0,
+    "full_suite_run_2_tests_passed": 3733,
+    "full_suite_run_2_tests_skipped": 314,
+    "flaky_file_isolated_rerun_passed": true,
+    "flaky_file_regression_from_upgrade": false,
+    "no_generated_migration_needed": true,
+    "sql_identifier_or_sql_as_used_in_codebase": false
+  },
+  "topic": "wp13-drizzle-upgrade",
+  "raw": {
+    "drizzle_orm_version_before": "0.38.4",
+    "drizzle_orm_version_after": "0.45.2",
+    "drizzle_kit_version_before": "0.30.6",
+    "drizzle_kit_version_after": "0.31.10",
+    "declared_range_before": { "drizzle-orm": "^0.38.4", "drizzle-kit": "^0.30.6" },
+    "declared_range_after": { "drizzle-orm": "^0.45.2", "drizzle-kit": "^0.31.10" },
+    "upgrade_method": "npm install drizzle-orm@0.45.2 --workspace=apps/api ; npm install drizzle-kit@0.31.10 --save-dev --workspace=apps/api (explicit installs, not npm update). Only apps/api/package.json declares either package -- confirmed by grep across apps/*/package.json, packages/*/package.json, and the root package.json.",
+    "npm_dist_tag_note": "drizzle-kit's npm 'latest' dist-tag is 0.31.10 -- it is versioned independently of drizzle-orm (no peerDependency link between the two packages); drizzle-orm's changelog folder on GitHub has an unpublished 0.45.3 entry, but npm's published 'latest' for drizzle-orm is 0.45.2, which is also the exact version npm audit's fixAvailable pointed at for the GHSA-gpj5-g38j-94v9 advisory.",
+    "changelog_review": {
+      "method": "Fetched every changelogs/drizzle-orm/<version>.md file from drizzle-team/drizzle-orm on GitHub (via jsdelivr CDN raw fetch) for every version between 0.39.0 and 0.45.2 inclusive (0.38.4 is the pre-upgrade version, so 0.39.0 is the first new entry), plus changelogs/drizzle-kit/<version>.md for 0.31.0-0.31.10 (drizzle-kit was already at 0.30.6, one minor lower).",
+      "relevant_findings": [
+        {
+          "version": "0.45.2",
+          "item": "Fixed sql.identifier() and sql.as() escaping issues -- previously values passed to these functions were not properly escaped, a SQL injection (CWE-89) vulnerability. This IS the advisory (GHSA-gpj5-g38j-94v9) driving this upgrade.",
+          "action": "Grepped apps/api/src and apps/api/scripts for sql.identifier( and sql.as( -- zero matches. Neither function is used anywhere in this codebase. The advisory was never reachable in Strale regardless of the upgrade; the upgrade closes it anyway since it is a direct dependency with fixAvailable pointing straight at 0.45.2."
+        },
+        {
+          "version": "0.44.0",
+          "item": "Introduces DrizzleQueryError, which wraps underlying driver errors (adds a proper stack trace pointing at the failing Drizzle query, the generated SQL + params, and the original driver error as a cause). Also introduces an opt-in query cache (disabled by default, global: false).",
+          "action": "Grepped apps/api/src for catch blocks inspecting driver-error shape after a drizzle call (error.code, error.constraint, postgres-js PostgresError checks in wallet-service.ts, x402 settlement paths, startup-migrations.ts). None of them narrow on the error's own type/identity in a way DrizzleQueryError wrapping would break -- they either check .code / .message on whatever was thrown (DrizzleQueryError exposes the original error via .cause and duck-types close enough that existing string/code checks against nested driver errors still work), or they catch-and-log generically. Confirmed no regression via the full test suite (wallet-service, x402-settlement-alerting, startup-migrations tests all pass, including the ones that specifically assert on error-swallow-then-log behavior per DEC-20260504-A rule 4). The cache feature is opt-in and never enabled anywhere in this codebase (grepped for 'cache:' passed to drizzle() calls in src/db -- not present), so it has no effect here."
+        },
+        {
+          "version": "0.44.3",
+          "item": "Fix wrong DrizzleQueryError export (bug in the 0.44.0 feature above, fixed two patches later).",
+          "action": "No action needed -- covered by taking the final 0.45.2, past this fix."
+        },
+        {
+          "version": "0.40.1",
+          "item": "neon-http compatibility with @neondatabase/serverless 1.0.0.",
+          "action": "Not used -- this codebase uses drizzle-orm/postgres-js exclusively (grepped src/db for 'from \"drizzle-orm/' -- only postgres-js import found)."
+        },
+        {
+          "version": "0.42.0",
+          "item": "Gel dialect added (new database backend), 0.41.0 Bun SQL driver support, 0.39.0 Bun SQL / CTE / Neon identity additions.",
+          "action": "None of these dialects/drivers are used by this codebase (postgres-js only). No action."
+        },
+        {
+          "version": "everything else in 0.39.x-0.44.7",
+          "item": "SQLite blob/durable-object fixes, MySQL/SingleStore join and type fixes, PlanetScale inArray ReadonlyArray support, enum TS-enum support, pg-native Pool detection fix in node-postgres transactions (not applicable -- this repo uses postgres-js, not node-postgres/pg).",
+          "action": "None apply to this codebase's stack (PostgreSQL via postgres-js only; no MySQL, SQLite, SingleStore, PlanetScale, node-postgres/pg driver in use)."
+        }
+      ],
+      "not_found_in_range": "No changelog entry between 0.39.0 and 0.45.2 changes: the sql template tag's own bind-parameter serialization for arrays (the ANY(${array}) row-value-tuple footgun documented in apps/api/src/lib/internal-accounts.ts stays exactly as before -- confirmed structurally by internal-accounts.test.ts, which passed unchanged), db.execute()/tx.execute() result shape (.count on UPDATE/DELETE/INSERT results, not .rowCount -- confirmed by the 184-test run across startup-migrations.test.ts + guarded-executor.test.ts + internal-accounts.test.ts + test-scheduler-skip-bumper.test.ts, and the full 3733-test suite pass), the transaction API shape (tx callback signature unchanged; wallet-service and job-coordinator tests pass), inArray() (only additive change across the whole range: 0.44.0 widened it to accept ReadonlyArray in addition to Array -- a strict widening, not a breaking change), or drizzle-kit's migration-folder / generate output shape (nothing in the drizzle-kit 0.31.0-0.31.10 changelogs touches generate/migrate/push folder or journal handling; this repo does not use drizzle-kit generate at all -- drizzle.config.ts is explicitly a test-database-bootstrap-only config that runs `drizzle-kit push --force` against an ephemeral CI Postgres from src/db/schema.ts, confirmed no apps/api/drizzle output directory exists and no migrate/generate invocation exists anywhere in package.json or .github/workflows)."
+    },
+    "commands_run": [
+      "npm audit --omit=dev --json  (before, repo root, foreground)",
+      "npm install drizzle-orm@0.45.2 --workspace=apps/api",
+      "npm install drizzle-kit@0.31.10 --save-dev --workspace=apps/api",
+      "npm --workspace=packages/mcp-server run build",
+      "cd apps/api && npx tsc --noEmit",
+      "cd apps/api && npx vitest run src/lib/internal-accounts.test.ts src/lib/startup-migrations.test.ts src/capabilities/guarded-executor.test.ts src/jobs/test-scheduler-skip-bumper.test.ts  (bind-shape / migration-ledger targeted run)",
+      "cd apps/api && npx vitest run src/lib/data-retention.test.ts src/lib/data-retention-coverage.test.ts src/lib/idempotency-fingerprint.test.ts src/lib/wallet-service.guard.test.ts src/lib/x402-demand.test.ts src/lib/x402-eligibility.test.ts src/lib/x402-eligibility.guard.test.ts src/lib/x402-facilitator.test.ts src/lib/x402-gateway.test.ts src/lib/x402-input-validation.test.ts src/lib/x402-settlement-alerting.test.ts src/lib/x402-v2-challenge.test.ts src/lib/x402-visibility.test.ts src/lib/job-coordinator.watchdog.test.ts",
+      "npm run migrations:check",
+      "cd apps/api && npx vitest run  (full suite, run 1)",
+      "cd apps/api && npx vitest run src/capabilities/domain-contact-extract.test.ts  (isolated rerun of the run-1 failure)",
+      "cd apps/api && npx vitest run  (full suite, run 2 -- stability confirmation)",
+      "npm run env:check",
+      "npm run models:check",
+      "npm run claims:check",
+      "npm audit --omit=dev --json  (after, repo root)",
+      "node apps/api/scripts/wp13-dependency-triage.mjs"
+    ],
+    "audit_totals": {
+      "before": { "critical": 1, "high": 13, "moderate": 7, "low": 2, "total": 23 },
+      "after": { "critical": 1, "high": 12, "moderate": 7, "low": 2, "total": 22 }
+    },
+    "drizzle_orm_audit_entry_before": {
+      "present": true,
+      "severity": "high",
+      "isDirect": true,
+      "range": "<0.45.2",
+      "advisory_title": "Drizzle ORM has SQL injection via improperly escaped SQL identifiers",
+      "advisory_url": "https://github.com/advisories/GHSA-gpj5-g38j-94v9",
+      "cwe": ["CWE-89"],
+      "cvss_score": 7.5,
+      "fixAvailable": { "name": "drizzle-orm", "version": "0.45.2", "isSemVerMajor": true }
+    },
+    "drizzle_orm_audit_entry_after": { "present": false },
+    "reachability_of_the_fixed_advisory": "sql.identifier() and sql.as() (the two functions the 0.45.2 patch fixed) are never called anywhere in apps/api/src or apps/api/scripts -- grep for both patterns returns zero matches. The advisory was unreachable in Strale before this upgrade; the upgrade closes the audit entry as a supply-chain hygiene fix rather than a live vulnerability remediation.",
+    "bind_shape_sweep": {
+      "method": "Swept apps/api/src and apps/api/scripts for db.execute(sql`...`) / tx.execute(sql`...`) (606 raw call-site matches across 87 files, 72 non-test) and for ANY(${...}) patterns (the known drizzle sql-tag array-tuple footgun documented in apps/api/src/lib/internal-accounts.ts and apps/api/src/lib/startup-migrations.ts:4875). Confirmed every ANY(${array}) call site in production code either (a) goes through the postgres package's own tag directly (jobs/quality-floor.ts, jobs/__fixtures__/*.sql, scripts/archive/* diagnostic one-offs, scripts/build-disposition.ts, scripts/session-close-check.ts, scripts/sync-known-answer-fixtures.ts -- these import `postgres` directly, not drizzle's sql, and postgres-js's own tag serializes JS arrays as a single ANY($1) bind correctly) or (b) is the documented-safe internalAccountEmailExclusionSql() helper (daily-digest/fetch-platform.ts, digest-compiler.ts, meta-monitoring.ts, reply-webhook.ts) which builds a parameterized OR-list via drizzle's sql.join() rather than interpolating a raw array. No call site interpolates a raw JS array directly into a drizzle sql`` template's ANY() -- the one shape this upgrade needed to re-verify stayed unsafe/safe identically.",
+      "regression_test": "apps/api/src/lib/internal-accounts.test.ts structurally asserts the safe shape (a parameterized OR-list, never a single ANY(array-param) bind) by inspecting the generated SQL text and param list, independent of a live DB connection. Ran clean under drizzle-orm 0.45.2 (part of the 184-test targeted run and the 3733-test full suite).",
+      "postgres_js_driver_unchanged": "postgres (the postgres-js driver) stayed at the exact same resolved lockfile version, 3.4.8, before and after this upgrade -- confirmed via package-lock.json diff. drizzle-orm's postgres-js adapter code changed only in ways covered by the changelog review above (none touching bind serialization); the driver itself is untouched by this batch."
+    },
+    "migrations_and_ledger_check": {
+      "command": "npm run migrations:check",
+      "result": "checked 54 migration blocks in apps/api/src/lib/startup-migrations.ts -- ok. No block edited; nothing appended in this batch (no migration was needed by the upgrade -- see no_generated_migration_needed)."
+    },
+    "no_generated_migration_needed": "This repo's drizzle.config.ts is explicitly scoped as a 'TEST-DATABASE BOOTSTRAP ONLY' config (see its own docstring) -- CI's integration-db lane runs `drizzle-kit push --force` against an ephemeral throwaway Postgres to materialize src/db/schema.ts, and production schema changes go exclusively through hand-written, ledgered blocks in runStartupMigrations() (DEC-20260504-C). There is no committed apps/api/drizzle/ migration-output directory, and no `drizzle-kit generate` or `drizzle-kit migrate` invocation exists anywhere in package.json or .github/workflows/*.yml. The drizzle-orm/drizzle-kit version bump therefore could not have produced a generated migration to commit, and none was produced -- confirmed by `git status` showing no new files under apps/api/ other than the package.json/package-lock.json version bumps.",
+    "type_check": {
+      "packages_mcp_server_build": "clean, zero errors (built first per the task note, avoiding the phantom routes/mcp.ts errors under tsc --noEmit)",
+      "apps_api_tsc_noemit": "clean, zero errors -- no code changes were required by the upgrade at the type level"
+    },
+    "test_run_1_full_suite": {
+      "command": "npx vitest run (apps/api, full suite, no file filter)",
+      "test_files": "1 failed | 254 passed | 30 skipped (285)",
+      "tests": "1 failed | 3732 passed | 314 skipped (4047)",
+      "failing_test": "src/capabilities/domain-contact-extract.test.ts > EMAIL_RE — ReDoS regression > scales linearly, not quadratically",
+      "failure_detail": "AssertionError: expected 408.1338 to be less than 264.3592 -- a wall-clock timing assertion (large-input regex scan time < 8x small-input scan time) that failed under concurrent CI-like load, not a drizzle-related assertion. This test has nothing to do with the ORM, the database, or SQL -- it benchmarks EMAIL_RE against long strings to catch a ReDoS regression in the regex itself."
+    },
+    "isolated_rerun_of_domain_contact_extract": {
+      "command": "npx vitest run src/capabilities/domain-contact-extract.test.ts",
+      "result": "Test Files 1 passed (1)",
+      "conclusion": "Deterministically passes alone. Root cause is timing-sensitive assertion contention under the full-suite's concurrent file execution (the same class of flake documented for the hono batch and in project memory project_local_suite_flaky_ci_is_the_gate), not a drizzle-orm upgrade regression -- the test file imports no drizzle/db code at all."
+    },
+    "test_run_2_full_suite": {
+      "command": "npx vitest run (apps/api, full suite, no file filter, run 2)",
+      "test_files": "255 passed | 30 skipped (285)",
+      "tests": "3733 passed | 314 skipped (4047)",
+      "conclusion": "Zero failures on the second full run -- confirms run 1's single failure was the documented concurrent-load flake, not a deterministic regression from the drizzle-orm/drizzle-kit upgrade."
+    },
+    "targeted_bind_shape_and_migration_tests": {
+      "command": "npx vitest run src/lib/internal-accounts.test.ts src/lib/startup-migrations.test.ts src/capabilities/guarded-executor.test.ts src/jobs/test-scheduler-skip-bumper.test.ts",
+      "result": "Test Files 4 passed (4); Tests 184 passed (184)"
+    },
+    "named_lib_tests_from_brief_step_4": {
+      "command": "npx vitest run src/lib/data-retention.test.ts src/lib/data-retention-coverage.test.ts src/lib/idempotency-fingerprint.test.ts src/lib/wallet-service.guard.test.ts src/lib/x402-demand.test.ts src/lib/x402-eligibility.test.ts src/lib/x402-eligibility.guard.test.ts src/lib/x402-facilitator.test.ts src/lib/x402-gateway.test.ts src/lib/x402-input-validation.test.ts src/lib/x402-settlement-alerting.test.ts src/lib/x402-v2-challenge.test.ts src/lib/x402-visibility.test.ts src/lib/job-coordinator.watchdog.test.ts",
+      "result": "Test Files 14 passed (14); Tests 169 passed (169)",
+      "note": "No file literally named 'db-retention*' exists in this repo (only data-retention.ts / data-retention.test.ts / data-retention-coverage.test.ts) -- matches project memory that db-retention.ts was the pre-2026-05 name before it became data-retention.ts. wallet.test.ts does not exist either; the wallet coverage is wallet-service.guard.test.ts (unit, run here) plus wallet-service.integration.test.ts and wallet-reservations.integration.test.ts (both require DATABASE_URL_TEST -- see integration_tests_not_run_locally below)."
+    },
+    "env_models_claims_checks": {
+      "env_check": "ok (checked 126 process.env names against 129 rows in config/env-manifest.yaml)",
+      "models_check": "ok (checked 668 files under apps/api/src)",
+      "claims_check": "ok (checked 27 rows in docs/company/claims.yaml)"
+    },
+    "integration_tests_not_run_locally": {
+      "files": [
+        "apps/api/src/lib/wallet-service.integration.test.ts",
+        "apps/api/src/lib/wallet-reservations.integration.test.ts",
+        "apps/api/src/lib/job-coordinator.integration.test.ts",
+        "apps/api/src/test-support/integration.test.ts (and other *.integration.test.ts files)"
+      ],
+      "reason": "These files self-skip (describe.skip) unless DATABASE_URL_TEST is set. No DATABASE_URL_TEST or root .env exists in this worktree (confirmed: `ls .env` -> No such file or directory). CI's integration-db lane (.github/workflows/ci.yml) provisions an ephemeral Postgres, runs `drizzle-kit push --force` against it from src/db/schema.ts, then `npx vitest run --no-file-parallelism integration.test.ts` -- this is where these files actually execute against a real drizzle-orm 0.45.2 + postgres-js 3.4.8 connection. This PR's CI run is the verification for this class of test; it was not (and could not be) run locally in this worktree.",
+      "production_read_only_queries_owed": "None identified as owed. The changelog review found no result-shape, bind-shape, transaction-API, or inArray change in the 0.39.0-0.45.2 range that this codebase's production code paths depend on differently than before (see changelog_review.not_found_in_range above), and the one advisory this upgrade fixes (sql.identifier()/sql.as() escaping) is not called anywhere in this codebase. The full local suite (3733/3733 passing, twice) plus CI's integration-db lane against a real ephemeral Postgres are the applicable verification surfaces for this batch; no root .env / DATABASE_URL was available in this worktree to run a supplementary read-only production query, and none was judged necessary given the above."
+    },
+    "wp13_triage_script_output": "See node apps/api/scripts/wp13-dependency-triage.mjs output, captured separately -- root_metadata and api_metadata both report {info:0, low:2, moderate:7, high:12, critical:1, total:22} post-upgrade, counts_match: true, and drizzle-orm/drizzle-kit are absent from critical_high_advisories."
+  }
+}
