@@ -41,6 +41,25 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-18
+    subject: "PR #529 — M2 batch 10: six distribution and x402-rail decisions (DEC-20260313-F, DEC-20260324-A, DEC-20260324-C, DEC-20260330-B, DEC-20260404-A, DEC-20260416-A) migrated to formal candidate records"
+    commit: d858a695
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Records about the distribution surfaces and the x402 rail, with live
+      anchors (the CDP facilitator, the AgentCash discovery compatibility,
+      the root registry manifests) and two drift findings. Whether the
+      records' code claims are traced to callers rather than comments is
+      the judgement this batch series has been losing rounds on.
+    what_to_attack: >
+      Each "status on 2026-09-04" claim against the files it names
+      (server.json vs packages/mcp-server/package.json, x402-gateway.ts,
+      x402-gateway-v2.ts, context7.json, docs/ide-rules); the absence of
+      relation edges; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-17
     subject: "PR #526 — M2 batch 9: six trust and quality display decisions (DEC-20260305-G, DEC-20260306-D, DEC-20260313-C, DEC-20260316-A, DEC-20260316-B, DEC-20260323-A) migrated to formal candidate records"
     commit: deb08103
