@@ -71,6 +71,7 @@
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -259,6 +260,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -531,7 +533,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f356f5bda4fc4f797e8a2e1f06f902f13253eff0ddd977fdc321cd20e0e0deb3",
+      "sha256": "616e18dc53e4aed6f22a965860251258c3f63e2d8def02bf62467d3b8e367bae",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
