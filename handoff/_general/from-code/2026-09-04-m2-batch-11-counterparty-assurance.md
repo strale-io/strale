@@ -383,8 +383,8 @@ same layout as the source) written to (NOT committed, per the brief):
 - `us-court-search`'s production `visible` / `x402_enabled` flags were not
   queried against the read-only prod DB; only its absence from DQ-30's
   three named dark capabilities was established from the repository text.
-- The DEC-20260430-A supersession relation was deliberately not added; see
-  "Relations" above.
+- The DEC-20260430-A supersession relation was deliberately not added by
+  the batch worker; see "Relations" above and the orchestrator note below.
 
 ## Deviations from the brief
 
@@ -392,6 +392,15 @@ One: the DEC-20260430-A supersession relation on DEC-20260515-A was found
 in source text but not added as a `relations` entry, per the brief's "No
 other edges" instruction taken literally over the general "source-stated
 only" relation rule. Flagged above rather than resolved unilaterally.
+
+Orchestrator resolution (2026-09-04, before the independent review):
+the edge WAS added in a follow-up commit. DEC-20260515-A now carries
+`amends DEC-20260430-A`, typed `amends` rather than `supersedes` because
+the source says "All other elements of DEC-20260430-A remain active" and
+the relation semantics in `scripts/decision-records-lib.mjs` require a
+superseded target to change status. The passages above that say
+DEC-20260515-A carries `relations: []` describe the worker's head, not
+the PR's final head. The independent review confirmed the typing.
 
 Otherwise none identified. Every other deliverable, check, and constraint
 in the brief was met as specified. The `.mjs` digest-computation and
