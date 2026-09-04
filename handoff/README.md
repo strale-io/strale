@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-225 files (198 with a recorded intent, 27 without).
+226 files (199 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
