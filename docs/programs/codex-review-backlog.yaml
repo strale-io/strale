@@ -41,6 +41,25 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-20
+    subject: "PR #537 — M2 batch 12: twelve vendor and registry sourcing decisions (DEC-20260320-E, DEC-20260405-A, DEC-20260505-G/H, DEC-20260506-G, DEC-20260507-D/E/F/G/H, DEC-20260508-A/D) migrated to formal candidate records"
+    commit: e4b6376a
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Twelve records whose Consequences sections state that production
+      sourcing diverged from the decided paths (Bolagsverket shipped, the
+      Openapi aggregator for BG/CY/LU/HU, no Implisense or Kyckr code). Ten
+      relation edges. The largest batch so far; fidelity across twelve
+      sources and the divergence claims are Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source; the ten edges and their types;
+      the executor and manifest claims for swedish-, german-, bulgarian-,
+      cypriot-, luxembourgish- and hungarian-company-data; the env-manifest
+      rows quoted; the register arithmetic and the recomputed
+      scope_date_digest via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-19
     subject: "PR #532 — M2 batch 11: seven Counterparty Assurance v1 decisions (DEC-20260515-A/B/C, DEC-20260518-A/B/C/D) migrated to formal candidate records"
     commit: 7ca52b3c

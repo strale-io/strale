@@ -275,24 +275,25 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 11 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529, #532). Batch 11 migrated the seven
-      Counterparty Assurance v1 decisions, each stating that DEC-20260812-A
-      retired that product framing and what survives in code (Cobalt as
-      one dormant capability, no per-state US Tier-1 capabilities, no
-      Digiteal handler). Private projection 102 rows at archive 012492be;
-      operator verifier passes. G1 holds 91 rows (90 global, 1
-      temporary). Blocking gaps: G1, G2, G9. Loop change from 2026-09-04
-      evening: the private half is committed and the register bumped
-      BEFORE the independent review, batches are 10 to 14 rows, and a
-      documentation-only CI fast path is in flight. Next: batch 12, the
-      twelve vendor and registry sourcing decisions (DEC-20260320-E,
-      DEC-20260405-A, DEC-20260505-G/H, DEC-20260506-G, DEC-20260507-D/E/F/G/H,
-      DEC-20260508-A/D), then the remaining early-2026 strategy rows, then
-      G2's 34 collisions one at a time, then G9's closing review. This
-      track is the M2 exit gate: the closure register's validator refuses
-      a state where it is done, or any post-m2 track is active or done,
-      while a blocking gap remains.
+      Batches 1 to 12 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529, #532, #537). Batch 12 migrated the twelve
+      vendor and registry sourcing decisions and surfaced that the shipped
+      sourcing diverged from several of them: Swedish data moved to
+      Bolagsverket on 2026-04-22 although the row says parked; BG, CY, LU
+      and HU shipped on the Openapi.com aggregator, gated off pending case
+      151296, instead of the decided self-build or deferral; Implisense
+      and Kyckr have no code; the OpenRegister billed tier is unrecorded.
+      Private projection 90 rows at archive 8a852ff7; operator verifier
+      passes. G1 holds 79 rows (78 global, 1 temporary). Blocking gaps:
+      G1, G2, G9. Loop since 2026-09-04 evening: private half committed
+      and register bumped before review, auto-merge armed after PASS,
+      batches of 10 to 14 rows, docs-only PRs take the CI fast path
+      (#533). Next: batch 13, the next 10 to 14 not_yet_reconciled global
+      rows by theme (read the private projection at private_rows.commit),
+      then G2's 34 collisions one at a time, then G9's closing review.
+      This track is the M2 exit gate: the closure register's validator
+      refuses a state where it is done, or any post-m2 track is active or
+      done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -351,6 +352,19 @@ tracks:
       - docs/decisions/records/DEC-20260518-C.md
       - docs/decisions/records/DEC-20260518-D.md
       - handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md
+      - docs/decisions/records/DEC-20260320-E.md
+      - docs/decisions/records/DEC-20260405-A.md
+      - docs/decisions/records/DEC-20260505-G.md
+      - docs/decisions/records/DEC-20260505-H.md
+      - docs/decisions/records/DEC-20260506-G.md
+      - docs/decisions/records/DEC-20260507-D.md
+      - docs/decisions/records/DEC-20260507-E.md
+      - docs/decisions/records/DEC-20260507-F.md
+      - docs/decisions/records/DEC-20260507-G.md
+      - docs/decisions/records/DEC-20260507-H.md
+      - docs/decisions/records/DEC-20260508-A.md
+      - docs/decisions/records/DEC-20260508-D.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md
 
   - id: T6
     title: M3 repo-native workflows
