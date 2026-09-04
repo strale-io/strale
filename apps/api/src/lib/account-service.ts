@@ -35,6 +35,7 @@ import { eq } from "drizzle-orm";
 
 import { users } from "../db/schema.js";
 import { generateApiKey, getKeyPrefix, hashApiKey } from "./auth.js";
+import { pgErrorCode } from "./db-error.js";
 import { normaliseEmail, recordTrialGrant, type TrialChannel } from "./trial-eligibility.js";
 import * as walletService from "./wallet-service.js";
 
@@ -61,11 +62,10 @@ export interface CreatedAccount {
 }
 
 function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    (err as { code?: unknown }).code === UNIQUE_VIOLATION
-  );
+  // Since drizzle-orm 0.44, `db.transaction()` rethrows driver errors
+  // wrapped in DrizzleQueryError — `.code` lives on `.cause`, not on the
+  // caught error itself. See db-error.ts for the full incident.
+  return pgErrorCode(err) === UNIQUE_VIOLATION;
 }
 
 /**

@@ -94,6 +94,7 @@
         "apps/api/src/db/seed-solutions.test.ts",
         "apps/api/src/jobs/capability-promotion.test.ts",
         "apps/api/src/jobs/quality-floor.test.ts",
+        "apps/api/src/jobs/settlement-reconciler.test.ts",
         "apps/api/src/lib/browserless-suite-migration.ts",
         "apps/api/src/lib/claude-md-protocols.test.ts",
         "apps/api/src/lib/cost-class-invariant.ts",
@@ -524,7 +525,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "319a6de78dd4e94b71126d046e90a8134bacf100ac49dca0dea17467225302f2",
+      "sha256": "a5c894ecc8d6207c09106a3ab58b1218e26ea551cfab8d154d0be059ed5e2be5",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

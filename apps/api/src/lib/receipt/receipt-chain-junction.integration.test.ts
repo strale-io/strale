@@ -30,6 +30,7 @@ import postgres from "postgres";
 import { randomUUID } from "node:crypto";
 
 import { useTestDatabase } from "../../test-support/integration-db.js";
+import { expectDbRejection } from "../../test-support/db-errors.js";
 import { buildExecutionReceipt } from "./execution-receipt.js";
 import {
   normalizeCapabilityDeclaration,
@@ -431,11 +432,12 @@ describeMaybe("receipt lifecycle × integrity chain", () => {
       `);
 
       // Sanity: the row really is un-updatable, or the test proves nothing.
-      await expect(
+      await expectDbRejection(
         db.execute(sql`
           UPDATE transactions SET latency_ms = 1 WHERE id = ${poison}::uuid
         `),
-      ).rejects.toThrow(/transactions_post_epoch_has_receipt/);
+        /transactions_post_epoch_has_receipt/,
+      );
 
       await runOnce();
 

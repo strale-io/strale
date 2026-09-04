@@ -30,6 +30,7 @@ import { randomUUID } from "node:crypto";
 import { sql as sqlRaw } from "drizzle-orm";
 
 import { useTestDatabase } from "../test-support/integration-db.js";
+import { expectDbRejection } from "../test-support/db-errors.js";
 import { capabilities } from "../db/schema.js";
 
 if (process.env.DATABASE_URL_TEST) {
@@ -238,12 +239,13 @@ describeMaybe("half-quarantined capabilities are detected", () => {
 
     // Withdrawing from the catalogue while leaving it on the paid rail is
     // exactly the shape production held.
-    await expect(
+    await expectDbRejection(
       db
         .update(capabilities)
         .set({ visible: false })
         .where(eq(capabilities.slug, slug)),
-    ).rejects.toThrow(/capabilities_no_half_quarantine/i);
+      /capabilities_no_half_quarantine/i,
+    );
 
     // The row is unchanged — the write was refused, not partially applied.
     const [after] = await db

@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 
 import { useTestDatabase } from "../../test-support/integration-db.js";
+import { expectDbRejection } from "../../test-support/db-errors.js";
 import {
   normalizeCapabilityDeclaration,
   normalizeSolutionDeclaration,
@@ -230,12 +231,13 @@ describeMaybe("execution receipts against a real database", () => {
 
   it("a stored snapshot cannot be UPDATED", async () => {
     const digest = await store(normalizeCapabilityDeclaration(BASE_DECL));
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE execution_manifest_snapshots SET snapshot = '{"tampered":true}'::jsonb
          WHERE digest = ${digest}
       `),
-    ).rejects.toThrow(/insert-only/i);
+      /insert-only/i,
+    );
 
     // And the content is genuinely unchanged, not merely the statement refused.
     const back = await readManifestSnapshot(db, digest);
@@ -244,17 +246,19 @@ describeMaybe("execution receipts against a real database", () => {
 
   it("a stored snapshot cannot be DELETED, so retention cannot silently remove it", async () => {
     const digest = await store(normalizeCapabilityDeclaration(BASE_DECL));
-    await expect(
+    await expectDbRejection(
       db.execute(sql`DELETE FROM execution_manifest_snapshots WHERE digest = ${digest}`),
-    ).rejects.toThrow(/insert-only/i);
+      /insert-only/i,
+    );
     expect(await readManifestSnapshot(db, digest)).not.toBeNull();
   });
 
   it("a blanket DELETE — what generic retention would issue — is refused too", async () => {
     await store(normalizeCapabilityDeclaration(BASE_DECL));
-    await expect(
+    await expectDbRejection(
       db.execute(sql`DELETE FROM execution_manifest_snapshots WHERE first_seen_at < now()`),
-    ).rejects.toThrow(/insert-only/i);
+      /insert-only/i,
+    );
   });
 
   it("db-retention.ts does not, and must never, list this table", async () => {
@@ -555,11 +559,12 @@ describeMaybe("execution receipts against a real database", () => {
 
   it("the database refuses a 'complete' receipt with no digest", async () => {
     const id = await newTransaction();
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_status = 'complete' WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/transactions_receipt_complete_is_complete/);
+      /transactions_receipt_complete_is_complete/,
+    );
   });
 
   it("the database refuses a pending/failed row with no reason", async () => {
@@ -570,18 +575,19 @@ describeMaybe("execution receipts against a real database", () => {
     // "set status and expect a violation" would have passed for the wrong
     // reason and stopped guarding anything.
     const id = await newTransaction();
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions
            SET receipt_status = 'failed', receipt_failure_reason = NULL
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/transactions_receipt_reason_required/);
+      /transactions_receipt_reason_required/,
+    );
   });
 
   it("the database refuses a truncated receipt digest", async () => {
     const id = await newTransaction();
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions
            SET receipt_status = 'complete', receipt_digest = 'sha256:abc',
@@ -589,7 +595,8 @@ describeMaybe("execution receipts against a real database", () => {
                receipt_digest_alg = 'sha256'
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/transactions_receipt_digest_shape/);
+      /transactions_receipt_digest_shape/,
+    );
   });
 
   it("a retryable reason stays pending and is picked up; a terminal one does not", async () => {
@@ -691,7 +698,7 @@ describeMaybe("execution receipts against a real database", () => {
     // The other half, and it is new: a row created TODAY cannot be given the
     // legacy shape at all. Before block 0109 this was a property of the wiring
     // (nothing wrote receipt state); now it is a property of the database.
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         INSERT INTO transactions (user_id, status, price_cents, transparency_marker,
                                   data_jurisdiction, input, receipt_status,
@@ -699,14 +706,16 @@ describeMaybe("execution receipts against a real database", () => {
         VALUES (${userId}::uuid, 'completed', 5, 'algorithmic', 'EU', '{}'::jsonb,
                 NULL, NULL)
       `),
-    ).rejects.toThrow(/transactions_post_epoch_has_receipt/);
+      /transactions_post_epoch_has_receipt/,
+    );
 
     // A v2 row cannot leave receipt_status null and read as legacy.
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET integrity_payload_version = 2 WHERE id = ${legacy}::uuid
       `),
-    ).rejects.toThrow(/transactions_chain_v2_has_receipt_state/);
+      /transactions_chain_v2_has_receipt_state/,
+    );
   });
 
   it("no historical row was given a receipt", async () => {

@@ -15,6 +15,7 @@ import postgres from "postgres";
 import { randomUUID } from "node:crypto";
 
 import { useTestDatabase } from "../../test-support/integration-db.js";
+import { expectDbRejection } from "../../test-support/db-errors.js";
 import {
   normalizeCapabilityDeclaration,
   normalizeSolutionDeclaration,
@@ -222,19 +223,21 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     const id = await txn();
     await completed(id);
 
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_status = 'pending', receipt_failure_reason = 'internal_error'
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/terminal/i);
+      /terminal/i,
+    );
 
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_status = 'failed', receipt_failure_reason = 'internal_error'
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/terminal/i);
+      /terminal/i,
+    );
   });
 
   it("failed is absorbing — a late success cannot resurrect it", async () => {
@@ -246,7 +249,7 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     await expect(completed(id)).rejects.toThrow(ReceiptLifecycleError);
 
     // And bypassing the module: refused by the database.
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions
            SET receipt_status = 'complete', receipt_digest = ${`sha256:${"9".repeat(64)}`},
@@ -254,55 +257,61 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
                receipt_digest_alg = 'sha256'
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/terminal/i);
+      /terminal/i,
+    );
   });
 
   it("a complete row's digest cannot be swapped", async () => {
     const id = await txn();
     await completed(id);
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_digest = ${`sha256:${"e".repeat(64)}`}
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/terminal/i);
+      /terminal/i,
+    );
   });
 
   it("receipt metadata cannot be rewritten to something we never produce", async () => {
     const id = await txn();
     await markReceiptPending(db, id);
     // Even on a pending row, garbage metadata is refused by CHECK.
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_version = 'fake.v9' WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/transactions_receipt_metadata_known/);
-    await expect(
+      /transactions_receipt_metadata_known/,
+    );
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_digest_alg = 'md5' WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/transactions_receipt_metadata_known/);
+      /transactions_receipt_metadata_known/,
+    );
   });
 
   it("reason codes are a closed set", async () => {
     const id = await txn();
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_status = 'failed', receipt_failure_reason = 'banana'
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/transactions_receipt_reason_closed/);
+      /transactions_receipt_reason_closed/,
+    );
   });
 
   it("post-epoch state cannot be cleared back to looking pre-epoch", async () => {
     const id = await txn();
     await markReceiptPending(db, id);
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_status = NULL, receipt_failure_reason = NULL
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/pre-epoch/i);
+      /pre-epoch/i,
+    );
   });
 
   it("a lifecycle write against a missing row is an error, not a silent no-op", async () => {
@@ -340,12 +349,13 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     `);
 
     await expect(markReceiptPending(db, id)).rejects.toThrow(ReceiptLifecycleError);
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_status = 'pending', receipt_failure_reason = 'not_yet_built'
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/already chained/);
+      /already chained/,
+    );
   });
 
   it("an unchained row still accepts receipt state normally", async () => {
@@ -365,22 +375,24 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     // refused here nor detectable there.
     const id = await txn();
     await completed(id);
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_manifest_digest = ${`sha256:${"c".repeat(64)}`}
          WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/terminal/i);
+      /terminal/i,
+    );
   });
 
   it("a failure reason cannot be stamped onto a complete row", async () => {
     const id = await txn();
     await completed(id);
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         UPDATE transactions SET receipt_failure_reason = 'unmapped_rail' WHERE id = ${id}::uuid
       `),
-    ).rejects.toThrow(/terminal/i);
+      /terminal/i,
+    );
   });
 
   it("the chain version is WRITE-ONCE, not frozen-on-terminal", async () => {
@@ -398,11 +410,12 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     );
 
     // Any later change: refused, in both directions.
-    await expect(
+    await expectDbRejection(
       db.execute(
         sql`UPDATE transactions SET integrity_payload_version = NULL WHERE id = ${id}::uuid`,
       ),
-    ).rejects.toThrow(/cannot be rewritten/);
+      /cannot be rewritten/,
+    );
   });
 
   // ── R2-B3: the BUILDER enforces step rules, not only the snapshot ────────
@@ -470,26 +483,28 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
 
   it("subject columns cannot disagree with the hashed content", async () => {
     const decl = normalizeCapabilityDeclaration(DECL);
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         INSERT INTO execution_manifest_snapshots (digest, subject_kind, subject_slug, snapshot)
         VALUES (${`sha256:${"2".repeat(64)}`}, 'solution', 'a-different-slug',
                 ${JSON.stringify(decl)}::jsonb)
       `),
-    ).rejects.toThrow(/subject_matches_content/);
+      /subject_matches_content/,
+    );
   });
 
   it("a snapshot with no subject keys at all is refused", async () => {
     // `col = snapshot->>'k'` is NULL when the key is absent, and a CHECK passes
     // on NULL — so this was accepted under any slug until the key-presence
     // tests were added.
-    await expect(
+    await expectDbRejection(
       db.execute(sql`
         INSERT INTO execution_manifest_snapshots (digest, subject_kind, subject_slug, snapshot)
         VALUES (${`sha256:${"7".repeat(64)}`}, 'capability', 'anything-i-like',
                 '{"no_subject_keys":1}'::jsonb)
       `),
-    ).rejects.toThrow(/subject_matches_content/);
+      /subject_matches_content/,
+    );
   });
 
   it("each subject key is checked independently", async () => {
@@ -500,14 +515,15 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
       ["slug present, kind absent", '{"slug":"vat-validate"}'],
       ["kind present, slug absent", '{"subject_kind":"capability"}'],
     ] as const) {
-      await expect(
+      await expectDbRejection(
         db.execute(sql`
           INSERT INTO execution_manifest_snapshots (digest, subject_kind, subject_slug, snapshot)
           VALUES (${`sha256:${Math.random().toString(16).slice(2).padEnd(64, "0").slice(0, 64)}`},
                   'capability', 'vat-validate', ${body}::jsonb)
         `),
+        /subject_matches_content/,
         label,
-      ).rejects.toThrow(/subject_matches_content/);
+      );
     }
   });
 
@@ -598,9 +614,10 @@ describeMaybe("Phase 4 invariants cannot be bypassed", () => {
     // The statement-level BEFORE TRUNCATE trigger from 0108 is still the
     // guarantee that survives the FK being dropped, so both messages are
     // accepted rather than pinning the test to whichever fires today.
-    await expect(
+    await expectDbRejection(
       db.execute(sql`TRUNCATE execution_manifest_snapshots`),
-    ).rejects.toThrow(/cannot be truncated|cannot truncate a table referenced/i);
+      /cannot be truncated|cannot truncate a table referenced/i,
+    );
 
     // And the property itself, not just the message.
     const after = await db.execute(

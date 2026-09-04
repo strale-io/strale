@@ -38,6 +38,7 @@ import {
   BudgetExhaustedError,
 } from "../capabilities/guarded-executor.js";
 import { apiError } from "../lib/errors.js";
+import { pgErrorCode } from "../lib/db-error.js";
 import {
   checkCircuitBreaker,
   recordSuccess,
@@ -2241,8 +2242,12 @@ async function executeSync(
     // Cert-audit Y-5: catch postgres timeout codes from the wallet tx.
     // The error shape from postgres-js is `{ code: '25P03' }` or
     // `{ code: '55P03' }`; the tx is rolled back automatically so no
-    // wallet state needs unwinding.
-    const code = (err as { code?: string } | null)?.code;
+    // wallet state needs unwinding. Since drizzle-orm 0.44+ this arrives
+    // wrapped in `DrizzleQueryError` (no `code` of its own) — go through
+    // db-error.ts's `pgErrorCode` rather than reading `err.code` directly
+    // so this branch still fires post-upgrade (see db-error.ts's doc
+    // comment for the incident this guards against).
+    const code = pgErrorCode(err);
     if (code === "25P03" || code === "55P03") {
       const reason = code === "25P03"
         ? "Capability execution exceeded the per-transaction timeout (15s). The request was not charged."
