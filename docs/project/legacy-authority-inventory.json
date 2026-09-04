@@ -257,6 +257,7 @@
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
         "handoff/_general/from-code/2026-09-03-codex-review-backlog.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
@@ -441,6 +442,7 @@
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
         "handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
@@ -534,7 +536,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "5bd0fa5889ff4f3bfadb18b178ffe43dffdd35595624b13e7606fc9400c25898",
+      "sha256": "559575938578535f6ee002cebddaef1cac00af1424aed0261623b4512fa13bfb",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
