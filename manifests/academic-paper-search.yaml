@@ -1,0 +1,124 @@
+slug: academic-paper-search
+name: Academic Paper Search
+description: >-
+  Search 250M+ scholarly works via OpenAlex: title, DOI, authors, venue, citation count, open-access PDF link
+  and abstract. Filter by year and open access.
+category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 36000
+known_rate_limit:
+  value: 10
+  unit: per_second
+  source_url: https://docs.openalex.org/how-to-use-the-api/rate-limits-and-authentication
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Free-text search (title, abstract, full text). At least 2 characters.
+    limit:
+      type: integer
+      description: "Results to return, 1-25. Default: 10"
+    year_from:
+      type: integer
+      description: Earliest publication year (inclusive)
+    year_to:
+      type: integer
+      description: Latest publication year (inclusive)
+    open_access_only:
+      type: boolean
+      description: Only return works with a free full-text copy
+    sort:
+      type: string
+      description: "relevance (default), cited (most cited first) or date (newest first)"
+output_schema:
+  type: object
+  example:
+    query: large language models
+    total_results: 4370190
+    returned: 1
+    papers:
+      - openalex_id: https://openalex.org/W4323655724
+        doi: https://doi.org/10.1016/j.lindif.2023.102274
+        title: ChatGPT for good? On opportunities and challenges of large language models for education
+        publication_year: 2023
+        publication_date: "2023-03-09"
+        type: article
+        cited_by_count: 6326
+        authors:
+          - Enkelejda Kasneci
+        venue: Learning and Individual Differences
+        landing_page_url: https://doi.org/10.1016/j.lindif.2023.102274
+        is_open_access: true
+        open_access_url: https://epub.ub.uni-muenchen.de/125071/1/ChatGPT_for_Good_v3.pdf
+        abstract: null
+  properties:
+    query:
+      type: string
+    total_results:
+      type: number
+    returned:
+      type: number
+    papers:
+      type: array
+data_source: OpenAlex (OurResearch) scholarly works API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      query: array programming numpy
+      limit: 3
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: returned
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: papers
+        operator: not_null
+        reliability: guaranteed
+      - field: papers
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: array programming numpy
+    limit: 1
+output_field_reliability:
+  query: guaranteed
+  total_results: guaranteed
+  returned: guaranteed
+  papers: guaranteed
+limitations:
+  - title: Abstracts are only returned when the publisher supplies them to OpenAlex
+    text: >-
+      OpenAlex stores abstracts as an inverted index and many publishers withhold them, so `abstract` is null
+      for a large share of works. The reconstruction is truncated at 800 characters.
+    category: coverage
+    severity: info
+    workaround: Use paper-details with the DOI, or follow landing_page_url / open_access_url for the full text.
+  - title: Citation counts and open-access links lag the source systems by days to weeks
+    text: >-
+      OpenAlex refreshes from Crossref, PubMed and repositories on a rolling basis; very recent papers may be
+      missing or under-cited.
+    category: freshness
+    severity: info
+    workaround: For preprints of the last few days, use arxiv-search.

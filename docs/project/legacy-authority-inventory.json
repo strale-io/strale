@@ -433,6 +433,7 @@
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -525,7 +526,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "a5c894ecc8d6207c09106a3ab58b1218e26ea551cfab8d154d0be059ed5e2be5",
+      "sha256": "812fdc32b4200f785755b3c2a1d258a96533b6abc129274d046c6ba6ce86c08e",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
