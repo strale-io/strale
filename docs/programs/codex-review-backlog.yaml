@@ -41,6 +41,46 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-9
+    subject: "PR #511 — DEC-20260422-A cross-surface collision resolved (G3 stage 2): protocol record DEC-20260422-A--git-3b256587, Notion row evidence-only"
+    commit: cf20869f
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      A formal record was transcribed from CLAUDE.md's Distribution PR
+      Integrity Protocol, the protocol Codex itself helped shape after the
+      pydantic-ai incident, and one collision was resolved by choosing an
+      evidence-only disposition for the Notion meaning. Fidelity of a
+      protocol record and the honesty of a disposition are exactly the
+      judgements reserved for Codex.
+    what_to_attack: >
+      Every requirement in the record against the live CLAUDE.md section
+      (any softened step is a defect); whether the Notion row (page
+      34967c87082c81ffacfbd04b59df64fe) truly has no live authority; the
+      rewritten stage-1 tests in scripts/m2-closure-register.test.mjs for
+      weakened invariants; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (one nit)
+  - id: CX-8
+    subject: "PR #509 — cross-surface identity mechanism (G3 stage 1): --git-<sha> record keys, DEC-20260904-B"
+    commit: 88d8c0c0
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Codex mapped the collision identity plan the closure register rests
+      on; this batch extends the record-key grammar and the validator's
+      derivation rules. A grammar or derivation mistake here propagates to
+      every future collision resolution.
+    what_to_attack: >
+      The record-key pattern in its three copies; the cross-surface
+      resolution rule (a git-qualified record AND a gap-report citation,
+      formal_record refused); RECORD_GIT_KEY_* and
+      RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE; whether decision-records-lib
+      accepting --git- keys without the registry opens a hole the closure
+      validator does not close; DEC-20260904-B's reversal condition.
+    claude_verdicts: 2 rounds (initial + follow-up), PASS
   - id: CX-7
     subject: "PR #503 — G1 rule (DEC-20260904-A): 76 pre-readiness feature-scoped rows become evidence-only"
     commit: 90c1c798
