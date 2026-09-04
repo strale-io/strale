@@ -26,7 +26,10 @@ The Decision column shows the historical display ID. Internal record keys are th
 |---|---|---|---|---|---|---|
 | [`DEC-20260419-A`](../decisions/records/DEC-20260419-A.md) — Structured logging standard: Pino + request-context middleware, label kebab-case, named fields only | `DEC-20260419-A` | active | `structured-logging-standard` | technical | petter | 2026-04-19 |
 | [`DEC-20260420-A`](../decisions/records/DEC-20260420-A.md) — Hand-write Drizzle migrations; abandon drizzle-kit generate | `DEC-20260420-A` | active | `hand-written-drizzle-migrations` | technical | petter | 2026-04-20 |
+| [`DEC-20260421-J`](../decisions/records/DEC-20260421-J.md) — Capability retirement pattern (soft-deactivate + seed-file removal + distribution regen + preserve history) | `DEC-20260421-J` | active | `capability-retirement-pattern` | operational | petter | 2026-04-21 |
+| [`DEC-20260421-L`](../decisions/records/DEC-20260421-L.md) — Park pattern (distinct from retirement) | `DEC-20260421-L` | active | `capability-park-pattern` | operational | petter | 2026-04-21 |
 | [`DEC-20260422-A`](../decisions/records/DEC-20260422-A--git-3b256587.md) — Distribution PR Integrity Protocol | `DEC-20260422-A--git-3b256587` | active | `distribution-pr-integrity` | global | petter | 2026-04-22 |
+| [`DEC-20260422-B`](../decisions/records/DEC-20260422-B.md) — Retirement pattern refinement: tombstone for FK-bound capabilities | `DEC-20260422-B` | active | `retirement-pattern-tombstone-refinement` | operational | petter | 2026-04-22 |
 | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) — Close capability-onboarding bypasses with staged structural remediation | `DEC-20260423-A` | active | `capability-onboarding` | global | petter | 2026-04-23 |
 | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) — Use the revised manifest-driven capability onboarding pipeline | `DEC-20260423-B` | active | `capability-onboarding` | global | petter | 2026-04-23 |
 | [`DEC-20260424-A`](../decisions/records/DEC-20260424-A.md) — Require structural enforcement and read-back for always-enforce decisions | `DEC-20260424-A` | active | `structural-rule-enforcement` | global | petter | 2026-04-24 |
@@ -76,6 +79,8 @@ The Decision column shows the historical display ID. Internal record keys are th
 |---|---|---|---|---|
 | [`DEC-20260320-B`](../decisions/records/DEC-20260320-B.md) | `DEC-20260320-B` | `superseded_by` | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) | `DEC-20260423-B` |
 | [`DEC-20260420-A`](../decisions/records/DEC-20260420-A.md) | `DEC-20260420-A` | `affirmed_by` | [`DEC-20260511-C`](../decisions/records/DEC-20260511-C.md) | `DEC-20260511-C` |
+| [`DEC-20260421-J`](../decisions/records/DEC-20260421-J.md) | `DEC-20260421-J` | `amended_by` | [`DEC-20260422-B`](../decisions/records/DEC-20260422-B.md) | `DEC-20260422-B` |
+| [`DEC-20260421-J`](../decisions/records/DEC-20260421-J.md) | `DEC-20260421-J` | `related_from` | [`DEC-20260421-L`](../decisions/records/DEC-20260421-L.md) | `DEC-20260421-L` |
 | [`DEC-20260422-C`](../decisions/records/DEC-20260422-C.md) | `DEC-20260422-C` | `superseded_by` | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) | `DEC-20260423-A` |
 | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) | `DEC-20260423-A` | `related_from` | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) | `DEC-20260423-B` |
 | [`DEC-20260427-A`](../decisions/records/DEC-20260427-A.md) | `DEC-20260427-A` | `related_from` | [`DEC-20260427-B`](../decisions/records/DEC-20260427-B.md) | `DEC-20260427-B` |
