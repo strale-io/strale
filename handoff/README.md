@@ -9,12 +9,13 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-230 files (203 with a recorded intent, 27 without).
+231 files (204 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md`](_general/from-code/2026-09-04-t17-drizzle-upgrade.md) | Program track T17 / WP13 second batch (drizzle-orm 0.38.4 -> 0.45.2, semver-major) -- the |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md`](_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md) | land T10 (M2 exit-gap closure) batch 8, five capability-onboarding-pipeline Decision rows (DEC-20260309-G the 12-cate... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md`](_general/from-code/2026-09-04-m2-batch-7-pricing.md) | land T10 (M2 exit-gap closure) batch 7, five capability-pricing Decision rows (DEC-20260302-A-0001 the original value... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md`](_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md) | land T10 (M2 exit-gap closure) batch 6, provenance and jurisdiction semantics, three `not_yet_reconciled`, `historica... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md`](_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md) | land T10 (M2 exit-gap closure) batch 5 — capability lifecycle patterns — three `not_yet_reconciled`, `historical_scop... |

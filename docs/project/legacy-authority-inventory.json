@@ -258,6 +258,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md",
         "handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -530,7 +531,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "4339be00aa56455098c7520a6c86a43ef5d323b0955334c6078ee1ff7af20f89",
+      "sha256": "f356f5bda4fc4f797e8a2e1f06f902f13253eff0ddd977fdc321cd20e0e0deb3",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
