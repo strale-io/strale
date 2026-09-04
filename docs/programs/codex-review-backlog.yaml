@@ -41,6 +41,25 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-17
+    subject: "PR #526 — M2 batch 9: six trust and quality display decisions (DEC-20260305-G, DEC-20260306-D, DEC-20260313-C, DEC-20260316-A, DEC-20260316-B, DEC-20260323-A) migrated to formal candidate records"
+    commit: deb08103
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Six records whose subject, the SQS and its display, was deleted on
+      2026-05-05; each Consequences section says what survives. Whether the
+      records keep the historical Decision text intact while stating the
+      deletion honestly, and whether the dead computeTrustGrade finding is
+      right, are judgements for a second model.
+    what_to_attack: >
+      Each record against its Notion source; the "status on 2026-09-04" code
+      claims (public-trust.ts header, trust-grade.ts dead code, the residual
+      columns, capability_health not renamed); the absence of relation edges;
+      the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-16
     subject: "PR #524 — M2 batch 8: five onboarding-pipeline decisions (DEC-20260309-G, DEC-20260318-A, DEC-20260318-B, DEC-20260320-A, DEC-20260411-B) migrated to formal candidate records"
     commit: 746c3beb
