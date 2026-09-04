@@ -41,6 +41,25 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-16
+    subject: "PR #524 — M2 batch 8: five onboarding-pipeline decisions (DEC-20260309-G, DEC-20260318-A, DEC-20260318-B, DEC-20260320-A, DEC-20260411-B) migrated to formal candidate records"
+    commit: 746c3beb
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      These records describe the pipeline the Capability Onboarding Protocol
+      (DEC-20260320-B) enforces, and one of them (the 12-category risk
+      framework) is a rule the repository never implemented. Whether the
+      records say that plainly without weakening the historical text is a
+      fidelity judgement for Codex.
+    what_to_attack: >
+      Each record against its Notion source for any dropped step, count or
+      flag; the "status on 2026-09-04" claims against apps/api/scripts/onboard.ts,
+      the readiness checker and gate5-path-coverage.ts; the absence of any
+      relation edge (the sources cite no decision ids); the register
+      arithmetic and digests via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-15
     subject: "PR #521 — M2 batch 7: five pricing decisions (DEC-20260302-A-0001, DEC-20260308-1, DEC-20260320-F, DEC-20260411-A, DEC-20260513-E) migrated to formal candidate records"
     commit: c309a8ca

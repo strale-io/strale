@@ -275,19 +275,21 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 7 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521). Batch 7 migrated the five pricing decisions with their live
-      contradictions stated (vendor basis moved from OpenSanctions to
-      Dilisense; compliance-screening prices sit below the EUR 0.25 the
-      2026-03 decision set). Private projection 126 rows at archive 4ed9c884;
-      operator verifier passes. G1 holds 115 rows (114 global, 1
-      temporary). Blocking gaps: G1, G2, G9. Next: batch 8, the five
-      onboarding-pipeline decisions (DEC-20260309-G, DEC-20260318-A,
-      DEC-20260318-B, DEC-20260320-A, DEC-20260411-B), then the trust and
-      quality-display group, then G2's 34 collisions one at a time, then
-      G9's closing review. This track is the M2 exit gate: the closure
-      register's validator refuses a state where it is done, or any
-      post-m2 track is active or done, while a blocking gap remains.
+      Batches 1 to 8 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524). Batch 8 migrated the five onboarding-pipeline decisions;
+      one finding for the To-do list: the 12-category onboarding risk
+      framework (DEC-20260309-G) exists nowhere in the repository and
+      nothing enforces it. Private projection 121 rows at archive ab1be15f;
+      operator verifier passes. G1 holds 110 rows (109 global, 1
+      temporary). Blocking gaps: G1, G2, G9. Next: batch 9, the six trust
+      and quality display decisions (DEC-20260305-G, DEC-20260306-D,
+      DEC-20260313-C, DEC-20260316-A, DEC-20260316-B, DEC-20260323-A), all
+      about the SQS the 2026-05-05 deletion removed, so their records
+      state what survives; then the vendor and registry group, then G2's
+      34 collisions one at a time, then G9's closing review. This track is
+      the M2 exit gate: the closure register's validator refuses a state
+      where it is done, or any post-m2 track is active or done, while a
+      blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -318,6 +320,12 @@ tracks:
       - docs/decisions/records/DEC-20260411-A.md
       - docs/decisions/records/DEC-20260513-E.md
       - handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md
+      - docs/decisions/records/DEC-20260309-G.md
+      - docs/decisions/records/DEC-20260318-A.md
+      - docs/decisions/records/DEC-20260318-B.md
+      - docs/decisions/records/DEC-20260320-A.md
+      - docs/decisions/records/DEC-20260411-B.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md
 
   - id: T6
     title: M3 repo-native workflows
