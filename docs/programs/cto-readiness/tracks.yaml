@@ -372,31 +372,24 @@ tracks:
 
   - id: T17
     title: Dependency remediation (WP13)
-    status: blocked
-    blocker: >
-      PR #510 (drizzle-orm 0.38.4 -> 0.45.2) failed CI and its independent
-      review: drizzle 0.44+ wraps driver errors in DrizzleQueryError, so
-      readers of err.code (account-service isUniqueViolation, app.ts
-      classifyError) and message-matching integration tests stopped seeing
-      the Postgres error. A worker is fixing it on the same branch
-      (apps/api/src/lib/db-error.ts, regression tests, corrected receipt);
-      the fix goes through a fresh review and CI before merge. T10 runs
-      in that window per PROGRAM.md.
+    status: queued
     gate: none
     depends_on: [T4]
     owner: session
     next_action: >
-      Batch 1 done (PR #499, hono 4.12.8 -> 4.13.5): the audit fell 24 -> 23,
-      the hono entry that folded 27 advisories is gone, and the HIGH CORS
-      advisory was shown never exploitable here (all three cors() sites set
-      origin explicitly, none sets credentials). Next: drizzle-orm 0.38.4 ->
-      0.45.2+, a semver-major on the ORM every query goes through -- its own
-      batch under DEC-20260504-A: read the release notes for query-builder
-      and bind-shape changes, run the full apps/api suite plus
-      data-retention and startup-migration tests, and check the queries the
-      notes call out against production read-only before merge. Then the
-      remaining eight reachable advisories, one batch each, re-running
-      apps/api/scripts/wp13-dependency-triage.mjs into a receipt after each.
+      Batches 1 and 2 done (PR #499 hono, PR #510 drizzle-orm 0.38.4 -> 0.45.2,
+      audit 23 -> 22). Batch 2 took three rounds: drizzle 0.44+ wraps every
+      driver error in DrizzleQueryError, and five readers of err.code on
+      money and boot paths (account-service, app.ts classifyError,
+      startup-db-retry, routes/do.ts timeout codes, settlement-reconciler
+      23505 race) silently stopped seeing the Postgres error; all now go
+      through apps/api/src/lib/db-error.ts with fail-first tests. Lesson
+      recorded in the final receipt: a semver-major upgrade with "no
+      source change needed" is attacked at the thrown-error shape, and
+      the sweep greps the cast forms. Next: the eight remaining reachable
+      advisories, one batch each, smallest blast radius first, re-running
+      apps/api/scripts/wp13-dependency-triage.mjs into a receipt after
+      each; runs in T10's review windows per PROGRAM.md.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - the ten reachable advisories are cleared, or each remaining one has a recorded reason it cannot be
@@ -405,6 +398,8 @@ tracks:
     evidence: 
       - archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json
       - handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md
+      - archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade-final.json
+      - handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md
 
   - id: T18
     title: Network and resource safety substrate (WP12)
