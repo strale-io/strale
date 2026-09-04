@@ -9,12 +9,13 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-223 files (196 with a recorded intent, 27 without).
+224 files (197 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md`](_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md) | land the first batch of T10 (M2 exit-gap closure) — the seven decision rows the closure register names as its next ba... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-checkin-morning.md`](_general/from-code/2026-09-04-checkin-morning.md) | Run the 2026-09-04 morning operating session per docs/company/DAILY-RUN.md — |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md`](_general/from-code/2026-09-03-t17-hono-upgrade.md) | Program track T17 / WP13 first batch — upgrade `hono` in `apps/api` to close its 27 |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md`](_general/from-code/2026-09-03-handoff-gate-live-worktree.md) | stop the session-end gate instructing the destruction of live work, after it did so three times in one session. |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-founder-answers-retention-and-wp13-track.md`](_general/from-code/2026-09-03-founder-answers-retention-and-wp13-track.md) | record the founder's answers of 2026-09-03 on the dormant vendor keys, the decision briefs and DQ-28; fix the two def... |

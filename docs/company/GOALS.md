@@ -135,6 +135,27 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-09-04 — the card customer's silence is now seven days, and a
+  day-by-day payer series says it is not a measurement artefact.** Every day
+  from 2026-08-22 to 2026-09-03 was resolved to its payers through
+  `lib/metrics`'s `payerFacts`. `provider@dlgt.io` bought on 08-23 (EUR 2.00),
+  08-25 (EUR 3.09), 08-26 (EUR 3.00) and 08-28 (EUR 3.00) — never a gap longer
+  than two days — and **nothing since**. This is a second, independent route to
+  yesterday's finding: yesterday read it off a distinct-payers-per-day count,
+  today off the per-payer series itself, and they agree.
+
+  Still a fact and still not a verdict, for the same reason as yesterday: four
+  active days of history make a seven-day gap weak evidence, and the week
+  closing **2026-09-06** is what settles it. What is new is only that the gap
+  grew and that a different instrument confirms it.
+
+  *Meanwhile the concentration picture has not improved in the week in
+  progress.* At day 5 of 7 the largest buyer holds 98.7% (EUR 47.44 against
+  EUR 0.61 from six others), against 76.0% in the last completed week. **That
+  comparison is not made**, and is recorded here only so a later session does
+  not make it: a partial week against a whole one is the artefact this file has
+  rejected three times. The 09-06 close is the first honest reading.
+
 - **Measured 2026-09-03 — the "who has stopped buying" instrument returned a
   value for the first time, and the buyer worth watching is not in it.**
   `quietPayers` had never once answered: it demanded the payer-identity
