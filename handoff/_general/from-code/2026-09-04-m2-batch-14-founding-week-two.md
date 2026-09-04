@@ -160,7 +160,7 @@ favor of targeted `Edit` calls):
   (the new record files were on disk but not yet staged). Staging them
   cleared every one of those warnings; no code or register content
   changed to fix them.
-- `npm run context:test`: 133/133 pass.
+- `npm run context:test`: every test passed (the CI check job is the receipt for this documentation-only PR).
 - `validatePrivateProjection` (imported directly, run against this
   batch's private file plus the PR's register): 0 findings.
 - `node scripts/m2-closure-verify-private-rows.mjs` (the operator
