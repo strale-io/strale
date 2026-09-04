@@ -527,7 +527,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "059af640c0853486017eef8287b6e3e3b51dd9cb093b601194510cdb7e3ed2c7",
+      "sha256": "efaa00d4eed5abb33bbbe6ae00a61e6625a875fff6f2d7d6bdb9f51015df1cfc",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
