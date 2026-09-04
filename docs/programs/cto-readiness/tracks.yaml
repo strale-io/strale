@@ -275,27 +275,28 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 13 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529, #532, #537, #539). Batch 13 migrated the
-      fourteen founding decisions of 2026-02-24/25 (priority hierarchy,
-      first vertical, differentiator, name, seed capabilities, LangChain
-      fallback tool, provider-lite model, bundles, positioning, the
-      commerce-protocol pivot, crypto stance, payment architecture,
-      TypeScript); each Consequences section states what later decisions
-      and the code did with it. Private projection 76 rows at archive
-      b843fca1; operator verifier passes. G1 holds 65 rows (64 global, 1
+      Batches 1 to 14 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529, #532, #537, #539, #542). Batch 14 migrated
+      the fourteen MVP launch and scaling rows of 2026-02-25/27 (fuzzy
+      input, TED, the review synthesis, MVP live, EU AI Act columns, the
+      13 and 35 capability expansions, provider growth phases, the
+      provider-hosted execution model, the deferrals, composable units,
+      protocol networks, the 20-step build sequence); each Consequences
+      section states what the code and later decisions did with it, the
+      largest finding being that no LLM fuzzy-input path exists in
+      swedish-company-data although CLAUDE.md still lists that decision
+      as active. Private projection 62 rows at archive
+      589d0bfe; operator verifier passes. G1 holds 51 rows (50 global, 1
       temporary). Blocking gaps: G1, G2, G9. Loop since 2026-09-04
       evening: private half committed and register bumped before review,
       auto-merge armed after PASS, batches of 10 to 14 rows, docs-only
-      PRs take the CI fast path (#533). Next: batch 14, the fourteen MVP
-      launch and scaling rows of 2026-02-25/27 (DEC-20260225-P-m5n6,
-      -o7p8, -y1z2, DEC-20260226-P-q1r2, -s3t4, -u5v6, -w7x8,
-      DEC-20260227-P-a1b2, -i9j0, -m3n4, -o5p6, -q7r8, -s9t0, -u1v2),
-      then the March to May rows by theme, then G2's 34 collisions one at
-      a time, then G9's closing review. This track is the M2 exit gate:
-      the closure register's validator refuses a state where it is done,
-      or any post-m2 track is active or done, while a blocking gap
-      remains.
+      PRs take the CI fast path (#533). Next: batch 15, the March 2026
+      rows from DEC-20260302-C to DEC-20260314-C (fourteen), then batch
+      16 (the remaining March rows), then the April to May rows in two
+      batches, then G2's 34 collisions one at a time, then G9's closing
+      review. This track is the M2 exit gate: the closure register's
+      validator refuses a state where it is done, or any post-m2 track is
+      active or done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -382,6 +383,21 @@ tracks:
       - docs/decisions/records/DEC-20260225-P-u7v8.md
       - docs/decisions/records/DEC-20260225-P-w9x0.md
       - handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md
+      - docs/decisions/records/DEC-20260225-P-m5n6.md
+      - docs/decisions/records/DEC-20260225-P-o7p8.md
+      - docs/decisions/records/DEC-20260225-P-y1z2.md
+      - docs/decisions/records/DEC-20260226-P-q1r2.md
+      - docs/decisions/records/DEC-20260226-P-s3t4.md
+      - docs/decisions/records/DEC-20260226-P-u5v6.md
+      - docs/decisions/records/DEC-20260226-P-w7x8.md
+      - docs/decisions/records/DEC-20260227-P-a1b2.md
+      - docs/decisions/records/DEC-20260227-P-i9j0.md
+      - docs/decisions/records/DEC-20260227-P-m3n4.md
+      - docs/decisions/records/DEC-20260227-P-o5p6.md
+      - docs/decisions/records/DEC-20260227-P-q7r8.md
+      - docs/decisions/records/DEC-20260227-P-s9t0.md
+      - docs/decisions/records/DEC-20260227-P-u1v2.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md
 
   - id: T6
     title: M3 repo-native workflows
