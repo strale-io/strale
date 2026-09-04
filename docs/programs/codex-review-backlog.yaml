@@ -41,6 +41,29 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-14
+    subject: "PR #518 — eight keyless free-API capabilities (OpenAlex, arXiv, PubMed, HN, SEC EDGAR, NVD, USGS) from the largest x402 buyer's basket"
+    commit: 5bf6c43d
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      New executors on the money path that build upstream URLs from caller
+      input. Three Claude rounds were needed: round 1 found query-parameter
+      smuggling through the DOI, round 2 found dot-segment path collapse
+      through the same function after the first fix. A model that did not
+      write either fix should look for the third variant, and at the seven
+      other executors the rounds spent less time on.
+    what_to_attack: >
+      apps/api/src/capabilities/paper-details.ts resolveWorkIdentifier /
+      encodeDoiPath (percent-encoded dots, backslashes, unicode, doi.org
+      URLs); every URLSearchParams construction in the other seven executors
+      for a parameter that changes the upstream route; readJsonWithLimit /
+      readTextWithLimit on every body; the manifests' guaranteed fields
+      against a real empty-result response (zero hits) for each search
+      capability; the sec-ticker-index probe cost at four runs a day.
+    claude_verdicts: 3 rounds — FAIL, FAIL, PASS; every finding fixed
+
   - id: CX-13
     subject: "PR #517 — M2 batch 6: provenance and jurisdiction rows (DEC-20260422-D, DEC-20260425-A, DEC-20260425-B) migrated to formal candidate records"
     commit: 167e46e0
