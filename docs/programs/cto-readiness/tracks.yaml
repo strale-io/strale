@@ -270,7 +270,12 @@ tracks:
 
   - id: T10
     title: M2 exit-gap closure
-    status: active
+    status: blocked
+    blocker: >
+      Waiting on the independent review of G3 stage 1 (the cross-surface
+      identity mechanism, branch docs/m2-g3-cross-surface-mechanism, DEC-20260904-B).
+      T17 runs in the review window per PROGRAM.md; T10 resumes as the active
+      track the moment the verdict lands, and stage 2 follows.
     gate: m2-exit
     depends_on: [T1]
     owner: session
@@ -363,7 +368,7 @@ tracks:
 
   - id: T17
     title: Dependency remediation (WP13)
-    status: queued
+    status: active
     gate: none
     depends_on: [T4]
     owner: session
@@ -387,6 +392,33 @@ tracks:
     evidence: 
       - archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json
       - handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md
+
+  - id: T18
+    title: Network and resource safety substrate (WP12)
+    status: queued
+    gate: none
+    depends_on: [T4]
+    owner: session
+    next_action: >
+      WP12 was unblocked on 2026-09-02 (VERIFY-IP: one proxy hop, client
+      X-Forwarded-For never reaches the app) and has not started. Four exit
+      items, one batch each in this order: (1) a CIDR-based outbound guard
+      that closes the IPv6 gaps the audit named (CR-11), tested against
+      literal, mapped and link-local forms; (2) a connect-time re-check for
+      raw-socket fetches so DNS rebinding cannot pass the pre-resolve check
+      (CR-12); (3) byte and pixel caps on every body and image reader,
+      routed through apps/api/src/lib/resource-limits.ts, the only body
+      reader; (4) the trusted-hop rule for forwarded IPs written down as
+      code and test from the VERIFY-IP receipt. Each batch: plant the
+      failure first, then the guard, then the discriminating test.
+    resume_file: docs/remediation/PACKAGE-GRAPH.yaml
+    exit:
+      - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code
+      - connect-time re-check for raw sockets
+      - byte and pixel caps on every reader
+      - the forwarded-IP trusted-hop rule as code and test
+      - WP12 status in PACKAGE-GRAPH.yaml moves off UNBLOCKED_NOT_YET_STARTED
+    evidence: []
 
   - id: T16
     title: Legal & Data Policy Authority (WP14)
