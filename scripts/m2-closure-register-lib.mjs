@@ -91,6 +91,11 @@ export const PLAN_DISPOSITIONS = ["merged", "partially_merged", "superseded", "o
 // The next-batch cutoff is the adoption of the readiness program: the formal
 // record with this id. The register may not choose another anchor.
 export const READINESS_ANCHOR_ID = "DEC-20260812-A";
+// Symmetric to the `--notion-<page id>` qualifier: `--git-<sha>` names the
+// commit that introduced the claim directly in Git. Capture group 1 is the
+// bare id (key with the qualifier removed), group 2 is the sha as written in
+// the key (7 to 40 lowercase hex).
+const GIT_QUALIFIED_RECORD_KEY = /^(.+)--git-([0-9a-f]{7,40})$/;
 const URL_EVIDENCE =
   /^https:\/\/(github\.com\/strale-io\/(strale|strale-context-archive)\/(pull\/[0-9]+|issues\/[0-9]+|commit\/[0-9a-f]{7,40})|app\.notion\.com\/(p\/)?[0-9a-f]{32})$/;
 // Forward-looking sentences in the migration plan that the register must
@@ -318,6 +323,22 @@ function fileCites(context, file, pageId) {
   return text.includes(pageId);
 }
 
+/**
+ * A cross-surface collision row may resolve (resolved/documented_only)
+ * exactly when (a) a git-qualified formal record exists whose id equals the
+ * collision id, and (b) a tracked gap report cited in the row's own evidence
+ * names the row's page id. Neither condition may be inferred from anything
+ * else; both are checked directly against the record graph and the gap
+ * citation index built from the index (context.gapCitations).
+ */
+function crossSurfaceResolutionEligible(context, recordByKey, row) {
+  const hasGitQualifiedRecord = [...recordByKey.values()].some(
+    (rec) => rec.id === row.collision.id && GIT_QUALIFIED_RECORD_KEY.test(rec.record_key ?? ""),
+  );
+  const citedByGapReport = (row.evidence ?? []).some((ev) => context.gapCitations?.get(ev)?.has(row.page_id));
+  return hasGitQualifiedRecord && citedByGapReport;
+}
+
 function countBy(items, key) {
   const out = {};
   for (const item of items) out[item[key]] = (out[item[key]] ?? 0) + 1;
@@ -427,6 +448,60 @@ export function validateClosureRegister(register, context, { schema, relativePat
     finding("SOURCE_COUNT_DRIFT", `formal_records.record_count ${register.sources.formal_records.record_count} vs ${context.records.length}`);
   }
 
+  // ---- A bare collided id is never a record key. Cross-surface collision ids
+  // (from decision_rows[].collision.kind === "cross-surface") join the
+  // existing notion-duplicate rule. Computed before the git-qualified-key
+  // loop below, which also needs it: a git-qualified key is legitimate only
+  // for an id the register actually claims as a cross-surface collision.
+  const crossSurfaceCollisionIds = new Set(
+    register.decision_rows.filter((r) => r.collision?.kind === "cross-surface").map((r) => r.collision.id),
+  );
+  for (const fr of register.formal_records) {
+    if (crossSurfaceCollisionIds.has(fr.record_key)) finding("RECORD_KEY_BARE_CROSS_SURFACE_ID", `${fr.record_key} is a cross-surface collision id and may not be used bare as a record key`);
+  }
+
+  // ---- Git-qualified record keys (`DEC-…--git-<sha>`), symmetric to the
+  // `--notion-<page id>` qualifier. A git-qualified record asserts that its id
+  // was introduced directly in Git at a specific commit, never a free choice:
+  // id equals the key with the qualifier removed, source_kind is git-native
+  // with no source rows, and provenance is the record's own first evidence
+  // entry, which must be the full-sha GitHub commit URL for a sha the key's
+  // (possibly abbreviated) sha prefixes, and which must be an ancestor of
+  // HEAD. When git is unavailable the ancestry finding is warning-class
+  // (COMMIT_UNVERIFIABLE), not a hard failure.
+  //
+  // A git-qualified key is legitimate only when the register carries a
+  // decision row claiming its id as a cross-surface collision
+  // (collision.kind: cross-surface, collision.id === the record's id);
+  // otherwise the qualifier is unclaimed and the key must stay bare
+  // (RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE). A git-native decision whose id is
+  // not a cross-surface collision (e.g. DEC-20260504-A) keeps a bare key;
+  // the qualifier exists to disambiguate an id also claimed on another
+  // surface, not to mark "this record came from Git".
+  for (const fr of register.formal_records) {
+    const gitKey = GIT_QUALIFIED_RECORD_KEY.exec(fr.record_key);
+    if (!gitKey) continue;
+    const [, baseId, keySha] = gitKey;
+    if (fr.id !== baseId) finding("RECORD_GIT_KEY_ID_MISMATCH", `${fr.record_key}: id ${fr.id} does not equal the key with its --git- qualifier removed (${baseId})`);
+    if (fr.source_kind !== "git-native" || (fr.source_rows ?? []).length > 0) {
+      finding("RECORD_GIT_KEY_SOURCE_KIND", `${fr.record_key}: a git-qualified record must be source_kind git-native with source_rows []`);
+    }
+    if (!crossSurfaceCollisionIds.has(baseId)) {
+      finding("RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE", `${fr.record_key}: no decision row claims ${baseId} as a cross-surface collision; the --git- qualifier is unclaimed`);
+    }
+    const actual = recordByKey.get(fr.record_key);
+    if (!actual) continue; // FORMAL_RECORD_UNKNOWN already reported
+    const evidence0 = actual.evidence[0];
+    const commitMatch = typeof evidence0 === "string" ? /^https:\/\/github\.com\/strale-io\/strale\/commit\/([0-9a-f]{40})$/.exec(evidence0) : null;
+    if (!commitMatch || !commitMatch[1].startsWith(keySha)) {
+      finding("RECORD_GIT_KEY_PROVENANCE_MISMATCH", `${fr.record_key}: first evidence entry must be https://github.com/strale-io/strale/commit/<40-hex sha with prefix ${keySha}>, got ${evidence0}`);
+    } else if (context.isAncestor) {
+      if (!context.isAncestor(commitMatch[1])) finding("RECORD_GIT_KEY_NOT_ANCESTOR", `${fr.record_key}: ${commitMatch[1]} is not an ancestor of HEAD`);
+    } else {
+      finding("COMMIT_UNVERIFIABLE", `${fr.record_key}: git is unavailable; ${commitMatch[1]} could not be checked against HEAD`);
+    }
+  }
+
   // ---- Collision registry facts.
   const collisionRows = new Map();
   const collisionIds = new Set();
@@ -509,8 +584,24 @@ export function validateClosureRegister(register, context, { schema, relativePat
       if (col.resolution_status !== row.collision.resolution_status) finding("DECISION_ROW_COLLISION_STATUS_MISMATCH", row.page_id);
       if (col.disposition !== row.collision.row_disposition) finding("DECISION_ROW_COLLISION_ROW_DISPOSITION_MISMATCH", row.page_id);
     }
-    if (row.collision?.kind === "cross-surface" && (row.collision.resolution_status !== "unresolved" || row.collision.row_disposition !== "unresolved")) {
-      finding("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH", `${row.page_id}: a cross-surface collision is always unresolved/unresolved`);
+    // A cross-surface payload is unresolved/unresolved unless a git-qualified
+    // record exists for the collision id AND a tracked gap report cited in
+    // this row's evidence names the row's page id, in which case it may be
+    // resolved/documented_only instead. formal_record is never supported for
+    // a cross-surface row in this stage. Any other combination is invalid.
+    if (row.collision?.kind === "cross-surface") {
+      const { resolution_status: rs, row_disposition: rd } = row.collision;
+      if (rd === "formal_record") {
+        finding("CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED", `${row.page_id}: row_disposition formal_record is not supported on a cross-surface row in this stage`);
+      } else if (rs === "unresolved" && rd === "unresolved") {
+        // Always valid.
+      } else if (rs === "resolved" && rd === "documented_only") {
+        if (!crossSurfaceResolutionEligible(context, recordByKey, row)) {
+          finding("DECISION_ROW_CROSS_SURFACE_STATE_INVALID", `${row.page_id}: resolved/documented_only requires a git-qualified record for ${row.collision.id} and a gap report (cited in this row's evidence) naming this page id`);
+        }
+      } else {
+        finding("DECISION_ROW_CROSS_SURFACE_STATE_INVALID", `${row.page_id}: ${rs}/${rd} is not a valid cross-surface collision state`);
+      }
     }
     if (d === "unresolved_collision" || d === "resolved_collision") {
       if (row.collision.kind === "notion-duplicate") {
@@ -599,7 +690,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
       // Registry rows are governed by the registry (a resolved collision may
       // legitimately share its id with the record that won it).
       const claimed = row.id && (context.gitNativeClaims.has(row.id) || recordIds.has(row.id)) && !recordCitedPages.has(row.page_id) && !collisionRows.has(row.page_id);
-      const labelled = row.disposition === "unresolved_collision" && row.collision?.kind === "cross-surface";
+      const labelled = row.collision?.kind === "cross-surface" && (row.disposition === "unresolved_collision" || row.disposition === "resolved_collision");
       if (claimed && !labelled) finding("DECISION_ROW_CROSS_SURFACE_EXPECTED", `${row.page_id}: ${row.id} is a Git-native protocol label without a record`);
       if (labelled && !claimed) finding("DECISION_ROW_CROSS_SURFACE_UNSUPPORTED", `${row.page_id}: ${row.id} is not a Git-native protocol label`);
     }
@@ -610,9 +701,11 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // Every public disposition is derived, in priority order: cited by a
   // same-id record -> formally_migrated; collision-registry row -> the
   // registry's status; Git-native protocol label without a record ->
-  // cross-surface collision; cited by a gap report -> intentionally
-  // historical; otherwise from identity fields (no id -> unclear;
-  // superseded/reversed -> obsolete_or_superseded; else not_yet_reconciled).
+  // cross-surface collision (resolved_collision when a git-qualified record
+  // and gap-report citation both exist, else unresolved_collision); cited by
+  // a gap report -> intentionally historical; otherwise from identity fields
+  // (no id -> unclear; superseded/reversed -> obsolete_or_superseded; else
+  // not_yet_reconciled).
   if (context.gapCitations && context.gitNativeClaims) {
     const recordIds = new Set(context.records.map((r) => r.id));
     const recordCited = new Set();
@@ -623,8 +716,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
       let expected;
       if (recordCited.has(row.page_id)) expected = "formally_migrated";
       else if (collisionRows.has(row.page_id)) expected = collisionRows.get(row.page_id).resolution_status === "unresolved" ? "unresolved_collision" : "resolved_collision";
-      else if (row.id && (context.gitNativeClaims.has(row.id) || recordIds.has(row.id))) expected = "unresolved_collision";
-      else if (gapCited.has(row.page_id)) expected = "intentionally_historical";
+      else if (row.id && (context.gitNativeClaims.has(row.id) || recordIds.has(row.id))) {
+        expected = row.collision?.kind === "cross-surface" && crossSurfaceResolutionEligible(context, recordByKey, row) ? "resolved_collision" : "unresolved_collision";
+      } else if (gapCited.has(row.page_id)) expected = "intentionally_historical";
       else if (!row.id) expected = "unclear";
       else if (["superseded", "reversed"].includes(row.historical_status)) expected = "obsolete_or_superseded";
       else expected = "not_yet_reconciled";

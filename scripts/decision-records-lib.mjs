@@ -23,7 +23,7 @@ export const DECISION_INDEX_CANDIDATE_BANNER =
 
 const DECISION_ID_PATTERN = "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$";
 const DECISION_RECORD_KEY_PATTERN =
-  "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$";
+  "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$";
 const NOTION_PAGE_ID_PATTERN = "^[0-9a-f]{32}$";
 const REQUIRED_COLLISION_MIGRATION_CORRECTIONS = new Map([
   ["DEC-20260502-A", ["DEC-20260812-A"]],
@@ -784,7 +784,19 @@ export function validateDecisionRecords(records, collisionRegistry = { collision
     if (unresolvedCollisionIds.has(id)) {
       findings.push(finding("DECISION_ID_COLLISION_IMPORTED", record.file, id));
     }
-    if (!collidedIds.has(id) && key !== id) {
+    // A --git-<sha> qualified key names its own evidence directly in Git rather than
+    // through the notion-duplicate collision registry, so its legitimacy is not gated
+    // on `id` appearing in docs/decisions/id-collisions.yaml. The closure validator
+    // (scripts/m2-closure-register-lib.mjs) is the one that checks id, source_kind,
+    // provenance, and ancestry for a git-qualified record. A --notion-<page> key keeps
+    // today's registry-bound rule: it is only legitimate when `id` has a registered
+    // collision.
+    const isGitQualifiedKey =
+      typeof key === "string" &&
+      typeof id === "string" &&
+      key.startsWith(`${id}--git-`) &&
+      /^[0-9a-f]{7,40}$/.test(key.slice(`${id}--git-`.length));
+    if (!isGitQualifiedKey && !collidedIds.has(id) && key !== id) {
       findings.push(
         finding("DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH", record.file, `${key}/${id}`),
       );

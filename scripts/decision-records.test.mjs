@@ -562,6 +562,83 @@ test("unambiguous record keys and filenames cannot diverge from display IDs", ()
   );
 });
 
+test("the record-key grammar also accepts a git-qualified key, symmetric to --notion-", () => {
+  const sha = "3b25658736bfed53eec52c8acf2619dacd54d1f5";
+  const gitQualified = record({
+    id: "DEC-20260812-A",
+    recordKey: `DEC-20260812-A--git-${sha.slice(0, 7)}`,
+  });
+  // The schema pattern accepts the shape; no DECISION_SCHEMA_INVALID for the
+  // record_key field.
+  assert.ok(
+    !validateDecisionRecords([gitQualified]).some(
+      (item) => item.code === "DECISION_SCHEMA_INVALID" && item.detail.includes("record_key"),
+    ),
+  );
+
+  // Refused: fewer than 7 hex digits.
+  const shortSha = record({ id: "DEC-20260812-A", recordKey: "DEC-20260812-A--git-abcdef" });
+  assert.ok(
+    validateDecisionRecords([shortSha]).some(
+      (item) => item.code === "DECISION_SCHEMA_INVALID",
+    ),
+  );
+
+  // Refused: uppercase hex.
+  const upperSha = record({ id: "DEC-20260812-A", recordKey: "DEC-20260812-A--git-ABCDEFG" });
+  assert.ok(
+    validateDecisionRecords([upperSha]).some(
+      (item) => item.code === "DECISION_SCHEMA_INVALID",
+    ),
+  );
+
+  // Decided (DEC-20260904-B, this test file): a --git- qualified key's
+  // legitimacy is not gated on its bare id appearing in the notion-duplicate
+  // collision registry (docs/decisions/id-collisions.yaml); that registry
+  // only ever records notion-duplicate collisions, and a cross-surface
+  // collision id (like DEC-20260422-A) never appears there by design (see
+  // archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md). A
+  // git-qualified key's legitimacy is the closure validator's job
+  // (scripts/m2-closure-register-lib.mjs), which checks id, source_kind,
+  // provenance, and ancestry. So even with an empty collision registry (no
+  // collision registered for DEC-20260812-A here), a git-qualified key for
+  // it must not trip DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH.
+  assert.ok(
+    !validateDecisionRecords([gitQualified]).some(
+      (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
+    ),
+  );
+});
+
+test("a --git- key for an id absent from the collision registry passes; a --notion- key for the same absent id still fails", () => {
+  // Cross-surface ids are never in the notion-duplicate collision registry by
+  // design, so this uses an id with no collision entry at all; the
+  // registry passed is empty.
+  const registry = { collisions: [] };
+
+  const gitQualified = record({
+    id: "DEC-20260422-A",
+    recordKey: "DEC-20260422-A--git-7a555131",
+  });
+  assert.ok(
+    !validateDecisionRecords([gitQualified], registry).some(
+      (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
+    ),
+    "a --git- qualified key must not require a registered collision",
+  );
+
+  const notionQualified = record({
+    id: "DEC-20260422-A",
+    recordKey: "DEC-20260422-A--notion-11111111111111111111111111111111",
+  });
+  assert.ok(
+    validateDecisionRecords([notionQualified], registry).some(
+      (item) => item.code === "DECISION_RECORD_KEY_UNQUALIFIED_MISMATCH",
+    ),
+    "a --notion- qualified key must still require a registered collision",
+  );
+});
+
 test("record keys are portable across case-insensitive filesystems", () => {
   const caseConflict = [
     record({ id: "DEC-CASE-A", topic: "upper-case" }),

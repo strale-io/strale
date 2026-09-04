@@ -45,7 +45,7 @@ sources:
     status_file: docs/project/private-archive-status.json
   formal_records:
     path: docs/decisions/records
-    record_count: 35
+    record_count: 36
   collision_registry:
     path: docs/decisions/id-collisions.yaml
     collision_count: 35
@@ -496,6 +496,11 @@ formal_records:
   source_kind: git-native
   source_rows: []
   git_provenance: archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+- record_key: DEC-20260904-B
+  id: DEC-20260904-B
+  source_kind: git-native
+  source_rows: []
+  git_provenance: archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md
 decision_rows:
 - page_id: 31267c87082c81279b14f3859f6f2038
   id: DEC-20260225-P-c5d6
@@ -2809,6 +2814,7 @@ exit_gaps:
     receive distinct record keys or evidence-only dispositions.
   evidence:
   - archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md
+  - docs/decisions/records/DEC-20260904-B.md
 - id: G4
   gap: Four formal records (DEC-20260504-A, DEC-20260822-A, DEC-20260831-A, DEC-20260901-A) have no Notion
     source row and rest on Git provenance alone.

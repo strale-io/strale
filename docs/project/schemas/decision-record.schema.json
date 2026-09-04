@@ -22,7 +22,7 @@
   "properties": {
     "record_key": {
       "type": "string",
-      "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$",
+      "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$",
       "maxLength": 120
     },
     "id": {
@@ -88,7 +88,7 @@
           },
           "target": {
             "type": "string",
-            "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32})?$",
+            "pattern": "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$",
             "maxLength": 120
           }
         }
