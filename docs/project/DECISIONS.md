@@ -24,6 +24,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 
 | Decision | Internal record key | Status | Topic | Scope | Owner | Decided |
 |---|---|---|---|---|---|---|
+| [`DEC-20260422-A`](../decisions/records/DEC-20260422-A--git-3b256587.md) — Distribution PR Integrity Protocol | `DEC-20260422-A--git-3b256587` | active | `distribution-pr-integrity` | global | petter | 2026-04-22 |
 | [`DEC-20260423-A`](../decisions/records/DEC-20260423-A.md) — Close capability-onboarding bypasses with staged structural remediation | `DEC-20260423-A` | active | `capability-onboarding` | global | petter | 2026-04-23 |
 | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) — Use the revised manifest-driven capability onboarding pipeline | `DEC-20260423-B` | active | `capability-onboarding` | global | petter | 2026-04-23 |
 | [`DEC-20260424-A`](../decisions/records/DEC-20260424-A.md) — Require structural enforcement and read-back for always-enforce decisions | `DEC-20260424-A` | active | `structural-rule-enforcement` | global | petter | 2026-04-24 |
