@@ -55,6 +55,7 @@ import { openApiSpec } from "./openapi.js";
 import { welcomeRoute } from "./routes/welcome.js";
 import { getDb } from "./db/index.js";
 import { sql } from "drizzle-orm";
+import { unwrapDbError, wasWrapped } from "./lib/db-error.js";
 
 // Capability executors + DataProvider chains are registered by
 // autoRegisterCapabilities() in index.ts before the server starts.
@@ -80,10 +81,21 @@ app.use("*", requestContext());
 export function classifyError(err: Error): {
   error_class: string;
   pg_code?: string;
+  wrapped?: true;
 } {
-  const e = err as Error & { code?: string };
+  // Since drizzle-orm 0.44 (PR #510, 2026-09-04), db.execute/tx.execute/the
+  // query builder/transactions all rethrow driver errors wrapped in
+  // DrizzleQueryError — every branch below has to run against the real
+  // driver error at `.cause`, not the wrapper's generic "Failed query: ..."
+  // shape. See lib/db-error.ts for the full incident. `wrapped: true` is
+  // added to the result only when unwrapping actually peeled a layer off,
+  // so dashboards can tell a drizzle-wrapped failure from a bare one
+  // without it changing the shape of every other classification.
+  const unwrapped = unwrapDbError(err);
+  const e = unwrapped as Error & { code?: string };
+  const wrapped = wasWrapped(err);
   // postgres-js attaches `code` (5-char SQLSTATE) on real DB errors.
-  if (e.code && /^[0-9A-Z]{5}$/.test(e.code)) {
+  if (e && typeof e === "object" && e.code && /^[0-9A-Z]{5}$/.test(e.code)) {
     // Common SQLSTATEs we care about; rest fall through to `db_unknown`.
     const known: Record<string, string> = {
       "23505": "db_unique_violation",
@@ -98,27 +110,32 @@ export function classifyError(err: Error): {
       "42703": "db_undefined_column",
       "42P01": "db_undefined_table",
     };
-    return { error_class: known[e.code] ?? "db_unknown", pg_code: e.code };
+    return {
+      error_class: known[e.code] ?? "db_unknown",
+      pg_code: e.code,
+      ...(wrapped ? { wrapped: true as const } : {}),
+    };
   }
   // postgres-js bind-encoder failure (the PR-43 shape): TypeError thrown
   // from Buffer.byteLength when a non-string/Buffer reaches the wire.
   // No SQLSTATE because we never made it to the server.
   if (
-    err.name === "TypeError" &&
-    err.message.includes("string") &&
-    /Date|Buffer|ArrayBuffer/.test(err.message) &&
-    /byteLength|prepared|Bind|ParameterDescription/.test(err.stack ?? "")
+    e instanceof Error &&
+    e.name === "TypeError" &&
+    e.message.includes("string") &&
+    /Date|Buffer|ArrayBuffer/.test(e.message) &&
+    /byteLength|prepared|Bind|ParameterDescription/.test(e.stack ?? "")
   ) {
-    return { error_class: "db_bind_encoder" };
+    return { error_class: "db_bind_encoder", ...(wrapped ? { wrapped: true as const } : {}) };
   }
   // Hono's BodyTimeout / our explicit AbortError shapes.
-  if (err.name === "AbortError" || err.message.includes("aborted")) {
-    return { error_class: "request_aborted" };
+  if (e instanceof Error && (e.name === "AbortError" || e.message.includes("aborted"))) {
+    return { error_class: "request_aborted", ...(wrapped ? { wrapped: true as const } : {}) };
   }
-  if (err.name === "ZodError" || err.message.startsWith("Validation")) {
-    return { error_class: "validation_error" };
+  if (e instanceof Error && (e.name === "ZodError" || e.message.startsWith("Validation"))) {
+    return { error_class: "validation_error", ...(wrapped ? { wrapped: true as const } : {}) };
   }
-  return { error_class: "unknown" };
+  return { error_class: "unknown", ...(wrapped ? { wrapped: true as const } : {}) };
 }
 
 /**

@@ -208,3 +208,96 @@ ran 0 times locally by design (no `DATABASE_URL_TEST` in this worktree) -- CI's 
 lane on this PR is the verification for those. No deviation from the brief beyond the two notes
 above (drizzle-kit's independent versioning track, and the "no production query owed" finding
 being a negative result rather than a list of queries run).
+
+## Correction (2026-09-04, same PR, follow-up session)
+
+The "no source change needed" claim above was **wrong**. CI's `integration-db` lane FAILED on the
+original commit (`7df94569`), and a fresh read-only Claude review returned FAIL. This section
+records what the review found and what changed; the sections above are left as-written (this batch
+never edits a receipt after the fact) with this correction appended.
+
+**What the review found.** Since drizzle-orm 0.44.0, `db.execute`/`tx.execute`/the query
+builder/transactions all rethrow driver errors wrapped in `DrizzleQueryError`
+(`node_modules/drizzle-orm/errors.js`): message `Failed query: ...\nparams: ...`, fields `query`,
+`params`, `cause` -- **no `.code`**. The real Postgres error (SQLSTATE code, message) is only at
+`.cause`. The changelog-review paragraph above ("existing string/code checks against nested driver
+errors still work") asserted the opposite without actually constructing a wrapped error and
+checking. Three call sites read a caught DB error's `.code`/`.message` directly and broke:
+
+1. `apps/api/src/lib/account-service.ts` `isUniqueViolation(err)` read `err.code` -- a
+   duplicate-email race escaped as an unhandled 500 instead of `EmailAlreadyRegisteredError` ->
+   409, reproduced in the CI log on `POST /v1/auth/register`.
+2. `apps/api/src/app.ts` `classifyError(err)` read `err.code` and the bind-encoder `TypeError`
+   shape directly -- every DB failure logged `error_class: "unknown"` with no `pg_code`, undoing
+   the PR-43 observability fix. `src/app.classify-error.test.ts` never fed it a wrapped error, so
+   it stayed green while the classifier had stopped working for every real DB failure.
+3. `apps/api/src/lib/receipt/execution-receipt.integration.test.ts` (8 assertions) and three
+   sibling `*.integration.test.ts` files -- `partial-quarantine.integration.test.ts` (1),
+   `receipt-chain-junction.integration.test.ts` (1), `receipt-invariants.integration.test.ts` (16)
+   -- asserted `.rejects.toThrow(/trigger-or-constraint-text/)` against the wrapper's generic
+   message, which no longer contains that text. 26 assertions total across 4 files.
+
+A grep sweep for every other reader of `.code`/`.message`/`.constraint`/`.detail` on a caught error
+(per the follow-up brief) found one more, not yet reproduced in prod but the same class of bug:
+`apps/api/src/lib/startup-db-retry.ts` `isTransientDbConnectError` reads `err.code` to decide
+whether a startup DB-connectivity failure is transient (CONNECT_TIMEOUT/errno/SQLSTATE class
+08/53) -- `runStartupMigrations()`/`validateSchema()` call `db.execute()` internally, so a
+connection failure surfacing through a query attempt is wrapped the same way. Fixed proactively.
+
+**What changed.**
+
+- New module `apps/api/src/lib/db-error.ts` -- the only place that knows the wrapper's shape:
+  `unwrapDbError`, `pgErrorCode`, `dbErrorMessage`, `wasWrapped`. Identification is by
+  `instanceof DrizzleQueryError` (imported from `drizzle-orm/errors`), with a SQLSTATE-bearing-
+  cause heuristic as a fallback -- **not** `err.name === "DrizzleQueryError"` as the orchestrator
+  brief specified: verified against the installed 0.45.2 build that `DrizzleQueryError` does not
+  set `this.name` at all, so it inherits the bare `"Error"` name from its `Error` superclass and
+  that check would never match. Documented in the module; noted here as a deviation from the
+  brief's exact wording, not from its intent.
+- `account-service.ts`: `isUniqueViolation` now reads `pgErrorCode(err)`.
+- `app.ts`: `classifyError` unwraps first, then runs every existing branch against the unwrapped
+  error; adds `wrapped: true` to the result only when unwrapping actually happened, so the exact
+  prior output shape is preserved for every already-unwrapped input (all 7 pre-existing
+  `classifyError` tests pass unchanged).
+- `startup-db-retry.ts`: `isTransientDbConnectError` unwraps first.
+- New integration-test helper `apps/api/src/test-support/db-errors.ts` (`expectDbRejection`):
+  awaits the rejection, unwraps with `dbErrorMessage`, and asserts the regex against the unwrapped
+  message -- falling back to the raw message so the same assertion also passes against an
+  unwrapped driver error. All 26 affected assertions converted. Two assertions in the same files
+  that looked similar were left as plain `.rejects.toThrow()` because they are JS-level thrown
+  errors, not DB-raised ones: `receipt-invariants.integration.test.ts`'s "mis-addressed" snapshot
+  assertion (thrown by `manifest-snapshot.ts`'s own validation) and
+  `wallet-service.integration.test.ts`'s "must run inside a transaction" assertion (thrown by
+  `wallet-service.ts`'s own guard).
+- `startup-migrations.ts`: the 4 `err.message` log lines a full-file grep found are all inside
+  ledgered migration-block functions (`runMigration0095_walletReservations`,
+  `runMigration0098_perCustomerIdempotency`, `runMigration0099_noHalfQuarantine`,
+  `runMigration0101_capabilityInvocations`) -- left untouched per the append-only ledger rule;
+  diagnostic-only degradation (no control-flow effect), same treatment the module already gives
+  its own non-ledgered logging.
+
+**New/changed unit tests, each shown failing against the pre-fix code first** (DEC-20260504-A;
+`git show HEAD:<path> > <path>` swap, restored from a scratchpad backup copy -- never
+`git checkout <branch> --`, which on an uncommitted-fix worktree silently restores the branch tip
+instead, discarding the fix; hit once in this session and recovered by re-applying the edit):
+`db-error.test.ts` (new, 13 tests), `account-service.test.ts` (new, 3 tests -- the wrapped-23505
+case fails pre-fix with `expected Error: Failed query: ... to be instanceof
+EmailAlreadyRegisteredError`), `app.classify-error.test.ts` (+3 tests -- both wrapped-input cases
+fail pre-fix with `error_class: "unknown"` instead of `db_unique_violation`/`db_bind_encoder`),
+`startup-db-retry.test.ts` (+2 tests -- the wrapped-CONNECT_TIMEOUT case fails pre-fix with
+`expected false to be true`).
+
+**The receipt.** `archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade.json` was deleted (never
+reached `main`; its "existing string/code checks against nested driver errors still work" claim
+was false) and replaced by
+`archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade-corrected.json`, written via
+`npm run receipt`, carrying this narrative and two fresh `npm audit --omit=dev --json` runs (both
+`{critical:1, high:12, moderate:7, low:2, total:22}`, `drizzle-orm` absent from both -- this
+correction batch made no dependency changes).
+
+**Full local suite, both runs green, zero failures** (unlike the original receipt's one flaky
+timing test, neither run in this session hit it): 257 passed | 30 skipped (287 files); 3754
+passed | 314 skipped (4068 tests), both runs. `tsc --noEmit` clean. `migrations:check`,
+`env:check`, `models:check`, `claims:check`, `receipts:check`, `context:check`, `context:test`
+all pass (`context:check` shows two pre-existing `WARN` lines on
+`docs/project/legacy-authority-inventory.json`, unrelated to this batch and warning-only).
