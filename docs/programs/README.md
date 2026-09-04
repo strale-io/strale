@@ -9,6 +9,7 @@ decided. Project truth lives in `docs/project/` (candidate until M4) and
 | Program | Register | Status |
 |---|---|---|
 | [CTO-readiness](cto-readiness/PROGRAM.md) | `cto-readiness/tracks.yaml` | active from 2026-09-02 |
+| [Brand and website](brand-website/PROGRAM.md) | `brand-website/tracks.yaml` | proposal prepared 2026-09-05; paused for positioning discussion |
 | [Remediation](../remediation/REMEDIATION-LEDGER.md) | legacy program; per-package YAML under `../remediation/packages/`, not a track register | closure tracked by CTO-readiness track T4 |
 
 Rules:

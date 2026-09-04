@@ -1,0 +1,104 @@
+schema_version: 1
+program: brand-website
+program_status: paused
+updated: "2026-09-05"
+tracks:
+  - id: T1
+    title: Product and brand discovery
+    status: done
+    gate: none
+    depends_on: []
+    owner: session
+    next_action: Read the discovery and private assessment before the positioning discussion.
+    resume_file: docs/research/2026-09-05-brand-foundation-discovery.md
+    exit:
+      - Product, commercial, catalogue and strategy evidence separated from hypotheses.
+      - Existing design sources and supplied references reviewed with limits recorded.
+    evidence:
+      - docs/research/2026-09-05-brand-foundation-discovery.md
+      - archive/receipts/2026-09-04-audit-brand-foundation-discovery.json
+  - id: T2
+    title: Positioning and creative brief
+    status: founder_gated
+    gate: none
+    depends_on: [T1]
+    owner: petter
+    blocker: The proposed positioning is ready for founder discussion; no new strategic direction has been adopted.
+    next_action: Discuss the working category and benefit hierarchy in the private assessment, then record the agreed strategic brief through the existing decision process.
+    resume_file: docs/programs/brand-website/PROGRAM.md
+    exit:
+      - Audience, jobs, promise, benefit hierarchy, proof limits and primary action agreed.
+      - Any conflicting prior strategy explicitly reconciled without silently replacing decisions.
+    evidence: []
+  - id: T3
+    title: Product proof and launch claim boundaries
+    status: queued
+    gate: none
+    depends_on: [T2]
+    owner: session
+    next_action: Map proposed launch claims to customer-visible evidence and specify bounded execution-route parity or retrieval fixes only where needed.
+    resume_file: docs/programs/brand-website/PROGRAM.md
+    exit:
+      - Claim-to-evidence map distinguishes shipped, internally implemented and proposed behaviour.
+      - Stronger unsupported claims omitted or verified after bounded remediation.
+    evidence: []
+  - id: T4
+    title: Asset audit and art direction
+    status: queued
+    gate: none
+    depends_on: [T2]
+    owner: session
+    next_action: Inventory and render current assets in context, then compare two or three coherent directions using identical real applications.
+    resume_file: docs/programs/brand-website/PROGRAM.md
+    exit:
+      - Current logo, atmosphere and light/dark variants visually audited with provenance.
+      - One direction selected through homepage, benefit, social and document examples.
+    evidence: []
+  - id: T5
+    title: Human and machine brand kit
+    status: queued
+    gate: none
+    depends_on: [T3, T4]
+    owner: session
+    next_action: Specify the versioned rule and asset contracts, then build initial masters, components, guideline views and enforcement from the selected direction.
+    resume_file: docs/programs/brand-website/PROGRAM.md
+    exit:
+      - Initial coverage contract demonstrated across identity, voice, type, imagery, composition, UI, motion and channels.
+      - Human examples and runtime consumers resolve the same adopted source version.
+    evidence: []
+  - id: T6
+    title: Website implementation
+    status: queued
+    gate: none
+    depends_on: [T5]
+    owner: session
+    next_action: Build the agreed narrative and developer conversion paths in apps/web using the adopted assets and components.
+    resume_file: docs/programs/brand-website/PROGRAM.md
+    exit:
+      - Responsive, accessible and performant benefit-first website with truthful demonstrations.
+      - Visitor-to-first-execution paths and machine discovery surfaces verified.
+    evidence: []
+  - id: T7
+    title: Channel starter assets
+    status: queued
+    gate: none
+    depends_on: [T5]
+    owner: session
+    next_action: Produce and context-review essential social, blog, email, PDF and video templates with editable masters and export metadata.
+    resume_file: docs/programs/brand-website/PROGRAM.md
+    exit:
+      - Initial channel exports share the adopted direction and have source, licence and accessibility records.
+      - Any proposed publication retains the existing outward-action gates.
+    evidence: []
+  - id: T8
+    title: Canonical cutover and acquisition learning
+    status: queued
+    gate: none
+    depends_on: [T6, T7]
+    owner: session
+    next_action: Complete the supersession map, verify served surfaces and redirects, and prepare one measurable acquisition experiment under existing publishing authority.
+    resume_file: docs/programs/brand-website/PROGRAM.md
+    exit:
+      - Orientation, guideline views, assets and build consumers resolve one adopted version; history remains traceable.
+      - Launch and acquisition evidence measured without attributing unknown customer motives.
+    evidence: []
