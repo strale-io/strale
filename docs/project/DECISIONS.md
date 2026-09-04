@@ -6,7 +6,7 @@ complete: false
 phase: M2
 m1_template: false
 authority_active: false
-verified_at: 2026-09-01
+verified_at: 2026-09-04
 generated: true
 ---
 
@@ -54,6 +54,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) — Reform daily operations with two artifacts, wider autonomy, and failure families | `DEC-20260822-A` | active | `autonomous-operating-model` | global | petter | 2026-08-22 |
 | [`DEC-20260827-A`](../decisions/records/DEC-20260827-A.md) — austrian-company-data migrates to the official Firmenbuch via JustizOnline IWG/HVD API | `DEC-20260827-A` | active | `registry-integration` | global | petter | 2026-08-27 |
 | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) — Treat the context pack as complete founder input and make reconciliation M2 work | `DEC-20260901-A` | active | `project-memory-system-of-record` | global | petter | 2026-09-01 |
+| [`DEC-20260904-A`](../decisions/records/DEC-20260904-A.md) — Pre-readiness feature-scoped M2 decision rows are evidence-only | `DEC-20260904-A` | active | `m2-closure-register-classification` | operational | claude | 2026-09-04 |
 
 ## Non-active decisions
 

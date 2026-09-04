@@ -45,7 +45,7 @@ sources:
     status_file: docs/project/private-archive-status.json
   formal_records:
     path: docs/decisions/records
-    record_count: 34
+    record_count: 35
   collision_registry:
     path: docs/decisions/id-collisions.yaml
     collision_count: 35
@@ -58,12 +58,12 @@ digests:
     = SHA-256 over sorted page_id|historical_scope|decided_at lines (LF-joined, trailing LF), recomputed
     from the archive by the operator script
   public_rows:
-    count: 102
-    digest: 347fca6cc1b28bcbf1204d3c605650f3b75e97a0ccc1481efabf56a254f53883
-    scope_date_digest: cdd11205577ac44b5f9d0adcb1c18c76dde7a8ac11418334e00adac122dbd3fd
+    count: 178
+    digest: a1941e1295b6b84ca2fb7b8259d908779a4387d13f74b2f29eec5ef227ccd2ce
+    scope_date_digest: 52b5d297eefff2282c280db7d2afd76dca1afb787821b2165ad8b4c17fd1e714
   all_rows:
     count: 318
-    digest: 4ec0025e4b80deb05554682fedf34e4440827174320f6f055ab0f2df7c4948f4
+    digest: 8118d505320b1b7b4696085563f4a041c01457bee6b0a4d500fc1575035f49c4
 counts:
   legacy_inventory:
     migrated: 6
@@ -76,8 +76,8 @@ counts:
     unresolved_collision: 70
     formally_migrated: 30
     resolved_collision: 1
-    intentionally_historical: 1
-    not_yet_reconciled: 205
+    intentionally_historical: 77
+    not_yet_reconciled: 129
     obsolete_or_superseded: 6
     unclear: 5
     total: 318
@@ -491,6 +491,11 @@ formal_records:
   source_kind: notion-row
   source_rows:
   - 3c967c87082c81be9ebac7982b89a36a
+- record_key: DEC-20260904-A
+  id: DEC-20260904-A
+  source_kind: git-native
+  source_rows: []
+  git_provenance: archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
 decision_rows:
 - page_id: 31267c87082c81279b14f3859f6f2038
   id: DEC-20260225-P-c5d6
@@ -1921,15 +1926,775 @@ decision_rows:
   evidence:
   - docs/decisions/records/DEC-20260827-A.md
   rationale: Formal candidate record exists with the same historical ID and cites this source row.
+- page_id: 31367c87082c8103ab84c5fe6d140a4a
+  id: DEC-20260227-P-g7h8
+  title_sha256: 3abcc53c7d174353371d85cab84f582fc3ccd8310d5aa347206fc6e1b6bbfff6
+  historical_status: active
+  source_url: https://app.notion.com/31367c87082c8103ab84c5fe6d140a4a
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-02-27); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31367c87082c81238fd2f08e7d176a9d
+  id: DEC-20260227-P-c3d4
+  title_sha256: b54e15cacc19b614a8f5e8f794116736c2d89c01595851523ec53ff2658b8a5a
+  historical_status: active
+  source_url: https://app.notion.com/31367c87082c81238fd2f08e7d176a9d
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-02-27); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31367c87082c819cac9bc1917def3951
+  id: DEC-20260227-P-k1l2
+  title_sha256: b4e05838c04d91a8fe371587baa25b544e30f88b5547c1fc293fe0cdff9cdf7d
+  historical_status: active
+  source_url: https://app.notion.com/31367c87082c819cac9bc1917def3951
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-02-27); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31367c87082c81a795c2f2c75c279eff
+  id: DEC-20260227-P-e5f6
+  title_sha256: ba1a97ebcfa215c0b72c09c598a469b7bd978f230bbff880ce211436ae1145f4
+  historical_status: active
+  source_url: https://app.notion.com/31367c87082c81a795c2f2c75c279eff
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-02-27); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31767c87082c8122afbae0e095b76dbc
+  id: DEC-20260302-E
+  title_sha256: dbdc79fd6b214bb9018ca4c5e51ccb93811db300b61be3128317672d69c06d7f
+  historical_status: active
+  source_url: https://app.notion.com/31767c87082c8122afbae0e095b76dbc
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-02); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c810294eedb4e5cadc4f1
+  id: DEC-20260303-L
+  title_sha256: 390f66a4a0305ac549e0fdf1c54a821131daae1ab056aeb39865a9e55fffbd9f
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c810294eedb4e5cadc4f1
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c81068c5cd4cdd98d24e0
+  id: DEC-20260303-J
+  title_sha256: 36149af6cdad441434a2f72320f46ecf314de7066a2ef7dda96f87fbbd8987f4
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c81068c5cd4cdd98d24e0
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c814d9d5ccdf8d2ee37d5
+  id: DEC-20260303-F
+  title_sha256: b38a87103b0f039143dba4877e460459e2430cdc41f1d20e6e00dc5b359c9e5f
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c814d9d5ccdf8d2ee37d5
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c814fb72ff1aab1015227
+  id: DEC-20260303-K
+  title_sha256: 83fd8b9602c6e0b82a406498de218f70edf51ded007ab730f4a0b92960276cbe
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c814fb72ff1aab1015227
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c8195a9dffe7132c1cc89
+  id: DEC-20260303-D
+  title_sha256: a7a42606515620fcdf1f6e20ce210f1b676833236d166da523931daed241b634
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c8195a9dffe7132c1cc89
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c81aebe08f00f24bc1d10
+  id: DEC-20260303-H
+  title_sha256: 2a18b5854cea1ddf28109bc64843cace5f90fdedf1ef6b51cc1b9049f2fe5a23
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c81aebe08f00f24bc1d10
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c81c18937e77ae55b1e92
+  id: DEC-20260303-M
+  title_sha256: b13cbb2c9cfc5a57e845e0f8af42495889d1d544f8068216bc6a86992eb46e61
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c81c18937e77ae55b1e92
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c81cabf16da662cd874f5
+  id: DEC-20260303-B
+  title_sha256: 1daf98a05e2fbdf39201500051a36336864a28490312406c7656a8d298e24876
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c81cabf16da662cd874f5
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c81d389f5f59c89e00750
+  id: DEC-20260303-I
+  title_sha256: 4a82e45f66c95641a93d14b8eb15dc6b4ee22ab87edb525c6716fe84ca6c787b
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c81d389f5f59c89e00750
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c81de8327f7ad1f1295ca
+  id: DEC-20260303-G
+  title_sha256: 1c4d2ed0fe1fa48f03c94faac9c4cd54bad85daa8db09b576727eb97581bd5c7
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c81de8327f7ad1f1295ca
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31867c87082c81e09d58deb1fe3cb086
+  id: DEC-20260303-E
+  title_sha256: 50b2d237d8033be3e778732e5f41a63286c2b364d99ca16cee629139c27321b0
+  historical_status: active
+  source_url: https://app.notion.com/31867c87082c81e09d58deb1fe3cb086
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-03); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31a67c87082c813fa2eacb9f22748a82
+  id: DEC-20260305-C
+  title_sha256: 6d051e6253d58b20cac5c8e836ffa45210b21c123d3fb735a04ea3a27d7b8779
+  historical_status: active
+  source_url: https://app.notion.com/31a67c87082c813fa2eacb9f22748a82
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-05); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31a67c87082c81ab9947de831a3b7730
+  id: DEC-20260305-B
+  title_sha256: 58bf3117ba6d331f96f529b9a05af479362789ba4f10c59dd2f40b947f73d667
+  historical_status: active
+  source_url: https://app.notion.com/31a67c87082c81ab9947de831a3b7730
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-05); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31a67c87082c81b29d12de21bc02af76
+  id: DEC-20260305-D
+  title_sha256: 187c2cd317d92e18eb85f31216dadf1e581f65f05f74f28b508f52c5cdefffa8
+  historical_status: active
+  source_url: https://app.notion.com/31a67c87082c81b29d12de21bc02af76
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-05); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31b67c87082c814785a8ff40666fe83b
+  id: DEC-20260306-A
+  title_sha256: 1a5b4397ec2a9a6c3279b80aef0fa84aff0f05e681abb489892b308f121098ec
+  historical_status: active
+  source_url: https://app.notion.com/31b67c87082c814785a8ff40666fe83b
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31b67c87082c815bae75db8f3dfbadab
+  id: DEC-20260306-C
+  title_sha256: 0e90a3583f5b4645aff3c443829826118687190b3b1210acd41ff5842f057d57
+  historical_status: active
+  source_url: https://app.notion.com/31b67c87082c815bae75db8f3dfbadab
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31b67c87082c81d4b535cfbaaba8ef47
+  id: DEC-20260306-B
+  title_sha256: e821d0aec4871f302f4b45d3f48f40517dbaf99c32010599d2a7a5e73eaa8eb0
+  historical_status: active
+  source_url: https://app.notion.com/31b67c87082c81d4b535cfbaaba8ef47
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31b67c87082c81d88b49d8b27e290768
+  id: DEC-20260306-F
+  title_sha256: 56923f25aba728d23b2af66c80621b6cee6c1bc6ba8a87358d5c6033e21b8a9e
+  historical_status: active
+  source_url: https://app.notion.com/31b67c87082c81d88b49d8b27e290768
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 31b67c87082c81f0b41dedbe561e0c4f
+  id: DEC-20260306-E
+  title_sha256: 915ccaf08d98ea648299bd5c11058ec5678ae2346c42e6d8850134164cc50040
+  historical_status: active
+  source_url: https://app.notion.com/31b67c87082c81f0b41dedbe561e0c4f
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32067c87082c8113a1adc2ecab0ce968
+  id: DEC-20260311-B
+  title_sha256: f48cd76744e6bdb931cd099839b474e20b8b49bf8b16206c9e66e9ee576b0817
+  historical_status: active
+  source_url: https://app.notion.com/32067c87082c8113a1adc2ecab0ce968
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-11); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32067c87082c815a90f3f59ca2f0b915
+  id: DEC-20260311-A
+  title_sha256: 235ef2d7bd50d335994b45d4900833250ddec12ffc841fe967c6e1e3c750753b
+  historical_status: active
+  source_url: https://app.notion.com/32067c87082c815a90f3f59ca2f0b915
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-11); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32267c87082c819280c1df580fe8aeff
+  id: DEC-20260313-B
+  title_sha256: 226072e5c4eb7c54fe78efeb0609d6b6badd996cd398fe09c31d84c9dfab34cf
+  historical_status: active
+  source_url: https://app.notion.com/32267c87082c819280c1df580fe8aeff
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-13); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32267c87082c81c58995f598d70524e6
+  id: DEC-20260313-A
+  title_sha256: 28c2867697f673d37aa6dd3be383b475b2bab6315916117709e181ba9941eb84
+  historical_status: active
+  source_url: https://app.notion.com/32267c87082c81c58995f598d70524e6
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-13); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32267c87082c81f297c2e2c8445ad228
+  id: DEC-20260313-D
+  title_sha256: 9d5cc1bce3dcb343f89a78798de3f310d6f0b4e9eba601a6b3a178392bce8e8b
+  historical_status: active
+  source_url: https://app.notion.com/32267c87082c81f297c2e2c8445ad228
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-13); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32367c87082c81349c24cdb7b0e36481
+  id: DEC-20260315-C
+  title_sha256: 482ac9475b031c3789d62cc9eb32a21a293836dab9bb04bf989208cacb0027e5
+  historical_status: active
+  source_url: https://app.notion.com/32367c87082c81349c24cdb7b0e36481
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-15); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32467c87082c81bb9547c1a2e5353534
+  id: DEC-20260315-J
+  title_sha256: 28c0c1f073fb795e1320c0d886ce70e5a2992eae4211d3b5889f228d76bc1bc6
+  historical_status: active
+  source_url: https://app.notion.com/32467c87082c81bb9547c1a2e5353534
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-15); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32567c87082c8194b76cf9bb2cadc61a
+  id: DEC-20260316-C
+  title_sha256: 4540e68b97568996567e8471f83061d835145d2514887f42e2dcfacfcb66c33d
+  historical_status: active
+  source_url: https://app.notion.com/32567c87082c8194b76cf9bb2cadc61a
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-16); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32667c87082c810aba91e8e32271aa08
+  id: DEC-20260317-C
+  title_sha256: 94e36b0c7d8cec7492d18ad74da79c1d259349cb8a2fa5863fa9f5f82e29e9f3
+  historical_status: active
+  source_url: https://app.notion.com/32667c87082c810aba91e8e32271aa08
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-17); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32667c87082c812398c6fc9b405da9c3
+  id: DEC-20260317-D
+  title_sha256: 80ab2ca85d306209b441d02d1347988c9c5ad0d066a08dfa12d7468507c6a874
+  historical_status: active
+  source_url: https://app.notion.com/32667c87082c812398c6fc9b405da9c3
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-17); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32667c87082c81b08169d245763c8e73
+  id: DEC-20260317-I
+  title_sha256: e0cf3c0adc6984363249a0a0104528db5ba282371c76d8e0acf0fad7d35381f2
+  historical_status: active
+  source_url: https://app.notion.com/32667c87082c81b08169d245763c8e73
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-17); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32667c87082c81f790c0fe18f4b09bdb
+  id: DEC-20260317-B
+  title_sha256: 9adf99bf13bd524cd1699e2b997018e4e15d4064f6d8f13aa07581d1a58be6c4
+  historical_status: active
+  source_url: https://app.notion.com/32667c87082c81f790c0fe18f4b09bdb
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-17); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32667c87082c81fa8896d57ed40a1bbd
+  id: DEC-20260317-E
+  title_sha256: 3b87552ee791eefcdddd35046c2fb0ae8b9a0b0a17647ddff06e7f809916b73c
+  historical_status: active
+  source_url: https://app.notion.com/32667c87082c81fa8896d57ed40a1bbd
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-17); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32967c87082c8138b5c5cef430075d6a
+  id: DEC-20260320-G
+  title_sha256: 6b22a5c4b665f40993dbc6320b3dc200f93f09c18f654ce1cfa83993a8d156aa
+  historical_status: active
+  source_url: https://app.notion.com/32967c87082c8138b5c5cef430075d6a
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32967c87082c8180bf20d41f80b528e4
+  id: DEC-20260320-I
+  title_sha256: 7be6d37d355c35d4e3e6ce698ac10e97c495f537a1a21108f3064fd25913d900
+  historical_status: active
+  source_url: https://app.notion.com/32967c87082c8180bf20d41f80b528e4
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32967c87082c81a39e9be7c319ecc60a
+  id: DEC-20260320-D
+  title_sha256: e0096c5c7d399dc16a17eb9f16db6d40db00797b077eabd1faf24969409f10e3
+  historical_status: active
+  source_url: https://app.notion.com/32967c87082c81a39e9be7c319ecc60a
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32967c87082c81b6962aef4f8bebcdbb
+  id: DEC-20260320-H
+  title_sha256: 4100e4d59366aedd600262fd063228e31811b596cca5e196685f0085e10cd842
+  historical_status: active
+  source_url: https://app.notion.com/32967c87082c81b6962aef4f8bebcdbb
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32d67c87082c8124b484d2fd0c17cdc0
+  id: DEC-20260324-B
+  title_sha256: eac64569cb3cfe01f40b0c98f6502768ad4a664ca48ed4caa75605eee3f6bfbf
+  historical_status: active
+  source_url: https://app.notion.com/32d67c87082c8124b484d2fd0c17cdc0
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-24); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32d67c87082c81378f63ca3272b44c8d
+  id: DEC-20260324-D
+  title_sha256: 5ec03d510d1b9c644313b6174363f69a38f622e361d255cb5fe742c70f2ebcd1
+  historical_status: active
+  source_url: https://app.notion.com/32d67c87082c81378f63ca3272b44c8d
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-24); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32d67c87082c81499f64de8ff2c570f4
+  id: DEC-20260324-E
+  title_sha256: fa13bc63feb92d96965c7d7578c441d96d0169e5ba63b336780cc1498f457367
+  historical_status: active
+  source_url: https://app.notion.com/32d67c87082c81499f64de8ff2c570f4
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-24); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 32d67c87082c8173be2ded071699cf63
+  id: DEC-20260324-F
+  title_sha256: 6e49a7e581a8de3a56587361acdd28fe3235a438b3fbdac88ad610b63537ecaf
+  historical_status: active
+  source_url: https://app.notion.com/32d67c87082c8173be2ded071699cf63
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-24); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 33467c87082c812aa2e6d8116c99aa87
+  id: DEC-20260331-A
+  title_sha256: c301776950eb7d75a22145f48ac5da4be87f0f035930ace185940942874702b1
+  historical_status: active
+  source_url: https://app.notion.com/33467c87082c812aa2e6d8116c99aa87
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-03-31); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 33667c87082c8123beb1d6a8e807f05c
+  id: DEC-20260402-B
+  title_sha256: b99c321960ea82a1542e220ad2c76f5bb4c0cb45593ff0a1e23ce3a34e6b91b0
+  historical_status: active
+  source_url: https://app.notion.com/33667c87082c8123beb1d6a8e807f05c
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-02); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 33667c87082c818ca676ff77d4c40588
+  id: DEC-20260402-A
+  title_sha256: 887f9961785059fcc37adab0ace6b8363a2d779f142048458ecf24b90a8a9b7f
+  historical_status: active
+  source_url: https://app.notion.com/33667c87082c818ca676ff77d4c40588
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-02); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 33967c87082c81648c55d06ba3877dd9
+  id: DEC-20260405-C
+  title_sha256: e89fdbe214ccd3846da87b46954f0a45ad46932eacf7b47a8bef4787545f4558
+  historical_status: active
+  source_url: https://app.notion.com/33967c87082c81648c55d06ba3877dd9
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-05); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 33f67c87082c81d68803cf7a7248e814
+  id: DEC-20260411-C
+  title_sha256: 1828a1e8b8cccb03838e74d4eebce7e7379ff22743b2358ff22298976afd66cd
+  historical_status: active
+  source_url: https://app.notion.com/33f67c87082c81d68803cf7a7248e814
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-11); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c811bb01fd066850afb8a
+  id: DEC-20260420-N
+  title_sha256: 6cd5a78c0f3ecb568110763d5c304579095acd8bfb792bcc03a2bdea19e710ce
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c811bb01fd066850afb8a
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c81598f69c2a973447a0a
+  id: DEC-20260420-M
+  title_sha256: 5cb67caa99be46131a7b326e79a61519a9ce731fd8039d1098636dd26179fea6
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c81598f69c2a973447a0a
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c818299a1e08733019df0
+  id: DEC-20260420-B
+  title_sha256: 15f82f0b1133ca9febe7a3e9aad28044032c30f4523a2e3a20b698cce0bff575
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c818299a1e08733019df0
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c818f8ec0e942777e9558
+  id: DEC-20260421-G
+  title_sha256: 6b9ab33f932bd2f9bb45243b76a0aac0ff52b93c7bba535d89d34f62e7d7741d
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c818f8ec0e942777e9558
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c819b9605fbdcf2824df4
+  id: DEC-20260420-C
+  title_sha256: 1dada10a0a97b839dc89c7c23d852c20cca8b62983d4fc285b020d799a799a61
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c819b9605fbdcf2824df4
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c81a995bfc8b6579d18d3
+  id: DEC-20260420-L
+  title_sha256: c7f82478c2e2196528d034c8da2b2314aefd24dfd9c8a4015459834eeb787562
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c81a995bfc8b6579d18d3
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c81b5879be194466683a2
+  id: DEC-20260421-E
+  title_sha256: e5b694d38eeb33af71c2766808d86c96346a236a61c474b9912b719f75a98d61
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c81b5879be194466683a2
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c81e4bbe4db1f713888ca
+  id: DEC-20260421-F
+  title_sha256: c39e9af8a15097a08a67593c52e9ac0fc15126c2afb60510b3bd2eaed9cfa11a
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c81e4bbe4db1f713888ca
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34867c87082c81ff8a28c9319c648aa3
+  id: DEC-20260420-O
+  title_sha256: ae41e63e22cfb270f1b167e2b2b3f26713567a1e3a097eafd44d46fa91288b37
+  historical_status: active
+  source_url: https://app.notion.com/34867c87082c81ff8a28c9319c648aa3
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-20); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34967c87082c810dae0dda7a1ef125cd
+  id: DEC-20260421-HR
+  title_sha256: f2c781da0b92af2f4147434c5e23b40d626cb96fec27b565bcda546d53998e02
+  historical_status: active
+  source_url: https://app.notion.com/34967c87082c810dae0dda7a1ef125cd
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34967c87082c813db2b7ca2728aac3cd
+  id: DEC-20260424-B
+  title_sha256: b0eecf1b16921098ede68bfc216f8a048506d718c738993ff022f6d14ec73615
+  historical_status: active
+  source_url: https://app.notion.com/34967c87082c813db2b7ca2728aac3cd
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-24); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34967c87082c814395bcc611e0066850
+  id: DEC-20260421-I
+  title_sha256: 4d295dad73f3abb920508781fef59e645e67badb33fc57cfcbddb36bcd65559a
+  historical_status: active
+  source_url: https://app.notion.com/34967c87082c814395bcc611e0066850
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34967c87082c8148bb8fd139dab5d3a3
+  id: DEC-20260421-SE-B
+  title_sha256: b5c141ba923ef9d4c2a42829fba46ee353b50bf59870c6c05f9a28dc62e4d3c7
+  historical_status: active
+  source_url: https://app.notion.com/34967c87082c8148bb8fd139dab5d3a3
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34967c87082c815f961ce1911c52669a
+  id: DEC-20260421-H
+  title_sha256: 22da109da03887be3e53ba324fc353e15249b59c1d4cf517e6dee77586e78ebd
+  historical_status: active
+  source_url: https://app.notion.com/34967c87082c815f961ce1911c52669a
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34967c87082c8173a2adc905f762303c
+  id: DEC-20260421-K
+  title_sha256: 42ef97271162d1869318cb379f20220a2ce412481b6d45d736e8cc09429ce733
+  historical_status: active
+  source_url: https://app.notion.com/34967c87082c8173a2adc905f762303c
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34967c87082c81daa06ff98472610dcc
+  id: DEC-20260421-SE-C
+  title_sha256: 6c18faae21155f8efd725d68743cbd2dca169a0b5795311e415b4b4a8079ac64
+  historical_status: active
+  source_url: https://app.notion.com/34967c87082c81daa06ff98472610dcc
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-21); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34a67c87082c8117a3f2c71cae63b9bb
+  id: DEC-20260422-G
+  title_sha256: 911ea41bfdaa7290d685aa330179c7960e7903b06f3be5b9dad8cde2b47a804c
+  historical_status: active
+  source_url: https://app.notion.com/34a67c87082c8117a3f2c71cae63b9bb
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-22); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34a67c87082c811e8e43ee63427cfb5b
+  id: DEC-20260422-F
+  title_sha256: aecce849d37f2a450eb27e38deb99a8b69a3d7652460ec0a000ee33f03477f6d
+  historical_status: active
+  source_url: https://app.notion.com/34a67c87082c811e8e43ee63427cfb5b
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-22); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 34a67c87082c81cda198d739d82cdb9c
+  id: DEC-20260422-E
+  title_sha256: c211c908a3e580abede5c829bae48e76def93ca5c1f83e0b1e0f593897a880fe
+  historical_status: active
+  source_url: https://app.notion.com/34a67c87082c81cda198d739d82cdb9c
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-04-22); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 35767c87082c8121ac43fc970dbe78ac
+  id: DEC-20260505-F
+  title_sha256: 3739b5d8274522e491e61e03083af3876f521d6853ebbb7c1e180eeb902c80cf
+  historical_status: active
+  source_url: https://app.notion.com/35767c87082c8121ac43fc970dbe78ac
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-05-04); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 35867c87082c81098cf9fbf2ba5e96a2
+  id: DEC-20260506-C
+  title_sha256: 7e89ed66a2eeec9e57ef06ffa02c9220cfd843755613ae1a3b76fea8614cff9f
+  historical_status: active
+  source_url: https://app.notion.com/35867c87082c81098cf9fbf2ba5e96a2
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-05-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 35867c87082c8127ad95d2531403f4f7
+  id: DEC-20260506-E
+  title_sha256: 47a364a33e84912f307a6555c5deeaae47e89cbcaec33ae78efa6c136da0da85
+  historical_status: active
+  source_url: https://app.notion.com/35867c87082c8127ad95d2531403f4f7
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-05-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 35867c87082c81498a7cef963cd19c52
+  id: DEC-20260506-F
+  title_sha256: f263ce15e62124ed3b59e81de46183a944f9d776afa6152a19e02e5831ff6d2b
+  historical_status: active
+  source_url: https://app.notion.com/35867c87082c81498a7cef963cd19c52
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-05-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 35867c87082c817ab229ea191f9564fe
+  id: DEC-20260506-A
+  title_sha256: bad8d08d6663e9d53c648f63e27b835e93e3bdbf164bf54f84d0756f50160ed5
+  historical_status: active
+  source_url: https://app.notion.com/35867c87082c817ab229ea191f9564fe
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-05-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 35867c87082c81d88be5cd076bc24f68
+  id: DEC-20260506-B
+  title_sha256: a5930901786d0f87ba214b7c06ddc6954fc2fb912af08e4f967646260f237ca4
+  historical_status: active
+  source_url: https://app.notion.com/35867c87082c81d88be5cd076bc24f68
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-05-06); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
+- page_id: 35d67c87082c81d18ec2fd9c53a33007
+  id: DEC-20260511-A
+  title_sha256: 2b019ff75de46bdf45bc847888ba56cac153b7470193c1ff812bd1b6eef792db
+  historical_status: active
+  source_url: https://app.notion.com/35d67c87082c81d18ec2fd9c53a33007
+  disposition: intentionally_historical
+  evidence:
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+  rationale: Pre-readiness feature-scoped decision (decided 2026-05-11); classified evidence-only
+    by DEC-20260904-A, which supersedes formal migration for this row class. See archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md.
 private_rows:
   repository: strale-io/strale-context-archive
   visibility: private
-  commit: 995cece3fe4abfb8b0bef0cccbd58191a6dab83c
+  commit: db6634c6c9a403384e0eb0e15438b035b96732d2
   file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
-  count: 216
-  digest: bc4dfc20a982ce6e3c4fb295087deb5ca4534cf36810a69e8dd430bf75e15109
+  count: 140
+  digest: ade828812c11c1d7bf77afb0013bb3328c9b9fbd5e67295845afe08c324d4eca
   counts_by_disposition:
-    not_yet_reconciled: 205
+    not_yet_reconciled: 129
     obsolete_or_superseded: 6
     unclear: 5
   verification: node scripts/m2-closure-verify-private-rows.mjs recomputes this digest, the all_rows digest,
@@ -2003,8 +2768,9 @@ plan_statements:
     gaps it lists are the remaining M2 work.
 exit_gaps:
 - id: G1
-  gap: 212 preserved Decision rows carry a unique ID but no formal record, collision entry, or deferral
-    decision.
+  gap: 129 preserved Decision rows (128 global, 1 temporary) carry a unique ID but
+    no formal record, collision entry, or deferral decision. 76 pre-readiness feature-scoped rows
+    were classified evidence-only by DEC-20260904-A.
   blocking: true
   owner: session
   phase: M2
@@ -2016,6 +2782,8 @@ exit_gaps:
   evidence:
   - docs/project/private-archive-status.json
   - docs/decisions/README.md
+  - docs/decisions/records/DEC-20260904-A.md
+  - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
 - id: G2
   gap: 34 historical IDs reused across 69 Notion rows remain unresolved in the collision registry and
     are excluded from formal records and relation targets.
