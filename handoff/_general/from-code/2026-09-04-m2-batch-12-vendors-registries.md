@@ -228,11 +228,15 @@ Targeted string edits only, per batch 4-11 method:
 - `digests.public_rows.digest`:
   `0851c210067cd246e239d468a0a9849bf684034cc992c451154e6daa060a87ab` ->
   `492a17a37d2cdf5b11423ff51ff01a97d66c895f99906524326384a6d56d8aa0`.
-- `digests.public_rows.scope_date_digest`: unchanged,
-  `4b5120b3a80fcc12b28842f910e5b8cf6989da0093ae4781376a1bc2ce07f3ca` (this
-  digest commits to the whole archive's page_id/scope/date triples, which
-  none of this batch's disposition changes alters; confirmed by recomputing
-  it and observing no difference).
+- `digests.public_rows.scope_date_digest`:
+  `4b5120b3a80fcc12b28842f910e5b8cf6989da0093ae4781376a1bc2ce07f3ca` ->
+  `55643675e7a2d801533712c5ba8097d1b07cd35407f8554bb6c19aded368bb81`.
+  Orchestrator correction: the batch worker had left this digest unchanged
+  on the reading that it commits to the whole archive's triples. It commits
+  to the PUBLIC rows' page_id/scope/date triples only (the lib's
+  compareRowsToExport filters rows without clear scope/date), so twelve rows
+  moving from private to public change it. Recomputed from the export at
+  the archive commit; the operator verifier then printed ok.
 - `digests.all_rows.digest`:
   `971e9eaa76ee3a43b28566d8fb0d7cdb80105a8b7c2363043a3ac6b81ca8da89` ->
   `e80c7e4ad14d53bcb2eb8d99a63b202230fea05e758dbf6299c2166653925918` (count
@@ -251,7 +255,7 @@ Targeted string edits only, per batch 4-11 method:
 
 No line was deleted from the register except as part of the in-place text
 replacements above. Specifically, the deleted lines are:
-- `count: 216` / `digest: 0851c210067c...` (public_rows, replaced; `scope_date_digest` unchanged)
+- `count: 216` / `digest: 0851c210067c...` (public_rows, replaced; `scope_date_digest` replaced too, see the correction above)
 - `digest: 971e9eaa76ee...` (all_rows, digest replaced, count unchanged at 318)
 - `formally_migrated: 68` / `not_yet_reconciled: 91` (counts.decision_rows, replaced)
 - `record_count: 75` (sources.formal_records, replaced)
@@ -264,7 +268,7 @@ No row, gap, or evidence entry was removed.
 ## Digests computed (all shown above); collected here for convenience
 
 - `public_rows.digest`: `492a17a37d2cdf5b11423ff51ff01a97d66c895f99906524326384a6d56d8aa0`
-- `public_rows.scope_date_digest`: `4b5120b3a80fcc12b28842f910e5b8cf6989da0093ae4781376a1bc2ce07f3ca` (unchanged)
+- `public_rows.scope_date_digest`: `55643675e7a2d801533712c5ba8097d1b07cd35407f8554bb6c19aded368bb81` (orchestrator recomputation)
 - `all_rows.digest`: `e80c7e4ad14d53bcb2eb8d99a63b202230fea05e758dbf6299c2166653925918`
 - `private_rows.digest` (new 90-row projection): `0aa61fe37252924ce775efbc08f1ff0ceee045e6d2a2c16993f1d55c4c553895`
 

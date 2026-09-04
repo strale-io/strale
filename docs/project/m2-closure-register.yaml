@@ -60,7 +60,7 @@ digests:
   public_rows:
     count: 228
     digest: 492a17a37d2cdf5b11423ff51ff01a97d66c895f99906524326384a6d56d8aa0
-    scope_date_digest: 4b5120b3a80fcc12b28842f910e5b8cf6989da0093ae4781376a1bc2ce07f3ca
+    scope_date_digest: 55643675e7a2d801533712c5ba8097d1b07cd35407f8554bb6c19aded368bb81
   all_rows:
     count: 318
     digest: e80c7e4ad14d53bcb2eb8d99a63b202230fea05e758dbf6299c2166653925918
@@ -3451,7 +3451,7 @@ decision_rows:
 private_rows:
   repository: strale-io/strale-context-archive
   visibility: private
-  commit: 012492be51e589ec8f327fe11746727343bd94ef
+  commit: 8a852ff7c2f601ad464ebbbbe8aa214c701f6d70
   file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
   count: 90
   digest: 0aa61fe37252924ce775efbc08f1ff0ceee045e6d2a2c16993f1d55c4c553895
