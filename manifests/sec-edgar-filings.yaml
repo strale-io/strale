@@ -28,6 +28,11 @@ input_schema:
     limit:
       type: integer
       description: "Filings to return, 1-50. Default: 20"
+  anyOf:
+    - required:
+        - ticker
+    - required:
+        - cik
 output_schema:
   type: object
   example:

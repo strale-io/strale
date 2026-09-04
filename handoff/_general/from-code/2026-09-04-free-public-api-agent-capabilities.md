@@ -74,3 +74,14 @@ then `npx tsx scripts/validate-capability.ts --slug <slug>`. Rows land dark
 - The buyer pays a competitor $0.03 for plain SERP results at ~3,000 calls/month while paying
   Strale €0.10 for `google-search` at ~300; a cheaper plain-results tier is the largest pricing
   lever inside the existing catalogue.
+
+## Independent review (fresh read-only Claude agent, 2026-09-04)
+
+Round 1: FAIL. Must-fix, both confirmed and fixed: (1) `paper-details` built the OpenAlex path from
+the raw DOI, so `10.1038/x?select=id&mailto=…` appended parameters to the upstream request — the DOI
+grammar now stops at `?#&` and each path segment is percent-encoded, with a regression test;
+(2) one `sec-edgar-filings` test depended on the module-level ticker cache left by the previous test —
+a test seam resets it and the test seeds its own fixtures. Should-fix, both applied: the ticker index on
+`www.sec.gov` is now its own health-probed provider, and the manifest declares `anyOf: [ticker | cik]`
+so the route-level structured 400 fires. Receipt after fixes:
+`archive/receipts/2026-09-04-test-run-free-public-api-capabilities-r2.json`.

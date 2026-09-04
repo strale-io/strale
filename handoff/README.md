@@ -9,12 +9,13 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-227 files (200 with a recorded intent, 27 without).
+228 files (201 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md`](_general/from-code/2026-09-04-t17-drizzle-upgrade.md) | Program track T17 / WP13 second batch (drizzle-orm 0.38.4 -> 0.45.2, semver-major) -- the |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md`](_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md) | land T10 (M2 exit-gap closure) batch 6, provenance and jurisdiction semantics, three `not_yet_reconciled`, `historica... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md`](_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md) | land T10 (M2 exit-gap closure) batch 5 — capability lifecycle patterns — three `not_yet_reconciled`, `historical_scop... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md`](_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md) | land T10 (M2 exit-gap closure) batch 4 — the first global-scope-row batch — three engineering-convention Decision row... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md`](_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md) | land the first batch of T10 (M2 exit-gap closure) — the seven decision rows the closure register names as its next ba... |

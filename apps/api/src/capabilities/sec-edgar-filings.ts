@@ -15,6 +15,11 @@ const TICKER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 type TickerRow = { cik_str?: number; ticker?: string; title?: string };
 let tickerCache: { at: number; byTicker: Map<string, { cik: number; title: string }> } | null = null;
 
+/** Test seam: forget the cached ticker index so each test starts cold. */
+export function resetTickerCacheForTests(): void {
+  tickerCache = null;
+}
+
 async function loadTickerMap(): Promise<Map<string, { cik: number; title: string }>> {
   if (tickerCache && Date.now() - tickerCache.at < TICKER_CACHE_TTL_MS) return tickerCache.byTicker;
   const res = await fetch(TICKERS_URL, { headers: { "User-Agent": USER_AGENT, Accept: "application/json" }, signal: AbortSignal.timeout(10_000) });

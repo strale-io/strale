@@ -8,7 +8,12 @@ const API = "https://api.openalex.org/works";
 const CONTACT = "support@strale.io";
 const USER_AGENT = `Strale/1.0 (${CONTACT})`;
 
-const DOI_RE = /\b10\.\d{4,9}\/[^\s"<>]+/i;
+// A DOI stops at whitespace, quotes, angle brackets and at any character that
+// would start a query string or fragment. The upstream URL is then built from
+// percent-encoded path segments, so nothing in the id can add or override a
+// request parameter (review of #518: `10.1038/x?select=id&mailto=…` reached
+// OpenAlex verbatim before this).
+const DOI_RE = /\b10\.\d{4,9}\/[^\s"<>?#&]+/i;
 const OPENALEX_ID_RE = /^W\d{4,}$/i;
 
 /** Accept a bare DOI, a doi.org URL, or an OpenAlex work id; return the API path segment. */
@@ -18,6 +23,11 @@ export function resolveWorkIdentifier(raw: string): { kind: "doi" | "openalex"; 
   const m = value.match(DOI_RE);
   if (m) return { kind: "doi", id: m[0].replace(/[.,;)]+$/, "").toLowerCase() };
   return null;
+}
+
+/** Percent-encode every path segment of a DOI while keeping its structural slashes. */
+export function encodeDoiPath(doi: string): string {
+  return doi.split("/").map(encodeURIComponent).join("/");
 }
 
 interface OpenAlexWork {
@@ -50,7 +60,7 @@ registerCapability("paper-details", async (input: CapabilityInput) => {
   const ident = resolveWorkIdentifier(raw);
   if (!ident) throw new Error(`'doi' does not look like a DOI or OpenAlex work id: ${JSON.stringify(raw.slice(0, 80))}.`);
 
-  const path = ident.kind === "doi" ? `https://doi.org/${ident.id}` : ident.id;
+  const path = ident.kind === "doi" ? `https://doi.org/${encodeDoiPath(ident.id)}` : ident.id;
   const response = await fetch(`${API}/${path}?mailto=${encodeURIComponent(CONTACT)}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     signal: AbortSignal.timeout(12_000),

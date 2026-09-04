@@ -577,6 +577,25 @@ export const PROVIDERS: DependencyProvider[] = [
     tier: "free",
   },
   {
+    // The ticker → CIK index lives on www.sec.gov, not data.sec.gov; every
+    // ticker-based call depends on it (review of #518), so it is probed on
+    // its own. The file is ~800 KB; four probes a day is negligible.
+    name: "sec-ticker-index",
+    displayName: "SEC company ticker index",
+    description: "SEC's ticker → CIK mapping file on www.sec.gov, used to resolve tickers for EDGAR lookups.",
+    baseUrl: "https://www.sec.gov",
+    authType: "none",
+    extraProbeHeaders: { "User-Agent": "Strale/1.0 (support@strale.io)" },
+    healthProbe: {
+      path: "/files/company_tickers.json",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 8000,
+    },
+    capabilities: ["sec-edgar-filings"],
+    tier: "free",
+  },
+  {
     name: "nvd",
     displayName: "NIST NVD",
     description: "National Vulnerability Database CVE API 2.0 (keyless: 5 requests / 30 s).",

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDirectExecutor } from "./index.js";
-import "./sec-edgar-filings.js";
+import { resetTickerCacheForTests } from "./sec-edgar-filings.js";
 
 const exec = getDirectExecutor("sec-edgar-filings")!;
 
@@ -22,7 +22,7 @@ const SUBMISSIONS = {
 
 describe("sec-edgar-filings", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
-  beforeEach(() => { fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock); });
+  beforeEach(() => { fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock); resetTickerCacheForTests(); });
   afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
   it("refuses when neither ticker nor cik is given, before any upstream call", async () => {
@@ -49,16 +49,23 @@ describe("sec-edgar-filings", () => {
     expect(f.report_date).toBe("2025-09-27");
   });
 
-  it("reuses the cached ticker index on a second call, and returns all forms when unfiltered", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(SUBMISSIONS), { status: 200 }));
-    const r = await exec({ ticker: "AAPL", limit: 2 });
-    expect(fetchMock).toHaveBeenCalledTimes(1); // no ticker-index fetch: cache from the previous test
+  it("fetches the ticker index once and reuses it on a second call in the same process; unfiltered returns all forms", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify(TICKERS), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(SUBMISSIONS), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(SUBMISSIONS), { status: 200 }));
+    await exec({ ticker: "AAPL", limit: 1 });
+    const r = await exec({ ticker: "NVDA", limit: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(3); // index + submissions, then submissions only
+    expect(String(fetchMock.mock.calls[2][0])).toBe("https://data.sec.gov/submissions/CIK0001045810.json");
     expect(r.output.returned).toBe(2);
     expect((r.output.filings as Array<Record<string, unknown>>).map((f) => f.form)).toEqual(["10-K", "10-Q"]);
   });
 
   it("names an unknown ticker and suggests the CIK route", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(TICKERS), { status: 200 }));
     await expect(exec({ ticker: "ZZZQ" })).rejects.toThrow(/Ticker 'ZZZQ' is not in the SEC's company ticker index/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("a CIK that EDGAR does not know is a clear not-found, and 8-K items are surfaced", async () => {

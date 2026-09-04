@@ -41,6 +41,28 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-11
+    subject: "PR #510 — drizzle-orm 0.38.4 -> 0.45.2 (T17 batch 2), with the DrizzleQueryError unwrap module and five routed readers"
+    commit: 47d69050
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      A semver-major on the ORM every query goes through. The first pass
+      claimed no source change was needed; CI and two Claude reviews found
+      five readers of err.code that had silently stopped seeing the Postgres
+      error (duplicate signup as a 500, DB errors logged as unknown, the
+      wallet timeout 503, the settlement race discharge). Three rounds is a
+      signal that a different model should read the whole surface once more.
+    what_to_attack: >
+      apps/api/src/lib/db-error.ts (the unwrap and the narrowed PostgresError
+      heuristic); any remaining reader of a caught DB error's code, message,
+      detail or constraint in apps/api/src and scripts that the sweep table
+      in handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md missed
+      (grep the cast forms); the expectDbRejection test helper for hollowness;
+      the append-only migration blocks (none may have changed); drizzle-kit
+      0.31.10 in the CI integration-db lane.
+    claude_verdicts: 3 rounds (FAIL, FAIL, PASS by the orchestrator after the Sonnet pool rate-limited)
   - id: CX-10
     subject: "PR #513 — M2 batch 4: three engineering-convention rows (DEC-20260419-A, DEC-20260420-A, DEC-20260511-C) migrated to formal candidate records"
     commit: 8b124678

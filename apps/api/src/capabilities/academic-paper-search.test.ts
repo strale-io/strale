@@ -60,6 +60,20 @@ describe("academic-paper-search / paper-details (OpenAlex)", () => {
     expect(p.abstract).toBe("Array programming provides a syntax");
   });
 
+  it("details cannot smuggle query parameters through the DOI (review of #518)", async () => {
+    // A fresh Response per call: a body can only be read once.
+    fetchMock.mockImplementation(async () => new Response(JSON.stringify(WORK), { status: 200 }));
+    await details({ doi: "10.1038/x?select=id&mailto=attacker@example.com" });
+    const url = String(fetchMock.mock.calls[0][0]);
+    // The DOI is cut at '?', and what remains is percent-encoded per path segment.
+    expect(url).toContain("/works/https://doi.org/10.1038/x?mailto=support%40strale.io");
+    expect(url).not.toContain("select=");
+    expect(url).not.toContain("attacker");
+    fetchMock.mockClear();
+    await details({ doi: "10.1000/a&b#c" });
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/works/https://doi.org/10.1000/a?mailto=");
+  });
+
   it("details turns an OpenAlex 404 into a clear not-found error", async () => {
     fetchMock.mockResolvedValue(new Response("{}", { status: 404 }));
     await expect(details({ doi: "10.9999/does-not-exist" })).rejects.toThrow(/No work found.*10\.9999\/does-not-exist/);
