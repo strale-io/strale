@@ -4081,7 +4081,7 @@ decision_rows:
 private_rows:
   repository: strale-io/strale-context-archive
   visibility: private
-  commit: 589d0bfecf7af9dcd1362d0c906638d9e5ff2c3f
+  commit: 201b0c4009e01572829ce8ebe21d15849734f9ea
   file: archive/derived/2026-09-02-m2-closure-private-rows.yaml
   count: 48
   digest: 1cbdf72dc6ce01cf7ba381a40303f095254633a6765fd7bf5d0b7dc83be796e3
