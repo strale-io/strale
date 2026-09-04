@@ -72,6 +72,7 @@
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "scripts/m2-closure-register-lib.mjs"
@@ -263,6 +264,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
+        "handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
@@ -544,7 +546,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "5f8bda4f29381379f2dde1d25f4d3231d06d99c28b225da5b5d425061e533c0b",
+      "sha256": "dcc47504a93079c327f9e274005ceb942c7785cff2b25453fa1fcae276e586e2",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-238 files (211 with a recorded intent, 27 without).
+239 files (212 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -22,6 +22,7 @@
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md`](_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md) | land T10 (M2 exit-gap closure) batch 5 — capability lifecycle patterns — three `not_yet_reconciled`, `historical_scop... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md`](_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md) | land T10 (M2 exit-gap closure) batch 4 — the first global-scope-row batch — three engineering-convention Decision row... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md`](_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md) | land the first batch of T10 (M2 exit-gap closure) — the seven decision rows the closure register names as its next ba... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md`](_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md) | land T10 (M2 exit-gap closure) batch 14, fourteen founding Decision |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md`](_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md) | land T10 (M2 exit-gap closure) batch 13, fourteen founding Decision |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md`](_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md) | land T10 (M2 exit-gap closure) batch 12, twelve vendor and registry |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md`](_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md) | land T10 (M2 exit-gap closure) batch 11, seven Counterparty |
