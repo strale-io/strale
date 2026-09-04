@@ -24,6 +24,10 @@ The Decision column shows the historical display ID. Internal record keys are th
 
 | Decision | Internal record key | Status | Topic | Scope | Owner | Decided |
 |---|---|---|---|---|---|---|
+| [`DEC-20260302-A-0001`](../decisions/records/DEC-20260302-A-0001.md) — Capability Pricing Framework | `DEC-20260302-A-0001` | active | `capability-pricing-framework` | product | petter | 2026-03-02 |
+| [`DEC-20260308-1`](../decisions/records/DEC-20260308-1.md) — Platform pricing currency: EUR (not USD) | `DEC-20260308-1` | active | `platform-pricing-currency` | product | petter | 2026-03-08 |
+| [`DEC-20260320-F`](../decisions/records/DEC-20260320-F.md) — Raise compliance screening prices to EUR 0.25/call (sanctions-check, pep-check, adverse-media-check) for 60% margin on OpenSanctions EUR 0.10/call cost | `DEC-20260320-F` | active | `compliance-screening-pricing-margin` | product | petter | 2026-03-20 |
+| [`DEC-20260411-A`](../decisions/records/DEC-20260411-A.md) — Capability pricing framework: price by cost structure, not by perceived value. Algorithmic = EUR 0.02, free API = EUR 0.02-0.05, Browserless = EUR 0.10-0.30, LLM = EUR 0.05-0.20, Browserless+LLM = EUR 0.15-0.50. | `DEC-20260411-A` | active | `capability-pricing-by-cost-structure` | product | petter | 2026-04-11 |
 | [`DEC-20260419-A`](../decisions/records/DEC-20260419-A.md) — Structured logging standard: Pino + request-context middleware, label kebab-case, named fields only | `DEC-20260419-A` | active | `structured-logging-standard` | technical | petter | 2026-04-19 |
 | [`DEC-20260420-A`](../decisions/records/DEC-20260420-A.md) — Hand-write Drizzle migrations; abandon drizzle-kit generate | `DEC-20260420-A` | active | `hand-written-drizzle-migrations` | technical | petter | 2026-04-20 |
 | [`DEC-20260421-J`](../decisions/records/DEC-20260421-J.md) — Capability retirement pattern (soft-deactivate + seed-file removal + distribution regen + preserve history) | `DEC-20260421-J` | active | `capability-retirement-pattern` | operational | petter | 2026-04-21 |
@@ -48,6 +52,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) — Verify deploy-pipeline reachability and the resulting production effect | `DEC-20260504-C` | active | `deploy-safety` | global | petter | 2026-05-04 |
 | [`DEC-20260511-C`](../decisions/records/DEC-20260511-C.md) — In-TS startup-migrations as the official schema-change convention | `DEC-20260511-C` | active | `startup-migrations-convention` | technical | petter | 2026-05-11 |
 | [`DEC-20260511-D`](../decisions/records/DEC-20260511-D.md) — Require production vendor evaluations to follow an evolving empirical methodology | `DEC-20260511-D` | active | `vendor-evaluation` | global | petter | 2026-05-11 |
+| [`DEC-20260513-E`](../decisions/records/DEC-20260513-E.md) — Normalize HR + CH customer prices to EUR 0.05; flag EUR 0.80 cluster as stranded legacy pricing | `DEC-20260513-E` | active | `hr-ch-price-normalization` | product | petter | 2026-05-13 |
 | [`DEC-20260517-A`](../decisions/records/DEC-20260517-A.md) — Make repository YAML canonical for structured Provider-Coverage reference data | `DEC-20260517-A` | active | `reference-data-authority` | global | petter | 2026-05-17 |
 | [`DEC-20260518-E`](../decisions/records/DEC-20260518-E.md) — Require exhaustive source enumeration before declaring a country path blocked | `DEC-20260518-E` | active | `source-enumeration` | global | petter | 2026-05-18 |
 | [`DEC-20260518-F`](../decisions/records/DEC-20260518-F.md) — Clarify data sourcing to permit constrained per-call public-registry parsing | `DEC-20260518-F` | active | `data-sourcing-principles` | global | petter | 2026-05-18 |
@@ -80,6 +85,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 
 | Target | Target key | Generated inverse | Source | Source key |
 |---|---|---|---|---|
+| [`DEC-20260302-A-0001`](../decisions/records/DEC-20260302-A-0001.md) | `DEC-20260302-A-0001` | `amended_by` | [`DEC-20260411-A`](../decisions/records/DEC-20260411-A.md) | `DEC-20260411-A` |
 | [`DEC-20260320-B`](../decisions/records/DEC-20260320-B.md) | `DEC-20260320-B` | `superseded_by` | [`DEC-20260423-B`](../decisions/records/DEC-20260423-B.md) | `DEC-20260423-B` |
 | [`DEC-20260420-A`](../decisions/records/DEC-20260420-A.md) | `DEC-20260420-A` | `affirmed_by` | [`DEC-20260511-C`](../decisions/records/DEC-20260511-C.md) | `DEC-20260511-C` |
 | [`DEC-20260421-J`](../decisions/records/DEC-20260421-J.md) | `DEC-20260421-J` | `amended_by` | [`DEC-20260422-B`](../decisions/records/DEC-20260422-B.md) | `DEC-20260422-B` |
@@ -95,6 +101,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260428-A`](../decisions/records/DEC-20260428-A.md) | `DEC-20260428-A` | `related_from` | [`DEC-20260430-A`](../decisions/records/DEC-20260430-A.md) | `DEC-20260430-A` |
 | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` | `related_from` | [`DEC-20260429-A`](../decisions/records/DEC-20260429-A.md) | `DEC-20260429-A` |
 | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` | `related_from` | [`DEC-20260430-A`](../decisions/records/DEC-20260430-A.md) | `DEC-20260430-A` |
+| [`DEC-20260502-A`](../decisions/records/DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6.md) | `DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6` | `related_from` | [`DEC-20260308-1`](../decisions/records/DEC-20260308-1.md) | `DEC-20260308-1` |
 | [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) | `DEC-20260503-A` | `superseded_by` | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` |
 | [`DEC-20260504-B`](../decisions/records/DEC-20260504-B.md) | `DEC-20260504-B` | `related_from` | [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) | `DEC-20260504-C` |
 | [`DEC-20260518-E`](../decisions/records/DEC-20260518-E.md) | `DEC-20260518-E` | `amended_by` | [`DEC-20260518-G`](../decisions/records/DEC-20260518-G.md) | `DEC-20260518-G` |
