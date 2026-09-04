@@ -275,21 +275,24 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 10 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529). Batch 10 migrated the six distribution and
-      x402-rail decisions; two findings for To-dos: server.json and
-      packages/mcp-server/package.json disagree on the MCP server version,
-      and context7.json rule 12 still cites the deleted GET /v1/quality/:slug.
-      Private projection 109 rows at archive df544ab6; operator verifier
-      passes. G1 holds 98 rows (97 global, 1 temporary). Blocking gaps: G1,
-      G2, G9. Next: batch 11, the Counterparty Assurance v1 group
-      (DEC-20260515-A, DEC-20260515-B, DEC-20260515-C, DEC-20260518-A,
-      DEC-20260518-B, DEC-20260518-C, DEC-20260518-D), whose product framing
-      DEC-20260812-A retired, so each record states that; then the vendor
-      and registry group, then G2's 34 collisions one at a time, then G9's
-      closing review. This track is the M2 exit gate: the closure
-      register's validator refuses a state where it is done, or any
-      post-m2 track is active or done, while a blocking gap remains.
+      Batches 1 to 11 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529, #532). Batch 11 migrated the seven
+      Counterparty Assurance v1 decisions, each stating that DEC-20260812-A
+      retired that product framing and what survives in code (Cobalt as
+      one dormant capability, no per-state US Tier-1 capabilities, no
+      Digiteal handler). Private projection 102 rows at archive 012492be;
+      operator verifier passes. G1 holds 91 rows (90 global, 1
+      temporary). Blocking gaps: G1, G2, G9. Loop change from 2026-09-04
+      evening: the private half is committed and the register bumped
+      BEFORE the independent review, batches are 10 to 14 rows, and a
+      documentation-only CI fast path is in flight. Next: batch 12, the
+      twelve vendor and registry sourcing decisions (DEC-20260320-E,
+      DEC-20260405-A, DEC-20260505-G/H, DEC-20260506-G, DEC-20260507-D/E/F/G/H,
+      DEC-20260508-A/D), then the remaining early-2026 strategy rows, then
+      G2's 34 collisions one at a time, then G9's closing review. This
+      track is the M2 exit gate: the closure register's validator refuses
+      a state where it is done, or any post-m2 track is active or done,
+      while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -340,6 +343,14 @@ tracks:
       - docs/decisions/records/DEC-20260404-A.md
       - docs/decisions/records/DEC-20260416-A.md
       - handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md
+      - docs/decisions/records/DEC-20260515-A.md
+      - docs/decisions/records/DEC-20260515-B.md
+      - docs/decisions/records/DEC-20260515-C.md
+      - docs/decisions/records/DEC-20260518-A.md
+      - docs/decisions/records/DEC-20260518-B.md
+      - docs/decisions/records/DEC-20260518-C.md
+      - docs/decisions/records/DEC-20260518-D.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md
 
   - id: T6
     title: M3 repo-native workflows
