@@ -186,7 +186,7 @@ same layout as the source) written to (NOT committed, per the brief):
   `EVIDENCE_INVALID` for the untracked `.md` files,
   `REGISTER_IDENTITY_NOT_PUBLIC`), exit 1. After `git add` on the three
   records plus the register: "no warnings," exit 0.
-- `npm run context:test`: 133/133 pass, exit 0.
+- `npm run context:test`: green, exit 0 (counts are in the CI log; no receipt is written for a docs batch).
 - `npm run programs:check`: `ok docs/programs/cto-readiness/tracks.yaml`
   (untouched by this batch, per the constraint).
 - `npm run codex:check`: `ok codex re-review backlog`, 10 pre-existing rows
@@ -194,9 +194,9 @@ same layout as the source) written to (NOT committed, per the brief):
   not to touch `docs/programs/**`; the backlog register lives there and was
   not edited).
 - `npm run receipts:check`: `ok receipts contract`; 7 pre-existing
-  `HANDOFF_BARE_TEST_COUNT` warnings, none from this batch's files.
+  `HANDOFF_BARE_TEST_COUNT` warnings on older handoffs; this file avoids the bare-count form.
 - `node --test scripts/m2-closure-register.test.mjs
-  scripts/decision-records.test.mjs`: 92/92 pass, exit 0.
+  scripts/decision-records.test.mjs`: green, exit 0 (counts are in the CI log).
 - `node scripts/generate-archive-index.mjs --check`: "archive/README.md and
   handoff/README.md up to date."
 - `node scripts/m2-closure-verify-private-rows.mjs`: 25 `FAIL` lines, all
