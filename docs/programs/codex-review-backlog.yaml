@@ -41,6 +41,26 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-15
+    subject: "PR #521 — M2 batch 7: five pricing decisions (DEC-20260302-A-0001, DEC-20260308-1, DEC-20260320-F, DEC-20260411-A, DEC-20260513-E) migrated to formal candidate records"
+    commit: c309a8ca
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Pricing records with live contradictions: the vendor cost basis moved
+      (OpenSanctions to Dilisense), the compliance-screening prices never
+      reached the EUR 0.25 the 2026-03 decision set, and one relation
+      (DEC-20260411-A amends DEC-20260302-A-0001) rests on subject restatement
+      rather than an explicit citation. Whether those are stated honestly and
+      whether the amends edge is source-stated enough are Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source for any dropped price, margin or
+      competitor figure; the "status on 2026-09-04" price claims against the
+      manifests; the amends edge; DEC-20260513-E's summarized Outcome (the
+      Claude review found it was first presented as a quote); the register
+      arithmetic and digests via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (one should-fix applied by the orchestrator before merge)
   - id: CX-14
     subject: "PR #518 — eight keyless free-API capabilities (OpenAlex, arXiv, PubMed, HN, SEC EDGAR, NVD, USGS) from the largest x402 buyer's basket"
     commit: 5bf6c43d
