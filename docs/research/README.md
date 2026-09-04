@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 37 (35 topics with a current answer, 1 historical).
+Total files: 38 (36 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -22,6 +22,7 @@ Total files: 37 (35 topics with a current answer, 1 historical).
 | be-kbo-open-data-ingest-spec | [2026-04-29-be-kbo-open-data-ingest-spec.md](2026-04-29-be-kbo-open-data-ingest-spec.md) | What is the design and registration spec for first-party ingest of the Belgian FPS Economy KBO Open Data feed? | 2026-04-29 | 0 |
 | belgian-company-data-parity-audit | [2026-05-08-belgian-company-data-parity-audit.md](2026-05-08-belgian-company-data-parity-audit.md) | Does the belgian-company-data capability meet the four parity questions raised against Topograph's BE catalog? | 2026-05-08 | 0 |
 | bg-registry-build-path | [2026-05-07-bg-registry-build-path.md](2026-05-07-bg-registry-build-path.md) | What is the build path for ingesting Bulgaria's BRRA commercial register open data? | 2026-05-07 | 0 |
+| brand-foundation-discovery | [2026-09-05-brand-foundation-discovery.md](2026-09-05-brand-foundation-discovery.md) | What product evidence, existing design work, and reference practices should inform Strale's brand and website program? | 2026-09-05 | 0 |
 | bundesapi-civic-tech-audit | [2026-05-06-bundesapi-civic-tech-audit.md](2026-05-06-bundesapi-civic-tech-audit.md) | Is the bundesAPI civic-tech stack a credible fallback data source for DE Counterparty Assurance if OpenRegister's audit-retention question can't be resolved? | 2026-05-06 | 0 |
 | cy-registry-build-path | [2026-05-07-cy-registry-build-path.md](2026-05-07-cy-registry-build-path.md) | What is the build path for ingesting Cyprus's DRCOR company registry open data? | 2026-05-07 | 0 |
 | dk-cvr-breaker-false-recovery-investigation | [2026-05-07-dk-phase2-understand.md](2026-05-07-dk-phase2-understand.md) | Why did the danish-company-data circuit breaker appear stuck open, and what does the Phase 2 investigation establish about its real state? | 2026-05-07 | 0 |
