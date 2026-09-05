@@ -191,8 +191,8 @@ Keep image-only. No matched amber card is defined; no invented amber glass.
 - SHA-256: `7eddfa7d54b58a243873cf763a62052cca94640cc175b1c4a8de9918046cb3d2`
 - Dimensions: 1672 x 941; 1323984 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Image only. Use a center/cover crop for a compact atmospheric accent; place all copy in a separate plain area.
+- Square: Image only. Preserve the folded light as the focal point; do not add a card or information row.
 - Provenance: Recorded in source manifest. Rights: source declaration only; not independently established.
 - Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
 
@@ -259,9 +259,9 @@ Still open: Founder review of the reconciled specimens; production adoption rema
 
 ### QM-04: Verification and closing recipes (proposed)
 
-Mulberry is the proposed current verification recipe, following the later component/census/checker. Dusk is the proposed closing default; Spectrum is reserved for a rare major opening/proof.
+Mulberry is the proposed current verification recipe, following the later component/census/checker. Dusk is the proposed default closing atmosphere; Spectrum is reserved for a rare major opening/proof.
 
-Still open: Archive the conflicting recipe text only at adoption; original source stays immutable.
+Still open: The compact closing composition and its default readable pairing remain to be designed. Archive conflicting recipe text only at adoption; original source stays immutable.
 
 ### QM-05: Illustration is not evidence (recorded)
 

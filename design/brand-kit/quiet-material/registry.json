@@ -596,8 +596,8 @@
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
         "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "narrow": "Image only. Use a center/cover crop for a compact atmospheric accent; place all copy in a separate plain area.",
+        "square": "Image only. Preserve the folded light as the focal point; do not add a card or information row."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -820,34 +820,46 @@
     {
       "file": "fonts/InstrumentSans.ttf",
       "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
-      "role": "font"
+      "role": "font",
+      "family": "Instrument Sans"
     },
     {
       "file": "fonts/IBMPlexMono-Regular.ttf",
       "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
-      "role": "font"
+      "role": "font",
+      "family": "IBM Plex Mono"
     },
     {
       "file": "fonts/InstrumentSans-OFL.txt",
       "sha256": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
-      "role": "licence"
+      "role": "licence",
+      "family": "Instrument Sans"
     },
     {
       "file": "fonts/IBMPlexMono-OFL.txt",
       "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
-      "role": "licence"
+      "role": "licence",
+      "family": "IBM Plex Mono"
     }
   ],
   "font_sources": [
     {
       "family": "Instrument Sans",
       "url": "https://github.com/google/fonts/tree/main/ofl/instrumentsans",
-      "licence": "SIL OFL 1.1"
+      "licence": "SIL OFL 1.1",
+      "files": [
+        "fonts/InstrumentSans.ttf",
+        "fonts/InstrumentSans-OFL.txt"
+      ]
     },
     {
       "family": "IBM Plex Mono",
       "url": "https://github.com/google/fonts/tree/main/ofl/ibmplexmono",
-      "licence": "SIL OFL 1.1"
+      "licence": "SIL OFL 1.1",
+      "files": [
+        "fonts/IBMPlexMono-Regular.ttf",
+        "fonts/IBMPlexMono-OFL.txt"
+      ]
     }
   ],
   "resolutions": [
@@ -876,8 +888,8 @@
       "id": "QM-04",
       "title": "Verification and closing recipes",
       "status": "proposed",
-      "choice": "Mulberry is the proposed current verification recipe, following the later component/census/checker. Dusk is the proposed closing default; Spectrum is reserved for a rare major opening/proof.",
-      "remaining": "Archive the conflicting recipe text only at adoption; original source stays immutable."
+      "choice": "Mulberry is the proposed current verification recipe, following the later component/census/checker. Dusk is the proposed default closing atmosphere; Spectrum is reserved for a rare major opening/proof.",
+      "remaining": "The compact closing composition and its default readable pairing remain to be designed. Archive conflicting recipe text only at adoption; original source stays immutable."
     },
     {
       "id": "QM-05",

@@ -15,6 +15,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent
 PREVIEW = ROOT / '.preview'
 PDF = ROOT / 'output/pdf/quiet-material-catalogue.pdf'
+BUILDER_FILES = ['build.mjs', 'catalogue.css', 'registry.schema.json', 'verification.schema.json', 'verify.py']
 
 
 def luminance(rgb):
@@ -35,21 +36,20 @@ def main():
     repo = ROOT.parents[2]
     assert render_inputs['registry_sha256'] == hashlib.sha256((ROOT/'registry.json').read_bytes()).hexdigest(), 'Re-render after changing the registry'
     assert render_inputs['tokens_sha256'] == hashlib.sha256((repo/reg['token_source']).read_bytes()).hexdigest(), 'Re-render after changing tokens'
+    assert sorted(render_inputs['builder_inputs']) == sorted(BUILDER_FILES), 'Incomplete builder inputs'
     for name, digest in render_inputs['builder_inputs'].items():
         assert digest == hashlib.sha256((ROOT/name).read_bytes()).hexdigest(), f'Re-render after changing {name}'
     for name, digest in render_inputs['sample_inputs'].items():
         assert digest == hashlib.sha256((PREVIEW/name).read_bytes()).hexdigest(), f'Changed background evidence: {name}'
     current_pdf_hash = hashlib.sha256(PDF.read_bytes()).hexdigest()
-    prior = json.loads((ROOT/'verification.json').read_text()) if (ROOT/'verification.json').exists() else {}
-    already_optimised = (prior.get('render_inputs') == render_inputs and prior.get('pdf_sha256') == current_pdf_hash)
-    assert current_pdf_hash == render_inputs['pdf_sha256'] or already_optimised, 'PDF differs from the captured render'
-    pdf = fitz.open(PDF)
+    assert current_pdf_hash == render_inputs['pdf_sha256'], 'PDF differs from the raw captured render; rebuild before verification'
+    raw_pdf = fitz.open(stream=PDF.read_bytes(), filetype='pdf')
     before = PDF.stat().st_size
     optimised = PDF.with_suffix('.optimised.pdf')
-    pdf.save(optimised, garbage=4, deflate=True)
-    pdf.close()
+    raw_pdf.save(optimised, garbage=4, deflate=True)
     optimised.replace(PDF)
     pdf = fitz.open(PDF)
+    assert len(pdf) == len(raw_pdf), 'Optimisation changed page count'
     samples = json.loads((PREVIEW / 'contrast-samples.json').read_text())
     results = []
     for sample in samples:
@@ -66,10 +66,14 @@ def main():
                             'ratio': round(ratio, 3), 'passes_normal_text_4_5': ratio >= 4.5})
     overflow = []
     for index, page in enumerate(pdf):
+        original = raw_pdf[index]
+        assert page.get_text() == original.get_text(), 'Optimisation changed text'
+        assert page.rect == original.rect, 'Optimisation changed page geometry'
         for word in page.get_text('words'):
             if word[0] < 0 or word[1] < 0 or word[2] > page.rect.width or word[3] > page.rect.height:
                 overflow.append({'page': index + 1, 'word': word[4]})
         pix = page.get_pixmap(matrix=fitz.Matrix(1, 1))
+        assert pix.samples == original.get_pixmap(matrix=fitz.Matrix(1, 1)).samples, 'Optimisation changed the rendered page'
         pix.save(PREVIEW / f'pdf-{index+1:02d}.png')
     # Contact sheets are PDF review intermediates, not new brand assets.
     for start in range(0, len(pdf), 4):
@@ -84,14 +88,15 @@ def main():
               'pdf_sha256': hashlib.sha256(PDF.read_bytes()).hexdigest(),
               'registry_sha256': hashlib.sha256((ROOT/'registry.json').read_bytes()).hexdigest(),
               'tokens_sha256': hashlib.sha256((repo/reg['token_source']).read_bytes()).hexdigest(),
-              'builder_inputs': {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in ['build.mjs','catalogue.css','registry.schema.json','verify.py']},
+              'builder_inputs': {name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest() for name in BUILDER_FILES},
               'render_inputs': render_inputs,
               'pdf_bytes_before_deduplication': before, 'pdf_bytes': PDF.stat().st_size,
               'contrast_method': 'WCAG relative luminance; minimum across all background pixels under each hidden text element bounding box, Chromium at device scale 1. All sampled text evaluated at 4.5:1, including headings.',
               'scope': 'Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.',
               'sampled_text_elements': len(results), 'minimum_ratio': min(r['ratio'] for r in results),
-              'failures': failures, 'out_of_page_text': overflow, 'results': results}
-    (ROOT/'verification.json').write_text(json.dumps(report, indent=2)+'\n')
+              'failures': failures, 'out_of_page_text': overflow, 'results': results,
+              'optimisation_verified': True}
+    (ROOT/'verification.json').write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8', newline='\n')
     print(json.dumps({k:v for k,v in report.items() if k!='results'}))
     if not report['ok']:
         raise SystemExit(1)

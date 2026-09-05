@@ -1,25 +1,27 @@
 {
   "ok": true,
   "pages": 24,
-  "pdf_sha256": "ef68d0932c9b53a21a4e97f4ba3f8ca4f53ac0124b0da9c9fb2f09693d9f3342",
-  "registry_sha256": "cacd46123999a3290262dc493f5a236e3bac60d7e8acf948ccc954e828677684",
-  "tokens_sha256": "7975e9e49947bf207fe999c364c839a5c51e9c4e82055d8939930cac536c0204",
+  "pdf_sha256": "96b2053ef18b3b4f24b461a72fda5ba78e6c7a41847d1debd144639b59b952b2",
+  "registry_sha256": "734f58e7587cc1fd96d29131361fa9fa433035dcdc5a0aa33f56dbca628b83c1",
+  "tokens_sha256": "22f05c05027ccba2cb93dfd20f62645290b02f0e6eae48fc7b7fc05c472211aa",
   "builder_inputs": {
-    "build.mjs": "4e02438ef4ecceaabc8b4d73f6d5a7d3084109dd82cca0fc741e0e8b47148260",
+    "build.mjs": "bf792e7d68db2b3631af35e5507004f6bcf81f3dc2e30a67a40526f4a4d0b7a0",
     "catalogue.css": "6005874106669b08173e065849e481ff91ac558f998cebbba52001d893b0bde2",
-    "registry.schema.json": "624647d84f1be662e78c7e61aaa9e1336f7a7cdeb09719e6e59fc1f4595b3272",
-    "verify.py": "7128c988ac0191aab61fe5c0c42bf8326c2cb30e86883fec4ab7ce79a59f43e6"
+    "registry.schema.json": "1b77aee5f60fbcdd36e23c8c42d81e18421bfe284d781148a6943a91498bd9f6",
+    "verification.schema.json": "9df0baa978351dfce38fe0632ea2c2e3f7b98ed834e8690c7cbe488d2dcfd0d5",
+    "verify.py": "1b2f0d706a6f1b3aca6aeb629971a768efd287a3669ec753115e95eae00fc35f"
   },
   "render_inputs": {
-    "registry_sha256": "cacd46123999a3290262dc493f5a236e3bac60d7e8acf948ccc954e828677684",
-    "tokens_sha256": "7975e9e49947bf207fe999c364c839a5c51e9c4e82055d8939930cac536c0204",
+    "registry_sha256": "734f58e7587cc1fd96d29131361fa9fa433035dcdc5a0aa33f56dbca628b83c1",
+    "tokens_sha256": "22f05c05027ccba2cb93dfd20f62645290b02f0e6eae48fc7b7fc05c472211aa",
     "builder_inputs": {
-      "build.mjs": "4e02438ef4ecceaabc8b4d73f6d5a7d3084109dd82cca0fc741e0e8b47148260",
+      "build.mjs": "bf792e7d68db2b3631af35e5507004f6bcf81f3dc2e30a67a40526f4a4d0b7a0",
       "catalogue.css": "6005874106669b08173e065849e481ff91ac558f998cebbba52001d893b0bde2",
-      "registry.schema.json": "624647d84f1be662e78c7e61aaa9e1336f7a7cdeb09719e6e59fc1f4595b3272",
-      "verify.py": "7128c988ac0191aab61fe5c0c42bf8326c2cb30e86883fec4ab7ce79a59f43e6"
+      "registry.schema.json": "1b77aee5f60fbcdd36e23c8c42d81e18421bfe284d781148a6943a91498bd9f6",
+      "verification.schema.json": "9df0baa978351dfce38fe0632ea2c2e3f7b98ed834e8690c7cbe488d2dcfd0d5",
+      "verify.py": "1b2f0d706a6f1b3aca6aeb629971a768efd287a3669ec753115e95eae00fc35f"
     },
-    "pdf_sha256": "62fc38db93847aba5e6edf49d73d621579f092e3c8d0be188b797f4fe57be361",
+    "pdf_sha256": "c1d1b9442fe60046908ba65129cf9638509093a8f6de2bd8ffc6eac569c7532b",
     "sample_inputs": {
       "contrast-samples.json": "39d96af200a717c6da0a65ef2cee774cb152c0849e0b47af8baac67a2858f558",
       "background-06.png": "0c737da3cf5fed93c7c1e699f8aee0497eece9043ff8945fc3ee64e9f41e9265",
@@ -39,8 +41,8 @@
       "background-21.png": "ba24d63344d36602c8d0ced31c42fa557bbedb713b0941200870fcec503c6dc4"
     }
   },
-  "pdf_bytes_before_deduplication": 51758910,
-  "pdf_bytes": 51629261,
+  "pdf_bytes_before_deduplication": 51759381,
+  "pdf_bytes": 51629427,
   "contrast_method": "WCAG relative luminance; minimum across all background pixels under each hidden text element bounding box, Chromium at device scale 1. All sampled text evaluated at 4.5:1, including headings.",
   "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
   "sampled_text_elements": 200,
@@ -1248,5 +1250,6 @@
       "ratio": 12.601,
       "passes_normal_text_4_5": true
     }
-  ]
+  ],
+  "optimisation_verified": true
 }

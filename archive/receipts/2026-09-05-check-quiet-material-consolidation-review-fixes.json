@@ -1,0 +1,48 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "addbccf8959fab08285c5187b45468f7273c54ad"
+  },
+  "at": "2026-09-05T12:52:35.125Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/qm-review-fixes-receipt-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "pdf_sha256": "96b2053ef18b3b4f24b461a72fda5ba78e6c7a41847d1debd144639b59b952b2",
+    "pages": 24,
+    "minimum_ratio": 5.696,
+    "sampled_text_elements": 200,
+    "design_tests_passed": 32,
+    "source_integrity": "All referenced extracted files verified by build.mjs --check --source",
+    "visual_review": "All 24 latest PDF pages inspected, including full pages 20 and 24 after review corrections",
+    "optimisation_verified": true,
+    "evidence": "design/brand-kit/quiet-material/verification.json"
+  },
+  "topic": "quiet-material-consolidation-review-fixes",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "pdf_sha256": "96b2053ef18b3b4f24b461a72fda5ba78e6c7a41847d1debd144639b59b952b2",
+    "pages": 24,
+    "minimum_ratio": 5.696,
+    "sampled_text_elements": 200,
+    "design_tests_passed": 32,
+    "source_integrity": "All referenced extracted files verified by build.mjs --check --source",
+    "visual_review": "All 24 latest PDF pages inspected, including full pages 20 and 24 after review corrections",
+    "optimisation_verified": true,
+    "evidence": "design/brand-kit/quiet-material/verification.json",
+    "corrected_findings": [
+      "machine continuation review",
+      "Dusk atmosphere scope",
+      "Amber image-only crop guidance",
+      "complete evidence invariants and raw PDF binding",
+      "registry authority and font linkage",
+      "retained CSS provenance"
+    ]
+  }
+}

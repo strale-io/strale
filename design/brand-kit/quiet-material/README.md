@@ -37,7 +37,7 @@ The optional `--playwright` argument locates an existing Playwright package; oth
 
 CI's existing `design:check` now checks coverage, token references, original identity/digests, generated-register drift and PDF/evidence/input hashes. `design:test` includes negative checks for missing assets, changed sources, invented Amber material and silent illustration promotion. CI does not fetch a release or regenerate visual evidence.
 
-The contrast method samples every background pixel beneath each hidden specimen text element, on the actual Chromium composition, and requires 4.5:1 even for headings. It is a conservative check of those fixed specimens, not certification of arbitrary crops, full responsive pages, dark mode or motion. PDF text bounds and visual page review are separate checks.
+The contrast method samples every background pixel beneath each hidden specimen text element, on the actual Chromium composition, and requires 4.5:1 even for headings. It is a conservative check of those fixed specimens, not certification of arbitrary crops, full responsive pages, dark mode or motion. PDF text bounds and visual page review are separate checks. Verification accepts only the raw PDF bound to that render, then checks that lossless optimisation preserves every page's text, geometry and rendered pixels. Rebuild before running verification again; a prior verification record cannot authorise a different PDF. CI enforces the complete evidence shape, per-page sample coverage and agreement between measurements, failure lists and status.
 
 ## Open work
 

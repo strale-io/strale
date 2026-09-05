@@ -8,6 +8,7 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
+    "recipe_consistency",
     "identity",
     "typography",
     "controls_and_navigation"

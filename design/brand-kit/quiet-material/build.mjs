@@ -22,6 +22,27 @@ function verifiedFile(root, relative, expected) {
   return bytes;
 }
 const uri = (bytes, path) => `data:${({'.svg':'image/svg+xml','.png':'image/png','.ttf':'font/ttf'})[extname(path)]};base64,${bytes.toString('base64')}`;
+const builderFiles = ['build.mjs','catalogue.css','registry.schema.json','verification.schema.json','verify.py'];
+
+export function validateEvidence(evidence, reg) {
+  const check = new Ajv2020({allErrors:true}).compile(json(resolve(here,'verification.schema.json')));
+  assert(check(evidence), JSON.stringify(check.errors));
+  const render = evidence.render_inputs;
+  for(const field of ['registry_sha256','tokens_sha256','builder_inputs']) assert.deepEqual(evidence[field],render[field],`Contradictory render input: ${field}`);
+  const counts = new Map([[6,12],[7,6]]);
+  reg.assets.forEach((a,i)=>{if(a.surface_token)counts.set(i+8,14)});
+  assert.equal(evidence.pages,reg.assets.length+10,'Incorrect page count');
+  assert.equal(evidence.sampled_text_elements,[...counts.values()].reduce((a,b)=>a+b,0),'Incomplete specimen coverage');
+  assert.equal(evidence.results.length,evidence.sampled_text_elements,'Sample count mismatch');
+  for(const [page,count] of counts)assert.equal(evidence.results.filter(r=>r.page===page).length,count,`Missing page samples: ${page}`);
+  const expectedSamples=['contrast-samples.json',...[...counts.keys()].map(p=>`background-${String(p).padStart(2,'0')}.png`)];
+  assert.deepEqual(Object.keys(render.sample_inputs).sort(),expectedSamples.sort(),'Incomplete background inputs');
+  for(const r of evidence.results)assert.equal(r.passes_normal_text_4_5,r.ratio>=4.5,'Contradictory contrast result');
+  assert.deepEqual(evidence.failures,evidence.results.filter(r=>!r.passes_normal_text_4_5),'Contradictory contrast failures');
+  assert.equal(evidence.minimum_ratio,Math.min(...evidence.results.map(r=>r.ratio)),'Incorrect minimum ratio');
+  assert.equal(evidence.ok,!evidence.failures.length&&!evidence.out_of_page_text.length,'Contradictory verification status');
+  assert.equal(evidence.ok,true,'Specimen verification failed');
+}
 
 export function validate(reg, tokens, source) {
   const ajv = new Ajv2020({allErrors:true});
@@ -29,7 +50,7 @@ export function validate(reg, tokens, source) {
   assert(check(reg), JSON.stringify(check.errors));
   const audit = json(resolve(repo,'archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json'));
   const originals = audit.atmosphere_assets ?? audit.assets;
-  assert.equal(new Set(reg.assets.map(a=>a.id)).size, reg.assets.length, 'Duplicate asset ids');
+  for(const key of ['assets','gradients','identity','illustrations','resolutions','missing_sources','rules'])assert.equal(new Set(reg[key].map(a=>a.id)).size,reg[key].length,`Duplicate ${key} ids`);
   assert.deepEqual(reg.assets.map(a=>a.token).sort(), originals.map(a=>a.token).sort(), 'Current asset coverage drift');
   const vars = tokens.layout.css_variables;
   const consumerCss=readFileSync(resolve(here,'catalogue.css'),'utf8');
@@ -47,6 +68,17 @@ export function validate(reg, tokens, source) {
     for(const key of ['surface_token','ink_token','secondary_token'])assert(g[key] in vars,`Unknown gradient pair: ${g[key]}`);
   }
   for (const file of reg.fonts) verifiedFile(here,file.file,file.sha256);
+  assert.equal(new Set(reg.fonts.map(f=>f.file)).size,reg.fonts.length,'Duplicate font files');
+  assert.equal(new Set(reg.font_sources.map(f=>f.family)).size,reg.font_sources.length,'Duplicate font sources');
+  const fontOrigins={'Instrument Sans':'instrumentsans','IBM Plex Mono':'ibmplexmono'};
+  for(const f of reg.font_sources) {
+    assert.equal(f.url,`https://github.com/google/fonts/tree/main/ofl/${fontOrigins[f.family]}`,'Font-source provenance drift');
+    assert.deepEqual(f.files.slice().sort(),reg.fonts.filter(x=>x.family===f.family).map(x=>x.file).sort(),'Font-source linkage drift');
+    assert.deepEqual(reg.fonts.filter(x=>x.family===f.family).map(x=>x.role).sort(),['font','licence'],'Missing font or licence');
+  }
+  const cssSource=reg.source.documents.find(f=>f.path.endsWith('/design-tokens.css'));
+  assert.equal(tokens.provenance.source,`strale-frontend:${cssSource.path}`,'Token provenance must name preserved CSS');
+  assert(tokens.provenance.note.includes(cssSource.sha256)&&tokens.provenance.note.includes(reg.source.release),'Missing retained CSS provenance');
   assert(existsSync(inside(repo,reg.claim_source)),'Missing claims authority');
   for (const id of ['QM-01','QM-02','QM-03','QM-04','QM-05','QM-06']) assert(reg.resolutions.some(r=>r.id===id),`Missing resolution ${id}`);
   assert.equal(reg.assets.find(a=>a.id==='pattern-folded-dark-amber').surface_token,null,'Amber cannot acquire an invented card');
@@ -105,7 +137,7 @@ function documentHtml(reg,tokens,source) {
   for(const a of reg.assets) {
     const specimen=(shape,label)=>`<div><div class="specimen ${shape}" data-asset="${a.id}" data-shape="${shape}" style="background-image:var(${a.token});--crop-position:${a.crop.position}">${card(a,reg.specimens.rows_by_shape[shape]===1)}</div><p class="caption">${label}</p></div>`;
     const size=(w,h)=>`${parseInt(values[w])} x ${parseInt(values[h])}`;
-    sheet(a.title,a.guidance,`<div class="specimen-row">${specimen('wide','LANDSCAPE / '+size('--c-wide-width','--c-wide-height'))}${specimen('square','SQUARE / '+size('--c-square-size','--c-square-size'))}${specimen('phone','NARROW / '+size('--c-phone-width','--c-phone-height'))}</div><div class="notes"><div><h3>Purpose</h3><p>${escape(a.role)}</p><p>${escape(a.recipe_status)}</p></div><div><h3>Reading surface</h3><p>${escape(a.surface_token??'None. Atmospheric field only.')}</p></div><div><h3>Crop rule</h3><p>Center / cover comparison. Narrow and square retain one information row and the same type size.</p></div></div>`, 'RETAINED ASSET / CONTEXT SPECIMENS');
+    sheet(a.title,a.guidance,`<div class="specimen-row">${specimen('wide','LANDSCAPE / '+size('--c-wide-width','--c-wide-height'))}${specimen('square','SQUARE / '+size('--c-square-size','--c-square-size'))}${specimen('phone','NARROW / '+size('--c-phone-width','--c-phone-height'))}</div><div class="notes"><div><h3>Purpose</h3><p>${escape(a.role)}</p><p>${escape(a.recipe_status)}</p></div><div><h3>Reading surface</h3><p>${escape(a.surface_token??'None. Atmospheric field only.')}</p></div><div><h3>Crop rule</h3><p>${escape(a.surface_token ? "Center / cover comparison. Narrow and square retain one information row and the same type size." : a.crop.narrow)}</p></div></div>`, 'RETAINED ASSET / CONTEXT SPECIMENS');
   }
   sheet('Identity has a specific job','Keep the flowing-S lockup. A transformation symbol does not become the brand mark.',`<div class="grid two"><div class="tile"><div class="identity-stage"><img src="${files.get('flowing-s-lockup')}" alt="Retained flowing S lockup"></div><h3>Retained identity reference</h3><p>The original lockup, unchanged. Small-size and inverse exports remain to be qualified.</p></div><div class="tile"><div class="identity-stage legacy"><img src="${files.get('legacy-compass')}" alt="Legacy compass favicon"></div><h3>Legacy identity conflict</h3><p>Comparison only. Exclude this favicon from new brand exports; keep functional glyphs separately named.</p></div></div>`,'IDENTITY / RECONCILIATION');
   sheet('Use fewer layers, deliberately','The plain canvas is part of Quiet Material.',reg.rules.slice(0,4).map(r=>`<div class="rule"><h3>${escape(r.id.toUpperCase())}</h3><p>${escape(r.text)}</p></div>`).join(''),'COMPOSITION / RULES');
@@ -121,11 +153,12 @@ export async function main(args=process.argv.slice(2)) {
   if(args.includes('--check')) {
     assert.equal(readFileSync(human,'utf8'),markdown,'REGISTER.md drift');
     const evidence=json(resolve(here,'verification.json'));
-    assert.equal(evidence.ok,true,'Specimen verification failed');
+    validateEvidence(evidence,reg);
     assert.equal(evidence.registry_sha256,hash(readFileSync(resolve(here,'registry.json'))),'Stale specimen registry');
     assert.equal(evidence.tokens_sha256,hash(readFileSync(inside(repo,reg.token_source))),'Stale specimen tokens');
-    for(const [file,digest] of Object.entries(evidence.builder_inputs))verifiedFile(here,file,digest);
-    verifiedFile(here,'output/pdf/quiet-material-catalogue.pdf',evidence.pdf_sha256);
+    for(const file of builderFiles)verifiedFile(here,file,evidence.builder_inputs[file]);
+    const pdf=verifiedFile(here,'output/pdf/quiet-material-catalogue.pdf',evidence.pdf_sha256);
+    assert.equal(pdf.length,evidence.pdf_bytes,'PDF byte count mismatch');
     console.log(JSON.stringify(result));return;
   }
   writeFileSync(human,markdown);
@@ -134,7 +167,7 @@ export async function main(args=process.argv.slice(2)) {
   const preview=resolve(here,'.preview');mkdirSync(preview,{recursive:true});
   const output=resolve(here,'output/pdf/quiet-material-catalogue.pdf');mkdirSync(dirname(output),{recursive:true});
   const doc=documentHtml(reg,tokens,source);writeFileSync(resolve(preview,'catalogue.html'),doc.html);
-  const renderInputs={registry_sha256:hash(readFileSync(resolve(here,'registry.json'))),tokens_sha256:hash(readFileSync(inside(repo,reg.token_source))),builder_inputs:Object.fromEntries(['build.mjs','catalogue.css','registry.schema.json','verify.py'].map(name=>[name,hash(readFileSync(resolve(here,name)))]))};
+  const renderInputs={registry_sha256:hash(readFileSync(resolve(here,'registry.json'))),tokens_sha256:hash(readFileSync(inside(repo,reg.token_source))),builder_inputs:Object.fromEntries(builderFiles.map(name=>[name,hash(readFileSync(resolve(here,name)))]))};
   const pw=await import(arg('--playwright')?pathToFileURL(resolve(arg('--playwright'))).href:'playwright');
   const browser=await pw.chromium.launch({headless:true,channel:'chrome'});
   try {

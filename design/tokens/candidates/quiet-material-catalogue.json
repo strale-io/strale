@@ -43,7 +43,7 @@
       "mono": "\"IBM Plex Mono\", Consolas, monospace"
     },
     "scale": {
-      "note": "Full responsive marketing type ladder lives in the preserved source, not restated here â€” see the exploration README for the file path."
+      "note": "Full responsive marketing type ladder lives in the preserved source; see the exploration README for the file path."
     }
   },
   "spacing": [
@@ -72,12 +72,13 @@
   ],
   "shadows": [],
   "motion": {
-    "note": "Not captured in this token file â€” see the preserved source's own CSS for stage/atmosphere transition timing."
+    "note": "Not captured in this token file; see the preserved source's own CSS for stage/atmosphere transition timing."
   },
   "provenance": {
-    "source": "design/brand-kit/quiet-material/registry.json",
+    "source": "strale-frontend:public/strale-site/design-system/assets/design-tokens.css",
     "captured_at": "2026-09-05",
-    "note": "CSS values preserved from the audited v0.7 release. Catalogue geometry is proposed, not website layout."
+    "note": "Exact CSS: https://github.com/strale-io/strale-frontend/releases/tag/preserve-2026-09-02; file SHA-256 f970fd3be3ebd683984e5874f23907625b91e8738f0d86deb5ff591bfcd5c94f; archive SHA-256 891e905f8f7e53f466fba4b10c62c868680310bab119429d901268c42c1ce1b2 (previously recorded preservation digest). Catalogue geometry is separately proposed document layout.",
+    "repo": "strale-frontend"
   },
   "layout": {
     "css_variables": {
