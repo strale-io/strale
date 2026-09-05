@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "status": "rejected",
+  "date": "2026-09-05",
+  "reason": "Founder prefers existing Quiet Material redesign; requested system completeness and atmospheric/gradient cohesion audit, not replacement identity.",
+  "resume_file": "docs/programs/brand-website/SYSTEM-COMPLETION.md",
+  "generator": "built-in image_gen; raster concepts, not editable production masters",
+  "prompts": "PROMPTS.md",
+  "assets": [
+    {
+      "file": "instrument.png",
+      "sha256": "27268d4243701ab6a59a368cb06474c5b55a81e61c82d1e77df13ce66fded2de",
+      "role": "rejected generated concept board"
+    },
+    {
+      "file": "fieldwork.png",
+      "sha256": "d06d4144c29f0c9d8dbfdaa170a87fca131ccdbd502c27703c879743ea2f38b3",
+      "role": "rejected generated concept board"
+    },
+    {
+      "file": "control.png",
+      "sha256": "6d762fe66d7286adb02867079b636924ce2c47e870ebddf62fe5ef912c7f004a",
+      "role": "founder-provided comparison screenshot"
+    }
+  ]
+}

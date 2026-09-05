@@ -1,0 +1,83 @@
+{
+  "name": "Fieldwork \u2014 brand direction study",
+  "status": "rejected",
+  "supersedes": null,
+  "superseded_by": null,
+  "notes": "Rejected by founder on 2026-09-05: retain existing Quiet Material and complete its design system. Historical intended reconstruction values only. Intended reconstruction values, not measurements of generated raster artwork. Serif is a display/editorial role only; generated type is not proof of the named font family.",
+  "palette": {
+    "paper": "#F5F1E8",
+    "ink": "#182B4B",
+    "muted": "#576376",
+    "accent": "#244ECF",
+    "tint": "#DEE5EE",
+    "line": "#BBC4D2",
+    "inverse": "#F5F1E8"
+  },
+  "type": {
+    "families": {
+      "display": "Newsreader, Georgia, serif",
+      "body": "Instrument Sans, Arial, sans-serif",
+      "label": "IBM Plex Mono, Consolas, monospace"
+    },
+    "scale": {
+      "display": {
+        "size": 80,
+        "leading": 82,
+        "weight": 400
+      },
+      "heading": {
+        "size": 44,
+        "leading": 48,
+        "weight": 400
+      },
+      "body": {
+        "size": 20,
+        "leading": 30,
+        "weight": 400
+      },
+      "label": {
+        "size": 12,
+        "leading": 18,
+        "weight": 400
+      }
+    }
+  },
+  "spacing": [
+    0,
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64,
+    96,
+    128
+  ],
+  "radii": [
+    0,
+    4
+  ],
+  "shadows": [],
+  "motion": {
+    "status": "storyboard-only",
+    "principle": "Move a margin index from source to corresponding result; no typewriter effect.",
+    "reduced_motion": "All selected fields and corresponding indices visible."
+  },
+  "layout": {
+    "units": "px at a 1440px desktop artboard; targets only",
+    "columns": 12,
+    "margin": 64,
+    "gap": 24,
+    "body_measure_ch": 48,
+    "hero_lines_max": 3,
+    "primary_actions_max": 1,
+    "framing": "Editorial page divisions and precise indexed annotations; no floating dashboard cards."
+  },
+  "provenance": {
+    "source": "design/explorations/2026-09-05-brand-directions/CREATIVE-BRIEF.md",
+    "captured_at": "2026-09-05",
+    "note": "New agent-authored alternative under the founder-authorized brand-first exploration; no identity adoption."
+  }
+}

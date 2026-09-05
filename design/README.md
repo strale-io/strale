@@ -13,6 +13,9 @@ design/
     candidates/
       quiet-material-v0.7.json      status: proposed
       codex-handoff-round-23.json   status: exploring
+      quiet-material-refinement.json status: rejected (closed study)
+      instrument.json              status: rejected
+      fieldwork.json               status: rejected
   explorations/
     README.md                 convention for exploration folders
     2026-09-01-quiet-material-v0.7/README.md

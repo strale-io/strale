@@ -10,7 +10,12 @@ Status values: `adopted` (a decision record made it what a surface runs),
 `unrecorded` (running in production, but no decision record ever adopted
 it), `superseded` (replaced by a later direction in the same lineage),
 `proposed` (preserved and candidate, not yet promoted), `exploring` (under
-active review, earlier than proposed).
+active review, earlier than proposed), `rejected` (closed without adoption;
+preserved as history, excluded from implementation).
+
+## Instrument and Fieldwork — rejected, 2026-09-05
+
+The founder rejected these alternatives and clarified that the existing Quiet Material redesign should be retained and its system completed. [Preserved concepts](explorations/2026-09-05-brand-directions/README.md) are historical evidence, not implementation inputs. The candidate token records are rejected. Resume at the [system completion plan](../docs/programs/brand-website/SYSTEM-COMPLETION.md). No existing runtime token or artwork was changed.
 
 ## Internal reports — `adopted`, 2026-08-15
 
@@ -88,6 +93,6 @@ No `design/explorations/` entry exists for it — the source document is
 already a self-contained spec, unlike Quiet Material's dated folder, so
 there was nothing further to preserve before extracting the token subset.
 
-## 5 September 2026: Quiet Material refinement
+## 5 September 2026: Quiet Material refinement — `rejected` (closed study)
 
-DEC-20260905-A adopts the positioning, not the visual identity. The [new exploration](explorations/2026-09-05-quiet-material-refinement/README.md) tests retained Quiet Material assets through website, social and PDF applications, with its own exploring token candidate and source digests. It supersedes no existing candidate and does not promote active production values.
+DEC-20260905-A adopts the positioning, not the visual identity. The [preserved study](explorations/2026-09-05-quiet-material-refinement/README.md) tested retained Quiet Material assets through website, social and PDF applications. It is now closed without adoption following the founder's correction to retain the original redesign and audit its system. Its token and authoring records are rejected as implementation inputs; this does not reject Quiet Material v0.7 or its original assets. Resume at the [system completion plan](../docs/programs/brand-website/SYSTEM-COMPLETION.md).

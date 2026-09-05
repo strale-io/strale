@@ -1,0 +1,66 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "fa01a7ca4dc2f817fc9d744c7bad62aa10c4c1da"
+  },
+  "at": "2026-09-05T11:20:49.761Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-quiet-material-audit-checks.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "scope": "Existing Quiet Material cohesion/completeness audit; no source artwork or production token modification. Rejected alternatives preserved.",
+    "audit_inventory": "archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json",
+    "current_atmosphere_assets": 14,
+    "gradient_roles": 9,
+    "current_assets_without_manifest_record": 11,
+    "visual_review": "All 14 current atmosphere masters, 3 manifest illustration images, older Midnight v1 and browser-rendered gradient/surface specimens inspected.",
+    "limits": "No exhaustive contrast/crop/motion/responsive or legal-originality certification; no claim of completed brand kit."
+  },
+  "topic": "quiet-material-system",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "scope": "Existing Quiet Material cohesion/completeness audit; no source artwork or production token modification. Rejected alternatives preserved.",
+    "checks": [
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "output": "\n> design:check\n> node scripts/check-design.mjs\n\nchecked 6 design/tokens/*.json files, 6 distinct off-token literals (10 raw occurrences) across the internal-report consumers, 6 allowlisted\nok   design tokens contract\n"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "output": "\n> claims:check\n> node scripts/check-claims.mjs\n\nchecked 27 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, and the frontend llms.txt when present\nok   claims register contract\n"
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "output": "\n> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index\n"
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "output": "\n> research:check\n> node scripts/check-research.mjs\n\nchecked 38 docs/research/*.md files\nok   research contract\nwarn (5) — research-looking files outside docs/research:\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-12-platform-readiness-program.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-demand-mined-build-queue.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-allabolag-pattern-full-inventory.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-company-registry-direct-api-audit.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/activation-traffic-2026-04-08.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\n"
+      },
+      {
+        "command": "npm run programs:check (after staging referenced source files)",
+        "exit_code": 0,
+        "output": "ok docs/programs/brand-website/tracks.yaml; ok docs/programs/cto-readiness/tracks.yaml"
+      },
+      {
+        "command": "node scripts/check-homepage-design-system-drift.mjs (preserved package, read-only)",
+        "exit_code": 0,
+        "output": "Homepage design-system drift check passed."
+      }
+    ],
+    "audit_inventory": "archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json",
+    "current_atmosphere_assets": 14,
+    "gradient_roles": 9,
+    "current_assets_without_manifest_record": 11,
+    "visual_review": "All 14 current atmosphere masters, 3 manifest illustration images, older Midnight v1 and browser-rendered gradient/surface specimens inspected.",
+    "limits": "No exhaustive contrast/crop/motion/responsive or legal-originality certification; no claim of completed brand kit."
+  }
+}
