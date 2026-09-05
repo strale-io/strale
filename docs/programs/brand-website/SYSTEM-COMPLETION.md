@@ -8,7 +8,7 @@ Read the [system audit](../../../archive/sessions/2026-09-05-quiet-material-syst
 
 The [Quiet Material consolidation package](../../../design/brand-kit/quiet-material/README.md) is the current candidate working surface for this track. It records all fourteen atmospheric assets and nine gradients, exact source hashes, semantic pairings, crop constraints, identity/symbol separation and the proposed QM-03/QM-04 reconciliations. Its generated human register and 24-page PDF resolve the same structured inputs. CI checks their consistency. [Verification](../../../design/brand-kit/quiet-material/verification.json) records the exact specimen tests; it is not whole-site accessibility certification.
 
-QM-01 through QM-06 have a recorded disposition; they are not all closed production defects. Eleven creation/rights histories and the missing reference/illustration files remain unresolved. The preferred flowing-S identity is distinguished from the legacy compass; small-size/inverse identity exports remain work. Revision 0.2 follows founder feedback: tighter gradient frames, solid light reading surfaces on dark backgrounds, and direct dark text on Frost/Mint. The first version's same-tone recipes are historical. Amber remains image-only, and the narrow hero crop cannot inherit the desktop quiet-left text zone. Source documents remain immutable; production adoption remains separate.
+QM-01 through QM-06 have a recorded disposition; they are not all closed production defects. Eleven creation/rights histories and the missing reference/illustration files remain unresolved. The preferred flowing-S identity is distinguished from the legacy compass; small-size/inverse identity exports are supplied by the foundations companion. Revision 0.2 follows founder feedback: tighter gradient frames, solid light reading surfaces on dark backgrounds, and direct dark text on Frost/Mint. The first version's same-tone recipes are historical. Amber remains image-only, and the narrow hero crop cannot inherit the desktop quiet-left text zone. Source documents remain immutable; production adoption remains separate.
 
 ## Current companion and next batch
 
@@ -16,7 +16,7 @@ The founder accepted the atmosphere/surface catalogue 0.2 after the full visual 
 
 Founder steering also requested direct light text and a light action on dark cards. The companion compares this candidate treatment on Cobalt and Dusk for short marketing messages. It does not replace the accepted light reading panel for detailed information. Direct text on atmospheric images still needs a separate crop and contrast review.
 
-Review the companion's identity/type applications and dark-card comparison, then continue navigation, controls and card states. Real email-client qualification, physical print proof, broader language coverage, density patterns, motion and final platform templates remain open. The original catalogue and preserved source remain unchanged. Production adoption is separate.
+The founder accepted the companion's direction and retained the current logo. Continue with the controls companion below. Real email-client qualification, physical print proof, broader language coverage, density patterns, motion and final platform templates remain open. The original catalogue and preserved source remain unchanged. Production adoption is separate.
 
 ## Completed first-batch scope: make the current system unambiguous
 
@@ -48,3 +48,7 @@ Use the structured record for typography, identity, controls, motion, copy/densi
 Keep one human/machine source hierarchy under the existing token, claims and provenance authorities. A selected visual baseline is not proof of complete font licences, correct claims or working accessibility. Production adoption follows the existing decision process, then applications consume the adopted version.
 
 Rejected concept boards remain under `design/explorations/2026-09-05-brand-directions/` with rejected status and a pointer here. The earlier Quiet Material refinement remains an unadopted study. Neither is an implementation input. Preserve their evidence; do not keep their earlier next-action text active in the program register.
+
+## Component continuation: current review
+
+The founder accepted the identity/type work and then explicitly retained the current flowing-S logo after previewing symbol alternatives. That exploration is closed; no generated symbol is a replacement or runtime input. The [navigation, controls and cards companion](../../../design/brand-kit/quiet-material/controls/README.md) is now the current candidate review. It provides interactive examples and a PDF from the same sources. Review component appearance and behaviour, then continue forms, icon conventions and broader composition/density rules. Existing atmosphere/foundation artifacts remain preserved; production adoption and remaining channel/accessibility qualification stay separate.

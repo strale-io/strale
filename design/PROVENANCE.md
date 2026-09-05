@@ -106,3 +106,7 @@ DEC-20260905-A adopts the positioning, not the visual identity. The [preserved s
 ## Quiet Material identity and typography companion 0.1
 
 Current candidate: `design/brand-kit/quiet-material/foundations/README.md`; values: `design/tokens/candidates/quiet-material-foundations.json`. Extends the founder-accepted atmosphere/surface catalogue 0.2 with retained flowing-S exports, real font roles and channel specimens. The new direct-light-text dark-card comparison follows founder steering and remains a candidate. No original paths, atmospheric masters or active production values changed.
+
+### Quiet Material controls 0.1
+
+Candidate companion at `design/brand-kit/quiet-material/controls/`. Retains the foundations token values, fonts and original flowing-S mark; adds proposed control/navigation/card state geometry. Founder closed the generated-symbol exploration and retained the existing logo. No production promotion or replacement of previous catalogue evidence.

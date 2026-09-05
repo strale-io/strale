@@ -51,7 +51,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Review the identity/type companion and direct-light-text dark-card candidate; then build navigation, controls and card states. Atmosphere catalogue 0.2 is founder accepted; production adoption, email-client checks, physical print proof and final channel qualification remain separate.
+    next_action: Review the navigation, controls and cards companion; then continue forms, icon conventions and broader composition/density rules. Founder retains the current logo and accepted the foundations direction. Production adoption and remaining channel/accessibility qualification remain separate.
     resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.

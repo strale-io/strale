@@ -1,0 +1,9 @@
+Intent: Continue the retained Quiet Material system with navigation, buttons and card states.
+
+Mode: Full. The founder accepted the foundations direction, then closed the generated-symbol exploration and explicitly retained the current flowing-S logo. No generated symbol is a replacement or build input. This batch supplies the current component companion at design/brand-kit/quiet-material/controls/README.md: an offline interactive HTML specimen and six-page PDF, generated from the same retained fonts/logo, candidate tokens and structured rules.
+
+Examples cover primary/secondary/text/inverse actions, hover/pressed/focus/unavailable/loading, desktop and mobile disclosure navigation, secondary topic anchors, marketing/discovery/result card compositions and text-led success/error feedback. Loading/retry/link actions are local demonstrations and never call the product or incur charges. W3C disclosure/focus guidance informed the interaction pattern. The existing atmosphere and foundations artifacts remain unchanged.
+
+Evidence: archive/receipts/2026-09-05-check-quiet-material-controls.json. Exact source/output hashes are bound by verification.json. Browser verification covers declared widths, keyboard open/close/return focus, hidden links, outside/focus-leave closure, local loading/retry outcomes, targets, reduced motion and bounded contrast. PDF font embedding and geometry are checked separately; review PNGs are ignored build intermediates.
+
+Resume: docs/programs/brand-website/SYSTEM-COMPLETION.md. Review the component companion, then continue forms, icon conventions and broader composition/density rules. Production adoption, cross-browser/screen-reader qualification and remaining channel work are explicitly separate. The working plan stays in the repository; legacy append-only Journal: https://www.notion.so/3d267c87082c8185abeccf14e0312ad9. Foreign worktrees belong to other active sessions and were not altered.
