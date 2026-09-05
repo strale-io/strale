@@ -23,7 +23,7 @@ This PR does two things. First, it archives round 1 verbatim at
 `archive/sessions/2026-09-05-m2-closing-review-round-1.md`, including the
 void gate run. Second, because every record round 1 flagged is `status:
 active` and the protected-section validator refuses any edit to an active
-record's body or metadata, it adds `docs/decisions/records/DEC-20260905-A.md`:
+record's body or metadata, it adds `docs/decisions/records/DEC-20260905-B.md`:
 one amending record that withdraws each false or misattributed statement
 from its named record and states the correct fact with fresh evidence,
 without changing any amended record's own text. A verification script
@@ -32,4 +32,4 @@ new record against its named source and reported zero mismatches.
 
 Round 2 needs: rerun all six partitions and the full gate sequence at the
 commit that merges this PR into `main`, and treat any statement withdrawn
-by `DEC-20260905-A` as corrected rather than re-flagging it.
+by `DEC-20260905-B` as corrected rather than re-flagging it.

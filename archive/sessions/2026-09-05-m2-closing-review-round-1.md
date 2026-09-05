@@ -1025,7 +1025,7 @@ The gate run recorded at the reviewed commit is void: its worktree lost
 its tracked files partway through, immediately after `context:check` and
 `context:test` both recorded exit 0, and every gate invoked after that
 point recorded exit 1 with no diagnostic output. Round 2 repeats the full
-gate sequence at the commit that merges this file and `DEC-20260905-A`.
+gate sequence at the commit that merges this file and `DEC-20260905-B`.
 
 ```
 M2 closing review gate run at 3a7089c5b48432a3dd359acefdd048a63af5034f, 2026-09-05T12:03:22Z
@@ -1067,11 +1067,11 @@ exit=1
 
 Three of six partitions failed: P2, P3, and P4. The confirmed findings
 across those partitions, and the two minor findings P5 recorded in an
-otherwise passing partition, are corrected by `DEC-20260905-A`
-(`docs/decisions/records/DEC-20260905-A.md`), which withdraws each false
+otherwise passing partition, are corrected by `DEC-20260905-B`
+(`docs/decisions/records/DEC-20260905-B.md`), which withdraws each false
 or misattributed statement from its record without editing that record.
 Round 2 of the closing review runs at the commit that merges this file
-and `DEC-20260905-A` into `main`, and treats a statement withdrawn there
+and `DEC-20260905-B` into `main`, and treats a statement withdrawn there
 as corrected.
 
 VERDICT: FAIL
