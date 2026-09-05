@@ -41,6 +41,29 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-24
+    subject: "PR #547 — M2 batch 16: twelve March 2026 decisions (DEC-20260314-F/G, DEC-20260315-A/B/H/I, DEC-20260317-A/F/G/H, DEC-20260321-A, DEC-20260329-A) migrated to formal candidate records"
+    commit: ccece2b2
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Twelve records whose Consequences sections judge what survived the
+      SQS deletion and the never-executed provider programme (billing on
+      upstream failure, the digest cadence, the publication threshold, the
+      evidence weighting, the schedule_tier ordering, the palette's move
+      into design tokens). Whether each claim is traced to code rather
+      than remembered, and whether each edge is source-stated, is the Codex
+      judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (do.ts settle path, x402-gateway.ts,
+      daily-digest.ts, trust-labels.ts, trust-grade.ts, onboard.ts,
+      test-scheduler.ts, design/tokens/active.json, the frontend Index
+      page at its cited sha); every relation edge; the register arithmetic
+      and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-23
     subject: "PR #544 — M2 batch 15: fourteen March 2026 launch-month decisions (DEC-20260302-C/D, DEC-20260303-C, DEC-20260305-E/F, DEC-20260306-G/H, DEC-20260309-H, DEC-20260310-E/F, DEC-20260313-E, DEC-20260314-A/B/C) migrated to formal candidate records"
     commit: fdb38591
