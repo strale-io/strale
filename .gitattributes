@@ -1,6 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
+# Rendered design studies retain their exact PDF bytes and cross-reference offsets.
+*.pdf binary
+
 # Force LF for the auto-generated coverage-matrix summary so the
 # regen --check round-trip stays clean on Windows. See
 # apps/api/scripts/regenerate-coverage-matrix-summary.mjs.

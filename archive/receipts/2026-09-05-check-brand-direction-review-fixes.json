@@ -1,0 +1,43 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "d219d8a4639638969dd4c07ebd3246c6e5aafc01"
+  },
+  "at": "2026-09-05T09:08:29.719Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-brand-direction-review-checks.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "review_fixes": "Older homepage decisions explicitly superseded for redesign; application inheritance and open checks recorded; social fixture disclosure rendered at 24-point source size and inspected at 600px.",
+    "pdf_pages": 6,
+    "pdf_sha256": "629c2df0e743153673d7e4b6cb01b9497d0249cb565b3f68a5545d8bc70e52c7"
+  },
+  "topic": "brand-direction-review-fixes",
+  "raw": {
+    "review_fixes": "Older homepage decisions explicitly superseded for redesign; application inheritance and open checks recorded; social fixture disclosure rendered at 24-point source size and inspected at 600px.",
+    "failures": [],
+    "ok": true,
+    "pdf_pages": 6,
+    "checks": [
+      {
+        "command": "npm run design:check",
+        "exit_code": 0,
+        "output": "\r\n> design:check\r\n> node scripts/check-design.mjs\r\n\r\nchecked 4 design/tokens/*.json files, 6 distinct off-token literals (10 raw occurrences) across the internal-report consumers, 6 allowlisted\r\nok   design tokens contract\r\n"
+      },
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "output": "\r\n> programs:check\r\n> node scripts/check-program-tracks.mjs\r\n\r\nok   docs/programs/brand-website/tracks.yaml\r\nok   docs/programs/cto-readiness/tracks.yaml\r\n"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "output": "\r\n> claims:check\r\n> node scripts/check-claims.mjs\r\n\r\nchecked 27 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, and the frontend llms.txt when present\r\nok   claims register contract\r\n"
+      }
+    ],
+    "pdf_sha256": "629c2df0e743153673d7e4b6cb01b9497d0249cb565b3f68a5545d8bc70e52c7"
+  }
+}

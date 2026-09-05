@@ -274,6 +274,7 @@ exactly the kind of thing that drifts; read CLAUDE.md (or the linked Notion
 Decisions DB entry) for the actual text before acting on any of these. The
 IDs every session should know exist, topic only, no numbers:
 
+- **DEC-20260905-A** — Benefit-first brand positioning, marketing terminology and Quiet Material refinement scope; see CLAUDE.md and the linked adoption record.
 - **DEC-20260902-A** — Website redesign is built as `apps/web` in this
   repository (monorepo); `strale-frontend` preserved, not extended.
 - **DEC-20260812-A** — Readiness program / operating strategy.

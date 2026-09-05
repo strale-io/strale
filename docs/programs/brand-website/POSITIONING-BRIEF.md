@@ -2,16 +2,16 @@
 doc_type: creative-brief
 authority_scope: none
 program: brand-website
-version: "0.1"
-status: proposed
+version: "1.0"
+status: adopted-strategy
 date: 2026-09-05
 ---
 
 # Strale positioning and creative brief
 
-**The proposed promise: give your agents useful external tools without building each provider integration yourself.**
+**The adopted promise: give your agents useful external tools without building each provider integration yourself.**
 
-This is the working brief for the redesign, prepared following the founder's instruction to proceed. It makes the recommendation concrete for review; it does not adopt new public claims or replace existing strategy, voice rules or design tokens. [PROGRAM.md](PROGRAM.md) is the continuation entry point. The [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and [rendered redesign review](../../../archive/sessions/2026-09-05-quiet-material-review.md) supply the evidence and its limits.
+The founder approved this positioning and benefit hierarchy on 5 September under DEC-20260905-A. See the [adoption record](../../strategy/2026-09-05-brand-direction-adoption.md). Strategy and marketing terminology are adopted; sample copy, visual rules and artwork remain candidates subject to their existing proof and design review. [PROGRAM.md](PROGRAM.md) is the continuation entry point. The [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and [rendered redesign review](../../../archive/sessions/2026-09-05-quiet-material-review.md) supply the evidence and its limits.
 
 ## Positioning
 
@@ -86,8 +86,8 @@ Judge the redesign first by whether readers can explain the offer and reach that
 
 ## Adoption and continuation
 
-The concrete strategic choice is whether the homepage leads with useful agent work, supported by shared access and scoped execution evidence, or retains shared access as its dominant promise. Both are defensible; the first better connects the breadth of the offer to an immediate reason to use it. Retaining the current emphasis would require less editorial change but would leave more of that value for visitors to infer. Doing nothing leaves the mismatch between product, copy and composition unresolved.
+The adopted choice is to lead the homepage with useful agent work, supported by shared access and scoped execution evidence. The alternative considered was retaining shared access as the dominant promise. The chosen hierarchy better connects the breadth of the offer to an immediate reason to use it; the alternative would require less editorial change but leave more of that value for visitors to infer.
 
-Recommend adopting the first hierarchy. On founder agreement, record the decision and reconcile terminology: this brief proposes **tools** for marketing, while [VOICE.md](../../company/VOICE.md) currently prescribes **data services** as the alternative to technical “capabilities.” Do not silently amend that authority or publish the sample copy. Keep technical identifiers where developers need them.
+The founder adopted the first hierarchy in DEC-20260905-A. [VOICE.md](../../company/VOICE.md) now uses **tools** for marketing, **data services** where the underlying service is being explained, and technical identifiers where developers need them. This resolves the terminology conflict identified in the reviewed draft; sample copy is not thereby approved for publication.
 
-The adoption batch must update the relevant strategy/voice pointers, proposed claim rulings and design provenance together. Existing tokens, historical decisions and the preserved frontend remain unchanged until their replacements are explicitly adopted. Routine design work within the selected direction should then proceed without repeated approval of individual cards, icons or layout choices.
+The adoption batch updates the strategy/voice pointers and records the candidate exploration in design provenance. Outward claim rulings follow route-specific verification. Existing tokens, historical decisions and the preserved frontend remain unchanged until their replacements are explicitly adopted. Routine design work within the selected direction should then proceed without repeated approval of individual cards, icons or layout choices.
