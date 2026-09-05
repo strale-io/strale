@@ -16,6 +16,12 @@ import { readJsonWithLimit } from "../lib/resource-limits.js";
 const API = "https://haveibeenpwned.com/api/v3/breaches";
 const USER_AGENT = "Strale/1.0 (support@strale.io)";
 
+// F-0-006 Bucket D: the caller's domain is embedded in the query string of a
+// hardcoded third-party API (haveibeenpwned.com). The connection target is
+// never user-controlled, and normalizeDomain rejects anything that is not a
+// bare hostname before the request is built — no SSRF surface, so validateUrl
+// is not required.
+
 interface Breach {
   Name?: string;
   Title?: string;
@@ -101,6 +107,9 @@ registerCapability("breach-exposure-check", async (input: CapabilityInput) => {
     throw new Error("'domain' is required and must be a hostname such as adobe.com (a URL is also accepted).");
   }
 
+  // The caller's domain is regex-validated by normalizeDomain and reaches only
+  // an encoded query parameter, never the host.
+  // unguarded-fetch-ok: fixed haveibeenpwned.com host
   const res = await fetch(`${API}?Domain=${encodeURIComponent(domain)}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     signal: AbortSignal.timeout(15_000),

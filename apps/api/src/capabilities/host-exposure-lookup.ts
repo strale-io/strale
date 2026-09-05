@@ -9,6 +9,14 @@ import { promises as dns } from "node:dns";
 const API = "https://internetdb.shodan.io";
 const USER_AGENT = "Strale/1.0 (support@strale.io)";
 
+// F-0-006 Bucket D (recorded although the inventory grep does not match this
+// file — it keys on input.url/link/domain/hostname/website and this capability
+// reads input.host). A caller-supplied hostname IS resolved here, but the
+// resolved address is only ever interpolated into the path of the hardcoded
+// internetdb.shodan.io host; no socket is ever opened to it. isIpv4 and
+// isPrivateIpv4 additionally refuse anything that is not a public dotted quad
+// before the request is built. No SSRF surface.
+
 interface InternetDb {
   ip?: string;
   ports?: number[];
@@ -89,6 +97,9 @@ registerCapability("host-exposure-lookup", async (input: CapabilityInput) => {
     throw new Error(`'${ip}' is a private, loopback or reserved address and is not present in internet scan data.`);
   }
 
+  // `ip` is a public dotted quad by this point — isIpv4 and isPrivateIpv4 have
+  // both run, and it is interpolated into the path, never the host.
+  // unguarded-fetch-ok: fixed internetdb.shodan.io host
   const res = await fetch(`${API}/${ip}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     signal: AbortSignal.timeout(12_000),

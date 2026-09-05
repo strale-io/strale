@@ -10,6 +10,12 @@ import { readBoundedInt } from "../lib/capability-input.js";
 const API = "https://api.fda.gov";
 const USER_AGENT = "Strale/1.0 (support@strale.io)";
 
+// F-0-006 Bucket D: the caller's search terms are embedded in the query string
+// of a hardcoded third-party API (api.fda.gov). The one caller-controlled path
+// segment is `domain`, refused unless it is drug, device or food, so the
+// connection target is never user-controlled — no SSRF surface, so validateUrl
+// is not required.
+
 const DOMAINS = new Set(["drug", "device", "food"]);
 const CLASSIFICATIONS = new Map<string, string>([
   ["1", "Class I"], ["i", "Class I"], ["class i", "Class I"],
@@ -87,6 +93,9 @@ registerCapability("fda-safety-search", async (input: CapabilityInput) => {
   const limit = readBoundedInt(input.limit, "limit", { min: 1, max: 50, fallback: 10 });
   const url = `${API}/${domain}/enforcement.json?search=${buildSearch(term, classification)}&limit=${limit}`;
 
+  // The only caller-controlled path segment is `domain`, refused above unless it
+  // is drug, device or food; the search expression is percent-encoded per clause.
+  // unguarded-fetch-ok: fixed api.fda.gov host
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     signal: AbortSignal.timeout(15_000),

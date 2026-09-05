@@ -10,6 +10,12 @@ const CERTSPOTTER = "https://api.certspotter.com/v1/issuances";
 const CRTSH = "https://crt.sh";
 const USER_AGENT = "Strale/1.0 (support@strale.io)";
 
+// F-0-006 Bucket D: the caller's domain is embedded in the query string of two
+// hardcoded third-party APIs (api.certspotter.com, crt.sh). Both connection
+// targets are fixed constants, and normalizeDomain rejects anything that is not
+// a bare hostname before either request is built — no SSRF surface, so
+// validateUrl is not required.
+
 interface SpotterIssuance {
   id?: string;
   dns_names?: string[];
@@ -90,6 +96,9 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
 
   let spotterOk = false;
   try {
+    // The caller's domain is regex-validated by normalizeDomain and carried in
+    // URLSearchParams, never in the host.
+    // unguarded-fetch-ok: fixed api.certspotter.com host
     const res = await fetch(spotterUrl, { headers, signal: AbortSignal.timeout(15_000) });
     if (res.ok) {
       const rows = await readJsonWithLimit<SpotterIssuance[]>(res);
@@ -114,6 +123,9 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
   if (!spotterOk) {
     // crt.sh is slow but unmetered; give it a longer budget than Cert Spotter.
     const url = `${CRTSH}/?q=${encodeURIComponent(includeSubdomains ? `%.${domain}` : domain)}&output=json`;
+    // The caller's domain is regex-validated by normalizeDomain and reaches only
+    // an encoded query parameter, never the host.
+    // unguarded-fetch-ok: fixed crt.sh host
     const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
     if (!res.ok) {
       throw new Error(`Certificate Transparency lookup failed: Cert Spotter was unavailable and crt.sh returned HTTP ${res.status}.`);
