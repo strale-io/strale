@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-270 files (243 with a recorded intent, 27 without).
+271 files (244 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-quiet-material-consolidation.md`](_general/from-code/2026-09-06-quiet-material-consolidation.md) | Consolidate the accepted Quiet Material kit and verify the first product example before homepage narrative work. |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-6.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-6.md) | archive round 6 of the M2 closing independent review (six |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-5.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-5.md) | Archive M2 closing-review round 5 (the final round: six fresh |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-4.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-4.md) | Archive M2 closing-review round 4 (six fresh read-only partitions, |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-3.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-3.md) | Archive M2 closing-review round 3 (six fresh read-only partitions |
