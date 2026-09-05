@@ -20,7 +20,7 @@ reports and gate output lived in the scratchpad. This session:
    `-C`; 14 real defects the checker caught that partition review had
    independently found in most cases too; 95 checker misses with a located
    and quoted source (13 individual + 82 that are self-referential
-   parsing artifacts inside `DEC-20260905-C.md`'s own body — a record
+   parsing artifacts inside `DEC-20260905-C.md`'s own body, a record
    about quotations naturally has many nested `"..." Fact: ... reads
    "..."` constructions, and the checker's strict quote-pairing
    occasionally lands a span boundary in the connective prose between two
@@ -57,7 +57,7 @@ reports and gate output lived in the scratchpad. This session:
 ## Gates
 
 All ten required gates run; results in the session's final message and
-the PR body. No merge performed — PR left open per the task's
+the PR body. No merge performed, PR left open per the task's
 instructions.
 
 ## What's next
