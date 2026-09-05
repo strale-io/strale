@@ -1,0 +1,136 @@
+slug: host-exposure-lookup
+name: Host Exposure Lookup
+description: >-
+  What an internet-facing host exposes: open ports, detected software, known CVEs and hostnames,
+  from Shodan's scan data. Accepts an IPv4 address or a hostname to resolve. Sends no traffic to the target.
+category: security
+cost_class: free_unlimited
+quota_window: none
+price_cents: 5
+avg_latency_ms: 80
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - host
+  properties:
+    host:
+      type: string
+      description: IPv4 address (1.1.1.1) or hostname to resolve to one (example.com)
+output_schema:
+  type: object
+  example:
+    ip: 1.1.1.1
+    resolved_from: null
+    found: true
+    ports:
+      - 53
+      - 80
+      - 443
+    port_count: 10
+    hostnames:
+      - one.one.one.one
+    software:
+      - cpe:/a:cloudflare:cloudflare
+    vulnerabilities: []
+    vulnerability_count: 0
+    tags: []
+    risk_level: low
+    remote_admin_ports: []
+  properties:
+    ip:
+      type: string
+    found:
+      type: boolean
+    ports:
+      type: array
+    port_count:
+      type: number
+    software:
+      type: array
+    vulnerabilities:
+      type: array
+    risk_level:
+      type: string
+data_source: Shodan InternetDB
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      host: 1.1.1.1
+    expected_fields:
+      - field: ip
+        operator: not_null
+        reliability: guaranteed
+      - field: found
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: ports
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: risk_level
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    host: 1.1.1.1
+output_field_reliability:
+  ip: guaranteed
+  found: guaranteed
+  ports: guaranteed
+  port_count: guaranteed
+  hostnames: guaranteed
+  software: guaranteed
+  vulnerabilities: guaranteed
+  vulnerability_count: guaranteed
+  tags: guaranteed
+  risk_level: guaranteed
+  remote_admin_ports: guaranteed
+  resolved_from: common
+limitations:
+  - title: Reports Shodan's last scan, not the live host
+    text: >-
+      InternetDB serves cached scan results and never probes on demand. A port closed yesterday can
+      still be listed, and a service opened this morning will be absent. The age of the observation
+      is not exposed by the upstream, so it cannot be reported.
+    category: freshness
+    severity: warning
+  - title: Shared addresses describe the provider, not your target
+    text: >-
+      For a host behind a CDN, load balancer or shared hosting, the address belongs to the provider
+      and the results describe their infrastructure and unrelated tenants. The example above returns
+      three unrelated customer hostnames on a Cloudflare resolver address. Resolving a hostname to
+      an IP does not make the exposure that hostname's.
+    category: accuracy
+    severity: warning
+  - title: Absence of a record is not proof of no exposure
+    text: >-
+      found is false when Shodan has never observed the address. That means unscanned or
+      unresponsive to their scanners, not secure.
+    category: coverage
+    severity: warning
+  - title: IPv4 only
+    text: >-
+      The data source is not addressable by IPv6, and a hostname is resolved via its A record only.
+      A host reachable solely over IPv6 cannot be looked up.
+    category: coverage
+    severity: info
+  - title: risk_level is a coarse Strale-computed summary
+    text: >-
+      It is derived here from the port list and CVE list — high when any CVE is present, medium when
+      a remote-administration port is open, low when any port is open. It is not a Shodan score and
+      not a substitute for assessment.
+    category: accuracy
+    severity: info
+  - title: Private and reserved addresses are refused
+    text: >-
+      RFC 1918, loopback, link-local, CGNAT and multicast ranges are rejected before any request is
+      made, since they are not present in internet scan data.
+    category: coverage
+    severity: info

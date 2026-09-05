@@ -1,0 +1,23 @@
+{
+  "observed_at": "2026-09-05T22:15:32Z",
+  "time_basis": "recorded after observation; local date 2026-09-06",
+  "search": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"query\": \"invoice-extract\",\n  \"category\": null,\n  \"total_matches\": 1,\n  \"offset\": 0,\n  \"showing\": 1,\n  \"has_more\": false,\n  \"results\": [\n    {\n      \"type\": \"capability\",\n      \"slug\": \"invoice-extract\",\n      \"name\": \"Invoice / Receipt Extraction\",\n      \"description\": \"Extract structured data from an invoice or receipt image/PDF. Returns line items, totals, dates, vendor info, VAT amounts.\",\n      \"category\": \"data-extraction\",\n      \"geography\": \"global\",\n      \"price\": null,\n      \"input_fields\": \"Optional: url (string), base64 (string)\"\n    }\n  ],\n  \"tip\": \"Use strale_execute to run any capability. Use strale_trust_profile for full quality breakdown and execution guidance.\"\n}"
+      }
+    ],
+    "isError": false
+  },
+  "unauthenticated_execute": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"error\":\"Authentication required for paid capabilities.\",\"pay_per_call\":{\"how\":\"No signup. POST to the x402 endpoint below, settle the 402 challenge it returns in USDC on Base, and replay the request — the payment is the authentication.\",\"endpoint\":\"http://localhost:3000/x402/invoice-extract\",\"catalog\":\"http://localhost:3000/x402/catalog\",\"discovery\":\"http://localhost:3000/.well-known/x402.json\"},\"api_key\":{\"how\":\"If a human can complete a web form, https://strale.dev/signup issues a key with €2 of credit and no card.\",\"then\":\"Reconnect with Authorization: Bearer sk_live_YOUR_KEY\"},\"free_without_either\":\"11 capabilities need no key and no payment (10/day per IP): bitcoin-address-validate, dns-lookup, dogecoin-address-validate, email-validate, eth-address-validate, iban-validate, json-repair, solana-address-validate, tron-address-validate, url-to-markdown, xrp-address-validate.\"}"
+      }
+    ],
+    "isError": false
+  },
+  "interpretation": "No successful invoice execution or transaction ID. Error text is retained as observed; localhost x402 URLs are not usable public links."
+}

@@ -1,6 +1,15 @@
 {
   "canonicalWorktree": "C:/Users/pette/Projects/strale",
   "recordedAt": "2026-09-02",
-  "knownWorktrees": [],
+  "knownWorktrees": [
+    {
+      "path": "C:/tmp/strale-review-584",
+      "reason": "Detached review checkout for PR #584, belonging to another session. Recorded 2026-09-06 by founder decision in-session, applied to a recurrence. It is not this session's to remove, and the gate's own text is the reason why: a clean tree is not proof a checkout is idle, because an agent between two steps looks exactly like an abandoned one. Whoever owns the #584 review removes it; delete this entry when they have."
+    },
+    {
+      "path": "C:/Users/pette/Projects/strale-wt-brand-consolidation",
+      "reason": "Live Codex session on codex/quiet-material-consolidation, holding uncommitted untracked work (archive/sessions/2026-09-06-brand-kit-launch-proof/). Recorded 2026-09-06 by founder decision in-session — the same decision taken for strale-wt-brand-patterns earlier the same day, applied to its successor. Never delete it to satisfy the one-batch rule: removing it destroys that session's unsaved work. Delete this entry when that session commits and its owner removes the worktree."
+    }
+  ],
   "knownBranches": []
 }

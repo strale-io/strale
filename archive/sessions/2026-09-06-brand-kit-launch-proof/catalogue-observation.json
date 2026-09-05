@@ -1,0 +1,105 @@
+{
+  "observed_at": "2026-09-05T22:16:46.577193+00:00",
+  "url": "https://api.strale.io/v1/capabilities/invoice-extract",
+  "http_status": 200,
+  "projection": {
+    "slug": "invoice-extract",
+    "name": "Invoice / Receipt Extraction",
+    "description": "Extract structured data from an invoice or receipt image/PDF. Returns line items, totals, dates, vendor info, VAT amounts.",
+    "price_cents": 50,
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "URL to invoice image or PDF"
+        },
+        "base64": {
+          "type": "string",
+          "description": "Base64-encoded invoice file"
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "example": {
+        "iban": null,
+        "currency": null,
+        "due_date": null,
+        "subtotal": null,
+        "vat_rate": null,
+        "buyer_vat": null,
+        "buyer_name": null,
+        "confidence": {
+          "line_items": "low",
+          "vat_amount": "low",
+          "vendor_name": "low",
+          "total_amount": "low"
+        },
+        "line_items": [],
+        "vat_amount": null,
+        "vendor_vat": null,
+        "vendor_name": null,
+        "invoice_date": null,
+        "total_amount": null,
+        "invoice_number": null,
+        "payment_reference": null
+      },
+      "properties": {
+        "iban": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "due_date": {
+          "type": "string"
+        },
+        "subtotal": {
+          "type": "number"
+        },
+        "vat_rate": {
+          "type": "number"
+        },
+        "buyer_vat": {
+          "type": "string"
+        },
+        "buyer_name": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "object"
+        },
+        "line_items": {
+          "type": "array"
+        },
+        "vat_amount": {
+          "type": "number"
+        },
+        "vendor_vat": {
+          "type": "string"
+        },
+        "vendor_name": {
+          "type": "string"
+        },
+        "invoice_date": {
+          "type": "string"
+        },
+        "total_amount": {
+          "type": "number"
+        },
+        "invoice_number": {
+          "type": "string"
+        },
+        "payment_reference": {
+          "type": "string"
+        }
+      }
+    },
+    "transparency_tag": "ai_generated",
+    "data_source": "Claude API (document analysis and data extraction)",
+    "is_free_tier": false,
+    "cost_class": "paid_prepaid"
+  },
+  "omitted": "Customer activity timestamps, geography and solution cross-sell fields are not part of this proof."
+}

@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 39 (37 topics with a current answer, 1 historical).
+Total files: 40 (38 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -31,6 +31,7 @@ Total files: 39 (37 topics with a current answer, 1 historical).
 | gleif-lei-coverage-by-country | [2026-04-27-gleif-coverage-by-country.md](2026-04-27-gleif-coverage-by-country.md) | How many active LEIs does GLEIF report per target country, for v1 jurisdiction coverage planning? | 2026-04-27 | 0 |
 | hu-registry-build-path | [2026-05-07-hu-registry-build-path.md](2026-05-07-hu-registry-build-path.md) | What is the build path for Hungary's company registry, given no free government API and fixed-cost-only commercial wrappers? | 2026-05-07 | 0 |
 | india-kyc-kyb-data-landscape | [2026-04-28-india-kyc-kyb-data-landscape.md](2026-04-28-india-kyc-kyb-data-landscape.md) | Does India's KYC/KYB data landscape clear Strale's Tier-2 scraping doctrine well enough to ship as Payee Assurance v1.5? | 2026-04-28 | 0 |
+| invoice-demo-qualification | [2026-09-06-invoice-demo-qualification.md](2026-09-06-invoice-demo-qualification.md) | What can the first invoice extraction story truthfully show on each execution and retrieval route? | 2026-09-06 | 0 |
 | it-registry-build-path-verify | [2026-05-07-it-registry-build-path-verify.md](2026-05-07-it-registry-build-path-verify.md) | Does the chosen IT registry data path (InfoCamere primary, or Openapi under a resale addendum) still hold up under a fresh technical-viability probe? | 2026-05-07 | 0 |
 | kyckr-evaluation | [2026-05-07-kyckr-evaluation.md](2026-05-07-kyckr-evaluation.md) | Is Kyckr a viable primary fallback or parallel gap-closer for Strale's registry and UBO data, given its published terms? | 2026-05-07 | 0 |
 | litigation-bankruptcy-data-sources | [2026-04-28-litigation-bankruptcy-data-sources.md](2026-04-28-litigation-bankruptcy-data-sources.md) | Which litigation and bankruptcy data vendors can supply a Tier-2-compliant, PAYG leg for Payee Assurance v1.1? | 2026-04-28 | 0 |

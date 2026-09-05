@@ -114,3 +114,7 @@ Candidate companion at `design/brand-kit/quiet-material/controls/`. Retains the 
 ### Quiet Material patterns 0.1
 
 Candidate extension at `design/brand-kit/quiet-material/patterns/README.md`, following founder acceptance of the controls companion. Retains the current logo and all prior type/control CSS values. Adds original utility geometry, form/selection/recovery patterns and content/composition budgets, with website/social/email studies from one illustrative story. External reference evidence is in `docs/research/2026-09-05-quiet-material-pattern-references.md`; no external font, palette or artwork replaces the retained kit. No production adoption or publication.
+
+### Quiet Material kit consolidation — 6 September
+
+The founder accepted the forms, utility symbols and composition/application studies for continued design work. `design/brand-kit/README.md` is now the single entry to all four accepted companions; the atmosphere guide retains its original `design/brand-kit/quiet-material/README.md` path so existing manifest references remain exact. Acceptance dates, source paths and open qualification are in `docs/programs/brand-website/system-completion.json`. This is an execution index change, not production token promotion or alteration of source masters, generated specimen bytes or prior receipts. The current live-demo qualification is separate from the unchanged launch-boundary input used to render the illustrative studies.
