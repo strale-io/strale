@@ -31,13 +31,20 @@ and P6, the collision-registry and M2-closure-register bindings. P1
 through P4 each took a contiguous slice of bare-keyed records; P5 took
 the 34 `--notion-` qualified records belonging to this batch's 18
 id-collisions; P6 took the remaining 33 qualified records (32 `--notion-`
-plus the one `--git-` qualified record). Below, each partition report's
-own `##` headings are demoted to `###` so this file keeps one heading
-hierarchy; nothing else in any report is edited.
+plus the one `--git-` qualified record). Below, every heading in each
+reproduced partition report and sweep report is demoted by exactly one
+level (`##` to `###`, `###` to `####`, `####` to `#####`; a report's own
+top-level `#` title is left as-is) so this file keeps one heading
+hierarchy throughout; nothing else in any report is edited.
 
 ## Partition reports
 
-Each partition report's own `##` headings are demoted to `###` below; its top-level `#` title is left as-is under a `### P<n>` wrapper, the same convention round 1's archive used.
+Each partition report's own headings are demoted by exactly one level
+below (`##` to `###`, `###` to `####`, `####` to `#####`); its
+top-level `#` title is left as-is under a `### P<n>` wrapper, the same
+convention round 1's archive used, extended here by one further level
+because round 1's sources never carried a third heading level and
+round 2's P5/P6 sources and the sweep's P5 do.
 
 ### P1
 
@@ -751,7 +758,7 @@ Setup: detached worktree at C:/tmp/strale-closing2-P6, `npm ci` run there. Read-
 
 Frontmatter/filename/id agreement and the five protected sections plus the CAUTION banner were checked with shell loops over all 33 files (grep-based presence checks). Quotation fidelity used a Python script (`p6_check_quotes2.py`) that: extracts every double-quoted span of 25+ characters from each record (a regex that tolerates single line-wraps but stops at paragraph breaks); for each quote, checks membership as a normalized-whitespace substring against (a) the Notion row(s) referenced by URL or `PAGE:` citation in that file, (b) every repo file listed in that record's own `evidence:` list, (c) every other record file in the full `docs/decisions/records/` directory (for relation-target title matches), and (d) an ellipsis-aware sequential-segment match for quotes that use "..." to mark omitted text. The script flagged 71 residual "not found" quotes out of 290 extracted; every one was individually resolved by hand against its named source. Separately, a null-field script (`p6_null_check.py`) extracted every sentence containing the word "null" (14 instances across the partition) and each was checked against the actual null/populated field list returned by `dump_rows.py` for the correct page (some claims describe a *different* row than the record's own page, cited via a `PAGE:` reference in the prose — those were re-fetched individually). An evidence-path script (`p6_evidence_check.py`) confirmed every non-URL evidence entry is a file that exists at the pinned commit. A relations script (`p6_relations_check.py`) confirmed every `target:` in the partition's `relations:` blocks exists as a record file and is not a bare id in `docs/decisions/id-collisions.yaml`. A registry script (`p6_registry_check.py`) cross-checked every `--notion-` record's collision entry and register row.
 
-### Residual-mismatch list and judgement
+#### Residual-mismatch list and judgement
 
 All 71 initial script "not found" quotes were resolved as follows, after manual inspection against the correct source:
 
@@ -897,10 +904,10 @@ worktree remove failed (leave it; orchestrator cleans up after a junction check)
 ## Sweep
 
 Round 2's own six partitions found disjoint sets of confirmed defects
-across all three rounds so far (round 1 P2/P3/P4, round 2 P2/P3/P5) —
+across all three rounds so far (round 1 P2/P3/P4, round 2 P2/P3/P5);
 sampling by partition was not converging on a stable, complete list. A
-sixth pass — read-only, six reviewers, one partition each, the same 232
-records — checked every quotation and every repository-state claim in
+sixth pass (read-only, six reviewers, one partition each, the same 232
+records) checked every quotation and every repository-state claim in
 every record once, rather than sampling, before the final round closes.
 
 ### Sweep P1
@@ -1417,7 +1424,7 @@ Format: `<file>:<line> | Q/C | <span/claim> | <source> | <verdict>`. File
 names abbreviated to their distinguishing suffix after `DEC-` for width;
 full names are in the partition list order below.
 
-### DEC-20260225-P-c5d6--notion-31267c87082c81279b14f3859f6f2038.md (failed_requests table)
+#### DEC-20260225-P-c5d6--notion-31267c87082c81279b14f3859f6f2038.md (failed_requests table)
 - L4 | Q | "Add failed_requests table to MVP schema. Log every no_matching..." | row Decision field | FAITHFUL
 - L39 | Q | "Here are 47 requests for Finnish company data this month at avg..." | row Rationale field | FAITHFUL
 - L66 | Q | "to capture unauthenticated free-tier failures," | apps/api/src/db/schema.ts:680 comment | FAITHFUL
@@ -1428,7 +1435,7 @@ full names are in the partition list order below.
 - L74 | C | do.ts inserts into failedRequests at four call sites | apps/api/src/routes/do.ts:935,1163,1207,1265 | TRUE
 - L79 | C | CLAUDE.md carries this row verbatim, schema comment references DEC id | CLAUDE.md:270; schema.ts:678 | TRUE
 
-### DEC-20260225-P-c5d6--notion-31267c87082c818e9d46cd25ac0236a8.md (GTM strategy)
+#### DEC-20260225-P-c5d6--notion-31267c87082c818e9d46cd25ac0236a8.md (GTM strategy)
 - L4 | Q | "GTM strategy: Demo-first, no community credibility required..." | row Decision field | FAITHFUL
 - L81 | Q | "Dev.to #1... 'How We Score 297 Agent Data Capabilities'" | archive/growth-ops/tweets-v2.md:24 | FAITHFUL (ellipsis-split, each side a substring in order)
 - L82 | Q | "Dev.to #2... 'Give Your LangChain Agent Verified Data in 3 Lines'" | archive/growth-ops/tweets-v2.md:25 | FAITHFUL
@@ -1440,7 +1447,7 @@ full names are in the partition list order below.
 - L75 | C | no Show HN submission committed | no file found | TRUE (negative, unverifiable beyond repo)
 - L82 | C | GOALS.md discusses "a second top-up" for a specific 2026-08 customer | docs/company/GOALS.md:425-435 | TRUE
 
-### DEC-20260303-A--notion-31867c87082c812dba47c52f4f36ca33.md (smart-input discovery UX)
+#### DEC-20260303-A--notion-31867c87082c812dba47c52f4f36ca33.md (smart-input discovery UX)
 - L4 | Q | "Solution discovery UX: smart input with AI recommendation card..." | row Decision field | FAITHFUL
 - L59 | Q | "Not what you need? Tell me more" (expansion phrase) | frontend RecommendationCard.tsx:389 | FAITHFUL
 - L75 | Q | "maps directly to `POST /v1/suggest`" | row Rationale field | FAITHFUL
@@ -1452,7 +1459,7 @@ full names are in the partition list order below.
 - L79 | C | SearchHero.tsx has placeholderIdx rotating through PLACEHOLDER_QUERIES | frontend@04c9fca9 SearchHero.tsx:11,44,82,188 | TRUE
 - L87 | C | RecommendationCard.tsx renders "Copy code" action with Copy icon | frontend@04c9fca9 RecommendationCard.tsx:3,278,295 | TRUE
 
-### DEC-20260303-A--notion-31867c87082c813198e2da8e3d02b531.md (Problem→Solution SVG diagrams)
+#### DEC-20260303-A--notion-31867c87082c813198e2da8e3d02b531.md (Problem→Solution SVG diagrams)
 - L4 | Q | "Problem→Solution section uses SVG diagrams + bullet lists, no code blocks" | row Decision field | FAITHFUL
 - L55 | Q | "(today's DIY integration work)" | row Rationale field | FAITHFUL
 - L56 | Q | "(Strale) communicate the problem/solution gap visually, faster..." | row Rationale field | FAITHFUL
@@ -1460,7 +1467,7 @@ full names are in the partition list order below.
 - L60 | C | ProblemSection.tsx imports TodayDiagram/StraleDiagram/VerdictChips, defines painChips/benefitChips, no `<pre>`/`<code>` | frontend@04c9fca9 ProblemSection.tsx:2-4,8-21 | TRUE
 - L71 | C | two-diagram contrast structure (Today vs Strale) matches row's pairing | frontend@04c9fca9 TodayDiagram.tsx (5 distinct hues), StraleDiagram.tsx (single "primary" hue) | TRUE (structurally; colour-literal "green" not independently reverified, as the record itself states)
 
-### DEC-20260304-A--notion-31867c87082c812c9ccef7f58256f40a.md (Homepage v2.1 polish)
+#### DEC-20260304-A--notion-31867c87082c812c9ccef7f58256f40a.md (Homepage v2.1 polish)
 - L4 | Q | "Homepage v2.1 polish: comparison back to #2, remove Built for Agents..." | row Decision field | FAITHFUL
 - L38 | Q | goes from 11 to 10 sections | row Rationale field ("Page goes from 11 to 10 sections") | FAITHFUL
 - L75 | Q | "maps directly to..." — n/a (not present here; see DEC-20260303-A) | — | —
@@ -1474,7 +1481,7 @@ full names are in the partition list order below.
 - L121 | Q | `DEC-20260303-G` ("Homepage restructure: 11-section order") attributed to CLAUDE.md's Current Decisions list | CLAUDE.md:281 at pinned commit reads "Historical eleven-section homepage order; superseded for the apps/web redesign by DEC-20260905-A..." — the quoted string does not appear; commit `413974d8` (2026-09-05, an ancestor of the pinned commit) rewrote that line the same day this M2 batch ran | **MISQUOTE — FRESH FINDING #1** (see Findings)
 - L126 | Q | "Static discovery" / "Solutions showcase (with discovery demo folded in)" | frontend Index.tsx:215 | FAITHFUL
 
-### DEC-20260304-A--notion-31967c87082c8185b0a6c33de2293215.md (Hide component prices)
+#### DEC-20260304-A--notion-31967c87082c8185b0a6c33de2293215.md (Hide component prices)
 - L4 | Q | "Hide component prices in discovery UI" | row Decision field | FAITHFUL
 - L38 | Q | "€1.50 solution + €0.80 capability" | row Rationale field | FAITHFUL
 - L38 | Q | "36% markup" / "€1.50 for KYC verification" | row Rationale field | FAITHFUL
@@ -1485,7 +1492,7 @@ full names are in the partition list order below.
 - L73 | C | component_sum_cents exists on SolutionDetail and api.ts normalizer but is not rendered on Solutions.tsx/SolutionDetail.tsx | frontend@04c9fca9 types/index.ts:70, api.ts:163,283; no match in Solutions.tsx/SolutionDetail.tsx | TRUE
 - L83 | C | Solutions.tsx sorts/displays by price_cents; no capability-level price rendering found | frontend@04c9fca9 Solutions.tsx:75,83 | TRUE
 
-### DEC-20260304-B--notion-31867c87082c81a4b2f7ccdd52b99b1e.md (Stats bar swap)
+#### DEC-20260304-B--notion-31867c87082c81a4b2f7ccdd52b99b1e.md (Stats bar swap)
 - L4 | Q | "Stats bar: swap 27 Countries for 15 Solutions" | row Decision field | FAITHFUL
 - L26 | Q | "27 Countries" implies geographic verticals... "15 Solutions" | row Rationale field | FAITHFUL
 - L55 | Q | "stat exists on the homepage stats bar in any form." — descriptive header, not itself a source quote | — | —
@@ -1494,7 +1501,7 @@ full names are in the partition list order below.
 - L70 | Q | "15 Solutions" wording | row Decision field | FAITHFUL
 - L58 | C | buildStats() returns exactly 4 stats: workflows(100,hardcoded), capabilities(live), automated tests(1500,hardcoded), free—no signup(live); no Countries stat | frontend@04c9fca9 StatsStrip.tsx:19-25 | TRUE
 
-### DEC-20260304-B--notion-31967c87082c81dda9c4f43b5b7674b3.md (Kill DIY calculator)
+#### DEC-20260304-B--notion-31967c87082c81dda9c4f43b5b7674b3.md (Kill DIY calculator)
 - L4 | Q | "Kill 'Compare with DIY' cost calculator feature" | row Decision field | FAITHFUL
 - L34 | Q | "Components individually: €1.10. Solution: €1.50 with orchestration," | row Rationale field (period, not comma, at that point) | FAITHFUL (trailing punctuation adapted for embedding, not a finding per convention)
 - L36 | Q | "€1.50 vs 2 weeks of integration work" | row Rationale field | FAITHFUL
@@ -1503,7 +1510,7 @@ full names are in the partition list order below.
 - L51 | C | SuggestRecommendation carries no component_sum_cents | frontend@04c9fca9 types/index.ts:132-147 | TRUE
 - L56 | C | component_sum_cents exists on SolutionDetail/api.ts but not rendered, same distinct-surface field as the sibling record | as above | TRUE
 
-### DEC-20260304-C--notion-31867c87082c810197f9efa520332024.md (Trust card monitoring-dashboard redesign)
+#### DEC-20260304-C--notion-31867c87082c810197f9efa520332024.md (Trust card monitoring-dashboard redesign)
 - L4 | Q | "Trust verification card redesigned as monitoring dashboard panel, not product card" | row Decision field | FAITHFUL
 - L30 | Q | "quality infrastructure" / "product recommendation" | row Rationale field (single-quoted there) | FAITHFUL
 - L44 | Q | "here is quality infrastructure data" / "here is a suggested product to buy." | row Rationale field | **MISQUOTE — FABRICATED, FINDING (confirms round-2 Finding 1)**: row's Rationale contains only the short single-quoted phrases 'quality infrastructure' and 'product recommendation'; these longer double-quoted sentences do not appear anywhere in the row
@@ -1511,7 +1518,7 @@ full names are in the partition list order below.
 - L57 | C | TestRunLog.tsx renders monospace pass-rate log with getPassRateColorClass, border-b border-border | frontend@04c9fca9 TestRunLog.tsx:6,172-173,181 | TRUE
 - L67 | C | sparkline/border/"Example"-label removal not independently confirmed — record itself hedges this | no discrete elements found; honestly flagged | TRUE (honest non-finding)
 
-### DEC-20260304-C--notion-31967c87082c815cb440e586e783df0a.md (Trust data no false confidence)
+#### DEC-20260304-C--notion-31967c87082c815cb440e586e783df0a.md (Trust data no false confidence)
 - L4 | Q | "Trust data must never be displayed with false confidence" | row Decision field | FAITHFUL
 - L37 | Q | "a trust violation worse than showing nothing." | row Rationale field | FAITHFUL
 - L74 | Q | "Trust display centralization" / "Metric consistency" | CLAUDE.md:282-283 | FAITHFUL
@@ -1521,14 +1528,14 @@ full names are in the partition list order below.
 - L88 | C | public-trust.ts and trust-grade.ts carry no field literally named data_confidence | git grep for `data_confidence` in both files — zero hits | TRUE
 - L99 | C | circuit breakers corroborated by DEC-20260306-D.md and "this batch's sibling records citing apps/api/src/lib/circuit-breaker.ts" | docs/decisions/records/DEC-20260306-D.md contains zero mentions of "circuit" or "breaker" (it is about metric-display consistency, six unrelated issues); apps/api/src/lib/circuit-breaker.ts exists but is not cited by any record in this 34-file partition | **FALSE_CLAIM — FRESH FINDING**: the specific corroboration-by-citation claim is unsupported by the named record
 
-### DEC-20260320-C--notion-32967c87082c81178c7acc8b5c396aa3.md (auto-register .d.ts filter + health gate)
+#### DEC-20260320-C--notion-32967c87082c81178c7acc8b5c396aa3.md (auto-register .d.ts filter + health gate)
 - L4 | Q | "Hotfix: auto-register must filter .d.ts declaration files + startup health gate (MIN_EXPECTED_EXECUTORS = 200)" | row Decision field | FAITHFUL
 - L38 | Q | classified it as "unknown" since "no executor" was not a recognized failure pattern | row Rationale field | FAITHFUL
 - L69 | Q | "The previous filesystem-glob discovery pulled in test files (`.test.ts`) and any unrelated `.ts` file, producing spurious errors and masking real failures. Manifest is the source of truth — matching validate-capability, onboard, and smoke-test." | apps/api/src/capabilities/auto-register.ts:19-22 header comment | FAITHFUL (byte-for-byte)
 - L60 | C | neither the .d.ts filter nor MIN_EXPECTED_EXECUTORS nor a process.exit(1) FATAL gate exists in auto-register.ts | confirmed true narrowly of that one file | TRUE (narrowly, of that file only)
 - L60 | C | (broader framing) "this row's specific fix and its startup gate moot rather than wrong" / mechanism doesn't exist under current architecture | **FALSE.** `apps/api/src/index.ts:10` defines `const MIN_EXPECTED_EXECUTORS = 200;` verbatim, and `index.ts:19-30` implements exactly the described gate: it calls `getRegisteredCount()` after `autoRegisterCapabilities()`, throws `StartupFatalError` if `count < MIN_EXPECTED_EXECUTORS`, and `main().catch` at `index.ts:345-394` always calls `process.exit(1)`. The mechanism is live in production under a different, unlisted evidence file — **FALSE_CLAIM — the most significant finding in this partition (confirms round-2 Finding 3)**
 
-### DEC-20260320-C--notion-32967c87082c81bfa5d1ee04b7d753dc.md (au-company-data ABR onboarding)
+#### DEC-20260320-C--notion-32967c87082c81bfa5d1ee04b7d753dc.md (au-company-data ABR onboarding)
 - L4 | Q | "au-company-data capability onboarded via ABR API (Australian Business Register)" | row Decision field | FAITHFUL
 - L72 | Q | "regex-based XML parsing (no new dependency)" | row Rationale field | FAITHFUL
 - L89 | Q | "ABR API GUID obtained, capability onboarded through the full Onboarding Pipeline (DEC-20260320-B)." | row Rationale field | FAITHFUL
@@ -1537,7 +1544,7 @@ full names are in the partition list order below.
 - L69 | C | env var renamed ABR_AUTH_GUID → ABN_LOOKUP_GUID; executor and env-manifest use only the new name | apps/api/src/capabilities/au-company-data.ts:4,17,20; config/env-manifest.yaml:20 (no ABR_AUTH_GUID trace) | TRUE
 - L83 | C | this record is related_to DEC-20260320-B, which exists as a formal record | docs/decisions/records/DEC-20260320-B.md present | TRUE
 
-### DEC-20260320-J--notion-32967c87082c8177a82be21d48f57411.md (Dynamic methodology counts)
+#### DEC-20260320-J--notion-32967c87082c8177a82be21d48f57411.md (Dynamic methodology counts)
 - L4 | Q | "Dynamic methodology text: capability counts, solution counts, and test suite counts must never be hardcoded. Always query live data." | row Decision field | FAITHFUL
 - L69 | Q | "Drift problem (cert audit 2026-04-30)" | apps/api/src/lib/platform-facts.ts:7 comment | FAITHFUL
 - L70 | Q | "free-tier list: 5 in marketing, 11 in manifests, 5 different in production." | apps/api/src/lib/platform-facts.ts:15-16 | FAITHFUL
@@ -1545,13 +1552,13 @@ full names are in the partition list order below.
 - L64 | C | platform-facts.ts computes capability_counts/solution_count_active from DB, not a constant | apps/api/src/lib/platform-facts.ts header/architecture section | TRUE
 - L69 | C | frontend Methodology.tsx does not display capability/solution/test-suite counts; only reads facts?.static.vendors.sanctions | frontend@04c9fca9 Methodology.tsx:91-92 (only field read from usePlatformFacts) | TRUE
 
-### DEC-20260320-J--notion-32967c87082c8192b920f8d8cfb40aa7.md (pep-check transparency tag)
+#### DEC-20260320-J--notion-32967c87082c8192b920f8d8cfb40aa7.md (pep-check transparency tag)
 - L4 | Q | "pep-check uses transparency tag mixed instead of commercial_data" | row Decision field | FAITHFUL
 - L64 | Q | "`pep-check` — ... Transparency: algorithmic," | CLAUDE.md:312 | FAITHFUL (ellipsis-compressed, each side a substring in order)
 - L57 | C | manifests/pep-check.yaml declares transparency_tag: algorithmic, not mixed or commercial_data | manifests/pep-check.yaml:136 | TRUE
 - L57 | C | this record cannot determine when/why the tag changed from mixed to algorithmic; no commit found | honestly flagged as unresolved | UNVERIFIABLE (repo history search inconclusive, correctly reported as such)
 
-### DEC-20260320-K--notion-32967c87082c818e8cbbc29a3a0c1bed.md (KYB+Invoice Verify complete)
+#### DEC-20260320-K--notion-32967c87082c818e8cbbc29a3a0c1bed.md (KYB+Invoice Verify complete)
 - L4 | Q | "KYB + Invoice Verify implementation complete — 60 solutions, 3 capabilities, all docs updated" | row Decision field | FAITHFUL
 - L78 | Q | "split out of seed-solutions.ts on 2026-08-16 so the definitions can be imported, validated and tested" | apps/api/src/db/solution-catalogue.ts header comment | FAITHFUL
 - L86 | Q | "Seed 60 new solutions (KYB Essentials, KYB Complete, Invoice Verify) across 20 countries, and deprecate 5 old solutions" | apps/api/scripts/seed-kyb-solutions.ts header | FAITHFUL
@@ -1560,7 +1567,7 @@ full names are in the partition list order below.
 - L88 | C | drop-aggregator-kyb.ts soft-deactivates 15 (5 countries × 3 families); drop-sg-kyb.ts soft-deactivates 3; 18 total accounted for | apps/api/scripts/archive/drop-aggregator-kyb.ts:13-16; drop-sg-kyb.ts:2-4 | TRUE (18 = 15+3, matches record's own arithmetic, despite the aggregator script's own header line separately and inconsistently saying "18 solutions across 6 jurisdictions" before listing only 15 — that internal inconsistency is the script's own, not this record's)
 - L96 | C | 42 of 60 solutions remain unaccounted for; cannot confirm production is_active state | honestly flagged as unconfirmable from repo alone | UNVERIFIABLE (production DB state)
 
-### DEC-20260320-K--notion-32967c87082c81e890bfe564a3c2e917.md (Free-tier showcase protection)
+#### DEC-20260320-K--notion-32967c87082c81e890bfe564a3c2e917.md (Free-tier showcase protection)
 - L4 | Q | "Free-tier showcase protection: 5 free-tier capabilities get dedicated meta-monitor alerting on any quality degradation. These are the front door." | row Decision field | FAITHFUL
 - L63 | Q | "Free-tier: 11 capabilities as of 2026-08 (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate, plus 6 crypto address validators: bitcoin/eth/solana/tron/dogecoin/xrp-address-validate) require no auth/signup." | CLAUDE.md:326 | FAITHFUL (byte-for-byte)
 - L67 | Q | "free-tier list: 5 in marketing, 11 in manifests, 5 different in production," | apps/api/src/lib/platform-facts.ts:15-16 | FAITHFUL
@@ -1568,7 +1575,7 @@ full names are in the partition list order below.
 - L58 | C | this record cannot determine which of today's 11 free-tier capabilities match the row's original 5; iban-validate remains free-tier | manifests/iban-validate.yaml:13 (is_free_tier: true) | TRUE
 - L64 | C | SQS-90 threshold mechanism cannot exist today because SQS score doesn't exist | consistent with CLAUDE.md:324's SQS-deletion statement | TRUE
 
-### DEC-20260405-B--notion-33967c87082c810c920dd09d78aa06b6.md (Solution execution transaction storage model)
+#### DEC-20260405-B--notion-33967c87082c810c920dd09d78aa06b6.md (Solution execution transaction storage model)
 - L4 | Q | "DEC-20260405-B: Solution execution transaction storage model and Phase 1.4 migration tooling workaround" | row Decision field | FAITHFUL
 - L60 | Q | (relations-paragraph quote) "`DEC-20260405-B` explicitly specified per-step `latencyMs` as required," attributed to the sibling DEC-20260406-A row's own Rationale — not this row | this record's own prose accurately describes the sibling's claim, not this row's Rationale | FAITHFUL (correctly attributed to the other record, not misattributed here)
 - L80 | Q | "solution executions have no single capability" | apps/api/src/db/schema.ts:333 comment | FAITHFUL
@@ -1577,7 +1584,7 @@ full names are in the partition list order below.
 - L74 | C | transactions.capabilityId nullable, solutionSlug present; no solution_executions/solution_run/parent_transaction table exists | apps/api/src/db/schema.ts:328-335; git grep for the three alternate names finds none | TRUE
 - L94 | C | no database-level CHECK constraint for the XOR found in schema.ts or startup-migrations.ts; record does not claim otherwise | honestly flagged as not independently located | UNVERIFIABLE (may be application-layer only)
 
-### DEC-20260405-B--notion-34a67c87082c810692c8dd4374a6f9ac.md (Deactivate credit-report-summary)
+#### DEC-20260405-B--notion-34a67c87082c810692c8dd4374a6f9ac.md (Deactivate credit-report-summary)
 - L4 | Q | "Deactivate credit-report-summary; no free source for Swedish credit ratings exists" | row Decision field | FAITHFUL
 - L50 | Q | "Phase 4, a separate decision on `credit-report-summary` (`DEC-20260405-B`, no formal record exists for that id on `main` and it is not in `docs/decisions/id-collisions.yaml`, so it is mentioned here in prose only)." | docs/decisions/records/DEC-20260405-A.md:67-70 | FAITHFUL (byte-for-byte)
 - L72 | Q | "DEC-20260405-B / DEC-20260422-SE-D: Swedish credit ratings, credit limits, and risk indicators are proprietary products of commercial bureaus (UC/Enento, Bisnode/D&B, Allabolag). No free government source exists — Bolagsverket is a registry, not a credit bureau." | apps/api/src/capabilities/auto-register.ts:141-143 | FAITHFUL (byte-for-byte)
@@ -1588,14 +1595,14 @@ full names are in the partition list order below.
 - L67 | C | manifest still on disk, data_source Allabolag.se scrape, price_cents 100 | manifests/credit-report-summary.yaml:10,52-53 | TRUE
 - L45 | C | id-collisions.yaml now carries a DEC-20260405-B entry (correcting DEC-20260405-A.md's now-stale prose) | docs/decisions/id-collisions.yaml:140-155 | TRUE
 
-### DEC-20260406-A--notion-33967c87082c816b825cdf812ef006b8.md (per-step latencyMs fix)
+#### DEC-20260406-A--notion-33967c87082c816b825cdf812ef006b8.md (per-step latencyMs fix)
 - L4 | Q | "DEC-20260406-A: Fix missing per-step latencyMs capture in solution audit_trail" | row Decision field | FAITHFUL
 - L64 | Q | "`DEC-20260405-B` explicitly specified per-step `latencyMs` as required." | this row's own Rationale field | FAITHFUL (correctly attributed as this row's own claim about the other row, not independently re-verified against that other row — record says so explicitly)
 - L88 | Q | "wraps each step with `Date.now()` timing on both success and failure branches." | apps/api/src/lib/solution-executor.ts:620-645 pattern | FAITHFUL
 - L84 | C | StepTiming interface with latencyMs: number field; pushed on both success/failure branches | apps/api/src/lib/solution-executor.ts:217,626,645 | TRUE
 - L87 | C | module header documents the nested-path resolution syntax the sibling DEC-20260406-B collision concerns | apps/api/src/lib/solution-executor.ts:9-13 | TRUE
 
-### DEC-20260406-A--notion-33a67c87082c81bdb38fd9eeaa556d98.md (Consolidate working rules)
+#### DEC-20260406-A--notion-33a67c87082c81bdb38fd9eeaa556d98.md (Consolidate working rules)
 - L4 | Q | "Consolidate working rules for Claude (chat), CC, and Notion governance into single source-of-truth page" | row Decision field | FAITHFUL
 - L81 | Q | "AMENDS DEC-20260812-A's escalation contract" | docs/company/CHARTER.md:8 ("This AMENDS...") | FAITHFUL (substring)
 - L82 | Q | "if they ever diverge, this file is the text and the other two are pointers to it" | docs/company/CHARTER.md:5-6 | FAITHFUL
@@ -1605,7 +1612,7 @@ full names are in the partition list order below.
 - L79 | C | CLAUDE.md's Workflow Protocol/Session contract/program register describe a repo-native model absent from this row's Notion-page model | CLAUDE.md opening sections; docs/programs/README.md | TRUE
 - L88 | C | CLAUDE.md still restates Notion governance rules ("Check before creating," "ONE page per topic," "Superseded pages archived same session...") alongside the repo-native model | CLAUDE.md:193-197 | TRUE
 
-### DEC-20260406-B--notion-33967c87082c8103becfe4900a1ff319.md (nested field reference fix)
+#### DEC-20260406-B--notion-33967c87082c8103becfe4900a1ff319.md (nested field reference fix)
 - L4 | Q | "DEC-20260406-B: Fix nested field reference resolution in solution input mapping" | row Decision field | FAITHFUL
 - L81 | Q | "`$input.<field>` — resolves to caller's `inputs[<field>]`" | apps/api/src/lib/solution-executor.ts:10 | FAITHFUL
 - L82 | Q | "`$steps[N].<field>` — resolves to step N's `output[<field>]` (0-indexed by execution order)" | apps/api/src/lib/solution-executor.ts:11 | FAITHFUL
@@ -1614,7 +1621,7 @@ full names are in the partition list order below.
 - L87 | Q | "`$steps[N].<path>` → walk path from `completedSteps[N]` (supports nested: `$steps[0].license.spdx`)" | apps/api/src/lib/solution-executor.ts:143 | FAITHFUL
 - L76 | C | file exports parsePath() and walkPath(), resolveInputRef() uses both | apps/api/src/lib/solution-executor.ts:76,110,147,160-203 | TRUE
 
-### DEC-20260406-B--notion-33a67c87082c81629339d9f208f65f52.md (Notion workspace restructure)
+#### DEC-20260406-B--notion-33a67c87082c81629339d9f208f65f52.md (Notion workspace restructure)
 - L4 | Q | "Restructure Notion workspace around Operating Manual as single entry point and four-layer model" | row Decision field | FAITHFUL
 - L82 | Q | "Notion Workspace Structure (8 sections under Project Home)" | CLAUDE.md:182 | FAITHFUL
 - L87 | Q | "four-layer model: canonical pages / databases / archives / not-Strale." | row Context (own restatement) | FAITHFUL
@@ -1622,7 +1629,7 @@ full names are in the partition list order below.
 - L79 | C | CLAUDE.md's 8-section list (🏠🎯🛠️✅📣🔧📓⚙️) does not name an "Operating Manual" page | CLAUDE.md:182-189 | TRUE
 - L88 | C | CHARTER.md (DEC-20260815-A) states it governs "day-to-day operation" | docs/company/CHARTER.md:14 | TRUE
 
-### DEC-20260406-C--notion-33a67c87082c814b8afafb2e1c6ca317.md (Project Home physical tidy)
+#### DEC-20260406-C--notion-33a67c87082c814b8afafb2e1c6ca317.md (Project Home physical tidy)
 - L4 | Q | "Project Home physical tidy — canonical set at top level, ~90 pages archived to Archive — Q1 2026" | row Decision field | FAITHFUL
 - L33 | Q | "Operating Manual (DEC-20260406-B) established the governance layer. This decision executes the content-layer tidy that the governance layer requires. The pre-tidy state had Failure Mode 2 (supersession without archival) re-emerging within 30 days of the prior governance protocol — fixing it was urgent because a governance layer not backed by a tidy content layer loses credibility fast. The tidy also unblocks Phase 3 content consolidation, which cannot proceed cleanly while ~90 non-canonical siblings obscure the canonical set." | row Rationale field | FAITHFUL (byte-for-byte, full paragraph)
 - L68 | Q | "Repo-native migration continuation — pre-cutover" | CLAUDE.md:53 section heading | FAITHFUL
@@ -1631,7 +1638,7 @@ full names are in the partition list order below.
 - L79 | Q | "Superseded pages archived same session (prefix + move to archive)," | CLAUDE.md:197 | FAITHFUL
 - L57 | C | this is a Notion-workspace state; no file in this repo confirms/denies the ~90-page archive still holding | honestly flagged | UNVERIFIABLE (Notion state, outside repo)
 
-### DEC-20260406-C--notion-33a67c87082c819cabf6d47331d695ce.md (Rule E, no em dashes)
+#### DEC-20260406-C--notion-33a67c87082c819cabf6d47331d695ce.md (Rule E, no em dashes)
 - L4 | Q | "Rule E added to Working Rules: brand voice is institutional and human, no em dashes" | row Decision field | FAITHFUL
 - L28 | Q | "the strongest AI tell in 2026." | row Rationale field | FAITHFUL
 - L28 | Q | full block quote beginning "The prior memory rule said 'never I built framing...'" through "...duplicate the wording." | row Rationale field (page 33a67c87082c819cabf6d47331d695ce) | FAITHFUL (long block, confirmed byte-for-byte)
@@ -1644,7 +1651,7 @@ full names are in the partition list order below.
 - L74 | Q | VOICE.md "states five writing rules ('No jargon, ever,' ...)" | docs/company/VOICE.md's actual first rule at the pinned commit reads "Use audience-appropriate terms (DEC-20260905-A)."; the string "No jargon, ever" does not appear anywhere in the file (confirmed by full-file grep) | **MISQUOTE — STALE, FINDING (confirms round-2 Finding 7)**: VOICE.md was edited the same day (DEC-20260905-A) the pinned commit was cut, replacing that rule
 - L67 | C | strale-content-rules.md does not exist at repo root or under docs/company/ | `find . -iname strale-content-rules.md` — zero results | TRUE
 
-### DEC-20260409-C--notion-33d67c87082c81c19655cb04fb7d3ecf.md (Gate 4 solution-level smoke tests)
+#### DEC-20260409-C--notion-33d67c87082c81c19655cb04fb7d3ecf.md (Gate 4 solution-level smoke tests)
 - L4 | Q | "Gate 4: Solution-level smoke tests in scheduler" | row Decision field | FAITHFUL
 - L46 | Q | "all 12 constituent capabilities had clean SQS scores, but the solution was broken end-to-end due to input mapping bugs." | row Rationale field | FAITHFUL
 - L50 | Q | "€2.50 × 100 solutions × daily cadence = ~€250/day if all run every 24h" | row Rationale field ("A 12-step KYB solution at €2.50 × 100 solutions × daily cadence = ~€250/day if all run every 24h") | FAITHFUL (substring)
@@ -1656,7 +1663,7 @@ full names are in the partition list order below.
 - L83 | C | DEC-20260409-D's Layer A/B shipped, Layer D (this row's live-execution design) never built | apps/api/scripts confirmed gate4b file exists; DEC-20260409-D.md text | TRUE
 - L88 | C | test-scheduler.ts's weekly-sweep is a URL/dependency probe, not a representative-solution execution layer, by its own comment | apps/api/src/jobs/test-scheduler.ts:125-129,662-667 | TRUE
 
-### DEC-20260420-D--notion-34867c87082c81f0827eedf29d133600.md (SA.2b PII classification)
+#### DEC-20260420-D--notion-34867c87082c81f0827eedf29d133600.md (SA.2b PII classification)
 - L4 | Q | "SA.2b per-capability PII classification: manifest-declared field + 12-value category enum + heuristic fallback during backfill + blocking gate for new capabilities + 15/15 top backfill shipped" | row Decision field | FAITHFUL
 - L42 | Q | "SA.2b.a audit surfaced 6 open questions; all 6 decided and shipped as SA.2b.b (5 commits: B1 migration, B2 runtime, B3 manifest backfill, B4 maintenance_class repair, B5 dutch-company-data fixture repair). F-A-003 (input-coverage bug in detectPersonalData) and F-A-009 (fragile keyword heuristic) both closed in prod as of 2026-04-20." | row Rationale field | FAITHFUL (byte-for-byte)
 - L50 | Q | "this one only touches input so we said false" | row Rationale field ("...invites 'this one only touches input so we said false' reasoning...") | FAITHFUL
@@ -1668,7 +1675,7 @@ full names are in the partition list order below.
 - L98 | C | onboarding-gates.ts "still enforces PII_CATEGORY_ENUM exactly as this row specifies" | apps/api/src/lib/onboarding-gates.ts:242-259 defines 14 entries (the 12 the row named plus `nationality` and `political_affiliation`, added 2026-04-30 per an inline comment) | **FALSE_CLAIM — FINDING (confirms round-2 Finding 4)**: not "exactly" — the enum has grown by 2 entries since this row
 - L96 | C | only DEC-20260420-A has a formal record among DEC-20260420-A/B/C | DEC-20260420-A.md exists; -B.md and -C.md do not | TRUE
 
-### DEC-20260420-E--notion-34867c87082c81b590b4e8bee4b59228.md (F-A-005 free-tier redaction)
+#### DEC-20260420-E--notion-34867c87082c81b590b4e8bee4b59228.md (F-A-005 free-tier redaction)
 - L4 | Q | "F-A-005 free-tier transaction lookup redaction: always-redact (path a), asymmetric marker (unauth-only), single commit, 200 + body_redacted envelope, verify endpoint untouched" | row Decision field | FAITHFUL
 - L41 | Q | "F-A-005.a audit surfaced 6 open questions; all 6 decided and shipped as F-A-005.b (single commit a253d91)." | row Rationale field | FAITHFUL
 - L44 | Q | "inherits the manifest-drift surface SA.2b.b discovered" | row Rationale field | FAITHFUL
@@ -1680,14 +1687,14 @@ full names are in the partition list order below.
 - L98 | Q | "F-A-005: Unauthenticated lookups return a redacted envelope — body fields" | apps/api/src/routes/transactions.ts:168 | FAITHFUL
 - L89 | C | verify endpoint carve-out preserved under DEC-20260420-G (F-A-012), still hash-only | apps/api/src/routes/verify.ts (F-A-012 hardening, verified separately below) | TRUE
 
-### DEC-20260420-E--notion-34867c87082c81d5a898f48cc1554086.md (Product architecture and first wedge)
+#### DEC-20260420-E--notion-34867c87082c81d5a898f48cc1554086.md (Product architecture and first wedge)
 - L4 | Q | title-only row, "Product architecture and first wedge" | row Decision title | FAITHFUL
 - L60 | Q | "Part Two — The compliance vertical, as a separate brand from scratch" | docs/strategy/2026-08-05-direction-plan.md section heading | FAITHFUL (not independently re-verified against the strategy doc's exact text in this pass beyond the record's own citation; treated as plausible per file existing)
 - L62 | Q | "Not "a KYB API" — Trulioo, Creditsafe, Kyckr, and Moody's own that phrase. Three viable wedges:" | docs/strategy/2026-08-05-direction-plan.md (Positioning subsection) | FAITHFUL (not independently re-verified byte-for-byte in this pass; not evidence-listed either — record's evidence array carries only the Notion URL)
 - L68 | Q | "supersedes... the Counterparty Assurance rename/ICP," attributed to `DEC-20260812-A` (existing record) | docs/decisions/records/DEC-20260812-A.md contains no such phrase; line 64 reads "The source decision explicitly supersedes the Counterparty Assurance row named DEC-20260502-A and DEC-20260503-A." The exact wording "(Counterparty Assurance rename/ICP)" and "retired as primary product" is CLAUDE.md's own summary bullet (CLAUDE.md:302), not this record's evidence list (which names only the Notion URL) | **MISATTRIBUTED — FINDING (confirms round-2 Finding 5)**
 - L57 | C | this row's title/Rationale/Outcome are all null except title | confirmed: row's null-field list includes Rationale, Outcome, Source | TRUE
 
-### DEC-20260420-F--notion-34867c87082c810b8547fccb3e75c61b.md (F-A-006+F-A-007 HMAC token lifecycle)
+#### DEC-20260420-F--notion-34867c87082c810b8547fccb3e75c61b.md (F-A-006+F-A-007 HMAC token lifecycle)
 - L4 | Q | "F-A-006 + F-A-007 HMAC audit token lifecycle: 90-day bounded expiry, two-key rotation ring, separate query params encoding, 180-day legacy grace, auth-gated re-issue endpoint. Two commits shipped." | row Decision field | FAITHFUL
 - L45 | Q | "F-A-006/007.a audit surfaced 9 open questions; all 9 decided and shipped as F-A-006/007.b across 2 commits." | row Rationale field | FAITHFUL
 - L48 | Q | "matches compliance-archive norms... and the existing retention grace period" | row Rationale field (ellipsis-compressed) | FAITHFUL
@@ -1705,14 +1712,14 @@ full names are in the partition list order below.
 - L96 | C | lifecycle mechanism still live at named functions | apps/api/src/lib/audit-token.ts and apps/api/src/routes/audit.ts, all four F-A-006/007 comments confirmed | TRUE
 - L100 | C | re-issue endpoint's ownership/rate-limit design unchanged since; no later narrowing/widening found | not independently falsified in this pass beyond the record's own search | UNVERIFIABLE (absence claim, reasonable)
 
-### DEC-20260420-F--notion-34867c87082c810b8df1e8e459039d35.md (Capability rationalization and site rebuild)
+#### DEC-20260420-F--notion-34867c87082c810b8df1e8e459039d35.md (Capability rationalization and site rebuild)
 - L4 | Q | title-only row, "Capability rationalization and site rebuild" | row Decision title | FAITHFUL
 - L62 | Q | "The website redesign is built inside this repository as `apps/web` (monorepo)... `strale-frontend` was swept and its design material preserved... and is kept, not extended, until the `apps/web` site serves production." | CLAUDE.md:296 (DEC-20260902-A bullet, ellipsis-compressed) | FAITHFUL
 - L69 | Q | "Hosting plan in DEC-20260503-C partially superseded: strale-frontend on Cloudflare Pages (not Railway as planned); sibling-repo structure retained (monorepo deferred); payment rails portion of DEC-20260503-C remains active" | docs/decisions/records/DEC-20260513-A.md title | FAITHFUL
 - L57 | C | apps/ contains only api; no apps/web directory exists at this commit | `ls apps/` = api only | TRUE
 - L57 | C | this row's Rationale/Outcome/Source all null | confirmed in dumped row | TRUE
 
-### DEC-20260420-G--notion-34867c87082c81c38c3acaca5d01d6ef.md (F-A-012 verify DoS hardening)
+#### DEC-20260420-G--notion-34867c87082c81c38c3acaca5d01d6ef.md (F-A-012 verify DoS hardening)
 - L4 | Q | "F-A-012 verify endpoint DoS hardening: MAX_DEPTH 200→50, DEFAULT_DEPTH 50→20, rate limit 30→10/min per IP, explicit truncated marker. Single commit shipped." | row Decision field | FAITHFUL
 - L43 | Q | "F-A-012.a audit surfaced 7 open questions; all 7 decided and shipped as F-A-012.b in commit b26addc. Tightens pre-existing DoS mitigations that were insufficient at prod's observed chain-length distribution (median 25, P95 1,308, max 1,592)." | row Rationale field | FAITHFUL
 - L47 | Q | "any sane cap truncates P95-day walks, so the cap choice is about per-request memory cost, not genesis-reachability" | row Rationale field | FAITHFUL
@@ -1726,13 +1733,13 @@ full names are in the partition list order below.
 - L101 | Q | "F-A-012: loop exited due to the depth cap (rather than genesis...)." | apps/api/src/routes/verify.ts:362-363 | FAITHFUL
 - L94 | C | MAX_DEPTH=50, DEFAULT_DEPTH=20 in verify.ts; AUTH_VERIFY_MAX_DEPTH=50 separately in transactions.ts | apps/api/src/routes/verify.ts:24-25; apps/api/src/routes/transactions.ts:200 | TRUE
 
-### DEC-20260420-G--notion-34867c87082c81dcafe3dea59cc119b1.md (Entity resolution priority investment)
+#### DEC-20260420-G--notion-34867c87082c81dcafe3dea59cc119b1.md (Entity resolution priority investment)
 - L4 | Q | title-only row, "Entity resolution as priority engineering investment" | row Decision title | FAITHFUL
 - L61 | Q | "Part 2, the cross-validation layer, was built as a standalone module but... file is itself orphaned: no capability executor under [wired into the solution executor]; the cross-validation half is dead code," | docs/decisions/records/DEC-20260409-B.md:86,96,104 (three non-adjacent sentences compressed via `...` plus an editorial `[...]` bracket) | FAITHFUL — each side of the `...` is independently a genuine substring in order; the bracket is a marked editorial insertion, not claimed as literal source text (judged not a finding, consistent with round-2's identical judgment on this record)
 - L57 | C | company-name-match.ts exists as a fuzzy company-name matching module | apps/api/src/lib/company-name-match.ts present | TRUE
 - L57 | C | this row's Rationale/Outcome are both null | confirmed in dumped row | TRUE
 
-### DEC-20260420-H--notion-34867c87082c81b58b36de5f71c0937f.md (Strale positioning and ICP clarification)
+#### DEC-20260420-H--notion-34867c87082c81b58b36de5f71c0937f.md (Strale positioning and ICP clarification)
 - L4 | Q | title-only row, "Strale positioning and ICP clarification" | row Decision title | FAITHFUL
 - L57 | Q | "direct connections only. No scraping. Full ToS compliance with every provider" attributed to DEC-20260420-I's own text | docs/decisions/records/DEC-20260420-I--notion-34867c87082c81c8b9d4c6b5568bbcef.md:28-29 actually reads "direct data connections only. No scraping. Full ToS compliance with every provider." (the same file's own Decision-field quote elsewhere is "direct connections only" describing the doctrine's *name*, not this quoted sentence) | **MISQUOTE — FRESH FINDING #2**: the word "data" is dropped from the DEC-20260420-I row's actual sentence ("direct data connections only"), producing a quotation that is not a substring of its named source
 - L57 | Q | "Amends DEC-20260420-H" | docs/decisions/records/DEC-20260420-I--notion-34867c87082c81c8b9d4c6b5568bbcef.md title | FAITHFUL
@@ -1740,7 +1747,7 @@ full names are in the partition list order below.
 - L36 | C | this row's Rationale/Outcome are both null | confirmed in dumped row | TRUE
 - L86 | C | this row's own title names the same subject area as the later-superseded DEC-20260502-A framing, four months earlier — hedged as inference only, not a claim of identity | honestly hedged | TRUE (non-finding, properly qualified)
 
-### DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6.md (Option C for 238-slug manifest drift)
+#### DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6.md (Option C for 238-slug manifest drift)
 - L4 | Q | "Option C for 238-slug manifest drift: fix Class 5.2 mapping + add backfill safety banner, defer full Class 4 cleanup to Session 1 onboarding engine rewrite. SA.2b.c will use direct-SQL backfill to avoid the pipeline entirely." | row Decision field | FAITHFUL
 - L50 | Q | "DB is serving correct values for all classes — drift is invisible to users, only blocks the onboarding pipeline." | row Rationale field | FAITHFUL
 - L53 | Q | "Option A," rejected... given a planned Session-1 onboarding rewrite | row Rationale field | FAITHFUL
