@@ -275,25 +275,22 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 17 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529, #532, #537, #539, #542, #544, #547,
-      #549). Batch 17 migrated the twelve April to early-May rows
-      (DEC-20260406-E to DEC-20260503-B, including the one temporary row
-      DEC-20260422-H, whose Payee Assurance pricing deferral never fired
-      because DEC-20260812-A retired that product framing); Consequences
-      state the SQS deletion, the scraper and aggregator deactivations'
-      state in the DEACTIVATED map, and that the progressive-unlock
-      mechanism was never built. Private projection 24 rows at archive
-      a7ffe1ad; operator verifier passes. G1 holds 13 rows, all global.
-      Blocking gaps: G1, G2, G9. Loop since 2026-09-04 evening: private
-      half committed and register bumped before review, auto-merge armed
-      after PASS, batches of 10 to 14 rows, docs-only PRs take the CI fast
-      path (#533). Next: batch 18, the thirteen May rows (DEC-20260505-A
-      to DEC-20260513-D), after which G1 has no pending row and the
-      orchestrator closes it; then G2's 34 collisions one at a time, then
-      G9's closing review. This track is the M2 exit gate: the closure
-      register's validator refuses a state where it is done, or any
-      post-m2 track is active or done, while a blocking gap remains.
+      Batches 1 to 18 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529, #532, #537, #539, #542, #544, #547, #549,
+      #551). Batch 18 migrated the last thirteen G1 rows, the May 2026
+      operating decisions (DEC-20260505-A to DEC-20260513-D); G1 is closed
+      in this bookkeeping batch (blocking: false, text rewritten as
+      resolved). Private projection 11 rows at archive
+      148808fd; operator verifier passes. Blocking gaps: G2 (34
+      collisions across 69 rows) and G9 (the closing independent review of
+      the full candidate set). Next: G2, one collision at a time, each
+      resolved atomically with source evidence and an independent review,
+      or given an evidence-backed documented_only disposition; start with
+      the collisions whose rows are both historically active, and record
+      the method in a brief before the first one. Then G9. This track is
+      the M2 exit gate: the closure register's validator refuses a state
+      where it is done, or any post-m2 track is active or done, while a
+      blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -436,6 +433,20 @@ tracks:
       - docs/decisions/records/DEC-20260427-I.md
       - docs/decisions/records/DEC-20260503-B.md
       - handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md
+      - docs/decisions/records/DEC-20260505-A.md
+      - docs/decisions/records/DEC-20260505-B.md
+      - docs/decisions/records/DEC-20260505-C.md
+      - docs/decisions/records/DEC-20260507-I.md
+      - docs/decisions/records/DEC-20260507-J.md
+      - docs/decisions/records/DEC-20260510-A.md
+      - docs/decisions/records/DEC-20260511-B.md
+      - docs/decisions/records/DEC-20260511-E.md
+      - docs/decisions/records/DEC-20260511-F.md
+      - docs/decisions/records/DEC-20260513-A.md
+      - docs/decisions/records/DEC-20260513-B.md
+      - docs/decisions/records/DEC-20260513-C.md
+      - docs/decisions/records/DEC-20260513-D.md
+      - handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md
 
   - id: T6
     title: M3 repo-native workflows
