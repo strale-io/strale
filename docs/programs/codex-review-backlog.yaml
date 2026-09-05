@@ -41,6 +41,39 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-32
+    subject: "PR #564 — startup-migration block 0112 lists the eight free-public-API capabilities and clears the fabricated dependency_health rule on six of them"
+    commit: 135e556d
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      It overrides an automatic quality gate to put capabilities on sale, and
+      it does so from a block that runs at boot, where a throw crash-loops
+      production. The promotion job's 95%-over-40-results bar was unreachable
+      for these eight (a fabricated `status` assertion pinned six at 80%, and
+      the free_quota 24h suite floor put 40 results ten days out), so the
+      block moves lifecycle_state, visible and x402_enabled directly. Whether
+      the evidence offered — live execution of all eight against their
+      upstreams, green known_answer suites, free keyless sources — is an
+      adequate substitute for the gate it replaces is exactly the judgement a
+      second provider should make, and a Claude session both made the call and
+      reviewed it.
+    what_to_attack: >
+      Whether runMigration0112_promoteFreeApiEight in
+      apps/api/src/lib/startup-migrations.ts can throw for any reachable
+      production state (the capabilities_no_half_quarantine CHECK, the
+      UPDATE...RETURNING result shape against postgres-js, jsonb exact-match
+      semantics); whether the known_overlaps justification for
+      capabilities.lifecycle_state holds, given migration-ledger-lib.mjs
+      allowlists by column name and never verifies the blocks list; whether
+      the block's statements auto-committing individually (getDb() is a
+      pooled non-transactional client) can leave capabilities listed with
+      their promotion events missing, and what the floor and promotion job
+      then do; and whether removing the `status` check from six suites while
+      keeping it on cve-details is the correct partition — verify against
+      each executor's actual output, not the manifests.
+    claude_verdicts: 1 round, PASS with 3 findings (untested deactivation_reason interlock, incomplete known_overlaps blocks list, ledger rows_affected mismatch); all three fixed in 7eec1f46 before merge
   - id: CX-31
     subject: "PR #563 — M2 G2 batch 4: seven ID collisions (DEC-20260420-I/J/K, DEC-20260421-A/B/C/D) resolved atomically with thirteen source-qualified records and one documented-only row"
     commit: 6f2dec52
