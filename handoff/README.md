@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-242 files (215 with a recorded intent, 27 without).
+243 files (216 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md`](_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md) | land T10 (M2 exit-gap closure) batch 17, twelve Decision rows from |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md`](_general/from-code/2026-09-05-m2-batch-16-march-second-half.md) | land T10 (M2 exit-gap closure) batch 16, twelve March 2026 |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md`](_general/from-code/2026-09-05-m2-batch-15-march-first-half.md) | land T10 (M2 exit-gap closure) batch 15, fourteen March 2026 |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-foundation-discovery.md`](_general/from-code/2026-09-05-brand-foundation-discovery.md) | understand Strale's product, commercial use, catalogue, positioning and design history before defining the founder's... |
