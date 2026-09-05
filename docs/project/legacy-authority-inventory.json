@@ -75,6 +75,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
+        "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -152,6 +153,9 @@
         "archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260225-P-c5d6.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-A.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260320-K.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-A.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-B.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -277,6 +281,7 @@
         "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md",
+        "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -434,6 +439,8 @@
         "archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md",
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260225-P-c5d6.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-A.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-B.md",
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
@@ -466,6 +473,7 @@
         "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md",
+        "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -562,7 +570,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "31f7a963a3e9f9f8a4467762955a3f624fcf20751c07ed8bea5b344bcbb3a74c",
+      "sha256": "d72d8a873971f8fc635506fcf72d784a49f03ffb32e60ca7dff75c9fd5b38167",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

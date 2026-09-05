@@ -90,89 +90,101 @@ collisions:
         disposition: formal_record
         record_key: DEC-20260304-C--notion-31867c87082c810197f9efa520332024
   - id: "DEC-20260320-C"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260320-C.md
     records:
       - title: "au-company-data capability onboarded via ABR API (Australian Business Register)"
         historical_status: active
         source_url: https://app.notion.com/32967c87082c81bfa5d1ee04b7d753dc
         source_page_id: "32967c87082c81bfa5d1ee04b7d753dc"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260320-C--notion-32967c87082c81bfa5d1ee04b7d753dc
       - title: "Hotfix: auto-register must filter .d.ts declaration files + startup health gate (MIN_EXPECTED_EXECUTORS = 200)"
         historical_status: active
         source_url: https://app.notion.com/32967c87082c81178c7acc8b5c396aa3
         source_page_id: "32967c87082c81178c7acc8b5c396aa3"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260320-C--notion-32967c87082c81178c7acc8b5c396aa3
   - id: "DEC-20260320-J"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260320-J.md
     records:
       - title: "Dynamic methodology text: capability counts, solution counts, and test suite counts must never be hardcoded. Always query live data."
         historical_status: active
         source_url: https://app.notion.com/32967c87082c8177a82be21d48f57411
         source_page_id: "32967c87082c8177a82be21d48f57411"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260320-J--notion-32967c87082c8177a82be21d48f57411
       - title: "pep-check uses transparency tag mixed instead of commercial_data"
         historical_status: active
         source_url: https://app.notion.com/32967c87082c8192b920f8d8cfb40aa7
         source_page_id: "32967c87082c8192b920f8d8cfb40aa7"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260320-J--notion-32967c87082c8192b920f8d8cfb40aa7
   - id: "DEC-20260320-K"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260320-K.md
     records:
       - title: "Free-tier showcase protection: 5 free-tier capabilities get dedicated meta-monitor alerting on any quality degradation. These are the front door."
         historical_status: active
         source_url: https://app.notion.com/32967c87082c81e890bfe564a3c2e917
         source_page_id: "32967c87082c81e890bfe564a3c2e917"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260320-K--notion-32967c87082c81e890bfe564a3c2e917
       - title: "KYB + Invoice Verify implementation complete — 60 solutions, 3 capabilities, all docs updated"
         historical_status: active
         source_url: https://app.notion.com/32967c87082c818e8cbbc29a3a0c1bed
         source_page_id: "32967c87082c818e8cbbc29a3a0c1bed"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260320-K--notion-32967c87082c818e8cbbc29a3a0c1bed
   - id: "DEC-20260405-B"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260405-B.md
     records:
       - title: "Deactivate credit-report-summary; no free source for Swedish credit ratings exists"
         historical_status: active
         source_url: https://app.notion.com/34a67c87082c810692c8dd4374a6f9ac
         source_page_id: "34a67c87082c810692c8dd4374a6f9ac"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260405-B--notion-34a67c87082c810692c8dd4374a6f9ac
       - title: "DEC-20260405-B: Solution execution transaction storage model and Phase 1.4 migration tooling workaround"
         historical_status: active
         source_url: https://app.notion.com/33967c87082c810c920dd09d78aa06b6
         source_page_id: "33967c87082c810c920dd09d78aa06b6"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260405-B--notion-33967c87082c810c920dd09d78aa06b6
   - id: "DEC-20260406-A"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-A.md
     records:
       - title: "Consolidate working rules for Claude (chat), CC, and Notion governance into single source-of-truth page"
         historical_status: active
         source_url: https://app.notion.com/33a67c87082c81bdb38fd9eeaa556d98
         source_page_id: "33a67c87082c81bdb38fd9eeaa556d98"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260406-A--notion-33a67c87082c81bdb38fd9eeaa556d98
       - title: "DEC-20260406-A: Fix missing per-step latencyMs capture in solution audit_trail"
         historical_status: active
         source_url: https://app.notion.com/33967c87082c816b825cdf812ef006b8
         source_page_id: "33967c87082c816b825cdf812ef006b8"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260406-A--notion-33967c87082c816b825cdf812ef006b8
   - id: "DEC-20260406-B"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-B.md
     records:
       - title: "DEC-20260406-B: Fix nested field reference resolution in solution input mapping"
         historical_status: active
         source_url: https://app.notion.com/33967c87082c8103becfe4900a1ff319
         source_page_id: "33967c87082c8103becfe4900a1ff319"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260406-B--notion-33967c87082c8103becfe4900a1ff319
       - title: "Restructure Notion workspace around Operating Manual as single entry point and four-layer model"
         historical_status: active
         source_url: https://app.notion.com/33a67c87082c81629339d9f208f65f52
         source_page_id: "33a67c87082c81629339d9f208f65f52"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260406-B--notion-33a67c87082c81629339d9f208f65f52
   - id: "DEC-20260406-C"
     resolution_status: unresolved
     resolution_evidence: null
