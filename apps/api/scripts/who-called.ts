@@ -19,13 +19,18 @@
  * each. A customer-impact figure of zero is then something you have to read
  * past, rather than something you have to remember to ask for.
  *
+ * The handle is openOperatorDrizzle() — read-only, enforced by Postgres, not
+ * the application's read-write pool. A script that only ever SELECTs still has
+ * to hold the read-only handle: the guard is on the handle, because intent is
+ * not a control. Caught by guard-production-write-access.mjs, 2026-09-05.
+ *
  * Usage:
  *   npx tsx scripts/who-called.ts --slug redirect-trace [--days 10] [--errors]
  *   npx tsx scripts/who-called.ts --error "map is not a function" --days 30
  *   npx tsx scripts/who-called.ts --failing --days 7      # every failing slug
  */
 import { sql } from "drizzle-orm";
-import { getDb } from "../src/db/index.js";
+import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 import { callerClassSql, CALLER_CLASSES, type CallerClass } from "../src/lib/metrics/populations.js";
 
 function arg(name: string): string | undefined {
@@ -51,7 +56,7 @@ if (!Number.isFinite(days) || days <= 0) {
 type Row = { slug: string | null; klass: CallerClass; status: string; n: number; err: string | null };
 
 async function main() {
-  const db = getDb();
+  const db = openOperatorDrizzle();
   const since = sql`now() - (${String(days)} || ' days')::interval`;
   const slugFilter = slug ? sql` AND c.slug = ${slug}` : sql``;
   const errFilter = errorLike ? sql` AND t.error ILIKE ${`%${errorLike}%`}` : sql``;

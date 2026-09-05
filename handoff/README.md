@@ -9,12 +9,34 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-224 files (197 with a recorded intent, 27 without).
+246 files (219 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md) | Resolve the five earliest historical ID collisions in the M2 closure |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md`](_general/from-code/2026-09-05-m2-batch-18-may-rows.md) | land T10 (M2 exit-gap closure) batch 18, the last thirteen Decision |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md`](_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md) | land T10 (M2 exit-gap closure) batch 17, twelve Decision rows from |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md`](_general/from-code/2026-09-05-m2-batch-16-march-second-half.md) | land T10 (M2 exit-gap closure) batch 16, twelve March 2026 |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md`](_general/from-code/2026-09-05-m2-batch-15-march-first-half.md) | land T10 (M2 exit-gap closure) batch 15, fourteen March 2026 |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-foundation-discovery.md`](_general/from-code/2026-09-05-brand-foundation-discovery.md) | understand Strale's product, commercial use, catalogue, positioning and design history before defining the founder's... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md`](_general/from-code/2026-09-04-t17-drizzle-upgrade.md) | Program track T17 / WP13 second batch (drizzle-orm 0.38.4 -> 0.45.2, semver-major) -- the |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md`](_general/from-code/2026-09-04-m2-batch-9-trust-display.md) | land T10 (M2 exit-gap closure) batch 9, six trust-and-quality-display Decision rows (DEC-20260305-G trust display sys... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md`](_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md) | land T10 (M2 exit-gap closure) batch 8, five capability-onboarding-pipeline Decision rows (DEC-20260309-G the 12-cate... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md`](_general/from-code/2026-09-04-m2-batch-7-pricing.md) | land T10 (M2 exit-gap closure) batch 7, five capability-pricing Decision rows (DEC-20260302-A-0001 the original value... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md`](_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md) | land T10 (M2 exit-gap closure) batch 6, provenance and jurisdiction semantics, three `not_yet_reconciled`, `historica... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md`](_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md) | land T10 (M2 exit-gap closure) batch 5 — capability lifecycle patterns — three `not_yet_reconciled`, `historical_scop... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md`](_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md) | land T10 (M2 exit-gap closure) batch 4 — the first global-scope-row batch — three engineering-convention Decision row... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md`](_general/from-code/2026-09-04-m2-batch-2026-08-operating-window.md) | land the first batch of T10 (M2 exit-gap closure) — the seven decision rows the closure register names as its next ba... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md`](_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md) | land T10 (M2 exit-gap closure) batch 14, fourteen founding Decision |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md`](_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md) | land T10 (M2 exit-gap closure) batch 13, fourteen founding Decision |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md`](_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md) | land T10 (M2 exit-gap closure) batch 12, twelve vendor and registry |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md`](_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md) | land T10 (M2 exit-gap closure) batch 11, seven Counterparty |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md`](_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md) | land T10 (M2 exit-gap closure) batch 10, six distribution-and-x402-rail Decision rows (DEC-20260313-F Official MCP Re... |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md`](_general/from-code/2026-09-04-free-public-api-agent-capabilities.md) | Add eight keyless, free-upstream capabilities that the platform's largest x402 buyer |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-free-api-capabilities-onboarded.md`](_general/from-code/2026-09-04-free-api-capabilities-onboarded.md) | Close the "not done" item of `2026-09-04-free-public-api-agent-capabilities.md` — the eight |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md`](_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md) | Fix the intermittent CI teardown failure in `scripts/codex-backlog.test.mjs` |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-ci-docs-only-fast-path.md`](_general/from-code/2026-09-04-ci-docs-only-fast-path.md) | add a documentation-only fast path to `.github/workflows/ci.yml` so PRs |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-checkin-morning.md`](_general/from-code/2026-09-04-checkin-morning.md) | Run the 2026-09-04 morning operating session per docs/company/DAILY-RUN.md — |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md`](_general/from-code/2026-09-03-t17-hono-upgrade.md) | Program track T17 / WP13 first batch — upgrade `hono` in `apps/api` to close its 27 |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md`](_general/from-code/2026-09-03-handoff-gate-live-worktree.md) | stop the session-end gate instructing the destruction of live work, after it did so three times in one session. |

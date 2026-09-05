@@ -78,12 +78,17 @@
  *
  * Uncovered paths (documented per the task's instruction not to fake
  * coverage): the x402 unauthenticated payment path,
- * free-tier (unauthenticated and authenticated-free-tier) execution,
- * the postgres 25P03/55P03 timeout-code catch branch, and the
- * low-balance/zero-balance conversion-email fire-and-forget branch.
+ * free-tier (unauthenticated and authenticated-free-tier) execution, and
+ * the low-balance/zero-balance conversion-email fire-and-forget branch.
  * Each depends on triggers not exercised by the core paths this task
  * scoped in. Flagged for a follow-up pass rather than asserted on with a
  * mock that would tautologically pass.
+ *
+ * The postgres 25P03/55P03 timeout-code catch branch came OFF this list
+ * in the PR #510 round-three follow-up — see "wallet-transaction
+ * timeout" below, which drives the wallet-lock `.for()` call to reject
+ * with a `DrizzleQueryError` (drizzle-orm 0.44+'s real wrapper shape)
+ * carrying a 55P03 cause, the same way a live lock_timeout expiry would.
  *
  * executeAsync / executeInBackground came OFF this list in #438: the second
  * DB-shaped mock surface it needed is `do.async.test.ts`, which drives the
@@ -93,6 +98,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { Hono } from "hono";
 
 import { hashApiKey, getKeyPrefix } from "../lib/auth.js";
@@ -747,6 +753,68 @@ describe("POST /v1/do — execution failure shape + DEC-14 ordering", () => {
     // The transaction row is still marked failed for the audit trail.
     const txnUpdate = tx.__updateCalls.find((c) => c.table === transactions);
     expect((txnUpdate!.vals as any).status).toBe("failed");
+  });
+});
+
+// ─── Wallet-transaction timeout (cert-audit Y-5, PR #510 round-three) ────────
+//
+// db.transaction(cb) in do.ts propagates whatever cb throws. Since
+// drizzle-orm 0.44+, a real Postgres 25P03/55P03 error surfaces wrapped in
+// `DrizzleQueryError` — no `code` of its own, the real SQLSTATE is on
+// `.cause`. This drives the wallet-lock `.for("update")` call to reject
+// with exactly that wrapper shape, so the test exercises the same object
+// shape a live lock_timeout/idle_in_transaction_session_timeout expiry
+// would produce. Fails against the pre-fix `(err as { code?: string
+// }).code` read (which finds `undefined` on the wrapper and rethrows as a
+// 500) and passes against `pgErrorCode(err)`.
+describe("POST /v1/do — wallet-transaction timeout (postgres 25P03/55P03 via DrizzleQueryError)", () => {
+  it("returns 503 timeout_exceeded, not 500, when the wallet-lock select rejects with a wrapped 55P03", async () => {
+    const user = buildUserRow();
+    mocks.outerSelectQueue.push([user]);
+    mockMatchCapability.mockResolvedValue({ capability: CAPABILITY_FIXTURE });
+    const executorFn = vi.fn(async () => ({
+      output: { ok: true },
+      provenance: { source: "test-source", fetched_at: new Date().toISOString() },
+    }));
+    mockGetExecutor.mockReturnValue(executorFn);
+
+    const pgCause = Object.assign(
+      new Error("canceling statement due to lock timeout"),
+      { name: "PostgresError", code: "55P03", severity: "ERROR", routine: "ProcessInterrupts" },
+    );
+    const wrapped = new DrizzleQueryError("select ... for update", [], pgCause);
+
+    mocks.txRef.current = {
+      execute: vi.fn(async () => []),
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            for: vi.fn(() => Promise.reject(wrapped)),
+          })),
+        })),
+      })),
+      insert: vi.fn(),
+      update: vi.fn(),
+    };
+
+    const app = makeApp();
+    const res = await app.request("/v1/do", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        capability_slug: "test-capability",
+        inputs: { value: "x" },
+        max_price_cents: 100,
+      }),
+    });
+
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error_code).toBe("timeout_exceeded");
+    expect(body.details?.postgres_code).toBe("55P03");
+    // The executor never ran — the tx rejected at the wallet-lock step,
+    // before executeSync reaches the executor call.
+    expect(executorFn).not.toHaveBeenCalled();
   });
 });
 

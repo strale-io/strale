@@ -1,0 +1,119 @@
+slug: pubmed-search
+name: PubMed Search
+description: >-
+  Search PubMed biomedical literature via NCBI: title, authors, journal, publication date, DOI, PMC id and link.
+  Supports PubMed field syntax and date ranges.
+category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 10000
+known_rate_limit:
+  value: 3
+  unit: per_second
+  source_url: https://www.ncbi.nlm.nih.gov/books/NBK25497/
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Search terms; PubMed field tags such as crispr[Title] AND 2024[dp] are accepted
+    limit:
+      type: integer
+      description: "Results to return, 1-20. Default: 10"
+    sort:
+      type: string
+      description: relevance (default) or date
+    min_date:
+      type: string
+      description: Earliest publication date as YYYY, YYYY/MM or YYYY/MM/DD
+    max_date:
+      type: string
+      description: Latest publication date as YYYY, YYYY/MM or YYYY/MM/DD
+output_schema:
+  type: object
+  example:
+    query: crispr
+    total_results: 70584
+    returned: 1
+    articles:
+      - pmid: "25315507"
+        title: Genome modification by CRISPR/Cas9.
+        authors:
+          - Ma Y
+        journal: The FEBS journal
+        journal_abbrev: FEBS J
+        pub_date: 2014 Dec
+        epub_date: 2014 Nov 7
+        volume: "281"
+        issue: "23"
+        pages: 5186-93
+        languages:
+          - eng
+        publication_types:
+          - Journal Article
+        doi: 10.1111/febs.13110
+        pmc_id: null
+        url: https://pubmed.ncbi.nlm.nih.gov/25315507/
+  properties:
+    query:
+      type: string
+    total_results:
+      type: number
+    returned:
+      type: number
+    articles:
+      type: array
+data_source: NCBI E-utilities (PubMed)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      query: crispr cas9 genome editing
+      limit: 3
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: articles
+        operator: not_null
+        reliability: guaranteed
+      - field: articles
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: crispr cas9 genome editing
+    limit: 1
+output_field_reliability:
+  query: guaranteed
+  total_results: guaranteed
+  returned: guaranteed
+  articles: guaranteed
+limitations:
+  - title: Returns citation metadata only, not abstracts or full text
+    text: >-
+      NCBI's summary endpoint carries title, authors, journal and identifiers. Abstracts require a second
+      fetch that this capability does not perform.
+    category: coverage
+    severity: info
+    workaround: Pass the returned DOI to paper-details for the abstract and open-access link.
+  - title: Two upstream calls per invocation against a 3 requests/second keyless allowance
+    text: Sustained bursts trip NCBI's limiter; the error is surfaced as retryable and nothing is cached.
+    category: availability
+    severity: info
+    workaround: Space calls out or raise limit to fetch more per call.

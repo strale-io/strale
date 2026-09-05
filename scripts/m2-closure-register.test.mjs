@@ -33,7 +33,15 @@ const base = () => loadRegister(root);
 const codes = (register, ctx = context) => validateClosureRegister(register, ctx, { schema }).map((f) => f.code);
 const has = (register, code, ctx) => assert.ok(codes(register, ctx).includes(code), `expected ${code}, got ${codes(register, ctx).join(",")}`);
 const lacks = (register, code, ctx) => assert.ok(!codes(register, ctx).includes(code), `did not expect ${code}`);
-const row = (r, disposition) => r.decision_rows.find((x) => x.disposition === disposition);
+// For "formally_migrated" specifically, skips collision-derived rows (they
+// carry an extra `collision` object and a source-qualified record_key
+// distinct from the plain `record_key === id` case other tests assume) so a
+// generic mutation test keeps targeting the same representative row
+// regardless of how many historical ID collisions have been resolved. Other
+// dispositions (including "unresolved_collision" and "resolved_collision",
+// which are collision rows by definition) are unaffected.
+const row = (r, disposition) =>
+  r.decision_rows.find((x) => x.disposition === disposition && !(disposition === "formally_migrated" && x.collision));
 // Re-derive every self-consistent value so a test isolates the one check it targets.
 const resync = (r) => {
   const by = (items, keys) => {
@@ -327,14 +335,16 @@ test("duplicate ids inside the public projection must be exactly the registry's 
 });
 
 test("private rows may not hold dispositions that are public by construction", () => {
+  // G1 reached zero not_yet_reconciled rows in batch 18, so the private bucket
+  // these fixtures borrow a row from is `unclear`, which still holds rows.
   const r = base();
-  r.private_rows.counts_by_disposition.not_yet_reconciled -= 1;
+  r.private_rows.counts_by_disposition.unclear -= 1;
   r.private_rows.count -= 1;
   r.decision_rows.push({ ...row(r, "formally_migrated"), page_id: "e".repeat(32), source_url: `https://app.notion.com/${"e".repeat(32)}` });
   resync(r);
   has(r, "DECISION_ROW_NOT_PUBLIC");
   const r2 = base();
-  r2.private_rows.counts_by_disposition.not_yet_reconciled -= 1;
+  r2.private_rows.counts_by_disposition.unclear -= 1;
   r2.private_rows.counts_by_disposition.formally_migrated = 1;
   has(r2, "SCHEMA");
 });
@@ -406,7 +416,7 @@ test("a missing decision row is rejected as silent removal and as count drift", 
   has(r, "PUBLIC_DIGEST_MISMATCH");
   const r2 = base();
   r2.private_rows.count -= 1;
-  r2.private_rows.counts_by_disposition.not_yet_reconciled -= 1;
+  r2.private_rows.counts_by_disposition.unclear -= 1;
   resync(r2);
   has(r2, "DECISION_ROW_REMOVED", withBase(base()));
 });
@@ -476,10 +486,13 @@ test("blocking is derived: open buckets must be covered by a blocking gap", () =
   r.counts.exit_gaps = { blocking: 0, non_blocking: r.exit_gaps.length };
   const c = codes(r);
   assert.ok(c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
+  // The rule only fires for a bucket that still holds rows; not_yet_reconciled
+  // has been empty since batch 18, so the fixture uses unresolved_collision (G2).
   const r2 = base();
-  const g1 = r2.exit_gaps.find((g) => g.covers.includes("decision_rows.not_yet_reconciled") && g.blocking);
-  g1.covers = g1.covers.filter((x) => x !== "decision_rows.not_yet_reconciled");
-  r2.exit_gaps.find((g) => !g.blocking).covers.push("decision_rows.not_yet_reconciled");
+  const open = "decision_rows.unresolved_collision";
+  const g2 = r2.exit_gaps.find((g) => g.covers.includes(open) && g.blocking);
+  g2.covers = g2.covers.filter((x) => x !== open);
+  r2.exit_gaps.find((g) => !g.blocking && !g.covers.includes(open)).covers.push(open);
   assert.ok(codes(r2).includes("EXIT_GAP_NOT_BLOCKING"));
 });
 
@@ -559,15 +572,25 @@ test("collision rows must agree with the collision registry", () => {
 });
 
 test("collision payloads are validated wherever they appear and forbidden elsewhere", () => {
-  // Cross-surface row flipped to resolved/documented_only.
+  // Cross-surface row given an invalid resolution_status/row_disposition
+  // combination (resolved/unresolved is neither the always-valid
+  // unresolved/unresolved nor the eligible resolved/documented_only pair),
+  // with disposition left inconsistent with what the entrypoints derive.
+  // The DEC-20260422-A row is resolved on disk in this register (a
+  // git-qualified record and a citing gap report both exist), so this test
+  // targets the invalid-combination rule itself rather than eligibility;
+  // eligibility for resolved/documented_only is covered by "cross-surface
+  // rows resolve only with a git-qualified record for the collision id and
+  // a gap-report citation" below.
   const r = base();
   const cross = r.decision_rows.find((x) => x.collision?.kind === "cross-surface");
   cross.collision.resolution_status = "resolved";
-  cross.collision.row_disposition = "documented_only";
-  cross.disposition = "resolved_collision";
+  cross.collision.row_disposition = "unresolved";
+  cross.disposition = "unresolved_collision";
   resync(r);
   const c = codes(r);
-  assert.ok(c.includes("DECISION_ROW_CROSS_SURFACE_ID_MISMATCH"), c.join(","));
+  assert.ok(c.includes("DECISION_ROW_CROSS_SURFACE_STATE_INVALID"), c.join(","));
+  assert.ok(c.includes("DECISION_ROW_DERIVATION_MISMATCH"), c.join(","));
   // Migrated registry row (DEC-20260502-A) with a wrong collision payload.
   const r2 = base();
   const mig = r2.decision_rows.find((x) => x.disposition === "formally_migrated" && x.collision);
@@ -694,7 +717,11 @@ test("inventory dispositions must match the migration-map table", () => {
 
 test("a cross-surface collision must not be a registry row, must carry its own id, and must be cited", () => {
   const r = base();
-  r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate").collision.kind = "cross-surface";
+  // Pick a still-unresolved notion-duplicate row: flipping a resolved
+  // (formally_migrated) collision row's kind also trips the formal-record
+  // cross-surface rule (CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED), which is a
+  // separate check this assertion does not target.
+  r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate" && x.disposition === "unresolved_collision").collision.kind = "cross-surface";
   has(r, "DECISION_ROW_CROSS_SURFACE_IN_REGISTRY");
   const r2 = base();
   r2.decision_rows.find((x) => x.collision?.kind === "cross-surface").collision.id = "DEC-19990101-Z";
@@ -879,6 +906,231 @@ test("cross-surface collisions are derived from the entrypoints, not from the la
   assert.ok(c3.includes("DECISION_ROW_DERIVATION_MISMATCH"));
 });
 
+// A synthetic formal-record summary, as readFormalRecordSummaries would
+// return it, for a git-qualified key whose commit is a real ancestor of HEAD.
+const GIT_QUALIFIED_KEY = "DEC-20260504-A--git-31ca662e9";
+const gitQualifiedSummary = (overrides = {}) => ({
+  file: "docs/decisions/records/DEC-20260504-A--git-31ca662e9.md",
+  record_key: GIT_QUALIFIED_KEY,
+  id: "DEC-20260504-A",
+  evidence: ["https://github.com/strale-io/strale/commit/31ca662e92d996d9d8a3ee150ce6f924d5419707"],
+  pageIds: [],
+  decided_at: "2026-05-04",
+  ...overrides,
+});
+const withRecord = (summary) => ({ ...context, records: [...context.records, summary] });
+const addFormalRecord = (r, entry) => {
+  r.formal_records.push({
+    record_key: GIT_QUALIFIED_KEY,
+    id: "DEC-20260504-A",
+    source_kind: "git-native",
+    source_rows: [],
+    git_provenance: "https://github.com/strale-io/strale/commit/31ca662e92d996d9d8a3ee150ce6f924d5419707",
+    ...entry,
+  });
+  return r;
+};
+
+test("git-qualified record keys: grammar accepted and rejected at the schema", () => {
+  // Accepted: 7 to 40 lowercase hex.
+  const ok = base();
+  addFormalRecord(ok, {});
+  lacks(ok, "SCHEMA", withRecord(gitQualifiedSummary()));
+  // Refused: fewer than 7 hex digits.
+  const shortSha = base();
+  addFormalRecord(shortSha, { record_key: "DEC-20260504-A--git-abcdef" });
+  has(shortSha, "SCHEMA");
+  // Refused: uppercase hex.
+  const upper = base();
+  addFormalRecord(upper, { record_key: "DEC-20260504-A--git-ABCDEFG" });
+  has(upper, "SCHEMA");
+});
+
+test("a git-qualified record must have id, source_kind, source_rows, and provenance derived from the key", () => {
+  // Valid fixture: id matches, source_kind/source_rows correct, provenance is
+  // a full-40-hex ancestor commit whose prefix matches the key's sha.
+  const valid = () => addFormalRecord(base(), {});
+  const validCtx = withRecord(gitQualifiedSummary());
+  for (const code of ["RECORD_GIT_KEY_ID_MISMATCH", "RECORD_GIT_KEY_SOURCE_KIND", "RECORD_GIT_KEY_PROVENANCE_MISMATCH", "RECORD_GIT_KEY_NOT_ANCESTOR", "COMMIT_UNVERIFIABLE"]) {
+    lacks(valid(), code, validCtx);
+  }
+
+  // RECORD_GIT_KEY_ID_MISMATCH: id does not equal the key with the qualifier removed.
+  const wrongId = base();
+  addFormalRecord(wrongId, { id: "DEC-19990101-Z" });
+  has(wrongId, "RECORD_GIT_KEY_ID_MISMATCH", validCtx);
+
+  // RECORD_GIT_KEY_SOURCE_KIND: a git-qualified key on a record still declared notion-row.
+  const notionKind = base();
+  notionKind.formal_records.push({ record_key: GIT_QUALIFIED_KEY, id: "DEC-20260504-A", source_kind: "notion-row", source_rows: ["a".repeat(32)] });
+  has(notionKind, "RECORD_GIT_KEY_SOURCE_KIND", validCtx);
+
+  // RECORD_GIT_KEY_PROVENANCE_MISMATCH: first evidence entry is not a full-sha commit URL matching the key's prefix.
+  const badProvenance = valid();
+  has(badProvenance, "RECORD_GIT_KEY_PROVENANCE_MISMATCH", withRecord(gitQualifiedSummary({ evidence: ["docs/decisions/README.md"] })));
+  const wrongCommit = valid();
+  has(wrongCommit, "RECORD_GIT_KEY_PROVENANCE_MISMATCH", withRecord(gitQualifiedSummary({ evidence: [`https://github.com/strale-io/strale/commit/${"f".repeat(40)}`] })));
+
+  // RECORD_GIT_KEY_NOT_ANCESTOR: a full-sha commit that matches the key's prefix but is not reachable from HEAD.
+  const notAncestorSha = `f0000000${"0".repeat(32)}`;
+  const notAncestor = base();
+  addFormalRecord(notAncestor, { record_key: "DEC-20260504-A--git-f0000000", git_provenance: `https://github.com/strale-io/strale/commit/${notAncestorSha}` });
+  has(notAncestor, "RECORD_GIT_KEY_NOT_ANCESTOR", withRecord(gitQualifiedSummary({
+    record_key: "DEC-20260504-A--git-f0000000",
+    evidence: [`https://github.com/strale-io/strale/commit/${notAncestorSha}`],
+  })));
+
+  // COMMIT_UNVERIFIABLE: git is unavailable, so ancestry cannot be checked; not a hard failure.
+  const noGit = valid();
+  const c = codes(noGit, { ...validCtx, isAncestor: undefined });
+  assert.ok(c.includes("COMMIT_UNVERIFIABLE"), c.join(","));
+  assert.ok(!c.includes("RECORD_GIT_KEY_NOT_ANCESTOR"), c.join(","));
+});
+
+test("a git-qualified record key is legitimate only when a decision row claims its id as a cross-surface collision", () => {
+  // DEC-20260422-A carries a cross-surface collision row in the committed
+  // register (fixture-verified elsewhere in this file); a git-qualified
+  // record for it must not trip RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE.
+  const claimed = base();
+  assert.ok(
+    claimed.decision_rows.some((x) => x.collision?.kind === "cross-surface" && x.collision.id === "DEC-20260422-A"),
+    "fixture precondition: DEC-20260422-A must already be a cross-surface collision id in the committed register",
+  );
+  claimed.formal_records.push({
+    record_key: "DEC-20260422-A--git-31ca662e9",
+    id: "DEC-20260422-A",
+    source_kind: "git-native",
+    source_rows: [],
+    git_provenance: "https://github.com/strale-io/strale/commit/31ca662e92d996d9d8a3ee150ce6f924d5419707",
+  });
+  lacks(claimed, "RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE");
+
+  // DEC-20260504-A has no cross-surface decision row (it is a plain
+  // git-native decision, per the existing "bare collided id" test below);
+  // planting the same shape of git-qualified record for it must fail this
+  // check specifically, proving the check actually discriminates.
+  const unclaimed = base();
+  assert.ok(
+    !unclaimed.decision_rows.some((x) => x.collision?.kind === "cross-surface" && x.collision.id === "DEC-20260504-A"),
+    "fixture precondition: DEC-20260504-A must not be a cross-surface collision id in the committed register",
+  );
+  unclaimed.formal_records.push({
+    record_key: "DEC-20260504-A--git-31ca662e9",
+    id: "DEC-20260504-A",
+    source_kind: "git-native",
+    source_rows: [],
+    git_provenance: "https://github.com/strale-io/strale/commit/31ca662e92d996d9d8a3ee150ce6f924d5419707",
+  });
+  has(unclaimed, "RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE");
+});
+
+test("a bare collided id is never a record key, including cross-surface collision ids", () => {
+  const r = base();
+  r.formal_records.push({ record_key: "DEC-20260422-A", id: "DEC-20260422-A", source_kind: "git-native", source_rows: [], git_provenance: "archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md" });
+  has(r, "RECORD_KEY_BARE_CROSS_SURFACE_ID");
+  // A bare id that is not a cross-surface collision id is unaffected by this rule.
+  const r2 = base();
+  r2.formal_records.push({ record_key: "DEC-20260504-B", id: "DEC-20260504-B", source_kind: "git-native", source_rows: [], git_provenance: "README.md" });
+  lacks(r2, "RECORD_KEY_BARE_CROSS_SURFACE_ID");
+});
+
+test("cross-surface rows resolve only with a git-qualified record for the collision id and a gap-report citation", () => {
+  // Stage 2 (this batch) actually resolved DEC-20260422-A: a git-qualified
+  // record (docs/decisions/records/DEC-20260422-A--git-3b256587.md) and a
+  // citing gap report (archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md)
+  // both exist on disk, so the committed register's row is already the
+  // resolved/documented_only case. This test exercises the mechanism's
+  // other branches against that committed state, rather than against a
+  // synthetic record injected only into the test context.
+  const crossRow = (r) => r.decision_rows.find((x) => x.collision?.kind === "cross-surface");
+  const setState = (r, resolutionStatus, rowDisposition, disposition) => {
+    const cross = crossRow(r);
+    cross.collision.resolution_status = resolutionStatus;
+    cross.collision.row_disposition = rowDisposition;
+    cross.disposition = disposition;
+    resync(r);
+    return cross;
+  };
+  // A context with no formal record for DEC-20260422-A, simulating "no
+  // git-qualified record exists" without touching the real files.
+  const withoutGitRecord = { ...context, records: context.records.filter((rec) => rec.id !== "DEC-20260422-A") };
+
+  // The committed state -- resolved/documented_only -- is valid and matches the derivation.
+  lacks(base(), "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  lacks(base(), "DECISION_ROW_DERIVATION_MISMATCH");
+
+  // unresolved/unresolved is a valid combination in isolation, but with the
+  // real record and the citing gap report both in place, the row is
+  // eligible to resolve and leaving it unresolved is now a derivation
+  // mismatch.
+  const stillUnresolved = base();
+  setState(stillUnresolved, "unresolved", "unresolved", "unresolved_collision");
+  lacks(stillUnresolved, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  has(stillUnresolved, "DECISION_ROW_DERIVATION_MISMATCH");
+
+  // Missing (a): resolved/documented_only without any git-qualified record for the id.
+  has(base(), "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withoutGitRecord);
+
+  // Missing (b): the git-qualified record exists, but the row's own evidence
+  // does not cite a gap report naming this page id.
+  const missingB = base();
+  const crossB = crossRow(missingB);
+  crossB.evidence = ["docs/decisions/README.md"];
+  resync(missingB);
+  has(missingB, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  has(missingB, "DECISION_ROW_NOT_CITED_BY_EVIDENCE");
+
+  // row_disposition formal_record is refused on a cross-surface row in this stage,
+  // even with (a) and (b) satisfied.
+  const formalRecord = base();
+  setState(formalRecord, "resolved", "formal_record", "resolved_collision");
+  has(formalRecord, "CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED");
+
+  // Any other resolution_status/row_disposition combination is invalid.
+  const other = base();
+  const crossO = crossRow(other);
+  crossO.collision.resolution_status = "resolved";
+  crossO.collision.row_disposition = "unresolved";
+  has(other, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+});
+
+test("the committed DEC-20260422-A row derives resolved_collision from a real git record and a real gap-report citation", () => {
+  // Regression guard for the G3 stage-2 resolution: the real committed
+  // register, the real formal record file, and the real gap report must
+  // together derive resolved_collision -- not merely declare it -- so a
+  // future edit that drops either the git-qualified record or the row's
+  // gap-report citation is caught by DECISION_ROW_DERIVATION_MISMATCH
+  // rather than silently passing because the row's own fields still say
+  // resolved_collision.
+  const committed = base();
+  const cross = committed.decision_rows.find((x) => x.id === "DEC-20260422-A");
+  assert.ok(cross, "DEC-20260422-A must be a public decision row");
+  assert.equal(cross.collision.kind, "cross-surface");
+  assert.equal(cross.disposition, "resolved_collision");
+  assert.equal(cross.collision.resolution_status, "resolved");
+  assert.equal(cross.collision.row_disposition, "documented_only");
+  lacks(committed, "DECISION_ROW_DERIVATION_MISMATCH");
+  lacks(committed, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+
+  // Dropping every evidence entry that cites this row's page id (while its
+  // fields still claim resolved_collision) must be rejected: this is the
+  // fail-first case for this test, run manually against a copy with the
+  // gap-report citation removed before the resolution landed, and it must
+  // fail the same way here. (The 2026-09-01 report also names this page id,
+  // so both citing entries must go for eligibility to actually break.)
+  const droppedCitation = base();
+  const crossDropped = droppedCitation.decision_rows.find((x) => x.id === "DEC-20260422-A");
+  crossDropped.evidence = ["docs/decisions/README.md"];
+  resync(droppedCitation);
+  has(droppedCitation, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
+  has(droppedCitation, "DECISION_ROW_DERIVATION_MISMATCH");
+
+  // Dropping the git-qualified record itself (context-only, real files
+  // untouched) must be rejected the same way.
+  const withoutGitRecord = { ...context, records: context.records.filter((rec) => rec.id !== "DEC-20260422-A") };
+  has(committed, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withoutGitRecord);
+});
+
 test("unclear rows have no id and blank-id rows are unclear", () => {
   const r = base();
   const p = publicPending(r);
@@ -985,8 +1237,10 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
 });
 
 test("every open bucket must be covered by an exit gap", () => {
+  // An uncovered bucket is only a finding while it holds rows; use the still-open
+  // unresolved_collision bucket (G2), since not_yet_reconciled is empty since batch 18.
   const r = base();
-  for (const g of r.exit_gaps) g.covers = g.covers.filter((c) => c !== "decision_rows.not_yet_reconciled");
+  for (const g of r.exit_gaps) g.covers = g.covers.filter((c) => c !== "decision_rows.unresolved_collision");
   has(r, "EXIT_GAP_UNCOVERED");
   const r2 = base();
   for (const g of r2.exit_gaps) g.covers = g.covers.filter((c) => c !== "legacy_inventory.incomplete");

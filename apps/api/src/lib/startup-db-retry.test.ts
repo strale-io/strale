@@ -18,6 +18,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { isTransientDbConnectError, withStartupDbRetry } from "./startup-db-retry.js";
 
 function errWithCode(message: string, code: string): Error {
@@ -74,6 +75,23 @@ describe("isTransientDbConnectError", () => {
     expect(isTransientDbConnectError("CONNECT_TIMEOUT")).toBe(false);
     expect(isTransientDbConnectError(null)).toBe(false);
     expect(isTransientDbConnectError(undefined)).toBe(false);
+  });
+
+  describe("drizzle-orm 0.44+ DrizzleQueryError wrapper (PR #510 follow-up)", () => {
+    // runStartupMigrations()/validateSchema() call db.execute() internally,
+    // so a connection failure surfacing through a query attempt reaches
+    // here wrapped, not bare. See lib/db-error.ts for the incident.
+    it("still matches a WRAPPED CONNECT_TIMEOUT, unwrapping to find the code", () => {
+      const inner = errWithCode("write CONNECT_TIMEOUT postgres.railway.internal:5432", "CONNECT_TIMEOUT");
+      const wrapped = new DrizzleQueryError("select 1", [], inner);
+      expect(isTransientDbConnectError(wrapped)).toBe(true);
+    });
+
+    it("still rejects a WRAPPED real SQL error — a broken migration stays fatal", () => {
+      const inner = errWithCode('column "nope" does not exist', "42703");
+      const wrapped = new DrizzleQueryError("select nope from t", [], inner);
+      expect(isTransientDbConnectError(wrapped)).toBe(false);
+    });
   });
 });
 

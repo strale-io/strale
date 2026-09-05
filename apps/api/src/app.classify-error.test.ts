@@ -12,12 +12,23 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { DrizzleQueryError } from "drizzle-orm/errors";
 import { classifyError } from "./app.js";
 
 function withCode(message: string, code: string): Error {
   const err = new Error(message) as Error & { code?: string };
   err.code = code;
   return err;
+}
+
+/**
+ * The exact shape drizzle-orm 0.44+ produces: `db.execute`/`tx.execute`/the
+ * query builder/transactions all rethrow driver errors wrapped this way
+ * (PR #510 follow-up, 2026-09-04). See app.ts's classifyError doc comment
+ * and lib/db-error.ts.
+ */
+function wrapped(inner: Error): Error {
+  return new DrizzleQueryError("select 1", [], inner) as unknown as Error;
 }
 
 function fakePostgresBindEncoderError(): Error {
@@ -99,5 +110,26 @@ describe("classifyError", () => {
   it("returns 'unknown' for genuinely unknown shapes", () => {
     const err = new Error("something went sideways");
     expect(classifyError(err)).toEqual({ error_class: "unknown" });
+  });
+
+  describe("drizzle-orm 0.44+ DrizzleQueryError wrapper (PR #510 follow-up)", () => {
+    it("classifies a WRAPPED unique violation, unwrapping to find the SQLSTATE", () => {
+      const err = wrapped(withCode("dup", "23505"));
+      expect(classifyError(err)).toEqual({
+        error_class: "db_unique_violation",
+        pg_code: "23505",
+        wrapped: true,
+      });
+    });
+
+    it("classifies a WRAPPED bind-encoder TypeError, unwrapping to find the shape", () => {
+      const err = wrapped(fakePostgresBindEncoderError());
+      expect(classifyError(err)).toEqual({ error_class: "db_bind_encoder", wrapped: true });
+    });
+
+    it("does not set `wrapped` when the error was never wrapped", () => {
+      const err = withCode("dup", "23505");
+      expect(classifyError(err)).toEqual({ error_class: "db_unique_violation", pg_code: "23505" });
+    });
   });
 });

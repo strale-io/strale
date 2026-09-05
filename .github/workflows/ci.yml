@@ -1,11 +1,104 @@
 name: CI
 
+# ─── Documentation-only fast path ───────────────────────────────────────
+#
+# A pull request whose every changed file (against the PR's base) falls
+# under docs/**, archive/**, handoff/**, or one of the root pointer files
+# (CLAUDE.md, AGENTS.md, WORKTREES.md, README.md, top-level *.md) changes no
+# code the `check` job's CODE steps or the `integration-db` job could ever
+# disagree with. Those M2-closure-style batches were paying the full ~10
+# minute apps/api suite plus the ephemeral-Postgres integration lane for
+# zero code change.
+#
+# The `classify` job below computes that verdict once, from `git diff
+# --name-only <merge-base>...<head>` (never a third-party action), and every
+# CODE step downstream (builds, typecheck, lint scripts that scan source,
+# `npm test`) is individually gated on `needs.classify.outputs.docs_only ==
+# 'false'`. Every REGISTER step (the small `*:check` / `*:test` registers —
+# programs, research, design, env, models, claims, docs, archive index,
+# receipts, migrations, codex backlog, context, handoff, and the
+# check-shape-contracts.mjs drift check, plus the content scanners that
+# read docs/ and handoff/ or manifest data: check-no-committed-secrets,
+# check-pii, check-ceo-brief, check-manifest-guaranteed-consistency) runs
+# unconditionally on every PR,
+# in the same order as before this change, because those scripts read
+# docs/config content that a docs-only PR can itself change and none of
+# them import the built packages. A push to `main` always sets
+# `docs_only=false` and runs everything — `main` is where the gate must
+# never be soft.
+#
+# The `check` job keeps its name so branch protection's required-check list
+# does not need to change; only individual steps inside it are skipped.
+# `integration-db` is gated at the job level since every one of its steps is
+# CODE (DB schema, migrations, integration suite).
+
 on:
   push:
     branches: [main]
   pull_request:
 
 jobs:
+  # ─── Change classification ──────────────────────────────────────────────
+  #
+  # Computes docs_only once so both `check`'s CODE steps and the whole
+  # `integration-db` job can gate on the same verdict. fetch-depth 0 is
+  # required to resolve the merge-base with the PR's base branch.
+  classify:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.diff.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify whether every changed file is documentation-only
+        id: diff
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # main always runs everything — never soften the gate on trunk.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Not a pull_request event (${{ github.event_name }}); docs_only=false"
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          MERGE_BASE=$(git merge-base "$BASE_SHA" "$HEAD_SHA")
+          CHANGED=$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")
+
+          echo "Merge base: $MERGE_BASE"
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          is_docs_path() {
+            local f="$1"
+            case "$f" in
+              docs/*|archive/*|handoff/*) return 0 ;;
+              CLAUDE.md|AGENTS.md|WORKTREES.md|README.md) return 0 ;;
+            esac
+            # A root-level *.md file only (no "/" in the path) — nested .md
+            # files under application code are not covered by this branch.
+            if [[ "$f" =~ ^[^/]+\.md$ ]]; then
+              return 0
+            fi
+            return 1
+          }
+
+          DOCS_ONLY=true
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            if ! is_docs_path "$f"; then
+              echo "Non-docs file changed: $f"
+              DOCS_ONLY=false
+            fi
+          done <<< "$CHANGED"
+
+          echo "docs_only=$DOCS_ONLY"
+          echo "docs_only=$DOCS_ONLY" >> "$GITHUB_OUTPUT"
+
   # ─── Ephemeral-Postgres integration lane (WP1) ──────────────────────────
   #
   # DB-critical behaviour — wallet locking, idempotency uniqueness, Stripe
@@ -23,7 +116,12 @@ jobs:
   # database problem is legible as a database problem. The service container
   # is published on localhost, which is what the loopback guard in
   # src/test-support/integration-db.ts requires.
+  #
+  # Entirely CODE (schema materialisation, migrations, an integration test
+  # suite) — gated at the job level on the documentation-only fast path.
   integration-db:
+    needs: classify
+    if: needs.classify.outputs.docs_only == 'false'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -115,6 +213,7 @@ jobs:
         run: npx vitest run --no-file-parallelism integration.test.ts
 
   check:
+    needs: classify
     runs-on: ubuntu-latest
     env:
       # Required by apps/api/src/lib/audit-token.ts (F-0-001). Not secret —
@@ -142,12 +241,17 @@ jobs:
       # the MCP server before the API for exactly this reason; CI must
       # do the same or typecheck can't find the module. See the seed CI
       # in #9 + the Phase B+C merge in #8.
-      - run: npm --workspace=packages/mcp-server run build
+      # CODE (build) — skipped on a documentation-only PR; none of the
+      # REGISTER steps below import the built package.
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm --workspace=packages/mcp-server run build
       # packages/langchain imports `straleio` (packages/sdk-typescript) by
       # its published dist/index.d.ts, same reasoning as mcp-server above —
       # its own typecheck (below, via root `npm run typecheck`) can't resolve
       # the module until sdk-typescript has been built at least once.
-      - run: npm --workspace=packages/sdk-typescript run build
+      # CODE (build) — same gate as mcp-server above.
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm --workspace=packages/sdk-typescript run build
       # Phase 2 T2.1 (2026-08-17): widened from apps/api/src only to also
       # cover apps/api/scripts + apps/api/test (tsconfig.scripts.json,
       # apps/api's typecheck:scripts script) and the published TS packages
@@ -156,7 +260,9 @@ jobs:
       # Previously only apps/api/src was ever typechecked; scripts/ and
       # test/ were tsx-transpiled but never checked, and the four packages
       # were never built or typechecked in CI at all.
-      - run: npm run typecheck
+      # CODE (tsc) — no source changed on a documentation-only PR.
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm run typecheck
       # Codex review follow-up (2026-08-17, same PR as the T2.1 typecheck
       # widening above): tsconfig.scripts.json is TS/MTS only — it does NOT
       # cover the non-archived .mjs files (26 at the 2026-08-17 review) in apps/api/scripts, several of
@@ -166,29 +272,43 @@ jobs:
       # same-pass fix — see tsconfig.scripts.json's DECLARED BOUNDARY
       # comment. This is the syntax-level floor in the meantime: proves
       # every .mjs parses as valid ESM, no more.
-      - run: node apps/api/scripts/check-mjs-syntax.mjs
-      - run: npm --workspace=apps/api run lint:no-bare-catch
+      # CODE (parses apps/api/scripts/*.mjs source).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-mjs-syntax.mjs
+      # CODE (lints apps/api/src).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm --workspace=apps/api run lint:no-bare-catch
       # Money-integrity 2026-08-12: caller-URL capabilities must use safeFetch
       # or the ToS gate — raw fetch shipped as blocklist side doors ten times.
-      - run: npm --workspace=apps/api run lint:no-unguarded-user-fetch
+      # CODE (lints apps/api/src).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm --workspace=apps/api run lint:no-unguarded-user-fetch
       # The SSRF inventory guard hardcodes its walk root relative to the
       # repo root (`apps/api/src/capabilities`); invoking it via the
       # workspace wrapper sets cwd to `apps/api/` and ENOENTs. Call it
       # directly from the repo root (GitHub Actions default cwd) instead.
       # The sibling `lint:no-bare-catch` script accepts its walk root as
       # argv ("src"), so the workspace wrapper still works for that one.
-      - run: node apps/api/scripts/check-ssrf-inventory.mjs
+      # CODE (walks apps/api/src/capabilities).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-ssrf-inventory.mjs
       # F-0-014 guard: no new `console.*` calls. Script is cwd-independent
       # (resolves paths from import.meta.url), so the workspace wrapper works.
-      - run: npm --workspace=apps/api run lint:no-new-console
+      # CODE (lints apps/api/src).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm --workspace=apps/api run lint:no-new-console
       # SCF-3 guard: no API code access to transactions.integrity_hash_status
       # (owned by an untracked external workflow — see schema.ts comment).
-      - run: node apps/api/scripts/check-no-external-column-access.mjs
+      # CODE (lints apps/api/src).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-no-external-column-access.mjs
       # DEC-20260422-A: every framework-named *-strale package must contain
       # at least one real import from the framework it claims to integrate
       # with. Blocks the "hollow package" class of incident that surfaced
       # with pydantic-ai on 2026-04-21. See archive/sessions/CONTAINMENT_REPORT.md.
-      - run: node apps/api/scripts/check-framework-packages.mjs
+      # CODE (scans packages/*-strale source).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-framework-packages.mjs
       # DEC-20260822-A: the CEO morning brief must stay a business synthesis.
       # Prose drifts back toward its author's frame, and the daily report had
       # already become an engineering activity log once. This lints every brief
@@ -197,10 +317,16 @@ jobs:
       # live in src/lib/ceo-brief-lint.ts and are unit-tested there; this step
       # is the reachability half — a gate nobody runs is a gate that does
       # nothing, which this repo has shipped three times.
+      # CODE (the linter itself lives in apps/api/src/lib, not a *:check
+      # register script — see the classification note in the PR body for
+      # the tradeoff this leaves open on a docs/company/briefs/-only PR).
       - run: npx tsx apps/api/scripts/check-ceo-brief.ts
       # No credential in a recognised vendor token format may reach a tracked
       # file. Scans tracked files only — the public history is what matters,
       # and history is not retractable. Added 2026-08-22.
+      # CODE (scans every tracked file, code and docs alike, for secrets —
+      # kept as CODE per the explicit classification list rather than
+      # reclassified to REGISTER; see the PR body).
       - run: node apps/api/scripts/check-no-committed-secrets.mjs
       # Phase A0b CI lint (wired 2026-08-17, Phase 2 T2.2 — written
       # 2026-08-12 but never wired in): apps/api/scripts/*.{ts,mts,mjs} must route
@@ -209,11 +335,15 @@ jobs:
       # scan of the scripts directory, no DB/network needed. Superseded and
       # made check-paid-api-preflight.ts (archived) redundant per the
       # 2026-08-12 scripts-rightsizing audit.
-      - run: node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs
+      # CODE (scans apps/api/scripts source).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-no-direct-getexecutor-in-scripts.mjs
       # Cert-audit C6 follow-up: every fetch() must be timeout-bounded.
       # Pre-existing offenders are tracked in fetch-timeout-allowlist.txt;
       # --strict fails CI on new offenders.
-      - run: node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict
+      # CODE (scans apps/api/src for fetch() calls).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-fetch-timeout-coverage.mjs --strict
       # Phase 3b (DEC-20260513-B + DEC-20260513-C): every manifest's
       # output_field_reliability.guaranteed entries must be enumerated in
       # output_schema.properties or output_schema.example. Pre-existing
@@ -222,6 +352,9 @@ jobs:
       # at lib/guaranteed-fields-sentinel.ts which fires at scheduler-tick
       # time, and with onboard.ts verifyFixtures which fires at manifest
       # authoring time.
+      # CODE (cross-checks manifests/*.yaml against the runtime sentinel in
+      # apps/api/src/lib — not one of the explicitly named register/shape
+      # checks, so kept as CODE; see the PR body).
       - run: node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
       # PII guard (renamed + widened 2026-08-14, was check-manifest-pii.mjs).
       # scrubFixture()/PII_ARRAY_FIELDS run at CAPTURE time on executor
@@ -239,6 +372,10 @@ jobs:
       # archive/, audit-output/, handoff/, docs/, apps/api/docs/. See the
       # script header for why identifier-format + checksum was chosen over
       # a name-shaped heuristic for the wider scope.
+      # CODE — this scanner does cover docs/, archive/ and handoff/ among
+      # its many targets, so a docs-only PR does lose PII-scan coverage on
+      # this fast path. That tradeoff is named explicitly in the PR body
+      # rather than silently accepted; see "anything left open" there.
       - run: node apps/api/scripts/check-pii.mjs --strict
       # Tier-coverage gate (STRICT since 2026-08-17 — zero unallowlisted findings). For each manifest with a
       # captured response fixture at apps/api/test/fixtures/tier-coverage/
@@ -252,7 +389,9 @@ jobs:
       # the allowlist file's own header for when each applies). New slugs
       # with new findings fail CI on first appearance, by design.
       # See script header for findings classification + extension notes.
-      - run: node apps/api/scripts/check-tier-coverage.mjs --strict
+      # CODE (compares manifests/ against captured fixtures under apps/api/test).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-tier-coverage.mjs --strict
       # DEC-20260513-D Phase 3 Harden gate (a): canonical-input sentinel for
       # Identity capabilities. Catches the GR-PR-#116 class of bad-shape
       # fixture (branch entity asserted, dissolved status equals-asserted,
@@ -262,13 +401,18 @@ jobs:
       # mode — --strict fails CI on new offenders versus the allowlist at
       # scripts/identity-fixture-shape-allowlist.txt. See script header for
       # the v1 criteria set and SI exemption rationale.
-      - run: node apps/api/scripts/check-identity-fixture-shape.mjs --strict
+      # CODE (scans manifests/ fixtures against executor behaviour).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-identity-fixture-shape.mjs --strict
       # Cert-audit Layer 2 (generalised 2026-04-30): cross-repo
       # type-shape contracts (currently AuditRecord). Skips cleanly
       # when STRALE_FRONTEND_PATH is not present (CI doesn't check out
       # the frontend repo); the weekly drift cron is the place where
       # this fires for real, with the frontend checked out alongside.
       # Run with --list to see registered contracts.
+      # REGISTER (explicitly named — "the shape and drift checks") — always
+      # runs, so a docs-only PR still gets cross-repo shape-contract
+      # coverage.
       - run: node apps/api/scripts/check-shape-contracts.mjs
       # Phase A0b cost_class coherence + Block 0082 throttled-vendor guard
       # (2026-08-14): cross-checks manifest cost_class against the vendor
@@ -276,7 +420,9 @@ jobs:
       # Phase A0b but was never wired into CI; the free_unlimited vs
       # throttled-upstream audit that produced Block 0082 is exactly the
       # class of drift this catches, so it goes live here.
-      - run: node apps/api/scripts/check-cost-class-coherence.mjs
+      # CODE (cross-checks manifests/ against executor source in apps/api/src).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node apps/api/scripts/check-cost-class-coherence.mjs
 
       # 2026-08-22 production-authorization incident. The whole authority model
       # rests on one property: the production write credential is readable in
@@ -284,18 +430,22 @@ jobs:
       # any other file can read it, a writable connection can be opened with no
       # authority attached and the model is decorative. That property is a grep,
       # so it is checked by one, on every change, rather than trusted.
-      - run: node scripts/guard-production-write-access.mjs
+      # CODE (scans apps/api/src for the production-write credential).
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: node scripts/guard-production-write-access.mjs
 
       # Program track registers (docs/programs/*/tracks.yaml) are the resume
       # surface for multi-batch work on both AI tools. A register that fails
       # validation means a fresh session cannot tell what is active, so it is
       # checked here rather than trusted. Tests cover the checker itself.
+      # REGISTER (programs:*) — always runs.
       - run: npm run programs:check
       - run: npm run programs:test
       # Research contract (T12, docs/research/*.md): one current file per
       # topic, reciprocal acyclic supersession, resolvable links/sources,
       # active decisions cite only current research. Tests plant every
       # failure mode in a throwaway repository.
+      # REGISTER (research:*) — always runs.
       - run: npm run research:check
       - run: npm run research:test
       # Design tokens as data (T13, design/tokens/*.json): one active file
@@ -306,6 +456,7 @@ jobs:
       # an off-token hex/rgb/hsl/font-family/off-scale-px lint over the
       # internal-report consumers with a ratcheted allowlist. Tests plant
       # every failure mode in a throwaway repository.
+      # REGISTER (design:*) — always runs.
       - run: npm run design:check
       - run: npm run design:test
       # Environment manifest (T14, config/env-manifest.yaml): one row per
@@ -314,6 +465,7 @@ jobs:
       # the generated .env.example / apps/api/.env.example must match what
       # the manifest would produce. Tests plant every failure mode in a
       # throwaway directory fixture.
+      # REGISTER (env:*) — always runs.
       - run: npm run env:check
       - run: npm run env:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
@@ -321,6 +473,7 @@ jobs:
       # decision reference: fails on a model-id literal anywhere else in
       # apps/api/src (outside *.test.ts), or a registry entry missing
       # pinned_at/decision.
+      # REGISTER (models:*) — always runs.
       - run: npm run models:check
       - run: npm run models:test
       # Claims register (T14, docs/company/claims.yaml): validates the
@@ -328,12 +481,15 @@ jobs:
       # description fields, and platform-facts.ts for `forbidden` claims
       # (failing the build) and warns on `needs_evidence` claims whose
       # evidence doesn't resolve.
+      # REGISTER (claims:*) — always runs.
       - run: npm run claims:check
       - run: npm run claims:test
       # CTO-readable structure (T5): docs/README.md must list every real
       # docs/ subtree (and no vanished one); archive/README.md and
       # handoff/README.md are generated from the filesystem and must not be
       # stale. Both checkers plant every failure mode in a throwaway fixture.
+      # REGISTER (docs:* / the archive index check, both explicitly named) —
+      # always runs.
       - run: npm run docs:check
       - run: npm run docs:test
       - run: node scripts/generate-archive-index.mjs --check
@@ -345,6 +501,7 @@ jobs:
       # Warns (does not fail) on a post-2026-09-02 handoff stating a bare
       # test count with no receipt link. Tests plant every failure mode in a
       # throwaway repository.
+      # REGISTER (receipts:*) — always runs.
       - run: npm run receipts:check
       - run: npm run receipts:test
       # Schema-migration ledger (T15, apps/api/src/lib/startup-migrations.ledger.json):
@@ -355,6 +512,7 @@ jobs:
       # known_overlaps (the 2026-08-21 two-blocks-fought-every-boot
       # incident class). Tests plant every failure mode in a throwaway
       # fixture.
+      # REGISTER (migrations:*) — always runs.
       - run: npm run migrations:check
       - run: npm run migrations:test
       # Codex re-review backlog (DEC-20260903-A): work that shipped without
@@ -363,17 +521,22 @@ jobs:
       # "we'll get Codex to look at it later" cannot quietly become never.
       # Closing a row needs a verdict, not a status change. Tests plant every
       # failure mode in a throwaway fixture.
+      # REGISTER (codex:*) — always runs.
       - run: npm run codex:check
       - run: npm run codex:test
       # Session-end handoff gate (scripts/handoff/): the Stop hooks, the Codex
       # notify wrapper, and the git hooks all call the same checker. Its tests
       # plant every failure mode in a throwaway repository.
+      # REGISTER (*:test under scripts/) — always runs.
       - run: npm run handoff:test
       # Repo-native project-context layer (M1/M2 candidates, decision graph,
       # M2 closure register). The checker itself is warning-only by contract
       # until M4; its test suite is not, and it asserts the checked-in context
       # is warning-clean, so drift on these files fails the build here.
+      # REGISTER (context:*) — always runs.
       - run: npm run context:check
       - run: npm run context:test
 
-      - run: npm test
+      # CODE — the full apps/api suite. Skipped on a documentation-only PR.
+      - if: needs.classify.outputs.docs_only == 'false'
+        run: npm test

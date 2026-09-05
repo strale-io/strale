@@ -27,6 +27,7 @@
  */
 
 import { logWarn } from "./log.js";
+import { unwrapDbError } from "./db-error.js";
 
 /** Node socket-level errno codes that indicate the DB host is unreachable. */
 const TRANSIENT_ERRNO_CODES = new Set([
@@ -68,7 +69,15 @@ const TRANSIENT_SQLSTATE_CODES = new Set(["57P01", "57P02", "57P03"]);
 export function isTransientDbConnectError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
 
-  const code = (err as Error & { code?: unknown }).code;
+  // Since drizzle-orm 0.44 (PR #510, 2026-09-04), the migration/schema
+  // functions this retries call db.execute() internally, and a connection
+  // failure surfacing THROUGH a query attempt is rethrown wrapped in
+  // DrizzleQueryError — the errno/SQLSTATE `code` this function keys on
+  // moves from the caught error to its `.cause`. See lib/db-error.ts.
+  const unwrapped = unwrapDbError(err);
+  if (!(unwrapped instanceof Error)) return false;
+
+  const code = (unwrapped as Error & { code?: unknown }).code;
   if (typeof code === "string") {
     if (TRANSIENT_ERRNO_CODES.has(code)) return true;
     if (TRANSIENT_POSTGRES_JS_CODES.has(code)) return true;
@@ -79,17 +88,17 @@ export function isTransientDbConnectError(err: unknown): boolean {
     // 57014 = query_canceled. Transient only in its connection-phase form
     // ("canceling authentication due to timeout", the 2026-07-02 shape);
     // a statement_timeout on a real query must stay fatal.
-    if (code === "57014" && /authenticat/i.test(err.message)) return true;
+    if (code === "57014" && /authenticat/i.test(unwrapped.message)) return true;
   }
 
   // Fallback: postgres-js sometimes surfaces timeouts as bare Errors
   // whose message carries the code (e.g. "write CONNECT_TIMEOUT ...").
-  if (/CONNECT_TIMEOUT|ECONNREFUSED|ETIMEDOUT/.test(err.message)) return true;
+  if (/CONNECT_TIMEOUT|ECONNREFUSED|ETIMEDOUT/.test(unwrapped.message)) return true;
 
   // AggregateError from Node's happy-eyeballs connect: transient if any
   // inner error is.
-  if (err instanceof AggregateError) {
-    return err.errors.some((inner) => isTransientDbConnectError(inner));
+  if (unwrapped instanceof AggregateError) {
+    return unwrapped.errors.some((inner) => isTransientDbConnectError(inner));
   }
 
   return false;

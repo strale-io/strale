@@ -1,0 +1,128 @@
+slug: paper-details
+name: Paper Details
+description: >-
+  Look up one scholarly work by DOI or OpenAlex id: full author list with institutions, venue, open-access
+  status and PDF, citations, topics and abstract.
+category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 36000
+known_rate_limit:
+  value: 10
+  unit: per_second
+  source_url: https://docs.openalex.org/how-to-use-the-api/rate-limits-and-authentication
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - doi
+  properties:
+    doi:
+      type: string
+      description: A DOI (10.1038/s41586-020-2649-2 or https://doi.org/...), or an OpenAlex work id such as W3035965352
+output_schema:
+  type: object
+  example:
+    openalex_id: https://openalex.org/W3035965352
+    doi: https://doi.org/10.1038/s41586-020-2649-2
+    title: Array programming with NumPy
+    publication_year: 2020
+    publication_date: "2020-09-16"
+    type: article
+    language: en
+    venue: Nature
+    venue_type: journal
+    landing_page_url: https://doi.org/10.1038/s41586-020-2649-2
+    pdf_url: https://www.nature.com/articles/s41586-020-2649-2.pdf
+    is_open_access: true
+    open_access_status: hybrid
+    is_retracted: false
+    cited_by_count: 23533
+    referenced_works_count: 41
+    author_count: 26
+    authors:
+      - name: Charles R. Harris
+        orcid: null
+        institutions: []
+    topics:
+      - Computational Physics and Python Applications
+    keywords:
+      - Python (programming language)
+    abstract: Array programming provides a powerful, compact and expressive syntax for accessing, manipulating and operating on data...
+  properties:
+    openalex_id:
+      type: string
+    title:
+      type: string
+    publication_year:
+      type: number
+    cited_by_count:
+      type: number
+    author_count:
+      type: number
+    authors:
+      type: array
+    is_open_access:
+      type: boolean
+    venue:
+      type: string
+    abstract:
+      type: string
+data_source: OpenAlex (OurResearch) scholarly works API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      doi: 10.1038/s41586-020-2649-2
+    expected_fields:
+      - field: openalex_id
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: type
+        reliability: guaranteed
+        value: string
+      - field: cited_by_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: authors
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    doi: 10.1038/s41586-020-2649-2
+output_field_reliability:
+  openalex_id: guaranteed
+  title: guaranteed
+  publication_year: guaranteed
+  cited_by_count: guaranteed
+  author_count: guaranteed
+  authors: guaranteed
+  is_open_access: guaranteed
+  venue: common
+  abstract: common
+limitations:
+  - title: Works without a DOI can only be fetched by OpenAlex id
+    text: >-
+      Book chapters, datasets and older articles frequently have no DOI; find their OpenAlex id with
+      academic-paper-search first.
+    category: coverage
+    severity: info
+    workaround: Search by title with academic-paper-search and pass the returned openalex_id.
+  - title: Abstract and venue are absent when the publisher withholds them
+    text: Many publishers do not license abstracts to OpenAlex; `abstract` and occasionally `venue` are then null.
+    category: coverage
+    severity: info
+    workaround: Follow landing_page_url or pdf_url for the full record.

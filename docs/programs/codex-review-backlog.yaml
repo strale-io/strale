@@ -41,6 +41,415 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-27
+    subject: "PR #553 — M2 G2 batch 1: five ID collisions (DEC-20260225-P-c5d6, DEC-20260303-A, DEC-20260304-A, DEC-20260304-B, DEC-20260304-C) resolved atomically with ten source-qualified records"
+    commit: 81d59db4
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The first collision resolutions after the DEC-20260502-A worked
+      example. Each resolution is irreversible history (the registry's
+      merge-base rules refuse a regression), so whether each row's
+      disposition is justified by its own source text, whether the
+      source-qualified keys map one-to-one, and whether the resolution
+      reports' implementation reconciliation is traced to code are the
+      Codex judgements.
+    what_to_attack: >
+      Each of the ten records against its Notion row (by page id, parsed);
+      each registry entry against the report and the register rows; every
+      bare collided id in existing records and prose; the register
+      arithmetic (unresolved_collision minus ten, formally_migrated plus
+      ten) and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-26
+    subject: "PR #551 — M2 batch 18: thirteen May 2026 decisions (DEC-20260505-A/B/C, DEC-20260507-I/J, DEC-20260510-A, DEC-20260511-B/E/F, DEC-20260513-A/B/C/D) migrated to formal candidate records; G1 closed"
+    commit: 6832cccb
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The last G1 batch, after which the closure register records G1
+      resolved. The records judge the scheduled_testing_eligible decoupling
+      against the boot-time derivation that CLAUDE.md documents, the
+      lifecycle and tiebreaker removals, the breaker pins, and the digest
+      rot. Whether each claim is traced to code, whether each edge is
+      source-stated, and whether G1's closure is justified by the register's
+      own counts are the Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (startup-migrations.ts block 0066,
+      matching.ts, test-runner.ts and circuit-breaker.ts, test-scheduler.ts,
+      the three country manifests, VOICE.md); every relation edge; the
+      register arithmetic, the zero not_yet_reconciled count, the G1
+      closure and exit_gaps counts, and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-25
+    subject: "PR #549 — M2 batch 17: twelve April to early-May 2026 decisions (DEC-20260406-E, DEC-20260409-A/B/D, DEC-20260410-A, DEC-20260413-A, DEC-20260415-A/B, DEC-20260422-H, DEC-20260427-H/I, DEC-20260503-B) migrated to formal candidate records"
+    commit: 892a1f75
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Twelve records including the SQS redesign row itself and the two
+      catalogue deactivation rows, whose Consequences enumerate the
+      DEACTIVATED map's entries and each named slug's state; plus the one
+      temporary row in G1. Whether each slug claim is traced to the map and
+      the manifests, and whether each edge is source-stated, is the Codex
+      judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (auto-register.ts DEACTIVATED map, auth.ts
+      signup, entity-validation.ts, test-scheduler.ts, schema.ts residual
+      SQS columns, VOICE.md, DECISION-QUEUE.md); every relation edge; the
+      register arithmetic and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-24
+    subject: "PR #547 — M2 batch 16: twelve March 2026 decisions (DEC-20260314-F/G, DEC-20260315-A/B/H/I, DEC-20260317-A/F/G/H, DEC-20260321-A, DEC-20260329-A) migrated to formal candidate records"
+    commit: ccece2b2
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Twelve records whose Consequences sections judge what survived the
+      SQS deletion and the never-executed provider programme (billing on
+      upstream failure, the digest cadence, the publication threshold, the
+      evidence weighting, the schedule_tier ordering, the palette's move
+      into design tokens). Whether each claim is traced to code rather
+      than remembered, and whether each edge is source-stated, is the Codex
+      judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (do.ts settle path, x402-gateway.ts,
+      daily-digest.ts, trust-labels.ts, trust-grade.ts, onboard.ts,
+      test-scheduler.ts, design/tokens/active.json, the frontend Index
+      page at its cited sha); every relation edge; the register arithmetic
+      and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-23
+    subject: "PR #544 — M2 batch 15: fourteen March 2026 launch-month decisions (DEC-20260302-C/D, DEC-20260303-C, DEC-20260305-E/F, DEC-20260306-G/H, DEC-20260309-H, DEC-20260310-E/F, DEC-20260313-E, DEC-20260314-A/B/C) migrated to formal candidate records"
+    commit: fdb38591
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Fourteen launch-month records whose Consequences sections judge what
+      the SQS deletion and later work did with each (no ranking-explanation
+      page, no blog route, no disclaimer field on today's risk
+      capabilities, 36 web-provider importers against the row's 47). Six
+      records cite the frontend by commit-qualified cross-repo path.
+      Whether each claim is traced to code and each cross-repo sha resolves
+      is the Codex judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (web-provider.ts and its importers,
+      dependency-manifest.ts, daily-digest.ts, seller-rank.ts, suggest.ts,
+      onboard.ts, the frontend Header, Methodology, Index, CapabilityDetail
+      and Terms pages at the cited shas); the single relation edge; the
+      register arithmetic and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-22
+    subject: "PR #542 — M2 batch 14: fourteen MVP launch and scaling decisions of 2026-02-25/27 (DEC-20260225-P-m5n6/o7p8/y1z2, DEC-20260226-P-q1r2/s3t4/u5v6/w7x8, DEC-20260227-P-a1b2/i9j0/m3n4/o5p6/q7r8/s9t0/u1v2) migrated to formal candidate records"
+    commit: cc936d78
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Fourteen founding-week records whose Consequences sections judge what
+      survived (no LLM fuzzy input despite CLAUDE.md, TED shipped, the EU AI
+      Act columns and their writer, provider growth never executed, no
+      reputation engine, no Visa TAP). Six relation edges, two of them
+      beyond the brief's list. Whether each claim is traced to code rather
+      than remembered, and whether each edge is source-stated, is the Codex
+      judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (swedish-company-data.ts, ted-procurement
+      manifest, schema.ts and do.ts, the SDK package.json, the MCP and A2A
+      surfaces); the six relation edges; the register arithmetic and the
+      recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-21
+    subject: "PR #539 — M2 batch 13: fourteen founding decisions of 2026-02-24/25 (DEC-20260224-P-a1b2/c3d4/e5f6/g7h8, DEC-20260225-P-a3b4/e7f8/g9h0/i1j2/k3l4/m1n2/q3r4/s5t6/u7v8/w9x0) migrated to formal candidate records"
+    commit: 8ebfafa9
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Fourteen founding-era records whose Consequences sections judge what
+      survived of each decision (the pivot, the seed set, the payment
+      architecture, keypair identity, provider-lite). Whether each "status
+      on 2026-09-04" claim is traced to code or a later record rather than
+      remembered is the Codex judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (manifests, x402 gateway, auth, langchain
+      packages, solutions route, VOICE.md, claims.yaml); the relation edges;
+      the register arithmetic and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-20
+    subject: "PR #537 — M2 batch 12: twelve vendor and registry sourcing decisions (DEC-20260320-E, DEC-20260405-A, DEC-20260505-G/H, DEC-20260506-G, DEC-20260507-D/E/F/G/H, DEC-20260508-A/D) migrated to formal candidate records"
+    commit: e4b6376a
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Twelve records whose Consequences sections state that production
+      sourcing diverged from the decided paths (Bolagsverket shipped, the
+      Openapi aggregator for BG/CY/LU/HU, no Implisense or Kyckr code). Ten
+      relation edges. The largest batch so far; fidelity across twelve
+      sources and the divergence claims are Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source; the ten edges and their types;
+      the executor and manifest claims for swedish-, german-, bulgarian-,
+      cypriot-, luxembourgish- and hungarian-company-data; the env-manifest
+      rows quoted; the register arithmetic and the recomputed
+      scope_date_digest via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-19
+    subject: "PR #532 — M2 batch 11: seven Counterparty Assurance v1 decisions (DEC-20260515-A/B/C, DEC-20260518-A/B/C/D) migrated to formal candidate records"
+    commit: 7ca52b3c
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Seven records for a product framing the readiness program retired;
+      each states the retirement and what survives in code. The batch also
+      carries four relation edges, one of them the orchestrator's reading of
+      a "partial supersession" as amends. Fidelity and relation typing are
+      Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source; the amends edge from
+      DEC-20260515-A to DEC-20260430-A (partial supersession, target stays
+      active); the code claims about Cobalt, us-court-search, ubo_availability
+      and the missing Digiteal handler; the register arithmetic and digests
+      via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-18
+    subject: "PR #529 — M2 batch 10: six distribution and x402-rail decisions (DEC-20260313-F, DEC-20260324-A, DEC-20260324-C, DEC-20260330-B, DEC-20260404-A, DEC-20260416-A) migrated to formal candidate records"
+    commit: d858a695
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Records about the distribution surfaces and the x402 rail, with live
+      anchors (the CDP facilitator, the AgentCash discovery compatibility,
+      the root registry manifests) and two drift findings. Whether the
+      records' code claims are traced to callers rather than comments is
+      the judgement this batch series has been losing rounds on.
+    what_to_attack: >
+      Each "status on 2026-09-04" claim against the files it names
+      (server.json vs packages/mcp-server/package.json, x402-gateway.ts,
+      x402-gateway-v2.ts, context7.json, docs/ide-rules); the absence of
+      relation edges; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-17
+    subject: "PR #526 — M2 batch 9: six trust and quality display decisions (DEC-20260305-G, DEC-20260306-D, DEC-20260313-C, DEC-20260316-A, DEC-20260316-B, DEC-20260323-A) migrated to formal candidate records"
+    commit: deb08103
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      Six records whose subject, the SQS and its display, was deleted on
+      2026-05-05; each Consequences section says what survives. Whether the
+      records keep the historical Decision text intact while stating the
+      deletion honestly, and whether the dead computeTrustGrade finding is
+      right, are judgements for a second model.
+    what_to_attack: >
+      Each record against its Notion source; the "status on 2026-09-04" code
+      claims (public-trust.ts header, trust-grade.ts dead code, the residual
+      columns, capability_health not renamed); the absence of relation edges;
+      the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-16
+    subject: "PR #524 — M2 batch 8: five onboarding-pipeline decisions (DEC-20260309-G, DEC-20260318-A, DEC-20260318-B, DEC-20260320-A, DEC-20260411-B) migrated to formal candidate records"
+    commit: 746c3beb
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      These records describe the pipeline the Capability Onboarding Protocol
+      (DEC-20260320-B) enforces, and one of them (the 12-category risk
+      framework) is a rule the repository never implemented. Whether the
+      records say that plainly without weakening the historical text is a
+      fidelity judgement for Codex.
+    what_to_attack: >
+      Each record against its Notion source for any dropped step, count or
+      flag; the "status on 2026-09-04" claims against apps/api/scripts/onboard.ts,
+      the readiness checker and gate5-path-coverage.ts; the absence of any
+      relation edge (the sources cite no decision ids); the register
+      arithmetic and digests via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
+  - id: CX-15
+    subject: "PR #521 — M2 batch 7: five pricing decisions (DEC-20260302-A-0001, DEC-20260308-1, DEC-20260320-F, DEC-20260411-A, DEC-20260513-E) migrated to formal candidate records"
+    commit: c309a8ca
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Pricing records with live contradictions: the vendor cost basis moved
+      (OpenSanctions to Dilisense), the compliance-screening prices never
+      reached the EUR 0.25 the 2026-03 decision set, and one relation
+      (DEC-20260411-A amends DEC-20260302-A-0001) rests on subject restatement
+      rather than an explicit citation. Whether those are stated honestly and
+      whether the amends edge is source-stated enough are Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source for any dropped price, margin or
+      competitor figure; the "status on 2026-09-04" price claims against the
+      manifests; the amends edge; DEC-20260513-E's summarized Outcome (the
+      Claude review found it was first presented as a quote); the register
+      arithmetic and digests via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (one should-fix applied by the orchestrator before merge)
+  - id: CX-14
+    subject: "PR #518 — eight keyless free-API capabilities (OpenAlex, arXiv, PubMed, HN, SEC EDGAR, NVD, USGS) from the largest x402 buyer's basket"
+    commit: 5bf6c43d
+    merged: "2026-09-04"
+    priority: medium
+    status: pending
+    why_codex: >
+      New executors on the money path that build upstream URLs from caller
+      input. Three Claude rounds were needed: round 1 found query-parameter
+      smuggling through the DOI, round 2 found dot-segment path collapse
+      through the same function after the first fix. A model that did not
+      write either fix should look for the third variant, and at the seven
+      other executors the rounds spent less time on.
+    what_to_attack: >
+      apps/api/src/capabilities/paper-details.ts resolveWorkIdentifier /
+      encodeDoiPath (percent-encoded dots, backslashes, unicode, doi.org
+      URLs); every URLSearchParams construction in the other seven executors
+      for a parameter that changes the upstream route; readJsonWithLimit /
+      readTextWithLimit on every body; the manifests' guaranteed fields
+      against a real empty-result response (zero hits) for each search
+      capability; the sec-ticker-index probe cost at four runs a day.
+    claude_verdicts: 3 rounds — FAIL, FAIL, PASS; every finding fixed
+
+  - id: CX-13
+    subject: "PR #517 — M2 batch 6: provenance and jurisdiction rows (DEC-20260422-D, DEC-20260425-A, DEC-20260425-B) migrated to formal candidate records"
+    commit: 167e46e0
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      DEC-20260425-A's record states that the decision's core mechanism
+      (manifest-declared jurisdictions) was never implemented and that the
+      audit field is still derived by a heuristic. A record that says its
+      own decision did not ship is exactly where a second model should check
+      the claim and the wording against the source and the code.
+    what_to_attack: >
+      DEC-20260425-A's five-option Rationale for any dropped reason; the
+      "status on 2026-09-04" block against apps/api/src/lib/provenance-builder.ts
+      getProcessingJurisdictions(); the affirms edge to DEC-20260425-B; the
+      22-executor provenance-field count; the register arithmetic and digests
+      via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, FAIL on a stale index and one omitted relation, both applied by the orchestrator before merge
+  - id: CX-12
+    subject: "PR #515 — M2 batch 5: capability lifecycle patterns (DEC-20260421-J, DEC-20260421-L, DEC-20260422-B) migrated to formal candidate records"
+    commit: fa869015
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Three operating patterns transcribed with a contradiction the worker
+      found itself: the exemplar retired capability was reactivated eight
+      days later. Whether the records state that honestly without rewriting
+      the historical Decision text is a fidelity judgement for Codex.
+    what_to_attack: >
+      The numbered steps, the Type 1 to 5 tree and the four tombstone reasons
+      against the sources; the bd25bc57 reactivation claim; the amends and
+      related_to edges; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (one nit)
+  - id: CX-11
+    subject: "PR #510 — drizzle-orm 0.38.4 -> 0.45.2 (T17 batch 2), with the DrizzleQueryError unwrap module and five routed readers"
+    commit: 47d69050
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      A semver-major on the ORM every query goes through. The first pass
+      claimed no source change was needed; CI and two Claude reviews found
+      five readers of err.code that had silently stopped seeing the Postgres
+      error (duplicate signup as a 500, DB errors logged as unknown, the
+      wallet timeout 503, the settlement race discharge). Three rounds is a
+      signal that a different model should read the whole surface once more.
+    what_to_attack: >
+      apps/api/src/lib/db-error.ts (the unwrap and the narrowed PostgresError
+      heuristic); any remaining reader of a caught DB error's code, message,
+      detail or constraint in apps/api/src and scripts that the sweep table
+      in handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md missed
+      (grep the cast forms); the expectDbRejection test helper for hollowness;
+      the append-only migration blocks (none may have changed); drizzle-kit
+      0.31.10 in the CI integration-db lane.
+    claude_verdicts: 3 rounds (FAIL, FAIL, PASS by the orchestrator after the Sonnet pool rate-limited)
+  - id: CX-10
+    subject: "PR #513 — M2 batch 4: three engineering-convention rows (DEC-20260419-A, DEC-20260420-A, DEC-20260511-C) migrated to formal candidate records"
+    commit: 8b124678
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Decision-record fidelity is the work the 2026-09-01 routing reserved
+      for Codex. These three records transcribe engineering conventions that
+      the code still enforces, and one of them (DEC-20260511-C) carries a
+      dated contradiction with today's tree (drizzle-kit back for the CI
+      test lane only). Whether that contradiction is stated honestly and
+      completely is a judgement worth a second model.
+    what_to_attack: >
+      Each record's five sections against its Notion source for any dropped
+      rule, path, commit id or option; the DEC-20260511-C "status on
+      2026-09-04" block against apps/api/drizzle.config.ts, package.json and
+      .github/workflows/ci.yml; the single affirms edge; the register
+      arithmetic and digests via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (three nits)
+  - id: CX-9
+    subject: "PR #511 — DEC-20260422-A cross-surface collision resolved (G3 stage 2): protocol record DEC-20260422-A--git-3b256587, Notion row evidence-only"
+    commit: cf20869f
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      A formal record was transcribed from CLAUDE.md's Distribution PR
+      Integrity Protocol, the protocol Codex itself helped shape after the
+      pydantic-ai incident, and one collision was resolved by choosing an
+      evidence-only disposition for the Notion meaning. Fidelity of a
+      protocol record and the honesty of a disposition are exactly the
+      judgements reserved for Codex.
+    what_to_attack: >
+      Every requirement in the record against the live CLAUDE.md section
+      (any softened step is a defect); whether the Notion row (page
+      34967c87082c81ffacfbd04b59df64fe) truly has no live authority; the
+      rewritten stage-1 tests in scripts/m2-closure-register.test.mjs for
+      weakened invariants; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round, PASS (one nit)
+  - id: CX-8
+    subject: "PR #509 — cross-surface identity mechanism (G3 stage 1): --git-<sha> record keys, DEC-20260904-B"
+    commit: 88d8c0c0
+    merged: "2026-09-04"
+    priority: high
+    status: pending
+    why_codex: >
+      Codex mapped the collision identity plan the closure register rests
+      on; this batch extends the record-key grammar and the validator's
+      derivation rules. A grammar or derivation mistake here propagates to
+      every future collision resolution.
+    what_to_attack: >
+      The record-key pattern in its three copies; the cross-surface
+      resolution rule (a git-qualified record AND a gap-report citation,
+      formal_record refused); RECORD_GIT_KEY_* and
+      RECORD_GIT_KEY_WITHOUT_CROSS_SURFACE; whether decision-records-lib
+      accepting --git- keys without the registry opens a hole the closure
+      validator does not close; DEC-20260904-B's reversal condition.
+    claude_verdicts: 2 rounds (initial + follow-up), PASS
   - id: CX-7
     subject: "PR #503 — G1 rule (DEC-20260904-A): 76 pre-readiness feature-scoped rows become evidence-only"
     commit: 90c1c798

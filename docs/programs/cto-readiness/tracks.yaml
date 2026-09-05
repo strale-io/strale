@@ -275,19 +275,21 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 and 2 done (PRs #500, #503). Batch 2 applied the G1 rule
-      (DEC-20260904-A): 76 pre-readiness feature-scoped rows are
-      intentionally_historical in the public register, cited by the gap
-      report, and the private projection is 140 rows at archive db6634c6.
-      The operator verifier passes. G1 now holds 129 rows (128 global, 1
-      temporary), all pre-readiness, which the rule does not cover: they
-      are contradiction-checked batch work, grouped by topic, smallest
-      coherent group first. Next: G3's cross-surface identity (a
-      source-qualified key for the Git-native DEC-20260422-A claim), then
-      the first global-row batch, then G2's 34 collisions one at a time,
-      then G9's closing review. This track is the M2 exit gate: the
-      closure register's validator refuses a state where it is done, or
-      any post-m2 track is active or done, while a blocking gap remains.
+      G1 closed (PR #552). G2 batch 1 done (PR #553): five ID collisions
+      resolved atomically (DEC-20260225-P-c5d6, DEC-20260303-A,
+      DEC-20260304-A, DEC-20260304-B, DEC-20260304-C), each row given a
+      source-qualified record (--notion-<page id>) or an evidence-backed
+      documented_only disposition, with one resolution report per
+      collision under archive/sessions/. Method:
+      archive/sessions/2026-09-01-decision-collision-identity-plan.md and
+      the DEC-20260502-A worked example; the operator verifier passes.
+      Blocking gaps: G2 (29 collisions remain) and G9. Next: G2 batch 2,
+      the March 2026 collisions (DEC-20260320-C, DEC-20260320-J,
+      DEC-20260320-K) and the April ones through DEC-20260406-C, then the
+      April 20 to 21 group, then the May group, then G9's closing review.
+      This track is the M2 exit gate: the closure register's validator
+      refuses a state where it is done, or any post-m2 track is active or
+      done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -297,6 +299,159 @@ tracks:
       - docs/project/m2-closure-register.yaml
       - docs/decisions/records/DEC-20260904-A.md
       - archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md
+      - docs/decisions/records/DEC-20260904-B.md
+      - docs/decisions/records/DEC-20260422-A--git-3b256587.md
+      - archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md
+      - docs/decisions/records/DEC-20260419-A.md
+      - docs/decisions/records/DEC-20260420-A.md
+      - docs/decisions/records/DEC-20260511-C.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-4-engineering-conventions.md
+      - docs/decisions/records/DEC-20260421-J.md
+      - docs/decisions/records/DEC-20260421-L.md
+      - docs/decisions/records/DEC-20260422-B.md
+      - docs/decisions/records/DEC-20260422-D.md
+      - docs/decisions/records/DEC-20260425-A.md
+      - docs/decisions/records/DEC-20260425-B.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-5-lifecycle-patterns.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md
+      - docs/decisions/records/DEC-20260302-A-0001.md
+      - docs/decisions/records/DEC-20260308-1.md
+      - docs/decisions/records/DEC-20260320-F.md
+      - docs/decisions/records/DEC-20260411-A.md
+      - docs/decisions/records/DEC-20260513-E.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md
+      - docs/decisions/records/DEC-20260309-G.md
+      - docs/decisions/records/DEC-20260318-A.md
+      - docs/decisions/records/DEC-20260318-B.md
+      - docs/decisions/records/DEC-20260320-A.md
+      - docs/decisions/records/DEC-20260411-B.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md
+      - docs/decisions/records/DEC-20260305-G.md
+      - docs/decisions/records/DEC-20260306-D.md
+      - docs/decisions/records/DEC-20260313-C.md
+      - docs/decisions/records/DEC-20260316-A.md
+      - docs/decisions/records/DEC-20260316-B.md
+      - docs/decisions/records/DEC-20260323-A.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md
+      - docs/decisions/records/DEC-20260313-F.md
+      - docs/decisions/records/DEC-20260324-A.md
+      - docs/decisions/records/DEC-20260324-C.md
+      - docs/decisions/records/DEC-20260330-B.md
+      - docs/decisions/records/DEC-20260404-A.md
+      - docs/decisions/records/DEC-20260416-A.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md
+      - docs/decisions/records/DEC-20260515-A.md
+      - docs/decisions/records/DEC-20260515-B.md
+      - docs/decisions/records/DEC-20260515-C.md
+      - docs/decisions/records/DEC-20260518-A.md
+      - docs/decisions/records/DEC-20260518-B.md
+      - docs/decisions/records/DEC-20260518-C.md
+      - docs/decisions/records/DEC-20260518-D.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md
+      - docs/decisions/records/DEC-20260320-E.md
+      - docs/decisions/records/DEC-20260405-A.md
+      - docs/decisions/records/DEC-20260505-G.md
+      - docs/decisions/records/DEC-20260505-H.md
+      - docs/decisions/records/DEC-20260506-G.md
+      - docs/decisions/records/DEC-20260507-D.md
+      - docs/decisions/records/DEC-20260507-E.md
+      - docs/decisions/records/DEC-20260507-F.md
+      - docs/decisions/records/DEC-20260507-G.md
+      - docs/decisions/records/DEC-20260507-H.md
+      - docs/decisions/records/DEC-20260508-A.md
+      - docs/decisions/records/DEC-20260508-D.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md
+      - docs/decisions/records/DEC-20260224-P-a1b2.md
+      - docs/decisions/records/DEC-20260224-P-c3d4.md
+      - docs/decisions/records/DEC-20260224-P-e5f6.md
+      - docs/decisions/records/DEC-20260224-P-g7h8.md
+      - docs/decisions/records/DEC-20260225-P-a3b4.md
+      - docs/decisions/records/DEC-20260225-P-e7f8.md
+      - docs/decisions/records/DEC-20260225-P-g9h0.md
+      - docs/decisions/records/DEC-20260225-P-i1j2.md
+      - docs/decisions/records/DEC-20260225-P-k3l4.md
+      - docs/decisions/records/DEC-20260225-P-m1n2.md
+      - docs/decisions/records/DEC-20260225-P-q3r4.md
+      - docs/decisions/records/DEC-20260225-P-s5t6.md
+      - docs/decisions/records/DEC-20260225-P-u7v8.md
+      - docs/decisions/records/DEC-20260225-P-w9x0.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md
+      - docs/decisions/records/DEC-20260225-P-m5n6.md
+      - docs/decisions/records/DEC-20260225-P-o7p8.md
+      - docs/decisions/records/DEC-20260225-P-y1z2.md
+      - docs/decisions/records/DEC-20260226-P-q1r2.md
+      - docs/decisions/records/DEC-20260226-P-s3t4.md
+      - docs/decisions/records/DEC-20260226-P-u5v6.md
+      - docs/decisions/records/DEC-20260226-P-w7x8.md
+      - docs/decisions/records/DEC-20260227-P-a1b2.md
+      - docs/decisions/records/DEC-20260227-P-i9j0.md
+      - docs/decisions/records/DEC-20260227-P-m3n4.md
+      - docs/decisions/records/DEC-20260227-P-o5p6.md
+      - docs/decisions/records/DEC-20260227-P-q7r8.md
+      - docs/decisions/records/DEC-20260227-P-s9t0.md
+      - docs/decisions/records/DEC-20260227-P-u1v2.md
+      - handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md
+      - docs/decisions/records/DEC-20260302-C.md
+      - docs/decisions/records/DEC-20260302-D.md
+      - docs/decisions/records/DEC-20260303-C.md
+      - docs/decisions/records/DEC-20260305-E.md
+      - docs/decisions/records/DEC-20260305-F.md
+      - docs/decisions/records/DEC-20260306-G.md
+      - docs/decisions/records/DEC-20260306-H.md
+      - docs/decisions/records/DEC-20260309-H.md
+      - docs/decisions/records/DEC-20260310-E.md
+      - docs/decisions/records/DEC-20260310-F.md
+      - docs/decisions/records/DEC-20260313-E.md
+      - docs/decisions/records/DEC-20260314-A.md
+      - docs/decisions/records/DEC-20260314-B.md
+      - docs/decisions/records/DEC-20260314-C.md
+      - handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md
+      - docs/decisions/records/DEC-20260314-F.md
+      - docs/decisions/records/DEC-20260314-G.md
+      - docs/decisions/records/DEC-20260315-A.md
+      - docs/decisions/records/DEC-20260315-B.md
+      - docs/decisions/records/DEC-20260315-H.md
+      - docs/decisions/records/DEC-20260315-I.md
+      - docs/decisions/records/DEC-20260317-A.md
+      - docs/decisions/records/DEC-20260317-F.md
+      - docs/decisions/records/DEC-20260317-G.md
+      - docs/decisions/records/DEC-20260317-H.md
+      - docs/decisions/records/DEC-20260321-A.md
+      - docs/decisions/records/DEC-20260329-A.md
+      - handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md
+      - docs/decisions/records/DEC-20260406-E.md
+      - docs/decisions/records/DEC-20260409-A.md
+      - docs/decisions/records/DEC-20260409-B.md
+      - docs/decisions/records/DEC-20260409-D.md
+      - docs/decisions/records/DEC-20260410-A.md
+      - docs/decisions/records/DEC-20260413-A.md
+      - docs/decisions/records/DEC-20260415-A.md
+      - docs/decisions/records/DEC-20260415-B.md
+      - docs/decisions/records/DEC-20260422-H.md
+      - docs/decisions/records/DEC-20260427-H.md
+      - docs/decisions/records/DEC-20260427-I.md
+      - docs/decisions/records/DEC-20260503-B.md
+      - handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md
+      - docs/decisions/records/DEC-20260505-A.md
+      - docs/decisions/records/DEC-20260505-B.md
+      - docs/decisions/records/DEC-20260505-C.md
+      - docs/decisions/records/DEC-20260507-I.md
+      - docs/decisions/records/DEC-20260507-J.md
+      - docs/decisions/records/DEC-20260510-A.md
+      - docs/decisions/records/DEC-20260511-B.md
+      - docs/decisions/records/DEC-20260511-E.md
+      - docs/decisions/records/DEC-20260511-F.md
+      - docs/decisions/records/DEC-20260513-A.md
+      - docs/decisions/records/DEC-20260513-B.md
+      - docs/decisions/records/DEC-20260513-C.md
+      - docs/decisions/records/DEC-20260513-D.md
+      - handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260225-P-c5d6.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260303-A.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-A.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-B.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-C.md
+      - handoff/_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md
 
   - id: T6
     title: M3 repo-native workflows
@@ -368,17 +523,19 @@ tracks:
     depends_on: [T4]
     owner: session
     next_action: >
-      Batch 1 done (PR #499, hono 4.12.8 -> 4.13.5): the audit fell 24 -> 23,
-      the hono entry that folded 27 advisories is gone, and the HIGH CORS
-      advisory was shown never exploitable here (all three cors() sites set
-      origin explicitly, none sets credentials). Next: drizzle-orm 0.38.4 ->
-      0.45.2+, a semver-major on the ORM every query goes through -- its own
-      batch under DEC-20260504-A: read the release notes for query-builder
-      and bind-shape changes, run the full apps/api suite plus
-      data-retention and startup-migration tests, and check the queries the
-      notes call out against production read-only before merge. Then the
-      remaining eight reachable advisories, one batch each, re-running
-      apps/api/scripts/wp13-dependency-triage.mjs into a receipt after each.
+      Batches 1 and 2 done (PR #499 hono, PR #510 drizzle-orm 0.38.4 -> 0.45.2,
+      audit 23 -> 22). Batch 2 took three rounds: drizzle 0.44+ wraps every
+      driver error in DrizzleQueryError, and five readers of err.code on
+      money and boot paths (account-service, app.ts classifyError,
+      startup-db-retry, routes/do.ts timeout codes, settlement-reconciler
+      23505 race) silently stopped seeing the Postgres error; all now go
+      through apps/api/src/lib/db-error.ts with fail-first tests. Lesson
+      recorded in the final receipt: a semver-major upgrade with "no
+      source change needed" is attacked at the thrown-error shape, and
+      the sweep greps the cast forms. Next: the eight remaining reachable
+      advisories, one batch each, smallest blast radius first, re-running
+      apps/api/scripts/wp13-dependency-triage.mjs into a receipt after
+      each; runs in T10's review windows per PROGRAM.md.
     resume_file: docs/remediation/PACKAGE-GRAPH.yaml
     exit:
       - the ten reachable advisories are cleared, or each remaining one has a recorded reason it cannot be
@@ -387,6 +544,35 @@ tracks:
     evidence: 
       - archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json
       - handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md
+      - archive/receipts/2026-09-04-audit-wp13-drizzle-upgrade-final.json
+      - handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md
+
+  - id: T18
+    title: Network and resource safety substrate (WP12)
+    status: queued
+    gate: none
+    depends_on: [T4]
+    owner: session
+    next_action: >
+      WP12 was unblocked on 2026-09-02 (VERIFY-IP: one proxy hop, client
+      X-Forwarded-For never reaches the app) and has not started. Four exit
+      items, one batch each in this order: (1) a CIDR-based outbound guard
+      that closes the IPv6 gaps the audit named (CR-11), tested against
+      literal, mapped and link-local forms; (2) a connect-time re-check for
+      raw-socket fetches so DNS rebinding cannot pass the pre-resolve check
+      (CR-12); (3) byte and pixel caps on every body and image reader,
+      routed through apps/api/src/lib/resource-limits.ts, the only body
+      reader; (4) the trusted-hop rule for forwarded IPs written down as
+      code and test from the VERIFY-IP receipt. Each batch: plant the
+      failure first, then the guard, then the discriminating test.
+    resume_file: docs/remediation/PACKAGE-GRAPH.yaml
+    exit:
+      - CIDR-based outbound guard including the IPv6 gaps, with tests that fail against the pre-guard code
+      - connect-time re-check for raw sockets
+      - byte and pixel caps on every reader
+      - the forwarded-IP trusted-hop rule as code and test
+      - WP12 status in PACKAGE-GRAPH.yaml moves off UNBLOCKED_NOT_YET_STARTED
+    evidence: []
 
   - id: T16
     title: Legal & Data Policy Authority (WP14)

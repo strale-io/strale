@@ -1,0 +1,146 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e5ce8c726b5c86c90f84329e6b6291951e690686"
+  },
+  "at": "2026-09-04T22:14:03.711Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/4f68dcca-de52-4ade-b2b2-8341f736268e/scratchpad/loop541.json"
+  },
+  "summary": {
+    "suite": "scripts/codex-backlog.test.mjs",
+    "head": "e5ce8c726b5c86c90f84329e6b6291951e690686",
+    "loops": 20,
+    "clean_runs": 20
+  },
+  "topic": "codex-backlog-teardown-loop",
+  "raw": {
+    "suite": "scripts/codex-backlog.test.mjs",
+    "head": "e5ce8c726b5c86c90f84329e6b6291951e690686",
+    "loops": 20,
+    "clean_runs": 20,
+    "runs": [
+      {
+        "run": 1,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 2,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 3,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 4,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 5,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 6,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 7,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 8,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 9,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 10,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 11,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 12,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 13,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 14,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 15,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 16,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 17,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 18,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 19,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      },
+      {
+        "run": 20,
+        "exit": 0,
+        "pass": 0,
+        "fail": 0
+      }
+    ]
+  }
+}

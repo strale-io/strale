@@ -34,6 +34,7 @@ import { getDb } from "../db/index.js";
 import { transactions } from "../db/schema.js";
 import { log, logError } from "../lib/log.js";
 import { alertOnce } from "../lib/alert-once.js";
+import { pgErrorCode } from "../lib/db-error.js";
 import {
   countEscalated,
   escalateIntent,
@@ -234,8 +235,12 @@ export async function reconcileSettlementsOnce(): Promise<ReconcileSettlementsSu
         // The advisory lock only spans the batch SELECT, so two staggered
         // replicas can both reach the insert; the loser gets 23505 here, which
         // means "already recovered", not "failed". Treated as a discharge so a
-        // benign race is not reported as an error every tick.
-        const pgCode = (err as { code?: string } | null)?.code;
+        // benign race is not reported as an error every tick. Since
+        // drizzle-orm 0.44+ this arrives wrapped in `DrizzleQueryError`
+        // (no `code` of its own) — go through db-error.ts's
+        // `pgErrorCode` rather than reading `err.code` directly so this
+        // branch still fires post-upgrade.
+        const pgCode = pgErrorCode(err);
         if (pgCode === "23505") {
           summary.discharged += 1;
           continue;

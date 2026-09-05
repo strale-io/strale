@@ -1,0 +1,124 @@
+slug: usgs-earthquake-search
+name: USGS Earthquake Search
+description: >-
+  Query the USGS earthquake catalogue by magnitude, date range and location radius: magnitude, place, time,
+  coordinates, depth, tsunami flag, alert level and event page.
+category: data-extraction
+cost_class: free_unlimited
+quota_window: none
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    min_magnitude:
+      type: number
+      description: "Minimum magnitude. Default: 4.5"
+    max_magnitude:
+      type: number
+      description: Maximum magnitude
+    start_time:
+      type: string
+      description: "Earliest event time, ISO date or datetime. Default: 30 days ago"
+    end_time:
+      type: string
+      description: Latest event time, ISO date or datetime
+    latitude:
+      type: number
+      description: Centre latitude for a radius search (requires longitude)
+    longitude:
+      type: number
+      description: Centre longitude for a radius search (requires latitude)
+    max_radius_km:
+      type: number
+      description: "Search radius around the centre in km. Default: 500"
+    limit:
+      type: integer
+      description: "Events to return, 1-100. Default: 20"
+    order:
+      type: string
+      description: time (newest first, default) or magnitude (largest first)
+output_schema:
+  type: object
+  example:
+    filters:
+      min_magnitude: 5
+      max_magnitude: null
+      start_time: "2026-08-05"
+      end_time: null
+      latitude: null
+      longitude: null
+      max_radius_km: null
+      order: time
+    count: 1
+    earthquakes:
+      - id: us7000te9t
+        magnitude: 5.4
+        magnitude_type: mww
+        place: Kermadec Islands region
+        time: "2026-09-04T11:59:58.323Z"
+        updated: "2026-09-04T12:19:40.040Z"
+        latitude: -28.5616
+        longitude: -176.6452
+        depth_km: 10
+        tsunami_warning: false
+        alert_level: null
+        felt_reports: null
+        significance: 449
+        status: reviewed
+        event_type: earthquake
+        url: https://earthquake.usgs.gov/earthquakes/eventpage/us7000te9t
+  properties:
+    filters:
+      type: object
+    count:
+      type: number
+    earthquakes:
+      type: array
+data_source: USGS Earthquake Hazards Program (FDSN event web service)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      min_magnitude: 5
+      limit: 5
+    expected_fields:
+      - field: filters
+        operator: not_null
+        reliability: guaranteed
+      - field: count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: earthquakes
+        operator: not_null
+        reliability: guaranteed
+      - field: earthquakes
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    min_magnitude: 5
+    limit: 1
+output_field_reliability:
+  filters: guaranteed
+  count: guaranteed
+  earthquakes: guaranteed
+limitations:
+  - title: Magnitudes and locations are revised for hours after an event
+    text: >-
+      USGS publishes automatic solutions first and reviewed ones later; status distinguishes them and
+      magnitude can change by a few tenths.
+    category: freshness
+    severity: info
+    workaround: Re-query later for reviewed values; treat status=automatic as provisional.
+  - title: Small events are complete only where USGS has dense station coverage
+    text: Below roughly magnitude 4.5 the catalogue is complete for the US and sparse elsewhere.
+    category: coverage
+    severity: info
+    workaround: Keep min_magnitude at 4.5 or above for global comparisons.
