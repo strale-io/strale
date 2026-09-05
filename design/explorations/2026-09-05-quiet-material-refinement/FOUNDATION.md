@@ -1,4 +1,6 @@
-# Candidate brand foundation
+# Historical brand foundation — closed without adoption
+
+Status: rejected as an implementation input. This document preserves the study's original rules; it is not current brand doctrine. Resume at [system completion](../../../docs/programs/brand-website/SYSTEM-COMPLETION.md), retaining the original Quiet Material v0.7 direction.
 
 Version 0.1. Strategy follows DEC-20260905-A; visual rules below are proposals to test through the accompanying applications. Machine-readable counterparts use stable rule IDs in `foundation.json`. [VOICE.md](../../../docs/company/VOICE.md), the claims register and active design tokens retain their existing scopes.
 

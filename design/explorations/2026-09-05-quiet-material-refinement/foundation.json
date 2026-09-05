@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "quiet-material-refinement-0.1",
-  "status": "exploring",
+  "status": "rejected",
   "strategy_decision": "DEC-20260905-A",
   "token_source": "design/tokens/candidates/quiet-material-refinement.json",
   "production_adopted": false,

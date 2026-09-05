@@ -10,7 +10,8 @@
   "next_batch": [
     "source_and_asset_governance",
     "recipe_consistency",
-    "identity"
+    "identity",
+    "icons_and_illustration"
   ],
   "evidence": [
     "archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md",
