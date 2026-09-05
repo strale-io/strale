@@ -2456,6 +2456,21 @@ describe("startup-migrations — block 0112 (list the eight free-public-API capa
     expect(/visible = true/i.test(setClause) && /x402_enabled = true/i.test(setClause)).toBe(true);
   });
 
+  it("refuses any capability a vendor suspension has withdrawn", async () => {
+    // The known_overlaps note for capabilities.lifecycle_state rests its
+    // safety argument on this clause: block 0111 sets deactivation_reason to
+    // its suspension marker whenever it withdraws a capability, and running
+    // earlier in the same boot it would win. Without this predicate 0112
+    // would silently un-suspend a vendor-withdrawn capability on the one boot
+    // it fires. Independent review of PR #564 removed the clause and found
+    // the whole suite still green — this test closes that.
+    const stub = makeStub({ queue: [{}, [], { count: 6 }, eight(), ...Array(9).fill({}) ] });
+    await runMigration0112_promoteFreeApiEight(stub);
+    const update = stub.renderedSql.find((q) => /update capabilities/i.test(q));
+    expect(update).toBeDefined();
+    expect(update!.toLowerCase().replace(/\s+/g, " ")).toContain("deactivation_reason is null");
+  });
+
   it("corrects the six fabricated rules and leaves cve-details alone", async () => {
     // cve-details genuinely returns `status` (NVD "Analyzed"), so the same
     // assertion is correct there. usgs-earthquake-search was already

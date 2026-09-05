@@ -5172,7 +5172,7 @@ export async function runMigration0112_promoteFreeApiEight(
 
   await tx.execute(sql`
     INSERT INTO startup_migration_ledger (block, rows_affected)
-    VALUES (${BLOCK}, ${promotedSlugs.length})
+    VALUES (${BLOCK}, ${promotedSlugs.length + fixedCount})
     ON CONFLICT (block) DO NOTHING
   `);
 
