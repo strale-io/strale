@@ -46,8 +46,8 @@ forbidden as a relationship target.
 exports `parsePath()` and `walkPath()`, and `resolveInputRef()`'s doc
 comment states support for "`$input.<path>` → walk path from inputs
 (supports nested: `$input.company.name`)" and "`$steps[N].<path>` → walk
-path from `completedSteps[N]` (supports nested: `$steps[0].license.spdx`)"
-— matching the row's named `dependency-risk-check` example exactly.
+path from `completedSteps[N]` (supports nested: `$steps[0].license.spdx`)",
+which matches the row's named `dependency-risk-check` example exactly.
 
 **Notion workspace restructure.** CLAUDE.md's current "Notion Workspace
 Structure (8 sections under Project Home)" describes an 8-section layout
