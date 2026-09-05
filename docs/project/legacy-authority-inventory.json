@@ -274,6 +274,7 @@
         "handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md",
+        "handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -461,6 +462,7 @@
         "handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md",
+        "handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -557,7 +559,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "174b58836a5ecd5504900f286523d982e5ead17b9c7eaf623893480e33647e49",
+      "sha256": "b739c469887c9c938867ea1f418b4c7e4126fd9ecc09bb966992d49f267596f8",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
