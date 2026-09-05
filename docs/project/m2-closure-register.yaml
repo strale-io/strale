@@ -88,8 +88,8 @@ counts:
     total: 5
     superseded: 0
   exit_gaps:
-    blocking: 3
-    non_blocking: 6
+    blocking: 2
+    non_blocking: 7
 legacy_inventory:
 - path: AGENTS.md
   owner_area: root-agent-entrypoint
@@ -4728,7 +4728,11 @@ plan_statements:
     gaps it lists are the remaining M2 work.
 exit_gaps:
 - id: G1
-  gap: Zero preserved Decision rows remain not_yet_reconciled after T10 batch 18
+  gap: 'Resolved. No not_yet_reconciled row remains: T10 batch 18 (PR #551) migrated the last
+    thirteen rows and the operator verifier passes against the private projection at archive
+    148808fd. The schema''s exit_gaps object has no separate closed state distinct from
+    blocking: false; this gap is recorded resolved by its rewritten text and non-blocking status,
+    not a schema field. History of the closure follows. Zero preserved Decision rows remain not_yet_reconciled after T10 batch 18
     (the last thirteen, all global scope, were migrated this batch). 76 pre-readiness feature-scoped rows
     were classified evidence-only by DEC-20260904-A. T10 batch 4 formally migrated three
     engineering-convention rows (DEC-20260419-A, DEC-20260420-A, DEC-20260511-C). T10 batch 5
@@ -4772,8 +4776,8 @@ exit_gaps:
     gap, all global scope
     (DEC-20260505-A, DEC-20260505-B, DEC-20260505-C, DEC-20260507-I, DEC-20260507-J,
     DEC-20260510-A, DEC-20260511-B, DEC-20260511-E, DEC-20260511-F, DEC-20260513-A,
-    DEC-20260513-B, DEC-20260513-C, DEC-20260513-D). No not_yet_reconciled row remains in G1.
-  blocking: true
+    DEC-20260513-B, DEC-20260513-C, DEC-20260513-D). No not_yet_reconciled row remains in G1.'
+  blocking: false
   owner: session
   phase: M2
   covers:

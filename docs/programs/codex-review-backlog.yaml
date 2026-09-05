@@ -41,6 +41,29 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-26
+    subject: "PR #551 — M2 batch 18: thirteen May 2026 decisions (DEC-20260505-A/B/C, DEC-20260507-I/J, DEC-20260510-A, DEC-20260511-B/E/F, DEC-20260513-A/B/C/D) migrated to formal candidate records; G1 closed"
+    commit: 6832cccb
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The last G1 batch, after which the closure register records G1
+      resolved. The records judge the scheduled_testing_eligible decoupling
+      against the boot-time derivation that CLAUDE.md documents, the
+      lifecycle and tiebreaker removals, the breaker pins, and the digest
+      rot. Whether each claim is traced to code, whether each edge is
+      source-stated, and whether G1's closure is justified by the register's
+      own counts are the Codex judgements.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (startup-migrations.ts block 0066,
+      matching.ts, test-runner.ts and circuit-breaker.ts, test-scheduler.ts,
+      the three country manifests, VOICE.md); every relation edge; the
+      register arithmetic, the zero not_yet_reconciled count, the G1
+      closure and exit_gaps counts, and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-25
     subject: "PR #549 — M2 batch 17: twelve April to early-May 2026 decisions (DEC-20260406-E, DEC-20260409-A/B/D, DEC-20260410-A, DEC-20260413-A, DEC-20260415-A/B, DEC-20260422-H, DEC-20260427-H/I, DEC-20260503-B) migrated to formal candidate records"
     commit: 892a1f75
