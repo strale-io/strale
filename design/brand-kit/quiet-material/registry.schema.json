@@ -191,6 +191,54 @@
           }
         }
       }
+    },
+    "composition_revision": {
+      "type": "object",
+      "required": [
+        "version",
+        "basis",
+        "predecessor_commit",
+        "production_adopted",
+        "gradient_frame_inset_token",
+        "gradient_frame_inner_radius_token",
+        "atmosphere_alignment",
+        "light_gradient_direct_text",
+        "reading_surface_token"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "0.2"
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "predecessor_commit": {
+          "const": "2972015dedfeb8bcd30369e0b0b4259bdc62f678"
+        },
+        "production_adopted": {
+          "const": false
+        },
+        "gradient_frame_inset_token": {
+          "const": "--c-frame-inset"
+        },
+        "gradient_frame_inner_radius_token": {
+          "const": "--c-frame-inner-radius"
+        },
+        "atmosphere_alignment": {
+          "const": "bottom"
+        },
+        "light_gradient_direct_text": {
+          "const": [
+            "frost",
+            "mint"
+          ]
+        },
+        "reading_surface_token": {
+          "const": "--surface"
+        }
+      }
     }
   },
   "$defs": {

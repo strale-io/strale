@@ -27,7 +27,7 @@ p { font-size: var(--c-body-size); line-height: var(--c-body-line); }
 .swatch { height: var(--c-swatch-height); border-radius: var(--radius-atmosphere); }
 .gradient-stage { min-height: var(--c-frame-height); border-radius: var(--radius-atmosphere); display: flex; align-items: stretch; padding: var(--c-frame-inset); }
 .gradient-stage .specimen-card { border-radius: var(--c-frame-inner-radius); display: flex; flex-direction: column; justify-content: center; }
-.gradient-stage .row { margin-top: var(--c-frame-row-gap); }
+.gradient-stage .specimen-card .row, .gradient-copy .row { margin-top: var(--c-frame-row-gap); }
 .gradient-stage.direct { padding: var(--c-direct-padding); }
 .gradient-copy { width: var(--c-card-width); color: var(--specimen-ink); display: flex; flex-direction: column; justify-content: center; }
 .gradient-copy h2 { font-size: var(--c-card-title); line-height: var(--type-product-card-title-line); }

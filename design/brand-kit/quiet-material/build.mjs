@@ -53,6 +53,12 @@ export function validate(reg, tokens, source) {
   for(const key of ['assets','gradients','identity','illustrations','resolutions','missing_sources','rules'])assert.equal(new Set(reg[key].map(a=>a.id)).size,reg[key].length,`Duplicate ${key} ids`);
   assert.deepEqual(reg.assets.map(a=>a.token).sort(), originals.map(a=>a.token).sort(), 'Current asset coverage drift');
   const vars = tokens.layout.css_variables;
+  const revision=reg.composition_revision;
+  assert.equal(reg.id,`quiet-material-consolidation-${revision.version}`,'Revision id drift');
+  assert.equal(tokens.name,`Quiet Material catalogue ${revision.version}`,'Token revision drift');
+  assert.equal(revision.production_adopted,reg.production_adopted,'Contradictory production adoption');
+  for(const key of ['gradient_frame_inset_token','gradient_frame_inner_radius_token'])assert(revision[key] in tokens.layout.catalogue,'Missing composition geometry token');
+  assert(revision.reading_surface_token in vars,'Missing revision reading surface');
   const consumerCss=readFileSync(resolve(here,'catalogue.css'),'utf8');
   assert(!/#[0-9a-f]{3,8}\b|\b\d+(?:\.\d+)?(?:px|rem|em)\b/i.test(consumerCss),'Off-token catalogue colour or dimension');
   for(const match of consumerCss.matchAll(/var\((--[\w-]+)/g))assert(match[1] in vars||match[1] in tokens.layout.catalogue||['--specimen-surface','--specimen-ink','--specimen-secondary','--crop-position'].includes(match[1]),`Unknown catalogue token: ${match[1]}`);
@@ -68,7 +74,7 @@ export function validate(reg, tokens, source) {
     for(const key of ['surface_token','ink_token','secondary_token'])if(g[key])assert(g[key] in vars,`Unknown gradient pair: ${g[key]}`);
     const direct=['frost','mint'].includes(g.id);
     assert.equal(g.composition,direct?'direct':'frame','Gradient composition drift');
-    assert.equal(g.surface_token,direct?null:'--surface','Gradient reading surface drift');
+    assert.equal(g.surface_token,direct?null:revision.reading_surface_token,'Gradient reading surface drift');
     assert.equal(g.ink_token,'--ink','Gradient ink drift');
     assert.equal(g.secondary_token,'--ink-secondary','Gradient secondary ink drift');
   }
@@ -88,7 +94,7 @@ export function validate(reg, tokens, source) {
   for (const id of ['QM-01','QM-02','QM-03','QM-04','QM-05','QM-06']) assert(reg.resolutions.some(r=>r.id===id),`Missing resolution ${id}`);
   assert.equal(reg.assets.find(a=>a.id==='pattern-folded-dark-amber').surface_token,null,'Amber cannot acquire an invented card');
   for(const a of reg.assets.filter(a=>a.surface_token)) {
-    assert.equal(a.surface_token,'--surface','Reading panels must use solid light paper in this revision');
+    assert.equal(a.surface_token,revision.reading_surface_token,'Reading panels must use solid light paper in this revision');
     assert.equal(a.ink_token,'--ink');assert.equal(a.secondary_token,'--ink-secondary');
   }
   for(const image of reg.illustrations) assert.equal(image.eligible_for_implementation,false,'Reference artwork cannot silently become usable');

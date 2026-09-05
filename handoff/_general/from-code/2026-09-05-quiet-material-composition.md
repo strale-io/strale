@@ -6,6 +6,8 @@ Gradient frames now use a fixed narrow inset. All reading panels use the retaine
 
 Evidence: `archive/receipts/2026-09-05-check-quiet-material-composition.json`, with detailed render bindings in `design/brand-kit/quiet-material/verification.json`. Visual checks and measured contrast concern these fixed specimens only. PyMuPDF and Poppler both render the prior and revised Balanced page off-white. The founder screenshot's pink cause remains unconfirmed; the new solid fill avoids the prior inner gradient without claiming a diagnosed viewer fix.
 
+Final review-corrected artifact: `archive/receipts/2026-09-05-check-quiet-material-composition-review-fixes.json`. Independent review identified an under-specified composition-revision object. Its version, adoption, predecessor, token references and candidate identity are now validated together, with negative coverage. A small CSS specificity correction ensures framed and direct-gradient text both use their intended row-gap token. The catalogue was rebuilt and reverified; the earlier receipt remains immutable.
+
 Resume at `docs/programs/brand-website/SYSTEM-COMPLETION.md`: review revised composition quality before identity exports, typography/fallback roles and navigation/control states. The complete compact closing composition, production adoption, whole-site accessibility and remaining channel templates are still open. Do not revive the rejected identities or start another homepage iteration.
 
 Append-only legacy Journal correction: https://www.notion.so/3d267c87082c811a8ecbc99b6d87ae24. The working brand plan and current rules remain in the repository. Foreign worktrees, including the active M2 review work, were not modified.
