@@ -1,0 +1,13 @@
+Intent: Extend the accepted Quiet Material atmosphere/surface baseline with retained identity variants and typography applications.
+
+Mode: Full. The founder accepted catalogue 0.2, then authorised the identity/type continuation. The current companion is design/brand-kit/quiet-material/foundations/README.md. Its structured registry, token candidate, generated human register, 13-page catalogue, two-page A4 proof and export manifest are one current package inside the existing kit. No new identity exploration or production adoption occurred.
+
+The flowing-S source paths and outlined name are preserved, with ink/inverse lockup, isolated mark, avatar, favicon and email exports. Instrument Sans uses real 400/500/600 weights at normal width; the supplied IBM Plex Mono is regular only. Twelve roles cover display, section, heading, lead, body, UI, compact, caption, label, code, numeric and document text. Glyph fixtures and PDF font resources are checked with explicit language/print limitations. Email uses a deliberate system-font fallback, with exported-HTML reflow checked at representative widths; real inbox qualification remains open.
+
+Mid-batch founder steering asked to try direct light text and a light button on dark cards. Page 4 compares Cobalt and Dusk as candidate short marketing compositions. This does not replace the accepted light reading panel for detailed results. Direct text on atmospheric images remains unqualified until its crop and text region have their own evidence.
+
+Final evidence: archive/receipts/2026-09-05-check-quiet-material-foundations-gradient-binding.json. Earlier review evidence is preserved in archive/receipts/2026-09-05-check-quiet-material-foundations.json. Contrast samples now carry their rendered gradient identity, with exactly three samples required per registered gradient. The exact outputs and inputs are bound by design/brand-kit/quiet-material/foundations/verification.json and exports/manifest.json. Canonical design checks now include companion drift/coverage guards, including unavailable mono weights, changed provenance, missing roles and altered source paths. The existing atmosphere catalogue remains unchanged on its original evidence.
+
+Resume at docs/programs/brand-website/SYSTEM-COMPLETION.md: review identity/type applications and the direct-text candidate, then build navigation, controls and card states. Broader density/motion, full language coverage, physical print proof, real email clients and final platform templates remain open. Do not treat repository merge as production or creative adoption.
+
+Append-only legacy Journal: https://www.notion.so/3d267c87082c81b78eb5e29a0cecbb0e. The repository remains the working plan. Other sessions' worktrees and branches were not changed.

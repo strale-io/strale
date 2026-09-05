@@ -32,3 +32,12 @@ design/brand-kit/quiet-material/fonts/** -text
 design/brand-kit/quiet-material/fonts/*.txt -whitespace
 design/brand-kit/quiet-material/output/pdf/** -text
 design/tokens/candidates/quiet-material-catalogue.json text eol=lf
+
+design/brand-kit/quiet-material/foundations/masters/** -text
+design/brand-kit/quiet-material/foundations/exports/*.png -text
+design/brand-kit/quiet-material/foundations/exports/*.ico -text
+design/tokens/candidates/quiet-material-foundations.json text eol=lf
+design/brand-kit/quiet-material/foundations/output/pdf/** -text
+design/brand-kit/quiet-material/foundations/exports/*.svg -text
+design/brand-kit/quiet-material/foundations/masters/*.svg whitespace=cr-at-eol
+design/brand-kit/quiet-material/foundations/exports/*.svg whitespace=cr-at-eol

@@ -1,0 +1,343 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": [
+        "ok",
+        "pages",
+        "document_pages",
+        "inputs",
+        "outputs",
+        "dark_contrast",
+        "contrast_scope",
+        "contrast_background_sha256",
+        "layout_errors",
+        "pdf_bounds_errors",
+        "email_browser_reflow",
+        "font_audit",
+        "embedded_fonts",
+        "pdf_text",
+        "runtime",
+        "limits"
+      ],
+      "properties": {
+        "ok": {
+          "const": true
+        },
+        "pages": {
+          "const": 13
+        },
+        "document_pages": {
+          "const": 2
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "minProperties": 1
+        },
+        "outputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "minProperties": 1
+        },
+        "dark_contrast": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "text",
+              "ratio",
+              "gradient"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ratio": {
+                "type": "number",
+                "minimum": 4.5
+              },
+              "gradient": {
+                "type": "string",
+                "enum": [
+                  "cobalt",
+                  "dusk"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "contrast_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contrast_background_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "layout_errors": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "pdf_bounds_errors": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "email_browser_reflow": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "width",
+              "overflow"
+            ],
+            "properties": {
+              "width": {
+                "type": "integer"
+              },
+              "overflow": {
+                "const": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "font_audit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "family",
+              "sha256",
+              "fixture",
+              "missing",
+              "axes",
+              "features",
+              "checkmark_present"
+            ],
+            "properties": {
+              "family": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "fixture": {
+                "type": "string",
+                "minLength": 1
+              },
+              "missing": {
+                "type": "array",
+                "maxItems": 0
+              },
+              "axes": {
+                "type": "object"
+              },
+              "features": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "checkmark_present": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "embedded_fonts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "document",
+              "page",
+              "name",
+              "format",
+              "embedded"
+            ],
+            "properties": {
+              "document": {
+                "enum": [
+                  "identity-typography",
+                  "document-specimen"
+                ]
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 13
+              },
+              "name": {
+                "type": "string"
+              },
+              "format": {
+                "type": "string",
+                "minLength": 1
+              },
+              "embedded": {
+                "const": true
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 15
+        },
+        "pdf_text": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "document",
+              "pages",
+              "characters",
+              "unicode_probe",
+              "title"
+            ],
+            "properties": {
+              "document": {
+                "type": "string",
+                "minLength": 1
+              },
+              "pages": {
+                "type": "integer"
+              },
+              "characters": {
+                "type": "integer",
+                "minimum": 100
+              },
+              "unicode_probe": {
+                "const": true
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "runtime": {
+          "type": "object",
+          "required": [
+            "node",
+            "chromium",
+            "playwright",
+            "python",
+            "pymupdf",
+            "pillow",
+            "fonttools"
+          ],
+          "properties": {
+            "node": {
+              "type": "string",
+              "minLength": 1
+            },
+            "chromium": {
+              "type": "string",
+              "minLength": 1
+            },
+            "playwright": {
+              "type": "string",
+              "minLength": 1
+            },
+            "python": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pymupdf": {
+              "type": "string",
+              "minLength": 1
+            },
+            "pillow": {
+              "type": "string",
+              "minLength": 1
+            },
+            "fonttools": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 4
+        }
+      },
+      "additionalProperties": false
+    },
+    "manifest": {
+      "type": "object",
+      "required": [
+        "status",
+        "production_adopted",
+        "source",
+        "inputs",
+        "outputs",
+        "scope",
+        "identity_derivation"
+      ],
+      "properties": {
+        "status": {
+          "const": "candidate"
+        },
+        "production_adopted": {
+          "const": false
+        },
+        "source": {
+          "type": "object"
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "minProperties": 1
+        },
+        "outputs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "minProperties": 1
+        },
+        "scope": {
+          "type": "array"
+        },
+        "identity_derivation": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

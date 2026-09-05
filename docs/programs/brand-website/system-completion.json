@@ -8,7 +8,6 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "recipe_consistency",
     "identity",
     "typography",
     "controls_and_navigation"
@@ -18,7 +17,8 @@
     "archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json",
     "design/brand-kit/quiet-material/README.md",
     "design/brand-kit/quiet-material/registry.json",
-    "design/brand-kit/quiet-material/verification.json"
+    "design/brand-kit/quiet-material/verification.json",
+    "design/brand-kit/quiet-material/foundations/README.md"
   ],
   "areas": [
     {
@@ -35,7 +35,7 @@
     },
     {
       "id": "recipe_consistency",
-      "status": "composition-revised-review-pending",
+      "status": "atmosphere-baseline-accepted-direct-text-candidate",
       "finding_ids": [
         "QM-03",
         "QM-04"
@@ -47,24 +47,25 @@
     },
     {
       "id": "identity",
-      "status": "roles-separated-exports-pending",
+      "status": "companion-specimens-review-pending",
       "finding_ids": [
         "QM-06"
       ],
       "acceptance": "Existing S lockup and legacy compass are separated; navigation/avatar/favicon/inverse exports reference one chosen master.",
       "owner": "session",
       "complete": false,
-      "evidence": "design/brand-kit/quiet-material/README.md"
+      "evidence": "design/brand-kit/quiet-material/foundations/README.md"
     },
     {
       "id": "typography",
-      "status": "partial",
+      "status": "companion-specimens-review-pending",
       "finding_ids": [
         "QM-07"
       ],
       "acceptance": "Instrument Sans and IBM Plex Mono have exact files/licences, role specimens, numerals/glyphs and channel fallbacks.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/foundations/README.md"
     },
     {
       "id": "atmosphere_cohesion",
@@ -165,6 +166,11 @@
       "id": "composition-correction-0-2",
       "date": "2026-09-05",
       "result": "Founder-approved correction direction rendered: tighter fixed frames, solid light panels on dark backgrounds and direct Frost/Mint text. Contextual specimen review remains open."
+    },
+    {
+      "id": "identity-type-companion-0-1",
+      "date": "2026-09-05",
+      "result": "Retained identity variants, twelve font roles and web/social/email/PDF specimens; new direct-text dark-card comparison follows founder steering. Candidate only; final application qualification remains open."
     }
   ]
 }

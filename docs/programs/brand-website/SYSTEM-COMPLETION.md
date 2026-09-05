@@ -10,9 +10,13 @@ The [Quiet Material consolidation package](../../../design/brand-kit/quiet-mater
 
 QM-01 through QM-06 have a recorded disposition; they are not all closed production defects. Eleven creation/rights histories and the missing reference/illustration files remain unresolved. The preferred flowing-S identity is distinguished from the legacy compass; small-size/inverse identity exports remain work. Revision 0.2 follows founder feedback: tighter gradient frames, solid light reading surfaces on dark backgrounds, and direct dark text on Frost/Mint. The first version's same-tone recipes are historical. Amber remains image-only, and the narrow hero crop cannot inherit the desktop quiet-left text zone. Source documents remain immutable; production adoption remains separate.
 
-## Next batch: identity, typography and component states
+## Current companion and next batch
 
-Review revision 0.2 for framing, contrast and restraint before the identity/type batch. The founder accepted the revised composition direction; the finished examples still need contextual review. Continue with the retained flowing-S mark's favicon/avatar/inverse exports, a complete type-role/fallback specimen register around the existing font families, and primary/secondary/mobile navigation and card/control states. Font files and OFL licences are now packaged; complete language, reading and fallback coverage is not yet established. Complete density/rhythm patterns after those foundations, then motion and channel templates. Do not regenerate atmosphere images or reopen identity exploration by default.
+The founder accepted the atmosphere/surface catalogue 0.2 after the full visual inspection. The [identity and typography companion](../../../design/brand-kit/quiet-material/foundations/README.md) is the current addition within the same kit. It supplies retained-S inverse/compact/avatar/favicon exports, twelve type roles, actual-weight and glyph evidence, wide/narrow reading examples, social exports, an email fallback specimen and an embedded A4 proof.
+
+Founder steering also requested direct light text and a light action on dark cards. The companion compares this candidate treatment on Cobalt and Dusk for short marketing messages. It does not replace the accepted light reading panel for detailed information. Direct text on atmospheric images still needs a separate crop and contrast review.
+
+Review the companion's identity/type applications and dark-card comparison, then continue navigation, controls and card states. Real email-client qualification, physical print proof, broader language coverage, density patterns, motion and final platform templates remain open. The original catalogue and preserved source remain unchanged. Production adoption is separate.
 
 ## Completed first-batch scope: make the current system unambiguous
 

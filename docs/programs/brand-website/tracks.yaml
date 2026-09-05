@@ -51,7 +51,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Catalogue revision 0.2 has received a full-document visual review and document polish; continue flowing-S identity exports, typography roles/fallbacks and navigation/control states. Founder accepted the composition correction direction; final contextual review and production adoption remain separate. Unknown histories and unavailable source folders remain explicit.
+    next_action: Review the identity/type companion and direct-light-text dark-card candidate; then build navigation, controls and card states. Atmosphere catalogue 0.2 is founder accepted; production adoption, email-client checks, physical print proof and final channel qualification remain separate.
     resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.

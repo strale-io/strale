@@ -102,3 +102,7 @@ there was nothing further to preserve before extracting the token subset.
 ## 5 September 2026: Quiet Material refinement — `rejected` (closed study)
 
 DEC-20260905-A adopts the positioning, not the visual identity. The [preserved study](explorations/2026-09-05-quiet-material-refinement/README.md) tested retained Quiet Material assets through website, social and PDF applications. It is now closed without adoption following the founder's correction to retain the original redesign and audit its system. Its token and authoring records are rejected as implementation inputs; this does not reject Quiet Material v0.7 or its original assets. Resume at the [system completion plan](../docs/programs/brand-website/SYSTEM-COMPLETION.md).
+
+## Quiet Material identity and typography companion 0.1
+
+Current candidate: `design/brand-kit/quiet-material/foundations/README.md`; values: `design/tokens/candidates/quiet-material-foundations.json`. Extends the founder-accepted atmosphere/surface catalogue 0.2 with retained flowing-S exports, real font roles and channel specimens. The new direct-light-text dark-card comparison follows founder steering and remains a candidate. No original paths, atmospheric masters or active production values changed.

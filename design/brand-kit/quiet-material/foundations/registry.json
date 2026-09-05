@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "id": "quiet-material-foundations-0.1",
+  "status": "candidate",
+  "production_adopted": false,
+  "date": "2026-09-05",
+  "token_source": "design/tokens/candidates/quiet-material-foundations.json",
+  "accepted_atmosphere_baseline": "design/brand-kit/quiet-material/README.md",
+  "source": {
+    "file": "masters/strale-lockup.svg",
+    "sha256": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809",
+    "origin": "Preserved Quiet Material v0.7 / public/strale-site/design-system/assets/strale-lockup.svg",
+    "rights": "Original creation and rights history not recovered; preserved source, no new rights claim."
+  },
+  "fonts": [
+    {
+      "file": "../fonts/InstrumentSans.ttf",
+      "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+      "role": "font",
+      "family": "Instrument Sans"
+    },
+    {
+      "file": "../fonts/IBMPlexMono-Regular.ttf",
+      "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+      "role": "font",
+      "family": "IBM Plex Mono"
+    },
+    {
+      "file": "../fonts/InstrumentSans-OFL.txt",
+      "sha256": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
+      "role": "licence",
+      "family": "Instrument Sans"
+    },
+    {
+      "file": "../fonts/IBMPlexMono-OFL.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+      "role": "licence",
+      "family": "IBM Plex Mono"
+    }
+  ],
+  "roles": [
+    {
+      "id": "display",
+      "job": "One short marketing message",
+      "sample": "Give your agents more useful tools."
+    },
+    {
+      "id": "section",
+      "job": "A new chapter or benefit",
+      "sample": "Start with useful work."
+    },
+    {
+      "id": "heading",
+      "job": "Subsection or compact story",
+      "sample": "Research. Extract. Validate."
+    },
+    {
+      "id": "lead",
+      "job": "Optional supporting thought",
+      "sample": "Choose a task. Find the right tool."
+    },
+    {
+      "id": "body",
+      "job": "Sustained reading",
+      "sample": "Begin with the information your agent needs."
+    },
+    {
+      "id": "ui",
+      "job": "Navigation and actions",
+      "sample": "Explore tools"
+    },
+    {
+      "id": "compact",
+      "job": "Supporting rows and descriptions",
+      "sample": "Inputs, results and source context."
+    },
+    {
+      "id": "caption",
+      "job": "Secondary context, never essential instructions",
+      "sample": "Example data for a typography specimen."
+    },
+    {
+      "id": "label",
+      "job": "Short optional category or identifier",
+      "sample": "TOOLS FOR AI AGENTS"
+    },
+    {
+      "id": "code",
+      "job": "Exact code and identifiers",
+      "sample": "email-validate"
+    },
+    {
+      "id": "number",
+      "job": "Aligned values; tabular numerals",
+      "sample": "1,234.50"
+    },
+    {
+      "id": "document",
+      "job": "A4 body text; size is in points",
+      "sample": "A clear record of the work."
+    }
+  ],
+  "rules": [
+    {
+      "id": "identity",
+      "text": "Use the existing outlined lockup wherever the name needs to be read. The isolated S is for already-branded compact contexts, favicon and avatar."
+    },
+    {
+      "id": "clearspace",
+      "text": "Keep a quarter of the S height clear on all sides. Measure from visible artwork. Do not squeeze the wordmark, change its paths or use a decorative symbol as the identity."
+    },
+    {
+      "id": "small",
+      "text": "Use the lockup at 120 CSS px wide or larger. Use the S at 24 CSS px or larger in ordinary UI. The 16 px favicon is a separately inspected small-context exception, not a general minimum."
+    },
+    {
+      "id": "inverse",
+      "text": "Use off-white identity on a plain dark field. Use ink identity on a plain light field. Keep gradients and folds away from the mark; no outline, glow or recolouring."
+    },
+    {
+      "id": "weights",
+      "text": "Instrument Sans uses real weights 400, 500 and 600 at normal width. IBM Plex Mono uses the supplied regular 400 only. Disable synthetic bold and italic; italics are not supplied in this batch."
+    },
+    {
+      "id": "density",
+      "text": "Start with a title. Add supporting copy only when it adds meaning. Give long reading a comfortable measure; remove content before shrinking type. A label is optional, never a mandatory subtitle."
+    },
+    {
+      "id": "numerals",
+      "text": "Use tabular Instrument Sans numerals for aligned values. Use IBM Plex Mono for code and exact identifiers. Long identifiers wrap where permitted; code blocks may scroll with a clear boundary."
+    },
+    {
+      "id": "direct-dark",
+      "text": "Candidate: direct light text is checked only in the fixed Cobalt and Dusk specimens shown here, with one title, one short paragraph and one light primary action. Remeasure contrast when the gradient, overlay, text position or layout changes. Detailed results keep a reading panel. Direct text on atmospheric images requires separate crop evidence."
+    },
+    {
+      "id": "fallback",
+      "text": "Use the bundled fonts for web, social and embedded PDF. Email deliberately uses Arial/Helvetica and a system monospace stack. Browser fallback specimens do not establish email-client compatibility; qualify real clients before sending."
+    },
+    {
+      "id": "coverage",
+      "text": "English and selected Nordic/Western European glyph fixtures are checked against the exact fonts. This is not full language coverage. Instrument Sans lacks the checkmark glyph; use a separate accessible icon, never silent font fallback as an icon system."
+    }
+  ],
+  "channels": [
+    {
+      "id": "web",
+      "status": "type-specimen",
+      "scope": "Narrow/wide text reflow; controls and interaction states are next."
+    },
+    {
+      "id": "social",
+      "status": "layout-specimen",
+      "scope": "Square and landscape exports; not platform-specific safe-area qualification."
+    },
+    {
+      "id": "email",
+      "status": "fallback-specimen",
+      "scope": "Browser rendering at wide and narrow widths; real inbox testing remains open."
+    },
+    {
+      "id": "pdf",
+      "status": "embedded-type-specimen",
+      "scope": "Two A4 pages with a cover and interior hierarchy/table proof; font resources and screen rendering checked. Long-document pagination and physical print proof remain open."
+    }
+  ],
+  "review_basis": "Founder accepted atmosphere/surface catalogue 0.2, then requested identity/type extension and a direct-light-text comparison on dark cards. Neither this companion nor that comparison is production adoption.",
+  "direct_dark": {
+    "status": "candidate",
+    "gradient_tokens": [
+      "--atmosphere-cobalt",
+      "--atmosphere-dusk"
+    ],
+    "fixed_specimens_only": true,
+    "remeasure_on_gradient_or_layout_change": true,
+    "max_primary_actions": 1,
+    "max_paragraphs": 1
+  }
+}
