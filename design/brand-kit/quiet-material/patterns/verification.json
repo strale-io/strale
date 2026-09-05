@@ -2,13 +2,13 @@
   "id": "quiet-material-patterns-0.1",
   "inputs": {
     "registry.json": "e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72",
-    "templates.mjs": "aad514aba99efb9517513388352721d41ee0dde3e2e12576e12b04654c34fc99",
-    "specimen.css": "0a1b7842cc3f61391d77353583b984ac9d32a5a7fe0ae2641a788947895b032f",
+    "templates.mjs": "900da3ec82430c096b4b081c646b4b0b8468322d5a65e33d8ae07c24140c7566",
+    "specimen.css": "488e93449711279a70a56987ad795885e5ab5f2215f8b3e4d20a9697d0bdc30f",
     "interactions.js": "50d29beac1823fde56dabb97b7d05b0b33757d96bdf59f21c333602f4080bd5d",
     "build.mjs": "00fdb2f49866a2a9bb9abb11a0b96620ccb169029800063c7d892533bcc9dea7",
     "verify.mjs": "e7171f051c5893e050577a68a12d21f91d81dc73972c5c8e9ca484327c04647a",
     "verify-pdf.py": "a44a9c8b0dedda7114fda4954300798d28f6ad9ab0c1afe845089458a0669aa5",
-    "../../../tokens/candidates/quiet-material-patterns.json": "a622e3286efd2f048b4580c7a9440fe347d833585b8c674c6cc44a0c9546b31c",
+    "../../../tokens/candidates/quiet-material-patterns.json": "96dc5a84e2843df06aeb87eb1fc07e0f4db6c6423b161d808ea979337a969559",
     "../../../tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
     "../controls/specimen.css": "decc5d17e173e74a30bd6b26236b1542dc505ca7769ca7d0788d871db17d84b0",
     "../foundations/exports/lockup-ink.svg": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
@@ -101,10 +101,10 @@
     "The utility set covers twelve common symbols; complex tables, dialogs, upload, authentication and custom comboboxes remain separate patterns."
   ],
   "outputs": {
-    "index.html": "2b7c7633c65441511bbc481239b819055fda884970245adf50a20fa95ea0f928",
-    "website.html": "285e6632d79bf04f98ceadc9c0b0eeb0025481bea9b1405425eee75ec96c3d87",
-    "social.html": "cb5952f9ff5c2050a487b419d089c354db287eed0219c71e3ce8afc9599236e6",
-    "email.html": "d9917b0abea0a94adee426fa0861b1eefd9a516792a4d0defd9790191399172d",
+    "index.html": "9e40465831140f2da30a7c9839b5a7bead9533b14c0a1b8d652a227ecf0a9025",
+    "website.html": "9b02bcbc101cf3c8125ec33b15a3ee4e6eef1538be08f1555ec151259b6755d0",
+    "social.html": "acb45171c7b8dc33ac797d59dccb0fd11d994efc566852ea9519027ad6905321",
+    "email.html": "a54cce67a52838ed47c8ca69d1a70a6493182e968b01c8ea7cd0da3d77110e3f",
     "email.txt": "049369bbf8e7c7f4117b8a50e284d218c1cda6d992b76afd45af90824a8b23bb",
     "icons/search.svg": "1421c335e53b6c25d82b6792b8d7a06cd38f9bba6be9970f477e336b86883331",
     "icons/arrow-right.svg": "f4a3208446ad96613d1f0e76a4d7a65f373fe3c7d22c0611bc2ebdf4192f72c6",
@@ -121,7 +121,7 @@
     "RULES.md": "1515853a06d357ac2120425acc6a3f87e643b8dfd1a81ca37a7fddd7910af3ef",
     "icons/manifest.json": "2d4c61414bf29e908432f9b97a8fea34f05bbc17077be7dfe5a29be8e8e067fe",
     "exports/social-landscape.png": "af2609d6028405932a751440c9786f7d64037edc963898d3629f061f443c7194",
-    "output/pdf/forms-symbols-composition.pdf": "3576b40072805d07195891870293b45664a32c8632ed48ebe9c84bc693557099"
+    "output/pdf/forms-symbols-composition.pdf": "c5f8fea4c129a253f2ecaee8e431bee24ca5364d4176cdbd46eb47e8bef63c49"
   },
   "pdf": {
     "pages": 8,
