@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-266 files (239 with a recorded intent, 27 without).
+267 files (240 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-5.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-5.md) | Archive M2 closing-review round 5 (the final round: six fresh |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-4.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-4.md) | Archive M2 closing-review round 4 (six fresh read-only partitions, |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-3.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-3.md) | Archive M2 closing-review round 3 (six fresh read-only partitions |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md) | archive M2 closing-review round 2 and its follow-up sweep, and land |

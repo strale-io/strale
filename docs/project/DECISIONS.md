@@ -255,6 +255,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) — Closing-review corrections to the M2 candidate set, round 2 and sweep | `DEC-20260905-C` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-05 |
 | [`DEC-20260905-D`](../decisions/records/DEC-20260905-D.md) — Closing-review corrections to the M2 candidate set, round 3 | `DEC-20260905-D` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-05 |
 | [`DEC-20260905-E`](../decisions/records/DEC-20260905-E.md) — Closing-review corrections to the M2 candidate set, round 4 | `DEC-20260905-E` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-05 |
+| [`DEC-20260905-F`](../decisions/records/DEC-20260905-F.md) — Closing-review corrections to the M2 candidate set, round 5 | `DEC-20260905-F` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-05 |
 
 ## Non-active decisions
 
@@ -397,6 +398,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` | `related_from` | [`DEC-20260429-A`](../decisions/records/DEC-20260429-A.md) | `DEC-20260429-A` |
 | [`DEC-20260428-B`](../decisions/records/DEC-20260428-B.md) | `DEC-20260428-B` | `related_from` | [`DEC-20260430-A`](../decisions/records/DEC-20260430-A.md) | `DEC-20260430-A` |
 | [`DEC-20260430-A`](../decisions/records/DEC-20260430-A.md) | `DEC-20260430-A` | `amended_by` | [`DEC-20260515-A`](../decisions/records/DEC-20260515-A.md) | `DEC-20260515-A` |
+| [`DEC-20260430-A`](../decisions/records/DEC-20260430-A.md) | `DEC-20260430-A` | `amended_by` | [`DEC-20260905-F`](../decisions/records/DEC-20260905-F.md) | `DEC-20260905-F` |
 | [`DEC-20260502-A`](../decisions/records/DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6.md) | `DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6` | `related_from` | [`DEC-20260308-1`](../decisions/records/DEC-20260308-1.md) | `DEC-20260308-1` |
 | [`DEC-20260503-A`](../decisions/records/DEC-20260503-A.md) | `DEC-20260503-A` | `superseded_by` | [`DEC-20260812-A`](../decisions/records/DEC-20260812-A.md) | `DEC-20260812-A` |
 | [`DEC-20260503-B`](../decisions/records/DEC-20260503-B.md) | `DEC-20260503-B` | `affirmed_by` | [`DEC-20260505-B`](../decisions/records/DEC-20260505-B.md) | `DEC-20260505-B` |
@@ -406,6 +408,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260504-B`](../decisions/records/DEC-20260504-B.md) | `DEC-20260504-B` | `related_from` | [`DEC-20260504-C`](../decisions/records/DEC-20260504-C.md) | `DEC-20260504-C` |
 | [`DEC-20260505-E`](../decisions/records/DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438.md) | `DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438` | `amended_by` | [`DEC-20260905-B`](../decisions/records/DEC-20260905-B.md) | `DEC-20260905-B` |
 | [`DEC-20260505-H`](../decisions/records/DEC-20260505-H.md) | `DEC-20260505-H` | `amended_by` | [`DEC-20260508-D`](../decisions/records/DEC-20260508-D.md) | `DEC-20260508-D` |
+| [`DEC-20260505-H`](../decisions/records/DEC-20260505-H.md) | `DEC-20260505-H` | `amended_by` | [`DEC-20260905-F`](../decisions/records/DEC-20260905-F.md) | `DEC-20260905-F` |
 | [`DEC-20260505-H`](../decisions/records/DEC-20260505-H.md) | `DEC-20260505-H` | `related_from` | [`DEC-20260505-G`](../decisions/records/DEC-20260505-G.md) | `DEC-20260505-G` |
 | [`DEC-20260506-G`](../decisions/records/DEC-20260506-G.md) | `DEC-20260506-G` | `affirmed_by` | [`DEC-20260507-E`](../decisions/records/DEC-20260507-E.md) | `DEC-20260507-E` |
 | [`DEC-20260506-G`](../decisions/records/DEC-20260506-G.md) | `DEC-20260506-G` | `amended_by` | [`DEC-20260905-B`](../decisions/records/DEC-20260905-B.md) | `DEC-20260905-B` |
