@@ -41,10 +41,10 @@ disposition.
     on the base, `commit`/`verdict`/`reviewed_at`/`evidence` may not change
     and the block may not be removed.
 - `docs/decisions/README.md`: short paragraph documenting the mechanism.
-- `scripts/m2-closure-register.test.mjs`: nine new tests (one positive
-  fixture, one per finding code, one for the "present but not clean" case).
-  Full detail and the disable-and-confirm proof for each code are in the PR
-  body.
+- `scripts/m2-closure-register.test.mjs`: every new finding code has a
+  planted test (one positive fixture, one per finding code, one for the
+  "present but not clean" case). Full detail and the disable-and-confirm
+  proof for each code are in the PR body.
 
 ## Verification
 

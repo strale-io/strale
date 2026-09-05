@@ -17,10 +17,12 @@
 // the recorded route or a pending Codex-backlog row),
 // CLOSING_REVIEW_COMMIT_NOT_ANCESTOR / COMMIT_UNVERIFIABLE (commit ancestry),
 // CLOSING_REVIEW_EVIDENCE_MISSING / CLOSING_REVIEW_EVIDENCE_NOT_VERDICT
-// (the evidence file must exist, be tracked, and read as a PASS verdict for
-// that exact commit), CLOSING_REVIEW_STALE (a decision surface changed, or
-// the register changed beyond what the review's own gap requires, since the
-// reviewed commit), CLOSING_REVIEW_COUNTS_MISMATCH (candidate_set vs what
+// (the evidence must be a tracked file under archive/sessions/, not a URL,
+// and its own last non-empty line outside any fenced block must read
+// exactly "VERDICT: PASS" for that exact commit), CLOSING_REVIEW_STALE (a
+// decision surface changed or is dirty in the working tree, or the register
+// changed beyond what the review's own gap requires, since the reviewed
+// commit), CLOSING_REVIEW_COUNTS_MISMATCH (candidate_set vs what
 // the lib computes now), and CLOSING_REVIEW_MUTATED (merge-base immutability
 // once recorded). It records no review and closes nothing by itself.
 import { execFileSync } from "node:child_process";
@@ -40,8 +42,9 @@ const ARCHIVE_STATUS_PATH = "docs/project/private-archive-status.json";
 const MIGRATION_PLAN_PATH = "docs/strategy/2026-08-31-repo-native-operating-model-migration.md";
 const TRACKS_PATH = "docs/programs/cto-readiness/tracks.yaml";
 const CODEX_BACKLOG_PATH = "docs/programs/codex-review-backlog.yaml";
-// A closing-review evidence file's PASS line, matched anywhere in the file.
-const CLOSING_REVIEW_VERDICT_LINE = /^VERDICT: PASS$/m;
+// The prefix a closing-review evidence path must have: a quote about another
+// commit, or a fenced example, does not count as this commit's verdict.
+const CLOSING_REVIEW_EVIDENCE_PREFIX = "archive/sessions/";
 // Paths whose change after the reviewed commit invalidates a closing review:
 // anything that could move a Decision's disposition without a new review.
 const CLOSING_REVIEW_STALE_PATHSPECS = [
@@ -289,6 +292,20 @@ export function changedPathsBetween(root, fromRef, toRef, pathspecs) {
   return out.split(/\r?\n/).filter(Boolean);
 }
 
+/**
+ * Paths with uncommitted working-tree changes, restricted to the given
+ * pathspecs. Null when git is unreachable; an empty array is a real, clean
+ * "nothing changed". `changedPathsBetween` only sees committed history
+ * between two refs, so when the reviewed commit is HEAD (or any other
+ * committed ref), an uncommitted edit to a decision surface is invisible to
+ * it. This is the working-tree half of the same staleness question.
+ */
+export function workingTreeDirtyPaths(root, pathspecs) {
+  const out = gitQuiet(root, ["status", "--porcelain", "--", ...pathspecs]);
+  if (out === null) return null;
+  return out.split(/\r?\n/).filter(Boolean).map((line) => line.slice(3).trim());
+}
+
 /** The register as it read at an arbitrary commit. Null when unreadable. */
 export function readRegisterAtCommit(root, sha, relativePath = REGISTER_PATH) {
   const content = gitQuiet(root, ["show", `${sha}:${relativePath}`]);
@@ -306,6 +323,30 @@ function canonicalize(value) {
 }
 function deepEqualIgnoringKeyOrder(a, b) {
   return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b));
+}
+
+/**
+ * True when the evidence file's own last non-empty line, outside any fenced
+ * code block, is exactly "VERDICT: PASS". A PASS line quoted inside a fence,
+ * or one that is not the file's final word, does not count: this file must
+ * itself assert the verdict, not merely mention one about another commit.
+ * Fences are counted, not matched by content, so a stray fence marker still
+ * toggles state the same way a renderer would treat it.
+ */
+export function verdictIsLastLine(text) {
+  const lines = text.split(/\r?\n/);
+  let inFence = false;
+  let lastNonEmpty = null;
+  for (const line of lines) {
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    if (line.trim() === "") continue;
+    lastNonEmpty = line;
+  }
+  return lastNonEmpty === "VERDICT: PASS";
 }
 
 /**
@@ -369,6 +410,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     tracks: existsSync(resolve(root, TRACKS_PATH)) ? YAML.parse(readFileSync(resolve(root, TRACKS_PATH), "utf8")) : null,
     codexBacklog: existsSync(resolve(root, CODEX_BACKLOG_PATH)) ? YAML.parse(readFileSync(resolve(root, CODEX_BACKLOG_PATH), "utf8")) : null,
     changedPathsBetween: (fromRef, toRef, pathspecs) => changedPathsBetween(root, fromRef, toRef, pathspecs),
+    workingTreeDirty: (pathspecs) => workingTreeDirtyPaths(root, pathspecs),
     registerAtCommit: (sha) => readRegisterAtCommit(root, sha),
   };
 }
@@ -863,21 +905,30 @@ export function validateClosureRegister(register, context, { schema, relativePat
       crFinding("COMMIT_UNVERIFIABLE", `closing_review.commit ${closingReview.commit}: git is unavailable`);
     }
 
-    // Evidence: must exist and be tracked, and must actually read as a PASS
-    // verdict for this exact commit.
-    const evProblem = evidenceProblem(context, closingReview.evidence);
-    if (evProblem) {
-      crFinding("CLOSING_REVIEW_EVIDENCE_MISSING", `${closingReview.evidence} (${evProblem})`);
-    } else if (context.root) {
-      const text = readFileSync(resolve(context.root, closingReview.evidence), "utf8");
-      const fmMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      const fm = fmMatch ? YAML.parse(fmMatch[1]) : {};
-      const ok = text.includes(closingReview.commit)
-        && CLOSING_REVIEW_VERDICT_LINE.test(text)
-        && fm.doc_type === "m2-closing-review"
-        && fm.commit === closingReview.commit;
-      if (!ok) {
-        crFinding("CLOSING_REVIEW_EVIDENCE_NOT_VERDICT", `${closingReview.evidence} does not read as a PASS verdict for ${closingReview.commit} (needs frontmatter doc_type: m2-closing-review with matching commit, the full sha in the text, and a line "VERDICT: PASS")`);
+    // Evidence: unlike the shared evidenceRef (which also accepts a GitHub or
+    // Notion URL for other evidence lists), closing-review evidence must be a
+    // repo-relative, tracked file under archive/sessions/ — the only kind
+    // this library can actually open and read as a verdict. A schema-legal
+    // URL is rejected here, before evidenceProblem (which treats it as fine)
+    // ever reaches the readFileSync below.
+    const evidence = closingReview.evidence;
+    if (typeof evidence !== "string" || !evidence.startsWith(CLOSING_REVIEW_EVIDENCE_PREFIX)) {
+      crFinding("CLOSING_REVIEW_EVIDENCE_MISSING", `${evidence}: must be a tracked file under archive/sessions/`);
+    } else {
+      const evProblem = evidenceProblem(context, evidence);
+      if (evProblem) {
+        crFinding("CLOSING_REVIEW_EVIDENCE_MISSING", `${evidence} (${evProblem})`);
+      } else if (context.root) {
+        const text = readFileSync(resolve(context.root, evidence), "utf8");
+        const fmMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+        const fm = fmMatch ? YAML.parse(fmMatch[1]) : {};
+        const ok = text.includes(closingReview.commit)
+          && verdictIsLastLine(text)
+          && fm.doc_type === "m2-closing-review"
+          && fm.commit === closingReview.commit;
+        if (!ok) {
+          crFinding("CLOSING_REVIEW_EVIDENCE_NOT_VERDICT", `${evidence} does not read as a PASS verdict for ${closingReview.commit} (needs frontmatter doc_type: m2-closing-review with matching commit, the full sha in the text, and "VERDICT: PASS" as the file's last non-empty line outside any fenced block)`);
+        }
       }
     }
 
@@ -889,6 +940,15 @@ export function validateClosureRegister(register, context, { schema, relativePat
       const changed = context.changedPathsBetween(closingReview.commit, "HEAD", CLOSING_REVIEW_STALE_PATHSPECS);
       if (changed === null) crFinding("COMMIT_UNVERIFIABLE", `could not diff ${closingReview.commit}..HEAD`);
       else if (changed.length > 0) crFinding("CLOSING_REVIEW_STALE", `decision surfaces changed since the reviewed commit: ${changed.join(", ")}`);
+    }
+    // A committed diff between the reviewed commit and HEAD is not the whole
+    // story: when the reviewed commit IS HEAD (or simply has no committed
+    // descendants yet), an uncommitted edit to a decision surface is
+    // invisible to changedPathsBetween above. Check the working tree itself.
+    if (context.workingTreeDirty) {
+      const dirty = context.workingTreeDirty(CLOSING_REVIEW_STALE_PATHSPECS);
+      if (dirty === null) crFinding("COMMIT_UNVERIFIABLE", "could not read working-tree status for decision surfaces");
+      else if (dirty.length > 0) crFinding("CLOSING_REVIEW_STALE", `uncommitted working-tree changes to decision surfaces: ${dirty.join(", ")}`);
     }
     if (context.registerAtCommit) {
       const atCommit = context.registerAtCommit(closingReview.commit);

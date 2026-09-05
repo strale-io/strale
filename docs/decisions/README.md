@@ -70,5 +70,5 @@ set counts. Once recorded, `closing_review` is as immutable as a receipt: its
 commit, verdict, review date, and evidence may not change and the block may
 not be removed. A clean block releases the `plan.review_route` exit gap's
 blocking requirement; the gap itself must still cover that bucket regardless.
-This block records no review by itself — it only lets the validator see one
+This block records no review by itself. It only lets the validator see one
 that has actually happened.
