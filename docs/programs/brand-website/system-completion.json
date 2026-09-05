@@ -8,9 +8,9 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "identity",
-    "typography",
-    "controls_and_navigation"
+    "review_pattern_and_application_studies",
+    "launch_tool_and_route_proof",
+    "remaining_channel_and_accessibility_qualification"
   ],
   "evidence": [
     "archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md",
@@ -18,7 +18,9 @@
     "design/brand-kit/quiet-material/README.md",
     "design/brand-kit/quiet-material/registry.json",
     "design/brand-kit/quiet-material/verification.json",
-    "design/brand-kit/quiet-material/foundations/README.md"
+    "design/brand-kit/quiet-material/foundations/README.md",
+    "design/brand-kit/quiet-material/controls/README.md",
+    "design/brand-kit/quiet-material/patterns/README.md"
   ],
   "areas": [
     {
@@ -47,7 +49,7 @@
     },
     {
       "id": "identity",
-      "status": "companion-specimens-review-pending",
+      "status": "direction-accepted-qualification-remains",
       "finding_ids": [
         "QM-06"
       ],
@@ -58,7 +60,7 @@
     },
     {
       "id": "typography",
-      "status": "companion-specimens-review-pending",
+      "status": "direction-accepted-qualification-remains",
       "finding_ids": [
         "QM-07"
       ],
@@ -92,17 +94,18 @@
     },
     {
       "id": "controls_and_navigation",
-      "status": "partial",
+      "status": "controls-accepted-form-extension-review-pending",
       "finding_ids": [
         "QM-10"
       ],
       "acceptance": "Needed control/navigation states rendered and tested, including keyboard, loading, disabled, error and empty.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/patterns/README.md"
     },
     {
       "id": "icons_and_illustration",
-      "status": "references-classified-sources-unavailable",
+      "status": "utility-family-proposed-illustration-sources-still-unavailable",
       "finding_ids": [
         "QM-02",
         "QM-05",
@@ -111,17 +114,18 @@
       "acceptance": "Current glyph and illustration sources inventoried; functional diagram vs decorative raster rules unambiguous.",
       "owner": "session",
       "complete": false,
-      "evidence": "design/brand-kit/quiet-material/README.md"
+      "evidence": "design/brand-kit/quiet-material/patterns/README.md"
     },
     {
       "id": "density_and_rhythm",
-      "status": "conflicting",
+      "status": "candidate-budgets-and-three-channel-studies",
       "finding_ids": [
         "QM-09"
       ],
       "acceptance": "Named open, compact and framed patterns preserve hierarchy; copy slots optional; mobile and long-content specimens pass.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/patterns/README.md"
     },
     {
       "id": "motion_and_modes",
@@ -135,25 +139,26 @@
     },
     {
       "id": "channel_templates",
-      "status": "incomplete",
+      "status": "website-social-email-composition-studies-review-pending",
       "finding_ids": [
         "QM-07",
         "QM-08"
       ],
       "acceptance": "Website, social/avatar/banner/OG, blog, email and document examples have source masters and reviewed exports; video has storyboard/poster/caption rules.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/patterns/README.md"
     },
     {
       "id": "consumer_enforcement",
-      "status": "register-and-catalogue-enforced",
+      "status": "candidate-views-and-application-budgets-enforced",
       "finding_ids": [
         "QM-10"
       ],
       "acceptance": "Asset reference/status checks, generated-view drift and actual apps/web/channel consumers covered by appropriate deterministic and visual checks.",
       "owner": "session",
       "complete": false,
-      "evidence": "design/brand-kit/quiet-material/README.md"
+      "evidence": "design/brand-kit/quiet-material/patterns/README.md"
     }
   ],
   "completed_batches": [
@@ -171,6 +176,16 @@
       "id": "identity-type-companion-0-1",
       "date": "2026-09-05",
       "result": "Retained identity variants, twelve font roles and web/social/email/PDF specimens; new direct-text dark-card comparison follows founder steering. Candidate only; final application qualification remains open."
+    },
+    {
+      "id": "controls-companion-0-1",
+      "date": "2026-09-05",
+      "result": "Founder accepted navigation, buttons and cards for continued design work. Original logo retained."
+    },
+    {
+      "id": "patterns-companion-0-1",
+      "date": "2026-09-05",
+      "result": "Forms, twelve utility symbols, density/rhythm rules and website/social/email composition studies. Candidate review; publication, launch proof and full channel qualification remain open."
     }
   ]
 }
