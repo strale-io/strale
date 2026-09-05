@@ -335,10 +335,9 @@ Decision ID).
 - Whether the 3 flagged Singapore solutions DEC-20260505-C names
   (blocked on `singapore-company-data`) were ever resolved; the row
   flags them "for separate investigation," not as resolved.
-- Whether the first-person-singular outreach exception (0507-I) or the
-  Movitz/Creditsafe-adjacent country-vendor text bleeding into several
-  Outcome fields is still current at the Notion source; this batch's
-  evidence scope is files in this repository only.
+- Whether the first-person-singular outreach exception (0507-I) is still
+  current at the Notion source; this batch's evidence scope is files in
+  this repository only.
 - The cause of the DEC-20260513-D-vs-DEC-20260513-C mislabeling in
   `test-scheduler.ts`'s comments; reported as found, not diagnosed.
 
