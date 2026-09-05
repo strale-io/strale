@@ -18,7 +18,7 @@ scratchpad. This session:
    by hand: 0 already withdrawn by `DEC-20260905-B`/`-C`/`-D`; 1 real
    defect (the `DEC-20260420-G` composite quotation, independently found
    by partition P5 too); 94 checker misses with a located and quoted
-   source (12 individual + 82 self-referential parsing artifacts inside
+   source (11 individual + 82 self-referential parsing artifacts inside
    `DEC-20260905-C.md`'s own body + 1 inside `DEC-20260905-D.md`'s own
    body, the same class round 3's reconciliation described). Full
    reconciliation: `scratchpad/residual-reconciliation-round4.md` (not
