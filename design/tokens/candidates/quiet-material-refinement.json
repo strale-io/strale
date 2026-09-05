@@ -1,0 +1,1534 @@
+{
+  "name": "Quiet Material refinement 0.1",
+  "status": "exploring",
+  "supersedes": null,
+  "superseded_by": null,
+  "notes": "Candidate composition studies under DEC-20260905-A. Palette/families retained from v0.7; new role and layout values are exploratory. All page geometry is in PDF points (one point per design unit); website pages are static studies, not CSS breakpoints.",
+  "palette": {
+    "--canvas": "#ffffff",
+    "--surface": "#f8f8f5",
+    "--surface-strong": "#f1f1ed",
+    "--surface-warm": "#f2f0ec",
+    "--section-canvas-primary": "#ffffff",
+    "--section-canvas-cool": "#f4f8fb",
+    "--section-canvas-warm": "#f7f4ef",
+    "--section-canvas-mineral": "#f1f7f4",
+    "--section-canvas-dark": "#071829",
+    "--ink": "#11110f",
+    "--ink-secondary": "#5f605c",
+    "--hairline": "#ddddd7",
+    "--signal-red": "#f2381b",
+    "--signal-red-inverse": "#ff7658",
+    "--deep-ember": "#25100d",
+    "--signal-blue": "#164076",
+    "--atmospheric-blue": "#315e8b",
+    "--midnight": "#0d223b",
+    "--blue-mist": "#e5eff9",
+    "--blue-whisper": "#f0f6fc",
+    "--border-blue": "#b8cee4",
+    "--mineral": "#246b5a",
+    "--mineral-light": "#8fd5a6",
+    "--deep-pine": "#12382f",
+    "--mint-whisper": "#edf6f2",
+    "--border-mint": "#d7e6df",
+    "--success": "#17795d",
+    "--ink-inverse": "#f3f6f9",
+    "--ink-inverse-secondary": "#aebdcd",
+    "--accent-blue-inverse": "#9bc9f5",
+    "--border-midnight": "#1d3958"
+  },
+  "type": {
+    "families": {
+      "sans": "\"Instrument Sans\", Arial, sans-serif",
+      "mono": "\"IBM Plex Mono\", Consolas, monospace"
+    },
+    "scale": {
+      "display": {
+        "size": 72,
+        "leading": 78,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "social-display": {
+        "size": 76,
+        "leading": 82,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "heading": {
+        "size": 56,
+        "leading": 60,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "mobile-display": {
+        "size": 38,
+        "leading": 42,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "pdf-display": {
+        "size": 48,
+        "leading": 52,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "pdf-heading": {
+        "size": 34,
+        "leading": 38,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "value": {
+        "size": 32,
+        "leading": 38,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "body": {
+        "size": 24,
+        "leading": 34,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "small-body": {
+        "size": 18,
+        "leading": 26,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "ui": {
+        "size": 18,
+        "leading": 24,
+        "pdf_font": "InstrumentSemibold",
+        "axes": {
+          "wdth": 100,
+          "wght": 600
+        }
+      },
+      "label": {
+        "size": 14,
+        "leading": 20,
+        "pdf_font": "Plex"
+      },
+      "micro": {
+        "size": 11,
+        "leading": 16,
+        "pdf_font": "Plex"
+      },
+      "pdf-body": {
+        "size": 13,
+        "leading": 19,
+        "pdf_font": "Instrument",
+        "axes": {
+          "wdth": 100,
+          "wght": 400
+        }
+      },
+      "pdf-label": {
+        "size": 9,
+        "leading": 14,
+        "pdf_font": "Plex"
+      }
+    }
+  },
+  "spacing": [
+    0,
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    56,
+    64,
+    72,
+    80,
+    96,
+    120
+  ],
+  "radii": [
+    0,
+    8,
+    16,
+    24,
+    28
+  ],
+  "shadows": [],
+  "motion": {
+    "status": "not-demonstrated",
+    "reduced_motion": "static-equivalent",
+    "note": "Timing/easing pending a working motion specimen."
+  },
+  "provenance": {
+    "repo": "strale",
+    "source": "design/explorations/2026-09-05-quiet-material-refinement/README.md",
+    "captured_at": "2026-09-05",
+    "note": "Palette/families derived from quiet-material-v0.7.json. Layout and type roles are new candidate values, not production adoption."
+  },
+  "layout": {
+    "units": "PDF points; static design studies",
+    "stroke": 1,
+    "pages": [
+      {
+        "id": "website-opening",
+        "size": [
+          1440,
+          900
+        ],
+        "background": "--canvas",
+        "layers": [
+          {
+            "kind": "image",
+            "asset": "light",
+            "at": [
+              0,
+              0
+            ],
+            "size": [
+              1440,
+              900
+            ]
+          },
+          {
+            "kind": "lockup",
+            "at": [
+              64,
+              36
+            ],
+            "width": 142,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "nav",
+            "at": [
+              520,
+              44
+            ],
+            "role": "small-body",
+            "max_width": 660,
+            "colour": "--ink"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              1200,
+              28
+            ],
+            "size": [
+              176,
+              56
+            ],
+            "fill": "--ink",
+            "stroke": null,
+            "radius_index": 4
+          },
+          {
+            "kind": "text",
+            "copy": "navcta",
+            "at": [
+              1228,
+              44
+            ],
+            "role": "ui",
+            "max_width": 140,
+            "colour": "--canvas"
+          },
+          {
+            "kind": "text",
+            "copy": "hero",
+            "at": [
+              64,
+              244
+            ],
+            "role": "display",
+            "max_width": 700,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "herobody",
+            "at": [
+              64,
+              438
+            ],
+            "role": "body",
+            "max_width": 670,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              64,
+              556
+            ],
+            "size": [
+              196,
+              60
+            ],
+            "fill": "--ink",
+            "stroke": null,
+            "radius_index": 4
+          },
+          {
+            "kind": "text",
+            "copy": "explore",
+            "at": [
+              96,
+              573
+            ],
+            "role": "ui",
+            "max_width": 150,
+            "colour": "--canvas"
+          },
+          {
+            "kind": "text",
+            "copy": "docslink",
+            "at": [
+              292,
+              573
+            ],
+            "role": "ui",
+            "max_width": 190,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "demokicker",
+            "at": [
+              856,
+              196
+            ],
+            "role": "label",
+            "max_width": 450,
+            "colour": "--signal-blue"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              912,
+              244
+            ],
+            "size": [
+              400,
+              336
+            ],
+            "fill": "--canvas",
+            "stroke": "--hairline",
+            "radius_index": 1
+          },
+          {
+            "kind": "text",
+            "copy": "invoice1",
+            "at": [
+              944,
+              276
+            ],
+            "role": "label",
+            "max_width": 330,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "vendor1",
+            "at": [
+              944,
+              316
+            ],
+            "role": "body",
+            "max_width": 330,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "invoiceid1",
+            "at": [
+              944,
+              374
+            ],
+            "role": "label",
+            "max_width": 330,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "line",
+            "at": [
+              944,
+              422
+            ],
+            "length": 336,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "invoicetotal1",
+            "at": [
+              944,
+              448
+            ],
+            "role": "small-body",
+            "max_width": 140,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "money1",
+            "at": [
+              1112,
+              446
+            ],
+            "role": "ui",
+            "max_width": 180,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "due1",
+            "at": [
+              944,
+              498
+            ],
+            "role": "small-body",
+            "max_width": 330,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              816,
+              576
+            ],
+            "size": [
+              560,
+              180
+            ],
+            "fill": "--canvas",
+            "stroke": null,
+            "radius_index": 2
+          },
+          {
+            "kind": "text",
+            "copy": "resultlabel1",
+            "at": [
+              848,
+              606
+            ],
+            "role": "label",
+            "max_width": 440,
+            "colour": "--mineral"
+          },
+          {
+            "kind": "text",
+            "copy": "resultvendor1",
+            "at": [
+              848,
+              644
+            ],
+            "role": "body",
+            "max_width": 470,
+            "colour": "--ink"
+          },
+          {
+            "kind": "line",
+            "at": [
+              848,
+              692
+            ],
+            "length": 496,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "resultmoney1",
+            "at": [
+              848,
+              710
+            ],
+            "role": "ui",
+            "max_width": 220,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "resultdue1",
+            "at": [
+              1152,
+              710
+            ],
+            "role": "ui",
+            "max_width": 200,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "fixture1",
+            "at": [
+              848,
+              780
+            ],
+            "role": "micro",
+            "max_width": 440,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "study1",
+            "at": [
+              64,
+              860
+            ],
+            "role": "micro",
+            "max_width": 760,
+            "colour": "--ink-secondary"
+          }
+        ]
+      },
+      {
+        "id": "document-benefit",
+        "size": [
+          1440,
+          880
+        ],
+        "background": "--surface",
+        "layers": [
+          {
+            "kind": "text",
+            "copy": "benefit",
+            "at": [
+              64,
+              64
+            ],
+            "role": "heading",
+            "max_width": 900,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "benefitlink",
+            "at": [
+              1008,
+              136
+            ],
+            "role": "ui",
+            "max_width": 340,
+            "colour": "--ink"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              96,
+              308
+            ],
+            "size": [
+              492,
+              444
+            ],
+            "fill": "--canvas",
+            "stroke": "--hairline",
+            "radius_index": 0
+          },
+          {
+            "kind": "text",
+            "copy": "invoice2",
+            "at": [
+              136,
+              348
+            ],
+            "role": "label",
+            "max_width": 412,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "vendor2",
+            "at": [
+              136,
+              388
+            ],
+            "role": "value",
+            "max_width": 412,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "id2",
+            "at": [
+              136,
+              452
+            ],
+            "role": "label",
+            "max_width": 412,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "line",
+            "at": [
+              136,
+              504
+            ],
+            "length": 412,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "billing2",
+            "at": [
+              136,
+              528
+            ],
+            "role": "small-body",
+            "max_width": 300,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "amount2",
+            "at": [
+              136,
+              570
+            ],
+            "role": "value",
+            "max_width": 412,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "date2",
+            "at": [
+              136,
+              648
+            ],
+            "role": "small-body",
+            "max_width": 412,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "line",
+            "at": [
+              644,
+              516
+            ],
+            "length": 80,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "extract2",
+            "at": [
+              644,
+              482
+            ],
+            "role": "micro",
+            "max_width": 90,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "out2",
+            "at": [
+              816,
+              310
+            ],
+            "role": "label",
+            "max_width": 520,
+            "colour": "--mineral"
+          },
+          {
+            "kind": "text",
+            "copy": "companylabel2",
+            "at": [
+              816,
+              376
+            ],
+            "role": "small-body",
+            "max_width": 480,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "companyvalue2",
+            "at": [
+              816,
+              408
+            ],
+            "role": "value",
+            "max_width": 550,
+            "colour": "--ink"
+          },
+          {
+            "kind": "line",
+            "at": [
+              816,
+              474
+            ],
+            "length": 520,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "totallabel2",
+            "at": [
+              816,
+              500
+            ],
+            "role": "small-body",
+            "max_width": 480,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "totalvalue2",
+            "at": [
+              816,
+              532
+            ],
+            "role": "value",
+            "max_width": 480,
+            "colour": "--ink"
+          },
+          {
+            "kind": "line",
+            "at": [
+              816,
+              598
+            ],
+            "length": 520,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "duelabel2",
+            "at": [
+              816,
+              624
+            ],
+            "role": "small-body",
+            "max_width": 480,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "duevalue2",
+            "at": [
+              816,
+              656
+            ],
+            "role": "value",
+            "max_width": 550,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "fixture2",
+            "at": [
+              96,
+              784
+            ],
+            "role": "micro",
+            "max_width": 1100,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "study2",
+            "at": [
+              64,
+              844
+            ],
+            "role": "micro",
+            "max_width": 950,
+            "colour": "--ink-secondary"
+          }
+        ]
+      },
+      {
+        "id": "mobile-opening",
+        "size": [
+          390,
+          844
+        ],
+        "background": "--canvas",
+        "layers": [
+          {
+            "kind": "lockup",
+            "at": [
+              24,
+              24
+            ],
+            "width": 104,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "mobilemenu",
+            "at": [
+              314,
+              30
+            ],
+            "role": "label",
+            "max_width": 60,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "mobilehero",
+            "at": [
+              24,
+              108
+            ],
+            "role": "mobile-display",
+            "max_width": 344,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "mobilebody",
+            "at": [
+              24,
+              218
+            ],
+            "role": "small-body",
+            "max_width": 344,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              24,
+              300
+            ],
+            "size": [
+              178,
+              52
+            ],
+            "fill": "--ink",
+            "stroke": null,
+            "radius_index": 4
+          },
+          {
+            "kind": "text",
+            "copy": "mobilecta",
+            "at": [
+              48,
+              314
+            ],
+            "role": "ui",
+            "max_width": 140,
+            "colour": "--canvas"
+          },
+          {
+            "kind": "text",
+            "copy": "mobiledocs",
+            "at": [
+              228,
+              316
+            ],
+            "role": "label",
+            "max_width": 142,
+            "colour": "--ink"
+          },
+          {
+            "kind": "image",
+            "asset": "light",
+            "at": [
+              0,
+              382
+            ],
+            "size": [
+              390,
+              338
+            ]
+          },
+          {
+            "kind": "rect",
+            "at": [
+              24,
+              414
+            ],
+            "size": [
+              342,
+              296
+            ],
+            "fill": "--canvas",
+            "stroke": "--hairline",
+            "radius_index": 2
+          },
+          {
+            "kind": "text",
+            "copy": "mobileproof",
+            "at": [
+              48,
+              438
+            ],
+            "role": "micro",
+            "max_width": 290,
+            "colour": "--signal-blue"
+          },
+          {
+            "kind": "text",
+            "copy": "mobileinvoice",
+            "at": [
+              48,
+              476
+            ],
+            "role": "small-body",
+            "max_width": 294,
+            "colour": "--ink"
+          },
+          {
+            "kind": "line",
+            "at": [
+              48,
+              520
+            ],
+            "length": 294,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "mobilevendor",
+            "at": [
+              48,
+              544
+            ],
+            "role": "body",
+            "max_width": 294,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "mobilemoney",
+            "at": [
+              48,
+              592
+            ],
+            "role": "ui",
+            "max_width": 294,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "mobiledate",
+            "at": [
+              48,
+              632
+            ],
+            "role": "small-body",
+            "max_width": 294,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "mobilefixture",
+            "at": [
+              24,
+              734
+            ],
+            "role": "micro",
+            "max_width": 340,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "mobilestudy",
+            "at": [
+              24,
+              802
+            ],
+            "role": "micro",
+            "max_width": 342,
+            "colour": "--ink-secondary"
+          }
+        ]
+      },
+      {
+        "id": "social-square",
+        "size": [
+          1200,
+          1200
+        ],
+        "background": "--section-canvas-dark",
+        "layers": [
+          {
+            "kind": "image",
+            "asset": "dark",
+            "at": [
+              0,
+              0
+            ],
+            "size": [
+              1200,
+              1200
+            ]
+          },
+          {
+            "kind": "text",
+            "copy": "sociallabel",
+            "at": [
+              80,
+              72
+            ],
+            "role": "label",
+            "max_width": 1020,
+            "colour": "--ink-inverse-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "socialtitle",
+            "at": [
+              80,
+              136
+            ],
+            "role": "social-display",
+            "max_width": 1080,
+            "colour": "--ink-inverse"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              80,
+              442
+            ],
+            "size": [
+              484,
+              498
+            ],
+            "fill": "--canvas",
+            "stroke": null,
+            "radius_index": 1
+          },
+          {
+            "kind": "text",
+            "copy": "socialinvoice",
+            "at": [
+              116,
+              480
+            ],
+            "role": "label",
+            "max_width": 410,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "socialvendor",
+            "at": [
+              116,
+              524
+            ],
+            "role": "value",
+            "max_width": 410,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "socialid",
+            "at": [
+              116,
+              590
+            ],
+            "role": "label",
+            "max_width": 410,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "line",
+            "at": [
+              116,
+              656
+            ],
+            "length": 412,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "socialamount",
+            "at": [
+              116,
+              690
+            ],
+            "role": "value",
+            "max_width": 410,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "socialdate",
+            "at": [
+              116,
+              766
+            ],
+            "role": "small-body",
+            "max_width": 410,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "socialout",
+            "at": [
+              660,
+              478
+            ],
+            "role": "label",
+            "max_width": 460,
+            "colour": "--ink-inverse-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "socialfield1",
+            "at": [
+              660,
+              532
+            ],
+            "role": "value",
+            "max_width": 460,
+            "colour": "--ink-inverse"
+          },
+          {
+            "kind": "line",
+            "at": [
+              660,
+              606
+            ],
+            "length": 452,
+            "colour": "--border-midnight"
+          },
+          {
+            "kind": "text",
+            "copy": "socialfield2",
+            "at": [
+              660,
+              644
+            ],
+            "role": "value",
+            "max_width": 460,
+            "colour": "--ink-inverse"
+          },
+          {
+            "kind": "line",
+            "at": [
+              660,
+              718
+            ],
+            "length": 452,
+            "colour": "--border-midnight"
+          },
+          {
+            "kind": "text",
+            "copy": "socialfield3",
+            "at": [
+              660,
+              756
+            ],
+            "role": "value",
+            "max_width": 460,
+            "colour": "--ink-inverse"
+          },
+          {
+            "kind": "lockup",
+            "at": [
+              80,
+              1062
+            ],
+            "width": 180,
+            "colour": "--ink-inverse"
+          },
+          {
+            "kind": "text",
+            "copy": "socialfixture",
+            "at": [
+              660,
+              1000
+            ],
+            "role": "body",
+            "max_width": 460,
+            "colour": "--ink-inverse"
+          }
+        ]
+      },
+      {
+        "id": "pdf-cover",
+        "size": [
+          595,
+          842
+        ],
+        "background": "--canvas",
+        "layers": [
+          {
+            "kind": "lockup",
+            "at": [
+              48,
+              44
+            ],
+            "width": 120,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfseries",
+            "at": [
+              48,
+              160
+            ],
+            "role": "pdf-label",
+            "max_width": 500,
+            "colour": "--signal-blue"
+          },
+          {
+            "kind": "text",
+            "copy": "pdftitle",
+            "at": [
+              48,
+              208
+            ],
+            "role": "pdf-display",
+            "max_width": 500,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfsub",
+            "at": [
+              48,
+              342
+            ],
+            "role": "small-body",
+            "max_width": 500,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "image",
+            "asset": "light",
+            "at": [
+              0,
+              430
+            ],
+            "size": [
+              595,
+              372
+            ]
+          },
+          {
+            "kind": "text",
+            "copy": "pdfedition",
+            "at": [
+              48,
+              798
+            ],
+            "role": "pdf-label",
+            "max_width": 500,
+            "colour": "--ink-secondary"
+          }
+        ]
+      },
+      {
+        "id": "pdf-interior",
+        "size": [
+          595,
+          842
+        ],
+        "background": "--canvas",
+        "layers": [
+          {
+            "kind": "lockup",
+            "at": [
+              48,
+              36
+            ],
+            "width": 90,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfchapter",
+            "at": [
+              330,
+              42
+            ],
+            "role": "pdf-label",
+            "max_width": 220,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfinside",
+            "at": [
+              48,
+              112
+            ],
+            "role": "pdf-heading",
+            "max_width": 500,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfintro",
+            "at": [
+              48,
+              212
+            ],
+            "role": "pdf-body",
+            "max_width": 500,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "rect",
+            "at": [
+              48,
+              304
+            ],
+            "size": [
+              228,
+              326
+            ],
+            "fill": "--surface",
+            "stroke": null,
+            "radius_index": 0
+          },
+          {
+            "kind": "text",
+            "copy": "pdfsource",
+            "at": [
+              64,
+              326
+            ],
+            "role": "pdf-label",
+            "max_width": 200,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfsourcevendor",
+            "at": [
+              64,
+              370
+            ],
+            "role": "small-body",
+            "max_width": 200,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfsourceid",
+            "at": [
+              64,
+              414
+            ],
+            "role": "pdf-body",
+            "max_width": 200,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "line",
+            "at": [
+              64,
+              464
+            ],
+            "length": 196,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfsourcemoney",
+            "at": [
+              64,
+              492
+            ],
+            "role": "small-body",
+            "max_width": 200,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfsourcedate",
+            "at": [
+              64,
+              540
+            ],
+            "role": "pdf-body",
+            "max_width": 200,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfoutlabel",
+            "at": [
+              324,
+              326
+            ],
+            "role": "pdf-label",
+            "max_width": 224,
+            "colour": "--mineral"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfoutcompanylabel",
+            "at": [
+              324,
+              370
+            ],
+            "role": "pdf-body",
+            "max_width": 224,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfoutcompany",
+            "at": [
+              324,
+              396
+            ],
+            "role": "small-body",
+            "max_width": 224,
+            "colour": "--ink"
+          },
+          {
+            "kind": "line",
+            "at": [
+              324,
+              442
+            ],
+            "length": 224,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfouttotallabel",
+            "at": [
+              324,
+              462
+            ],
+            "role": "pdf-body",
+            "max_width": 224,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfouttotal",
+            "at": [
+              324,
+              488
+            ],
+            "role": "small-body",
+            "max_width": 224,
+            "colour": "--ink"
+          },
+          {
+            "kind": "line",
+            "at": [
+              324,
+              534
+            ],
+            "length": 224,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfoutduelabel",
+            "at": [
+              324,
+              554
+            ],
+            "role": "pdf-body",
+            "max_width": 224,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfoutdue",
+            "at": [
+              324,
+              580
+            ],
+            "role": "small-body",
+            "max_width": 224,
+            "colour": "--ink"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfnotecaption",
+            "at": [
+              48,
+              682
+            ],
+            "role": "pdf-label",
+            "max_width": 500,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfnote",
+            "at": [
+              48,
+              708
+            ],
+            "role": "pdf-body",
+            "max_width": 500,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "line",
+            "at": [
+              48,
+              786
+            ],
+            "length": 500,
+            "colour": "--hairline"
+          },
+          {
+            "kind": "text",
+            "copy": "pdffooter",
+            "at": [
+              48,
+              804
+            ],
+            "role": "pdf-label",
+            "max_width": 440,
+            "colour": "--ink-secondary"
+          },
+          {
+            "kind": "text",
+            "copy": "pdfnumber",
+            "at": [
+              524,
+              804
+            ],
+            "role": "pdf-label",
+            "max_width": 30,
+            "colour": "--ink-secondary"
+          }
+        ]
+      }
+    ]
+  }
+}

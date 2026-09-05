@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "id": "quiet-material-refinement-0.1",
+  "status": "exploring",
+  "strategy_decision": "DEC-20260905-A",
+  "token_source": "design/tokens/candidates/quiet-material-refinement.json",
+  "production_adopted": false,
+  "rules": [
+    {
+      "id": "CMP-01",
+      "name": "One dominant idea",
+      "rule": "one reader question, principal visual and primary action",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "CMP-02",
+      "name": "Change of pace",
+      "rule": "avoid repeated outer-card use-case sections",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "DEN-01",
+      "name": "Initial content budgets",
+      "rule": "hero 10/24 words; benefit 8/30; social headline 10",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "DEN-02",
+      "name": "Mobile recomposition",
+      "rule": "retain proof and remove repetition, never shrink to fit",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "TYP-01",
+      "name": "Roles before families",
+      "rule": "Instrument Sans text and display; Plex for compact technical labels",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "COL-01",
+      "name": "Neutral reading surfaces",
+      "rule": "colour has semantic context; no unverified quality signal",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "SUR-01",
+      "name": "Framing earns its place",
+      "rule": "whitespace, then hairline, then necessary panel",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "IMG-01",
+      "name": "Atmosphere has a limited role",
+      "rule": "opening, cover, transition; quiet text region",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "ILL-01",
+      "name": "Faithful transformation",
+      "rule": "input and result agree; conceptual fixtures labelled",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "ICO-01",
+      "name": "Functional symbols",
+      "rule": "optical consistency and understandable meaning",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "UI-01",
+      "name": "Clear actions",
+      "rule": "one filled primary; quieter secondary; states remain to specify",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "MOT-01",
+      "name": "Explain change",
+      "rule": "static baseline, purposeful sequence, reduced motion",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    },
+    {
+      "id": "CHN-01",
+      "name": "Adapt composition",
+      "rule": "channel-specific reading situation, shared source vocabulary",
+      "status": "candidate",
+      "basis": "derived",
+      "human_source": "FOUNDATION.md"
+    }
+  ],
+  "assets": {
+    "light": {
+      "archive_path": "public/strale-site/hero-folded-light-background-v1.png",
+      "sha256": "2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07",
+      "role": "atmosphere",
+      "licence_status": "preserved-source; audit pending"
+    },
+    "dark": {
+      "archive_path": "public/strale-site/design-system/assets/pattern-folded-dark-midnight-v2.png",
+      "sha256": "5aeef908cdf77ccd50b6e37da40d09443185a8fe9bc3742e6b70128a76289295",
+      "role": "atmosphere",
+      "licence_status": "preserved-source; audit pending"
+    },
+    "lockup": {
+      "archive_path": "public/strale-site/strale-lockup.svg",
+      "sha256": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809",
+      "role": "existing-identity-control",
+      "licence_status": "preserved-source; audit pending"
+    }
+  },
+  "font_sources": [
+    {
+      "family": "Instrument Sans",
+      "source": "https://github.com/google/fonts/tree/main/ofl/instrumentsans",
+      "licence": "SIL OFL 1.1",
+      "file": "InstrumentSans[wdth,wght].ttf"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "source": "https://github.com/google/fonts/tree/main/ofl/ibmplexmono",
+      "licence": "SIL OFL 1.1",
+      "file": "IBMPlexMono-Regular.ttf"
+    }
+  ],
+  "font_inputs": {
+    "InstrumentSans.ttf": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+    "IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46"
+  },
+  "enforcement": {
+    "current": "token schema, renderer asset/font digest checks and text bounds; human visual review",
+    "pending": "production rule schema, all reference checks, responsive/accessibility/motion and runtime consumer enforcement"
+  }
+}

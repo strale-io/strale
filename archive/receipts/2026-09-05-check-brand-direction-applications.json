@@ -1,0 +1,48 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4e66a410915d81e7fadd8ca21327e2599fbd0d51"
+  },
+  "at": "2026-09-05T08:56:48.259Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-brand-direction-checks.json"
+  },
+  "summary": {
+    "ok": true,
+    "tests_passed": 24,
+    "tests_failed": 0,
+    "pdf_pages": 6,
+    "api_typecheck": "passed",
+    "pdf_sha256": "2f32d14608e458ace7adbd0e0d6b3bd4fdc59a8dfa430be540464603007d4c79",
+    "scope": "candidate working-tree assets and authoring renderer; no product behaviour changes"
+  },
+  "topic": "brand-direction-applications",
+  "raw": {
+    "ok": true,
+    "tests_passed": 24,
+    "tests_failed": 0,
+    "pdf_pages": 6,
+    "api_typecheck": "passed",
+    "pdf_sha256": "2f32d14608e458ace7adbd0e0d6b3bd4fdc59a8dfa430be540464603007d4c79",
+    "scope": "candidate working-tree assets and authoring renderer; no product behaviour changes",
+    "raw": {
+      "design_test_and_checks": "Warning: truncated output (original token count: 3234)\nTotal output lines: 178\n\n✔ clean pass: valid tokens, matching generated file, no lint findings — zero failures (1697.3967ms)\n✔ active.json missing a required field fails schema validation, fixing it passes (3244.3017ms)\n✔ a candidate with an invalid status fails schema validation, fixing it passes (3203.3203ms)\n✔ invalid JSON in a token file is reported, not thrown (1425.3266ms)\n✔ a second top-level file in design/tokens/ fails, removing it passes (3220.2939ms)\n✔ a missing active.json fails (1593.3104ms)\n✔ active.json changed against origin/main with no adopted_by change fails, changing adopted_by too passes (2917.4049ms)\n✔ a change to one surface is not licensed by another surface's adopted_by change (2889.3981ms)\n✔ source files under apps/web join the lint scope as soon as the tree exists (1329.4369ms)\n✔ active.json absent on origin/main (this PR creates it) is a pass (1387.5945ms)\n✔ no origin/main ref available warns and passes, not fails (270.1975ms)\n✔ active.json unchanged from origin/main is a pass even with a stale adopted_by (1582.6382ms)\n✔ an off-token hex literal in a consumer fails, allowlisting it (and matching origin/main) passes (3065.2238ms)\n✔ a raw font-family: declaration in a consumer fails (1507.8245ms)\n✔ an off-scale margin px value in a consumer fails; an on-scale one passes (3051.9414ms)\n✔ an off-scale border-radius px value fails; an on-scale one passes (3045.9904ms)\n✔ an HTML numeric entity is not mistaken for a hex color (1380.9703ms)\n✔ an allowlist entry whose literal no longer appears in the file fails, removing the entry passes (3357.0634ms)\n✔ the allowlist growing versus origin/main fails, matching origin/main passes (2962.3906ms)\n✔ an allowlist shrinking versus origin/main is not growth (1499.0468ms)\n✔ a stale generated file is detected by generate({check:true}) (1293.517ms)\n✔ a missing generated file is detected by generate({check:true}) (1401.3844ms)\n✔ hex literals are found in CSS declarations (followed by a semicolon) and inside strings, but HTML entities are not (0.3492ms)\n✔ regenerating a stale file makes it match (1309.7627ms)\nℹ tests 24\nℹ suites 0\nℹ pass 24\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 48914.849\n\n> design:check\n> node scripts/check-design.mjs\n\nchecked 4 design/tokens/*.json files, 6 distinct off-token literals (10 raw occurrences) across the internal-report consumers, 6 allowlisted\nok   design tokens contract\n\n> claims:check\n> node scripts/check-claims.mjs\n\nchecked 27 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, and the frontend llms.txt when present\nok   claims register contract\n",
+      "typecheck": {
+        "command": "npx tsc --noEmit --project apps/api/tsconfig.json",
+        "exit_code": 0,
+        "prerequisite": "npm run mcp:build"
+      },
+      "pdf": {
+        "renderer": "design/explorations/2026-09-05-quiet-material-refinement/render.py",
+        "asset_and_font_digests": "passed",
+        "text_bounds": "passed",
+        "visual_review": "all six pages inspected; mobile source label revised and re-inspected"
+      },
+      "diff": {
+        "initial_failure": "PDF was treated as text; fixed by *.pdf binary in .gitattributes",
+        "final": "git diff --cached --check passed"
+      }
+    }
+  }
+}
