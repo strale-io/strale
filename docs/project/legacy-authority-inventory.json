@@ -83,7 +83,8 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-quote-fidelity.mjs"
       ]
     },
     {
@@ -323,6 +324,8 @@
         "scripts/handoff/handoff-check.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs",
+        "scripts/m2-quote-fidelity.mjs",
+        "scripts/m2-quote-fidelity.test.mjs",
         "scripts/receipts-lib.mjs",
         "scripts/receipts.test.mjs"
       ]
@@ -516,6 +519,7 @@
         "scripts/claims-lib.mjs",
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-quote-fidelity.test.mjs",
         "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
