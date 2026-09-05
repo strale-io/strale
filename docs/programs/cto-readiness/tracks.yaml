@@ -275,25 +275,22 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      G1 closed (PR #552). G2 batches 1 and 2 done (PRs #553, #555): eleven
-      ID collisions resolved atomically (DEC-20260225-P-c5d6,
-      DEC-20260303-A, DEC-20260304-A/B/C, DEC-20260320-C/J/K,
-      DEC-20260405-B, DEC-20260406-A/B), every row a source-qualified
-      record, one resolution report per collision under
-      archive/sessions/. Batch 2 found that the sixty KYB and Invoice
-      Verify solutions are absent from the current solution catalogue
-      source and that eighteen were retired by name, so forty-two are
-      unaccounted for in the repository (production state unknown from
-      files). Blocking gaps: G2 (23 collisions remain) and G9. Next: G2
-      batch 3 (DEC-20260406-C, DEC-20260409-C, DEC-20260420-D/E/F/G/H;
-      one superseded twin and one identical-title duplicate become
-      documented_only; the DEC-20260420-H rows do not carry the
-      social-platform rule that CLAUDE.md and two records attribute to
-      that id, so the report says so in prose), then the April 20 to 21
-      group, then the May group, then G9's closing review. This track is
-      the M2 exit gate: the closure register's validator refuses a state
-      where it is done, or any post-m2 track is active or done, while a
-      blocking gap remains.
+      G1 closed (PR #552). G2 batches 1 to 3 done (PRs #553, #555, #560):
+      eighteen ID collisions resolved atomically; batch 3 added the first
+      documented_only rows (a superseded Gate 4 twin and a duplicate SA.2b
+      entry) and established that neither DEC-20260420-H row in the export
+      carries the social-platform scraping rule that CLAUDE.md,
+      DEC-20260813-A and DEC-20260427-H attribute to that id (the nearest
+      evidence is DEC-20260420-I's own text; the doctrine's wording is not
+      in the export). PR #559 made the register-test fixtures plant their
+      own unresolved collision so the suite survives an empty bucket.
+      Blocking gaps: G2 (16 collisions remain) and G9. Next: G2 batch 4
+      (DEC-20260420-I/J/K, DEC-20260421-A/B/C/D), then batch 5 (the last
+      nine, May 5 to 13, including the three-row DEC-20260508-C), after
+      which the orchestrator closes G2; then G9's closing review. This
+      track is the M2 exit gate: the closure register's validator refuses
+      a state where it is done, or any post-m2 track is active or done,
+      while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -463,6 +460,14 @@ tracks:
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-A.md
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-B.md
       - handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-C.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260409-C.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-D.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-E.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-F.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-G.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-H.md
+      - handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md
 
   - id: T6
     title: M3 repo-native workflows
