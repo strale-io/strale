@@ -11,9 +11,9 @@
     "registry.json": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
     "registry.schema.json": "5db15dd196731d26ebd45f8958234da8a35fc459be7d481e8772127ccd1a64c1",
     "catalogue.css": "c2cab825b5ccd87629c270f6a450df5712574698cd3309d12f975cbaab92f144",
-    "build.mjs": "7bfbe3ffcf15aeccae43bfd42841834b279d8cbdea2b43f68723b3a35a0f9edf",
-    "verify.py": "932565284b96bd65c58d5b68b4a940ca1bb0aefafa9ad1f07d806446258e8a6f",
-    "evidence.schema.json": "1dc6ddde25f9a2dde5623ee99121ae919d72a409ba80eb2797b4ca393632f4fc",
+    "build.mjs": "1752cc1dfedaffc7cf386d5d737940a51dac77f4b2fc0aad52b7b0f886f6e136",
+    "verify.py": "83ae36c2954046ef40b3a73b456f5779a2a203a0a6733a6e864209f3926590dc",
+    "evidence.schema.json": "4336c7d71c6e9a5ab18299ee9b41e0cd02e8ccecfeb001b1d3c962a21181c6f8",
     "masters/strale-lockup.svg": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809",
     "../registry.json": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
     "../../../tokens/candidates/quiet-material-catalogue.json": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
@@ -39,8 +39,8 @@
     "exports/mark-inverse.svg": "25d45de8ee601f2bf3e743f4c684c0ad47502876e0338765d48ddee86371b404",
     "exports/social-landscape.png": "993a2bd728e7dffca86d029aa274d6e094fe8cd18fe39284bbf46e5d4ec72287",
     "exports/social-square.png": "8d7d0185a7935c932e5a3f287f454cbedc9e0d9fc0b8e272334067889b918760",
-    "output/pdf/document-specimen.pdf": "4669a495d1732bb9a2308d46d6482eb51a11b40f54585961756bdb891ce38bac",
-    "output/pdf/identity-typography.pdf": "9f69cb6bc6023198426dfe8fa70a4e125818a1edf8841517491b4ab9b6daa1f0"
+    "output/pdf/document-specimen.pdf": "f6bd83ea55d62c974810da6f14071b23c4f73833286be8a02ee589a7e4f8afdc",
+    "output/pdf/identity-typography.pdf": "37d077c7049eddc587057abe29f97d0e2e0cb5c71047d4f6ca792550e3a23a76"
   },
   "scope": [
     {

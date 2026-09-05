@@ -73,7 +73,8 @@ def main():
         assert box[0] >= 0 and box[1] >= 0 and box[2] <= background.width and box[3] <= background.height
         pixels = set(background.crop(box).getdata())
         ratio = min((max(fg, lum(p)) + .05) / (min(fg, lum(p)) + .05) for p in pixels)
-        contrast.append({'text': s['text'], 'ratio': round(ratio, 3)})
+        contrast.append({'gradient': s['gradient'], 'text': s['text'], 'ratio': round(ratio, 3)})
+    assert sorted('--atmosphere-' + s['gradient'] for s in contrast) == sorted(t for t in reg['direct_dark']['gradient_tokens'] for _ in range(3)), 'Contrast gradient coverage drift'
     assert len(contrast) == 6 and all(x['ratio'] >= 4.5 for x in contrast), contrast
     fixture = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789ÅÄÖåäöÆæØøÜüÉéÑñß€£$¥“”‘’.,:;!?()[]{}+-=/|'
     fonts = []

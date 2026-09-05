@@ -53,7 +53,8 @@
             "type": "object",
             "required": [
               "text",
-              "ratio"
+              "ratio",
+              "gradient"
             ],
             "properties": {
               "text": {
@@ -63,6 +64,13 @@
               "ratio": {
                 "type": "number",
                 "minimum": 4.5
+              },
+              "gradient": {
+                "type": "string",
+                "enum": [
+                  "cobalt",
+                  "dusk"
+                ]
               }
             },
             "additionalProperties": false

@@ -55,6 +55,7 @@ export function validateEvidence(reg,tokens,evidence,manifest) {
   for(const [kind,data] of Object.entries({evidence,manifest})) {
     const check=ajv.compile({...schema,$ref:`#/$defs/${kind}`});assert(check(data),JSON.stringify(check.errors));
   }
+  assert.deepEqual(evidence.dark_contrast.map(s=>'--atmosphere-'+s.gradient).sort(),reg.direct_dark.gradient_tokens.flatMap(token=>[token,token,token]).sort(),'Contrast gradient coverage drift');
   assert.deepEqual(manifest.source,reg.source,'Manifest source drift');
   assert.deepEqual(manifest.scope,reg.channels,'Manifest scope drift');
   assert.deepEqual(manifest.inputs,evidence.inputs);assert.deepEqual(manifest.outputs,evidence.outputs);
@@ -174,7 +175,7 @@ export async function main(args=process.argv.slice(2)) {
     });
     for(let i=0;i<doc.pageCount;i++)await page.locator('.sheet').nth(i).screenshot({path:resolve(here,`.preview/browser-${String(i+1).padStart(2,'0')}.png`)});
     assert.deepEqual(layoutErrors,[],'Layout defects');
-    const samples=await page.locator('.contrast').evaluateAll(elements=>elements.map(e=>{const range=document.createRange();range.selectNodeContents(e);const r=range.getBoundingClientRect(),s=getComputedStyle(e);return {text:e.textContent,color:s.color,x:r.x,y:r.y+scrollY,width:r.width,height:r.height};}));
+    const samples=await page.locator('.contrast').evaluateAll(elements=>elements.map(e=>{const range=document.createRange();range.selectNodeContents(e);const r=range.getBoundingClientRect(),s=getComputedStyle(e);return {gradient:e.closest('[data-direct-dark]').dataset.directDark,text:e.textContent,color:s.color,x:r.x,y:r.y+scrollY,width:r.width,height:r.height};}));
     await page.pdf({path:resolve(here,'output/pdf/identity-typography.pdf'),printBackground:true,preferCSSPageSize:true,tagged:true,outline:true});
     await page.addStyleTag({content:'.contrast { color: transparent !important; }'});
     const dark=page.locator('.sheet').nth(3);await dark.screenshot({path:resolve(here,'.preview/dark-background.png')});
