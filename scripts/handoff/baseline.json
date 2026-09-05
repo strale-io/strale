@@ -1,6 +1,11 @@
 {
   "canonicalWorktree": "C:/Users/pette/Projects/strale",
   "recordedAt": "2026-09-02",
-  "knownWorktrees": [],
+  "knownWorktrees": [
+    {
+      "path": "C:/Users/pette/Projects/strale-wt-brand-patterns",
+      "reason": "Live Codex session on codex/quiet-material-patterns, recorded 2026-09-05 by founder decision in-session. It holds uncommitted untracked work (design/brand-kit/quiet-material/patterns/, design/tokens/candidates/quiet-material-patterns.json, docs/research/2026-09-05-quiet-material-pattern-references.md) that belongs to that session, not to the one that recorded it. Never delete it to satisfy the one-batch rule: removing it destroys that work. It leaves this file when that session commits and its worktree is removed by whoever owns it."
+    }
+  ],
   "knownBranches": []
 }
