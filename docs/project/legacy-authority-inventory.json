@@ -82,6 +82,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs"
@@ -309,6 +310,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md",
+        "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -617,7 +619,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f386892531193ed3a2f8fe0bab3d7b4f153d7e07c2d869176519b700e6068e66",
+      "sha256": "ea4a139f12eb4f25b3c0ec2a7bac8389eb501465c17f42c935189efbf746fd4b",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
