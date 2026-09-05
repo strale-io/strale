@@ -409,7 +409,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "cc8dae612f6c0bbfa5174770814299c165b6aed0491585044b28bc7d733a5ecd",
+      "sha256": "526a624680e012710a564660015a7596bdb1ea334e6cf719ab3d656322979262",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -464,6 +464,7 @@
         "handoff/_general/from-code/2026-09-02-t14-cheap-extras.md",
         "handoff/_general/from-code/2026-09-02-t5-cto-readable-structure.md",
         "handoff/_general/from-code/2026-09-03-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-04-checkin-morning.md",
         "handoff/_general/from-code/2026-09-04-free-public-api-agent-capabilities.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-11-counterparty-assurance.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-12-vendors-registries.md",
@@ -570,7 +571,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "d72d8a873971f8fc635506fcf72d784a49f03ffb32e60ca7dff75c9fd5b38167",
+      "sha256": "0655c3b7cc5be8c4f2f01ca735aac3af03a04241bf446064b448689545005846",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

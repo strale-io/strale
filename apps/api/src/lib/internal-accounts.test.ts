@@ -34,8 +34,13 @@ describe("internalAccountEmailExclusionSql", () => {
 
     // The suffix patterns and exact-match extras are both present, flattened
     // into one OR chain (not an OR-of-LIKEs joined to a separate IN-list).
-    expect(built.sql).toContain("email LIKE");
-    expect(built.sql).toContain("email =");
+    // `lower(email)` since 2026-09-04: the TypeScript twin isInternalAccountEmail()
+    // lowercases, and Postgres LIKE/= on a varchar column does not, so without
+    // the fold the two disagreed on any mixed-case address. Asserted here rather
+    // than only in the OR-shape, because dropping the fold is a silent change.
+    expect(built.sql).toContain("lower(email) LIKE");
+    expect(built.sql).toContain("lower(email) =");
+    expect(built.sql).not.toMatch(/(?<!lower\()email[^)]*(?:LIKE|=)/);
     expect(built.sql).not.toContain(" IN (");
 
     // No ANY(array-param) anywhere. drizzle's tuple expansion renders as
