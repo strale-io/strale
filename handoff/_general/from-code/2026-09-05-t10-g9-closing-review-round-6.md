@@ -1,4 +1,4 @@
-# 2026-09-05 — T10 G9 closing-review round 6 archived; DEC-20260905-G
+# 2026-09-05: T10 G9 closing-review round 6 archived; DEC-20260905-G
 
 **Intent:** archive round 6 of the M2 closing independent review (six
 fresh read-only partitions at `ff8a1384694532d037c5fc0b27588ee93daf63ae`)
@@ -26,7 +26,7 @@ was true when drafted and is false at the reviewed commit. The
 sibling-state sweep found one further instance beyond the six partitions'
 own coverage: `DEC-20260430-A` (lines 82-83) calls `DEC-20260420-K` "an
 unresolved collision" and `DEC-20260422-H` "unmigrated," both false at
-this commit — independently corroborated by
+this commit, independently corroborated by
 `archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-K.md`'s
 own "Forward correction" section, which had already flagged the same gap
 without being able to withdraw it (an archive file is never amended).
@@ -39,7 +39,7 @@ two `related_to` relations were not added: those relations were already
 fully substantiated by `DEC-20260905-F` items 1-2, this round's own P3
 partition independently re-confirmed the substantiation still holds, and
 `DEC-20260430-A`'s own Notion row supplies no additional basis beyond what
-`-F` already used — adding a duplicate item would restate an existing
+`-F` already used, adding a duplicate item would restate an existing
 substantiation, not record a new one. See `DEC-20260905-G`'s Not-adopted
 section for the full reasoning.
 
@@ -48,7 +48,7 @@ section for the full reasoning.
 The operator checker (`scripts/m2-quote-fidelity.mjs`) ran over the full
 236-record corpus: 1128 spans, 1029 faithful, 99 residual. All 99
 reconcile as checker misses with a located, quoted source (0 already
-withdrawn by prior rounds, 0 new defects) — 88 self-referential parsing
+withdrawn by prior rounds, 0 new defects), 88 self-referential parsing
 artifacts inside the three already-merged withdrawal records
 (`DEC-20260905-C.md` 82, `-D.md` 1, `-F.md` 5, new this round since `-F`
 merged after round 5), and 11 individually verified checker misses across
