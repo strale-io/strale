@@ -41,6 +41,27 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-25
+    subject: "PR #549 — M2 batch 17: twelve April to early-May 2026 decisions (DEC-20260406-E, DEC-20260409-A/B/D, DEC-20260410-A, DEC-20260413-A, DEC-20260415-A/B, DEC-20260422-H, DEC-20260427-H/I, DEC-20260503-B) migrated to formal candidate records"
+    commit: 892a1f75
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      Twelve records including the SQS redesign row itself and the two
+      catalogue deactivation rows, whose Consequences enumerate the
+      DEACTIVATED map's entries and each named slug's state; plus the one
+      temporary row in G1. Whether each slug claim is traced to the map and
+      the manifests, and whether each edge is source-stated, is the Codex
+      judgement.
+    what_to_attack: >
+      Each record against its Notion source; every Consequences claim
+      against the file it names (auto-register.ts DEACTIVATED map, auth.ts
+      signup, entity-validation.ts, test-scheduler.ts, schema.ts residual
+      SQS columns, VOICE.md, DECISION-QUEUE.md); every relation edge; the
+      register arithmetic and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-24
     subject: "PR #547 — M2 batch 16: twelve March 2026 decisions (DEC-20260314-F/G, DEC-20260315-A/B/H/I, DEC-20260317-A/F/G/H, DEC-20260321-A, DEC-20260329-A) migrated to formal candidate records"
     commit: ccece2b2

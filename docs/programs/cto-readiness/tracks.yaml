@@ -275,28 +275,25 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 16 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529, #532, #537, #539, #542, #544, #547). Batch
-      16 migrated the remaining twelve March 2026 rows (DEC-20260314-F to
-      DEC-20260329-A: agent experience, the hero headline, Sprint 9F,
-      code-pattern publishing, the dual-profile launch, the no-billing on
-      upstream failure rule, the weekly digest model, the publication
-      SQS threshold, provider fixture and evidence-weight rules, the
-      schedule_tier ordering, the dark-mode palette); Consequences state
-      the SQS deletion, that no third-party provider ever onboarded, and
-      what each mechanism does in code today. Private projection 36 rows
-      at archive 9da4ff92; operator verifier passes. G1 holds 25 rows
-      (24 global, 1 temporary). Blocking gaps: G1, G2, G9. Loop since
-      2026-09-04 evening: private half committed and register bumped
-      before review, auto-merge armed after PASS, batches of 10 to 14
-      rows, docs-only PRs take the CI fast path (#533). Next: batch 17,
-      the twelve April to early-May rows (DEC-20260406-E to
-      DEC-20260503-B, including the one temporary row DEC-20260422-H),
-      then batch 18, the remaining thirteen May rows, which closes G1;
-      then G2's 34 collisions one at a time, then G9's closing review.
-      This track is the M2 exit gate: the closure register's validator
-      refuses a state where it is done, or any post-m2 track is active
-      or done, while a blocking gap remains.
+      Batches 1 to 17 done (PRs #500, #503, #509, #511, #513, #515, #517,
+      #521, #524, #526, #529, #532, #537, #539, #542, #544, #547,
+      #549). Batch 17 migrated the twelve April to early-May rows
+      (DEC-20260406-E to DEC-20260503-B, including the one temporary row
+      DEC-20260422-H, whose Payee Assurance pricing deferral never fired
+      because DEC-20260812-A retired that product framing); Consequences
+      state the SQS deletion, the scraper and aggregator deactivations'
+      state in the DEACTIVATED map, and that the progressive-unlock
+      mechanism was never built. Private projection 24 rows at archive
+      a7ffe1ad; operator verifier passes. G1 holds 13 rows, all global.
+      Blocking gaps: G1, G2, G9. Loop since 2026-09-04 evening: private
+      half committed and register bumped before review, auto-merge armed
+      after PASS, batches of 10 to 14 rows, docs-only PRs take the CI fast
+      path (#533). Next: batch 18, the thirteen May rows (DEC-20260505-A
+      to DEC-20260513-D), after which G1 has no pending row and the
+      orchestrator closes it; then G2's 34 collisions one at a time, then
+      G9's closing review. This track is the M2 exit gate: the closure
+      register's validator refuses a state where it is done, or any
+      post-m2 track is active or done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -426,6 +423,19 @@ tracks:
       - docs/decisions/records/DEC-20260321-A.md
       - docs/decisions/records/DEC-20260329-A.md
       - handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md
+      - docs/decisions/records/DEC-20260406-E.md
+      - docs/decisions/records/DEC-20260409-A.md
+      - docs/decisions/records/DEC-20260409-B.md
+      - docs/decisions/records/DEC-20260409-D.md
+      - docs/decisions/records/DEC-20260410-A.md
+      - docs/decisions/records/DEC-20260413-A.md
+      - docs/decisions/records/DEC-20260415-A.md
+      - docs/decisions/records/DEC-20260415-B.md
+      - docs/decisions/records/DEC-20260422-H.md
+      - docs/decisions/records/DEC-20260427-H.md
+      - docs/decisions/records/DEC-20260427-I.md
+      - docs/decisions/records/DEC-20260503-B.md
+      - handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md
 
   - id: T6
     title: M3 repo-native workflows
