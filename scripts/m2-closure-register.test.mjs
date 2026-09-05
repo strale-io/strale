@@ -156,6 +156,72 @@ const syntheticPrivate = () => {
   return { r, rows };
 };
 const pcodes = (r, rows) => validatePrivateProjection(r, rows, { schema, collisions: context.collisions, context }).map((f) => f.code);
+// Same as pcodes, but against a supplied (e.g. synthetic-collision) context/collisions pair.
+const pcodesWith = (r, rows, ctx) => validatePrivateProjection(r, rows, { schema, collisions: ctx.collisions, context: ctx }).map((f) => f.code);
+
+// The M2 program is resolving every historical ID collision (G2); once the
+// live register hits zero unresolved_collision rows, fixtures that locate a
+// live row with that disposition throw or pass vacuously (the same class of
+// break hit not_yet_reconciled at batch 18). This helper plants a fully
+// self-consistent, independent unresolved notion-duplicate collision -- two
+// public decision_rows entries plus a matching docs/decisions/id-collisions.yaml
+// entry in a copied context.collisions -- so a fixture never has to search the
+// live register for one. Counts, the public digest, and the collision-registry
+// source counts are resynced so the planted state alone introduces no
+// unrelated findings; each call plants a fresh id/page-id pair so multiple
+// calls against copies of the same base register never collide with each other.
+let syntheticCollisionSeq = 0;
+const withSyntheticCollision = (register, ctx = context) => {
+  syntheticCollisionSeq += 1;
+  const n = syntheticCollisionSeq;
+  const collisionId = `DEC-99990101-${String(n).padStart(2, "0")}`;
+  const pageA = sha256(`m2-test-synthetic-collision-a-${n}`).slice(0, 32);
+  const pageB = sha256(`m2-test-synthetic-collision-b-${n}`).slice(0, 32);
+  const titleA = `Synthetic planted collision row A #${n}, independent of any live register row`;
+  const titleB = `Synthetic planted collision row B #${n}, independent of any live register row`;
+  const rowFor = (pageId, title) => ({
+    page_id: pageId,
+    id: collisionId,
+    title,
+    historical_status: "active",
+    source_url: `https://app.notion.com/${pageId}`,
+    collision: { id: collisionId, resolution_status: "unresolved", row_disposition: "unresolved", kind: "notion-duplicate" },
+    disposition: "unresolved_collision",
+    evidence: ["docs/decisions/id-collisions.yaml"],
+    rationale: "Synthetic planted collision for register-test isolation from live collision state.",
+  });
+  const rowA = rowFor(pageA, titleA);
+  const rowB = rowFor(pageB, titleB);
+  register.decision_rows.push(rowA, rowB);
+  register.sources.collision_registry.collision_count += 1;
+  register.sources.collision_registry.row_count += 2;
+  const collisions = {
+    ...ctx.collisions,
+    collision_count: (ctx.collisions.collision_count ?? 0) + 1,
+    source_row_count: (ctx.collisions.source_row_count ?? 0) + 2,
+    collisions: [
+      ...(ctx.collisions.collisions ?? []),
+      {
+        id: collisionId,
+        resolution_status: "unresolved",
+        records: [
+          { title: titleA, historical_status: "active", source_url: rowA.source_url, source_page_id: pageA, disposition: "unresolved" },
+          { title: titleB, historical_status: "active", source_url: rowB.source_url, source_page_id: pageB, disposition: "unresolved" },
+        ],
+      },
+    ],
+  };
+  const newContext = {
+    ...ctx,
+    collisions,
+    public:
+      ctx.public && ctx.public.available !== false
+        ? { ...ctx.public, pageIds: new Set([...ctx.public.pageIds, pageA, pageB]), ids: new Set([...ctx.public.ids, collisionId]) }
+        : ctx.public,
+  };
+  resync(register);
+  return { register, context: newContext, rowA, rowB, collisionId, pageA, pageB };
+};
 
 test("a coordinated identity edit that re-syncs every digest passes CI but fails the raw-export comparison", () => {
   const r = base();
@@ -487,13 +553,15 @@ test("blocking is derived: open buckets must be covered by a blocking gap", () =
   const c = codes(r);
   assert.ok(c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
   // The rule only fires for a bucket that still holds rows; not_yet_reconciled
-  // has been empty since batch 18, so the fixture uses unresolved_collision (G2).
-  const r2 = base();
+  // has been empty since batch 18, so the fixture used unresolved_collision
+  // (G2), which G2 itself is draining to zero. A planted synthetic collision
+  // keeps the bucket non-empty independent of the live register's state.
+  const { register: r2, context: ctx2 } = withSyntheticCollision(base());
   const open = "decision_rows.unresolved_collision";
   const g2 = r2.exit_gaps.find((g) => g.covers.includes(open) && g.blocking);
   g2.covers = g2.covers.filter((x) => x !== open);
   r2.exit_gaps.find((g) => !g.blocking && !g.covers.includes(open)).covers.push(open);
-  assert.ok(codes(r2).includes("EXIT_GAP_NOT_BLOCKING"));
+  assert.ok(codes(r2, ctx2).includes("EXIT_GAP_NOT_BLOCKING"));
 });
 
 test("no identity anywhere in the register text may be absent from the public set", () => {
@@ -552,23 +620,28 @@ test("a formal record's source rows must be migrated rows pointing back at it", 
 });
 
 test("collision rows must agree with the collision registry", () => {
-  const dup = (r) => r.decision_rows.find((x) => x.disposition === "unresolved_collision" && x.collision.kind === "notion-duplicate");
-  const r = base();
-  dup(r).disposition = "not_yet_reconciled";
-  resync(r);
-  has(r, "DECISION_ROW_COLLISION_UNDECLARED");
-  const r2 = base();
-  dup(r2).collision.id = "DEC-19990101-Z";
-  has(r2, "DECISION_ROW_COLLISION_ID_MISMATCH");
-  const r3 = base();
-  const c3 = dup(r3);
-  c3.disposition = "resolved_collision";
-  c3.collision.resolution_status = "resolved";
-  resync(r3);
-  has(r3, "DECISION_ROW_COLLISION_STATUS_MISMATCH");
-  const r4 = base();
-  dup(r4).collision.row_disposition = "documented_only";
-  has(r4, "DECISION_ROW_COLLISION_ROW_DISPOSITION_MISMATCH");
+  // Each sub-case plants its own synthetic notion-duplicate collision rather
+  // than locating a live unresolved_collision row: G2 is draining that
+  // bucket to zero, and a search that finds nothing throws or passes
+  // vacuously.
+  const s0 = withSyntheticCollision(base());
+  s0.rowA.disposition = "not_yet_reconciled";
+  resync(s0.register);
+  has(s0.register, "DECISION_ROW_COLLISION_UNDECLARED", s0.context);
+
+  const s1 = withSyntheticCollision(base());
+  s1.rowA.collision.id = "DEC-19990101-Z";
+  has(s1.register, "DECISION_ROW_COLLISION_ID_MISMATCH", s1.context);
+
+  const s2 = withSyntheticCollision(base());
+  s2.rowA.disposition = "resolved_collision";
+  s2.rowA.collision.resolution_status = "resolved";
+  resync(s2.register);
+  has(s2.register, "DECISION_ROW_COLLISION_STATUS_MISMATCH", s2.context);
+
+  const s3 = withSyntheticCollision(base());
+  s3.rowA.collision.row_disposition = "documented_only";
+  has(s3.register, "DECISION_ROW_COLLISION_ROW_DISPOSITION_MISMATCH", s3.context);
 });
 
 test("collision payloads are validated wherever they appear and forbidden elsewhere", () => {
@@ -606,10 +679,9 @@ test("collision payloads are validated wherever they appear and forbidden elsewh
   row(r3, "intentionally_historical").collision = { id: "DEC-20260517-B", resolution_status: "unresolved", row_disposition: "unresolved", kind: "notion-duplicate" };
   assert.ok(codes(r3).includes("DECISION_ROW_COLLISION_PAYLOAD_UNSUPPORTED"));
   // Registry row stripped of its payload.
-  const r4 = base();
-  const reg = r4.decision_rows.find((x) => x.collision?.kind === "notion-duplicate" && x.disposition === "unresolved_collision");
-  delete reg.collision;
-  const c4 = codes(r4);
+  const s4 = withSyntheticCollision(base());
+  delete s4.rowA.collision;
+  const c4 = codes(s4.register, s4.context);
   assert.ok(c4.includes("SCHEMA") || c4.includes("DECISION_ROW_COLLISION_PAYLOAD_EXPECTED"), c4.join(","));
 });
 
@@ -652,12 +724,12 @@ test("the track register cannot start M3 or close the gate while blocking M2 gap
 
 test("private rows whose identities are already public, or with unspecific evidence, are rejected", () => {
   const { r, rows } = syntheticPrivate();
-  const pub = r.decision_rows.find((x) => x.disposition === "unresolved_collision" && x.collision.kind === "notion-duplicate");
+  const { register: rSynth, context: ctxSynth, rowA: pub } = withSyntheticCollision(r);
   // Manufacture a private row with a page id and id that are both public on main.
   rows[0].page_id = pub.page_id;
   rows[0].id = pub.id;
   rows[0].source_url = pub.source_url;
-  const c = pcodes(r, rows);
+  const c = pcodesWith(rSynth, rows, ctxSynth);
   assert.ok(c.includes("PRIVATE_ROW_ALREADY_PUBLIC"), c.join(","));
   const { r: r2, rows: rows2 } = syntheticPrivate();
   rows2[0].evidence = ["README.md"];
@@ -685,9 +757,9 @@ test("evidence must be disposition-specific, not merely valid", () => {
   const r = base();
   row(r, "formally_migrated").evidence = ["README.md"];
   has(r, "DECISION_ROW_EVIDENCE_NOT_SPECIFIC");
-  const r2 = base();
-  r2.decision_rows.find((x) => x.disposition === "unresolved_collision" && x.collision.kind === "notion-duplicate").evidence = ["README.md"];
-  has(r2, "DECISION_ROW_EVIDENCE_NOT_SPECIFIC");
+  const s2 = withSyntheticCollision(base());
+  s2.rowA.evidence = ["README.md"];
+  has(s2.register, "DECISION_ROW_EVIDENCE_NOT_SPECIFIC", s2.context);
   const r3 = base();
   const nr = r3.formal_records.find((x) => x.source_kind === "notion-row");
   nr.git_provenance = "docs/decisions/README.md";
@@ -716,13 +788,14 @@ test("inventory dispositions must match the migration-map table", () => {
 });
 
 test("a cross-surface collision must not be a registry row, must carry its own id, and must be cited", () => {
-  const r = base();
-  // Pick a still-unresolved notion-duplicate row: flipping a resolved
-  // (formally_migrated) collision row's kind also trips the formal-record
-  // cross-surface rule (CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED), which is a
-  // separate check this assertion does not target.
-  r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate" && x.disposition === "unresolved_collision").collision.kind = "cross-surface";
-  has(r, "DECISION_ROW_CROSS_SURFACE_IN_REGISTRY");
+  // Plant a synthetic still-unresolved notion-duplicate row rather than
+  // locating one on the live register (G2 is draining it to zero): flipping
+  // a resolved (formally_migrated) collision row's kind also trips the
+  // formal-record cross-surface rule (CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED),
+  // which is a separate check this assertion does not target.
+  const s = withSyntheticCollision(base());
+  s.rowA.collision.kind = "cross-surface";
+  has(s.register, "DECISION_ROW_CROSS_SURFACE_IN_REGISTRY", s.context);
   const r2 = base();
   r2.decision_rows.find((x) => x.collision?.kind === "cross-surface").collision.id = "DEC-19990101-Z";
   has(r2, "DECISION_ROW_CROSS_SURFACE_ID_MISMATCH");
@@ -1214,10 +1287,11 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
   const m = row(r4, "formally_migrated");
   r4.next_decision_batch.candidates.push({ page_id: m.page_id, id: m.id, why: "planted migrated candidate" });
   has(r4, "NEXT_BATCH_ROW_NOT_PENDING");
-  const r5 = base();
-  const col = row(r5, "unresolved_collision");
-  r5.next_decision_batch.candidates.push({ page_id: col.page_id, id: col.id, why: "planted collision candidate" });
-  has(r5, "NEXT_BATCH_COLLIDES");
+  // A live unresolved_collision row would do, but G2 is draining that bucket
+  // to zero; a planted synthetic collision is a registry collision either way.
+  const s5 = withSyntheticCollision(base());
+  s5.register.next_decision_batch.candidates.push({ page_id: s5.rowA.page_id, id: s5.rowA.id, why: "planted collision candidate" });
+  has(s5.register, "NEXT_BATCH_COLLIDES", s5.context);
   const r6 = base();
   r6.next_decision_batch.candidates.push({ page_id: "0".repeat(32), id: "DEC-x", why: "planted unknown candidate" });
   has(r6, "NEXT_BATCH_ROW_UNKNOWN");
@@ -1237,11 +1311,13 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
 });
 
 test("every open bucket must be covered by an exit gap", () => {
-  // An uncovered bucket is only a finding while it holds rows; use the still-open
-  // unresolved_collision bucket (G2), since not_yet_reconciled is empty since batch 18.
-  const r = base();
-  for (const g of r.exit_gaps) g.covers = g.covers.filter((c) => c !== "decision_rows.unresolved_collision");
-  has(r, "EXIT_GAP_UNCOVERED");
+  // An uncovered bucket is only a finding while it holds rows; not_yet_reconciled
+  // has been empty since batch 18, and G2 is draining unresolved_collision to
+  // zero too, so a planted synthetic collision keeps that bucket non-empty
+  // independent of the live register's state.
+  const s = withSyntheticCollision(base());
+  for (const g of s.register.exit_gaps) g.covers = g.covers.filter((c) => c !== "decision_rows.unresolved_collision");
+  has(s.register, "EXIT_GAP_UNCOVERED", s.context);
   const r2 = base();
   for (const g of r2.exit_gaps) g.covers = g.covers.filter((c) => c !== "legacy_inventory.incomplete");
   has(r2, "EXIT_GAP_UNCOVERED");

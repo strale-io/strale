@@ -76,6 +76,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -282,6 +283,7 @@
         "handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -571,7 +573,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "27df02346df8d29345b8e7387edb18c585b0f7edc8b2c3913cad122ac8a8e7f6",
+      "sha256": "c31c19de27ad58835b1e9760899eaba93bc96772962854ccfbf324442d880633",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
