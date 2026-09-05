@@ -41,6 +41,41 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-34
+    subject: "PR #582 — eight keyless agent-data capabilities (clinical-trials-search, doi-resolve, citation-graph, cert-transparency-search, host-exposure-lookup, breach-exposure-check, fda-safety-search, company-fundamentals) plus a corrected false claim on password-strength"
+    commit: 4529f778
+    merged: "2026-09-06"
+    priority: high
+    status: pending
+    why_codex: >
+      Eight new executors on the paid rail at once, and the Claude review
+      round found a defect class the repo has an open three-strike
+      investigation on: twenty-two refusal messages that the circuit
+      breaker, the quality floor and the trust surfaces all read as
+      internal errors, which is the 2026-08-14 french-company-data incident
+      (LESSONS F1/F9) reproduced eight times over. It was caught by review,
+      not by authoring, which is the argument for a second opinion rather
+      than against one. The batch also changed a customer-facing claim on a
+      capability it did not otherwise touch (password-strength said
+      "Password is NOT stored" while transactions.input retains it for 90
+      days) — a narrowing correction under DEC-20260822-A part 2, but a
+      claim change nonetheless.
+    what_to_attack: >
+      Whether every refusal site in the eight executors is recognised by
+      all three consumers on the ASYNC and x402 paths, not just the sync
+      one — the house-style rewrite was verified through
+      classifyTransactionFailure/isUserInputError/categorizeError in
+      new-capabilities-refusal.test.ts, but only sync execution was
+      exercised live. Whether company-fundamentals can exceed the SEC's 10
+      requests/second under concurrent customer calls (9-13 requests per
+      call, concurrency 5, no cross-request limiter; an SEC block is not a
+      refusal and would open the breaker) — raised by the Claude review and
+      deliberately left open. Whether the manifests' `guaranteed` fields
+      are actually always present on a successful response, which no gate
+      proves. Whether cert-transparency-search's two upstreams can
+      disagree about the same domain in a way the provenance line does not
+      make visible.
+    claude_verdicts: 1 round, FAIL with five blockers, all addressed; re-review not run before merge
   - id: CX-33
     subject: "PR #569 — M2 G2 batch 5: the last nine ID collisions (DEC-20260505-D/E, DEC-20260507-A/B/C, DEC-20260508-B/C, DEC-20260512-A, DEC-20260513-F) resolved atomically; G2 closed"
     commit: f7b1f651
