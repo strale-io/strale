@@ -72,3 +72,27 @@ not be removed. A clean block releases the `plan.review_route` exit gap's
 blocking requirement; the gap itself must still cover that bucket regardless.
 This block records no review by itself. It only lets the validator see one
 that has actually happened.
+
+Quotation fidelity across the records is checked by an operator script,
+`scripts/m2-quote-fidelity.mjs`, not by CI (it needs the private Notion
+export). It extracts every double-quoted span in a record's body and looks
+for it, in order, in one of six candidate sources: the record's own Notion
+row fields when `--export` is given, evidence entries that are repository
+paths, repository paths mentioned in backticks in the same paragraph as the
+span, `CLAUDE.md` and `AGENTS.md`, every other record, and `strale-io/strale-
+frontend` evidence entries read from a sibling checkout when `--frontend` is
+given. Comparison uses one declared normalization: transliterate the euro
+sign, multiplication sign, and the greater/less-than-or-equal and arrow and
+ellipsis symbols to their letter or ASCII spelling, lowercase, then delete
+every character that is not a letter or digit, which is what lets an
+em-dash, a curly quote, markdown emphasis, and a trailing period at a
+truncation point all pass as the same text. A span containing an ellipsis is
+checked as ordered segments, so a quote may legitimately skip text but may
+not reorder it. Run it with `node scripts/m2-quote-fidelity.mjs --export
+<path to the raw export> --frontend <path to the strale-frontend checkout>`;
+add `--only <record file>` to check one record, `--json <path>` for a
+machine-readable copy of the same report, and `--strict` to exit 1 when any
+residual remains, for scripting. Its own tests live in
+`scripts/m2-quote-fidelity.test.mjs` (`npm run context:test` runs them; all
+passing) and plant a broken normalizer and a broken segment-ordering check to
+prove the test suite actually fails against each.
