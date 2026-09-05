@@ -9,12 +9,13 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-256 files (229 with a recorded intent, 27 without).
+257 files (230 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-system-audit.md`](_general/from-code/2026-09-05-quiet-material-system-audit.md) | Retain the founder's preferred Quiet Material redesign and audit its system and assets for cohesion and completeness. |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md`](_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md) | make every `scripts/m2-closure-register.test.mjs` fixture that locates a |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md`](_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md) | land the G9 stage-1 closing-review mechanism so the M2 closure |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md) | resolve T10 gap G2 batch 5, the last nine historical decision-ID |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md) | resolve T10 gap G2 batch 4, seven historical decision-ID collisions |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md) | resolve T10 gap G2 batch 3, seven historical decision-ID collisions |

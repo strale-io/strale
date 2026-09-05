@@ -305,6 +305,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -607,7 +608,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "0ad32287a09be89f2a182036289acd01fa7092267d90ab9dcb8e9190e6c06caa",
+      "sha256": "26d7e75bde9242819dff8ce63a6fa2d023d25f97e744ab5293c6584a91d420fb",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
