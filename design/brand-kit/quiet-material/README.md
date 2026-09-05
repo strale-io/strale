@@ -1,56 +1,43 @@
-# Quiet Material: atmosphere and surface register
+# Strale brand kit — Quiet Material
 
-This is the **current consolidation proposal, revision 0.2**, for the existing Quiet Material v0.7 direction. It incorporates founder feedback on excessive nested-card spacing and same-tone reading panels. It is not a replacement identity or a production adoption. Start with the specimen catalogue under `output/pdf/`, then use the generated [register](REGISTER.md) for implementation detail. Revision 0.1 remains recoverable at commit `2972015dedfeb8bcd30369e0b0b4259bdc62f678`; it is historical, not a competing current recipe.
+**Start here for all current brand and design work.** The atmosphere, identity/type, controls, and form/icon/composition companions are accepted for continued design work. The latest acceptance is the founder’s 6 September review of the pattern and channel studies. Keep the current flowing-S logo, Instrument Sans, IBM Plex Mono and retained Quiet Material direction.
 
-The founder accepted the rendered atmosphere/surface catalogue 0.2 on 5 September after the full visual review. It is the accepted composition baseline; production adoption is still separate. The next current part of this same kit is the [identity and typography companion](foundations/README.md), including the requested direct-light-text comparison on dark marketing cards. The companion is a candidate and does not replace this catalogue.
+Design acceptance is distinct from production adoption. Existing specimen registries remain candidates, and [active.json](../../tokens/active.json) still controls production. This index connects the accepted parts; it does not introduce another palette, rule register or design direction.
 
-## Source hierarchy
+## Open the right part
 
-1. `design/tokens/active.json` remains the production authority. Positioning and claims retain their existing decision/register authority.
-2. [registry.json](registry.json) owns this candidate's asset identities, roles, pairings, crop instructions, source confidence, restrictions and reconciliation record.
-3. [quiet-material-catalogue.json](../../tokens/candidates/quiet-material-catalogue.json) contains the exact retained CSS values and separately named document geometry. Its geometry is not website layout. It supersedes no previous token candidate.
-4. [REGISTER.md](REGISTER.md) and the PDF are generated views. Edit the register/tokens, rebuild, inspect, then verify; do not hand-edit a generated view.
-5. [verification.json](verification.json) binds the PDF to the register, tokens and builder inputs. It records the measured text/background specimens, with explicit limits.
+| Need | Human guide / visual reference | Machine rules |
+|---|---|---|
+| Atmosphere, gradients and reading surfaces | [Atmosphere guide](ATMOSPHERE.md) · [24-page catalogue](output/pdf/quiet-material-catalogue.pdf) | [Asset and recipe registry](registry.json) |
+| Logo variants, font roles and fallbacks | [Identity and typography](foundations/README.md) · [Visual guide](foundations/output/pdf/identity-typography.pdf) | [Foundation registry](foundations/registry.json) |
+| Navigation, buttons, links and cards | [Interactive controls](controls/index.html) · [Usage and limits](controls/README.md) | [Control registry](controls/registry.json) |
+| Forms, feedback, utility icons and density | [Interactive patterns](patterns/index.html) · [Usage and limits](patterns/README.md) | [Pattern registry](patterns/registry.json) |
+| Cross-channel composition | [Website](patterns/website.html) · [Social](patterns/social.html) · [Email](patterns/email.html) | [Shared story and budgets](patterns/registry.json) |
+| Positioning, voice and claims | [Adopted positioning](../../../docs/programs/brand-website/POSITIONING-BRIEF.md) · [Voice](../../../docs/company/VOICE.md) | [Public claim rulings](../../../docs/company/claims.yaml) |
+| Current acceptance, gaps and next work | [Completion plan](../../../docs/programs/brand-website/SYSTEM-COMPLETION.md) | [Completion record](../../../docs/programs/brand-website/system-completion.json) |
+| Product example evidence | [Current proof qualification](../../../docs/programs/brand-website/PROOF-QUALIFICATION.md) | Dated observation files linked from that record |
 
-The preserved source package remains immutable and recoverable from the release URL and archive digest in `registry.json`. The builder takes an extracted package root and verifies every referenced source file against its recorded SHA-256. Large image masters are not duplicated into this repository. The PDF embeds them; the local HTML intermediate needs the extracted originals. Fonts and their OFL licences are packaged here with digests. No source image is regenerated, retouched or recoloured.
+## Use the kit
 
-## What to review
+1. Read the positioning and the relevant companion’s limits. Choose the existing pattern that answers the reader’s question.
+2. Resolve values through that companion’s token source and assets through its registry/manifest. The `kit_parts` array in the completion record supplies exact paths and acceptance dates. Candidate document geometry is not a universal website layout specification.
+3. Give each section one message and a deliberate destination for detail. Use the named density profile; subtitles are optional. Short messages may use approved direct light text and a light action on dark Cobalt/Dusk. Detailed results use the approved light reading panel. Frost/Mint remain direct dark text compositions.
+4. Reuse an asset only in its permitted context and crop. Keep atmosphere decorative, utility icons functional, and product demonstrations traceable to evidence. The current invoice studies remain illustrative.
+5. If a needed rule or asset is missing, extend the shared source first, then render it in context and review it. Do not invent private values in a page or reduce type size to fit excess content.
+6. Run the relevant companion’s rebuild/verification steps and `npm run design:check` before treating changed output as current. These checks cover specimens; production consumers still need implementation and qualification.
 
-- Pages 2â€“3: whether the light and dark families feel related and their distinct roles are sensible.
-- Pages 4â€“7: retained gradients, then revised compositions. Dark gradients frame light paper with a fixed narrow inset. Frost and Mint have direct dark text and no inner card.
-- Pages 8â€“21: all fourteen images at landscape, square and narrow crops. Light reading panels sit low with a fixed inset, preserving atmosphere above. One-row compact cards demonstrate reducing content before type size. Amber remains image-only.
-- Page 22: the retained lockup and the legacy favicon conflict. This proposes identity/symbol separation, not a new logo.
-- Pages 23â€“24: composition rules and remaining work.
+## What is still missing
 
-The first version's thick centred frames and dark-on-dark panels were rejected in founder review. Revision 0.2 uses a 16px gradient-frame inset, 20px reading-panel padding and 12px inner corners; these are document specimen tokens, not a universal responsive component specification. Larger raster atmospheres use a 20px inset with a low-set panel. Solid off-white paper replaces the earlier translucent/gradient reading surfaces. No original image or gradient is changed. The narrow hero crop still loses its desktop quiet-left area, and the complete closing composition remains open. Direct text on raster atmospheres remains unqualified; the direct Frost/Mint examples have their own measured evidence.
+The [completion record](../../../docs/programs/brand-website/system-completion.json) owns the gap list and order. The remaining website-critical work is product proof, rights clearance for assets actually used, concise editorial/illustration briefs, actual-page accessibility/performance checks and production token/component adoption. Email-client testing, full social/blog templates, print qualification and video production are required when those channels launch; they do not all have to precede homepage design.
 
-The full-document visual review also aligns the gradient groups across swatches and compositions, keeps comparative artwork at a consistent vertical position, clarifies candidate and crop-test status, demonstrates Amber with copy outside the image, and adds PDF bookmarks. Light Mineral, Cobalt and Warm now have distinct usage guidance. These are document refinements; they do not qualify production layouts.
+A listed asset is not automatically cleared for public use. Eleven original asset histories and the original logo history remain unresolved. Missing legacy illustration masters remain unavailable; they must not be silently reconstructed or described as supplied. No extra atmospheric images are needed merely to make the inventory larger.
 
-## Rebuild and verify
+## Current and historical
 
-From the repository root:
+These four companions are additive parts of one kit. Their version numbers describe different scopes, not competing brands. The atmosphere details formerly at this README now live in [ATMOSPHERE.md](ATMOSPHERE.md); the root README is the single entry point.
 
-```powershell
-node design/brand-kit/quiet-material/build.mjs --source <extracted-package-root> --playwright <playwright/index.mjs>
-python design/brand-kit/quiet-material/verify.py
-npm run design:check
-npm run design:test
-```
+The preserved Quiet Material v0.7 release supplies the source lineage recorded in the atmosphere registry. The rejected thick-frame/same-tone catalogue 0.1 is recoverable at `2972015dedfeb8bcd30369e0b0b4259bdc62f678`. Instrument/Fieldwork boards, generated logo alternatives and the earlier refinement study are historical and cannot supply implementation defaults. Original masters, dated receipts and prior decisions stay unchanged. [PROVENANCE.md](../../PROVENANCE.md) records the lineage; the program record records work status.
 
-The optional `--playwright` argument locates an existing Playwright package; otherwise the builder uses a locally resolvable installation. It launches installed Chrome headlessly with a fresh context, allows only local/data inputs, closes the browser, and writes no product data. The PDF verifier requires PyMuPDF and Pillow. `--register-only` regenerates just the human register. `--check --source <root>` adds extracted-file integrity checks to ordinary CI validation.
+## Authority
 
-CI's existing `design:check` checks coverage, token references, original identity/digests, generated-register drift and PDF/evidence/input hashes. `design:test` includes negative checks for missing assets, changed sources, invented Amber material, silent illustration promotion, same-tone dark panels and nested Frost/Mint cards. Rendering also checks equal gradient-frame insets and the absence of an inner gradient. CI does not fetch a release or regenerate visual evidence.
-
-The contrast method samples every background pixel beneath each hidden specimen text element, on the actual Chromium composition, and requires 4.5:1 even for headings. It is a conservative check of those fixed specimens, not certification of arbitrary crops, full responsive pages, dark mode or motion. PDF text bounds and visual page review are separate checks. Verification accepts only the raw PDF bound to that render, then checks that lossless optimisation preserves every page's text, geometry and rendered pixels. Rebuild before running verification again; a prior verification record cannot authorise a different PDF. CI enforces the complete evidence shape, per-page sample coverage and agreement between measurements, failure lists and status.
-
-## Open work
-
-Current records cover all fourteen atmospheric assets, but eleven original creation/rights histories remain unknown. Missing direction-reference and capability-illustration sources are explicitly unavailable. The three editorial references remain excluded from implementation. Identity exports at small sizes, complete typography roles/fallbacks, component states, motion and channel templates still need their own specimens.
-
-Continue from [SYSTEM-COMPLETION.md](../../../docs/programs/brand-website/SYSTEM-COMPLETION.md). Keep the earlier audit and rejected studies as history; do not reactivate them as competing current directions.
-
-The [navigation, controls and cards companion](controls/README.md) is the current component candidate, continuing the accepted foundations and retained flowing-S logo with interactive examples and a PDF review.
-
-## Forms, utility symbols and composition
-
-The [patterns companion](patterns/README.md) is the current extension after the founder accepted navigation/buttons/cards. It includes generated human/machine rules, local interactive forms, an original twelve-symbol utility family, density/rhythm budgets and website/social/email composition studies. Existing companions remain retained inputs. This addition is candidate until reviewed and adopted through the existing process.
+Positioning follows DEC-20260905-A. Public claims follow `docs/company/claims.yaml`. Production design values follow `design/tokens/active.json`. Companion registries own their candidate rules/assets, token candidates own values, and generated views plus verification records describe the rendered specimens. The completion record is an execution index, not a new product or brand authority.

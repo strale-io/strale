@@ -1,0 +1,39 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "9ac4a378b7a87b15be207d0f073c513dd85784a9"
+  },
+  "at": "2026-09-05T22:23:21.171Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-brand-consolidation-check.json"
+  },
+  "summary": {
+    "checked_at": "2026-09-05T22:21:42.769401+00:00",
+    "hash_basis": "staged Git blob bytes; LF text and unchanged PNG bytes"
+  },
+  "topic": "quiet-material-kit-index-proof",
+  "raw": {
+    "checked_at": "2026-09-05T22:21:42.769401+00:00",
+    "checks": {
+      "four_current_companion_paths": true,
+      "all_gap_evidence_paths": true,
+      "changed_markdown_links_resolve": true,
+      "no_token_or_registry_changes": true
+    },
+    "observations": {
+      "authenticated_execution": false,
+      "own_transaction_retrieval": false,
+      "paid_execution_count": 0,
+      "reason": "authentication refused before execution"
+    },
+    "inputs": {
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/account-attempt.json": "1253fa76974ec515b19d0b7c7dfdcc2a2b5fc342fe72eada8376b87320826534",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/catalogue-observation.json": "f8fbe1af6b8451c35fa07376649c8acfe75bbc23225fcabace9a44acf7726d8d",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/connector-observations.json": "4308dc35c89263b22af1e6fb3291cecf9eda2c903135ebabd2d0ef734280c38b",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.png": "0a44563cb740bc71ea71b92a93deb6cdf0f70207b75edf3f7f06d93876a846ab",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.txt": "cac96382b54cd9747992bb70e53ef7e5371d430311176d6e1ded91d62ae133b6"
+    },
+    "hash_basis": "staged Git blob bytes; LF text and unchanged PNG bytes"
+  }
+}

@@ -2,15 +2,15 @@
   "schema_version": 1,
   "authority_scope": "execution-record-only",
   "status": "active",
-  "date": "2026-09-05",
+  "date": "2026-09-06",
   "visual_baseline": "Preserved Quiet Material v0.7; founder-supplied screenshot for the exact opening",
   "founder_constraint": "Retain existing visual direction. Audit and complete its design system and cohesive gradients/atmospheric images. Instrument and Fieldwork rejected.",
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "review_pattern_and_application_studies",
-    "launch_tool_and_route_proof",
-    "remaining_channel_and_accessibility_qualification"
+    "authenticated_invoice_demo_and_own_record_retrieval",
+    "website_scope_qualification_and_asset_rights",
+    "single_kit_adoption_then_homepage_narrative"
   ],
   "evidence": [
     "archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md",
@@ -37,7 +37,7 @@
     },
     {
       "id": "recipe_consistency",
-      "status": "atmosphere-baseline-accepted-direct-text-candidate",
+      "status": "accepted-compositions-production-qualification-remains",
       "finding_ids": [
         "QM-03",
         "QM-04"
@@ -94,7 +94,7 @@
     },
     {
       "id": "controls_and_navigation",
-      "status": "controls-accepted-form-extension-review-pending",
+      "status": "controls-and-form-patterns-accepted-qualification-remains",
       "finding_ids": [
         "QM-10"
       ],
@@ -105,7 +105,7 @@
     },
     {
       "id": "icons_and_illustration",
-      "status": "utility-family-proposed-illustration-sources-still-unavailable",
+      "status": "utility-family-accepted-illustration-sources-unavailable",
       "finding_ids": [
         "QM-02",
         "QM-05",
@@ -118,7 +118,7 @@
     },
     {
       "id": "density_and_rhythm",
-      "status": "candidate-budgets-and-three-channel-studies",
+      "status": "budgets-and-three-channel-studies-accepted",
       "finding_ids": [
         "QM-09"
       ],
@@ -139,7 +139,7 @@
     },
     {
       "id": "channel_templates",
-      "status": "website-social-email-composition-studies-review-pending",
+      "status": "website-social-email-studies-accepted-production-templates-remain",
       "finding_ids": [
         "QM-07",
         "QM-08"
@@ -186,6 +186,103 @@
       "id": "patterns-companion-0-1",
       "date": "2026-09-05",
       "result": "Forms, twelve utility symbols, density/rhythm rules and website/social/email composition studies. Candidate review; publication, launch proof and full channel qualification remain open."
+    },
+    {
+      "id": "patterns-acceptance-and-kit-consolidation",
+      "date": "2026-09-06",
+      "result": "Founder accepted the pattern/application studies. One kit entry now routes human and machine readers to retained companion sources; dated batch descriptions remain historical evidence."
+    }
+  ],
+  "kit_entry": "design/brand-kit/quiet-material/README.md",
+  "kit_parts": [
+    {
+      "id": "atmosphere",
+      "version": "0.2",
+      "accepted_on": "2026-09-05",
+      "guide": "design/brand-kit/quiet-material/ATMOSPHERE.md",
+      "rules": "design/brand-kit/quiet-material/registry.json",
+      "tokens": "design/tokens/candidates/quiet-material-catalogue.json",
+      "verification": "design/brand-kit/quiet-material/verification.json"
+    },
+    {
+      "id": "foundations",
+      "version": "0.1",
+      "accepted_on": "2026-09-05",
+      "guide": "design/brand-kit/quiet-material/foundations/README.md",
+      "rules": "design/brand-kit/quiet-material/foundations/registry.json",
+      "tokens": "design/tokens/candidates/quiet-material-foundations.json",
+      "verification": "design/brand-kit/quiet-material/foundations/verification.json"
+    },
+    {
+      "id": "controls",
+      "version": "0.1",
+      "accepted_on": "2026-09-05",
+      "guide": "design/brand-kit/quiet-material/controls/README.md",
+      "rules": "design/brand-kit/quiet-material/controls/registry.json",
+      "tokens": "design/tokens/candidates/quiet-material-controls.json",
+      "verification": "design/brand-kit/quiet-material/controls/verification.json"
+    },
+    {
+      "id": "patterns",
+      "version": "0.1",
+      "accepted_on": "2026-09-06",
+      "guide": "design/brand-kit/quiet-material/patterns/README.md",
+      "rules": "design/brand-kit/quiet-material/patterns/registry.json",
+      "tokens": "design/tokens/candidates/quiet-material-patterns.json",
+      "verification": "design/brand-kit/quiet-material/patterns/verification.json"
+    }
+  ],
+  "acceptance_scope": "Accepted for continued design work; not production adoption, publication approval or whole-kit qualification.",
+  "launch_proof": "docs/programs/brand-website/PROOF-QUALIFICATION.md",
+  "gaps": [
+    {
+      "id": "proof",
+      "required_before": "live-demo-or-execution-claim",
+      "status": "authentication-blocked",
+      "action": "Run invoice-extract on the synthetic PNG and retrieve that same account transaction; use measured fields only. Trace other routes separately.",
+      "evidence": "docs/programs/brand-website/PROOF-QUALIFICATION.md"
+    },
+    {
+      "id": "rights",
+      "required_before": "public-use-of-affected-assets",
+      "status": "open",
+      "action": "Resolve original S/logo and selected atmospheric asset creation/rights history, or secure a cleared replacement. Unused missing assets need not delay launch.",
+      "evidence": "design/brand-kit/quiet-material/registry.json"
+    },
+    {
+      "id": "website-qualification",
+      "required_before": "website-launch",
+      "status": "open",
+      "action": "Qualify actual responsive pages, keyboard/screen-reader paths, target browsers, image crops, performance and intended light/dark modes.",
+      "evidence": "design/brand-kit/quiet-material/patterns/verification.json"
+    },
+    {
+      "id": "editorial-and-illustration",
+      "required_before": "homepage-design-freeze",
+      "status": "open",
+      "action": "Write section briefs and concise voice examples from adopted positioning. Design product proof illustrations from verified data; use existing atmosphere only in its permitted role.",
+      "evidence": "docs/programs/brand-website/POSITIONING-BRIEF.md"
+    },
+    {
+      "id": "consumer-adoption",
+      "required_before": "production-implementation",
+      "status": "open",
+      "action": "Consolidate the accepted recipe into website tokens/components, extend consumer checks, and record production adoption through the existing decision process.",
+      "evidence": "design/tokens/active.json"
+    },
+    {
+      "id": "channels",
+      "required_before": "each-channel-launch",
+      "status": "scoped-later",
+      "action": "Finish actual social/banner/OG/blog templates; qualify sendable email in target clients and delivery setup; qualify document/print formats when used.",
+      "evidence": "design/brand-kit/quiet-material/patterns/README.md"
+    },
+    {
+      "id": "motion-video",
+      "required_before": "motion-or-video-use",
+      "status": "scoped-later",
+      "action": "Add storyboard, caption/poster and static/reduced-motion alternatives with size/loading limits for the story that earns video.",
+      "evidence": "docs/programs/brand-website/PROGRAM.md"
     }
   ]
 }
