@@ -474,6 +474,7 @@
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
+        "design/brand-kit/quiet-material/registry.json",
         "design/explorations/2026-09-05-quiet-material-refinement/FOUNDATION.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
         "docs/programs/brand-website/PROGRAM.md",
@@ -608,7 +609,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "26d7e75bde9242819dff8ce63a6fa2d023d25f97e744ab5293c6584a91d420fb",
+      "sha256": "35a7f72be878e7095f4d5c00970393880950f2e730cadabe51535f22b0658424",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

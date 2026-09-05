@@ -51,13 +51,16 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Retain Quiet Material; complete the asset manifest, locate or mark missing sources and reconcile identity/recipe conflicts, then verify existing gradient and atmospheric combinations in contextual specimens before filling remaining brand-kit gaps.
+    next_action: Review the retained-material catalogue and its restricted pairings; continue flowing-S identity exports, typography roles/fallbacks and navigation/control states using the same Quiet Material direction. Atmosphere source/recipe records and exact specimens now exist; unknown histories and unavailable source folders remain explicit.
     resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.
       - Existing direction retained and required gradient/image/surface recipes verified in relevant contexts before brand-kit adoption.
     evidence:
       - docs/programs/brand-website/SYSTEM-COMPLETION.md
+      - design/brand-kit/quiet-material/README.md
+      - design/brand-kit/quiet-material/registry.json
+      - design/brand-kit/quiet-material/verification.json
       - archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md
       - archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json
       - design/explorations/2026-09-05-quiet-material-refinement/README.md

@@ -8,47 +8,53 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "source_and_asset_governance",
     "recipe_consistency",
     "identity",
-    "icons_and_illustration"
+    "typography",
+    "controls_and_navigation"
   ],
   "evidence": [
     "archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md",
-    "archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json"
+    "archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json",
+    "design/brand-kit/quiet-material/README.md",
+    "design/brand-kit/quiet-material/registry.json",
+    "design/brand-kit/quiet-material/verification.json"
   ],
   "areas": [
     {
       "id": "source_and_asset_governance",
-      "status": "partial",
+      "status": "recorded-with-unknown-history",
       "finding_ids": [
         "QM-01",
         "QM-02"
       ],
       "acceptance": "All current image tokens resolve to versioned records; missing reference/illustration sources located or explicitly unavailable.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/README.md"
     },
     {
       "id": "recipe_consistency",
-      "status": "conflicting",
+      "status": "reconciled-proposal",
       "finding_ids": [
         "QM-03",
         "QM-04"
       ],
       "acceptance": "Written, visual and structured recipes agree, including verification, closing CTA and Mineral inverse surfaces.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/README.md"
     },
     {
       "id": "identity",
-      "status": "conflicting",
+      "status": "roles-separated-exports-pending",
       "finding_ids": [
         "QM-06"
       ],
       "acceptance": "Existing S lockup and legacy compass are separated; navigation/avatar/favicon/inverse exports reference one chosen master.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/README.md"
     },
     {
       "id": "typography",
@@ -62,24 +68,26 @@
     },
     {
       "id": "atmosphere_cohesion",
-      "status": "partial",
+      "status": "specimens-reviewed",
       "finding_ids": [
         "QM-01"
       ],
       "acceptance": "All fourteen retained masters have contextual pairings, focal/crop records and reviewed uses; no speculative expansion.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/README.md"
     },
     {
       "id": "colour_and_gradients",
-      "status": "partial",
+      "status": "exact-specimens-measured",
       "finding_ids": [
         "QM-03",
         "QM-04"
       ],
       "acceptance": "Nine gradient roles mapped to permitted uses, surfaces and state distinctions; contextual contrast measured.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/README.md"
     },
     {
       "id": "controls_and_navigation",
@@ -93,7 +101,7 @@
     },
     {
       "id": "icons_and_illustration",
-      "status": "partial",
+      "status": "references-classified-sources-unavailable",
       "finding_ids": [
         "QM-02",
         "QM-05",
@@ -101,7 +109,8 @@
       ],
       "acceptance": "Current glyph and illustration sources inventoried; functional diagram vs decorative raster rules unambiguous.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/README.md"
     },
     {
       "id": "density_and_rhythm",
@@ -136,13 +145,21 @@
     },
     {
       "id": "consumer_enforcement",
-      "status": "partial",
+      "status": "register-and-catalogue-enforced",
       "finding_ids": [
         "QM-10"
       ],
       "acceptance": "Asset reference/status checks, generated-view drift and actual apps/web/channel consumers covered by appropriate deterministic and visual checks.",
       "owner": "session",
-      "complete": false
+      "complete": false,
+      "evidence": "design/brand-kit/quiet-material/README.md"
+    }
+  ],
+  "completed_batches": [
+    {
+      "id": "retained-atmosphere-consolidation",
+      "date": "2026-09-05",
+      "result": "Complete current asset/gradient census, reconciled candidate recipes and contextual specimens; whole kit remains incomplete."
     }
   ]
 }
