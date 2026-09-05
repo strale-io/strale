@@ -79,6 +79,42 @@ between), `npm run context:check`, `npm run context:test`,
 `node scripts/m2-closure-verify-private-rows.mjs`. Results in the PR body
 and session report.
 
+## Orchestrator addendum: independent review failed on quote fidelity, now fixed
+
+The independent read-only review of PR #563 failed on quote fidelity, against
+ground truth parsed with a real JSON parser from the fourteen Notion rows.
+Nine findings: a quoted phrase misattributed to `DEC-20260420-J`'s own row
+that actually belongs to `DEC-20260420-K`'s Session B sibling (F-A-003
+anti-pattern); four resolution-report-adjacent records (`DEC-20260421-A`
+through `-D`, the 4867-page-id qualified records) each wrongly stated
+`Superseded By` *and* `Outcome` were both null when only `Superseded By` and
+`Source` are null, with the Outcome text itself misquoted or mis-attributed
+to the wrong field in one case; a dropped word ("v1 ship date slips" read
+as "the ship date slips") in `DEC-20260420-K`'s bank-verification record;
+four case/wording drifts against the Session B OQ text in the sibling
+`DEC-20260420-K` record; a flattened en dash in a fine-range quote in
+`DEC-20260420-I`; two records quoting CLAUDE.md's summary of
+`DEC-20260812-A` as if it were that record's own Decision text; a
+period moved inside a quote; a dropped capital letter ("Event-ordering"
+misquoted lowercase); and an unexplained evidence-list entry
+(`manifests/estonian-company-data.yaml`) with no supporting prose, dropped.
+All nine fixed in place; no frontmatter identity, relation, or Decision
+substance changed.
+
+Quotes were then re-verified across all thirteen records and all seven
+resolution reports by script, checking every quoted span against the parsed
+rows JSON (never the raw dump), each named sibling record's own file, named
+repo evidence files, and CLAUDE.md, with markdown line-wrap whitespace
+normalized and standard ellipsis-elision and terminal-punctuation
+conventions accounted for so the check does not fire on cosmetic rendering
+choices. The sweep found one further defect beyond the nine listed (an
+en-dash-adjacent parenthetical in `DEC-20260420-I` presenting a truncated
+row quote as if complete, closed with a fabricated period) and fixed it; a
+second checker run against every file came back clean except one accepted
+case (a resolution report renders a JSX `<br />` line break in a quoted
+frontend headline as a plain space, which is the correct rendering of the
+visible text, not a misquote).
+
 ## Constraints honored
 
 Branch `docs/m2-g2-batch-4-collisions` from `origin/main`, own worktree,
