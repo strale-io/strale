@@ -50,3 +50,7 @@ Current records cover all fourteen atmospheric assets, but eleven original creat
 Continue from [SYSTEM-COMPLETION.md](../../../docs/programs/brand-website/SYSTEM-COMPLETION.md). Keep the earlier audit and rejected studies as history; do not reactivate them as competing current directions.
 
 The [navigation, controls and cards companion](controls/README.md) is the current component candidate, continuing the accepted foundations and retained flowing-S logo with interactive examples and a PDF review.
+
+## Forms, utility symbols and composition
+
+The [patterns companion](patterns/README.md) is the current extension after the founder accepted navigation/buttons/cards. It includes generated human/machine rules, local interactive forms, an original twelve-symbol utility family, density/rhythm budgets and website/social/email composition studies. Existing companions remain retained inputs. This addition is candidate until reviewed and adopted through the existing process.
