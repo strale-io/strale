@@ -1,0 +1,140 @@
+slug: breach-exposure-check
+name: Breach Exposure Check
+description: >-
+  Known data breaches of a company's own domain: date, accounts exposed, what data classes leaked,
+  and whether credentials were among them. Takes a domain only — no personal data, no secrets.
+category: compliance
+cost_class: free_unlimited
+quota_window: none
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Hostname of the company whose breach history you want, such as adobe.com
+output_schema:
+  type: object
+  example:
+    domain: adobe.com
+    breached: true
+    breach_count: 1
+    credential_breach_count: 1
+    total_accounts_exposed: 152445165
+    most_recent_breach_date: "2013-10-04"
+    breaches:
+      - name: Adobe
+        title: Adobe
+        domain: adobe.com
+        breach_date: "2013-10-04"
+        added_date: "2013-12-04T00:00:00Z"
+        accounts_exposed: 152445165
+        data_classes:
+          - Email addresses
+          - Password hints
+          - Passwords
+          - Usernames
+        exposed_credentials: true
+        is_verified: true
+        is_fabricated: false
+        is_sensitive: false
+        is_spam_list: false
+        is_malware: false
+        is_stealer_log: false
+  properties:
+    domain:
+      type: string
+    breached:
+      type: boolean
+    breach_count:
+      type: number
+    credential_breach_count:
+      type: number
+    total_accounts_exposed:
+      type: number
+    breaches:
+      type: array
+data_source: Have I Been Pwned breach database
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      domain: adobe.com
+    expected_fields:
+      - field: domain
+        operator: not_null
+        reliability: guaranteed
+      - field: breached
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: breach_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: breaches
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    domain: adobe.com
+output_field_reliability:
+  domain: guaranteed
+  breached: guaranteed
+  breach_count: guaranteed
+  credential_breach_count: guaranteed
+  total_accounts_exposed: guaranteed
+  breaches: guaranteed
+  most_recent_breach_date: common
+limitations:
+  - title: Breaches OF the domain, not breaches affecting its people
+    text: >-
+      This reports incidents where the service running on that domain was itself breached. It does
+      not tell you whether staff at that company had accounts exposed in someone else's breach —
+      that is a per-account question this capability deliberately does not answer.
+    category: coverage
+    severity: warning
+  - title: No per-email or per-password checking, by design
+    text: >-
+      Have I Been Pwned's account endpoint and the Pwned Passwords range API are both excluded.
+      Strale records capability inputs on the transaction for 90 days with no write-time redaction,
+      so an email address or password hash passed here would be retained. Those inputs are rejected
+      with an explanatory error rather than accepted.
+    category: coverage
+    severity: warning
+    workaround: Query Have I Been Pwned directly from your own environment for account-level checks.
+  - title: A clean domain and an unknown domain look identical
+    text: >-
+      Both return breached false with an empty list. The upstream does not distinguish "we know this
+      domain and it is clean" from "we have no record of this domain at all", so absence of a breach
+      is not evidence of good security.
+    category: accuracy
+    severity: warning
+  - title: Coverage is curated, not exhaustive
+    text: >-
+      Have I Been Pwned lists breaches that were disclosed, obtained and verified by its operator.
+      Undisclosed breaches, breaches still under embargo, and incidents never traded publicly are
+      absent.
+    category: coverage
+    severity: warning
+  - title: Qualifier flags change what a row means
+    text: >-
+      is_verified false means the operator could not confirm the dump's provenance; is_fabricated,
+      is_spam_list and is_stealer_log mark rows that are not conventional service breaches. Counting
+      every row equally overstates exposure.
+    category: accuracy
+    severity: info
+  - title: total_accounts_exposed double-counts across breaches
+    text: >-
+      It is the sum of each breach's account count. One person present in three breaches of the same
+      company is counted three times; it is not a distinct-person figure.
+    category: accuracy
+    severity: info

@@ -1,0 +1,135 @@
+slug: doi-resolve
+name: DOI Resolve
+description: >-
+  Resolve a DOI to canonical publication metadata: title, authors, journal, publisher, date,
+  volume/issue/pages, ISSN, licence and citation count. Falls back to DataCite for dataset DOIs.
+category: data-extraction
+cost_class: free_unlimited
+quota_window: none
+price_cents: 2
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - doi
+  properties:
+    doi:
+      type: string
+      description: "A bare DOI (10.1038/nature12373), a doi: prefixed string, or any doi.org URL"
+output_schema:
+  type: object
+  example:
+    doi: 10.1038/nature12373
+    registration_agency: Crossref
+    title: Nanometre-scale thermometry in a living cell
+    type: journal-article
+    container_title: Nature
+    publisher: Springer Science and Business Media LLC
+    authors:
+      - G. Kucsko
+      - P. C. Maurer
+    published: "2013-07-31"
+    volume: "500"
+    issue: "7460"
+    pages: 54-58
+    issn:
+      - 0028-0836
+    referenced_by_count: 1815
+    reference_count: 30
+    abstract: null
+    language: en
+    license_url: http://www.springer.com/tdm
+    url: https://doi.org/10.1038/nature12373
+  properties:
+    doi:
+      type: string
+    registration_agency:
+      type: string
+    title:
+      type: string
+    authors:
+      type: array
+    referenced_by_count:
+      type: number
+    url:
+      type: string
+data_source: Crossref REST API with DataCite fallback
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      doi: 10.1038/nature12373
+    expected_fields:
+      - field: doi
+        operator: not_null
+        reliability: guaranteed
+      - field: registration_agency
+        operator: not_null
+        reliability: guaranteed
+      - field: title
+        operator: not_null
+        reliability: common
+      - field: authors
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: url
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    doi: 10.1038/nature12373
+output_field_reliability:
+  doi: guaranteed
+  registration_agency: guaranteed
+  url: guaranteed
+  authors: guaranteed
+  issn: guaranteed
+  title: common
+  type: common
+  container_title: common
+  publisher: common
+  published: common
+  referenced_by_count: common
+  reference_count: common
+  volume: rare
+  issue: rare
+  pages: rare
+  abstract: rare
+  language: rare
+  license_url: rare
+limitations:
+  - title: Two registration agencies of the eleven that exist
+    text: >-
+      Crossref and DataCite together register the large majority of DOIs, but mEDRA, JaLC, KISTI,
+      Airiti and the EU Publications Office run their own. A DOI registered with one of those
+      resolves at doi.org but returns not-registered here.
+    category: coverage
+    severity: warning
+  - title: Metadata is only as complete as the publisher's deposit
+    text: >-
+      Crossref stores what the publisher submitted. Abstracts, licences, ORCIDs and page ranges are
+      optional fields and are frequently absent even for major journals — the Nature article in the
+      example above has no deposited abstract.
+    category: coverage
+    severity: info
+  - title: DataCite records are thinner than Crossref records
+    text: >-
+      The DataCite fallback path returns title, publisher, year, creators and type. Journal-specific
+      fields (container title, volume, issue, pages, ISSN) are null because dataset DOIs do not
+      carry them.
+    category: coverage
+    severity: info
+  - title: Citation count is Crossref's, not a consensus figure
+    text: >-
+      referenced_by_count counts citations from works deposited at Crossref. Scopus, Web of Science
+      and OpenAlex all report different totals for the same paper.
+    category: accuracy
+    severity: info
+    workaround: Call citation-graph for the OpenAlex figure and the citing works themselves.

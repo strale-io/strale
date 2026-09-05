@@ -1,0 +1,140 @@
+slug: fda-safety-search
+name: FDA Safety Search
+description: >-
+  Search FDA enforcement (recall) reports for drugs, medical devices and food: recall class, reason,
+  recalling firm, status, distribution and dates. Filter by product domain and recall classification.
+category: data-extraction
+cost_class: free_quota
+quota_window: daily
+quota_cap: 1000
+known_rate_limit:
+  value: 240
+  unit: per_minute
+  source_url: https://open.fda.gov/apis/authentication/
+price_cents: 5
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Product name, ingredient, firm or recall reason
+    domain:
+      type: string
+      description: "drug, device or food. Default: drug"
+    classification:
+      type: string
+      description: >-
+        Optional severity filter: 1 (reasonable probability of serious harm), 2 (temporary or
+        reversible harm), 3 (unlikely to cause harm)
+    limit:
+      type: integer
+      description: "Recalls to return, 1-50. Default: 10"
+output_schema:
+  type: object
+  example:
+    query: aspirin
+    domain: drug
+    classification: null
+    total_results: 81
+    returned: 1
+    recalls:
+      - recall_number: D-0508-2023
+        status: Ongoing
+        classification: Class II
+        product_description: Alprazolam C-IV, 1 mg, packaged in 30 Tabs per bottle
+        reason_for_recall: "CGMP Deviations: potential product cross contamination"
+        recalling_firm: Direct Rx
+        recall_initiation_date: "2023-03-22"
+        report_date: "2023-04-12"
+        distribution_pattern: Nationwide in the USA
+        voluntary_or_mandated: "Voluntary: Firm initiated"
+        product_quantity: 349 bottles
+        firm_city: Dawsonville
+        firm_state: GA
+        firm_country: United States
+  properties:
+    query:
+      type: string
+    domain:
+      type: string
+    total_results:
+      type: number
+    returned:
+      type: number
+    recalls:
+      type: array
+data_source: openFDA enforcement reports (U.S. Food and Drug Administration)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: us
+test_fixtures:
+  known_answer:
+    input:
+      query: aspirin
+      domain: drug
+      limit: 3
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: domain
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: recalls
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: aspirin
+    domain: drug
+    limit: 1
+output_field_reliability:
+  query: guaranteed
+  domain: guaranteed
+  classification: guaranteed
+  total_results: guaranteed
+  returned: guaranteed
+  recalls: guaranteed
+limitations:
+  - title: United States FDA jurisdiction only
+    text: >-
+      Covers drugs, medical devices and food regulated by the FDA. Consumer products fall to the
+      CPSC, and EU recalls appear in RASFF and Safety Gate — none of which are searched here.
+    category: coverage
+    severity: warning
+    workaround: Use us-product-recall-search for CPSC consumer-product recalls.
+  - title: Enforcement reports lag the recall itself
+    text: >-
+      A recall is announced by the firm first and appears in the enforcement database only once the
+      FDA has classified it, which commonly takes weeks. A very recent recall will be missing.
+    category: freshness
+    severity: warning
+  - title: Free-text matching, not an ingredient index
+    text: >-
+      The query is matched against product description, recall reason and firm name. A search for a
+      generic ingredient will miss recalls that name only a brand, and vice versa. The example
+      query "aspirin" matches records whose description mentions it, not every aspirin-containing product.
+    category: accuracy
+    severity: warning
+  - title: Classification is the FDA's judgement of the recall
+    text: >-
+      Class I, II and III describe the health hazard the FDA assessed at classification time. They
+      are not a measure of how many units were affected or whether the recall was completed.
+    category: accuracy
+    severity: info
+  - title: An empty result is returned as a result
+    text: >-
+      openFDA signals no matches with HTTP 404. That is translated into total_results 0 with an
+      empty list rather than an error, so a no-match query is not billed as a failure.
+    category: accuracy
+    severity: info

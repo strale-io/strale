@@ -1,0 +1,157 @@
+slug: citation-graph
+name: Citation Graph
+description: >-
+  Traverse the citation graph around a paper: works that cite it, works it references, and totals.
+  Accepts a DOI, arXiv id, PubMed id or OpenAlex work id.
+category: data-extraction
+cost_class: free_unlimited
+quota_window: none
+known_rate_limit:
+  value: 10
+  unit: per_second
+  source_url: https://docs.openalex.org/how-to-use-the-api/rate-limits-and-authentication
+price_cents: 3
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - paper_id
+  properties:
+    paper_id:
+      type: string
+      description: DOI, arXiv id (2209.15001), PubMed id, or OpenAlex work id (W2159974629)
+    limit:
+      type: integer
+      description: "Works to return per edge, 1-50. Default: 10"
+    direction:
+      type: string
+      description: "citations, references, or both. Default: both"
+output_schema:
+  type: object
+  example:
+    resolved_id: W2159974629
+    paper:
+      openalex_id: W2159974629
+      title: Nanometre-scale thermometry in a living cell
+      year: 2013
+      venue: Nature
+      citation_count: 1989
+      doi: 10.1038/nature12373
+      type: article
+      authors:
+        - Georg Kucsko
+      url: https://openalex.org/W2159974629
+    citation_count: 1989
+    citing_works_total: 1990
+    reference_count: 36
+    open_access_pdf: https://www.nature.com/articles/nature12373.pdf
+    citations:
+      - openalex_id: W3037447387
+        title: Quantum sensing
+        year: 2017
+        venue: Reviews of Modern Physics
+        citation_count: 4067
+        doi: 10.1103/revmodphys.89.035002
+        url: https://openalex.org/W3037447387
+    references:
+      - openalex_id: W1557405337
+        title: "Quantum correlation in disordered spin systems: Applications to magnetic sensing"
+        year: 2009
+        citation_count: 75
+        url: https://openalex.org/W1557405337
+    citations_unavailable: false
+    references_unavailable: false
+  properties:
+    resolved_id:
+      type: string
+    paper:
+      type: object
+    citation_count:
+      type: number
+    citing_works_total:
+      type: number
+    reference_count:
+      type: number
+    citations:
+      type: array
+    references:
+      type: array
+data_source: OpenAlex (OurResearch) scholarly works API
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: true
+personal_data_categories:
+  - name
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      paper_id: 10.1038/nature12373
+      limit: 3
+    expected_fields:
+      - field: resolved_id
+        operator: not_null
+        reliability: guaranteed
+      - field: reference_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: citations
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: references
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    paper_id: 10.1038/nature12373
+    limit: 1
+output_field_reliability:
+  resolved_id: guaranteed
+  paper: guaranteed
+  reference_count: guaranteed
+  citations: guaranteed
+  references: guaranteed
+  citations_unavailable: guaranteed
+  references_unavailable: guaranteed
+  citation_count: common
+  citing_works_total: common
+  open_access_pdf: rare
+limitations:
+  - title: OpenAlex counts differ from Scopus and Web of Science
+    text: >-
+      Citation totals depend on which corpus the index covers. OpenAlex is broader and includes
+      preprints and repositories, so its count typically exceeds Scopus for the same work. Do not
+      present the figure as the citation count.
+    category: accuracy
+    severity: warning
+  - title: The two citation totals need not agree
+    text: >-
+      citation_count comes from the work record and citing_works_total from a live query over the
+      index. They drift apart by a small margin while OpenAlex reindexes — 1,989 against 1,990 in
+      the example above. Neither is a correction of the other.
+    category: accuracy
+    severity: info
+  - title: References are limited to what the record lists
+    text: >-
+      reference_count reflects the reference list OpenAlex extracted, which is usually shorter than
+      the bibliography actually printed in the paper — 36 against the 30 Crossref records for the
+      example work. References are unavailable entirely for many older and paywalled articles.
+    category: coverage
+    severity: warning
+  - title: Preprints and published versions are separate works
+    text: >-
+      An arXiv preprint and its journal version often carry distinct OpenAlex ids and split the
+      citations between them. Resolving by the published DOI returns only that version's edges.
+    category: coverage
+    severity: info
+  - title: Edge lists degrade independently of the counts
+    text: >-
+      If a citations or references query fails, the corresponding array is empty and the matching
+      citations_unavailable / references_unavailable flag is true. An empty array with the flag
+      false means the work genuinely has no edges of that kind.
+    category: availability
+    severity: info
