@@ -88,8 +88,8 @@ counts:
     total: 5
     superseded: 0
   exit_gaps:
-    blocking: 2
-    non_blocking: 7
+    blocking: 1
+    non_blocking: 8
 legacy_inventory:
 - path: AGENTS.md
   owner_area: root-agent-entrypoint
@@ -5249,7 +5249,14 @@ exit_gaps:
   - docs/decisions/records/DEC-20260513-C.md
   - docs/decisions/records/DEC-20260513-D.md
 - id: G2
-  gap: 'Resolved. No unresolved_collision row remains. T10 G2 batch 1 resolved the five earliest
+  gap: 'Resolved. No unresolved collision remains: T10 G2 batches 1 to 5 (PRs #553, #555, #560, and
+    the two that followed, the last being #569) resolved all 34 remaining collisions atomically,
+    each row a source-qualified formal record or an evidence-backed documented_only disposition,
+    one resolution report per collision under archive/sessions/, and the operator verifier
+    passes. The schema''s exit_gaps object has no separate closed state distinct from
+    blocking: false; this gap is recorded resolved by its rewritten text and non-blocking status,
+    not a schema field. A bare collided id remains untargetable. History of the closure
+    follows. T10 G2 batch 1 resolved the five earliest
     collisions (ten rows, all historically active), namely DEC-20260225-P-c5d6, DEC-20260303-A,
     DEC-20260304-A, DEC-20260304-B, and DEC-20260304-C, each with two formal records under distinct
     source-qualified record keys. T10 G2 batch 2 resolved six further collisions (twelve rows, all
@@ -5271,7 +5278,7 @@ exit_gaps:
     with two, all historically active; DEC-20260507-B with one; DEC-20260508-C, a three-row collision,
     with three); one row became documented_only (DEC-20260507-B''s superseded NL twin, naming
     DEC-20260508-C''s KVK-ineligibility row as its successor). No unresolved_collision row remains.'
-  blocking: true
+  blocking: false
   owner: session
   phase: M2
   covers:

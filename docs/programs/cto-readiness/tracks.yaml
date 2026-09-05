@@ -275,19 +275,22 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      G1 closed (PR #552). G2 batches 1 to 4 done (PRs #553, #555, #560,
-      #563): twenty-five ID collisions resolved atomically; batch 4 covered
-      the April 20 to 21 group (the direct-connections doctrine row that
-      amends DEC-20260420-H, the SA.2b backfill rows, the Payee Assurance
-      conditions and input spec, the landing page H1 and Section 2, the
-      Phase 4 split) and corrected in prose the two records that call
-      DEC-20260420-K unresolved. Blocking gaps: G2 (9 collisions remain)
-      and G9. Next: G2 batch 5, the last nine collisions (May 5 to 13,
-      including the three-row DEC-20260508-C), after which the
-      orchestrator closes G2; then G9's closing review of the complete
-      candidate set at an exact commit. This track is the M2 exit gate:
-      the closure register's validator refuses a state where it is done,
-      or any post-m2 track is active or done, while a blocking gap
+      G1 closed (PR #552). G2 closed in this bookkeeping batch after G2
+      batch 5 (PR #569) resolved the last nine collisions (May 5 to 13,
+      including the three-row DEC-20260508-C); all 35 collisions now carry
+      a resolution report and every row a source-qualified record or an
+      evidence-backed documented_only disposition. Blocking gap: G9 only,
+      the closing independent review of the complete M2 candidate set at
+      an exact commit, with its verdict archived. Next: G9. The route is
+      the 2026-09-03 amendment (DEC-20260903-A): a fresh read-only Claude
+      agent reviews the full candidate set (every record under
+      docs/decisions/records/, the registry, the register and the
+      resolution reports) at one commit, the verdict is archived under
+      archive/sessions/ and cited from G9's evidence, and the Codex
+      re-review obligation for the whole set is recorded on the backlog.
+      Only then may this track be marked done. This track is the M2 exit
+      gate: the closure register's validator refuses a state where it is
+      done, or any post-m2 track is active or done, while a blocking gap
       remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
@@ -474,6 +477,16 @@ tracks:
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260421-C.md
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260421-D.md
       - handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260505-D.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260505-E.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-A.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-B.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-C.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-B.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-C.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260512-A.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260513-F.md
+      - handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md
 
   - id: T6
     title: M3 repo-native workflows

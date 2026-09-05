@@ -41,6 +41,26 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-33
+    subject: "PR #569 — M2 G2 batch 5: the last nine ID collisions (DEC-20260505-D/E, DEC-20260507-A/B/C, DEC-20260508-B/C, DEC-20260512-A, DEC-20260513-F) resolved atomically; G2 closed"
+    commit: f7b1f651
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The last collision batch, after which the closure register records
+      G2 resolved and only G9 blocks the M2 exit. Includes the three-row
+      DEC-20260508-C and the superseded NL row. Whether each disposition is
+      justified by the parsed rows, each code claim traced to the file, and
+      the G2 closure justified by the register's own counts are the Codex
+      judgements.
+    what_to_attack: >
+      Each record against its Notion row (by page id, parsed); each
+      registry entry against the report and the register rows; the zero
+      unresolved_collision count, the G2 closure and exit_gaps counts; the
+      register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-32
     subject: "PR #564 — startup-migration block 0112 lists the eight free-public-API capabilities and clears the fabricated dependency_health rule on six of them"
     commit: 135e556d

@@ -570,9 +570,14 @@ test("blocking is derived: open buckets must be covered by a blocking gap", () =
   // keeps the bucket non-empty independent of the live register's state.
   const { register: r2, context: ctx2 } = withSyntheticCollision(base());
   const open = "decision_rows.unresolved_collision";
-  const g2 = r2.exit_gaps.find((g) => g.covers.includes(open) && g.blocking);
-  g2.covers = g2.covers.filter((x) => x !== open);
-  r2.exit_gaps.find((g) => !g.blocking && !g.covers.includes(open)).covers.push(open);
+  // G2 itself is non-blocking once resolved, so the fixture first makes every
+  // gap covering the bucket non-blocking (a no-op after G2's closure) and
+  // then asserts the synthetic rows alone produce the finding.
+  for (const g of r2.exit_gaps) if (g.covers.includes(open)) g.blocking = false;
+  r2.counts.exit_gaps = {
+    blocking: r2.exit_gaps.filter((g) => g.blocking).length,
+    non_blocking: r2.exit_gaps.filter((g) => !g.blocking).length,
+  };
   assert.ok(codes(r2, ctx2).includes("EXIT_GAP_NOT_BLOCKING"));
 });
 
@@ -1695,6 +1700,14 @@ test("EXIT_GAP_NOT_BLOCKING isolates the plan.review_route branch: no closing_re
   // because the block is absent, not because any of its checks failed.
   const { register: r, context: ctx } = withSyntheticCollision(base());
   assert.equal(r.closing_review, undefined);
+  // G2 is non-blocking once every live collision is resolved, so the gap that
+  // covers the synthetic bucket is made blocking here; otherwise that bucket,
+  // not plan.review_route, would produce the finding before the plant.
+  for (const g of r.exit_gaps) if (g.covers.includes("decision_rows.unresolved_collision")) g.blocking = true;
+  r.counts.exit_gaps = {
+    blocking: r.exit_gaps.filter((g) => g.blocking).length,
+    non_blocking: r.exit_gaps.filter((g) => !g.blocking).length,
+  };
   const g9 = r.exit_gaps.find((g) => g.covers.includes("plan.review_route"));
   assert.equal(g9.blocking, true, "sanity: the live G9 gap is blocking");
   // With G9 blocking, the branch does not fire: nothing isolates it yet.
