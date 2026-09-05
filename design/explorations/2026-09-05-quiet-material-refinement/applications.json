@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "status": "candidate",
+  "fixture_status": "conceptual; not a captured response",
+  "purpose": "Compare Quiet Material composition across website, social and PDF",
+  "copy": {
+    "nav": "Tools     Use cases     Developers     Pricing",
+    "navcta": "Read the docs",
+    "hero": "Give your agents\nmore useful tools.",
+    "herobody": "Search the web, extract document data and\nvalidate inputs through one Strale connection.",
+    "explore": "Explore tools",
+    "docslink": "Read the docs",
+    "demokicker": "DOCUMENTS / DATA",
+    "invoice1": "INVOICE",
+    "vendor1": "Northstar Systems",
+    "invoiceid1": "INV-1042",
+    "invoicetotal1": "Total",
+    "money1": "EUR 2,400.00",
+    "due1": "Due 30 September 2026",
+    "resultlabel1": "EXTRACTED FIELDS",
+    "resultvendor1": "Northstar Systems",
+    "resultmoney1": "EUR 2,400.00",
+    "resultdue1": "30 Sep 2026",
+    "fixture1": "Illustrative example",
+    "study1": "01 / WEBSITE OPENING / CANDIDATE",
+    "benefit": "Documents in.\nUseful data out.",
+    "benefitlink": "Explore document tools",
+    "invoice2": "INVOICE",
+    "vendor2": "Northstar Systems",
+    "id2": "INV-1042",
+    "billing2": "Services",
+    "amount2": "EUR 2,400.00",
+    "date2": "Due 30 September 2026",
+    "extract2": "EXTRACT",
+    "out2": "FIELDS YOUR AGENT CAN USE",
+    "companylabel2": "Company",
+    "companyvalue2": "Northstar Systems",
+    "totallabel2": "Total",
+    "totalvalue2": "EUR 2,400.00",
+    "duelabel2": "Due date",
+    "duevalue2": "30 September 2026",
+    "fixture2": "Illustrative document and fields. Not a captured API response.",
+    "study2": "02 / BENEFIT SECTION / CANDIDATE",
+    "mobilemenu": "Menu",
+    "mobilehero": "Give your agents\nmore useful tools.",
+    "mobilebody": "Search, extract and validate\nthrough one Strale connection.",
+    "mobilecta": "Explore tools",
+    "mobiledocs": "Read the docs",
+    "mobileproof": "DOCUMENTS / DATA",
+    "mobileinvoice": "Extracted from INV-1042",
+    "mobilevendor": "Northstar Systems",
+    "mobilemoney": "EUR 2,400.00",
+    "mobiledate": "Due 30 September 2026",
+    "mobilefixture": "Illustrative example",
+    "mobilestudy": "03 / MOBILE STUDY / CANDIDATE",
+    "sociallabel": "DOCUMENT EXTRACTION",
+    "socialtitle": "Let your agent\nread the paperwork.",
+    "socialinvoice": "INVOICE",
+    "socialvendor": "Northstar Systems",
+    "socialid": "INV-1042",
+    "socialamount": "EUR 2,400.00",
+    "socialdate": "Due 30 September 2026",
+    "socialout": "USEFUL FIELDS",
+    "socialfield1": "Northstar Systems",
+    "socialfield2": "EUR 2,400.00",
+    "socialfield3": "30 September 2026",
+    "socialfixture": "Illustrative example / Design study",
+    "pdfseries": "TOOLS AND DATA FOR AI AGENTS",
+    "pdftitle": "Give your agents\nuseful tools.",
+    "pdfsub": "A practical introduction to Strale",
+    "pdfedition": "APPLICATION STUDY / SEPTEMBER 2026",
+    "pdfchapter": "DOCUMENT EXTRACTION",
+    "pdfinside": "From an invoice\nto usable fields.",
+    "pdfintro": "Give an agent the fields it needs for the next step.\nThis illustration shows a document becoming structured data.",
+    "pdfsource": "SOURCE DOCUMENT",
+    "pdfsourcevendor": "Northstar Systems",
+    "pdfsourceid": "Invoice INV-1042",
+    "pdfsourcemoney": "EUR 2,400.00",
+    "pdfsourcedate": "Due 30 September 2026",
+    "pdfoutlabel": "EXTRACTED FIELDS",
+    "pdfoutcompanylabel": "Company",
+    "pdfoutcompany": "Northstar Systems",
+    "pdfouttotallabel": "Total",
+    "pdfouttotal": "EUR 2,400.00",
+    "pdfoutduelabel": "Due date",
+    "pdfoutdue": "30 September 2026",
+    "pdfnotecaption": "ILLUSTRATIVE EXAMPLE",
+    "pdfnote": "The document and fields are a conceptual fixture, not a captured\nAPI response. Available fields depend on the selected tool.",
+    "pdffooter": "STRALE / APPLICATION STUDY",
+    "pdfnumber": "02"
+  },
+  "applications": [
+    {
+      "id": "website-opening",
+      "token_layout": "/layout/pages/0",
+      "rule_ids": [
+        "CMP-01",
+        "DEN-01",
+        "ILL-01",
+        "CHN-01"
+      ],
+      "approval": "not-adopted"
+    },
+    {
+      "id": "document-benefit",
+      "token_layout": "/layout/pages/1",
+      "rule_ids": [
+        "CMP-01",
+        "DEN-01",
+        "ILL-01",
+        "CHN-01"
+      ],
+      "approval": "not-adopted"
+    },
+    {
+      "id": "mobile-opening",
+      "token_layout": "/layout/pages/2",
+      "rule_ids": [
+        "CMP-01",
+        "DEN-01",
+        "ILL-01",
+        "CHN-01"
+      ],
+      "approval": "not-adopted"
+    },
+    {
+      "id": "social-square",
+      "token_layout": "/layout/pages/3",
+      "rule_ids": [
+        "CMP-01",
+        "DEN-01",
+        "ILL-01",
+        "CHN-01"
+      ],
+      "approval": "not-adopted"
+    },
+    {
+      "id": "pdf-cover",
+      "token_layout": "/layout/pages/4",
+      "rule_ids": [
+        "CMP-01",
+        "DEN-01",
+        "ILL-01",
+        "CHN-01"
+      ],
+      "approval": "not-adopted"
+    },
+    {
+      "id": "pdf-interior",
+      "token_layout": "/layout/pages/5",
+      "rule_ids": [
+        "CMP-01",
+        "DEN-01",
+        "ILL-01",
+        "CHN-01"
+      ],
+      "approval": "not-adopted"
+    }
+  ]
+}

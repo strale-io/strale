@@ -1,6 +1,6 @@
 schema_version: 1
 program: brand-website
-program_status: paused
+program_status: active
 updated: "2026-09-05"
 tracks:
   - id: T1
@@ -19,18 +19,18 @@ tracks:
       - archive/receipts/2026-09-04-audit-brand-foundation-discovery.json
   - id: T2
     title: Positioning and creative brief
-    status: founder_gated
+    status: done
     gate: none
     depends_on: [T1]
-    owner: petter
-    blocker: The founder authorised brief preparation; the completed proposed brief still needs strategic adoption and terminology reconciliation.
-    next_action: Review POSITIONING-BRIEF.md, record the agreed benefit hierarchy and reconcile tools versus data services through the existing decision process, then begin T3 and T4 in bounded batches.
+    owner: session
+    next_action: Positioning adopted under DEC-20260905-A; continue product-proof qualification and candidate application work without reopening this approval.
     resume_file: docs/programs/brand-website/POSITIONING-BRIEF.md
     exit:
       - Audience, jobs, promise, benefit hierarchy, proof limits and primary action agreed.
       - Any conflicting prior strategy explicitly reconciled without silently replacing decisions.
     evidence:
       - docs/programs/brand-website/POSITIONING-BRIEF.md
+      - docs/strategy/2026-09-05-brand-direction-adoption.md
       - archive/sessions/2026-09-05-quiet-material-review.md
   - id: T3
     title: Product proof and launch claim boundaries
@@ -38,24 +38,27 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Map proposed launch claims to customer-visible evidence and specify bounded execution-route parity or retrieval fixes only where needed.
-    resume_file: docs/programs/brand-website/PROGRAM.md
+    next_action: Continue the launch proof map with route-specific customer retrieval and exact demo-tool verification; specify bounded fixes only for claims intended to ship.
+    resume_file: docs/programs/brand-website/LAUNCH-PROOF.md
     exit:
       - Claim-to-evidence map distinguishes shipped, internally implemented and proposed behaviour.
       - Stronger unsupported claims omitted or verified after bounded remediation.
-    evidence: []
+    evidence:
+      - docs/programs/brand-website/LAUNCH-PROOF.md
   - id: T4
     title: Asset audit and art direction
-    status: queued
+    status: active
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Use the rendered Quiet Material review to audit remaining assets and compare the preserved direction with a refined homepage opening, contrasting benefit section, social post and PDF cover/interior.
-    resume_file: docs/programs/brand-website/PROGRAM.md
+    next_action: Review the first application studies, finish the remaining logo/type/atmosphere and interaction audit, and refine the candidate foundation from contextual feedback.
+    resume_file: design/explorations/2026-09-05-quiet-material-refinement/README.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.
       - One direction selected through homepage, benefit, social and document examples.
-    evidence: []
+    evidence:
+      - design/explorations/2026-09-05-quiet-material-refinement/README.md
+      - archive/receipts/2026-09-05-check-brand-direction-applications.json
   - id: T5
     title: Human and machine brand kit
     status: queued

@@ -10,7 +10,7 @@ customer-facing copy, PR descriptions, session summaries — should read.
 
 Plain English is part of the system, not a preference:
 
-- **No jargon, ever.** Not "capabilities" but *data services*. Not "circuit
+- **Use audience-appropriate terms (DEC-20260905-A).** Use *tools* as the primary marketing catalogue noun; use *data services* when explaining the underlying service. Keep exact technical identifiers such as `capabilities` where developers need the API contract. Not "circuit
   breaker open" but *switched off*. Not "x402 payers" but *paying customers*.
   Not "quarantined" but *paused*.
 - **Say what it means for the business.** Finished work is described by what

@@ -87,3 +87,7 @@ Candidate token file: `design/tokens/candidates/codex-handoff-round-23.json`.
 No `design/explorations/` entry exists for it — the source document is
 already a self-contained spec, unlike Quiet Material's dated folder, so
 there was nothing further to preserve before extracting the token subset.
+
+## 5 September 2026: Quiet Material refinement
+
+DEC-20260905-A adopts the positioning, not the visual identity. The [new exploration](explorations/2026-09-05-quiet-material-refinement/README.md) tests retained Quiet Material assets through website, social and PDF applications, with its own exploring token candidate and source digests. It supersedes no existing candidate and does not promote active production values.
