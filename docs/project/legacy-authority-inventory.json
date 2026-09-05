@@ -272,6 +272,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md",
+        "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -457,6 +458,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-7-pricing.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md",
+        "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -502,6 +504,7 @@
         "handoff/_general/from-code/2026-09-02-claude-code-resume-checkpoint.md",
         "handoff/_general/from-code/2026-09-02-t12-research-contract.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
@@ -551,7 +554,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "7de49cd2876bd847513c26d43def417b3ead2158307cc9db40ab7db71da70274",
+      "sha256": "76614e8ebbb906b4aaa76f19d72ba657a2a3bd47fe1c313a5edac6d6f4b6f4ec",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
