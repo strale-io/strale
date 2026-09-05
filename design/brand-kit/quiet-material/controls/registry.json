@@ -1,0 +1,115 @@
+{
+  "id": "quiet-material-controls-0.1",
+  "status": "candidate",
+  "production_adopted": false,
+  "founder_direction": "Keep current flowing-S logo; symbol alternatives are closed. Continue accepted foundations and short direct-text dark cards.",
+  "token_source": "design/tokens/candidates/quiet-material-controls.json",
+  "baseline": "design/tokens/candidates/quiet-material-foundations.json",
+  "pages": [
+    "overview",
+    "buttons",
+    "navigation",
+    "mobile",
+    "cards",
+    "feedback"
+  ],
+  "buttons": {
+    "variants": [
+      "primary",
+      "secondary",
+      "text",
+      "inverse"
+    ],
+    "states": [
+      "default",
+      "hover",
+      "active",
+      "focus-visible",
+      "disabled",
+      "loading"
+    ],
+    "min_target_px": 44,
+    "primary_per_group": 1
+  },
+  "navigation": {
+    "pattern": "disclosure",
+    "escape": "close-and-return-focus",
+    "outside": "close",
+    "focus_leaves": "close",
+    "secondary": "native-anchor-navigation",
+    "mobile": "inline-disclosure-not-modal"
+  },
+  "cards": {
+    "patterns": [
+      "marketing",
+      "discovery",
+      "result"
+    ],
+    "max_nested_reading_panels": 1,
+    "marketing": {
+      "headings": 1,
+      "paragraphs_max": 1,
+      "primary_actions_max": 1
+    },
+    "discovery": {
+      "headings": 1,
+      "paragraphs_max": 1,
+      "metadata_rows_max": 1,
+      "interactive_model": "single-anchor"
+    },
+    "result": {
+      "interactive_model": "contained-actions",
+      "fixture_rows": 3,
+      "fixture_only": true
+    }
+  },
+  "rules": [
+    {
+      "id": "overview",
+      "title": "A clear next step.",
+      "summary": "Familiar controls, quieter surfaces and enough room for the message.",
+      "guidance": "Keep the current logo. Use the existing type roles and palette; choose a surface for the content it carries."
+    },
+    {
+      "id": "buttons",
+      "title": "Make the main action obvious.",
+      "summary": "One strong action. Supporting choices stay quieter.",
+      "guidance": "Use links for destinations and buttons for actions. Keep labels short, preserve the label while loading, and explain why an action is unavailable."
+    },
+    {
+      "id": "navigation",
+      "title": "A calm way through the product.",
+      "summary": "Primary navigation introduces the site. Secondary navigation locates the reader within a topic.",
+      "guidance": "Dropdowns open on activation, not hover. Tab follows ordinary links; Escape closes an open disclosure and returns focus to its trigger."
+    },
+    {
+      "id": "mobile",
+      "title": "Give small screens room.",
+      "summary": "The same labels and hierarchy, with an inline menu that opens below the header.",
+      "guidance": "Keep controls at least 44px high. Allow labels to wrap. The mobile menu is a disclosure, not a modal; it never traps focus."
+    },
+    {
+      "id": "cards",
+      "title": "Let the content choose the card.",
+      "summary": "A short invitation, a useful tool, and an inspectable result need different compositions.",
+      "guidance": "Use a single link for a discovery card. Use contained actions for a result. Never nest interactive targets or add a panel just to hold a heading."
+    },
+    {
+      "id": "feedback",
+      "title": "Make every state understandable.",
+      "summary": "State changes should explain what happened and what comes next.",
+      "guidance": "Use text alongside status colour. Keep unavailable controls legible, announce asynchronous outcomes, and remove decorative motion when reduced motion is requested."
+    }
+  ],
+  "limits": [
+    "Specimen only; no production adoption",
+    "Fixture results and local actions; no API call, billing or product proof",
+    "Chrome keyboard and responsive checks; screen-reader and cross-browser qualification remain open",
+    "No direct text on raster atmospheric images qualified",
+    "No full form, modal, table or icon library in this batch"
+  ],
+  "sources": [
+    "https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/",
+    "https://www.w3.org/WAI/WCAG22/Understanding/focus-visible.html"
+  ]
+}
