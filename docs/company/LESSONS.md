@@ -203,7 +203,7 @@ over time is the honest measure of whether the taxonomy is catching up.
 > total labelled weekly, a one-day-old instrument read as a 30-day fact, funnel
 > steps compared over different periods, a population defined by hand.
 
-**Count: 9.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
+**Count: 10.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
 (a hand-rolled filter that inner-joined `users` and therefore silently measured
 ~nothing, because nearly all revenue arrives with no user attached); a seventh
 on 2026-08-22 — a largest-buyer share compared across two windows of different
@@ -299,6 +299,84 @@ module is a new instance of this family, whoever computes it and however careful
 they were; and any *comparison* of two measurements must check that both windows
 are answerable on the same basis, not merely that each value was individually
 available.
+
+**Incident 10, 2026-09-04 — "in production, last 24h" was our own test harness,
+all 2,425 times, for 98 days.** PR #502 fixed three capabilities that answered a
+wrong-shaped input with a raw `TypeError` instead of a structured refusal, and
+justified the fix with a production impact table: `gitignore-generate` 13 calls,
+`timezone-meeting-find` 12, `redirect-trace` 12, "which reached the customer as
+an unstructured 500". Every one of those calls was `system@strale.internal` —
+the test harness, deliberately feeding malformed input to its own negative
+tests. Partitioned by caller class over the capabilities' whole lifetime: 808 /
+806 / 811 harness, and **zero** registered accounts and **zero** anonymous x402
+callers, back to 2026-05-29. No customer has ever seen any of the three errors.
+
+The fix itself is correct and stays merged — an `as string[]` cast is not a
+check, and crashing on a declared contract violation is a real defect. What was
+wrong was the reason recorded for it, in a merged PR body where it would be
+cited later. Corrected on the PR.
+
+**And then the correction was itself wrong, in the same shape, and that is the
+half of this incident worth keeping.** The first correction claimed one place
+customer impact *did* exist: that `redirect-trace`'s `max_redirects` bug had
+served `Too many redirects (>0)` to 2 anonymous x402 calls, "same root cause, so
+the fix covers it". Retracted the same morning, caught by the independent review
+of the batch carrying the correction, which returned FAIL on exactly this.
+Three disproofs, any one sufficient: both callers sent **valid** numbers
+(`max_redirects: 5` and `10`, so the NaN/0 path is never reached); the `(>0)`
+is `safeFetch`'s own hardcoded internal cap, not the caller's parameter, and
+`redirect-trace.ts`'s docstring says so; and the error class went extinct on
+2026-08-17 when `returnOnRedirectCap` landed in #318, **17 days before** the fix
+now credited with covering it. The true statement is stronger than the false
+one: no customer was ever affected by anything PR #502 fixed, full stop.
+
+*How it happened, because it is not a second failure but the same one.*
+`who-called.ts` rendered those two rows as `Starting URL: [service]` — the
+production error sanitizer redacts URLs for external callers, while the harness
+rows directly above showed their real URLs. The string alone could not say what
+those callers sent; `transactions.input` had to be read, and was not. A matching
+error string on a matching slug was taken for a matching cause. **The generalisation
+is not about populations at all: an instrument built to stop one inference from
+outrunning its evidence will happily serve a display that invites a different
+one, and the fix for a redacted field is to open the record it was redacted
+from, never to reason from what survived redaction.** The tool's closing line —
+which summed every non-harness row, printing "12 customer-facing call(s)" for 9
+completed and 3 failed — has been split into total and failed, because in a tool
+built to stop "13 calls" reading as "13 customers" that was the one line that
+read exactly that way.
+
+*Why this is F2 and not carelessness.* The query was correct. Its population was
+everybody. This family's own standing rule — "any business number computed
+outside `lib/metrics` is a new instance of this family, whoever computes it and
+however careful they were" — already covered it, and the module already exported
+`externalCustomers()`, which would have produced zero. It was not reached for.
+
+**Generalisation, and it is the F2 incident 9 lesson arriving in a second
+place:** `externalCustomers()` is a *filter*, and a filter is something a caller
+has to remember to apply. The failure mode when they forget is silent, and — the
+part that makes it dangerous — flattering to whatever claim is being made, since
+on this platform an unfiltered count is roughly 98% harness by default. Where the
+safe value is also the default, an opt-in guard is a convention rather than a
+guard.
+
+*Repaired 2026-09-04* by adding a **partition** rather than another filter:
+`callerClass()` / `callerClassSql()` in `lib/metrics/populations.ts` split every
+transaction into `harness` / `account` / `anonymous`, and
+`apps/api/scripts/who-called.ts` prints all three side by side — including at
+zero, because a class that disappears when empty is exactly how "13 calls" gets
+read as "13 customers". Both are built from one `internalUserIds()` subquery
+that `externalCustomers()` now also uses, so the filter and the partition cannot
+disagree about who is ours; `populations.test.ts` renders both through the
+Postgres dialect and fails if their SQL or their bind parameters ever diverge.
+Nine tests, three of which were verified failing against two planted mutations
+(a partition drifted off the shared subquery, and `account` collapsed into
+`anonymous` when no email was joined).
+
+*What is still owed, unchanged:* the replay. This family has been "REPAIRED BUT
+NOT CLOSED" since incident 7 for want of re-deriving the 2026-08-15 conclusions
+through `lib/metrics`. Incident 10 is a fresh argument for it rather than a
+substitute — it happened in a session that had the right helper available and
+did not use it, which no amount of module design fixes on its own.
 
 ### F3 · Incorrect billing or economic judgement
 

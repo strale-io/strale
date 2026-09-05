@@ -61,10 +61,21 @@ list below is the minimum the run must be able to answer.
 `CRITICAL`, `WARNING`, stale balance reading, prepaid-credit expiry, inventory
 gap, and automatic vendor suspension as an overnight-health finding. Then check
 open breakers, newly quarantined capabilities, failing CI on main, and invariant
-alerts. For each: is it a defect, a correct refusal, or an instrument fault?
-Answering that question is the run's job, not the brief's. The report is the
-account-balance authority; never rely on remembering which vendor dashboard
-needs a manual check.
+alerts. For each: is it a defect, a correct refusal, or an instrument fault —
+**and who it actually happened to**? Answering those questions is the run's job,
+not the brief's. The report is the account-balance authority; never rely on
+remembering which vendor dashboard needs a manual check.
+
+> **Never read a raw call count as customer impact.** The harness is roughly 98%
+> of all traffic, so an unfiltered count is a harness count by default.
+> `cd apps/api && npx tsx scripts/who-called.ts --slug <slug> --days N --errors`
+> (production read-only) prints harness / registered account / anonymous x402
+> side by side, at zero as well as above it. Run it before any finding about a
+> capability's failures reaches either artifact. On 2026-09-04 a merged change
+> reported three capabilities crashing "in production, last 24h" at 13/12/12
+> calls; every one of the 2,425 such calls in those capabilities' lifetimes was
+> the harness feeding its own negative tests, and no customer had ever seen the
+> error. LESSONS.md F2 incident 10.
 
 Credential failures for Serper and Dilisense are re-armed automatically only
 after the configured API-key value changes; the tower stores a one-way key
