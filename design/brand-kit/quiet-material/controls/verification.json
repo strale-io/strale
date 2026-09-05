@@ -3,7 +3,7 @@
   "production_adopted": false,
   "inputs": {
     "registry.json": "f09a38f11da044da9ef8b58718512057616eeb76368f9c5b8d5895b99d654011",
-    "build.mjs": "c0c74d6f70c9bc6d0c64007420be37d5e0a24e090da01ef25fa1c21a8ddcafe8",
+    "build.mjs": "6b8f45670b39dbeb9f75b963be1bde06c38f90623f30d6f27a4f0f19253de3c8",
     "specimen.css": "decc5d17e173e74a30bd6b26236b1542dc505ca7769ca7d0788d871db17d84b0",
     "interactions.js": "ad67bb55b710c29e5548f90bfc2d4dc57433ea46873e7e4ae61f4671f7b591cc",
     "verify.mjs": "f412fa23a99a75b62ee836bd3921509235c9dcdb518716190d83dc2159bdade4",
@@ -17,7 +17,7 @@
   },
   "outputs": {
     "index.html": "6990b53a71b6f161dee72ae8aef5ebde8b58b7f5a03e0fd96184f675ddb063e1",
-    "output/pdf/navigation-controls.pdf": "1b8cb16cc3d70ccded70805595edbfa2c37b92000dfa13243b7510e30d2e5bd6"
+    "output/pdf/navigation-controls.pdf": "9dea9fc4b82232d56be594a180c89202809d18508d2390d3750bfc0173e6269b"
   },
   "runtime": {
     "node": "v24.12.0",
