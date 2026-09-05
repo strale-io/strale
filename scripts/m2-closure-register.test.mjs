@@ -327,14 +327,16 @@ test("duplicate ids inside the public projection must be exactly the registry's 
 });
 
 test("private rows may not hold dispositions that are public by construction", () => {
+  // G1 reached zero not_yet_reconciled rows in batch 18, so the private bucket
+  // these fixtures borrow a row from is `unclear`, which still holds rows.
   const r = base();
-  r.private_rows.counts_by_disposition.not_yet_reconciled -= 1;
+  r.private_rows.counts_by_disposition.unclear -= 1;
   r.private_rows.count -= 1;
   r.decision_rows.push({ ...row(r, "formally_migrated"), page_id: "e".repeat(32), source_url: `https://app.notion.com/${"e".repeat(32)}` });
   resync(r);
   has(r, "DECISION_ROW_NOT_PUBLIC");
   const r2 = base();
-  r2.private_rows.counts_by_disposition.not_yet_reconciled -= 1;
+  r2.private_rows.counts_by_disposition.unclear -= 1;
   r2.private_rows.counts_by_disposition.formally_migrated = 1;
   has(r2, "SCHEMA");
 });
@@ -406,7 +408,7 @@ test("a missing decision row is rejected as silent removal and as count drift", 
   has(r, "PUBLIC_DIGEST_MISMATCH");
   const r2 = base();
   r2.private_rows.count -= 1;
-  r2.private_rows.counts_by_disposition.not_yet_reconciled -= 1;
+  r2.private_rows.counts_by_disposition.unclear -= 1;
   resync(r2);
   has(r2, "DECISION_ROW_REMOVED", withBase(base()));
 });
@@ -476,10 +478,13 @@ test("blocking is derived: open buckets must be covered by a blocking gap", () =
   r.counts.exit_gaps = { blocking: 0, non_blocking: r.exit_gaps.length };
   const c = codes(r);
   assert.ok(c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
+  // The rule only fires for a bucket that still holds rows; not_yet_reconciled
+  // has been empty since batch 18, so the fixture uses unresolved_collision (G2).
   const r2 = base();
-  const g1 = r2.exit_gaps.find((g) => g.covers.includes("decision_rows.not_yet_reconciled") && g.blocking);
-  g1.covers = g1.covers.filter((x) => x !== "decision_rows.not_yet_reconciled");
-  r2.exit_gaps.find((g) => !g.blocking).covers.push("decision_rows.not_yet_reconciled");
+  const open = "decision_rows.unresolved_collision";
+  const g2 = r2.exit_gaps.find((g) => g.covers.includes(open) && g.blocking);
+  g2.covers = g2.covers.filter((x) => x !== open);
+  r2.exit_gaps.find((g) => !g.blocking && !g.covers.includes(open)).covers.push(open);
   assert.ok(codes(r2).includes("EXIT_GAP_NOT_BLOCKING"));
 });
 
@@ -1220,8 +1225,10 @@ test("the next batch cutoff is anchored, the public candidate set is exact, and 
 });
 
 test("every open bucket must be covered by an exit gap", () => {
+  // An uncovered bucket is only a finding while it holds rows; use the still-open
+  // unresolved_collision bucket (G2), since not_yet_reconciled is empty since batch 18.
   const r = base();
-  for (const g of r.exit_gaps) g.covers = g.covers.filter((c) => c !== "decision_rows.not_yet_reconciled");
+  for (const g of r.exit_gaps) g.covers = g.covers.filter((c) => c !== "decision_rows.unresolved_collision");
   has(r, "EXIT_GAP_UNCOVERED");
   const r2 = base();
   for (const g of r2.exit_gaps) g.covers = g.covers.filter((c) => c !== "legacy_inventory.incomplete");

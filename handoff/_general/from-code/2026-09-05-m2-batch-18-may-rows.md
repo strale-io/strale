@@ -350,3 +350,15 @@ None. All named files were read; all named checks were run and
 reported; the G1 gap text states the batch closes the gap without
 touching `docs/programs/**` or G1's own `status` field, per the brief's
 explicit instruction that the orchestrator closes G1 separately.
+
+## Orchestrator addendum (after this handoff was written)
+
+The private half (11 rows) was committed to the archive repository at
+`148808fdb960c599317b3a09107b0d52bd04edae` and `private_rows.commit` in the
+register was bumped to it in this same PR, per the loop change of
+2026-09-04. The `not_yet_reconciled` key was restored to
+`private_rows.counts_by_disposition` at zero: the register schema keeps
+that key set closed and the register tests read the key, so removing it
+produced the six test failures reported above rather than the tests
+assuming a nonzero bucket. At the PR head the operator verifier prints
+`ok` and the register tests pass.
