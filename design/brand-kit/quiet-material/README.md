@@ -1,6 +1,6 @@
 # Quiet Material: atmosphere and surface register
 
-This is the **current consolidation proposal** for the existing Quiet Material v0.7 direction. It is not a replacement identity or a production adoption. Start with the specimen catalogue under `output/pdf/`, then use the generated [register](REGISTER.md) for implementation detail.
+This is the **current consolidation proposal, revision 0.2**, for the existing Quiet Material v0.7 direction. It incorporates founder feedback on excessive nested-card spacing and same-tone reading panels. It is not a replacement identity or a production adoption. Start with the specimen catalogue under `output/pdf/`, then use the generated [register](REGISTER.md) for implementation detail. Revision 0.1 remains recoverable at commit `2972015dedfeb8bcd30369e0b0b4259bdc62f678`; it is historical, not a competing current recipe.
 
 ## Source hierarchy
 
@@ -15,12 +15,12 @@ The preserved source package remains immutable and recoverable from the release 
 ## What to review
 
 - Pages 2–3: whether the light and dark families feel related and their distinct roles are sensible.
-- Pages 4–7: retained gradients, then proposed gradient/surface pairings.
-- Pages 8–21: all fourteen images at landscape, square and narrow crops. One-row compact cards demonstrate reducing content before type size.
+- Pages 4–7: retained gradients, then revised compositions. Dark gradients frame light paper with a fixed narrow inset. Frost and Mint have direct dark text and no inner card.
+- Pages 8–21: all fourteen images at landscape, square and narrow crops. Light reading panels sit low with a fixed inset, preserving atmosphere above. One-row compact cards demonstrate reducing content before type size. Amber remains image-only.
 - Page 22: the retained lockup and the legacy favicon conflict. This proposes identity/symbol separation, not a new logo.
 - Pages 23–24: composition rules and remaining work.
 
-Particular judgements: the narrow hero crop loses its desktop quiet-left area; Dusk/Ember/Graphite paired with the existing neutral glass become visibly blue-biased; Amber has no card recipe. These limitations are recorded, rather than filled with invented assets or colours. The current catalogue does not approve direct text on an atmospheric image.
+The first version's thick centred frames and dark-on-dark panels were rejected in founder review. Revision 0.2 uses a 16px gradient-frame inset, 20px reading-panel padding and 12px inner corners; these are document specimen tokens, not a universal responsive component specification. Larger raster atmospheres use a 20px inset with a low-set panel. Solid off-white paper replaces the earlier translucent/gradient reading surfaces. No original image or gradient is changed. The narrow hero crop still loses its desktop quiet-left area, and the complete closing composition remains open. Direct text on raster atmospheres remains unqualified; the direct Frost/Mint examples have their own measured evidence.
 
 ## Rebuild and verify
 
@@ -35,7 +35,7 @@ npm run design:test
 
 The optional `--playwright` argument locates an existing Playwright package; otherwise the builder uses a locally resolvable installation. It launches installed Chrome headlessly with a fresh context, allows only local/data inputs, closes the browser, and writes no product data. The PDF verifier requires PyMuPDF and Pillow. `--register-only` regenerates just the human register. `--check --source <root>` adds extracted-file integrity checks to ordinary CI validation.
 
-CI's existing `design:check` now checks coverage, token references, original identity/digests, generated-register drift and PDF/evidence/input hashes. `design:test` includes negative checks for missing assets, changed sources, invented Amber material and silent illustration promotion. CI does not fetch a release or regenerate visual evidence.
+CI's existing `design:check` checks coverage, token references, original identity/digests, generated-register drift and PDF/evidence/input hashes. `design:test` includes negative checks for missing assets, changed sources, invented Amber material, silent illustration promotion, same-tone dark panels and nested Frost/Mint cards. Rendering also checks equal gradient-frame insets and the absence of an inner gradient. CI does not fetch a release or regenerate visual evidence.
 
 The contrast method samples every background pixel beneath each hidden specimen text element, on the actual Chromium composition, and requires 4.5:1 even for headings. It is a conservative check of those fixed specimens, not certification of arbitrary crops, full responsive pages, dark mode or motion. PDF text bounds and visual page review are separate checks. Verification accepts only the raw PDF bound to that render, then checks that lossless optimisation preserves every page's text, geometry and rendered pixels. Rebuild before running verification again; a prior verification record cannot authorise a different PDF. CI enforces the complete evidence shape, per-page sample coverage and agreement between measurements, failure lists and status.
 

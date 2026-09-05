@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "id": "quiet-material-consolidation-0.1",
+  "id": "quiet-material-consolidation-0.2",
   "status": "candidate",
   "production_adopted": false,
   "updated": "2026-09-05",
@@ -70,8 +70,8 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Opening anchor",
-      "guidance": "Keep the broad pearl sweep as the opening anchor. Narrow crops lose its quiet-left field; recompose the opening rather than reusing desktop text placement.",
-      "recipe_status": "retained",
+      "guidance": "Keep the broad pearl sweep as the opening anchor. The paper panel sits low, leaving the fold visible. Narrow crops still need their own composition.",
+      "recipe_status": "revised-proposal",
       "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
@@ -79,9 +79,9 @@
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "The crop loses the desktop quiet-left field. Use as a bounded image composition with a separate reading surface; no inherited hero text-safe zone.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -93,10 +93,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface"
     },
     {
       "id": "pattern-folded-balanced",
@@ -113,18 +114,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Default light process plate",
-      "guidance": "Soft-white objects; let the folds supply depth.",
-      "recipe_status": "retained",
-      "surface_token": "--surface-card-soft-white",
+      "guidance": "Use solid off-white paper, anchored low. Let the folded image supply depth; do not add another gradient inside the card.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -136,10 +137,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-soft-white"
     },
     {
       "id": "pattern-folded-mineral",
@@ -156,18 +158,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Light process variation",
-      "guidance": "Use for a deliberate tonal change, not a success state.",
-      "recipe_status": "retained",
-      "surface_token": "--surface-card-soft-white",
+      "guidance": "Use a solid light reading surface, anchored low. The original atmosphere supplies the colour and depth.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -179,10 +181,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-soft-white"
     },
     {
       "id": "pattern-folded-cobalt",
@@ -199,18 +202,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Light technical emphasis",
-      "guidance": "The rising blue edge has more visual weight; keep text on a surface.",
-      "recipe_status": "retained",
-      "surface_token": "--surface-card-soft-white",
+      "guidance": "Use a solid light reading surface, anchored low. The original atmosphere supplies the colour and depth.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -222,10 +225,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-soft-white"
     },
     {
       "id": "pattern-folded-warm",
@@ -242,18 +246,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Light editorial variation",
-      "guidance": "Keep the material light; avoid adding a second warm tint.",
-      "recipe_status": "retained",
-      "surface_token": "--surface-card-soft-white",
+      "guidance": "Use a solid light reading surface, anchored low. The original atmosphere supplies the colour and depth.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -265,10 +269,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-soft-white"
     },
     {
       "id": "pattern-folded-dark-midnight",
@@ -285,18 +290,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Neutral technical context",
-      "guidance": "Neutral inverse glass belongs to the plate; paper remains a separate source.",
-      "recipe_status": "retained",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Pair the dark field with a solid light reading surface. Keep the atmospheric fold visible above the low-set panel.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -308,10 +313,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-neutral"
     },
     {
       "id": "pattern-folded-dark-cobalt",
@@ -328,18 +334,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Tools and enrichment",
-      "guidance": "Preserve the bright seam around the object, not behind reading text.",
-      "recipe_status": "retained",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Use a light reading surface against the blue field. Avoid a second dark blue card competing with the background.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -351,10 +357,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-neutral"
     },
     {
       "id": "pattern-folded-dark-dusk",
@@ -371,18 +378,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Closing and orchestration",
-      "guidance": "Neutral inverse reads blue against the warm field. This is a rare contrast specimen, not a default warm card; prefer a compact closing treatment.",
-      "recipe_status": "scoped-exception",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Use a light reading surface against the warm-to-blue field. Dusk remains the proposed closing atmosphere; the complete closing composition is still open.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -394,10 +401,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-neutral"
     },
     {
       "id": "pattern-folded-dark-mineral",
@@ -414,18 +422,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Document inspection",
-      "guidance": "Use the mineral inspector as the dominant result; reserve neutral glass for a labelled context exception.",
-      "recipe_status": "reconciled-proposal",
-      "surface_token": "--surface-card-inverse-mineral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Use a light reading surface for document information. Retain the mineral light in the background; do not tint the reading panel green.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -437,10 +445,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-mineral"
     },
     {
       "id": "pattern-folded-dark-spectrum",
@@ -457,18 +466,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Major multi-signal proof",
-      "guidance": "One expressive moment. Use Spectrum glass, never a generic blue result.",
-      "recipe_status": "retained",
-      "surface_token": "--surface-card-inverse-spectrum",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Keep Spectrum for a rare expressive moment. A solid light reading surface separates the information from the multi-colour field.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -480,10 +489,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-spectrum"
     },
     {
       "id": "pattern-folded-dark-ember",
@@ -500,18 +510,18 @@
       "source_status": "unrecorded",
       "status": "candidate",
       "role": "Exceptional warm emphasis",
-      "guidance": "Neutral inverse reads blue against the warm field. Keep this contrast exceptional; matched warm glass is still undefined.",
-      "recipe_status": "scoped-exception",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Use the warm field sparingly. A solid light panel replaces the previous blue glass pairing.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -523,10 +533,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-neutral"
     },
     {
       "id": "pattern-folded-dark-mulberry",
@@ -543,18 +554,18 @@
       "source_status": "approved",
       "status": "candidate",
       "role": "Identity and bounded evidence",
-      "guidance": "Keep source signals separate. The grainier material needs space around the lenses.",
-      "recipe_status": "reconciled-proposal",
-      "surface_token": "--surface-card-inverse-mulberry",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Retain Mulberry for a bounded verification story. Use a solid light panel and keep source signals separate from decorative colour.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -566,10 +577,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-mulberry"
     },
     {
       "id": "pattern-folded-dark-amber",
@@ -629,18 +641,18 @@
       "source_status": "approved",
       "status": "candidate",
       "role": "Exceptional neutral field",
-      "guidance": "The neutral inverse token is blue-biased. Use it only when blue product context is intended; prefer the unoverlaid field for a monochrome moment.",
-      "recipe_status": "restricted",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
+      "guidance": "Keep the graphite field neutral. A solid light panel replaces blue glass; the unoverlaid image remains available for a quieter moment.",
+      "recipe_status": "revised-proposal",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
       "crop": {
         "fit": "cover",
         "position": "50% 50%",
         "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
-        "desktop": "Landscape field with one bounded object.",
-        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
-        "square": "Keep one information row on the named surface; no direct text on the plate."
+        "desktop": "Center/cover image with a low-set paper panel and a fixed inset. Preserve open atmosphere above the panel.",
+        "narrow": "Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.",
+        "square": "Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above."
       },
       "provenance": {
         "file_confidence": "sha256-matches-preserved-extraction",
@@ -652,10 +664,11 @@
       "verification": {
         "asset_integrity": "verified",
         "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
-        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "contextual_contrast": "Measured for this revision in verification.json; prior glass-pair measurements do not apply.",
         "accessibility": "not-certified",
         "evidence": "verification.json"
-      }
+      },
+      "previous_surface_token": "--surface-card-inverse-neutral"
     }
   ],
   "gradients": [
@@ -669,7 +682,9 @@
       "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
-      "pair_status": "proposed-context"
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface",
+      "composition": "frame"
     },
     {
       "id": "mulberry",
@@ -681,7 +696,9 @@
       "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
-      "pair_status": "proposed-context"
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface",
+      "composition": "frame"
     },
     {
       "id": "ember",
@@ -693,7 +710,9 @@
       "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
-      "pair_status": "proposed-context"
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface",
+      "composition": "frame"
     },
     {
       "id": "cobalt",
@@ -702,10 +721,12 @@
       "role": "Tools and technical framing",
       "status": "candidate",
       "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
-      "pair_status": "proposed-context"
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface-card-inverse-neutral",
+      "composition": "frame"
     },
     {
       "id": "dusk",
@@ -714,10 +735,12 @@
       "role": "Closing transition",
       "status": "candidate",
       "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
-      "pair_status": "proposed-context"
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface-card-inverse-neutral",
+      "composition": "frame"
     },
     {
       "id": "frost",
@@ -726,10 +749,12 @@
       "role": "Quiet explanatory surface",
       "status": "candidate",
       "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
-      "surface_token": "--surface",
+      "surface_token": null,
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
-      "pair_status": "proposed-context"
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface",
+      "composition": "direct"
     },
     {
       "id": "midnight",
@@ -738,10 +763,12 @@
       "role": "Neutral technical frame",
       "status": "candidate",
       "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
-      "surface_token": "--surface-card-inverse-neutral",
-      "ink_token": "--ink-inverse",
-      "secondary_token": "--ink-inverse-secondary",
-      "pair_status": "proposed-context"
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface-card-inverse-neutral",
+      "composition": "frame"
     },
     {
       "id": "mineral",
@@ -753,7 +780,9 @@
       "surface_token": "--surface",
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
-      "pair_status": "proposed-context"
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface",
+      "composition": "frame"
     },
     {
       "id": "mint",
@@ -762,10 +791,12 @@
       "role": "Quiet mineral support",
       "status": "candidate",
       "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
-      "surface_token": "--surface",
+      "surface_token": null,
       "ink_token": "--ink",
       "secondary_token": "--ink-secondary",
-      "pair_status": "proposed-context"
+      "pair_status": "revised-proposal",
+      "previous_surface_token": "--surface",
+      "composition": "direct"
     }
   ],
   "identity": [
@@ -881,14 +912,14 @@
       "id": "QM-03",
       "title": "One pairing table",
       "status": "proposed",
-      "choice": "The register includes Mulberry, Amber and Graphite. Mineral inverse is the primary document inspector; neutral inverse is a scoped agent-context exception.",
-      "remaining": "Founder review of the reconciled specimens; production adoption remains separate."
+      "choice": "Revision 0.2 replaces nested same-tone panels with solid light reading surfaces; Frost and Mint use direct dark text. Amber remains image-only. Earlier glass mappings remain in the preserved source and predecessor commit.",
+      "remaining": "Review revised composition quality and qualify real component/channel layouts before production adoption."
     },
     {
       "id": "QM-04",
       "title": "Verification and closing recipes",
       "status": "proposed",
-      "choice": "Mulberry is the proposed current verification recipe, following the later component/census/checker. Dusk is the proposed default closing atmosphere; Spectrum is reserved for a rare major opening/proof.",
+      "choice": "Mulberry remains the proposed verification atmosphere, now with a light reading surface. Dusk is the proposed default closing atmosphere; Spectrum is reserved for a rare major opening or proof.",
       "remaining": "The compact closing composition and its default readable pairing remain to be designed. Archive conflicting recipe text only at adoption; original source stays immutable."
     },
     {
@@ -922,35 +953,43 @@
   ],
   "rules": [
     {
-      "id": "layering",
-      "text": "Choose a plain canvas, one atmospheric raster, or a bounded gradient frame. A dark raster already contains its lighting; never add a second semantic gradient."
+      "id": "containment",
+      "text": "Add a reading panel only when the information needs separation. Frost and Mint use dark text directly on the gradient in the verified specimens."
     },
     {
-      "id": "reading",
-      "text": "In this specimen release, reading text sits on its named surface. No direct text-on-image combination is approved by this catalogue."
+      "id": "contrast",
+      "text": "Dark gradients and dark atmospheric images default to a solid light reading surface. Dark-on-dark reading panels are excluded from this revision."
+    },
+    {
+      "id": "spacing",
+      "text": "Simple gradient frames use a narrow, fixed inset. Larger atmospheric images use a low-set panel with visible artwork above. Do not reuse one centred percentage-width card for both jobs."
     },
     {
       "id": "meaning",
-      "text": "Decorative green is not success. Atmosphere conveys tone; labelled product states need real evidence."
+      "text": "Atmosphere is decorative. Green is not automatically success, and an illustration does not establish a product result."
+    },
+    {
+      "id": "layering",
+      "text": "Keep one decorative field and, only where needed, one reading surface. No extra gradient inside a reading panel; no second atmospheric overlay."
     },
     {
       "id": "rhythm",
-      "text": "Plain sections are part of the system. Use open, compact and framed compositions according to the narrative; do not alternate only by changing colours."
+      "text": "Plain sections and unframed content are part of Quiet Material. Vary composition with the story; do not create rhythm only by changing background colours."
     },
     {
-      "id": "exceptions",
-      "text": "Amber has no card recipe. Dusk and Ember use neutral inverse only as a rare dominant contrast object; matched warm glass remains an open gap."
+      "id": "scope",
+      "text": "Direct text on Frost and Mint is verified only for these fixed specimens. Direct text on raster atmospheres and arbitrary responsive layouts remains unqualified. Amber remains image-only."
     }
   ],
   "claim_source": "docs/company/claims.yaml",
   "positioning": "DEC-20260905-A",
   "specimen_copy": {
-    "title": "A clear reading surface",
+    "title": "Reading surface",
     "row1": "Primary information",
     "row2": "Supporting context",
     "value1": "One idea",
     "value2": "Only what helps",
-    "disclosure": "Design specimen. No product result.",
+    "disclosure": "Composition specimen",
     "gradient_title": "Reading surface",
     "gradient_body": "One clear idea."
   },
@@ -960,12 +999,12 @@
       "square": 1,
       "phone": 1
     },
-    "compact_rule": "Square and narrow specimens remove the secondary row before changing typography. These are composition samples, not approved channel templates."
+    "compact_rule": "Atmospheric panels keep a fixed inset and sit low. Square and narrow versions remove the secondary row before changing type size. These are fixed composition specimens, not approved channel templates."
   },
   "visual_review": {
     "date": "2026-09-05",
     "status": "reviewed-specimens-only",
-    "finding": "Core families remain coherent. Warm and graphite plates need restricted roles because available neutral inverse glass is visibly blue-biased. Narrow hero crops do not retain the desktop quiet-left field.",
+    "finding": "Revision 0.2 responds to founder rejection of thick nested frames and same-tone reading panels. Original imagery and gradients are retained; exact revised specimens require their own visual and contrast verification.",
     "not_certified": [
       "whole-website accessibility",
       "direct text on atmospheric images",
@@ -974,5 +1013,19 @@
       "motion",
       "full channel templates"
     ]
+  },
+  "composition_revision": {
+    "version": "0.2",
+    "basis": "Founder approved the tighter-frame, dark-background/light-surface and direct-text-on-Frost/Mint revision on 2026-09-05.",
+    "predecessor_commit": "2972015dedfeb8bcd30369e0b0b4259bdc62f678",
+    "production_adopted": false,
+    "gradient_frame_inset_token": "--c-frame-inset",
+    "gradient_frame_inner_radius_token": "--c-frame-inner-radius",
+    "atmosphere_alignment": "bottom",
+    "light_gradient_direct_text": [
+      "frost",
+      "mint"
+    ],
+    "reading_surface_token": "--surface"
   }
 }

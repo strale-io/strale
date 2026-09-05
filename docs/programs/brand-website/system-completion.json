@@ -35,7 +35,7 @@
     },
     {
       "id": "recipe_consistency",
-      "status": "reconciled-proposal",
+      "status": "composition-revised-review-pending",
       "finding_ids": [
         "QM-03",
         "QM-04"
@@ -160,6 +160,11 @@
       "id": "retained-atmosphere-consolidation",
       "date": "2026-09-05",
       "result": "Complete current asset/gradient census, reconciled candidate recipes and contextual specimens; whole kit remains incomplete."
+    },
+    {
+      "id": "composition-correction-0-2",
+      "date": "2026-09-05",
+      "result": "Founder-approved correction direction rendered: tighter fixed frames, solid light panels on dark backgrounds and direct Frost/Mint text. Contextual specimen review remains open."
     }
   ]
 }

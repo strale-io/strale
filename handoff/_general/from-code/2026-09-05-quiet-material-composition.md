@@ -1,0 +1,11 @@
+Intent: Apply the founder-approved correction to nested-card spacing and same-tone reading surfaces within the existing Quiet Material direction.
+
+Mode: Full. The founder agreed to tighter gradient frames, light reading surfaces on dark fields, and direct dark text on Frost/Mint. Revision 0.2 is the current candidate under `design/brand-kit/quiet-material/`. Revision 0.1 remains recoverable at commit `2972015dedfeb8bcd30369e0b0b4259bdc62f678`; it is historical, not a competing recipe. The preserved source artwork, exact CSS gradients, identity and active production tokens remain unchanged.
+
+Gradient frames now use a fixed narrow inset. All reading panels use the retained solid off-white surface and dark text. Frost/Mint have no inner panel. Raster atmospheres use a lower panel with a fixed inset, leaving the artwork visible above; Amber remains image-only. Compact samples reduce information and retain readable type. The register, generated human view, catalogue, candidate geometry and program pointers agree. Guards reject a return to same-tone dark cards or nested Frost/Mint panels, and rendering checks equal frame insets.
+
+Evidence: `archive/receipts/2026-09-05-check-quiet-material-composition.json`, with detailed render bindings in `design/brand-kit/quiet-material/verification.json`. Visual checks and measured contrast concern these fixed specimens only. PyMuPDF and Poppler both render the prior and revised Balanced page off-white. The founder screenshot's pink cause remains unconfirmed; the new solid fill avoids the prior inner gradient without claiming a diagnosed viewer fix.
+
+Resume at `docs/programs/brand-website/SYSTEM-COMPLETION.md`: review revised composition quality before identity exports, typography/fallback roles and navigation/control states. The complete compact closing composition, production adoption, whole-site accessibility and remaining channel templates are still open. Do not revive the rejected identities or start another homepage iteration.
+
+Append-only legacy Journal correction: https://www.notion.so/3d267c87082c811a8ecbc99b6d87ae24. The working brand plan and current rules remain in the repository. Foreign worktrees, including the active M2 review work, were not modified.

@@ -20,7 +20,8 @@
     "specimen_copy",
     "authority",
     "specimens",
-    "font_sources"
+    "font_sources",
+    "composition_revision"
   ],
   "properties": {
     "schema_version": {
@@ -48,8 +49,27 @@
           "token",
           "css",
           "role",
-          "status"
-        ]
+          "status",
+          "composition",
+          "surface_token",
+          "ink_token",
+          "secondary_token",
+          "pair_status"
+        ],
+        "properties": {
+          "composition": {
+            "enum": [
+              "frame",
+              "direct"
+            ]
+          },
+          "surface_token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       }
     },
     "identity": {
