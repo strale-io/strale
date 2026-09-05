@@ -150,8 +150,12 @@ conversion.
 
   **Nobody was charged for the refusals.** Revenue is `status = 'completed'`
   only, so the €7.95 of list price attached to those 159 rows is *demand we
-  declined to serve*, not money taken — four times the €1.85 we actually earned
-  on the 37 we answered.
+  declined to serve*, not money taken — **4.4 times the €1.80 we earned on the
+  36 we answered**. (Both figures are the single day. An earlier draft of this
+  entry paired the day's refusals with the 30-day earnings, €1.85 on 37 calls,
+  which silently mixed two windows in one sentence; the 37th completed call was
+  an unrelated German lookup earlier in the month. Caught by independent review,
+  2026-09-05.)
 
   **The refusals are correct and must not be weakened.** `pickByName` refuses
   when two distinct German registrations tie at the same confidence, because
