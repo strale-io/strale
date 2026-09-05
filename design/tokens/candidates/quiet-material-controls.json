@@ -160,7 +160,8 @@
     24,
     "50%",
     "full",
-    999
+    999,
+    16
   ],
   "motion": {
     "duration": "150ms",
@@ -389,7 +390,8 @@
       "--three-cols": "repeat(3, minmax(0, 1fr))",
       "--four-cols": "repeat(4, minmax(0, 1fr))",
       "--doc-tracking": "-0.03em",
-      "--copy-measure": "52ch"
+      "--copy-measure": "52ch",
+      "--menu-radius": "16px"
     },
     "identity": {
       "source_viewbox": [

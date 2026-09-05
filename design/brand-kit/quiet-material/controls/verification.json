@@ -3,12 +3,12 @@
   "production_adopted": false,
   "inputs": {
     "registry.json": "f09a38f11da044da9ef8b58718512057616eeb76368f9c5b8d5895b99d654011",
-    "build.mjs": "485d6921b299bdbf88e84e265462919609ae3cc7dfa26e8657aaee9572dba746",
-    "specimen.css": "f01cb8234193b39353e5a6153e90044ed07b42fc492f508427dd64c504e040d9",
+    "build.mjs": "c0c74d6f70c9bc6d0c64007420be37d5e0a24e090da01ef25fa1c21a8ddcafe8",
+    "specimen.css": "decc5d17e173e74a30bd6b26236b1542dc505ca7769ca7d0788d871db17d84b0",
     "interactions.js": "ad67bb55b710c29e5548f90bfc2d4dc57433ea46873e7e4ae61f4671f7b591cc",
-    "verify.mjs": "aeec2f2754b7ed25aacbe3ff708a597f914a663ea0b7a29cf6edaf1fc1668340",
+    "verify.mjs": "f412fa23a99a75b62ee836bd3921509235c9dcdb518716190d83dc2159bdade4",
     "verify-pdf.py": "c0cca6a7c8cbccbedbb2b212d7c30ab045e4a1e56b87b9aa2d74ea9b6f2664a6",
-    "../../../tokens/candidates/quiet-material-controls.json": "e1764dadb62f79691a5dc5ebbd80cee998ada371cc9ecf2adbb2b01a03456d2b",
+    "../../../tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
     "../../../tokens/candidates/quiet-material-foundations.json": "2720ada20ec6e36f0f358ddda07f1310f43d1bb42334a351046771a971ed6b18",
     "../foundations/registry.json": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
     "../foundations/exports/lockup-ink.svg": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
@@ -16,8 +16,8 @@
     "../fonts/IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46"
   },
   "outputs": {
-    "index.html": "fd3c6fe5ad06c0129b771a07c7ce548a9660f95d72bdc36d9547775c5ef3c47c",
-    "output/pdf/navigation-controls.pdf": "ae54db01aec97a30bd0f1826169c5cee07a8e27f39fa7ff4349aad7ff6d979b7"
+    "index.html": "6990b53a71b6f161dee72ae8aef5ebde8b58b7f5a03e0fd96184f675ddb063e1",
+    "output/pdf/navigation-controls.pdf": "1b8cb16cc3d70ccded70805595edbfa2c37b92000dfa13243b7510e30d2e5bd6"
   },
   "runtime": {
     "node": "v24.12.0",

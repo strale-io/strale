@@ -11,6 +11,7 @@ const checks={},layoutErrors=[],consoleErrors=[];
 try {
   const page=await browser.newPage({viewport:{width:1120,height:900},deviceScaleFactor:1});
   page.on('pageerror',e=>consoleErrors.push(e.message));
+  page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
   await page.route('http**://**',route=>route.abort());
   await page.goto(pathToFileURL(resolve(here,'index.html')).href);await page.evaluate(()=>document.fonts.ready);
   assert.equal(await page.locator('.sheet').count(),6);

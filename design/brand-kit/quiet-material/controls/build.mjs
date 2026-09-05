@@ -27,6 +27,7 @@ export function validate(r,t) {
   assert.equal(t.layout.css_variables['--control-compact'],r.buttons.min_target_px+'px');
   assert.equal(t.layout.page_count,pageIds.length);
   const css=read('specimen.css');
+  for(const match of css.matchAll(/border-radius:\s*var\((--[\w-]+)\)/g)){const value=t.layout.css_variables[match[1]];assert(t.radii.includes(value)||t.radii.includes(parseFloat(value)),'Radius variable is off-scale');}
   assert(!/#[0-9a-f]{3,8}\b|\b\d+(?:\.\d+)?(?:px|pt|rem|em|ms)\b/i.test(css),'Off-token CSS');
   for(const match of css.matchAll(/var\((--[\w-]+)/g))assert(match[1] in t.layout.css_variables,`Unknown token ${match[1]}`);
   const fonts=json('../foundations/registry.json').fonts.filter(x=>x.role==='font');

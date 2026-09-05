@@ -73,7 +73,7 @@ a.card:active { border-color: var(--ink); }
 .nav-link:hover { text-decoration: underline; text-underline-offset: var(--focus-offset); }
 .caret { width: var(--gap-tiny); height: var(--gap-tiny); border-right: var(--underline) solid currentColor; border-bottom: var(--underline) solid currentColor; transform: rotate(45deg); margin-top: calc(var(--gap-tiny) * -1); }
 [aria-expanded=true] .caret { transform: rotate(225deg); margin-top: 0; }
-.disclosure-panel { position: absolute; z-index: 2; top: 100%; left: 0; min-width: var(--menu-width); background: var(--canvas); border: var(--border-width) solid var(--hairline); border-radius: var(--title-gap); padding: var(--gap-small); box-shadow: var(--menu-shadow); }
+.disclosure-panel { position: absolute; z-index: 2; top: 100%; left: 0; min-width: var(--menu-width); background: var(--canvas); border: var(--border-width) solid var(--hairline); border-radius: var(--menu-radius); padding: var(--gap-small); box-shadow: var(--menu-shadow); }
 .disclosure-panel .nav-link { display: flex; }
 .nav-space { padding: var(--gap-large) 0; min-height: var(--demo-height); }
 .section-nav { display: flex; gap: var(--gap); flex-wrap: wrap; border-bottom: var(--border-width) solid var(--hairline); margin-top: var(--gap); }
