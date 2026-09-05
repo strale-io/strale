@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "status",
+    "production_adopted",
+    "date",
+    "token_source",
+    "accepted_atmosphere_baseline",
+    "source",
+    "fonts",
+    "roles",
+    "rules",
+    "channels",
+    "review_basis",
+    "direct_dark"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "const": "quiet-material-foundations-0.1"
+    },
+    "status": {
+      "const": "candidate"
+    },
+    "production_adopted": {
+      "const": false
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "token_source": {
+      "const": "design/tokens/candidates/quiet-material-foundations.json"
+    },
+    "accepted_atmosphere_baseline": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "file",
+        "sha256",
+        "origin",
+        "rights"
+      ],
+      "properties": {
+        "file": {
+          "const": "masters/strale-lockup.svg"
+        },
+        "sha256": {
+          "const": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809"
+        },
+        "origin": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rights": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "fonts": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "sha256",
+          "role",
+          "family"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "role": {
+            "enum": [
+              "font",
+              "licence"
+            ]
+          },
+          "family": {
+            "enum": [
+              "Instrument Sans",
+              "IBM Plex Mono"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "job",
+          "sample"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "job": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sample": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "channels": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "scope"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "web",
+              "social",
+              "email",
+              "pdf"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "review_basis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "direct_dark": {
+      "const": {
+        "status": "candidate",
+        "gradient_tokens": [
+          "--atmosphere-cobalt",
+          "--atmosphere-dusk"
+        ],
+        "fixed_specimens_only": true,
+        "remeasure_on_gradient_or_layout_change": true,
+        "max_primary_actions": 1,
+        "max_paragraphs": 1
+      }
+    }
+  },
+  "additionalProperties": false
+}

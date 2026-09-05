@@ -1,0 +1,1452 @@
+{
+  "ok": true,
+  "pages": 13,
+  "document_pages": 2,
+  "inputs": {
+    "registry.json": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
+    "registry.schema.json": "5db15dd196731d26ebd45f8958234da8a35fc459be7d481e8772127ccd1a64c1",
+    "catalogue.css": "c2cab825b5ccd87629c270f6a450df5712574698cd3309d12f975cbaab92f144",
+    "build.mjs": "7bfbe3ffcf15aeccae43bfd42841834b279d8cbdea2b43f68723b3a35a0f9edf",
+    "verify.py": "932565284b96bd65c58d5b68b4a940ca1bb0aefafa9ad1f07d806446258e8a6f",
+    "evidence.schema.json": "1dc6ddde25f9a2dde5623ee99121ae919d72a409ba80eb2797b4ca393632f4fc",
+    "masters/strale-lockup.svg": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809",
+    "../registry.json": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
+    "../../../tokens/candidates/quiet-material-catalogue.json": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
+    "design/tokens/candidates/quiet-material-foundations.json": "2720ada20ec6e36f0f358ddda07f1310f43d1bb42334a351046771a971ed6b18",
+    "../fonts/InstrumentSans.ttf": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+    "../fonts/IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+    "../fonts/InstrumentSans-OFL.txt": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
+    "../fonts/IBMPlexMono-OFL.txt": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+  },
+  "outputs": {
+    "exports/avatar-dark.png": "fead39175736f7786897a910d2a155afb62657a51e7a0f8a7e76092e8e8cc91b",
+    "exports/avatar-ink.svg": "576dc28ae900b05c51c1e23fdce216fd5a816fc64ad1f408d741c036253ccd49",
+    "exports/avatar-inverse.svg": "137b1c6ef4b9fabbc6e4f6278771bbbe1cd60f536149537c13b71c5d90e64f84",
+    "exports/avatar-light.png": "030fb4fd6f6f04813ad1ce2ac864a0597fd91bf8383144dad7a4ac53c0e2e230",
+    "exports/email-logo.png": "e91fb574658f670347a3f2dd2ddab99988aeb1682885d4d2bbd0a0a144a520fd",
+    "exports/email.html": "77fc26264e8ba875510dbf62c1559bea6ab346e326d64e5751394b90c6d79635",
+    "exports/favicon-16.png": "75ce83a4f079efc0fc0dc037fce839959acc37908526b1b4ae5531ed36207c82",
+    "exports/favicon-32.png": "fa8185f632dd398772d188feb38c543994dd24ed226ef557b051034d090634e2",
+    "exports/favicon.ico": "f77a17fb9e44bc9f957efd9a5655a4082cf66371ecfdbb92ea8d8328f080374a",
+    "exports/lockup-ink.svg": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
+    "exports/lockup-inverse.svg": "fcbd4e1461d1341bee85e0630c03ede040164be0157bf658d6b2ce498ba73b60",
+    "exports/mark-ink.svg": "808c5ec13730a1d3a80680104224f8e896cb6fbac17685d25136e97a1ff82952",
+    "exports/mark-inverse.svg": "25d45de8ee601f2bf3e743f4c684c0ad47502876e0338765d48ddee86371b404",
+    "exports/social-landscape.png": "993a2bd728e7dffca86d029aa274d6e094fe8cd18fe39284bbf46e5d4ec72287",
+    "exports/social-square.png": "8d7d0185a7935c932e5a3f287f454cbedc9e0d9fc0b8e272334067889b918760",
+    "output/pdf/document-specimen.pdf": "4669a495d1732bb9a2308d46d6482eb51a11b40f54585961756bdb891ce38bac",
+    "output/pdf/identity-typography.pdf": "9f69cb6bc6023198426dfe8fa70a4e125818a1edf8841517491b4ab9b6daa1f0"
+  },
+  "dark_contrast": [
+    {
+      "text": "Give your agents more useful tools.",
+      "ratio": 5.315
+    },
+    {
+      "text": "Start with research, extraction or validation.",
+      "ratio": 5.803
+    },
+    {
+      "text": "Explore tools",
+      "ratio": 17.766
+    },
+    {
+      "text": "Start with one useful task.",
+      "ratio": 13.938
+    },
+    {
+      "text": "Find a tool that fits the work.",
+      "ratio": 14.35
+    },
+    {
+      "text": "Explore tools",
+      "ratio": 17.766
+    }
+  ],
+  "contrast_scope": "Actual Cobalt and Dusk specimen text boxes at fixed layout; 4.5:1 minimum. No direct text on raster atmospheres is qualified.",
+  "contrast_background_sha256": "09aaf73aadccfe28249b40a0fa287690e18a87065a3ee9b923aa2855c7ca202b",
+  "layout_errors": [],
+  "pdf_bounds_errors": [],
+  "email_browser_reflow": [
+    {
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "overflow": false
+    },
+    {
+      "width": 640,
+      "overflow": false
+    }
+  ],
+  "pdf_text": [
+    {
+      "document": "identity-typography",
+      "pages": 13,
+      "characters": 10162,
+      "unicode_probe": true,
+      "title": "Strale identity and typography"
+    },
+    {
+      "document": "document-specimen",
+      "pages": 2,
+      "characters": 1321,
+      "unicode_probe": true,
+      "title": "Strale A4 document typography specimen"
+    }
+  ],
+  "runtime": {
+    "node": "v24.12.0",
+    "chromium": "152.0.7977.82",
+    "playwright": "1.62.1",
+    "python": "3.14.2",
+    "pymupdf": "1.27.2.3",
+    "pillow": "12.1.1",
+    "fonttools": "4.64.0"
+  },
+  "font_audit": [
+    {
+      "family": "Instrument Sans",
+      "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+      "fixture": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\u00c5\u00c4\u00d6\u00e5\u00e4\u00f6\u00c6\u00e6\u00d8\u00f8\u00dc\u00fc\u00c9\u00e9\u00d1\u00f1\u00df\u20ac\u00a3$\u00a5\u201c\u201d\u2018\u2019.,:;!?()[]{}+-=/|",
+      "missing": [],
+      "axes": {
+        "wdth": [
+          75.0,
+          100.0,
+          100.0
+        ],
+        "wght": [
+          400.0,
+          400.0,
+          700.0
+        ]
+      },
+      "features": [
+        "aalt",
+        "case",
+        "ccmp",
+        "liga",
+        "locl",
+        "ordn",
+        "pnum",
+        "ss01",
+        "ss02",
+        "ss03",
+        "ss04",
+        "ss05",
+        "ss06",
+        "ss07",
+        "ss08",
+        "ss09",
+        "ss10",
+        "ss11",
+        "ss12",
+        "tnum"
+      ],
+      "checkmark_present": false
+    },
+    {
+      "family": "IBM Plex Mono",
+      "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+      "fixture": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789\u00c5\u00c4\u00d6\u00e5\u00e4\u00f6\u00c6\u00e6\u00d8\u00f8\u00dc\u00fc\u00c9\u00e9\u00d1\u00f1\u00df\u20ac\u00a3$\u00a5\u201c\u201d\u2018\u2019.,:;!?()[]{}+-=/|",
+      "missing": [],
+      "axes": {},
+      "features": [
+        "aalt",
+        "ccmp",
+        "dnom",
+        "frac",
+        "numr",
+        "ordn",
+        "salt",
+        "sinf",
+        "ss01",
+        "ss02",
+        "ss03",
+        "ss04",
+        "ss05",
+        "sups",
+        "zero"
+      ],
+      "checkmark_present": true
+    }
+  ],
+  "embedded_fonts": [
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 3,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 4,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 5,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 6,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 7,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 8,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 9,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 10,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 11,
+      "name": "VAAAAA+ArialMT",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 12,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 13,
+      "name": "AAAAAA+IBMPlexMono-Regular",
+      "format": "Type0",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 13,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 13,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 13,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 13,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 13,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "identity-typography",
+      "page": 13,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 1,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    },
+    {
+      "document": "document-specimen",
+      "page": 2,
+      "name": "",
+      "format": "Type3",
+      "embedded": true
+    }
+  ],
+  "limits": [
+    "No physical print proof",
+    "No real email-client or dark-mode inbox qualification",
+    "No production adoption",
+    "Glyph fixtures are not full language coverage"
+  ]
+}

@@ -2,6 +2,8 @@
 
 This is the **current consolidation proposal, revision 0.2**, for the existing Quiet Material v0.7 direction. It incorporates founder feedback on excessive nested-card spacing and same-tone reading panels. It is not a replacement identity or a production adoption. Start with the specimen catalogue under `output/pdf/`, then use the generated [register](REGISTER.md) for implementation detail. Revision 0.1 remains recoverable at commit `2972015dedfeb8bcd30369e0b0b4259bdc62f678`; it is historical, not a competing current recipe.
 
+The founder accepted the rendered atmosphere/surface catalogue 0.2 on 5 September after the full visual review. It is the accepted composition baseline; production adoption is still separate. The next current part of this same kit is the [identity and typography companion](foundations/README.md), including the requested direct-light-text comparison on dark marketing cards. The companion is a candidate and does not replace this catalogue.
+
 ## Source hierarchy
 
 1. `design/tokens/active.json` remains the production authority. Positioning and claims retain their existing decision/register authority.
