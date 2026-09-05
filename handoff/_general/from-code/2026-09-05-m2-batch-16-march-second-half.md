@@ -328,3 +328,14 @@ already written at
 scratchpad, verified 0 findings). The next T10 batch continues the same
 twelve-row cadence against the remaining 2026 rows per the program's
 usual selection order.
+
+## Orchestrator addendum (after this handoff was written)
+
+The private half (36 rows) was committed to the archive repository at
+`9da4ff92751c4afb0282141d04d9ea63359c1840` and `private_rows.commit` in the
+register was bumped to it in this same PR, per the loop change of
+2026-09-04 (private half committed and register pinned before the
+independent review). The statements above that the pin was left at
+`201b0c40...` and that the operator verifier reported failures in the
+private count and digest classes describe the worker's state before that
+step; at the PR head the verifier prints `ok`.
