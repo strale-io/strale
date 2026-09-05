@@ -330,7 +330,8 @@ and run-matches the binds, so it still fails on reordering or dropping any.
 3. **Where the new payers came from.** 5 → 13 payers and 96.4% → 76.0% in one
    week is the best commercial news in the series and nothing yet explains it.
    `newPayers` cannot answer and must not be made to.
-4. **#507 is on the Codex re-review backlog as CX-28** and owes a Codex verdict
+4. **#507 is on the Codex re-review backlog as CX-29** (CX-28 was taken by a
+   concurrent session merging #555 while this run was in CI) and owes a Codex verdict
    when the quota returns (DEC-20260903-A).
 
 **Gate status at close:** `handoff:check` will report more than one batch
