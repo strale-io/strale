@@ -301,103 +301,117 @@ collisions:
         disposition: formal_record
         record_key: DEC-20260420-H--notion-34867c87082c81b58b36de5f71c0937f
   - id: "DEC-20260420-I"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-I.md
     records:
       - title: "Adopt split-by-data-source-type as the operable form of the \"direct connections only\" doctrine. Amends DEC-20260420-H."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81c8b9d4c6b5568bbcef
         source_page_id: "34867c87082c81c8b9d4c6b5568bbcef"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-I--notion-34867c87082c81c8b9d4c6b5568bbcef
       - title: "SA.2b.c direct-SQL backfill of 260 remaining capabilities with PII classification + 2 Class 2 fixture fixes. Complete."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c8172a41ac4c9d52904de
         source_page_id: "34867c87082c8172a41ac4c9d52904de"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-I--notion-34867c87082c8172a41ac4c9d52904de
   - id: "DEC-20260420-J"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-J.md
     records:
       - title: "SA.2b.d closes Session A: 32 orphans classified (15 TRUE/17 FALSE), processes_personal_data flipped to NOT NULL with default false, heuristic fallback deleted from audit-helpers.ts + all three call sites in do.ts. Session A formally complete."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81478c15cb6985d10137
         source_page_id: "34867c87082c81478c15cb6985d10137"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-J--notion-34867c87082c81478c15cb6985d10137
       - title: "SUPERSEDED 2026-04-20 by DEC-20260420-K. Original decision (defer bank verification to v1.1) was incorrect — the v1 vision has not changed, bank verification is a launch gate, not a descope."
         historical_status: superseded
         source_url: https://app.notion.com/34867c87082c81dc803bc3709bd5fdd6
         source_page_id: "34867c87082c81dc803bc3709bd5fdd6"
-        disposition: unresolved
+        disposition: documented_only
+        rationale: "This row's own text states it was superseded 2026-04-20 by DEC-20260420-K. The formal record for this batch's DEC-20260420-K collision, DEC-20260420-K--notion-34867c87082c81e3a62bf051cc0575c4, fully carries this row's superseded scope (defer bank verification to v1.1) in its own Context section, quoting this row directly. Creating a second formal record for a plan the same-session superseding decision already fully describes would represent one abandoned scope as two live decisions."
   - id: "DEC-20260420-K"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-K.md
     records:
       - title: "Payee Assurance v1 launch is conditional on resolving the bank verification (IBAN/name match) source. No source contracted, no launch. Supersedes DEC-20260420-J."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81e3a62bf051cc0575c4
         source_page_id: "34867c87082c81e3a62bf051cc0575c4"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-K--notion-34867c87082c81e3a62bf051cc0575c4
       - title: "Session B Open Questions resolved: OQ-1 hybrid split ownership, OQ-2 5-second countdown + CI=1 skip, OQ-3 defer solutions YAML pathway, OQ-4 auto-derive solution PII from step union, OQ-5 delete env-var kill switch + add --skip-gates=<reason> CLI flag, OQ-6 delete transparency-tag heuristic default (same pattern as SA.2b.d). OQ-7 already being fixed in three-hotfix prompt."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c8198b6ecf3569a68a9b4
         source_page_id: "34867c87082c8198b6ecf3569a68a9b4"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-K--notion-34867c87082c8198b6ecf3569a68a9b4
   - id: "DEC-20260421-A"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260421-A.md
     records:
       - title: "DEC-20260421-A — Cluster 2 Phase 3 split into C1 and C2"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81babd35eba5856ded79
         source_page_id: "34867c87082c81babd35eba5856ded79"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-A--notion-34867c87082c81babd35eba5856ded79
       - title: "Payee Assurance input spec is single-field (company name only); entity resolution engine is a v1 launch blocker"
         historical_status: active
         source_url: https://app.notion.com/34967c87082c813c825cc3e4dca30a98
         source_page_id: "34967c87082c813c825cc3e4dca30a98"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-A--notion-34967c87082c813c825cc3e4dca30a98
   - id: "DEC-20260421-B"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260421-B.md
     records:
       - title: "DEC-20260421-B — Hook placement correction: onCapabilityCreated moved outside db.transaction"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81dab702f98b2034aa5d
         source_page_id: "34867c87082c81dab702f98b2034aa5d"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-B--notion-34867c87082c81dab702f98b2034aa5d
       - title: "Landing page H1 is product-led (\"Counterparty verification for AI agents, in one call.\"), not platform-led. Amends Brand & Voice Section 7.1."
         historical_status: active
         source_url: https://app.notion.com/34967c87082c81828e3fe183dd5e8072
         source_page_id: "34967c87082c81828e3fe183dd5e8072"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-B--notion-34967c87082c81828e3fe183dd5e8072
   - id: "DEC-20260421-C"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260421-C.md
     records:
       - title: "\"No scraping\" positioning commitment promoted to v1 launch blocker. All 9 EU countries currently using Browserless+LLM scraping must be migrated to direct APIs or licensed aggregator contracts before launch."
         historical_status: active
         source_url: https://app.notion.com/34967c87082c81bd8c6bf8e92e901711
         source_page_id: "34967c87082c81bd8c6bf8e92e901711"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-C--notion-34967c87082c81bd8c6bf8e92e901711
       - title: "DEC-20260421-C — Replace Phase 4 7-day traffic soak with evidence-based validation gates"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81a6bb52ca8dbd61dc25
         source_page_id: "34867c87082c81a6bb52ca8dbd61dc25"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-C--notion-34867c87082c81a6bb52ca8dbd61dc25
   - id: "DEC-20260421-D"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260421-D.md
     records:
       - title: "DEC-20260421-D — Phase 4 split into 4a (authority enforcement) and 4b (manifest completeness + bulk regen)"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81a2a12cc95010bf25bf
         source_page_id: "34867c87082c81a2a12cc95010bf25bf"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-D--notion-34867c87082c81a2a12cc95010bf25bf
       - title: "Landing page Section 2 is a full-quality agent-in-use animation, not a static problem statement. Ships in v1."
         historical_status: active
         source_url: https://app.notion.com/34967c87082c810695c2e365deb8f2c8
         source_page_id: "34967c87082c810695c2e365deb8f2c8"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260421-D--notion-34967c87082c810695c2e365deb8f2c8
   - id: "DEC-20260502-A"
     resolution_status: resolved
     resolution_evidence: archive/sessions/2026-09-01-decision-collision-resolution-DEC-20260502-A.md
