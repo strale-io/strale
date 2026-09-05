@@ -10,75 +10,85 @@ collision_count: 35
 source_row_count: 71
 collisions:
   - id: "DEC-20260225-P-c5d6"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260225-P-c5d6.md
     records:
       - title: "Add failed_requests table to MVP schema. Log every no_matching_capability response with task, category, max_price_cents, user_id. Turns failures into provider recruitment data for Phase 2."
         historical_status: active
         source_url: https://app.notion.com/31267c87082c81279b14f3859f6f2038
         source_page_id: "31267c87082c81279b14f3859f6f2038"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260225-P-c5d6--notion-31267c87082c81279b14f3859f6f2038
       - title: "GTM strategy: Demo-first, no community credibility required. Three launch outputs in week 4-5: demo video (Twitter/YouTube), tutorial post (dev.to/Hashnode), 5 targeted developer outreach messages. Framework integrations (LangChain, CrewAI) as primary distribution in weeks 5-8. HN Show post with real transaction data in week 6-7."
         historical_status: active
         source_url: https://app.notion.com/31267c87082c818e9d46cd25ac0236a8
         source_page_id: "31267c87082c818e9d46cd25ac0236a8"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260225-P-c5d6--notion-31267c87082c818e9d46cd25ac0236a8
   - id: "DEC-20260303-A"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260303-A.md
     records:
       - title: "Problem→Solution section uses SVG diagrams + bullet lists, no code blocks"
         historical_status: active
         source_url: https://app.notion.com/31867c87082c813198e2da8e3d02b531
         source_page_id: "31867c87082c813198e2da8e3d02b531"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260303-A--notion-31867c87082c813198e2da8e3d02b531
       - title: "Solution discovery UX: smart input with AI recommendation card (not chat, not traditional search)"
         historical_status: active
         source_url: https://app.notion.com/31867c87082c812dba47c52f4f36ca33
         source_page_id: "31867c87082c812dba47c52f4f36ca33"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260303-A--notion-31867c87082c812dba47c52f4f36ca33
   - id: "DEC-20260304-A"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-A.md
     records:
       - title: "Hide component prices in discovery UI"
         historical_status: active
         source_url: https://app.notion.com/31967c87082c8185b0a6c33de2293215
         source_page_id: "31967c87082c8185b0a6c33de2293215"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260304-A--notion-31967c87082c8185b0a6c33de2293215
       - title: "Homepage v2.1 polish: comparison back to #2, remove Built for Agents, compact three-steps, tabbed integrations, static discovery"
         historical_status: active
         source_url: https://app.notion.com/31867c87082c812c9ccef7f58256f40a
         source_page_id: "31867c87082c812c9ccef7f58256f40a"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260304-A--notion-31867c87082c812c9ccef7f58256f40a
   - id: "DEC-20260304-B"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-B.md
     records:
       - title: "Kill 'Compare with DIY' cost calculator feature"
         historical_status: active
         source_url: https://app.notion.com/31967c87082c81dda9c4f43b5b7674b3
         source_page_id: "31967c87082c81dda9c4f43b5b7674b3"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260304-B--notion-31967c87082c81dda9c4f43b5b7674b3
       - title: "Stats bar: swap 27 Countries for 15 Solutions"
         historical_status: active
         source_url: https://app.notion.com/31867c87082c81a4b2f7ccdd52b99b1e
         source_page_id: "31867c87082c81a4b2f7ccdd52b99b1e"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260304-B--notion-31867c87082c81a4b2f7ccdd52b99b1e
   - id: "DEC-20260304-C"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-C.md
     records:
       - title: "Trust data must never be displayed with false confidence"
         historical_status: active
         source_url: https://app.notion.com/31967c87082c815cb440e586e783df0a
         source_page_id: "31967c87082c815cb440e586e783df0a"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260304-C--notion-31967c87082c815cb440e586e783df0a
       - title: "Trust verification card redesigned as monitoring dashboard panel, not product card"
         historical_status: active
         source_url: https://app.notion.com/31867c87082c810197f9efa520332024
         source_page_id: "31867c87082c810197f9efa520332024"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260304-C--notion-31867c87082c810197f9efa520332024
   - id: "DEC-20260320-C"
     resolution_status: unresolved
     resolution_evidence: null

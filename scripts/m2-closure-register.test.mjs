@@ -33,7 +33,15 @@ const base = () => loadRegister(root);
 const codes = (register, ctx = context) => validateClosureRegister(register, ctx, { schema }).map((f) => f.code);
 const has = (register, code, ctx) => assert.ok(codes(register, ctx).includes(code), `expected ${code}, got ${codes(register, ctx).join(",")}`);
 const lacks = (register, code, ctx) => assert.ok(!codes(register, ctx).includes(code), `did not expect ${code}`);
-const row = (r, disposition) => r.decision_rows.find((x) => x.disposition === disposition);
+// For "formally_migrated" specifically, skips collision-derived rows (they
+// carry an extra `collision` object and a source-qualified record_key
+// distinct from the plain `record_key === id` case other tests assume) so a
+// generic mutation test keeps targeting the same representative row
+// regardless of how many historical ID collisions have been resolved. Other
+// dispositions (including "unresolved_collision" and "resolved_collision",
+// which are collision rows by definition) are unaffected.
+const row = (r, disposition) =>
+  r.decision_rows.find((x) => x.disposition === disposition && !(disposition === "formally_migrated" && x.collision));
 // Re-derive every self-consistent value so a test isolates the one check it targets.
 const resync = (r) => {
   const by = (items, keys) => {
@@ -709,7 +717,11 @@ test("inventory dispositions must match the migration-map table", () => {
 
 test("a cross-surface collision must not be a registry row, must carry its own id, and must be cited", () => {
   const r = base();
-  r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate").collision.kind = "cross-surface";
+  // Pick a still-unresolved notion-duplicate row: flipping a resolved
+  // (formally_migrated) collision row's kind also trips the formal-record
+  // cross-surface rule (CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED), which is a
+  // separate check this assertion does not target.
+  r.decision_rows.find((x) => x.collision?.kind === "notion-duplicate" && x.disposition === "unresolved_collision").collision.kind = "cross-surface";
   has(r, "DECISION_ROW_CROSS_SURFACE_IN_REGISTRY");
   const r2 = base();
   r2.decision_rows.find((x) => x.collision?.kind === "cross-surface").collision.id = "DEC-19990101-Z";

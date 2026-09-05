@@ -68,13 +68,13 @@ classification table.
 > "Newest file" is read from a `YYYY-MM-DD-` filename prefix; a subtree
 > with no dated filenames is marked accordingly rather than guessed.
 
-5 subtrees, 283 files total.
+5 subtrees, 288 files total.
 
 | subtree | files | newest (by filename date) |
 | --- | --- | --- |
 | `archive/growth-ops/` | 23 | _(no dated filenames)_ |
 | `archive/receipts/` | 14 | `2026-09-04-test-run-free-public-api-capabilities.json` (2026-09-04) |
-| `archive/sessions/` | 228 | `2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md` (2026-09-04) |
+| `archive/sessions/` | 233 | `2026-09-05-decision-collision-resolution-DEC-20260304-C.md` (2026-09-05) |
 | `archive/submissions/` | 12 | _(no dated filenames)_ |
 | `archive/superseded/` | 6 | _(no dated filenames)_ |
 
