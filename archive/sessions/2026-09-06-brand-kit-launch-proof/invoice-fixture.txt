@@ -1,0 +1,11 @@
+SYNTHETIC DEMO INVOICE
+Vendor: Example Studio
+Invoice number: INV-1042
+Invoice date: 2026-09-06
+Currency: EUR
+Description: Design services
+Quantity: 1
+Net amount: 480.00
+VAT amount: 0.00
+Total amount: EUR 480.00
+Fictional test document. No payment due.

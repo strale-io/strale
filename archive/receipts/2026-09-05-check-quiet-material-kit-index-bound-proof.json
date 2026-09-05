@@ -1,0 +1,69 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "48c55d8f4dd0cdd2984f08757c9b85bf497e1093"
+  },
+  "at": "2026-09-05T22:35:14.329Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-kit-index-bound-proof.json"
+  },
+  "summary": {
+    "checked_at": "2026-09-05T22:35:12.945815+00:00",
+    "hash_basis": "UTF-8 text with LF; raw PNG bytes",
+    "limits": "Checks documentation and retained inputs only; no live execution, retrieval, price or latency qualification."
+  },
+  "topic": "quiet-material-kit-index-bound-proof",
+  "raw": {
+    "checked_at": "2026-09-05T22:35:12.945815+00:00",
+    "producer": {
+      "recipe": "archive/sessions/2026-09-06-brand-kit-launch-proof/VERIFY.md",
+      "base_commit": "9ac4a378b7a87b15be207d0f073c513dd85784a9",
+      "runtime": "Python 3 + Git"
+    },
+    "hash_basis": "UTF-8 text with LF; raw PNG bytes",
+    "checks": {
+      "current_companion_paths": true,
+      "gap_evidence_paths": true,
+      "document_links": true,
+      "retained_token_and_rule_bytes": true
+    },
+    "inputs": {
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/VERIFY.md": "ca3fa324716ebec560b61f732014077d416435f43de09636ae8bdbd4b58bd442",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/account-attempt.json": "1253fa76974ec515b19d0b7c7dfdcc2a2b5fc342fe72eada8376b87320826534",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/catalogue-observation.json": "f8fbe1af6b8451c35fa07376649c8acfe75bbc23225fcabace9a44acf7726d8d",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/connector-observations.json": "4308dc35c89263b22af1e6fb3291cecf9eda2c903135ebabd2d0ef734280c38b",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.png": "0a44563cb740bc71ea71b92a93deb6cdf0f70207b75edf3f7f06d93876a846ab",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.txt": "cac96382b54cd9747992bb70e53ef7e5371d430311176d6e1ded91d62ae133b6",
+      "design/PROVENANCE.md": "31d1a18bcb3e94bc999162fb3cfcee0f28b38d07b3b9a4cf59ce8eb74dad3a87",
+      "design/README.md": "d56ef81c4b2a6b5e9b869181599ad85b2546dce315aaf6e3848ee9b99b600b74",
+      "design/brand-kit/README.md": "eba71f0c65ce90cf894d4899ddb5217616a402f14b69f1c5cca8c3d583cf82d0",
+      "design/brand-kit/quiet-material/README.md": "94c4f1806d42ef989700b9000062e2b7654412d780118fed17d871638245f755",
+      "design/brand-kit/quiet-material/controls/README.md": "0176c38499534d9ed1c64b39fb2a9119c5987a16313ba0995d5836e117c8cbb5",
+      "design/brand-kit/quiet-material/controls/registry.json": "f09a38f11da044da9ef8b58718512057616eeb76368f9c5b8d5895b99d654011",
+      "design/brand-kit/quiet-material/controls/verification.json": "b9daa1eb5cb135c911a085313dd364bef85ee9a14bc55a12c3d638ea1fac8ccb",
+      "design/brand-kit/quiet-material/foundations/README.md": "2c5b97a62125d98864b5cf252be700482f29f8a67b1378ef9d6e8638e054fa13",
+      "design/brand-kit/quiet-material/foundations/registry.json": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
+      "design/brand-kit/quiet-material/foundations/verification.json": "f7ca16c170816ea8d2dcd9d64c65ee338a532e79315030217404bcdc8ae5ac67",
+      "design/brand-kit/quiet-material/patterns/README.md": "1b31639c6cc1ec080ed4e63b9e02aea97aec8aafd4141eb9c2fd172d303fac5f",
+      "design/brand-kit/quiet-material/patterns/registry.json": "e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72",
+      "design/brand-kit/quiet-material/patterns/verification.json": "0fb083f401ecd0768aaedc8a835f65b819922f06aa7307d00c7ad8ecf2e0f807",
+      "design/brand-kit/quiet-material/registry.json": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
+      "design/brand-kit/quiet-material/verification.json": "f70331bec31665359052868125cb0070ced1b8e02e62cebc3cdd37c8997d0b58",
+      "design/tokens/active.json": "c9aeffcecbbbaa3592267307a81f3e4c0a66c4989cbfdaa58377e40f414a0960",
+      "design/tokens/candidates/quiet-material-catalogue.json": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
+      "design/tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
+      "design/tokens/candidates/quiet-material-foundations.json": "2720ada20ec6e36f0f358ddda07f1310f43d1bb42334a351046771a971ed6b18",
+      "design/tokens/candidates/quiet-material-patterns.json": "7e5611bf7d156e0465c9b53086c7b1a7bd757c517d20a84f73ba8d461a887f50",
+      "docs/programs/brand-website/POSITIONING-BRIEF.md": "af5ec971b6552c8a04378581b054a149deba29c4ae539306992e97943bb9398d",
+      "docs/programs/brand-website/PROGRAM.md": "a0e56c734fa9dddaac9f7aee9799e36203b6c9fd1f7bf2858c26069d154a745c",
+      "docs/programs/brand-website/PROOF-QUALIFICATION.md": "9f4a09af425e9b0b812eb223c7e20da91c1b4eda4412725a224e350779532e7d",
+      "docs/programs/brand-website/SYSTEM-COMPLETION.md": "82973c222ac771901f52935e9f538ca270078fe6643c29cfd741b4c3d36baedb",
+      "docs/programs/brand-website/system-completion.json": "0ff97ebd21bacc9a763403bf45821f28b7c7acea5e9667ad272697e9a416a11e",
+      "docs/programs/brand-website/tracks.yaml": "d387cdc145edcd8d56c1f2f7ca55729fc7ae17907a4d9f735d300806454490ae",
+      "docs/research/2026-09-06-invoice-demo-qualification.md": "182c1d824f5c3f68a07a2d51b110e696d636c254d1995312d80b89169bcbe816",
+      "handoff/_general/from-code/2026-09-06-quiet-material-consolidation.md": "e2dbf600d2f1f28b2227365a22fd45666896a2b0f25caeec3ecc31245940ef7e"
+    },
+    "limits": "Checks documentation and retained inputs only; no live execution, retrieval, price or latency qualification."
+  }
+}

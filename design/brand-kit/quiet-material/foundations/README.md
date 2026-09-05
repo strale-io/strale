@@ -1,5 +1,7 @@
 # Quiet Material: identity and typography
 
+**Accepted for continued design work.** The founder accepted this companion on 5 September 2026. This records design acceptance; the packaged candidate status and production tokens remain unchanged. [Start at the complete kit index](../../README.md).
+
 This is the current **identity/type companion candidate, revision 0.1**, within the existing Quiet Material kit. The founder accepted the atmosphere/surface catalogue 0.2 on 5 September and asked us to continue with identity variants and typography. The later request to compare direct light text and a light action on dark cards is included as a candidate specimen. It does not replace the accepted reading-panel recipe or adopt production tokens.
 
 Start with `output/pdf/identity-typography.pdf`. The separate `output/pdf/document-specimen.pdf` is an actual two-page A4 type proof. The [generated register](REGISTER.md) is the human reference for roles and rules; [registry.json](registry.json) is their structured source, and [the token candidate](../../../tokens/candidates/quiet-material-foundations.json) owns the design values. [Verification](verification.json) records the exact font, export, reflow, PDF and dark-card checks.
@@ -31,4 +33,4 @@ node design/brand-kit/quiet-material/foundations/build.mjs --check
 
 The browser build uses installed Chrome with a fresh context and blocks HTTP(S). Python verification requires PyMuPDF, Pillow and fontTools. Source assets are local, so this companion does not require the external preserved archive extraction. `--check` verifies the committed generated views and artifacts without launching a browser. Rebuild after any hashed input changes.
 
-The completion plan remains [SYSTEM-COMPLETION.md](../../../../docs/programs/brand-website/SYSTEM-COMPLETION.md). Next come navigation, controls and card states, then wider density, motion and channel qualification. The companion is one current part of the kit, not an alternative design direction.
+The completion plan remains [SYSTEM-COMPLETION.md](../../../../docs/programs/brand-website/SYSTEM-COMPLETION.md). Navigation, controls, form states, utility symbols and composition studies are now available in the accepted companions linked from the kit index. Remaining qualification follows the system completion plan. The companion is one current part of the kit, not an alternative design direction.

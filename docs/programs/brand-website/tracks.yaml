@@ -1,7 +1,7 @@
 schema_version: 1
 program: brand-website
 program_status: active
-updated: "2026-09-05"
+updated: "2026-09-06"
 tracks:
   - id: T1
     title: Product and brand discovery
@@ -38,20 +38,21 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Continue the launch proof map with route-specific customer retrieval and exact demo-tool verification; specify bounded fixes only for claims intended to ship.
-    resume_file: docs/programs/brand-website/LAUNCH-PROOF.md
+    next_action: Resume invoice-extract qualification from the current proof record. Catalogue and source contract checked; authenticated execution and own-record retrieval remain blocked by invalid or absent credentials. Preserve illustrative status until successful evidence exists.
+    resume_file: docs/programs/brand-website/PROOF-QUALIFICATION.md
     exit:
       - Claim-to-evidence map distinguishes shipped, internally implemented and proposed behaviour.
       - Stronger unsupported claims omitted or verified after bounded remediation.
     evidence:
       - docs/programs/brand-website/LAUNCH-PROOF.md
+      - docs/programs/brand-website/PROOF-QUALIFICATION.md
   - id: T4
     title: Existing Quiet Material system audit and cohesion
     status: active
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Review the forms, utility symbols, density/rhythm and three application studies in the patterns companion. Controls are accepted for continued design work. Then qualify the chosen extraction tool and route under T3, complete remaining channel/accessibility gaps and consolidate for kit adoption. Current logo and Quiet Material remain retained.
+    next_action: All four companions are accepted for continued design work and consolidated at the kit README. Complete the T3 authentication-dependent invoice proof and the scoped website gaps, then consolidate production consumers for adoption. Current logo and Quiet Material remain retained.
     resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.

@@ -1,0 +1,14 @@
+{
+  "http_status": 401,
+  "wall_seconds": 0.532,
+  "response": {
+    "error_code": "unauthorized",
+    "message": "Invalid API key."
+  },
+  "route": "POST https://api.strale.io/v1/do",
+  "max_price_cents": 50,
+  "input_file": "invoice-fixture.png",
+  "credential": "Existing local project credential; omitted from evidence",
+  "successful_execution": false,
+  "transaction_retrieval_attempted": false
+}

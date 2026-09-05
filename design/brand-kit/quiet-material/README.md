@@ -1,8 +1,10 @@
-# Quiet Material: atmosphere and surface register
+# Quiet Material: atmosphere and surface catalogue
+
+Part of the accepted design baseline. [Start at the kit index](../README.md) for all current companions, acceptance and remaining work.
 
 This is the **current consolidation proposal, revision 0.2**, for the existing Quiet Material v0.7 direction. It incorporates founder feedback on excessive nested-card spacing and same-tone reading panels. It is not a replacement identity or a production adoption. Start with the specimen catalogue under `output/pdf/`, then use the generated [register](REGISTER.md) for implementation detail. Revision 0.1 remains recoverable at commit `2972015dedfeb8bcd30369e0b0b4259bdc62f678`; it is historical, not a competing current recipe.
 
-The founder accepted the rendered atmosphere/surface catalogue 0.2 on 5 September after the full visual review. It is the accepted composition baseline; production adoption is still separate. The next current part of this same kit is the [identity and typography companion](foundations/README.md), including the requested direct-light-text comparison on dark marketing cards. The companion is a candidate and does not replace this catalogue.
+The founder accepted the rendered atmosphere/surface catalogue 0.2 on 5 September after the full visual review. It is the accepted composition baseline; production adoption is still separate. The accepted [identity and typography companion](foundations/README.md) adds retained identity/type roles and the direct-light-text treatment on short dark marketing cards. All current companions are linked from the kit index and do not replace this catalogue.
 
 ## Source hierarchy
 
@@ -16,11 +18,11 @@ The preserved source package remains immutable and recoverable from the release 
 
 ## What to review
 
-- Pages 2â€“3: whether the light and dark families feel related and their distinct roles are sensible.
-- Pages 4â€“7: retained gradients, then revised compositions. Dark gradients frame light paper with a fixed narrow inset. Frost and Mint have direct dark text and no inner card.
-- Pages 8â€“21: all fourteen images at landscape, square and narrow crops. Light reading panels sit low with a fixed inset, preserving atmosphere above. One-row compact cards demonstrate reducing content before type size. Amber remains image-only.
+- Pages 2–3: whether the light and dark families feel related and their distinct roles are sensible.
+- Pages 4–7: retained gradients, then revised compositions. Dark gradients frame light paper with a fixed narrow inset. Frost and Mint have direct dark text and no inner card.
+- Pages 8–21: all fourteen images at landscape, square and narrow crops. Light reading panels sit low with a fixed inset, preserving atmosphere above. One-row compact cards demonstrate reducing content before type size. Amber remains image-only.
 - Page 22: the retained lockup and the legacy favicon conflict. This proposes identity/symbol separation, not a new logo.
-- Pages 23â€“24: composition rules and remaining work.
+- Pages 23–24: composition rules and remaining work.
 
 The first version's thick centred frames and dark-on-dark panels were rejected in founder review. Revision 0.2 uses a 16px gradient-frame inset, 20px reading-panel padding and 12px inner corners; these are document specimen tokens, not a universal responsive component specification. Larger raster atmospheres use a 20px inset with a low-set panel. Solid off-white paper replaces the earlier translucent/gradient reading surfaces. No original image or gradient is changed. The narrow hero crop still loses its desktop quiet-left area, and the complete closing composition remains open. Direct text on raster atmospheres remains unqualified; the direct Frost/Mint examples have their own measured evidence.
 
@@ -45,12 +47,6 @@ The contrast method samples every background pixel beneath each hidden specimen 
 
 ## Open work
 
-Current records cover all fourteen atmospheric assets, but eleven original creation/rights histories remain unknown. Missing direction-reference and capability-illustration sources are explicitly unavailable. The three editorial references remain excluded from implementation. Identity exports at small sizes, complete typography roles/fallbacks, component states, motion and channel templates still need their own specimens.
+Current records cover all fourteen atmospheric assets, but eleven original creation/rights histories remain unknown. Missing direction-reference and capability-illustration sources are explicitly unavailable. The three editorial references remain excluded from implementation. Identity/type, controls and form/icon/composition specimens have since been accepted for continued design work. Remaining production qualification is tracked in the kit index and system completion record.
 
 Continue from [SYSTEM-COMPLETION.md](../../../docs/programs/brand-website/SYSTEM-COMPLETION.md). Keep the earlier audit and rejected studies as history; do not reactivate them as competing current directions.
-
-The [navigation, controls and cards companion](controls/README.md) is the current component candidate, continuing the accepted foundations and retained flowing-S logo with interactive examples and a PDF review.
-
-## Forms, utility symbols and composition
-
-The [patterns companion](patterns/README.md) is the current extension after the founder accepted navigation/buttons/cards. It includes generated human/machine rules, local interactive forms, an original twelve-symbol utility family, density/rhythm budgets and website/social/email composition studies. Existing companions remain retained inputs. This addition is candidate until reviewed and adopted through the existing process.

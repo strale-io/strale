@@ -1,5 +1,7 @@
 # Quiet Material: forms, symbols and composition
 
+**Accepted for continued design work.** The founder accepted this companion on 6 September 2026. This records design acceptance; the packaged candidate status and production tokens remain unchanged. [Start at the complete kit index](../../README.md).
+
 The current extension of the founder-accepted controls companion. Start with [the interactive guide](index.html), or its [eight-page PDF review](output/pdf/forms-symbols-composition.pdf). The current logo and existing type/control/gradient values are retained. This is candidate design work, not a production token adoption.
 
 ## What to assess
