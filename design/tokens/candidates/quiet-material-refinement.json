@@ -1168,11 +1168,11 @@
             "copy": "socialfixture",
             "at": [
               660,
-              1090
+              1000
             ],
-            "role": "micro",
+            "role": "body",
             "max_width": 460,
-            "colour": "--ink-inverse-secondary"
+            "colour": "--ink-inverse"
           }
         ]
       },

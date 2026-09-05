@@ -86,7 +86,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "565ee0fc2e289aa361899a6f33806c69cb229eb212f6019294e03606de3bcf33",
+      "sha256": "08c4754bddcbfffd6939b8382b380b737765b3882357362cdb3ce0e8d0d97527",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -444,6 +444,7 @@
         "apps/api/src/lib/startup-migrations.ts",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
         "archive/receipts/2026-09-05-check-brand-direction-applications.json",
+        "archive/receipts/2026-09-05-check-brand-direction-review-fixes.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
@@ -507,7 +508,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "6b9d1d50927ef1324954533a09d6f8e613ffe4f2b60584e992252b580743fa7a",
+      "sha256": "0fffef49e60d7108c3349781ba64594717616727859ceeb31a64eab48842387c",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -594,7 +595,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "690e2a5cb73762a71fae9683fe6cd6473b182f1238fadd3c1634845ac305db08",
+      "sha256": "34812553dfc1e68f6b34911ad64ba699f6ff05693120c758c7f35e2917c97062",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

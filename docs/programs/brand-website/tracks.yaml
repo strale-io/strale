@@ -59,6 +59,7 @@ tracks:
     evidence:
       - design/explorations/2026-09-05-quiet-material-refinement/README.md
       - archive/receipts/2026-09-05-check-brand-direction-applications.json
+      - archive/receipts/2026-09-05-check-brand-direction-review-fixes.json
   - id: T5
     title: Human and machine brand kit
     status: queued

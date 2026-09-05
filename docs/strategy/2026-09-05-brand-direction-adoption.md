@@ -20,7 +20,11 @@ This approval is for strategy and design exploration, not permission to publish 
 
 ## Supersession and history
 
-The brief's proposed status is superseded by this adoption. Its reviewed draft remains preserved at the commit above. The narrow VOICE.md terminology rule is amended; its prior version remains in Git history. No entire strategy document, legacy frontend, candidate asset family or Notion page is retired by this decision. The website remains assigned to `apps/web` under DEC-20260902-A.
+The brief's proposed status is superseded by this adoption. Its reviewed draft remains preserved at the commit above. The narrow VOICE.md terminology rule is amended; its prior version remains in Git history. No entire strategy document, legacy frontend or candidate asset family is retired by this decision; historical Notion pages remain readable. The website remains assigned to `apps/web` under DEC-20260902-A.
+
+The new homepage hierarchy also supersedes the composition prescriptions in **DEC-20260302-C** and **DEC-20260303-G** for the `apps/web` redesign. C says “Homepage leads with solutions and trust positioning, not infrastructure/API messaging”; G prescribes an eleven-section order beginning with hero, trust verification and solutions. The approved brief instead leads with useful agent work and qualified examples, with shared access and scoped execution evidence in supporting roles. Its task-organised catalogue and narrative determine section order; the fixed eleven-section sequence is no longer a design constraint.
+
+Preserve C's rationale that developers need outcomes before technical plumbing, and G's principle that evidence should substantiate the claim near which it appears. Supersede their trust-as-lead, showcase/category-placement and fixed-order prescriptions. This is the concrete reconciliation of the founder-approved brief, not a second positioning choice. The preserved live frontend remains as served until the separate website cutover. The old Notion entries retain their original content and receive supersession metadata linking to the new decision; their M2 candidate records remain historical source evidence, not revised project authority.
 
 ## Consequence
 
