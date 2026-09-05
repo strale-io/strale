@@ -41,6 +41,28 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-28
+    subject: "PR #555 — M2 G2 batch 2: six ID collisions (DEC-20260320-C/J/K, DEC-20260405-B, DEC-20260406-A/B) resolved atomically with twelve source-qualified records"
+    commit: 036f207d
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      Irreversible collision resolutions (the registry's merge-base rules
+      refuse a regression). The batch also asserts that the KYB and Invoice
+      Verify solution families are absent from the catalogue source and
+      partly retired by name, and that the au-company-data hotfix's
+      .d.ts filter no longer exists. Whether each disposition is justified
+      by its own source text and each code claim traced to the file is the
+      Codex judgement.
+    what_to_attack: >
+      Each of the twelve records against its Notion row (by page id,
+      parsed); each registry entry against the report and the register
+      rows; the solution-catalogue and retirement-script claims; the
+      auto-register.ts, pep-check.yaml, platform-facts.ts and
+      solution-executor.ts claims; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-27
     subject: "PR #553 — M2 G2 batch 1: five ID collisions (DEC-20260225-P-c5d6, DEC-20260303-A, DEC-20260304-A, DEC-20260304-B, DEC-20260304-C) resolved atomically with ten source-qualified records"
     commit: 81d59db4
