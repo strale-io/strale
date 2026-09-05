@@ -53,9 +53,9 @@ The duplicate display ID remains unchanged for both sources. A bare
 
 ## Citations of the bare id in code
 
-`apps/api/src/capabilities/auto-register.ts` line 164 says "2026-05-12
-(DEC-20260512-A: Mirjam Boele confirmed KVK partner status is closed to
-foreign EU entities)". That citation means the KVK Option B row
+`apps/api/src/capabilities/auto-register.ts` line 164 says "DEC-20260512-A: Mirjam
+Boele confirmed KVK partner status" and the next line continues "is closed
+to foreign EU entities". That citation means the KVK Option B row
 (`DEC-20260512-A--notion-35e67c87082c8122a29ef35f256d5958`), not the
 scheduler cost-class row; the code comment predates this resolution and
 the bare id stays prose there.
