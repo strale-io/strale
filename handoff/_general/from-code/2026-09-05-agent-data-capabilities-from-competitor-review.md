@@ -82,13 +82,69 @@ flag marking fields that must never reach `transactions.input`). Without it,
 Strale cannot offer any capability whose input is itself sensitive. `pii-redact`
 has the same exposure today.
 
+## Independent review — FAIL, then fixed
+
+A fresh read-only Claude agent that did not author the batch reviewed PR #582
+and returned **FAIL** with five blockers. Four were real; the fifth (a red
+`lint:no-unguarded-user-fetch`) had already been fixed while the review ran.
+Post-review receipt:
+`archive/receipts/2026-09-05-test-run-agent-data-capabilities-post-review.json`
+
+**The one that mattered: refusals were invisible to the health machinery.**
+Twenty-two refusal messages — the review counted twelve; the test written to
+measure it found twenty-two — were classified `internal_error` and counted by
+the circuit breaker. Three agents in a row passing a hallucinated ticker to
+`company-fundamentals`, or an `email` to `breach-exposure-check`, would have
+opened the breaker on a healthy capability and served every caller
+`capability_unavailable`. That is the 2026-08-14 `french-company-data`
+incident reproduced exactly, LESSONS families F1 and F9.
+
+The fix is wording, because wording is what survives: the async and x402 paths
+persist the message string, not the error object, so `CapabilityRefusalError`
+alone would not have carried. Every message is now in the house style
+(`'field' must be …`), which `capability-refusal.ts` recognises by shape.
+`new-capabilities-refusal.test.ts` puts all 25 refusal sites through the three
+consumers, and also asserts a genuine upstream 500 is still counted — without
+that, a test proving "refusals are excused" would pass just as well if
+everything were excused.
+
+**The verification harness was itself measuring the wrong thing.** It asserted
+a refusal matched a regex, never that the platform classifies it as one, so
+the first receipt's "8/8 input refusals passed" was not evidence of what it
+appeared to be. The harness now runs the three consumers too. Worth
+remembering as a general shape: a green check that cannot fail for the reason
+you care about is not evidence.
+
+Other blockers: `cert-transparency-search` returned the **oldest**
+certificates (Cert Spotter answers ascending) and reported a
+`latest_certificate` from the middle of the window; two manifests declared a
+`known_rate_limit` against `free_unlimited`, which `check-cost-class-coherence`
+forbids — a gate that never ran in CI because the job aborted at the fetch
+lint 37 steps earlier; and two fixtures asserted `not_null` on fields their own
+reliability map called `common`.
+
+Also taken from the should-fix list: `avg_latency_ms` declared from the
+measured run on all eight; every timeout lowered so the worst case fits under
+the 15s sync wall (`cert-transparency-search` was 45s, `company-fundamentals`
+55s); a 4s ceiling on the DNS resolve that c-ares would otherwise let run
+~20s; `isPrivateIpv4` now defers to `url-validator.isBlockedIp` rather than
+keeping a second copy of the non-routable list that had already diverged on
+multicast; and the mutation script refuses to run on a dirty tree.
+
+**Still open from the review (not blocking):** `company-fundamentals` issues 9
+to 13 SEC requests per call at concurrency 5, which can exceed the SEC's 10/s
+guidance under concurrent customer calls — there is no cross-request limiter,
+and an SEC IP block is not a refusal, so it would open the breaker. Worth a
+shared limiter before this capability sees real traffic.
+
 ## Verification
 
 Receipt: `archive/receipts/2026-09-05-test-run-agent-data-capabilities-batch.json`
+(pre-review) and `…-post-review.json` (after the fixes above).
 
 All eight executed against their real upstreams (not fixtures); all eight input
-refusals fire before any upstream call; 57 unit tests; 13 planted mutations, 13
-caught. Harnesses are committed and rerunnable:
+refusals fire before any upstream call AND are recognised by all three health
+consumers; 92 unit tests; 23 planted mutations, 23 caught. Harnesses are committed and rerunnable:
 `apps/api/scripts/verify-new-capabilities.ts` and
 `apps/api/scripts/mutation-check-new-capabilities.mjs`.
 

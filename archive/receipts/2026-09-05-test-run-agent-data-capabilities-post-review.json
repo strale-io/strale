@@ -1,0 +1,38 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/scripts/verify-new-capabilities.ts",
+    "commit": "33795f416b26d436cacdb60740f83f853f8f5788"
+  },
+  "at": "2026-09-05T22:02:47.526Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/427e7490-26c0-4cc7-aa84-9031a101914a/scratchpad/receipt2.json"
+  },
+  "summary": {
+    "live_executions_attempted": 8,
+    "live_executions_passed": 8,
+    "refusals_attempted": 8,
+    "refusals_recognised_by_all_three_consumers": 8,
+    "unit_tests": 92,
+    "unit_tests_passed": 92,
+    "mutations_planted": 23,
+    "mutations_caught": 23,
+    "slowest_live_ms": 1179,
+    "review_round": "independent read-only Claude review of PR #582, verdict FAIL, five blockers",
+    "timings": "clinical-trials-search=408ms doi-resolve=465ms citation-graph=1047ms cert-transparency-search=593ms host-exposure-lookup=124ms breach-exposure-check=151ms fda-safety-search=1029ms company-fundamentals=1179ms"
+  },
+  "topic": "agent-data-capabilities-post-review",
+  "raw": {
+    "live_executions_attempted": 8,
+    "live_executions_passed": 8,
+    "refusals_attempted": 8,
+    "refusals_recognised_by_all_three_consumers": 8,
+    "unit_tests": 92,
+    "unit_tests_passed": 92,
+    "mutations_planted": 23,
+    "mutations_caught": 23,
+    "slowest_live_ms": 1179,
+    "review_round": "independent read-only Claude review of PR #582, verdict FAIL, five blockers",
+    "timings": "clinical-trials-search=408ms doi-resolve=465ms citation-graph=1047ms cert-transparency-search=593ms host-exposure-lookup=124ms breach-exposure-check=151ms fda-safety-search=1029ms company-fundamentals=1179ms"
+  }
+}
