@@ -25,3 +25,10 @@ scripts/program-tracks.test.mjs text eol=lf
 scripts/m2-closure-register-lib.mjs text eol=lf
 scripts/m2-closure-register.test.mjs text eol=lf
 scripts/m2-closure-verify-private-rows.mjs text eol=lf
+# Reproducible catalogue inputs. Preserve original font/licence and PDF bytes.
+design/brand-kit/quiet-material/** text eol=lf
+design/brand-kit/quiet-material/fonts/** -text
+# Upstream licence text is preserved verbatim, including its original whitespace.
+design/brand-kit/quiet-material/fonts/*.txt -whitespace
+design/brand-kit/quiet-material/output/pdf/** -text
+design/tokens/candidates/quiet-material-catalogue.json text eol=lf

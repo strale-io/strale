@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "ok",
+    "pages",
+    "pdf_sha256",
+    "registry_sha256",
+    "tokens_sha256",
+    "builder_inputs",
+    "render_inputs",
+    "pdf_bytes_before_deduplication",
+    "pdf_bytes",
+    "contrast_method",
+    "scope",
+    "sampled_text_elements",
+    "minimum_ratio",
+    "failures",
+    "out_of_page_text",
+    "results",
+    "optimisation_verified"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "pages": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pdf_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "registry_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "tokens_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "builder_inputs": {
+      "type": "object",
+      "required": [
+        "build.mjs",
+        "catalogue.css",
+        "registry.schema.json",
+        "verification.schema.json",
+        "verify.py"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "build.mjs": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "catalogue.css": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "registry.schema.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "verification.schema.json": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "verify.py": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "render_inputs": {
+      "type": "object",
+      "required": [
+        "registry_sha256",
+        "tokens_sha256",
+        "builder_inputs",
+        "pdf_sha256",
+        "sample_inputs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registry_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "tokens_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "builder_inputs": {
+          "type": "object",
+          "required": [
+            "build.mjs",
+            "catalogue.css",
+            "registry.schema.json",
+            "verification.schema.json",
+            "verify.py"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "build.mjs": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "catalogue.css": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "registry.schema.json": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "verification.schema.json": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "verify.py": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "pdf_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "sample_inputs": {
+          "type": "object",
+          "minProperties": 2,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "pdf_bytes_before_deduplication": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "pdf_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "contrast_method": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sampled_text_elements": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "minimum_ratio": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 21
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "page",
+          "text",
+          "ratio",
+          "passes_normal_text_4_5"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ratio": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 21
+          },
+          "passes_normal_text_4_5": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "out_of_page_text": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "page",
+          "word"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "word": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "page",
+          "text",
+          "ratio",
+          "passes_normal_text_4_5"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ratio": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 21
+          },
+          "passes_normal_text_4_5": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "optimisation_verified": {
+      "const": true
+    }
+  }
+}

@@ -12,6 +12,7 @@ design/
     active.json               what production runs today, per surface
     candidates/
       quiet-material-v0.7.json      status: proposed
+      quiet-material-catalogue.json status: proposed (retained values; specimen geometry)
       codex-handoff-round-23.json   status: exploring
       quiet-material-refinement.json status: rejected (closed study)
       instrument.json              status: rejected
@@ -20,10 +21,16 @@ design/
     README.md                 convention for exploration folders
     2026-09-01-quiet-material-v0.7/README.md
   PROVENANCE.md              every historical direction, one status each
+  brand-kit/quiet-material/  current consolidation register and specimen catalogue
   lint-allowlist.json        today's off-token literals in consumer code, ratcheted down
 ```
 
 ## What is active
+
+For the retained Quiet Material redesign, the current system-completion proposal is
+[the atmosphere/surface register](brand-kit/quiet-material/README.md). It reconciles
+the preserved sources and produces human/PDF views from structured records. It is
+candidate; it does not change the production surfaces below.
 
 `design/tokens/active.json` has one entry per production surface under
 `surfaces`. Today there are two:
