@@ -112,7 +112,7 @@ name no row at all in the file it pointed to.
   `DEC-20260507-C` rejected as too slow) and Austria shipped on the direct
   JustizOnline government API (Tier-1, not the aggregator path
   `DEC-20260507-C` and `DEC-20260508-B`'s provenance-posture row both
-  anticipated) — both undocumented divergences from the rows' stated
+  anticipated), both undocumented divergences from the rows' stated
   defaults.
 - `config/env-manifest.yaml`'s `OPENAPI_ENABLED` row confirms the Openapi.com
   resolver is still gated off in production pending the case-151296 resale
@@ -143,7 +143,7 @@ name no row at all in the file it pointed to.
   comment immediately above the branch attributes the mechanism to
   `DEC-20260513-B` and `DEC-20260513-C` instead of this row, and both of
   those records describe unrelated subjects (a Swiss breaker-pin release
-  and a Slovak scheduler hash-stagger fix) — an apparent misattribution in
+  and a Slovak scheduler hash-stagger fix), an apparent misattribution in
   the code comment, not evidence those two decisions authorized this path.
 - The v1 Identity coverage verdict's (`DEC-20260513-F`) canonical source,
   `apps/api/docs/v1-identity-coverage-matrix-2026-05-13.md`, still exists
@@ -162,7 +162,7 @@ name no row at all in the file it pointed to.
 (twice, staging between), `npm run context:check` (zero findings),
 `npm run context:test` (clean), `npm run programs:check` (ok,
 both tracks), `npm run codex:check` (ok, backlog unchanged by this batch),
-`npm run receipts:check` (ok — pre-existing unrelated
+`npm run receipts:check` (ok; pre-existing unrelated
 `HANDOFF_BARE_TEST_COUNT` warnings on other sessions' handoffs, not this
 one), `node apps/api/scripts/check-pii.mjs --strict` (clean),
 `node apps/api/scripts/check-no-committed-secrets.mjs` (clean),

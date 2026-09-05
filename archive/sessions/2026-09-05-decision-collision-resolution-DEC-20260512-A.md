@@ -51,6 +51,15 @@ The duplicate display ID remains unchanged for both sources. A bare
   `scheduled_testing_eligible`, which is not the same mechanism as this
   row's `cost_class` gate; both appear to coexist in the current codebase.
 
+## Citations of the bare id in code
+
+`apps/api/src/capabilities/auto-register.ts` line 164 says "2026-05-12
+(DEC-20260512-A: Mirjam Boele confirmed KVK partner status is closed to
+foreign EU entities)". That citation means the KVK Option B row
+(`DEC-20260512-A--notion-35e67c87082c8122a29ef35f256d5958`), not the
+scheduler cost-class row; the code comment predates this resolution and
+the bare id stays prose there.
+
 ## Rejected representations
 
 - Importing only one row formally would leave the other's distinct subject

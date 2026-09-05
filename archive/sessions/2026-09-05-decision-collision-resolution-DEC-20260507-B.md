@@ -57,6 +57,14 @@ The duplicate display ID remains unchanged for both sources. A bare
   with the eligibility this row proposed having been closed by
   `DEC-20260508-C`.
 
+## Citations of the bare id in code
+
+`apps/api/src/capabilities/auto-register.ts` line 166 says "Openapi is the
+licensed-aggregator path per DEC-20260507-B". That citation means the
+superseded NL row (KVK direct API replaced by an aggregator path), not the
+Rule 16 self-merge row; the code comment predates this resolution and the
+bare id stays prose there.
+
 ## Rejected representations
 
 - Formally recording the superseded NL row would create a second competing
