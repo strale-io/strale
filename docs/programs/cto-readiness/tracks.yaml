@@ -275,21 +275,25 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      G1 closed (PR #552). G2 batch 1 done (PR #553): five ID collisions
-      resolved atomically (DEC-20260225-P-c5d6, DEC-20260303-A,
-      DEC-20260304-A, DEC-20260304-B, DEC-20260304-C), each row given a
-      source-qualified record (--notion-<page id>) or an evidence-backed
-      documented_only disposition, with one resolution report per
-      collision under archive/sessions/. Method:
-      archive/sessions/2026-09-01-decision-collision-identity-plan.md and
-      the DEC-20260502-A worked example; the operator verifier passes.
-      Blocking gaps: G2 (29 collisions remain) and G9. Next: G2 batch 2,
-      the March 2026 collisions (DEC-20260320-C, DEC-20260320-J,
-      DEC-20260320-K) and the April ones through DEC-20260406-C, then the
-      April 20 to 21 group, then the May group, then G9's closing review.
-      This track is the M2 exit gate: the closure register's validator
-      refuses a state where it is done, or any post-m2 track is active or
-      done, while a blocking gap remains.
+      G1 closed (PR #552). G2 batches 1 and 2 done (PRs #553, #555): eleven
+      ID collisions resolved atomically (DEC-20260225-P-c5d6,
+      DEC-20260303-A, DEC-20260304-A/B/C, DEC-20260320-C/J/K,
+      DEC-20260405-B, DEC-20260406-A/B), every row a source-qualified
+      record, one resolution report per collision under
+      archive/sessions/. Batch 2 found that the sixty KYB and Invoice
+      Verify solutions are absent from the current solution catalogue
+      source and that eighteen were retired by name, so forty-two are
+      unaccounted for in the repository (production state unknown from
+      files). Blocking gaps: G2 (23 collisions remain) and G9. Next: G2
+      batch 3 (DEC-20260406-C, DEC-20260409-C, DEC-20260420-D/E/F/G/H;
+      one superseded twin and one identical-title duplicate become
+      documented_only; the DEC-20260420-H rows do not carry the
+      social-platform rule that CLAUDE.md and two records attribute to
+      that id, so the report says so in prose), then the April 20 to 21
+      group, then the May group, then G9's closing review. This track is
+      the M2 exit gate: the closure register's validator refuses a state
+      where it is done, or any post-m2 track is active or done, while a
+      blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -452,6 +456,13 @@ tracks:
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-B.md
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-C.md
       - handoff/_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260320-C.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260320-J.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260320-K.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260405-B.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-A.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-B.md
+      - handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md
 
   - id: T6
     title: M3 repo-native workflows
