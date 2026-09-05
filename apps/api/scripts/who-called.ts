@@ -29,9 +29,21 @@
  *   npx tsx scripts/who-called.ts --error "map is not a function" --days 30
  *   npx tsx scripts/who-called.ts --failing --days 7      # every failing slug
  */
+import { config } from "dotenv";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 import { callerClassSql, CALLER_CLASSES, type CallerClass } from "../src/lib/metrics/populations.js";
+
+// The operator handle reads DATABASE_URL when it is opened, and unlike the
+// application pool it loads no environment of its own. Without this the script
+// dies with "DATABASE_URL is required" even on a machine where .env sits right
+// there — which is how it read on first run. Safe after the imports because the
+// handle is opened inside main(), never at module scope. Same repo-root .env
+// every other operator script reads.
+const HERE = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(HERE, "../../..", ".env") });
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
