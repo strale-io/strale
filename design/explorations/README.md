@@ -29,8 +29,8 @@ promoted to `active.json`.
   `docs/programs/brand-website/SYSTEM-COMPLETION.md`; these concepts are history.
 
 - [`2026-09-05-quiet-material-refinement/`](2026-09-05-quiet-material-refinement/README.md)
-  — status: exploring. First website, social and PDF application studies after
-  DEC-20260905-A; production tokens and v0.7 status remain unchanged.
+  — status: rejected. Closed historical website, social and PDF study after
+  DEC-20260905-A; excluded from implementation. Original v0.7 remains the baseline.
 
 - [`2026-09-01-quiet-material-v0.7/`](2026-09-01-quiet-material-v0.7/README.md)
   — status: proposed. Candidate token file:
