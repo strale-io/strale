@@ -1,0 +1,146 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "536a1c04064bc0874e7ff4b55d77024fd4376244"
+  },
+  "at": "2026-09-05T21:33:42.567Z",
+  "inputs": {
+    "source": "design/brand-kit/quiet-material/patterns/verification.json"
+  },
+  "summary": {
+    "id": "quiet-material-patterns-0.1"
+  },
+  "topic": "quiet-material-patterns",
+  "raw": {
+    "id": "quiet-material-patterns-0.1",
+    "inputs": {
+      "registry.json": "e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72",
+      "templates.mjs": "aad514aba99efb9517513388352721d41ee0dde3e2e12576e12b04654c34fc99",
+      "specimen.css": "0a1b7842cc3f61391d77353583b984ac9d32a5a7fe0ae2641a788947895b032f",
+      "interactions.js": "50d29beac1823fde56dabb97b7d05b0b33757d96bdf59f21c333602f4080bd5d",
+      "build.mjs": "00fdb2f49866a2a9bb9abb11a0b96620ccb169029800063c7d892533bcc9dea7",
+      "verify.mjs": "e7171f051c5893e050577a68a12d21f91d81dc73972c5c8e9ca484327c04647a",
+      "verify-pdf.py": "a44a9c8b0dedda7114fda4954300798d28f6ad9ab0c1afe845089458a0669aa5",
+      "../../../tokens/candidates/quiet-material-patterns.json": "a622e3286efd2f048b4580c7a9440fe347d833585b8c674c6cc44a0c9546b31c",
+      "../../../tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
+      "../controls/specimen.css": "decc5d17e173e74a30bd6b26236b1542dc505ca7769ca7d0788d871db17d84b0",
+      "../foundations/exports/lockup-ink.svg": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
+      "../foundations/exports/lockup-inverse.svg": "fcbd4e1461d1341bee85e0630c03ede040164be0157bf658d6b2ce498ba73b60",
+      "../fonts/InstrumentSans.ttf": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+      "../fonts/IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+      "../../../../docs/research/2026-09-05-quiet-material-pattern-references.md": "71d331b0d4f73a5901d00194fe6c7cab30dfbd0f85f08384951d1941b5d8ed01"
+    },
+    "widths": [
+      320,
+      375,
+      760,
+      1120,
+      1440
+    ],
+    "checks": {
+      "reflow": true,
+      "form_validation": true,
+      "native_selection": true,
+      "preserved_values": true,
+      "loading_guard": true,
+      "failure_recovery": true,
+      "read_only_disabled": true,
+      "labels": true,
+      "focus_visible": true,
+      "targets": true,
+      "icons": true,
+      "reduced_motion": true,
+      "density": true,
+      "contrast": true,
+      "print_bounds": true,
+      "network_blocked": true
+    },
+    "errors": [],
+    "contrast": [
+      {
+        "fg": "--ink",
+        "bg": "--canvas",
+        "required": 4.5,
+        "ratio": 18.903394841315958
+      },
+      {
+        "fg": "--ink-secondary",
+        "bg": "--canvas",
+        "required": 4.5,
+        "ratio": 6.336238847359875
+      },
+      {
+        "fg": "--status-bad",
+        "bg": "--canvas",
+        "required": 4.5,
+        "ratio": 7.157794559094324
+      },
+      {
+        "fg": "--status-good",
+        "bg": "--canvas",
+        "required": 4.5,
+        "ratio": 6.969305280947136
+      },
+      {
+        "fg": "--p-field-border",
+        "bg": "--canvas",
+        "required": 3,
+        "ratio": 4.330795344079111
+      },
+      {
+        "fg": "--canvas",
+        "bg": "--ink",
+        "required": 4.5,
+        "ratio": 18.903394841315958
+      },
+      {
+        "fg": "--surface",
+        "bg": "Dusk per-channel upper bound",
+        "required": 4.5,
+        "ratio": 13.529875709286966
+      }
+    ],
+    "runtime": {
+      "node": "v24.12.0",
+      "chromium": "152.0.7977.82"
+    },
+    "limits": [
+      "Production active.json is unchanged; this candidate extends accepted design work.",
+      "Browser keyboard/reflow and bounded contrast checks are not full screen-reader or cross-browser certification.",
+      "Forms and actions are local fixtures without network, accounts, persistence or billing.",
+      "Application copy and document fields are illustrative; chosen tool, route and public claims require launch proof.",
+      "Email has not been tested in mail clients, and no message or social artwork has been published.",
+      "Existing atmospheric asset rights gaps remain open; no new imagery or new logo is introduced.",
+      "The utility set covers twelve common symbols; complex tables, dialogs, upload, authentication and custom comboboxes remain separate patterns."
+    ],
+    "outputs": {
+      "index.html": "2b7c7633c65441511bbc481239b819055fda884970245adf50a20fa95ea0f928",
+      "website.html": "285e6632d79bf04f98ceadc9c0b0eeb0025481bea9b1405425eee75ec96c3d87",
+      "social.html": "cb5952f9ff5c2050a487b419d089c354db287eed0219c71e3ce8afc9599236e6",
+      "email.html": "d9917b0abea0a94adee426fa0861b1eefd9a516792a4d0defd9790191399172d",
+      "email.txt": "049369bbf8e7c7f4117b8a50e284d218c1cda6d992b76afd45af90824a8b23bb",
+      "icons/search.svg": "1421c335e53b6c25d82b6792b8d7a06cd38f9bba6be9970f477e336b86883331",
+      "icons/arrow-right.svg": "f4a3208446ad96613d1f0e76a4d7a65f373fe3c7d22c0611bc2ebdf4192f72c6",
+      "icons/chevron-down.svg": "197fa79b777d0e08a13d82005615716e9219b2cca04c0beff78d49593816fea2",
+      "icons/close.svg": "f3a8f8e11395930640692b144fd143d54ab1722db097b10b4039375150443919",
+      "icons/check.svg": "14d907faf42e98238b8d094e225f157224921cc46ca366cb8dfcde85d4c1651a",
+      "icons/info.svg": "6175ee32dfebe887a823c207f1b31169b679df36f046e36e5f82ca69ec2a62b0",
+      "icons/alert.svg": "0cc8da24700dbc6e0f0f33e1dcd35b9e9099c5b12b63cd2c6aa890449671d26a",
+      "icons/copy.svg": "7c3e64c3ef3d7f92c6f72a6323a13356c9e7d1c963126fb66c172410db66d02a",
+      "icons/external.svg": "1afa6b94ce43cb32b956939f771edd373975ee28951e9b293384e9501213bbdc",
+      "icons/filter.svg": "beebd4e8f5f8b56c8aef22141727bd04d27e29a6736ade44e4b7010e38a64daa",
+      "icons/mail.svg": "988dd34e955e9c69b5e028c5a69061c01ee58aa81849d0594156500113f2dc24",
+      "icons/document.svg": "f198da18a6565281e32afe718aa5f2b372bd327e3e8bc3d0b84c77eeb8c8301f",
+      "RULES.md": "1515853a06d357ac2120425acc6a3f87e643b8dfd1a81ca37a7fddd7910af3ef",
+      "icons/manifest.json": "2d4c61414bf29e908432f9b97a8fea34f05bbc17077be7dfe5a29be8e8e067fe",
+      "exports/social-landscape.png": "af2609d6028405932a751440c9786f7d64037edc963898d3629f061f443c7194",
+      "output/pdf/forms-symbols-composition.pdf": "3576b40072805d07195891870293b45664a32c8632ed48ebe9c84bc693557099"
+    },
+    "pdf": {
+      "pages": 8,
+      "all_fonts_embedded": true,
+      "bounds_errors": []
+    }
+  }
+}

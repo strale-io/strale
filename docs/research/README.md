@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 38 (36 topics with a current answer, 1 historical).
+Total files: 39 (37 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -44,6 +44,7 @@ Total files: 38 (36 topics with a current answer, 1 historical).
 | payee-assurance-pricing-benchmark | [2026-04-28-payee-assurance-apples-to-apples-benchmark.md](2026-04-28-payee-assurance-apples-to-apples-benchmark.md) | What is the correct per-call price anchor for Payee Assurance v1 when benchmarked only against genuinely comparable multi-leg competitor APIs? | 2026-04-28 | 1 |
 | payee-assurance-two-tier-pricing | [2026-04-22-payee-assurance-two-tier-pricing.md](2026-04-22-payee-assurance-two-tier-pricing.md) | Should Payee Assurance charge as a two-tier (onboarding plus monitoring) product or a single flat per-call price? | 2026-04-22 | 0 |
 | pt-registry-build-path-verify | [2026-05-07-pt-registry-build-path-verify.md](2026-05-07-pt-registry-build-path-verify.md) | Does the chosen PT registry data path (publicacoes.mj.pt parser plus Certidao Permanente) still hold up under a fresh technical-viability probe? | 2026-05-07 | 0 |
+| quiet-material-pattern-references | [2026-09-05-quiet-material-pattern-references.md](2026-09-05-quiet-material-pattern-references.md) | Which interaction and composition references help complete the retained Quiet Material system? | 2026-09-05 | 0 |
 | ro-registry-build-path | [2026-05-06-ro-registry-build-path.md](2026-05-06-ro-registry-build-path.md) | What is the build path for ingesting Romania's ONRC company register? | 2026-05-06 | 0 |
 | screening-coverage-empirical | [2026-04-27-screening-coverage-empirical.md](2026-04-27-screening-coverage-empirical.md) | What is the real-world hit rate and coverage of Strale's PEP, sanctions, and adverse-media screening across v1 and v1.1 target jurisdictions? | 2026-04-27 | 0 |
 | si-registry-build-path | [2026-05-06-si-registry-build-path.md](2026-05-06-si-registry-build-path.md) | What is the build path for ingesting Slovenia's AJPES business register? | 2026-05-06 | 0 |

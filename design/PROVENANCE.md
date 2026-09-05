@@ -110,3 +110,7 @@ Current candidate: `design/brand-kit/quiet-material/foundations/README.md`; valu
 ### Quiet Material controls 0.1
 
 Candidate companion at `design/brand-kit/quiet-material/controls/`. Retains the foundations token values, fonts and original flowing-S mark; adds proposed control/navigation/card state geometry. Founder closed the generated-symbol exploration and retained the existing logo. No production promotion or replacement of previous catalogue evidence.
+
+### Quiet Material patterns 0.1
+
+Candidate extension at `design/brand-kit/quiet-material/patterns/README.md`, following founder acceptance of the controls companion. Retains the current logo and all prior type/control CSS values. Adds original utility geometry, form/selection/recovery patterns and content/composition budgets, with website/social/email studies from one illustrative story. External reference evidence is in `docs/research/2026-09-05-quiet-material-pattern-references.md`; no external font, palette or artwork replaces the retained kit. No production adoption or publication.

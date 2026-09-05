@@ -1,0 +1,89 @@
+import assert from 'node:assert/strict';
+import {writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {here,json,inputHashes,digest,render,validateComposition} from './build.mjs';
+const {chromium}=await import(pathToFileURL(process.argv[2]).href);
+const r=json('registry.json'),t=json('../../../tokens/candidates/quiet-material-patterns.json');
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const context=await browser.newContext({viewport:{width:1120,height:1000},deviceScaleFactor:1});
+const page=await context.newPage(),errors=[],requests=[],checks={};
+page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+await context.route('**/*',route=>{const url=route.request().url();if(/^(file:|data:)/.test(url))return route.continue();requests.push(url);return route.abort();});
+const go=async file=>{await page.goto(pathToFileURL(resolve(here,file)).href);await page.evaluate(()=>document.fonts.ready);await page.locator('img').evaluateAll(async imgs=>{await Promise.all(imgs.map(i=>i.decode()));});};
+const outputNames=Object.keys(render(r,t));
+mkdirSync(resolve(here,'.preview'),{recursive:true});mkdirSync(resolve(here,'exports'),{recursive:true});
+// Fixed-size source artwork, then the responsive guide that embeds it.
+await go('social.html');await page.setViewportSize({width:1200,height:800});
+assert.deepEqual(await page.locator('.social-art').evaluate(e=>({width:e.offsetWidth,height:e.offsetHeight})),{width:1200,height:630});
+await page.locator('.social-art').screenshot({path:resolve(here,'exports/social-landscape.png')});
+const widths=[320,375,760,1120,1440];
+for(const file of ['index.html','website.html','email.html'])for(const width of widths){
+ await page.setViewportSize({width,height:1000});await go(file);
+ const overflow=await page.evaluate(()=>[...document.querySelectorAll('main *')].filter(e=>{const b=e.getBoundingClientRect(),s=getComputedStyle(e);return b.width&&b.height&&s.display!=='none'&&(b.left<-.5||b.right>innerWidth+.5);}).map(e=>`${e.tagName}.${e.className}`));
+ assert.deepEqual(overflow,[],`${file} at ${width}`);
+ if(width===375||width===1120)await page.screenshot({path:resolve(here,`.preview/${file.replace('.html','')}-${width}.png`),fullPage:true});
+}
+checks.reflow=true;
+await page.setViewportSize({width:1120,height:1000});await go('index.html');
+assert.equal(await page.locator('#name-error').isVisible(),false);
+await page.locator('#save-example').click();assert.equal(await page.locator('#view-name').getAttribute('aria-invalid'),'true');assert.equal(await page.evaluate(()=>document.activeElement.id),'view-name');
+await page.locator('#view-name').fill('Research view');assert.equal(await page.locator('#name-error').isVisible(),false);checks.form_validation=true;
+await page.locator('#view-note').fill('Keep this description through recovery.');
+await page.locator('#view-category').selectOption({label:'Extraction'});await page.locator('input[value=compact]').check();await page.locator('#captions').uncheck();
+assert.equal(await page.locator('#view-category').inputValue(),'Extraction');assert(await page.locator('input[value=compact]').isChecked());assert.equal(await page.locator('#captions').isChecked(),false);checks.native_selection=true;
+await page.locator('#simulate-failure').check();
+const before=await page.locator('#save-example').boundingBox();await page.locator('#save-example').click();
+assert.equal(await page.locator('#save-example').getAttribute('aria-busy'),'true');
+const during=await page.locator('#save-example').boundingBox();assert.equal(before.width,during.width);assert.equal(before.height,during.height);
+await page.locator('#preferences').evaluate(f=>{f.requestSubmit();f.requestSubmit();});
+await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Couldn’t'));
+assert.equal(await page.locator('#view-name').inputValue(),'Research view');assert.equal(await page.locator('#view-note').inputValue(),'Keep this description through recovery.');checks.preserved_values=true;checks.loading_guard=true;
+await page.locator('#simulate-failure').uncheck();await page.locator('#save-example').click();await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Nothing was stored'));checks.failure_recovery=true;
+assert(await page.locator('#save-status').evaluate(e=>e.classList.contains('good')));
+await page.locator('#view-name').fill('');await page.locator('#save-example').click();
+assert(await page.locator('#save-status').evaluate(e=>e.classList.contains('bad')&&!e.classList.contains('good')));
+await page.locator('#view-name').fill('Recovered view');assert.equal(await page.locator('#save-status').textContent(),'');
+await page.locator('#save-example').click();assert(await page.locator('#save-status').evaluate(e=>!e.classList.contains('bad')&&!e.classList.contains('good')));
+await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Nothing was stored'));
+
+assert(await page.locator('#state-Unavailable').isDisabled());assert.equal(await page.locator('#state-Read-only').getAttribute('readonly'),'');checks.read_only_disabled=true;
+const labels=await page.locator('input,select,textarea').evaluateAll(els=>els.every(e=>e.labels?.length));assert(labels);checks.labels=true;
+await page.locator('#view-name').focus();await page.keyboard.press('Tab');assert(await page.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle==='solid'));checks.focus_visible=true;
+assert(await page.locator('button,a.btn,.choice,.field input,.field select').evaluateAll(els=>els.filter(e=>e.getBoundingClientRect().height).every(e=>e.getBoundingClientRect().height>=44)));checks.targets=true;
+assert(await page.locator('.utility').evaluateAll(els=>els.every(e=>e.getAttribute('aria-hidden')==='true'&&e.getAttribute('focusable')==='false')));checks.icons=true;
+await page.locator('#clear-example').click();assert((await page.locator('#clear-status').textContent()).includes('Filters cleared'));
+await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('#save-example').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');checks.reduced_motion=true;await page.emulateMedia({reducedMotion:'no-preference'});
+const compositions={};
+for(const file of ['website.html','social.html','email.html']){
+ await go(file);
+ const measured=await page.locator('[data-density]').evaluateAll(els=>els.map(el=>{
+  const owned=selector=>[...el.querySelectorAll(selector)].filter(x=>x.closest('[data-density]')===el);
+  const count=text=>text.trim().split(/\s+/).filter(Boolean).length;
+  const proofs=[...(el.matches('[data-proof]')?[el]:[]),...el.querySelectorAll('[data-proof]')].filter(x=>{const parent=x.parentElement.closest('[data-proof]');return !parent||!el.contains(parent);});
+  const panels=[...(el.matches('.extraction,.paper-document')?[el]:[]),...el.querySelectorAll('.extraction,.paper-document')];
+  const depths=panels.map(x=>{let depth=1,parent=x.parentElement.closest('.extraction,.paper-document');while(parent){depth++;parent=parent.parentElement.closest('.extraction,.paper-document');}return depth;});
+  return {id:el.dataset.density,headline_words:count(owned('h1,h2,h3')[0]?.textContent||''),body_words:count(owned('[data-body]').map(x=>x.textContent).join(' ')),primary_actions:owned('a.primary,a.inverse,button.primary,button.inverse').length,supporting_links:owned('a:not(.primary):not(.inverse)').length,proof_objects:proofs.length,rows:el.querySelectorAll('dl>div').length,decorative_fields:el.querySelectorAll('[data-decorative-field]').length+Number(el.matches('[data-decorative-field]')),panel_depth:Math.max(0,...depths)};
+ }));
+ validateComposition(measured,r);compositions[file]=measured;
+ if(file==='website.html'){
+  const layouts=await page.locator('[data-layout]').evaluateAll(els=>els.map(x=>x.dataset.layout));assert.deepEqual(layouts,r.density.rhythm.sequence);
+  let run=0,previous='';for(const layout of layouts){run=layout===previous?run+1:1;assert(run<=r.density.rhythm.adjacent_same_layout_max);previous=layout;}
+ }
+}
+checks.density=true;
+// Conservative bound for every interpolated Dusk colour, not a single point sample.
+const rgb=hex=>hex.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));
+const lum=x=>x.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+const ratio=(a,b)=>(Math.max(lum(a),lum(b))+.05)/(Math.min(lum(a),lum(b))+.05);
+const v=t.layout.css_variables,contrast=[];
+for(const [fg,bg,required]of [['--ink','--canvas',4.5],['--ink-secondary','--canvas',4.5],['--status-bad','--canvas',4.5],['--status-good','--canvas',4.5],['--p-field-border','--canvas',3],['--canvas','--ink',4.5]])contrast.push({fg,bg,required,ratio:ratio(rgb(v[fg]),rgb(v[bg]))});
+const stops=v['--atmosphere-dusk'].match(/#[a-f0-9]{6}/gi).map(x=>rgb(x.slice(1))),upper=[0,1,2].map(i=>Math.max(...stops.map(s=>s[i])));
+contrast.push({fg:'--surface',bg:'Dusk per-channel upper bound',required:4.5,ratio:ratio(rgb(v['--surface']),upper)});assert(contrast.every(x=>x.ratio>=x.required));checks.contrast=true;
+await go('index.html');await page.setViewportSize({width:1120,height:1000});await page.emulateMedia({media:'print'});
+const bounds=await page.locator('.sheet').evaluateAll(sheets=>sheets.flatMap(s=>{const sb=s.getBoundingClientRect(),footer=s.querySelector('.footer').getBoundingClientRect();return [...s.querySelectorAll('.body *')].filter(e=>{const b=e.getBoundingClientRect();return b.width&&b.height&&(b.bottom>footer.top||b.left<sb.left||b.right>sb.right);}).map(e=>`${s.id}: ${e.tagName}.${e.className}`);}));assert.deepEqual(bounds,[]);checks.print_bounds=true;
+await page.pdf({path:resolve(here,'output/pdf/forms-symbols-composition.pdf'),printBackground:true,preferCSSPageSize:true,tagged:true});
+assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);checks.network_blocked=true;
+const e={id:r.id,inputs:inputHashes(),widths,checks,errors,contrast,compositions,runtime:{node:process.version,chromium:browser.version()},limits:r.limits,outputs:Object.fromEntries([...outputNames,'exports/social-landscape.png','output/pdf/forms-symbols-composition.pdf'].map(p=>[p,digest(p)]))};
+writeFileSync(resolve(here,'.preview/browser-evidence.json'),JSON.stringify(e,null,2)+'\n');console.log(JSON.stringify({ok:true,checks}));
+await context.close();await browser.close();

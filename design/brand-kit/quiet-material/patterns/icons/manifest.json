@@ -1,0 +1,140 @@
+{
+  "id": "Strale utility outlines",
+  "status": "candidate",
+  "authorship": "Original paths authored in this batch; no third-party icon artwork copied.",
+  "source": "../registry.json",
+  "items": [
+    {
+      "id": "search",
+      "file": "search.svg",
+      "sha256": "1421c335e53b6c25d82b6792b8d7a06cd38f9bba6be9970f477e336b86883331",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Find content"
+    },
+    {
+      "id": "arrow-right",
+      "file": "arrow-right.svg",
+      "sha256": "f4a3208446ad96613d1f0e76a4d7a65f373fe3c7d22c0611bc2ebdf4192f72c6",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Directional action after a label"
+    },
+    {
+      "id": "chevron-down",
+      "file": "chevron-down.svg",
+      "sha256": "197fa79b777d0e08a13d82005615716e9219b2cca04c0beff78d49593816fea2",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Disclosure with aria-expanded on trigger"
+    },
+    {
+      "id": "close",
+      "file": "close.svg",
+      "sha256": "f3a8f8e11395930640692b144fd143d54ab1722db097b10b4039375150443919",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Dismiss current surface"
+    },
+    {
+      "id": "check",
+      "file": "check.svg",
+      "sha256": "14d907faf42e98238b8d094e225f157224921cc46ca366cb8dfcde85d4c1651a",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Reinforce a written result"
+    },
+    {
+      "id": "info",
+      "file": "info.svg",
+      "sha256": "6175ee32dfebe887a823c207f1b31169b679df36f046e36e5f82ca69ec2a62b0",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Context that changes a decision"
+    },
+    {
+      "id": "alert",
+      "file": "alert.svg",
+      "sha256": "0cc8da24700dbc6e0f0f33e1dcd35b9e9099c5b12b63cd2c6aa890449671d26a",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Reinforce a written warning or error"
+    },
+    {
+      "id": "copy",
+      "file": "copy.svg",
+      "sha256": "7c3e64c3ef3d7f92c6f72a6323a13356c9e7d1c963126fb66c172410db66d02a",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Copy named text; announce outcome"
+    },
+    {
+      "id": "external",
+      "file": "external.svg",
+      "sha256": "1afa6b94ce43cb32b956939f771edd373975ee28951e9b293384e9501213bbdc",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Indicate a destination outside current site when useful"
+    },
+    {
+      "id": "filter",
+      "file": "filter.svg",
+      "sha256": "beebd4e8f5f8b56c8aef22141727bd04d27e29a6736ade44e4b7010e38a64daa",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Narrow a result set"
+    },
+    {
+      "id": "mail",
+      "file": "mail.svg",
+      "sha256": "988dd34e955e9c69b5e028c5a69061c01ee58aa81849d0594156500113f2dc24",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Identify email as a channel"
+    },
+    {
+      "id": "document",
+      "file": "document.svg",
+      "sha256": "f198da18a6565281e32afe718aa5f2b372bd327e3e8bc3d0b84c77eeb8c8301f",
+      "sizes_px": [
+        16,
+        20,
+        24
+      ],
+      "use": "Identify a document, not certification"
+    }
+  ]
+}
