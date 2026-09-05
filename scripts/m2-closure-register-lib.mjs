@@ -335,17 +335,18 @@ function deepEqualIgnoringKeyOrder(a, b) {
  */
 export function verdictIsLastLine(text) {
   const lines = text.split(/\r?\n/);
-  // Both CommonMark fence markers count; a fence closes only on its own marker,
-  // so a tilde fence cannot be closed by backticks or vice versa.
+  // Both CommonMark fence markers count; a fence closes only on its own marker
+  // at the same length or longer, so a tilde fence cannot be closed by backticks
+  // and a four-tilde fence cannot be closed by three tildes.
   let fence = null;
   let lastNonEmpty = null;
   for (const line of lines) {
-    const m = /^\s*(```|~~~)/.exec(line);
+    const m = /^\s*(`{3,}|~{3,})/.exec(line);
     if (m && fence === null) {
       fence = m[1];
       continue;
     }
-    if (m && m[1] === fence) {
+    if (m && fence !== null && m[1][0] === fence[0] && m[1].length >= fence.length) {
       fence = null;
       continue;
     }
