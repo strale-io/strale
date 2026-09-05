@@ -1,9 +1,9 @@
 {
   "name": "Quiet Material refinement 0.1",
-  "status": "exploring",
+  "status": "rejected",
   "supersedes": null,
   "superseded_by": null,
-  "notes": "Candidate composition studies under DEC-20260905-A. Palette/families retained from v0.7; new role and layout values are exploratory. All page geometry is in PDF points (one point per design unit); website pages are static studies, not CSS breakpoints.",
+  "notes": "Closed without adoption following the founder's correction to retain the original Quiet Material redesign and audit its system. Historical composition studies under DEC-20260905-A; excluded from implementation. Palette/families retained from v0.7. All page geometry is in PDF points (one point per design unit); website pages are static studies, not CSS breakpoints.",
   "palette": {
     "--canvas": "#ffffff",
     "--surface": "#f8f8f5",

@@ -13,9 +13,11 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
-Read [tracks.yaml](tracks.yaml), then the [adopted positioning brief](POSITIONING-BRIEF.md), [launch proof boundaries](LAUNCH-PROOF.md) and [first application studies](../../../design/explorations/2026-09-05-quiet-material-refinement/README.md). The founder approved the positioning and benefit hierarchy under DEC-20260905-A; [the adoption record](../../strategy/2026-09-05-brand-direction-adoption.md) documents the narrow terminology reconciliation. T2 is done. Do not ask the founder to approve the same positioning again. T4 is active: review the rendered studies and complete the remaining logo/type/atmosphere and interaction audit before selecting the visual foundation. The broader product-proof work in T3 remains open; the first visual studies avoid its stronger unsupported claims.
+Read [tracks.yaml](tracks.yaml), the [system completion plan](SYSTEM-COMPLETION.md), the [Quiet Material system audit](../../../archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md), and the [adopted positioning brief](POSITIONING-BRIEF.md). The founder clarified that the existing redesign is preferred and that the task is to audit and complete its design system, gradients and atmospheric images as a cohesive brand kit. Instrument and Fieldwork are rejected. Do not restart visual identity exploration.
 
-Use the [rendered Quiet Material review](../../../archive/sessions/2026-09-05-quiet-material-review.md) as the control critique. The first studies cover the homepage opening and benefit section, mobile opening, social square and PDF cover/interior; they are candidate applications, not an implemented site or approved production design system. Continue from these masters rather than restarting discovery or generating an entire replacement library.
+Positioning remains adopted under DEC-20260905-A; T2 is done and must not be reopened. T4 is active: consolidate the existing asset and recipe records, resolve source conflicts, then verify retained images/gradients in contextual specimens and fill actual coverage gaps. The audit inspected fourteen current atmospheric masters and nine gradient roles. It does not certify accessibility, all crops or the complete brand kit. T3 product-proof work remains open.
+
+Quiet Material v0.7 is the working visual baseline. Keep the [rendered review](../../../archive/sessions/2026-09-05-quiet-material-review.md) and exact founder screenshot as evidence, with their version distinction preserved. The earlier refinement and rejected alternative boards remain historical studies, not implementation inputs. The sequence is existing-system audit and completion, cohesive brand kit and initial design system, then website design. Do not revert to either the two-section homepage proposal or a choice between new identities.
 
 Evidence remains in [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and the private [positioning assessment](https://github.com/strale-io/strale-context-archive/blob/94051a311da77151f6b05988438830c315dd3449/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). This repository program is the working continuation home. Historical Notion records are not a separate brand plan; the broader operating-model migration remains subject to its explicit M4 cutover.
 
@@ -36,7 +38,7 @@ Initial release scope: the public website and essential developer conversion/dis
 | T1 Discovery | Product/usage/strategy/design-source assessment and receipts | Sources and dates recorded; customer facts separated from hypotheses; no silent strategy adoption. |
 | T2 Positioning and creative brief | Audience, jobs, category, promise, benefit hierarchy, proof, alternatives, voice principles, and commercial next action | Founder adopts the strategic choice through a decision record; contradictory older instructions are explicitly reconciled. |
 | T3 Product proof | A claim-to-evidence map and bounded remediation of any proof needed for launch | What the user can inspect and what each test establishes verified by execution route; stronger claims omitted until supported. |
-| T4 Art direction | Existing-asset audit and Quiet Material control/refinement shown in the same real applications | Founder selects a direction from rendered examples; further alternatives only if the comparison exposes a need. |
+| T4 Existing-system audit and cohesion | Quiet Material asset/recipe inventory, resolved source conflicts and contextual specimens | Existing direction retained; each required asset and combination has an explicit role, status and verification. |
 | T5 Brand kit and system | Human guidelines, machine contracts, production assets, components, lint/verification integration | Required initial coverage is demonstrated; examples, masters and runtime consumers agree on the adopted version. |
 | T6 Website | Implemented website in `apps/web`, with use-case/detail/quickstart paths | Benefit-first narrative, real product truth, responsive/accessibility/performance and end-to-end conversion checks. |
 | T7 Channel starter assets | Social profile/banner/post templates, blog/OG, email, PDF and video set | Actual exports reviewed in context; source masters, licences and variants recorded; no unapproved publishing. |
@@ -74,13 +76,13 @@ These are proposed acceptance rules for T4/T5, not silently active tokens:
 
 A section brief records audience question, message, evidence source, visible content, visual action, deeper destination, density class and acceptance screenshot. These are authoring records, not content shown to website visitors.
 
-## Art-direction process
+## Existing-system audit and completion process
 
-1. Assemble current logo/atmosphere/type assets and known versions into a comparison sheet, including light/dark variants, actual use sizes and crops. Record keep/refine/retire/unknown; the inventory is not approval.
-2. Use references for particular principles such as typography, pacing or photographic treatment. Name what each reference may influence. Strale's adopted identity controls the result.
-3. Compare preserved Quiet Material with a refined composition using identical real copy: homepage opening, a contrasting benefit/proof section, a social post and a PDF cover plus interior example. Use the rendered review to address repetition and competing hierarchy. Explore a further identity direction only if this comparison exposes a reason; a direction must work beyond one attractive hero.
-4. Critique clarity, hierarchy, distinctiveness, cohesion, accessibility and production feasibility separately. Machine checks can verify constraints; a model score does not choose the founder's aesthetic preference.
-5. Select one direction, freeze its anchor applications, and derive the initial component/asset library. Review assets both individually and in the assembled page. Supporting parts must remain subordinate where the composition needs them.
+1. Retain Quiet Material and inspect its actual assets and current written/code rules. The founder has rejected replacement identity exploration; do not use the rejected alternatives as fresh references.
+2. Reconcile source/version/status, missing files, identity symbols, gradient roles and card/background recipes. The [completion plan](SYSTEM-COMPLETION.md) owns the work order and [system-completion.json](system-completion.json) records required coverage.
+3. Render the existing combinations in relevant desktop, narrow and channel crops. Include calm, image-free compositions. Verify legibility, crop safety, hierarchy, material coherence and contrast; a generated image or passing linter cannot certify these together.
+4. Fill demonstrated gaps in assets, typography, component states, density/rhythm, motion and channel templates. Refine existing assets only for a documented failure; preserve the originals and their lineage.
+5. Adopt the completed brand kit and initial system through the existing decision process, then use it to design the website. Keep human rules, structured data, specimens and consumers aligned.
 
 Every meaningful exported asset gets a brief, source master, approved variants, usage metadata and contextual acceptance. This is not a mandate to catalogue every DOM element. Add a missing asset deliberately to the shared library, then consume it; do not improvise a private copy inside one page.
 

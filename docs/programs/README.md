@@ -9,7 +9,7 @@ decided. Project truth lives in `docs/project/` (candidate until M4) and
 | Program | Register | Status |
 |---|---|---|
 | [CTO-readiness](cto-readiness/PROGRAM.md) | `cto-readiness/tracks.yaml` | active from 2026-09-02 |
-| [Brand and website](brand-website/PROGRAM.md) | `brand-website/tracks.yaml` | positioning adopted 2026-09-05; T4 active with first application studies ready |
+| [Brand and website](brand-website/PROGRAM.md) | `brand-website/tracks.yaml` | positioning adopted; T4 active: retain Quiet Material and complete its system/asset governance |
 | [Remediation](../remediation/REMEDIATION-LEDGER.md) | legacy program; per-package YAML under `../remediation/packages/`, not a track register | closure tracked by CTO-readiness track T4 |
 
 Rules:

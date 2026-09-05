@@ -46,17 +46,20 @@ tracks:
     evidence:
       - docs/programs/brand-website/LAUNCH-PROOF.md
   - id: T4
-    title: Asset audit and art direction
+    title: Existing Quiet Material system audit and cohesion
     status: active
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Review the first application studies, finish the remaining logo/type/atmosphere and interaction audit, and refine the candidate foundation from contextual feedback.
-    resume_file: design/explorations/2026-09-05-quiet-material-refinement/README.md
+    next_action: Retain Quiet Material; complete the asset manifest, locate or mark missing sources and reconcile identity/recipe conflicts, then verify existing gradient and atmospheric combinations in contextual specimens before filling remaining brand-kit gaps.
+    resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.
-      - One direction selected through homepage, benefit, social and document examples.
+      - Existing direction retained and required gradient/image/surface recipes verified in relevant contexts before brand-kit adoption.
     evidence:
+      - docs/programs/brand-website/SYSTEM-COMPLETION.md
+      - archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md
+      - archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json
       - design/explorations/2026-09-05-quiet-material-refinement/README.md
       - archive/receipts/2026-09-05-check-brand-direction-applications.json
       - archive/receipts/2026-09-05-check-brand-direction-review-fixes.json

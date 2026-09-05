@@ -1,0 +1,84 @@
+{
+  "name": "Instrument \u2014 brand direction study",
+  "status": "rejected",
+  "supersedes": null,
+  "superseded_by": null,
+  "notes": "Rejected by founder on 2026-09-05: retain existing Quiet Material and complete its design system. Historical intended reconstruction values only. Intended reconstruction values, not measurements of generated raster artwork. Boards approximate these roles; fonts, contrast and exact geometry must be proven in editable masters before adoption.",
+  "palette": {
+    "paper": "#F4F1E9",
+    "ink": "#20251F",
+    "muted": "#60665D",
+    "accent": "#D94727",
+    "night": "#222E29",
+    "line": "#C9CABE",
+    "inverse": "#F4F1E9"
+  },
+  "type": {
+    "families": {
+      "display": "Instrument Sans, Arial, sans-serif",
+      "body": "Instrument Sans, Arial, sans-serif",
+      "label": "IBM Plex Mono, Consolas, monospace"
+    },
+    "scale": {
+      "display": {
+        "size": 76,
+        "leading": 78,
+        "weight": 500
+      },
+      "heading": {
+        "size": 40,
+        "leading": 44,
+        "weight": 500
+      },
+      "body": {
+        "size": 20,
+        "leading": 30,
+        "weight": 400
+      },
+      "label": {
+        "size": 12,
+        "leading": 18,
+        "weight": 400
+      }
+    }
+  },
+  "spacing": [
+    0,
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48,
+    64,
+    96,
+    128
+  ],
+  "radii": [
+    0,
+    4,
+    8
+  ],
+  "shadows": [],
+  "motion": {
+    "status": "storyboard-only",
+    "principle": "Reveal a selected field and its result together; atmosphere stays still.",
+    "reduced_motion": "Show the completed explanatory frame."
+  },
+  "layout": {
+    "units": "px at a 1440px desktop artboard; targets only",
+    "columns": 12,
+    "margin": 64,
+    "gap": 24,
+    "body_measure_ch": 48,
+    "hero_lines_max": 3,
+    "primary_actions_max": 1,
+    "framing": "Open canvas, one focal material object, no nested card frames."
+  },
+  "provenance": {
+    "source": "design/explorations/2026-09-05-brand-directions/CREATIVE-BRIEF.md",
+    "captured_at": "2026-09-05",
+    "note": "New agent-authored candidate under the founder-authorized brand-first exploration. Quiet Material remains the comparison control."
+  }
+}
