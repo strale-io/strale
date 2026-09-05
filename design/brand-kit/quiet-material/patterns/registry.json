@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "id": "quiet-material-patterns-0.1",
+  "status": "candidate",
+  "production_adopted": false,
+  "founder_direction": "Controls accepted for continued design work; retain current logo, fonts and Quiet Material. Complete forms/icons/composition and test across channels.",
+  "token_source": "design/tokens/candidates/quiet-material-patterns.json",
+  "reference_lock": "docs/research/2026-09-05-quiet-material-pattern-references.md",
+  "pages": [
+    {"id":"forms","title":"A clear path through a form.","summary":"Ask only what is needed. Keep the next action easy to find."},
+    {"id":"states","title":"Make the next step clear.","summary":"Feedback belongs beside the work. Keep the input when something fails."},
+    {"id":"icons","title":"Small symbols. One language.","summary":"Functional outlines share a grid, weight and purpose. The logo stays distinct."},
+    {"id":"density","title":"Give each idea room.","summary":"Set a content budget before choosing a container."},
+    {"id":"rhythm","title":"Change the composition.","summary":"Move between atmosphere, open reading and a focused invitation."},
+    {"id":"website","title":"The system, working together.","summary":"A website sequence tests the relationship between promise, example and action."},
+    {"id":"social","title":"One thought in the feed.","summary":"Adapt the composition to the channel. Keep the message short enough to see."},
+    {"id":"email","title":"A useful message, simply sent.","summary":"Readable text and a clear destination carry the brand when custom fonts cannot."}
+  ],
+  "forms": {
+    "layout":"single-column",
+    "label":"visible-above-field",
+    "optional":"word-optional-in-label",
+    "validation":"on-submit-then-on-correction",
+    "error_focus":"first-invalid-field",
+    "error_association":"aria-invalid-and-aria-describedby",
+    "loading":"preserve-label-and-size; announce-status; prevent-repeat",
+    "failure":"preserve-values; inline-recovery; no-toast-only-error",
+    "selection":"native-select-radio-checkbox",
+    "paste":"allowed",
+    "target_min_px":44,
+    "states":["empty","filled","hover","focus-visible","invalid","disabled","read-only","loading","success","failure"],
+    "specimen_only":true,
+    "storage":"none",
+    "network":"none"
+  },
+  "icons": {
+    "family":"Strale utility outlines",
+    "authorship":"Original paths authored in this batch; no third-party icon artwork copied.",
+    "status":"candidate",
+    "view_box":[0,0,24,24],
+    "stroke_width":2,
+    "linecap":"round",
+    "linejoin":"round",
+    "sizes_px":[16,20,24],
+    "colour":"currentColor",
+    "decorative":"aria-hidden true and focusable false",
+    "action":"visible text preferred; otherwise accessible name on 44px minimum button",
+    "prohibited":["standalone logo substitute","decorative icon on every benefit","mixed library or weight","status conveyed only by colour","outline converted into an atmospheric illustration"],
+    "items":[
+      {"id":"search","label":"Search","use":"Find content","path":"M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13M15.5 15.5 21 21"},
+      {"id":"arrow-right","label":"Continue","use":"Directional action after a label","path":"M4 12h15M13 5l7 7-7 7"},
+      {"id":"chevron-down","label":"Expand","use":"Disclosure with aria-expanded on trigger","path":"m6 9 6 6 6-6"},
+      {"id":"close","label":"Close","use":"Dismiss current surface","path":"m6 6 12 12M18 6 6 18"},
+      {"id":"check","label":"Success","use":"Reinforce a written result","path":"m4 12 5 5L20 6"},
+      {"id":"info","label":"Information","use":"Context that changes a decision","path":"M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18M12 11v6M12 7v.1"},
+      {"id":"alert","label":"Attention","use":"Reinforce a written warning or error","path":"m12 3 10 18H2L12 3ZM12 9v5M12 17v.1"},
+      {"id":"copy","label":"Copy","use":"Copy named text; announce outcome","path":"M9 8h11v13H9V8ZM5 16H3V3h11v2"},
+      {"id":"external","label":"External link","use":"Indicate a destination outside current site when useful","path":"M14 3h7v7M21 3 11 13M10 5H3v16h16v-7"},
+      {"id":"filter","label":"Filter","use":"Narrow a result set","path":"M4 6h16M7 12h10M10 18h4"},
+      {"id":"mail","label":"Email","use":"Identify email as a channel","path":"M3 5h18v14H3V5Zm0 1 9 7 9-7"},
+      {"id":"document","label":"Document","use":"Identify a document, not certification","path":"M5 3h9l5 5v13H5V3Zm9 0v6h5M9 13h6M9 17h6"}
+    ]
+  },
+  "density": {
+    "method":"Authoring defaults; exceptions require a reason, deeper destination and reviewed narrow screenshot. Never hide required instructions to meet a budget.",
+    "max_primary_per_group":1,
+    "max_nested_reading_panels":1,
+    "subtitle_default":"omit-unless-it-adds-a-distinct-needed-fact",
+    "profiles":[
+      {"id":"hero","label":"Opening promise","headline_words":12,"body_words":32,"primary_actions":1,"supporting_links":1,"proof_objects":1},
+      {"id":"section","label":"Benefit section","headline_words":10,"body_words":40,"primary_actions":1,"supporting_links":1,"proof_objects":1},
+      {"id":"card","label":"Marketing card","headline_words":8,"body_words":24,"primary_actions":1,"supporting_links":0,"proof_objects":0},
+      {"id":"result","label":"Result preview","headline_words":8,"body_words":18,"primary_actions":0,"supporting_links":1,"proof_objects":1,"rows_max":3},
+      {"id":"social","label":"Social artwork","headline_words":10,"body_words":16,"primary_actions":0,"supporting_links":0,"proof_objects":1},
+      {"id":"email","label":"Email body","headline_words":10,"body_words":90,"primary_actions":1,"supporting_links":0,"proof_objects":1}
+    ],
+    "hierarchy":["One dominant message per section","One body-text level plus essential metadata","Put technical detail at a named deeper destination","Stack on narrow screens; do not shrink the type to preserve columns"],
+    "rhythm":{"sequence":["split-atmosphere","open-editorial","dark-invitation"],"adjacent_same_layout_max":2,"decorative_fields_per_section_max":1,"card_grid_requires":"Comparable choices, not a default section template"}
+  },
+  "story": {
+    "headline":"Turn documents into useful data.",
+    "lead":"Give your agent the fields it needs to carry on with the work.",
+    "section_title":"Start with the result you need.",
+    "section_body":"Extract the useful fields from a document, then pass them to the next step in your workflow.",
+    "closing_title":"Find a tool for the next step.",
+    "closing_body":"Explore tools for research, extraction and validation.",
+    "primary":"Explore tools",
+    "secondary":"See the example",
+    "fixture_label":"Illustrative example",
+    "document":{"title":"Invoice","company":"Example Studio","number":"INV-1042","total":"EUR 480.00"},
+    "result":[{"label":"Supplier","value":"Example Studio"},{"label":"Invoice","value":"INV-1042"},{"label":"Total","value":"EUR 480.00"}],
+    "email_subject":"A useful starting point for document work",
+    "email_body":"If your agent works with documents, start with the fields the next step needs. This illustrative invoice example shows the idea: a supplier, an invoice number and a total. Explore the tools to find a fit for your workflow.",
+    "social_caption":"Turn documents into useful data. Explore Strale tools for the next step in your agent workflow. Illustration only; see individual tool documentation for supported inputs and outputs.",
+    "social_alt":"Strale: Turn documents into useful data. An illustrative invoice from Example Studio becomes supplier, invoice number INV-1042 and total EUR 480.00 fields.",
+    "claim_basis":"docs/programs/brand-website/LAUNCH-PROOF.md",
+    "publication_status":"composition-study-only; chosen-tool-and-route-proof-required"
+  },
+  "applications":[
+    {"id":"website","file":"website.html","role":"Three-section responsive sequence","source":"story + templates.mjs + specimen.css","status":"candidate","limits":"Local anchors only; no API response or final homepage architecture"},
+    {"id":"social","file":"social.html","export":"exports/social-landscape.png","width":1200,"height":630,"role":"Landscape artwork and accessible caption","status":"candidate","limits":"Format study; platform crops and publication still require review"},
+    {"id":"email","file":"email.html","role":"Browser email composition with Arial fallback and plain-text companion","status":"candidate","limits":"Not a sendable campaign; client testing, recipient context, links and legal footer required before sending"}
+  ],
+  "limits":[
+    "Production active.json is unchanged; this candidate extends accepted design work.",
+    "Browser keyboard/reflow and bounded contrast checks are not full screen-reader or cross-browser certification.",
+    "Forms and actions are local fixtures without network, accounts, persistence or billing.",
+    "Application copy and document fields are illustrative; chosen tool, route and public claims require launch proof.",
+    "Email has not been tested in mail clients, and no message or social artwork has been published.",
+    "Existing atmospheric asset rights gaps remain open; no new imagery or new logo is introduced.",
+    "The utility set covers twelve common symbols; complex tables, dialogs, upload, authentication and custom comboboxes remain separate patterns."
+  ]
+}

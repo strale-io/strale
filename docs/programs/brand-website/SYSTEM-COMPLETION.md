@@ -16,7 +16,7 @@ The founder accepted the atmosphere/surface catalogue 0.2 after the full visual 
 
 Founder steering also requested direct light text and a light action on dark cards. The companion compares this candidate treatment on Cobalt and Dusk for short marketing messages. It does not replace the accepted light reading panel for detailed information. Direct text on atmospheric images still needs a separate crop and contrast review.
 
-The founder accepted the companion's direction and retained the current logo. Continue with the controls companion below. Real email-client qualification, physical print proof, broader language coverage, density patterns, motion and final platform templates remain open. The original catalogue and preserved source remain unchanged. Production adoption is separate.
+The founder accepted the companion's direction and retained the current logo. The controls companion below was also accepted for continued design work. Real email-client qualification, physical print proof, broader language coverage, density patterns, motion and final platform templates remain open. The original catalogue and preserved source remain unchanged. Production adoption is separate.
 
 ## Completed first-batch scope: make the current system unambiguous
 
@@ -49,6 +49,12 @@ Keep one human/machine source hierarchy under the existing token, claims and pro
 
 Rejected concept boards remain under `design/explorations/2026-09-05-brand-directions/` with rejected status and a pointer here. The earlier Quiet Material refinement remains an unadopted study. Neither is an implementation input. Preserve their evidence; do not keep their earlier next-action text active in the program register.
 
-## Component continuation: current review
+## Component continuation: accepted controls
 
-The founder accepted the identity/type work and then explicitly retained the current flowing-S logo after previewing symbol alternatives. That exploration is closed; no generated symbol is a replacement or runtime input. The [navigation, controls and cards companion](../../../design/brand-kit/quiet-material/controls/README.md) is now the current candidate review. It provides interactive examples and a PDF from the same sources. Review component appearance and behaviour, then continue forms, icon conventions and broader composition/density rules. Existing atmosphere/foundation artifacts remain preserved; production adoption and remaining channel/accessibility qualification stay separate.
+The founder accepted the identity/type work and then explicitly retained the current flowing-S logo after previewing symbol alternatives. That exploration is closed; no generated symbol is a replacement or runtime input. The [navigation, controls and cards companion](../../../design/brand-kit/quiet-material/controls/README.md) was accepted for continued design work. It provides interactive examples and a PDF from the same sources. Its values and patterns are retained in the extension below. Existing atmosphere/foundation artifacts remain preserved; production adoption and remaining channel/accessibility qualification stay separate.
+
+## Current review: forms, symbols and application studies
+
+The [patterns companion](../../../design/brand-kit/quiet-material/patterns/README.md) supplies a working form with validation/recovery, twelve original utility symbols, generated density/rhythm rules, an eight-page PDF and responsive website/social/email composition studies. All three applications use the same illustrative document story and retained brand values. Review the form/selection states, icon weight and composition balance. The application studies test the kit; they do not adopt the complete homepage or qualify a live tool response.
+
+Next, complete the chosen-tool and route proof in T3 and the remaining client/accessibility/channel gaps before final kit consolidation and production adoption. Source-image rights histories and missing illustration masters remain open. Existing companion documents are additive retained inputs, not superseded files to archive. The structured completion record now reflects the accepted controls and this review.

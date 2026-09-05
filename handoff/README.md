@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-268 files (241 with a recorded intent, 27 without).
+269 files (242 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -20,6 +20,7 @@
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md) | archive M2 closing-review round 2 and its follow-up sweep, and land |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-1.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-1.md) | archive the M2 closing independent review's round 1 and correct the |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-system-audit.md`](_general/from-code/2026-09-05-quiet-material-system-audit.md) | Retain the founder's preferred Quiet Material redesign and audit its system and assets for cohesion and completeness. |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-patterns.md`](_general/from-code/2026-09-05-quiet-material-patterns.md) | Complete the retained Quiet Material forms, utility symbols and composition rules, then test one story across website... |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-foundations.md`](_general/from-code/2026-09-05-quiet-material-foundations.md) | Extend the accepted Quiet Material atmosphere/surface baseline with retained identity variants and typography applica... |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-controls.md`](_general/from-code/2026-09-05-quiet-material-controls.md) | Continue the retained Quiet Material system with navigation, buttons and card states. |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-consolidation.md`](_general/from-code/2026-09-05-quiet-material-consolidation.md) | Consolidate the retained Quiet Material system and create a contextual catalogue of its existing gradients, atmospher... |

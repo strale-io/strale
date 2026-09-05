@@ -1,0 +1,16 @@
+COMPOSITION STUDY - NOT FOR SENDING
+Subject: A useful starting point for document work
+
+Turn documents into useful data.
+
+If your agent works with documents, start with the fields the next step needs. This illustrative invoice example shows the idea: a supplier, an invoice number and a total. Explore the tools to find a fit for your workflow.
+
+Illustrative example:
+Supplier: Example Studio
+Invoice: INV-1042
+Total: EUR 480.00
+
+Explore tools: [verified catalogue destination required]
+
+Strale
+[Recipient context and required footer to be completed before sending]

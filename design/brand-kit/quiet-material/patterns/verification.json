@@ -1,0 +1,228 @@
+{
+  "id": "quiet-material-patterns-0.1",
+  "inputs": {
+    "registry.json": "e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72",
+    "templates.mjs": "1121c3a5dd0d7b8c0f859fab73b0cab11cefd8cbf75dad85d09d050a9777739a",
+    "specimen.css": "5bfbe18470e3cd7e7aa1da40c0c985a92105427ba4193d363b6f649324810219",
+    "interactions.js": "bc7e7173e5bee3abaee4ba2de6e2d22f064cec2dc729216cbee16d62520843e2",
+    "build.mjs": "ee3e16a566c8e5fbf3804046323833c313dff3b2b9c3346c7294071de835e30c",
+    "verify.mjs": "3e7650cf0ab974791e282b524528cab613d19c5ec93258f7a77b476d98371307",
+    "verify-pdf.py": "a44a9c8b0dedda7114fda4954300798d28f6ad9ab0c1afe845089458a0669aa5",
+    "../../../tokens/candidates/quiet-material-patterns.json": "7e5611bf7d156e0465c9b53086c7b1a7bd757c517d20a84f73ba8d461a887f50",
+    "../../../tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
+    "../controls/specimen.css": "decc5d17e173e74a30bd6b26236b1542dc505ca7769ca7d0788d871db17d84b0",
+    "../foundations/exports/lockup-ink.svg": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
+    "../foundations/exports/lockup-inverse.svg": "fcbd4e1461d1341bee85e0630c03ede040164be0157bf658d6b2ce498ba73b60",
+    "../fonts/InstrumentSans.ttf": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+    "../fonts/IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+    "../../../../docs/research/2026-09-05-quiet-material-pattern-references.md": "71d331b0d4f73a5901d00194fe6c7cab30dfbd0f85f08384951d1941b5d8ed01",
+    "../../../../docs/programs/brand-website/LAUNCH-PROOF.md": "4d0c6577e07b5bc630c869b4988d8df609c95bb842789c2cc343c5a56d9226b7"
+  },
+  "widths": [
+    320,
+    375,
+    760,
+    1120,
+    1440
+  ],
+  "checks": {
+    "reflow": true,
+    "form_validation": true,
+    "native_selection": true,
+    "preserved_values": true,
+    "loading_guard": true,
+    "failure_recovery": true,
+    "read_only_disabled": true,
+    "labels": true,
+    "focus_visible": true,
+    "targets": true,
+    "icons": true,
+    "reduced_motion": true,
+    "density": true,
+    "contrast": true,
+    "print_bounds": true,
+    "network_blocked": true
+  },
+  "errors": [],
+  "contrast": [
+    {
+      "fg": "--ink",
+      "bg": "--canvas",
+      "required": 4.5,
+      "ratio": 18.903394841315958
+    },
+    {
+      "fg": "--ink-secondary",
+      "bg": "--canvas",
+      "required": 4.5,
+      "ratio": 6.336238847359875
+    },
+    {
+      "fg": "--status-bad",
+      "bg": "--canvas",
+      "required": 4.5,
+      "ratio": 7.157794559094324
+    },
+    {
+      "fg": "--status-good",
+      "bg": "--canvas",
+      "required": 4.5,
+      "ratio": 6.969305280947136
+    },
+    {
+      "fg": "--p-field-border",
+      "bg": "--canvas",
+      "required": 3,
+      "ratio": 4.330795344079111
+    },
+    {
+      "fg": "--canvas",
+      "bg": "--ink",
+      "required": 4.5,
+      "ratio": 18.903394841315958
+    },
+    {
+      "fg": "--surface",
+      "bg": "Dusk per-channel upper bound",
+      "required": 4.5,
+      "ratio": 13.529875709286966
+    }
+  ],
+  "compositions": {
+    "website.html": [
+      {
+        "id": "hero",
+        "headline_words": 5,
+        "body_words": 13,
+        "primary_actions": 1,
+        "supporting_links": 1,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 1,
+        "panel_depth": 1
+      },
+      {
+        "id": "result",
+        "headline_words": 2,
+        "body_words": 0,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      },
+      {
+        "id": "section",
+        "headline_words": 6,
+        "body_words": 17,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 0,
+        "rows": 0,
+        "decorative_fields": 0,
+        "panel_depth": 0
+      },
+      {
+        "id": "card",
+        "headline_words": 7,
+        "body_words": 7,
+        "primary_actions": 1,
+        "supporting_links": 0,
+        "proof_objects": 0,
+        "rows": 0,
+        "decorative_fields": 1,
+        "panel_depth": 0
+      }
+    ],
+    "social.html": [
+      {
+        "id": "social",
+        "headline_words": 5,
+        "body_words": 13,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 1,
+        "panel_depth": 1
+      },
+      {
+        "id": "result",
+        "headline_words": 2,
+        "body_words": 0,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      }
+    ],
+    "email.html": [
+      {
+        "id": "email",
+        "headline_words": 5,
+        "body_words": 39,
+        "primary_actions": 1,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      },
+      {
+        "id": "result",
+        "headline_words": 2,
+        "body_words": 0,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      }
+    ]
+  },
+  "runtime": {
+    "node": "v24.12.0",
+    "chromium": "152.0.7977.82"
+  },
+  "limits": [
+    "Production active.json is unchanged; this candidate extends accepted design work.",
+    "Browser keyboard/reflow and bounded contrast checks are not full screen-reader or cross-browser certification.",
+    "Forms and actions are local fixtures without network, accounts, persistence or billing.",
+    "Application copy and document fields are illustrative; chosen tool, route and public claims require launch proof.",
+    "Email has not been tested in mail clients, and no message or social artwork has been published.",
+    "Existing atmospheric asset rights gaps remain open; no new imagery or new logo is introduced.",
+    "The utility set covers twelve common symbols; complex tables, dialogs, upload, authentication and custom comboboxes remain separate patterns."
+  ],
+  "outputs": {
+    "index.html": "58012c3fc326a0c2979d4fbad8c6b39bcdf499a715dd74648634451e7f4567e5",
+    "website.html": "4e6910ea45013c64ed33a143f3bf9d91d8d3fcebfcdadfbc537f4c29f19687fa",
+    "social.html": "8643b9199db6655897abbfe54e6411b9805acb3296e12f44b9c45011cb679364",
+    "email.html": "d5146ea3de269029e9c7c5852706a009ca2d9d482528c19867c5b097a59e5844",
+    "email.txt": "049369bbf8e7c7f4117b8a50e284d218c1cda6d992b76afd45af90824a8b23bb",
+    "icons/search.svg": "1421c335e53b6c25d82b6792b8d7a06cd38f9bba6be9970f477e336b86883331",
+    "icons/arrow-right.svg": "f4a3208446ad96613d1f0e76a4d7a65f373fe3c7d22c0611bc2ebdf4192f72c6",
+    "icons/chevron-down.svg": "197fa79b777d0e08a13d82005615716e9219b2cca04c0beff78d49593816fea2",
+    "icons/close.svg": "f3a8f8e11395930640692b144fd143d54ab1722db097b10b4039375150443919",
+    "icons/check.svg": "14d907faf42e98238b8d094e225f157224921cc46ca366cb8dfcde85d4c1651a",
+    "icons/info.svg": "6175ee32dfebe887a823c207f1b31169b679df36f046e36e5f82ca69ec2a62b0",
+    "icons/alert.svg": "0cc8da24700dbc6e0f0f33e1dcd35b9e9099c5b12b63cd2c6aa890449671d26a",
+    "icons/copy.svg": "7c3e64c3ef3d7f92c6f72a6323a13356c9e7d1c963126fb66c172410db66d02a",
+    "icons/external.svg": "1afa6b94ce43cb32b956939f771edd373975ee28951e9b293384e9501213bbdc",
+    "icons/filter.svg": "beebd4e8f5f8b56c8aef22141727bd04d27e29a6736ade44e4b7010e38a64daa",
+    "icons/mail.svg": "988dd34e955e9c69b5e028c5a69061c01ee58aa81849d0594156500113f2dc24",
+    "icons/document.svg": "f198da18a6565281e32afe718aa5f2b372bd327e3e8bc3d0b84c77eeb8c8301f",
+    "RULES.md": "1515853a06d357ac2120425acc6a3f87e643b8dfd1a81ca37a7fddd7910af3ef",
+    "icons/manifest.json": "2d4c61414bf29e908432f9b97a8fea34f05bbc17077be7dfe5a29be8e8e067fe",
+    "exports/social-landscape.png": "af2609d6028405932a751440c9786f7d64037edc963898d3629f061f443c7194",
+    "output/pdf/forms-symbols-composition.pdf": "a8ea15c9ee463323cde9e36e0db3c24eff22751ac72439e47dff18c5ec6fb981"
+  },
+  "pdf": {
+    "pages": 8,
+    "all_fonts_embedded": true,
+    "bounds_errors": []
+  }
+}
