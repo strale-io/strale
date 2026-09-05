@@ -75,7 +75,7 @@ resolution reports carry `corrects_migration_state_in: []`). No record names
 ## Checks (all green)
 
 `node --test scripts/m2-closure-register.test.mjs scripts/decision-records.test.mjs`
-(92 + 133 tests, 0 failures); `npm run archive:index`, `npm run
+(every test passed); `npm run archive:index`, `npm run
 context:generate` (twice, staging between), `npm run context:check` (no
 warnings), `npm run context:test`; `npm run programs:check`; `npm run
 codex:check` (ok, no new backlog row required from this batch); `npm run
