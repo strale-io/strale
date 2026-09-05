@@ -1,0 +1,172 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a3e57c899fbe0e357b8126ad3eac2dc2bbac96d3"
+  },
+  "at": "2026-09-05T20:56:39.897Z",
+  "inputs": {
+    "source": "design/brand-kit/quiet-material/controls/verification.json"
+  },
+  "summary": {
+    "id": "quiet-material-controls-0.1",
+    "production_adopted": false
+  },
+  "topic": "quiet-material-controls-radius-units",
+  "raw": {
+    "id": "quiet-material-controls-0.1",
+    "production_adopted": false,
+    "inputs": {
+      "registry.json": "f09a38f11da044da9ef8b58718512057616eeb76368f9c5b8d5895b99d654011",
+      "build.mjs": "6b8f45670b39dbeb9f75b963be1bde06c38f90623f30d6f27a4f0f19253de3c8",
+      "specimen.css": "decc5d17e173e74a30bd6b26236b1542dc505ca7769ca7d0788d871db17d84b0",
+      "interactions.js": "ad67bb55b710c29e5548f90bfc2d4dc57433ea46873e7e4ae61f4671f7b591cc",
+      "verify.mjs": "f412fa23a99a75b62ee836bd3921509235c9dcdb518716190d83dc2159bdade4",
+      "verify-pdf.py": "c0cca6a7c8cbccbedbb2b212d7c30ab045e4a1e56b87b9aa2d74ea9b6f2664a6",
+      "../../../tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
+      "../../../tokens/candidates/quiet-material-foundations.json": "2720ada20ec6e36f0f358ddda07f1310f43d1bb42334a351046771a971ed6b18",
+      "../foundations/registry.json": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
+      "../foundations/exports/lockup-ink.svg": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
+      "../fonts/InstrumentSans.ttf": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+      "../fonts/IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46"
+    },
+    "outputs": {
+      "index.html": "6990b53a71b6f161dee72ae8aef5ebde8b58b7f5a03e0fd96184f675ddb063e1",
+      "output/pdf/navigation-controls.pdf": "9dea9fc4b82232d56be594a180c89202809d18508d2390d3750bfc0173e6269b"
+    },
+    "runtime": {
+      "node": "v24.12.0",
+      "chromium": "152.0.7977.82",
+      "playwright": "1.62.1"
+    },
+    "widths": [
+      320,
+      375,
+      760,
+      1120,
+      1440
+    ],
+    "checks": {
+      "desktop_keyboard": true,
+      "outside_close": true,
+      "focus_leaves_close": true,
+      "hidden_links_unfocusable": true,
+      "focus_visible": true,
+      "mobile_keyboard": true,
+      "loading_guard": true,
+      "retry_announcement": true,
+      "no_nested_targets": true,
+      "card_contract": true,
+      "reduced_motion": true,
+      "targets_minimum": true,
+      "responsive_menu": true,
+      "open_state_layout": true,
+      "contrast_pairs": true,
+      "print_bounds": true
+    },
+    "layout_errors": [],
+    "console_errors": [],
+    "contrast_pairs": [
+      {
+        "fg": "--ink",
+        "bg": "--canvas",
+        "ratio": 18.903394841315958
+      },
+      {
+        "fg": "--ink-secondary",
+        "bg": "--canvas",
+        "ratio": 6.336238847359875
+      },
+      {
+        "fg": "--canvas",
+        "bg": "--ink",
+        "ratio": 18.903394841315958
+      },
+      {
+        "fg": "--canvas",
+        "bg": "--hover-ink",
+        "ratio": 12.36797091332521
+      },
+      {
+        "fg": "--canvas",
+        "bg": "--ink-secondary",
+        "ratio": 6.336238847359875
+      },
+      {
+        "fg": "--ink",
+        "bg": "--surface",
+        "ratio": 17.76628077557453
+      },
+      {
+        "fg": "--ink",
+        "bg": "--hover-paper",
+        "ratio": 15.49942486674885
+      },
+      {
+        "fg": "--disabled-ink",
+        "bg": "--disabled-bg",
+        "ratio": 4.6122515565425255
+      },
+      {
+        "fg": "--status-good",
+        "bg": "--canvas",
+        "ratio": 6.969305280947136
+      },
+      {
+        "fg": "--ink",
+        "bg": "--status-good-bg",
+        "ratio": 17.140397601871705
+      },
+      {
+        "fg": "--ink",
+        "bg": "--status-bad-bg",
+        "ratio": 17.27181727185509
+      }
+    ],
+    "limits": [
+      "Specimen only; no production adoption",
+      "Fixture results and local actions; no API call, billing or product proof",
+      "Chrome keyboard and responsive checks; screen-reader and cross-browser qualification remain open",
+      "No direct text on raster atmospheric images qualified",
+      "No full form, modal, table or icon library in this batch"
+    ],
+    "dark_contrast": [
+      {
+        "text": "SHORT MARKETING MESSAGE",
+        "ratio": 14.337083655161388,
+        "background_sha256": "857d28735b2f7e623f7ea0b72fb8ebc14d7c55052ee8cbdfa03880c98a45a005"
+      },
+      {
+        "text": "Start with one useful task.",
+        "ratio": 14.681020834442453,
+        "background_sha256": "857d28735b2f7e623f7ea0b72fb8ebc14d7c55052ee8cbdfa03880c98a45a005"
+      },
+      {
+        "text": "Find a tool that fits the work.",
+        "ratio": 15.082983274549761,
+        "background_sha256": "857d28735b2f7e623f7ea0b72fb8ebc14d7c55052ee8cbdfa03880c98a45a005"
+      },
+      {
+        "text": "Inverse / on dark fields",
+        "ratio": 15.736744226157661,
+        "background_sha256": "befd9c688e1816c283d60b428db0be42a8aab59d8c2c4b8e49e4bfed3a6751d8"
+      },
+      {
+        "text": "Put a useful tool to work.",
+        "ratio": 14.502454753129653,
+        "background_sha256": "d0e1eb4241c08b80bdceb643f8132cb38a2510271c6095dd82c8ee6eabdd748e"
+      },
+      {
+        "text": "Start with a task your agent already needs to do.",
+        "ratio": 15.357930057887122,
+        "background_sha256": "d0e1eb4241c08b80bdceb643f8132cb38a2510271c6095dd82c8ee6eabdd748e"
+      }
+    ],
+    "pdf": {
+      "pages": 6,
+      "all_fonts_embedded": true,
+      "bounds_errors": [],
+      "title": "Strale navigation, controls and cards"
+    }
+  }
+}

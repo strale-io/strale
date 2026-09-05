@@ -48,3 +48,5 @@ The contrast method samples every background pixel beneath each hidden specimen 
 Current records cover all fourteen atmospheric assets, but eleven original creation/rights histories remain unknown. Missing direction-reference and capability-illustration sources are explicitly unavailable. The three editorial references remain excluded from implementation. Identity exports at small sizes, complete typography roles/fallbacks, component states, motion and channel templates still need their own specimens.
 
 Continue from [SYSTEM-COMPLETION.md](../../../docs/programs/brand-website/SYSTEM-COMPLETION.md). Keep the earlier audit and rejected studies as history; do not reactivate them as competing current directions.
+
+The [navigation, controls and cards companion](controls/README.md) is the current component candidate, continuing the accepted foundations and retained flowing-S logo with interactive examples and a PDF review.

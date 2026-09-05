@@ -41,3 +41,6 @@ design/brand-kit/quiet-material/foundations/output/pdf/** -text
 design/brand-kit/quiet-material/foundations/exports/*.svg -text
 design/brand-kit/quiet-material/foundations/masters/*.svg whitespace=cr-at-eol
 design/brand-kit/quiet-material/foundations/exports/*.svg whitespace=cr-at-eol
+
+design/brand-kit/quiet-material/controls/output/pdf/** -text
+design/tokens/candidates/quiet-material-controls.json text eol=lf
