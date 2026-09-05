@@ -1,5 +1,5 @@
 {
-  "name": "Quiet Material catalogue 0.1",
+  "name": "Quiet Material catalogue 0.2",
   "status": "proposed",
   "supersedes": null,
   "superseded_by": null,
@@ -438,16 +438,24 @@
       "--c-note-width": "1040px",
       "--c-cover-image-height": "510px",
       "--c-cover-title-size": "78px",
-      "--c-card-width": "78%",
-      "--c-card-padding": "24px",
+      "--c-card-width": "100%",
+      "--c-card-padding": "20px",
       "--c-card-title": "24px",
       "--c-card-label": "17px",
-      "--c-card-row-gap": "20px",
+      "--c-card-row-gap": "16px",
       "--c-card-border-width": "1px",
       "--c-grid-cols": "3",
       "--c-caption-gap": "12px",
       "--c-footer-bottom": "28px",
-      "--c-footer-size": "13px"
+      "--c-footer-size": "13px",
+      "--c-frame-inset": "16px",
+      "--c-frame-inner-radius": "12px",
+      "--c-frame-height": "160px",
+      "--c-frame-row-gap": "12px",
+      "--c-atmosphere-inset": "20px",
+      "--c-atmosphere-inner-radius": "12px",
+      "--c-direct-padding": "36px",
+      "--c-specimen-intro-height": "58px"
     }
   }
 }

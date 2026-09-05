@@ -1,0 +1,46 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c3691079b150c9aecb082af6a9215e7b1d8c7a2b"
+  },
+  "at": "2026-09-05T14:08:23.083Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/qm-composition-receipt-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "pdf_sha256": "93db1b5d314c170e71de9d83d3cb32926a6cc5186473065cfb2ffdd5fff61469",
+    "registry_sha256": "d6926cf30761ff0746b5e9be51663b5efa4a4ba8280e345d4a4ad763904fe3c1",
+    "tokens_sha256": "08357dc0a82d8837d44a01a42c3297181dd1b813817002d92d7d96b1280eca4f",
+    "pages": 24,
+    "minimum_ratio": 5.955,
+    "sampled_text_elements": 200,
+    "targeted_tests_passed": 10,
+    "api_typecheck": "passed",
+    "source_integrity": "All original assets and gradients retained; extracted file hashes verified by the render",
+    "visual_review": "All changed specimens inspected; Poppler independently rendered pages 6 through 9",
+    "pink_investigation": "Prior Balanced page rendered off-white in PyMuPDF and Poppler; screenshot anomaly not reproduced. Current solid reading fill also renders off-white in both.",
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "verification_file": "design/brand-kit/quiet-material/verification.json"
+  },
+  "topic": "quiet-material-composition",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "pdf_sha256": "93db1b5d314c170e71de9d83d3cb32926a6cc5186473065cfb2ffdd5fff61469",
+    "registry_sha256": "d6926cf30761ff0746b5e9be51663b5efa4a4ba8280e345d4a4ad763904fe3c1",
+    "tokens_sha256": "08357dc0a82d8837d44a01a42c3297181dd1b813817002d92d7d96b1280eca4f",
+    "pages": 24,
+    "minimum_ratio": 5.955,
+    "sampled_text_elements": 200,
+    "targeted_tests_passed": 10,
+    "api_typecheck": "passed",
+    "source_integrity": "All original assets and gradients retained; extracted file hashes verified by the render",
+    "visual_review": "All changed specimens inspected; Poppler independently rendered pages 6 through 9",
+    "pink_investigation": "Prior Balanced page rendered off-white in PyMuPDF and Poppler; screenshot anomaly not reproduced. Current solid reading fill also renders off-white in both.",
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "verification_file": "design/brand-kit/quiet-material/verification.json"
+  }
+}

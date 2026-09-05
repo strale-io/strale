@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-261 files (234 with a recorded intent, 27 without).
+262 files (235 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -17,6 +17,7 @@
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-1.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-1.md) | archive the M2 closing independent review's round 1 and correct the |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-system-audit.md`](_general/from-code/2026-09-05-quiet-material-system-audit.md) | Retain the founder's preferred Quiet Material redesign and audit its system and assets for cohesion and completeness. |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-consolidation.md`](_general/from-code/2026-09-05-quiet-material-consolidation.md) | Consolidate the retained Quiet Material system and create a contextual catalogue of its existing gradients, atmospher... |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-quiet-material-composition.md`](_general/from-code/2026-09-05-quiet-material-composition.md) | Apply the founder-approved correction to nested-card spacing and same-tone reading surfaces within the existing Quiet... |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md`](_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md) | make every `scripts/m2-closure-register.test.mjs` fixture that locates a |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md`](_general/from-code/2026-09-05-m2-quote-fidelity-checker.md) | give the M2 candidate records a mechanical, repeatable quotation-fidelity check with a declared normalization convent... |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md`](_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md) | land the G9 stage-1 closing-review mechanism so the M2 closure |

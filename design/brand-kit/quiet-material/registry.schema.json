@@ -20,7 +20,8 @@
     "specimen_copy",
     "authority",
     "specimens",
-    "font_sources"
+    "font_sources",
+    "composition_revision"
   ],
   "properties": {
     "schema_version": {
@@ -48,8 +49,27 @@
           "token",
           "css",
           "role",
-          "status"
-        ]
+          "status",
+          "composition",
+          "surface_token",
+          "ink_token",
+          "secondary_token",
+          "pair_status"
+        ],
+        "properties": {
+          "composition": {
+            "enum": [
+              "frame",
+              "direct"
+            ]
+          },
+          "surface_token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       }
     },
     "identity": {
@@ -169,6 +189,54 @@
               "type": "string"
             }
           }
+        }
+      }
+    },
+    "composition_revision": {
+      "type": "object",
+      "required": [
+        "version",
+        "basis",
+        "predecessor_commit",
+        "production_adopted",
+        "gradient_frame_inset_token",
+        "gradient_frame_inner_radius_token",
+        "atmosphere_alignment",
+        "light_gradient_direct_text",
+        "reading_surface_token"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "0.2"
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "predecessor_commit": {
+          "const": "2972015dedfeb8bcd30369e0b0b4259bdc62f678"
+        },
+        "production_adopted": {
+          "const": false
+        },
+        "gradient_frame_inset_token": {
+          "const": "--c-frame-inset"
+        },
+        "gradient_frame_inner_radius_token": {
+          "const": "--c-frame-inner-radius"
+        },
+        "atmosphere_alignment": {
+          "const": "bottom"
+        },
+        "light_gradient_direct_text": {
+          "const": [
+            "frost",
+            "mint"
+          ]
+        },
+        "reading_surface_token": {
+          "const": "--surface"
         }
       }
     }
