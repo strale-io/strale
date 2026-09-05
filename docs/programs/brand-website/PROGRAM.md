@@ -2,7 +2,7 @@
 doc_type: program-plan
 authority_scope: none
 program: brand-website
-status: brief-ready-for-review
+status: art-direction-in-progress
 started: 2026-09-05
 owner: session
 ---
@@ -13,7 +13,9 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
-Read [tracks.yaml](tracks.yaml), then the [positioning and creative brief](POSITIONING-BRIEF.md) and [rendered Quiet Material review](../../../archive/sessions/2026-09-05-quiet-material-review.md). The founder authorised preparation of this brief after the recommendation to lead with useful agent work and retain Quiet Material as the visual starting point. The concrete brief is ready for strategic review; it is not yet an adopted global decision. Next, record the agreed hierarchy and reconcile terminology through the existing decision process, then begin product-proof work and the four application examples. Do not restart discovery or generate a replacement asset library.
+Read [tracks.yaml](tracks.yaml), then the [adopted positioning brief](POSITIONING-BRIEF.md), [launch proof boundaries](LAUNCH-PROOF.md) and [first application studies](../../../design/explorations/2026-09-05-quiet-material-refinement/README.md). The founder approved the positioning and benefit hierarchy under DEC-20260905-A; [the adoption record](../../strategy/2026-09-05-brand-direction-adoption.md) documents the narrow terminology reconciliation. T2 is done. Do not ask the founder to approve the same positioning again. T4 is active: review the rendered studies and complete the remaining logo/type/atmosphere and interaction audit before selecting the visual foundation. The broader product-proof work in T3 remains open; the first visual studies avoid its stronger unsupported claims.
+
+Use the [rendered Quiet Material review](../../../archive/sessions/2026-09-05-quiet-material-review.md) as the control critique. The first studies cover the homepage opening and benefit section, mobile opening, social square and PDF cover/interior; they are candidate applications, not an implemented site or approved production design system. Continue from these masters rather than restarting discovery or generating an entire replacement library.
 
 Evidence remains in [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and the private [positioning assessment](https://github.com/strale-io/strale-context-archive/blob/94051a311da77151f6b05988438830c315dd3449/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). This repository program is the working continuation home. Historical Notion records are not a separate brand plan; the broader operating-model migration remains subject to its explicit M4 cutover.
 

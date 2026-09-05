@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "12c6966c432dd09f661a36c1680a109537af75015f323f242a09466f282cf881",
+      "sha256": "d57a99547304df16baf704346abb1c5d06975923d4a936d94474d7702e4e7c34",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -51,6 +51,7 @@
         "docs/strategy/2026-08-16-codebase-quality-program.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "docs/strategy/2026-09-05-brand-direction-adoption.md",
         "handoff/_general/from-code/2026-05-18-pii-fixture-audit-legal-representatives.md",
         "handoff/_general/from-code/2026-05-18-uk-ubo-smoke-eu30-reaudit-directors-verification.md",
         "handoff/_general/from-code/2026-06-24-llm-json-truncation-fix.md",
@@ -75,6 +76,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-14-founding-week-two.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-6-provenance-jurisdiction.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
+        "handoff/_general/from-code/2026-09-05-brand-direction-applications.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
@@ -85,7 +87,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "2abee8ab7f5a24cea64bee4b1146e9c8dd4c0bb5946756c94ff87ce44ca1581c",
+      "sha256": "08c4754bddcbfffd6939b8382b380b737765b3882357362cdb3ce0e8d0d97527",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -218,6 +220,7 @@
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
+        "docs/strategy/2026-09-05-brand-direction-adoption.md",
         "handoff/_general/from-code/2026-03-18-dark-launch-qualification.md",
         "handoff/_general/from-code/2026-03-18-smart-onboarding-pipeline.md",
         "handoff/_general/from-code/2026-03-21-integrity-check.md",
@@ -287,6 +290,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-8-onboarding-pipeline.md",
         "handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md",
         "handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md",
+        "handoff/_general/from-code/2026-09-05-brand-direction-applications.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md",
@@ -422,7 +426,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "526a624680e012710a564660015a7596bdb1ea334e6cf719ab3d656322979262",
+      "sha256": "8882c9449769801c02a591dea64fabe3910aabbcb39b468ae615afccbb7b2502",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -442,6 +446,8 @@
         "apps/api/src/lib/seller-rank.ts",
         "apps/api/src/lib/startup-migrations.ts",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
+        "archive/receipts/2026-09-05-check-brand-direction-applications.json",
+        "archive/receipts/2026-09-05-check-brand-direction-review-fixes.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-09-01-m2-product-state-claim-matrix.json",
@@ -459,6 +465,7 @@
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
+        "design/explorations/2026-09-05-quiet-material-refinement/FOUNDATION.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
         "docs/programs/brand-website/PROGRAM.md",
         "docs/programs/cto-readiness/PROGRAM.md",
@@ -504,7 +511,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "9300290fff7b50a9f08c265a58b1d52fd53ec366130ba778b7679a517d6727fc",
+      "sha256": "0fffef49e60d7108c3349781ba64594717616727859ceeb31a64eab48842387c",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -530,6 +537,7 @@
         "archive/superseded/manifests-drafts/sec-edgar-name-search.yaml",
         "config/env-manifest.yaml",
         "docs/README.md",
+        "docs/programs/brand-website/tracks.yaml",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "handoff/README.md",
@@ -590,7 +598,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "31557b16e2fc78d0f91b9ea88a9856a4da29d7d22e4a45e509f3337afbbb96f2",
+      "sha256": "09e4bac13676ae31a9f3255ad46629374b9fb6bbf1574fc8904dc3c7736327c7",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
