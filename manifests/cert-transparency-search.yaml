@@ -1,0 +1,135 @@
+slug: cert-transparency-search
+name: Certificate Transparency Search
+description: >-
+  Search public Certificate Transparency logs for a domain: every certificate issued, the issuing
+  CA, validity window, and the full set of hostnames those certificates cover.
+category: security
+cost_class: free_quota
+quota_window: daily
+quota_cap: 100
+price_cents: 5
+avg_latency_ms: 420
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - domain
+  properties:
+    domain:
+      type: string
+      description: Hostname such as example.com; a URL or email address is also accepted
+    include_subdomains:
+      type: boolean
+      description: "Include certificates issued to subdomains. Default: true"
+    limit:
+      type: integer
+      description: "Certificates to return, 1-100. Default: 50"
+output_schema:
+  type: object
+  example:
+    domain: strale.dev
+    include_subdomains: true
+    certificate_count: 1
+    total_matched: 16
+    hostnames:
+      - "*.strale.dev"
+      - strale.dev
+      - www.strale.dev
+    hostname_count: 3
+    earliest_certificate: "2026-02-27T21:27:12.000Z"
+    latest_certificate: "2026-02-27T21:27:12.000Z"
+    certificates:
+      - id: "13963152168"
+        dns_names:
+          - strale.dev
+        issuer: GoDaddy
+        not_before: "2026-02-27T21:27:12.000Z"
+        not_after: "2026-09-13T21:27:12.000Z"
+        revoked: false
+        sha256: 720d2666833fd58052f95b4fec3b83e8be402ae79145782ffd99d01319f014ef
+  properties:
+    domain:
+      type: string
+    certificate_count:
+      type: number
+    total_matched:
+      type: number
+    hostnames:
+      type: array
+    hostname_count:
+      type: number
+    certificates:
+      type: array
+data_source: Cert Spotter (SSLMate) Certificate Transparency API with crt.sh fallback
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      domain: strale.dev
+      limit: 5
+    expected_fields:
+      - field: domain
+        operator: not_null
+        reliability: guaranteed
+      - field: certificate_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: hostnames
+        operator: type
+        reliability: guaranteed
+        value: array
+      - field: certificates
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    domain: strale.dev
+    limit: 1
+output_field_reliability:
+  domain: guaranteed
+  include_subdomains: guaranteed
+  certificate_count: guaranteed
+  total_matched: guaranteed
+  hostnames: guaranteed
+  hostname_count: guaranteed
+  certificates: guaranteed
+  earliest_certificate: common
+  latest_certificate: common
+limitations:
+  - title: Issuance is not deployment
+    text: >-
+      A certificate in a CT log proves a CA issued it for that name. It does not prove the host
+      exists, is reachable, or ever served the certificate. Hostnames found here are candidates to
+      verify, not confirmed infrastructure.
+    category: accuracy
+    severity: warning
+  - title: Wildcard entries are not hosts
+    text: >-
+      An entry such as *.example.com is evidence of a wildcard issuance and is returned verbatim.
+      It enumerates nothing — the subdomains it covers are not disclosed by the certificate.
+    category: coverage
+    severity: info
+  - title: Only certificates logged to Certificate Transparency
+    text: >-
+      Public CAs have logged all issuance since 2018, but certificates from a private or internal CA
+      never appear. An organisation's internal estate is therefore invisible here.
+    category: coverage
+    severity: warning
+  - title: Two upstreams with different depth and speed
+    text: >-
+      Cert Spotter is queried first on a keyless allowance; when it is exhausted or unavailable the
+      call falls back to crt.sh, which is slower (6 seconds or more observed) but has deeper
+      history. The provenance block names which one answered, and the two return different
+      certificate populations for the same domain.
+    category: availability
+    severity: info
+  - title: revoked is only populated on the Cert Spotter path
+    text: The crt.sh fallback does not carry revocation state, so the field is null on that path.
+    category: coverage
+    severity: info

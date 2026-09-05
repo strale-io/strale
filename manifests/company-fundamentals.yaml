@@ -1,0 +1,131 @@
+slug: company-fundamentals
+name: Company Fundamentals
+description: >-
+  Latest annual financials for a US-listed company from its own SEC filings: revenue, operating and
+  net income, assets, liabilities, equity, cash, diluted EPS and share count, each with the filing it came from.
+category: financial
+cost_class: free_quota
+quota_window: daily
+quota_cap: 10000
+known_rate_limit:
+  value: 10
+  unit: per_second
+  source_url: https://www.sec.gov/os/webmaster-faq#developers
+price_cents: 10
+avg_latency_ms: 840
+is_free_tier: false
+input_schema:
+  type: object
+  properties:
+    ticker:
+      type: string
+      description: Exchange ticker such as AAPL. One of ticker or cik is required.
+    cik:
+      type: string
+      description: SEC Central Index Key such as 320193. One of ticker or cik is required.
+output_schema:
+  type: object
+  example:
+    cik: "0000320193"
+    ticker: AAPL
+    entity_name: Apple Inc.
+    latest_period_end: "2025-09-27"
+    fundamentals:
+      revenue:
+        label: Revenue
+        value: 416161000000
+        unit: USD
+        concept: RevenueFromContractWithCustomerExcludingAssessedTax
+        fiscal_year: 2025
+        period_start: "2024-09-29"
+        period_end: "2025-09-27"
+        form: 10-K
+        filed: "2025-10-31"
+        accession: 0000320193-25-000079
+    metrics_unavailable: []
+    source_url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000320193&type=10-K
+  properties:
+    cik:
+      type: string
+    ticker:
+      type: string
+    entity_name:
+      type: string
+    latest_period_end:
+      type: string
+    fundamentals:
+      type: object
+    metrics_unavailable:
+      type: array
+    source_url:
+      type: string
+data_source: SEC XBRL company-concept API (EDGAR financial statement data)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: us
+test_fixtures:
+  known_answer:
+    input:
+      ticker: AAPL
+    expected_fields:
+      - field: cik
+        operator: not_null
+        reliability: guaranteed
+      - field: entity_name
+        operator: type
+        reliability: common
+        value: string
+      - field: fundamentals
+        operator: not_null
+        reliability: guaranteed
+      - field: source_url
+        operator: not_null
+        reliability: guaranteed
+  health_check_input:
+    ticker: AAPL
+output_field_reliability:
+  cik: guaranteed
+  fundamentals: guaranteed
+  metrics_unavailable: guaranteed
+  source_url: guaranteed
+  entity_name: common
+  latest_period_end: common
+  ticker: common
+limitations:
+  - title: SEC 10-K filers only
+    text: >-
+      Covers US domestic registrants that file a 10-K. Foreign private issuers filing 20-F or 40-F,
+      private companies, funds and trusts are not covered, and neither is any non-US listing.
+    category: coverage
+    severity: warning
+  - title: As-reported XBRL, not normalised financials
+    text: >-
+      Values are the concept tags the filer chose. Different companies tag the same economic line
+      differently, so figures are not directly comparable across filers the way a commercial
+      aggregator's normalised statements are. The concept field names the tag each value came from.
+    category: accuracy
+    severity: warning
+  - title: Latest annual period only
+    text: >-
+      One value per metric, from the most recently ended fiscal year reported on a 10-K. There is no
+      history, no quarterly data and no trend. Restatements are followed — the latest filed value
+      for the latest period wins.
+    category: coverage
+    severity: info
+  - title: Metrics a filer does not tag come back null
+    text: >-
+      Revenue is resolved through a fallback chain because tags change over time — Apple stopped
+      reporting under the Revenues tag in 2018. Where no tag in a chain matches, the metric is null
+      and its key is listed in metrics_unavailable rather than being silently omitted.
+    category: coverage
+    severity: info
+  - title: Metric periods can differ within one response
+    text: >-
+      Each metric carries its own period_end. A filer that restates one line and not another can
+      leave two metrics covering different periods, so latest_period_end is the newest across the
+      set rather than a period every figure shares.
+    category: accuracy
+    severity: info

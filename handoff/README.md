@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-269 files (242 with a recorded intent, 27 without).
+270 files (243 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -42,6 +42,7 @@
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-positioning-brief.md`](_general/from-code/2026-09-05-brand-positioning-brief.md) | Make the Strale positioning recommendation concrete and bring the rendered redesign review into the repo-based program. |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-foundation-discovery.md`](_general/from-code/2026-09-05-brand-foundation-discovery.md) | understand Strale's product, commercial use, catalogue, positioning and design history before defining the founder's... |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-direction-applications.md`](_general/from-code/2026-09-05-brand-direction-applications.md) | Record the approved Strale positioning and turn it into candidate website, social and PDF applications. |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-agent-data-capabilities-from-competitor-review.md`](_general/from-code/2026-09-05-agent-data-capabilities-from-competitor-review.md) | Research workingmachines.dev as a competitor, then add the capabilities |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md`](_general/from-code/2026-09-04-t17-drizzle-upgrade.md) | Program track T17 / WP13 second batch (drizzle-orm 0.38.4 -> 0.45.2, semver-major) -- the |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-m2-batch-9-trust-display.md`](_general/from-code/2026-09-04-m2-batch-9-trust-display.md) | land T10 (M2 exit-gap closure) batch 9, six trust-and-quality-display Decision rows (DEC-20260305-G trust display sys... |

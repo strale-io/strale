@@ -1,0 +1,36 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api/scripts/verify-new-capabilities.ts",
+    "commit": "122d44959c5241633e7c907140ac93b664a4e2dc"
+  },
+  "at": "2026-09-05T21:04:10.809Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/427e7490-26c0-4cc7-aa84-9031a101914a/scratchpad/receipt-src.json"
+  },
+  "summary": {
+    "live_executions_attempted": 8,
+    "live_executions_passed": 8,
+    "input_refusals_attempted": 8,
+    "input_refusals_passed": 8,
+    "unit_tests": 57,
+    "unit_tests_passed": 57,
+    "mutations_planted": 13,
+    "mutations_caught": 13,
+    "slowest_live_ms": 925,
+    "timings": "clinical-trials-search=339ms doi-resolve=402ms citation-graph=890ms cert-transparency-search=422ms host-exposure-lookup=72ms breach-exposure-check=76ms fda-safety-search=925ms company-fundamentals=841ms"
+  },
+  "topic": "agent-data-capabilities-batch",
+  "raw": {
+    "live_executions_attempted": 8,
+    "live_executions_passed": 8,
+    "input_refusals_attempted": 8,
+    "input_refusals_passed": 8,
+    "unit_tests": 57,
+    "unit_tests_passed": 57,
+    "mutations_planted": 13,
+    "mutations_caught": 13,
+    "slowest_live_ms": 925,
+    "timings": "clinical-trials-search=339ms doi-resolve=402ms citation-graph=890ms cert-transparency-search=422ms host-exposure-lookup=72ms breach-exposure-check=76ms fda-safety-search=925ms company-fundamentals=841ms"
+  }
+}
