@@ -83,8 +83,10 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-quote-fidelity.mjs"
       ]
     },
     {
@@ -310,6 +312,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md",
+        "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md",
         "handoff/_general/from-code/security-audit-api.md",
@@ -326,6 +329,8 @@
         "scripts/handoff/handoff-check.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs",
+        "scripts/m2-quote-fidelity.mjs",
+        "scripts/m2-quote-fidelity.test.mjs",
         "scripts/receipts-lib.mjs",
         "scripts/receipts.test.mjs"
       ]
@@ -520,6 +525,7 @@
         "scripts/claims-lib.mjs",
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-quote-fidelity.test.mjs",
         "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
@@ -618,7 +624,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "37b6ed824eb3cc290b71f5a1a2865e275e4306d7b5720d078f1d0c20778144d3",
+      "sha256": "e0f90e434cd7251782ba3e1da2ddf89dce04a3e463c78e44839ba597864fe852",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
