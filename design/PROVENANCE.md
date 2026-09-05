@@ -12,6 +12,10 @@ it), `superseded` (replaced by a later direction in the same lineage),
 `proposed` (preserved and candidate, not yet promoted), `exploring` (under
 active review, earlier than proposed).
 
+## Instrument and Fieldwork — rejected, 2026-09-05
+
+The founder rejected these alternatives and clarified that the existing Quiet Material redesign should be retained and its system completed. [Preserved concepts](explorations/2026-09-05-brand-directions/README.md) are historical evidence, not implementation inputs. The candidate token records are rejected. Resume at the [system completion plan](../docs/programs/brand-website/SYSTEM-COMPLETION.md). No existing runtime token or artwork was changed.
+
 ## Internal reports — `adopted`, 2026-08-15
 
 Light-mode operational SaaS: white cards on a soft grey ground, one accent

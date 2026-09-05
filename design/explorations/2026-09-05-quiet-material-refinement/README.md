@@ -6,6 +6,8 @@ superseded_by: null
 
 # Quiet Material refinement
 
+**Continuation note, 5 September:** the founder found these studies unpolished. After seeing alternative boards, the founder clarified a preference for the existing Quiet Material redesign and a review/completion of its design system. Resume at the [system completion plan](../../../docs/programs/brand-website/SYSTEM-COMPLETION.md). This folder preserves the earlier unadopted masters; its historical instructions below are not the current next action.
+
 First application studies following DEC-20260905-A. The positioning is approved; these visual rules and applications are candidates. This exploration compares composition within Quiet Material, not replacement identities. The preserved v0.7 remains the control and is not superseded.
 
 Read [FOUNDATION.md](FOUNDATION.md) for the human rules, `foundation.json` for the machine-readable authoring records and `applications.json` for editable composition instructions. Values come from [the candidate token file](../../tokens/candidates/quiet-material-refinement.json). The application PDF is a static study, not a functioning website, a production template or approved launch copy.

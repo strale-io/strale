@@ -446,6 +446,7 @@
         "apps/api/src/lib/seller-rank.ts",
         "apps/api/src/lib/startup-migrations.ts",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
+        "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-direction-applications.json",
         "archive/receipts/2026-09-05-check-brand-direction-review-fixes.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
@@ -517,6 +518,7 @@
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/src/lib/attribution.ts",
+        "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
         "archive/sessions/2026-08-31-m1-foundation-extraction-boundary.md",
         "archive/sessions/2026-08-31-repo-native-operating-model-m1-review-claude.md",
@@ -598,7 +600,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "65dcca1f5830a202a25b609730f9f0db2860c8c045ff4e9112efff1ca0dc106d",
+      "sha256": "821971611010c59bc794d6043a8f7ec04329eb9201df8cf612e159dce085d379",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

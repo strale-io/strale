@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "authority_scope": "execution-record-only",
+  "status": "active",
+  "date": "2026-09-05",
+  "visual_baseline": "Preserved Quiet Material v0.7; founder-supplied screenshot for the exact opening",
+  "founder_constraint": "Retain existing visual direction. Audit and complete its design system and cohesive gradients/atmospheric images. Instrument and Fieldwork rejected.",
+  "positioning": "DEC-20260905-A remains adopted",
+  "production_adoption": false,
+  "next_batch": [
+    "source_and_asset_governance",
+    "recipe_consistency",
+    "identity"
+  ],
+  "evidence": [
+    "archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md",
+    "archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json"
+  ],
+  "areas": [
+    {
+      "id": "source_and_asset_governance",
+      "status": "partial",
+      "finding_ids": [
+        "QM-01",
+        "QM-02"
+      ],
+      "acceptance": "All current image tokens resolve to versioned records; missing reference/illustration sources located or explicitly unavailable.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "recipe_consistency",
+      "status": "conflicting",
+      "finding_ids": [
+        "QM-03",
+        "QM-04"
+      ],
+      "acceptance": "Written, visual and structured recipes agree, including verification, closing CTA and Mineral inverse surfaces.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "identity",
+      "status": "conflicting",
+      "finding_ids": [
+        "QM-06"
+      ],
+      "acceptance": "Existing S lockup and legacy compass are separated; navigation/avatar/favicon/inverse exports reference one chosen master.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "typography",
+      "status": "partial",
+      "finding_ids": [
+        "QM-07"
+      ],
+      "acceptance": "Instrument Sans and IBM Plex Mono have exact files/licences, role specimens, numerals/glyphs and channel fallbacks.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "atmosphere_cohesion",
+      "status": "partial",
+      "finding_ids": [
+        "QM-01"
+      ],
+      "acceptance": "All fourteen retained masters have contextual pairings, focal/crop records and reviewed uses; no speculative expansion.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "colour_and_gradients",
+      "status": "partial",
+      "finding_ids": [
+        "QM-03",
+        "QM-04"
+      ],
+      "acceptance": "Nine gradient roles mapped to permitted uses, surfaces and state distinctions; contextual contrast measured.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "controls_and_navigation",
+      "status": "partial",
+      "finding_ids": [
+        "QM-10"
+      ],
+      "acceptance": "Needed control/navigation states rendered and tested, including keyboard, loading, disabled, error and empty.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "icons_and_illustration",
+      "status": "partial",
+      "finding_ids": [
+        "QM-02",
+        "QM-05",
+        "QM-06"
+      ],
+      "acceptance": "Current glyph and illustration sources inventoried; functional diagram vs decorative raster rules unambiguous.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "density_and_rhythm",
+      "status": "conflicting",
+      "finding_ids": [
+        "QM-09"
+      ],
+      "acceptance": "Named open, compact and framed patterns preserve hierarchy; copy slots optional; mobile and long-content specimens pass.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "motion_and_modes",
+      "status": "partial",
+      "finding_ids": [
+        "QM-08"
+      ],
+      "acceptance": "Timings/easing as shared data; supported modes explicit; pause, off-screen, reduced-motion/static equivalents tested.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "channel_templates",
+      "status": "incomplete",
+      "finding_ids": [
+        "QM-07",
+        "QM-08"
+      ],
+      "acceptance": "Website, social/avatar/banner/OG, blog, email and document examples have source masters and reviewed exports; video has storyboard/poster/caption rules.",
+      "owner": "session",
+      "complete": false
+    },
+    {
+      "id": "consumer_enforcement",
+      "status": "partial",
+      "finding_ids": [
+        "QM-10"
+      ],
+      "acceptance": "Asset reference/status checks, generated-view drift and actual apps/web/channel consumers covered by appropriate deterministic and visual checks.",
+      "owner": "session",
+      "complete": false
+    }
+  ]
+}
