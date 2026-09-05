@@ -41,6 +41,28 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-30
+    subject: "PR #560 — M2 G2 batch 3: seven ID collisions (DEC-20260406-C, DEC-20260409-C, DEC-20260420-D/E/F/G/H) resolved atomically with twelve source-qualified records and two documented-only rows"
+    commit: 8deb296b
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      Irreversible collision resolutions including the first two
+      documented_only rows (a superseded twin and an identical-title
+      duplicate) and the DEC-20260420-H finding that the export holds no
+      row stating the social-platform scraping rule that three merged
+      records attribute to that id. Whether the duplicate comparison, the
+      dispositions and the range-expanded relation edges are justified by
+      the parsed rows is the Codex judgement.
+    what_to_attack: >
+      Each of the twelve records against its Notion row (by page id,
+      parsed); the DEC-20260420-D comparison against both rows; the
+      DEC-20260420-H report against DEC-20260420-I's text; the relation
+      edges derived from the Option C row's "through DEC-20260420-G" range;
+      the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-29
     subject: "PR #507 — the caller-class partition (harness / account / x402 / anonymous), the who-called operator script, and the 2026-09-04 and 2026-09-05 operating runs"
     commit: b9739d12
