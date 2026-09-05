@@ -429,133 +429,154 @@ collisions:
         disposition: formal_record
         record_key: DEC-20260502-A--notion-35467c87082c8124bcc5e2c2597c76c6
   - id: "DEC-20260505-D"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260505-D.md
     records:
       - title: "DEC-20260505-D — InfoCamere route: pursue Distributore Ufficiale program, not Telemaco Pay"
         historical_status: active
         source_url: https://app.notion.com/35767c87082c81059f67e756f5c5eefa
         source_page_id: "35767c87082c81059f67e756f5c5eefa"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260505-D--notion-35767c87082c81059f67e756f5c5eefa
       - title: "v1 launch scope expanded from 6-fixed to as-close-to-full-EU-coverage-as-possible"
         historical_status: active
         source_url: https://app.notion.com/35767c87082c81d3897fe47a2ec7a4c1
         source_page_id: "35767c87082c81d3897fe47a2ec7a4c1"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260505-D--notion-35767c87082c81d3897fe47a2ec7a4c1
   - id: "DEC-20260505-E"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260505-E.md
     records:
       - title: "DEC-20260505-E — HMRC VAT Checker: surface redistribution model proactively, force compliance review now"
         historical_status: active
         source_url: https://app.notion.com/35767c87082c813481a8efa27ea37438
         source_page_id: "35767c87082c813481a8efa27ea37438"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438
       - title: "Topograph downgraded to customer-funded or fee-waived only; not v1 default"
         historical_status: active
         source_url: https://app.notion.com/35767c87082c81e2ba50d630d0b95f9d
         source_page_id: "35767c87082c81e2ba50d630d0b95f9d"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260505-E--notion-35767c87082c81e2ba50d630d0b95f9d
   - id: "DEC-20260507-A"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-A.md
     records:
       - title: "Drift-check substrate moves to platform-facts.ts; static maps in CI scripts deprecated"
         historical_status: active
         source_url: https://app.notion.com/35967c87082c81b0ad02d69148811b57
         source_page_id: "35967c87082c81b0ad02d69148811b57"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260507-A--notion-35967c87082c81b0ad02d69148811b57
       - title: "Gap-8 reclassified to Gap-7: SK misclassification corrected, SI/SK/RO confirmed buildable, MT remains genuine gap pending MBR outreach"
         historical_status: active
         source_url: https://app.notion.com/35967c87082c81a9abc3da329b92a0f9
         source_page_id: "35967c87082c81a9abc3da329b92a0f9"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260507-A--notion-35967c87082c81a9abc3da329b92a0f9
   - id: "DEC-20260507-B"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-B.md
     records:
       - title: "Closing-steps Rule 16 — CC self-merges feature-branch PRs after session-end verification passes"
         historical_status: active
         source_url: https://app.notion.com/35967c87082c81ec9db7cba5b6fecb76
         source_page_id: "35967c87082c81ec9db7cba5b6fecb76"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260507-B--notion-35967c87082c81ec9db7cba5b6fecb76
       - title: "NL dutch-company-data defaults to KVK direct API (Basisprofiel + Zoeken), replacing Company.info as primary mid-rebuild target"
         historical_status: superseded
         source_url: https://app.notion.com/35967c87082c81f38091f6afba337a8a
         source_page_id: "35967c87082c81f38091f6afba337a8a"
-        disposition: unresolved
+        disposition: documented_only
+        rationale: Superseded by the row that became DEC-20260508-C--notion-35a67c87082c817eb9b5d491786dc67b,
+          which its own Superseded By field names and whose Rationale confirms supersession "for the
+          eligibility question."
   - id: "DEC-20260507-C"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-C.md
     records:
       - title: "Branch protection enabled on main (required PR, required status checks, strict base, enforce on admins)"
         historical_status: active
         source_url: https://app.notion.com/35967c87082c81f187e7f1881a6d74c4
         source_page_id: "35967c87082c81f187e7f1881a6d74c4"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260507-C--notion-35967c87082c81f187e7f1881a6d74c4
       - title: "IT/ES/PT/AT cohort defaults to Openapi PAYG for v1; self-build / Compass / InfoCamere / publicacoes.mj.pt parser deferred until revenue triggers"
         historical_status: active
         source_url: https://app.notion.com/35967c87082c817cad56ec58c707d895
         source_page_id: "35967c87082c817cad56ec58c707d895"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260507-C--notion-35967c87082c817cad56ec58c707d895
   - id: "DEC-20260508-B"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-B.md
     records:
       - title: "Canonical local-development worktree structure locked: trunk always on main; daily work in strale-work (detached HEAD); research/exploratory in strale-research (detached HEAD). WORKTREES.md at repo root is the operational doc."
         historical_status: active
         source_url: https://app.notion.com/35a67c87082c814bbb8df7036fccf8e1
         source_page_id: "35a67c87082c814bbb8df7036fccf8e1"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260508-B--notion-35a67c87082c814bbb8df7036fccf8e1
       - title: "Provenance posture for aggregator-sourced data: pointer-to-register where Strale calls registers directly; pointer-to-aggregator-plus-legal-basis where Strale calls aggregators operating under their own legal authority"
         historical_status: active
         source_url: https://app.notion.com/35a67c87082c8119a22bf1414e307e5f
         source_page_id: "35a67c87082c8119a22bf1414e307e5f"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260508-B--notion-35a67c87082c8119a22bf1414e307e5f
   - id: "DEC-20260508-C"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-C.md
     records:
       - title: "Audit-first template extended at point 1: adds Files I will modify sub-list and cross-worktree write-conflict check. Halts on file modified <1h ago in another worktree; warns on stale ≥1h modifications."
         historical_status: active
         source_url: https://app.notion.com/35a67c87082c81dd8477cdb92d1403f2
         source_page_id: "35a67c87082c81dd8477cdb92d1403f2"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260508-C--notion-35a67c87082c81dd8477cdb92d1403f2
       - title: "Closing-steps Rule 17 — CC verifies worktree HEAD state at session start; adds Worktree branch-collision tripwire to stop-conditions.md"
         historical_status: active
         source_url: https://app.notion.com/35a67c87082c8170a19af278e67abd46
         source_page_id: "35a67c87082c8170a19af278e67abd46"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260508-C--notion-35a67c87082c8170a19af278e67abd46
       - title: "KVK direct M2M ineligible for Swedish AB; NL primary intent reverts to Company.info as KVK recognised partner pending eligibility validation. Supersedes DEC-20260507-B for the eligibility question."
         historical_status: active
         source_url: https://app.notion.com/35a67c87082c817eb9b5d491786dc67b
         source_page_id: "35a67c87082c817eb9b5d491786dc67b"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260508-C--notion-35a67c87082c817eb9b5d491786dc67b
   - id: "DEC-20260512-A"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260512-A.md
     records:
       - title: "KVK Option B (Strale-applies-for-KVK-recognised-partner-status) closed — all KVK channels confirmed closed to foreign EU entities"
         historical_status: active
         source_url: https://app.notion.com/35e67c87082c8122a29ef35f256d5958
         source_page_id: "35e67c87082c8122a29ef35f256d5958"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260512-A--notion-35e67c87082c8122a29ef35f256d5958
       - title: "Scheduler and internal callers must respect vendor cost class + quota windows"
         historical_status: active
         source_url: https://app.notion.com/35e67c87082c8188a014f4b1f963cf77
         source_page_id: "35e67c87082c8188a014f4b1f963cf77"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260512-A--notion-35e67c87082c8188a014f4b1f963cf77
   - id: "DEC-20260513-F"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260513-F.md
     records:
       - title: "Classify guaranteed_field_missing:* as manifest_drift non-tripping in categorizeFailureReason"
         historical_status: active
         source_url: https://app.notion.com/35f67c87082c81269b79cb7d0367dc46
         source_page_id: "35f67c87082c81269b79cb7d0367dc46"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260513-F--notion-35f67c87082c81269b79cb7d0367dc46
       - title: "v1 Identity coverage verdict — 20 of 20 audited capabilities v1-ready"
         historical_status: active
         source_url: https://app.notion.com/35f67c87082c81c09fbfc2253cf4e24c
         source_page_id: "35f67c87082c81c09fbfc2253cf4e24c"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260513-F--notion-35f67c87082c81c09fbfc2253cf4e24c
