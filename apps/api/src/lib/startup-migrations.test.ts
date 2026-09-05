@@ -69,6 +69,7 @@ import {
   runMigration0066_ensureEligibilityColumnAndReconcile,
   runMigration0094_clearChurnInvalidatedBaselines,
   runMigration0100_relistUrlToMarkdown,
+  runMigration0112_promoteFreeApiEight,
   runMigration0101_capabilityInvocations,
   runStartupMigrations,
   type MigrationExecutor,
@@ -1423,6 +1424,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0109_receiptEpoch",
       "runMigration0110_receiptExecutionContext",
       "runMigration0111_vendorControlTower",
+      "runMigration0112_promoteFreeApiEight",
     ]);
   });
 });
@@ -2282,7 +2284,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(111);
+    expect(Math.max(...numbers)).toBe(112);
   });
 });
 
@@ -2399,5 +2401,140 @@ describe("startup-migrations — block 0101 runs its one-shot work exactly once"
     expect(ledger).toBeGreaterThan(-1);
     expect(ledger, "the ledger row must be written after the trigger is verified")
       .toBeGreaterThan(verify);
+  });
+});
+
+describe("startup-migrations — block 0112 (list the eight free-public-API capabilities)", () => {
+  /**
+   * The eight PR #518 capabilities were onboarded dark on 2026-09-04 and could
+   * not reach automatic promotion: six carried a `dependency_health` assertion
+   * on a `status` field their output lacks (a permanent 80% against a 95% bar)
+   * and the `free_quota` 24h suite floor put `minTests = 40` about ten days out.
+   *
+   * The failure modes these tests protect against are asymmetric. Listing
+   * without moving `lifecycle_state` sells nothing while reporting success;
+   * an event without its flags leaves the floor clamp reading a stale takedown;
+   * firing twice would undo a LATER, legitimate quarantine; and widening the
+   * rule fix to `cve-details` would delete a correct assertion.
+   */
+  const applied = () => [{ block: "0112_promoteFreeApiEight" }] as unknown[];
+  const eight = () =>
+    [
+      { slug: "academic-paper-search" },
+      { slug: "arxiv-search" },
+      { slug: "cve-details" },
+      { slug: "hacker-news-search" },
+      { slug: "paper-details" },
+      { slug: "pubmed-search" },
+      { slug: "sec-edgar-filings" },
+      { slug: "usgs-earthquake-search" },
+    ] as unknown[];
+
+  it("lists all eight and writes one promotion event each", async () => {
+    const stub = makeStub({
+      queue: [{}, [], { count: 6 }, eight(), {}, {}, {}, {}, {}, {}, {}, {}, {}],
+    });
+    const result = await runMigration0112_promoteFreeApiEight(stub);
+    const events = stub.renderedSql.filter((q) => /insert into health_monitor_events/i.test(q));
+    expect(events).toHaveLength(8);
+    expect(result.rows_affected).toBe(14); // 8 listed + 6 rules corrected
+    expect(result.outcome).toContain("listed 8");
+  });
+
+  it("moves lifecycle_state, without which the listing sells nothing", async () => {
+    // /x402/* filters lifecycle_state IN ('active','probation') and
+    // /v1/capabilities on ('active','degraded'). These rows are 'validating',
+    // so flipping visible and x402_enabled alone is a silent no-op that still
+    // reports success. This is the single most load-bearing line in the block.
+    const stub = makeStub({ queue: [{}, [], { count: 6 }, eight(), ...Array(9).fill({})] });
+    await runMigration0112_promoteFreeApiEight(stub);
+    const update = stub.renderedSql.find((q) => /update capabilities/i.test(q));
+    expect(update).toBeDefined();
+    const setClause = update!.slice(update!.toLowerCase().indexOf("set"));
+    expect(setClause).toMatch(/lifecycle_state = 'active'/i);
+    // and the WP8 half-quarantine CHECK: visible and x402_enabled together.
+    expect(/visible = true/i.test(setClause) && /x402_enabled = true/i.test(setClause)).toBe(true);
+  });
+
+  it("refuses any capability a vendor suspension has withdrawn", async () => {
+    // The known_overlaps note for capabilities.lifecycle_state rests its
+    // safety argument on this clause: block 0111 sets deactivation_reason to
+    // its suspension marker whenever it withdraws a capability, and running
+    // earlier in the same boot it would win. Without this predicate 0112
+    // would silently un-suspend a vendor-withdrawn capability on the one boot
+    // it fires. Independent review of PR #564 removed the clause and found
+    // the whole suite still green — this test closes that.
+    const stub = makeStub({ queue: [{}, [], { count: 6 }, eight(), ...Array(9).fill({}) ] });
+    await runMigration0112_promoteFreeApiEight(stub);
+    const update = stub.renderedSql.find((q) => /update capabilities/i.test(q));
+    expect(update).toBeDefined();
+    expect(update!.toLowerCase().replace(/\s+/g, " ")).toContain("deactivation_reason is null");
+  });
+
+  it("corrects the six fabricated rules and leaves cve-details alone", async () => {
+    // cve-details genuinely returns `status` (NVD "Analyzed"), so the same
+    // assertion is correct there. usgs-earthquake-search was already
+    // auto-remediated to an empty check list. Widening this UPDATE to either
+    // would delete a correct rule — bending the substrate, which the Scoring
+    // Integrity rule forbids.
+    const stub = makeStub({ queue: [{}, [], { count: 6 }, eight(), ...Array(9).fill({})] });
+    await runMigration0112_promoteFreeApiEight(stub);
+    const fix = stub.renderedSql.find((q) => /update test_suites/i.test(q));
+    expect(fix).toBeDefined();
+    const scope = fix!.slice(0, fix!.toLowerCase().indexOf("and validation_rules"));
+    expect(scope).not.toContain("cve-details");
+    expect(scope).not.toContain("usgs-earthquake-search");
+    for (const slug of [
+      "academic-paper-search",
+      "arxiv-search",
+      "hacker-news-search",
+      "paper-details",
+      "pubmed-search",
+      "sec-edgar-filings",
+    ]) {
+      expect(scope).toContain(slug);
+    }
+    // Exact-match on the whole rules object: a rule edited since is not clobbered.
+    expect(fix!).toContain('{"checks":[{"field":"status","operator":"not_null"}]}');
+  });
+
+  it("writes the event in the shape the floor clamp and promotion job read", async () => {
+    const stub = makeStub({ queue: [{}, [], { count: 6 }, eight(), ...Array(9).fill({})] });
+    await runMigration0112_promoteFreeApiEight(stub);
+    const insert = stub.renderedSql.find((q) => /insert into health_monitor_events/i.test(q));
+    expect(insert!).toContain("promoted_with_x402");
+    const boundStrings = stub.captured
+      .flatMap((c) => ((c as { queryChunks?: unknown[] }).queryChunks ?? []) as unknown[])
+      .filter((v): v is string => typeof v === "string");
+    const details = boundStrings
+      .map((v) => {
+        try {
+          return JSON.parse(v) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })
+      .find((v) => v !== null && typeof v === "object");
+    expect(details, "the promotion event must bind a details payload").toBeTruthy();
+    expect(details!.mode).toBe("enforce");
+  });
+
+  it("does not claim a promotion that did not happen", async () => {
+    const stub = makeStub({ queue: [{}, [], { count: 0 }, [], {}] });
+    const result = await runMigration0112_promoteFreeApiEight(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no capability listed/);
+  });
+
+  it("never fires twice — a later quarantine is not undone on the next deploy", async () => {
+    const stub = makeStub({ queue: [{}, applied()] });
+    const result = await runMigration0112_promoteFreeApiEight(stub);
+    expect(result.rows_affected).toBe(0);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
+    expect(joined).not.toMatch(/update capabilities/);
+    expect(joined).not.toMatch(/update test_suites/);
+    expect(joined).not.toMatch(/insert into health_monitor_events/);
+    expect(result.outcome).toMatch(/already applied/);
   });
 });
