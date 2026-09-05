@@ -32,6 +32,16 @@ const withBase = (register) => ({ ...context, base: { available: true, ref: "tes
 const base = () => loadRegister(root);
 const codes = (register, ctx = context) => validateClosureRegister(register, ctx, { schema }).map((f) => f.code);
 const has = (register, code, ctx) => assert.ok(codes(register, ctx).includes(code), `expected ${code}, got ${codes(register, ctx).join(",")}`);
+// COMMIT_UNVERIFIABLE is shared with the pre-existing git-qualified-record
+// ancestry check, so a plain `has` can pass vacuously off that unrelated
+// finding. This checks a finding with the given code AND a detail substring.
+const hasDetail = (register, code, substr, ctx = context) => {
+  const findings = validateClosureRegister(register, ctx, { schema });
+  assert.ok(
+    findings.some((f) => f.code === code && f.detail.includes(substr)),
+    `expected ${code} with detail including "${substr}", got ${findings.filter((f) => f.code === code).map((f) => f.detail).join(" | ")}`,
+  );
+};
 const lacks = (register, code, ctx) => assert.ok(!codes(register, ctx).includes(code), `did not expect ${code}`);
 // For "formally_migrated" specifically, skips collision-derived rows (they
 // carry an extra `collision` object and a source-qualified record_key
@@ -1359,4 +1369,198 @@ test("the register keeps its inactive-candidate markers", () => {
     r[k] = v;
     has(r, "SCHEMA");
   }
+});
+
+// ---- closing_review (G9 stage 1 mechanism). This stage lands and proves the
+// mechanism the validator uses to SEE a closing review; it plants no real
+// review and closes nothing. Each fixture builds its own tracked evidence
+// file in a temp dir (the pattern the raw-scan test above already uses) and
+// overrides the git-backed context functions rather than touching real git
+// history or the live register.
+const closingReviewFixture = (overrides = {}) => {
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-"));
+  const commit = overrides.commit ?? "f".repeat(40);
+  const evidenceRel = "archive/sessions/2026-09-05-m2-closing-review-test-fixture.md";
+  mkdirSync(join(dir, "archive/sessions"), { recursive: true });
+  const evidenceText = overrides.evidenceText ?? `---\ndoc_type: m2-closing-review\ncommit: ${commit}\n---\n\nVERDICT: PASS\n\nCommit ${commit} passed the closing review.\n`;
+  writeFileSync(join(dir, evidenceRel), evidenceText);
+
+  const r = base();
+  const g9 = r.exit_gaps.find((g) => g.covers.includes("plan.review_route"));
+  // Isolate the mechanism from the live G2 batch: the unresolved_collision
+  // bucket still holds rows independent of this stage, so its own blocking
+  // gap (G2) is left untouched unless a test overrides it.
+  const expectedFormalRecords = context.records.length;
+  const expectedCollisionsResolved = (context.collisions.collisions ?? []).filter((c) => c.resolution_status === "resolved").length;
+  const expectedResolutionReports = [...context.tracked].filter((f) => /^archive\/sessions\/.*-decision-collision-resolution-.*\.md$/.test(f)).length;
+
+  r.closing_review = {
+    route: overrides.route ?? "fresh-read-only-claude-agent",
+    commit,
+    verdict: "PASS",
+    reviewed_at: "2026-09-05",
+    evidence: evidenceRel,
+    candidate_set: {
+      formal_records: overrides.formalRecords ?? expectedFormalRecords,
+      collisions_resolved: overrides.collisionsResolved ?? expectedCollisionsResolved,
+      resolution_reports: overrides.resolutionReports ?? expectedResolutionReports,
+    },
+  };
+  if (overrides.mutateRegister) overrides.mutateRegister(r, g9);
+
+  // The whole-file-boundary raw scan (REGISTER_IDENTITY_NOT_PUBLIC) reads the
+  // register straight off `context.root`; give it something to read, the
+  // same way the existing raw-scan test above does.
+  mkdirSync(join(dir, "docs/project"), { recursive: true });
+  writeFileSync(join(dir, "docs/project/m2-closure-register.yaml"), YAML.stringify(r));
+
+  const backlog = overrides.backlog ?? { entries: [{ status: "pending", subject: "closing review of the complete M2 candidate set", commit: "abc1234" }] };
+  const ctx = {
+    ...context,
+    root: dir,
+    tracked: new Set([...context.tracked, evidenceRel]),
+    isAncestor: overrides.isAncestor === undefined ? () => true : overrides.isAncestor,
+    changedPathsBetween: overrides.changedPathsBetween === undefined ? () => [] : overrides.changedPathsBetween,
+    registerAtCommit: overrides.registerAtCommit === undefined ? () => r : overrides.registerAtCommit,
+    codexBacklog: backlog,
+    ...overrides.contextOverrides,
+  };
+  return { dir, r, g9, ctx };
+};
+const withClosingReviewFixture = (overrides, run) => {
+  const { dir, r, g9, ctx } = closingReviewFixture(overrides);
+  try {
+    run({ r, g9, ctx });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
+test("a clean closing_review releases plan.review_route and clears the track gate", () => {
+  withClosingReviewFixture({
+    mutateRegister: (r, g9) => {
+      g9.blocking = false;
+      // Isolate from the live unresolved_collision batch (G2) so the track-gate
+      // assertion below tests the closing_review mechanism, not that batch's
+      // progress: every other gap goes non-blocking and the bucket total is
+      // zeroed for this synthetic copy only.
+      for (const g of r.exit_gaps) if (g.id !== g9.id) g.blocking = false;
+      r.counts.exit_gaps = { blocking: 0, non_blocking: r.exit_gaps.length };
+      r.counts.decision_rows.unresolved_collision = 0;
+    },
+  }, ({ r, ctx }) => {
+    const c = codes(r, ctx);
+    assert.ok(!c.some((code) => code.startsWith("CLOSING_REVIEW_")), c.join(","));
+    assert.ok(!c.includes("COMMIT_UNVERIFIABLE"), c.join(","));
+    assert.ok(!c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
+    const doneTracks = { ...context.tracks, tracks: context.tracks.tracks.map((t) => (t.id === "T10" ? { ...t, status: "done" } : t)) };
+    const c2 = codes(r, { ...ctx, tracks: doneTracks });
+    assert.ok(!c2.includes("TRACKS_GATE_DONE_WITH_BLOCKING_GAPS"), c2.join(","));
+  });
+});
+
+test("CLOSING_REVIEW_ROUTE_MISMATCH: fresh-read-only-claude-agent needs a pending backlog row naming the closing review", () => {
+  withClosingReviewFixture({ backlog: { entries: [{ status: "pending", subject: "PR #999 — unrelated batch" }] } }, ({ r, ctx }) => {
+    has(r, "CLOSING_REVIEW_ROUTE_MISMATCH", ctx);
+  });
+  withClosingReviewFixture({ backlog: { entries: [{ status: "reviewed", subject: "the M2 closing review" }] } }, ({ r, ctx }) => {
+    has(r, "CLOSING_REVIEW_ROUTE_MISMATCH", ctx);
+  });
+  // fresh-codex-task never needs the backlog row.
+  withClosingReviewFixture({ route: "fresh-codex-task", backlog: { entries: [] } }, ({ r, ctx }) => {
+    assert.ok(!codes(r, ctx).includes("CLOSING_REVIEW_ROUTE_MISMATCH"));
+  });
+});
+
+test("CLOSING_REVIEW_COMMIT_NOT_ANCESTOR and COMMIT_UNVERIFIABLE: the reviewed commit must be checkable and an ancestor of HEAD", () => {
+  withClosingReviewFixture({ isAncestor: () => false }, ({ r, ctx }) => {
+    has(r, "CLOSING_REVIEW_COMMIT_NOT_ANCESTOR", ctx);
+  });
+  withClosingReviewFixture({ isAncestor: null }, ({ r, ctx }) => {
+    // COMMIT_UNVERIFIABLE is shared with the pre-existing git-qualified-record
+    // ancestry check (also unable to verify ancestry when isAncestor is
+    // unavailable); hasDetail pins this to the closing_review occurrence.
+    hasDetail(r, "COMMIT_UNVERIFIABLE", "closing_review.commit", ctx);
+  });
+});
+
+test("CLOSING_REVIEW_EVIDENCE_MISSING: the evidence file must exist and be tracked", () => {
+  withClosingReviewFixture({}, ({ r, ctx }) => {
+    const bad = { ...ctx, tracked: new Set([...context.tracked]) }; // drop the evidence file from tracked
+    has(r, "CLOSING_REVIEW_EVIDENCE_MISSING", bad);
+    r.closing_review.evidence = "archive/sessions/does-not-exist-anywhere.md";
+    has(r, "CLOSING_REVIEW_EVIDENCE_MISSING", ctx);
+  });
+});
+
+test("CLOSING_REVIEW_EVIDENCE_NOT_VERDICT: the evidence file must read as a PASS verdict for this exact commit", () => {
+  withClosingReviewFixture({ evidenceText: "no frontmatter, no verdict line, no commit\n" }, ({ r, ctx }) => {
+    has(r, "CLOSING_REVIEW_EVIDENCE_NOT_VERDICT", ctx);
+  });
+  withClosingReviewFixture({ evidenceText: `---\ndoc_type: m2-closing-review\ncommit: ${"f".repeat(40)}\n---\n\nVERDICT: FAIL\n` }, ({ r, ctx }) => {
+    has(r, "CLOSING_REVIEW_EVIDENCE_NOT_VERDICT", ctx);
+  });
+  withClosingReviewFixture({ evidenceText: `---\ndoc_type: something-else\ncommit: ${"f".repeat(40)}\n---\n\nVERDICT: PASS\n` }, ({ r, ctx }) => {
+    has(r, "CLOSING_REVIEW_EVIDENCE_NOT_VERDICT", ctx);
+  });
+});
+
+test("CLOSING_REVIEW_STALE: a changed decision surface, or a register that moved beyond the review's own gap, invalidates the review", () => {
+  withClosingReviewFixture({ changedPathsBetween: () => ["docs/decisions/id-collisions.yaml"] }, ({ r, ctx }) => {
+    has(r, "CLOSING_REVIEW_STALE", ctx);
+  });
+  withClosingReviewFixture({}, ({ r, ctx }) => {
+    // registerAtCommit returns a copy that differs somewhere the strip does
+    // not ignore (a decision row's rationale, unrelated to the review's own gap).
+    const atCommit = structuredClone(r);
+    atCommit.decision_rows[0].rationale += " (edited after the review)";
+    has(r, "CLOSING_REVIEW_STALE", { ...ctx, registerAtCommit: () => atCommit });
+  });
+  withClosingReviewFixture({ registerAtCommit: () => null }, ({ r, ctx }) => {
+    hasDetail(r, "COMMIT_UNVERIFIABLE", "could not read the register at", ctx);
+  });
+  withClosingReviewFixture({ changedPathsBetween: () => null }, ({ r, ctx }) => {
+    hasDetail(r, "COMMIT_UNVERIFIABLE", "could not diff", ctx);
+  });
+});
+
+test("CLOSING_REVIEW_COUNTS_MISMATCH: candidate_set must equal what the lib computes now", () => {
+  withClosingReviewFixture({}, ({ r, ctx }) => {
+    r.closing_review.candidate_set.formal_records += 1;
+    has(r, "CLOSING_REVIEW_COUNTS_MISMATCH", ctx);
+  });
+  withClosingReviewFixture({}, ({ r, ctx }) => {
+    r.closing_review.candidate_set.collisions_resolved += 1;
+    has(r, "CLOSING_REVIEW_COUNTS_MISMATCH", ctx);
+  });
+  withClosingReviewFixture({}, ({ r, ctx }) => {
+    r.closing_review.candidate_set.resolution_reports += 1;
+    has(r, "CLOSING_REVIEW_COUNTS_MISMATCH", ctx);
+  });
+});
+
+test("CLOSING_REVIEW_MUTATED: once recorded on the base, closing_review's identity fields and its presence are immutable", () => {
+  withClosingReviewFixture({}, ({ r, ctx }) => {
+    const baseRegister = structuredClone(r);
+    const mutated = structuredClone(r);
+    mutated.closing_review.verdict = "PASS"; // unchanged value, sanity baseline
+    assert.ok(!codes(mutated, { ...ctx, base: { available: true, ref: "test", register: baseRegister } }).includes("CLOSING_REVIEW_MUTATED"));
+    const changedCommit = structuredClone(r);
+    changedCommit.closing_review.commit = "0".repeat(40);
+    has(changedCommit, "CLOSING_REVIEW_MUTATED", { ...ctx, base: { available: true, ref: "test", register: baseRegister } });
+    const removed = structuredClone(r);
+    delete removed.closing_review;
+    has(removed, "CLOSING_REVIEW_MUTATED", { ...ctx, base: { available: true, ref: "test", register: baseRegister } });
+  });
+});
+
+test("plan.review_route stays a blocking requirement when closing_review is present but not clean", () => {
+  withClosingReviewFixture({
+    backlog: { entries: [] }, // makes the route mismatch, so closing_review is not clean
+    mutateRegister: (r, g9) => { g9.blocking = false; },
+  }, ({ r, ctx }) => {
+    const c = codes(r, ctx);
+    assert.ok(c.includes("CLOSING_REVIEW_ROUTE_MISMATCH"), c.join(","));
+    assert.ok(c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
+  });
 });

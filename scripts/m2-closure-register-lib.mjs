@@ -10,6 +10,19 @@
 // the public rows to the private projection, the recomputed counts, and the
 // version of the register already on the base branch (so rows cannot silently
 // disappear).
+//
+// closing_review (optional; see docs/decisions/README.md) is the G9 stage-1
+// mechanism that lets the M2 exit's fresh independent review actually be
+// seen once it happens: CLOSING_REVIEW_ROUTE_MISMATCH (route not backed by
+// the recorded route or a pending Codex-backlog row),
+// CLOSING_REVIEW_COMMIT_NOT_ANCESTOR / COMMIT_UNVERIFIABLE (commit ancestry),
+// CLOSING_REVIEW_EVIDENCE_MISSING / CLOSING_REVIEW_EVIDENCE_NOT_VERDICT
+// (the evidence file must exist, be tracked, and read as a PASS verdict for
+// that exact commit), CLOSING_REVIEW_STALE (a decision surface changed, or
+// the register changed beyond what the review's own gap requires, since the
+// reviewed commit), CLOSING_REVIEW_COUNTS_MISMATCH (candidate_set vs what
+// the lib computes now), and CLOSING_REVIEW_MUTATED (merge-base immutability
+// once recorded). It records no review and closes nothing by itself.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -26,6 +39,17 @@ const RECORDS_DIR = "docs/decisions/records";
 const ARCHIVE_STATUS_PATH = "docs/project/private-archive-status.json";
 const MIGRATION_PLAN_PATH = "docs/strategy/2026-08-31-repo-native-operating-model-migration.md";
 const TRACKS_PATH = "docs/programs/cto-readiness/tracks.yaml";
+const CODEX_BACKLOG_PATH = "docs/programs/codex-review-backlog.yaml";
+// A closing-review evidence file's PASS line, matched anywhere in the file.
+const CLOSING_REVIEW_VERDICT_LINE = /^VERDICT: PASS$/m;
+// Paths whose change after the reviewed commit invalidates a closing review:
+// anything that could move a Decision's disposition without a new review.
+const CLOSING_REVIEW_STALE_PATHSPECS = [
+  "docs/decisions/records/",
+  "docs/decisions/id-collisions.yaml",
+  "archive/sessions/*-decision-collision-resolution-*.md",
+];
+const RESOLUTION_REPORT_PATTERN = /^archive\/sessions\/.*-decision-collision-resolution-.*\.md$/;
 // The track register declares each track's relation to the M2 exit gate in a
 // required `gate` field (see docs/programs/tracks.schema.json). Declarations
 // are not trusted on their own: only the tracks below may stand outside the
@@ -254,6 +278,53 @@ export function isAncestorOfHead(root, sha) {
   return gitQuiet(root, ["merge-base", "--is-ancestor", sha, "HEAD"]) !== null;
 }
 
+/**
+ * Paths that changed between two refs, restricted to the given pathspecs.
+ * Null when the diff could not be read (git unreachable or a bad ref); an
+ * empty array is a real, confirmed "nothing changed".
+ */
+export function changedPathsBetween(root, fromRef, toRef, pathspecs) {
+  const out = gitQuiet(root, ["diff", "--name-only", fromRef, toRef, "--", ...pathspecs]);
+  if (out === null) return null;
+  return out.split(/\r?\n/).filter(Boolean);
+}
+
+/** The register as it read at an arbitrary commit. Null when unreadable. */
+export function readRegisterAtCommit(root, sha, relativePath = REGISTER_PATH) {
+  const content = gitQuiet(root, ["show", `${sha}:${relativePath}`]);
+  return content === null ? null : YAML.parse(content);
+}
+
+/** Deep equality that ignores key order (two different points in time can
+ * serialize the same content with different YAML key order). */
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((k) => [k, canonicalize(value[k])]));
+  }
+  return value;
+}
+function deepEqualIgnoringKeyOrder(a, b) {
+  return JSON.stringify(canonicalize(a)) === JSON.stringify(canonicalize(b));
+}
+
+/**
+ * A register stripped of everything a closing review's staleness check must
+ * ignore: the closing_review block itself, the exit-gap entry covering
+ * plan.review_route (its blocking flag is expected to move once the review
+ * lands), and the exit-gap counts (derived from that flag). Any other change
+ * still fails the comparison.
+ */
+function stripForClosingReviewComparison(register) {
+  const clone = structuredClone(register);
+  delete clone.closing_review;
+  if (Array.isArray(clone.exit_gaps)) {
+    clone.exit_gaps = clone.exit_gaps.filter((g) => !(g.covers ?? []).includes("plan.review_route"));
+  }
+  if (clone.counts) delete clone.counts.exit_gaps;
+  return clone;
+}
+
 /** Forward-looking statements the plan file contains, as normalized sentences. */
 export function requiredPlanStatements(planText) {
   const lines = planText.split(/\r?\n/);
@@ -296,6 +367,9 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     gitNativeClaims: gitNativeClaims(root),
     gapCitations: gapReportCitations(root),
     tracks: existsSync(resolve(root, TRACKS_PATH)) ? YAML.parse(readFileSync(resolve(root, TRACKS_PATH), "utf8")) : null,
+    codexBacklog: existsSync(resolve(root, CODEX_BACKLOG_PATH)) ? YAML.parse(readFileSync(resolve(root, CODEX_BACKLOG_PATH), "utf8")) : null,
+    changedPathsBetween: (fromRef, toRef, pathspecs) => changedPathsBetween(root, fromRef, toRef, pathspecs),
+    registerAtCommit: (sha) => readRegisterAtCommit(root, sha),
   };
 }
 
@@ -755,6 +829,93 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
   }
 
+  // ---- Closing review (G9 stage 1 mechanism): an optional block that, once
+  // every invariant below holds, releases the plan.review_route blocking
+  // requirement further down. It records no review by itself; see
+  // docs/decisions/README.md. `closingReviewClean` is read at the blocking
+  // check below, so this must run before it.
+  const closingReview = register.closing_review;
+  let closingReviewClean = false;
+  if (closingReview !== undefined) {
+    const crFindings = [];
+    const crFinding = (code, detail) => crFindings.push({ code, path: relativePath, detail });
+
+    // Route consistency: the recorded route is PROGRAM.md's review_route,
+    // substituted per CLAUDE.md's 2026-09-03 amendment (DEC-20260903-A)
+    // while the Codex quota is out. fresh-codex-task is always the real
+    // route and needs no substitute-route evidence; the schema enum already
+    // excludes anything else. fresh-read-only-claude-agent is accepted only
+    // when the Codex re-review obligation for this closing review is
+    // actually recorded in the backlog (a pending row naming it).
+    if (closingReview.route === "fresh-read-only-claude-agent") {
+      const backlog = context.codexBacklog;
+      const named = Array.isArray(backlog?.entries)
+        && backlog.entries.some((e) => e.status === "pending" && typeof e.subject === "string" && /closing review/i.test(e.subject));
+      if (!named) {
+        crFinding("CLOSING_REVIEW_ROUTE_MISMATCH", "fresh-read-only-claude-agent requires a pending row in docs/programs/codex-review-backlog.yaml whose subject names the closing review");
+      }
+    }
+
+    // Commit ancestry, checked the way git_provenance already is.
+    if (context.isAncestor) {
+      if (!context.isAncestor(closingReview.commit)) crFinding("CLOSING_REVIEW_COMMIT_NOT_ANCESTOR", closingReview.commit);
+    } else {
+      crFinding("COMMIT_UNVERIFIABLE", `closing_review.commit ${closingReview.commit}: git is unavailable`);
+    }
+
+    // Evidence: must exist and be tracked, and must actually read as a PASS
+    // verdict for this exact commit.
+    const evProblem = evidenceProblem(context, closingReview.evidence);
+    if (evProblem) {
+      crFinding("CLOSING_REVIEW_EVIDENCE_MISSING", `${closingReview.evidence} (${evProblem})`);
+    } else if (context.root) {
+      const text = readFileSync(resolve(context.root, closingReview.evidence), "utf8");
+      const fmMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      const fm = fmMatch ? YAML.parse(fmMatch[1]) : {};
+      const ok = text.includes(closingReview.commit)
+        && CLOSING_REVIEW_VERDICT_LINE.test(text)
+        && fm.doc_type === "m2-closing-review"
+        && fm.commit === closingReview.commit;
+      if (!ok) {
+        crFinding("CLOSING_REVIEW_EVIDENCE_NOT_VERDICT", `${closingReview.evidence} does not read as a PASS verdict for ${closingReview.commit} (needs frontmatter doc_type: m2-closing-review with matching commit, the full sha in the text, and a line "VERDICT: PASS")`);
+      }
+    }
+
+    // Staleness: nothing that could move a Decision's disposition may have
+    // changed since the reviewed commit, and the register itself must be
+    // unchanged apart from closing_review, the plan.review_route gap's
+    // blocking flag, and the exit-gap counts it feeds.
+    if (context.changedPathsBetween) {
+      const changed = context.changedPathsBetween(closingReview.commit, "HEAD", CLOSING_REVIEW_STALE_PATHSPECS);
+      if (changed === null) crFinding("COMMIT_UNVERIFIABLE", `could not diff ${closingReview.commit}..HEAD`);
+      else if (changed.length > 0) crFinding("CLOSING_REVIEW_STALE", `decision surfaces changed since the reviewed commit: ${changed.join(", ")}`);
+    }
+    if (context.registerAtCommit) {
+      const atCommit = context.registerAtCommit(closingReview.commit);
+      if (atCommit === null) crFinding("COMMIT_UNVERIFIABLE", `could not read the register at ${closingReview.commit}`);
+      else if (!deepEqualIgnoringKeyOrder(stripForClosingReviewComparison(atCommit), stripForClosingReviewComparison(register))) {
+        crFinding("CLOSING_REVIEW_STALE", `the register changed (beyond closing_review, the plan.review_route gap, and counts.exit_gaps) since ${closingReview.commit}`);
+      }
+    }
+
+    // Candidate-set counts must equal what the lib computes right now.
+    const expectedFormalRecords = context.records.length;
+    const expectedCollisionsResolved = (context.collisions?.collisions ?? []).filter((c) => c.resolution_status === "resolved").length;
+    const expectedResolutionReports = context.tracked ? [...context.tracked].filter((f) => RESOLUTION_REPORT_PATTERN.test(f)).length : null;
+    if (closingReview.candidate_set.formal_records !== expectedFormalRecords) {
+      crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `formal_records: register says ${closingReview.candidate_set.formal_records}, lib computes ${expectedFormalRecords}`);
+    }
+    if (closingReview.candidate_set.collisions_resolved !== expectedCollisionsResolved) {
+      crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `collisions_resolved: register says ${closingReview.candidate_set.collisions_resolved}, lib computes ${expectedCollisionsResolved}`);
+    }
+    if (expectedResolutionReports !== null && closingReview.candidate_set.resolution_reports !== expectedResolutionReports) {
+      crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `resolution_reports: register says ${closingReview.candidate_set.resolution_reports}, lib computes ${expectedResolutionReports}`);
+    }
+
+    findings.push(...crFindings);
+    closingReviewClean = crFindings.length === 0;
+  }
+
   // ---- Exit gaps: unique, and every open bucket must be covered.
   const gapIds = new Set();
   const covered = new Set();
@@ -786,7 +947,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
   for (const d of ["not_yet_reconciled", "unresolved_collision"]) {
     if ((totals[d] ?? 0) > 0 && !blockingCovered.has(`decision_rows.${d}`)) finding("EXIT_GAP_NOT_BLOCKING", `decision_rows.${d} (${totals[d]} rows) is open but no blocking gap covers it`);
   }
-  if (!blockingCovered.has("plan.review_route")) finding("EXIT_GAP_NOT_BLOCKING", "plan.review_route is open but no blocking gap covers it");
+  if (!blockingCovered.has("plan.review_route") && !closingReviewClean) finding("EXIT_GAP_NOT_BLOCKING", "plan.review_route is open but no blocking gap covers it");
 
   // ---- Next batch: cutoff anchored to a public row; public eligibility exact.
   const nb = register.next_decision_batch;
@@ -906,6 +1067,19 @@ export function validateClosureRegister(register, context, { schema, relativePat
     const basePrivate = base.register.private_rows?.count ?? 0;
     if (privateCount + publicCount < basePrivate + (base.register.decision_rows?.length ?? 0)) {
       finding("DECISION_ROW_REMOVED", `total rows fell from ${basePrivate + base.register.decision_rows.length} to ${privateCount + publicCount}`);
+    }
+    // Merge-base immutability for closing_review, in the same place the
+    // register's other base-immutability checks live: once recorded, its
+    // identity fields are as immutable as a receipt.
+    if (base.register.closing_review) {
+      const baseCR = base.register.closing_review;
+      if (!closingReview) {
+        finding("CLOSING_REVIEW_MUTATED", "closing_review existed on the base and was removed");
+      } else {
+        for (const k of ["commit", "verdict", "reviewed_at", "evidence"]) {
+          if (baseCR[k] !== closingReview[k]) finding("CLOSING_REVIEW_MUTATED", `closing_review.${k}: ${baseCR[k]} -> ${closingReview[k]}`);
+        }
+      }
     }
   }
 

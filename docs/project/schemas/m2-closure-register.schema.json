@@ -236,6 +236,29 @@
         ]
       }
     },
+    "closing_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Recorded once the M2 exit's fresh independent review has actually happened. Absent until then; see docs/decisions/README.md. Cross-row and staleness invariants live in scripts/m2-closure-register-lib.mjs, not here.",
+      "required": ["route", "commit", "verdict", "reviewed_at", "evidence", "candidate_set"],
+      "properties": {
+        "route": { "enum": ["fresh-read-only-claude-agent", "fresh-codex-task"] },
+        "commit": { "$ref": "#/$defs/sha40" },
+        "verdict": { "const": "PASS" },
+        "reviewed_at": { "$ref": "#/$defs/date" },
+        "evidence": { "$ref": "#/$defs/evidenceRef" },
+        "candidate_set": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["formal_records", "collisions_resolved", "resolution_reports"],
+          "properties": {
+            "formal_records": { "type": "integer", "minimum": 0 },
+            "collisions_resolved": { "type": "integer", "minimum": 0 },
+            "resolution_reports": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
     "next_decision_batch": {
       "type": "object",
       "additionalProperties": false,
