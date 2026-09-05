@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-244 files (217 with a recorded intent, 27 without).
+245 files (218 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md) | Resolve the five earliest historical ID collisions in the M2 closure |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md`](_general/from-code/2026-09-05-m2-batch-18-may-rows.md) | land T10 (M2 exit-gap closure) batch 18, the last thirteen Decision |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md`](_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md) | land T10 (M2 exit-gap closure) batch 17, twelve Decision rows from |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md`](_general/from-code/2026-09-05-m2-batch-16-march-second-half.md) | land T10 (M2 exit-gap closure) batch 16, twelve March 2026 |

@@ -150,6 +150,8 @@
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
         "archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260225-P-c5d6.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-A.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -431,6 +433,7 @@
         "archive/sessions/2026-09-02-t14-cheap-extras-plan.md",
         "archive/sessions/2026-09-02-t2-repo-hygiene-sweep-report.md",
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260225-P-c5d6.md",
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
@@ -559,7 +562,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "b739c469887c9c938867ea1f418b4c7e4126fd9ecc09bb966992d49f267596f8",
+      "sha256": "31f7a963a3e9f9f8a4467762955a3f624fcf20751c07ed8bea5b344bcbb3a74c",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
