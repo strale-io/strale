@@ -362,3 +362,14 @@ operator verifier will print `ok`. The exact projection to commit is
 already written at `2026-09-02-m2-closure-private-rows.batch17.yaml` in
 the session scratchpad. The next T10 batch continues the same
 twelve-row cadence against the remaining 13 rows, all now global scope.
+
+## Orchestrator addendum (after this handoff was written)
+
+The private half (24 rows) was committed to the archive repository at
+`a7ffe1ad4d68d7d16d7c57dd858c9c89509d7937` and `private_rows.commit` in the
+register was bumped to it in this same PR, per the loop change of
+2026-09-04 (private half committed and register pinned before the
+independent review). The statements above that the pin was left at
+`9da4ff92...` and that the operator verifier reported failures in the
+private count and digest classes describe the worker's state before that
+step; at the PR head the verifier prints `ok`.
