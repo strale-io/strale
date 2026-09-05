@@ -1522,7 +1522,7 @@ test("CLOSING_REVIEW_EVIDENCE_NOT_VERDICT: the evidence file must read as a PASS
   });
   // A PASS line quoted inside a fenced block, with a different verdict as the
   // file's real last line, must not be mistaken for this commit's own
-  // verdict — the pre-fix regex matched "VERDICT: PASS" anywhere in the file,
+  // verdict; the pre-fix regex matched "VERDICT: PASS" anywhere in the file,
   // fences included.
   withClosingReviewFixture({
     evidenceText: `---\ndoc_type: m2-closing-review\ncommit: ${"f".repeat(40)}\n---\n\n`
@@ -1542,6 +1542,11 @@ test("CLOSING_REVIEW_EVIDENCE_NOT_VERDICT: the evidence file must read as a PASS
 });
 
 test("verdictIsLastLine: fenced blocks are counted, not content-matched, and only the file's own last word counts", () => {
+  // Tilde fences count like backtick fences, and a fence closes only on its own marker.
+  assert.equal(verdictIsLastLine("Some content\n~~~\nVERDICT: PASS\n"), false);
+  assert.equal(verdictIsLastLine("~~~\nVERDICT: PASS\n~~~\nVERDICT: FAIL\n"), false);
+  assert.equal(verdictIsLastLine("~~~\nquoted\n```\nVERDICT: PASS\n"), false);
+  assert.equal(verdictIsLastLine("~~~\nquoted\n~~~\nVERDICT: PASS\n"), true);
   assert.equal(verdictIsLastLine("VERDICT: PASS\n"), true);
   assert.equal(verdictIsLastLine("VERDICT: PASS\n\n"), true, "trailing blank lines are ignored");
   assert.equal(verdictIsLastLine("```\nVERDICT: PASS\n```\nVERDICT: FAIL\n"), false);
@@ -1693,7 +1698,7 @@ test("EXIT_GAP_NOT_BLOCKING isolates the plan.review_route branch: no closing_re
   const before = codes(r, ctx);
   assert.ok(!before.includes("EXIT_GAP_NOT_BLOCKING"), before.join(","));
   // Plant: disable only G9's blocking flag. No other gap, and no
-  // closing_review, changes — this alone must trip the plan.review_route
+  // closing_review, changes; this alone must trip the plan.review_route
   // branch of EXIT_GAP_NOT_BLOCKING.
   const mutated = structuredClone(r);
   mutated.exit_gaps.find((g) => g.covers.includes("plan.review_route")).blocking = false;

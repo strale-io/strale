@@ -335,14 +335,21 @@ function deepEqualIgnoringKeyOrder(a, b) {
  */
 export function verdictIsLastLine(text) {
   const lines = text.split(/\r?\n/);
-  let inFence = false;
+  // Both CommonMark fence markers count; a fence closes only on its own marker,
+  // so a tilde fence cannot be closed by backticks or vice versa.
+  let fence = null;
   let lastNonEmpty = null;
   for (const line of lines) {
-    if (/^\s*```/.test(line)) {
-      inFence = !inFence;
+    const m = /^\s*(```|~~~)/.exec(line);
+    if (m && fence === null) {
+      fence = m[1];
       continue;
     }
-    if (inFence) continue;
+    if (m && m[1] === fence) {
+      fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
     if (line.trim() === "") continue;
     lastNonEmpty = line;
   }
@@ -907,7 +914,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
 
     // Evidence: unlike the shared evidenceRef (which also accepts a GitHub or
     // Notion URL for other evidence lists), closing-review evidence must be a
-    // repo-relative, tracked file under archive/sessions/ — the only kind
+    // repo-relative, tracked file under archive/sessions/, the only kind
     // this library can actually open and read as a verdict. A schema-legal
     // URL is rejected here, before evidenceProblem (which treats it as fine)
     // ever reaches the readFileSync below.
