@@ -334,8 +334,29 @@ and run-matches the binds, so it still fails on reordering or dropping any.
    concurrent session merging #555 while this run was in CI) and owes a Codex verdict
    when the quota returns (DEC-20260903-A).
 
-**Gate status at close:** `handoff:check` will report more than one batch
-worktree, because two detached review worktrees belonging to other sessions
-exist at `C:/tmp/`. That is an accurate failing finding and it is left accurate —
-deleting another live session's worktree to make a gate green is the documented
-F12 mistake and is not done here.
+## 8. Verified state at close
+
+Written after the work, not predicted before it. An earlier draft of this
+section said `handoff:check` would fail on more than one batch worktree,
+because two detached review worktrees belonging to other sessions were sitting
+in `C:/tmp/` mid-run. By close they were gone — their owners cleared them — so
+that sentence described a state that no longer existed. It is replaced rather
+than left standing: a closing status that was true when drafted and false when
+read is the state-drift shape, and this file is the first thing the next
+session opens.
+
+- **`handoff:check`: PASSES**, `main` in the trunk worktree, clean.
+- **Both PRs merged.** #507 as `b9739d12`, #557 as `dc226db3`.
+- **Deployed commit equals `main`:** `GET /health` → `dc226db3f957`, against a
+  tip of `dc226db3f957…`. Confirmed after the merge, not assumed from it.
+- **Branches:** the two `chore/checkin-*` branches deleted, local ref first
+  then remote, both gated on PR state `MERGED`. Remote now carries `main` and
+  one other session's open branch. Two stale `worktree-agent-*` local refs
+  were deleted with `git branch -d` — both ancestors of `main`, neither
+  checked out in any worktree, neither on the remote, so nothing was taken
+  from anyone.
+- **Left alone, deliberately:** two locked agent worktrees under
+  `.claude/worktrees/` carrying uncommitted work, belonging to a running
+  session. The gate reports them as notes, not failures. Removing another live
+  session's worktree to tidy a gate is the documented F12 mistake and was not
+  done.
