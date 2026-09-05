@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-241 files (214 with a recorded intent, 27 without).
+242 files (215 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md`](_general/from-code/2026-09-05-m2-batch-16-march-second-half.md) | land T10 (M2 exit-gap closure) batch 16, twelve March 2026 |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md`](_general/from-code/2026-09-05-m2-batch-15-march-first-half.md) | land T10 (M2 exit-gap closure) batch 15, fourteen March 2026 |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-foundation-discovery.md`](_general/from-code/2026-09-05-brand-foundation-discovery.md) | understand Strale's product, commercial use, catalogue, positioning and design history before defining the founder's... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md`](_general/from-code/2026-09-04-t17-drizzle-upgrade.md) | Program track T17 / WP13 second batch (drizzle-orm 0.38.4 -> 0.45.2, semver-major) -- the |
