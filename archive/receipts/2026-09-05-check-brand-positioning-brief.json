@@ -1,0 +1,42 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0b8640be4988444bff154df15c4fa4cac07c2e46"
+  },
+  "at": "2026-09-05T07:27:13.199Z",
+  "inputs": {
+    "source": "C:\\Users\\pette\\AppData\\Local\\Temp/strale-brand-brief-checks.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0
+  },
+  "topic": "brand-positioning-brief",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "checks": [
+      {
+        "command": "npm run programs:check",
+        "exit_code": 0,
+        "output": "\r\n> programs:check\r\n> node scripts/check-program-tracks.mjs\r\n\r\nok   docs/programs/brand-website/tracks.yaml\r\nok   docs/programs/cto-readiness/tracks.yaml\r\n"
+      },
+      {
+        "command": "npm run research:check",
+        "exit_code": 0,
+        "output": "\r\n> research:check\r\n> node scripts/check-research.mjs\r\n\r\nchecked 38 docs/research/*.md files\r\nok   research contract\r\nwarn (5) — research-looking files outside docs/research:\r\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-12-platform-readiness-program.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\r\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/strategy/2026-08-demand-mined-build-queue.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\r\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-allabolag-pattern-full-inventory.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\r\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/2026-04-21-company-registry-direct-api-audit.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\r\n  RESEARCH_LOOKING_FILE_OUTSIDE_CONTRACT docs/audits/activation-traffic-2026-04-08.md: looks like research (heading matches research/audit/evaluation/benchmark) but lives outside docs/research — consider migrating it into the research contract\r\n"
+      },
+      {
+        "command": "npm run docs:check",
+        "exit_code": 0,
+        "output": "\r\n> docs:check\r\n> node scripts/check-docs-index.mjs\r\n\r\nchecked 18 docs/ subtrees against docs/README.md\r\nok   docs/README.md index\r\n"
+      },
+      {
+        "command": "npm run claims:check",
+        "exit_code": 0,
+        "output": "\r\n> claims:check\r\n> node scripts/check-claims.mjs\r\n\r\nchecked 27 rows in docs/company/claims.yaml against README.md, packages/*/README.md, manifests/*.yaml, platform-facts.ts, and the frontend llms.txt when present\r\nok   claims register contract\r\n"
+      }
+    ]
+  }
+}
