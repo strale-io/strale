@@ -1547,6 +1547,9 @@ test("verdictIsLastLine: fenced blocks are counted, not content-matched, and onl
   assert.equal(verdictIsLastLine("~~~\nVERDICT: PASS\n~~~\nVERDICT: FAIL\n"), false);
   assert.equal(verdictIsLastLine("~~~\nquoted\n```\nVERDICT: PASS\n"), false);
   assert.equal(verdictIsLastLine("~~~\nquoted\n~~~\nVERDICT: PASS\n"), true);
+  assert.equal(verdictIsLastLine("~~~~\nquoted\n~~~\nVERDICT: PASS\n"), false);
+  assert.equal(verdictIsLastLine("~~~~\nquoted\n~~~~\nVERDICT: PASS\n"), true);
+  assert.equal(verdictIsLastLine("````\nquoted\n`````\nVERDICT: PASS\n"), true);
   assert.equal(verdictIsLastLine("VERDICT: PASS\n"), true);
   assert.equal(verdictIsLastLine("VERDICT: PASS\n\n"), true, "trailing blank lines are ignored");
   assert.equal(verdictIsLastLine("```\nVERDICT: PASS\n```\nVERDICT: FAIL\n"), false);
