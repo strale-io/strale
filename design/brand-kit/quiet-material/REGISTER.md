@@ -29,7 +29,7 @@ Source status records the preserved package. Recipe status records this consolid
 
 ### Hero folded light
 
-Keep the broad pearl sweep as the opening anchor. The paper panel sits low, leaving the fold visible. Narrow crops still need their own composition.
+Keep the broad pearl sweep as the opening anchor. The narrow example is a composition test; qualify it in its intended layout before use.
 
 - File: `public/strale-site/design-system/assets/hero-folded-light-background-v1.png`
 - SHA-256: `2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07`
@@ -55,7 +55,7 @@ Use solid off-white paper, anchored low. Let the folded image supply depth; do n
 
 ### Mineral / light
 
-Use a solid light reading surface, anchored low. The original atmosphere supplies the colour and depth.
+Use Mineral for gentle process variation. Keep the paper neutral; the green in the artwork is decorative, not a success signal.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-mineral-v1.png`
 - SHA-256: `83c78da37771c1699834fd5a3990ad7fe2ea6a40ad326a1282a914155a4c3406`
@@ -68,7 +68,7 @@ Use a solid light reading surface, anchored low. The original atmosphere supplie
 
 ### Cobalt / light
 
-Use a solid light reading surface, anchored low. The original atmosphere supplies the colour and depth.
+Use Cobalt for light technical emphasis. Keep information on solid paper and leave the brightest fold visible above it.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-cobalt-v1.png`
 - SHA-256: `cff9ae5cb32eca15966091ab7c2465089069f8dfbbd7045ffa89a4b6b173ef86`
@@ -81,7 +81,7 @@ Use a solid light reading surface, anchored low. The original atmosphere supplie
 
 ### Warm / light
 
-Use a solid light reading surface, anchored low. The original atmosphere supplies the colour and depth.
+Use Warm for occasional editorial variation. The original image supplies the warmth; keep the reading panel neutral.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-warm-v1.png`
 - SHA-256: `1ea4dfb038a2d3c603b5fdf024614b337ca98ddce5b9aa71dea172d7956c6c9b`

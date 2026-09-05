@@ -454,7 +454,8 @@
       "--c-frame-row-gap": "12px",
       "--c-atmosphere-inset": "20px",
       "--c-atmosphere-inner-radius": "12px",
-      "--c-direct-padding": "36px"
+      "--c-direct-padding": "36px",
+      "--c-specimen-intro-height": "58px"
     }
   }
 }

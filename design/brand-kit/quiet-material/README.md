@@ -14,13 +14,15 @@ The preserved source package remains immutable and recoverable from the release 
 
 ## What to review
 
-- Pages 2–3: whether the light and dark families feel related and their distinct roles are sensible.
-- Pages 4–7: retained gradients, then revised compositions. Dark gradients frame light paper with a fixed narrow inset. Frost and Mint have direct dark text and no inner card.
-- Pages 8–21: all fourteen images at landscape, square and narrow crops. Light reading panels sit low with a fixed inset, preserving atmosphere above. One-row compact cards demonstrate reducing content before type size. Amber remains image-only.
+- Pages 2â€“3: whether the light and dark families feel related and their distinct roles are sensible.
+- Pages 4â€“7: retained gradients, then revised compositions. Dark gradients frame light paper with a fixed narrow inset. Frost and Mint have direct dark text and no inner card.
+- Pages 8â€“21: all fourteen images at landscape, square and narrow crops. Light reading panels sit low with a fixed inset, preserving atmosphere above. One-row compact cards demonstrate reducing content before type size. Amber remains image-only.
 - Page 22: the retained lockup and the legacy favicon conflict. This proposes identity/symbol separation, not a new logo.
-- Pages 23–24: composition rules and remaining work.
+- Pages 23â€“24: composition rules and remaining work.
 
 The first version's thick centred frames and dark-on-dark panels were rejected in founder review. Revision 0.2 uses a 16px gradient-frame inset, 20px reading-panel padding and 12px inner corners; these are document specimen tokens, not a universal responsive component specification. Larger raster atmospheres use a 20px inset with a low-set panel. Solid off-white paper replaces the earlier translucent/gradient reading surfaces. No original image or gradient is changed. The narrow hero crop still loses its desktop quiet-left area, and the complete closing composition remains open. Direct text on raster atmospheres remains unqualified; the direct Frost/Mint examples have their own measured evidence.
+
+The full-document visual review also aligns the gradient groups across swatches and compositions, keeps comparative artwork at a consistent vertical position, clarifies candidate and crop-test status, demonstrates Amber with copy outside the image, and adds PDF bookmarks. Light Mineral, Cobalt and Warm now have distinct usage guidance. These are document refinements; they do not qualify production layouts.
 
 ## Rebuild and verify
 

@@ -55,3 +55,7 @@ p { font-size: var(--c-body-size); line-height: var(--c-body-line); }
 .identity-stage img { max-width: var(--c-square-size); max-height: var(--c-grid-image-height); }
 .identity-stage.legacy img { width: var(--c-logo-width); }
 footer { position: absolute; left: var(--c-margin); right: var(--c-margin); bottom: var(--c-footer-bottom); display: flex; justify-content: space-between; color: var(--ink-secondary); font-size: var(--c-footer-size); }
+
+.asset-sheet .intro { min-height: var(--c-specimen-intro-height); }
+.external-copy { margin-top: var(--c-gap); }
+.external-copy p { margin-top: var(--c-gap-small); font-size: var(--c-small-size); color: var(--ink-secondary); }
