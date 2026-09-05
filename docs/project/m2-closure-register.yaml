@@ -45,7 +45,7 @@ sources:
     status_file: docs/project/private-archive-status.json
   formal_records:
     path: docs/decisions/records
-    record_count: 213
+    record_count: 231
   collision_registry:
     path: docs/decisions/id-collisions.yaml
     collision_count: 35
@@ -59,11 +59,11 @@ digests:
     from the archive by the operator script
   public_rows:
     count: 307
-    digest: c411a2f2864fb3fc0f0ad8bf2503e0bd0536482d8db9f24dde8e122b0568e6e0
+    digest: 1e994b3d7a55204bd7f24b5d1a0ff67357d85ccc207630bb93301f01ac2dd9e6
     scope_date_digest: 55b09be18118831d77a69bb95c80270af238059b609fc6fb3732e507ed66da84
   all_rows:
     count: 318
-    digest: cef68a8108ed7008253256ef58248cb67c2c308e0f7a5bc65b9e599689bf582d
+    digest: 9f792e25efe3543243bcfab40999b9a888b35eca1d97fe9b3eaa8c0a4168f71f
 counts:
   legacy_inventory:
     migrated: 6
@@ -73,9 +73,9 @@ counts:
     evidence-only: 0
     unclear: 0
   decision_rows:
-    unresolved_collision: 19
-    formally_migrated: 206
-    resolved_collision: 5
+    unresolved_collision: 0
+    formally_migrated: 224
+    resolved_collision: 6
     intentionally_historical: 77
     not_yet_reconciled: 0
     obsolete_or_superseded: 6
@@ -1386,6 +1386,96 @@ formal_records:
   source_kind: notion-row
   source_rows:
   - 34967c87082c810695c2e365deb8f2c8
+- record_key: DEC-20260505-D--notion-35767c87082c81059f67e756f5c5eefa
+  id: DEC-20260505-D
+  source_kind: notion-row
+  source_rows:
+  - 35767c87082c81059f67e756f5c5eefa
+- record_key: DEC-20260505-D--notion-35767c87082c81d3897fe47a2ec7a4c1
+  id: DEC-20260505-D
+  source_kind: notion-row
+  source_rows:
+  - 35767c87082c81d3897fe47a2ec7a4c1
+- record_key: DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438
+  id: DEC-20260505-E
+  source_kind: notion-row
+  source_rows:
+  - 35767c87082c813481a8efa27ea37438
+- record_key: DEC-20260505-E--notion-35767c87082c81e2ba50d630d0b95f9d
+  id: DEC-20260505-E
+  source_kind: notion-row
+  source_rows:
+  - 35767c87082c81e2ba50d630d0b95f9d
+- record_key: DEC-20260507-A--notion-35967c87082c81b0ad02d69148811b57
+  id: DEC-20260507-A
+  source_kind: notion-row
+  source_rows:
+  - 35967c87082c81b0ad02d69148811b57
+- record_key: DEC-20260507-A--notion-35967c87082c81a9abc3da329b92a0f9
+  id: DEC-20260507-A
+  source_kind: notion-row
+  source_rows:
+  - 35967c87082c81a9abc3da329b92a0f9
+- record_key: DEC-20260507-B--notion-35967c87082c81ec9db7cba5b6fecb76
+  id: DEC-20260507-B
+  source_kind: notion-row
+  source_rows:
+  - 35967c87082c81ec9db7cba5b6fecb76
+- record_key: DEC-20260507-C--notion-35967c87082c81f187e7f1881a6d74c4
+  id: DEC-20260507-C
+  source_kind: notion-row
+  source_rows:
+  - 35967c87082c81f187e7f1881a6d74c4
+- record_key: DEC-20260507-C--notion-35967c87082c817cad56ec58c707d895
+  id: DEC-20260507-C
+  source_kind: notion-row
+  source_rows:
+  - 35967c87082c817cad56ec58c707d895
+- record_key: DEC-20260508-B--notion-35a67c87082c814bbb8df7036fccf8e1
+  id: DEC-20260508-B
+  source_kind: notion-row
+  source_rows:
+  - 35a67c87082c814bbb8df7036fccf8e1
+- record_key: DEC-20260508-B--notion-35a67c87082c8119a22bf1414e307e5f
+  id: DEC-20260508-B
+  source_kind: notion-row
+  source_rows:
+  - 35a67c87082c8119a22bf1414e307e5f
+- record_key: DEC-20260508-C--notion-35a67c87082c81dd8477cdb92d1403f2
+  id: DEC-20260508-C
+  source_kind: notion-row
+  source_rows:
+  - 35a67c87082c81dd8477cdb92d1403f2
+- record_key: DEC-20260508-C--notion-35a67c87082c8170a19af278e67abd46
+  id: DEC-20260508-C
+  source_kind: notion-row
+  source_rows:
+  - 35a67c87082c8170a19af278e67abd46
+- record_key: DEC-20260508-C--notion-35a67c87082c817eb9b5d491786dc67b
+  id: DEC-20260508-C
+  source_kind: notion-row
+  source_rows:
+  - 35a67c87082c817eb9b5d491786dc67b
+- record_key: DEC-20260512-A--notion-35e67c87082c8122a29ef35f256d5958
+  id: DEC-20260512-A
+  source_kind: notion-row
+  source_rows:
+  - 35e67c87082c8122a29ef35f256d5958
+- record_key: DEC-20260512-A--notion-35e67c87082c8188a014f4b1f963cf77
+  id: DEC-20260512-A
+  source_kind: notion-row
+  source_rows:
+  - 35e67c87082c8188a014f4b1f963cf77
+- record_key: DEC-20260513-F--notion-35f67c87082c81269b79cb7d0367dc46
+  id: DEC-20260513-F
+  source_kind: notion-row
+  source_rows:
+  - 35f67c87082c81269b79cb7d0367dc46
+- record_key: DEC-20260513-F--notion-35f67c87082c81c09fbfc2253cf4e24c
+  id: DEC-20260513-F
+  source_kind: notion-row
+  source_rows:
+  - 35f67c87082c81c09fbfc2253cf4e24c
 decision_rows:
 - page_id: 31267c87082c81279b14f3859f6f2038
   id: DEC-20260225-P-c5d6
@@ -2488,108 +2578,108 @@ decision_rows:
   title: v1 launch scope expanded from 6-fixed to as-close-to-full-EU-coverage-as-possible
   historical_status: active
   source_url: https://app.notion.com/35767c87082c81d3897fe47a2ec7a4c1
+  record_key: DEC-20260505-D--notion-35767c87082c81d3897fe47a2ec7a4c1
   collision:
     id: DEC-20260505-D
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260505-D--notion-35767c87082c81d3897fe47a2ec7a4c1.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35767c87082c81e2ba50d630d0b95f9d
   id: DEC-20260505-E
   title: Topograph downgraded to customer-funded or fee-waived only; not v1 default
   historical_status: active
   source_url: https://app.notion.com/35767c87082c81e2ba50d630d0b95f9d
+  record_key: DEC-20260505-E--notion-35767c87082c81e2ba50d630d0b95f9d
   collision:
     id: DEC-20260505-E
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260505-E--notion-35767c87082c81e2ba50d630d0b95f9d.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35767c87082c81059f67e756f5c5eefa
   id: DEC-20260505-D
   title: 'DEC-20260505-D — InfoCamere route: pursue Distributore Ufficiale program, not Telemaco Pay'
   historical_status: active
   source_url: https://app.notion.com/35767c87082c81059f67e756f5c5eefa
+  record_key: DEC-20260505-D--notion-35767c87082c81059f67e756f5c5eefa
   collision:
     id: DEC-20260505-D
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260505-D--notion-35767c87082c81059f67e756f5c5eefa.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35767c87082c813481a8efa27ea37438
   id: DEC-20260505-E
   title: 'DEC-20260505-E — HMRC VAT Checker: surface redistribution model proactively, force compliance
     review now'
   historical_status: active
   source_url: https://app.notion.com/35767c87082c813481a8efa27ea37438
+  record_key: DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438
   collision:
     id: DEC-20260505-E
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35967c87082c81a9abc3da329b92a0f9
   id: DEC-20260507-A
   title: 'Gap-8 reclassified to Gap-7: SK misclassification corrected, SI/SK/RO confirmed buildable, MT
     remains genuine gap pending MBR outreach'
   historical_status: active
   source_url: https://app.notion.com/35967c87082c81a9abc3da329b92a0f9
+  record_key: DEC-20260507-A--notion-35967c87082c81a9abc3da329b92a0f9
   collision:
     id: DEC-20260507-A
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260507-A--notion-35967c87082c81a9abc3da329b92a0f9.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35967c87082c81b0ad02d69148811b57
   id: DEC-20260507-A
   title: Drift-check substrate moves to platform-facts.ts; static maps in CI scripts deprecated
   historical_status: active
   source_url: https://app.notion.com/35967c87082c81b0ad02d69148811b57
+  record_key: DEC-20260507-A--notion-35967c87082c81b0ad02d69148811b57
   collision:
     id: DEC-20260507-A
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260507-A--notion-35967c87082c81b0ad02d69148811b57.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35967c87082c81ec9db7cba5b6fecb76
   id: DEC-20260507-B
   title: Closing-steps Rule 16 — CC self-merges feature-branch PRs after session-end verification passes
   historical_status: active
   source_url: https://app.notion.com/35967c87082c81ec9db7cba5b6fecb76
+  record_key: DEC-20260507-B--notion-35967c87082c81ec9db7cba5b6fecb76
   collision:
     id: DEC-20260507-B
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260507-B--notion-35967c87082c81ec9db7cba5b6fecb76.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35967c87082c81f38091f6afba337a8a
   id: DEC-20260507-B
   title: NL dutch-company-data defaults to KVK direct API (Basisprofiel + Zoeken), replacing Company.info
@@ -2598,46 +2688,47 @@ decision_rows:
   source_url: https://app.notion.com/35967c87082c81f38091f6afba337a8a
   collision:
     id: DEC-20260507-B
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: documented_only
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: resolved_collision
   evidence:
   - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-B.md
+  rationale: Collision resolved; this row is documented-only with an evidence-backed rationale in the
+    registry.
 - page_id: 35967c87082c817cad56ec58c707d895
   id: DEC-20260507-C
   title: IT/ES/PT/AT cohort defaults to Openapi PAYG for v1; self-build / Compass / InfoCamere / publicacoes.mj.pt
     parser deferred until revenue triggers
   historical_status: active
   source_url: https://app.notion.com/35967c87082c817cad56ec58c707d895
+  record_key: DEC-20260507-C--notion-35967c87082c817cad56ec58c707d895
   collision:
     id: DEC-20260507-C
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260507-C--notion-35967c87082c817cad56ec58c707d895.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35967c87082c81f187e7f1881a6d74c4
   id: DEC-20260507-C
   title: Branch protection enabled on main (required PR, required status checks, strict base, enforce
     on admins)
   historical_status: active
   source_url: https://app.notion.com/35967c87082c81f187e7f1881a6d74c4
+  record_key: DEC-20260507-C--notion-35967c87082c81f187e7f1881a6d74c4
   collision:
     id: DEC-20260507-C
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260507-C--notion-35967c87082c81f187e7f1881a6d74c4.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35a67c87082c8119a22bf1414e307e5f
   id: DEC-20260508-B
   title: 'Provenance posture for aggregator-sourced data: pointer-to-register where Strale calls registers
@@ -2645,16 +2736,16 @@ decision_rows:
     own legal authority'
   historical_status: active
   source_url: https://app.notion.com/35a67c87082c8119a22bf1414e307e5f
+  record_key: DEC-20260508-B--notion-35a67c87082c8119a22bf1414e307e5f
   collision:
     id: DEC-20260508-B
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260508-B--notion-35a67c87082c8119a22bf1414e307e5f.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35a67c87082c814bbb8df7036fccf8e1
   id: DEC-20260508-B
   title: 'Canonical local-development worktree structure locked: trunk always on main; daily work in strale-work
@@ -2662,64 +2753,64 @@ decision_rows:
     is the operational doc.'
   historical_status: active
   source_url: https://app.notion.com/35a67c87082c814bbb8df7036fccf8e1
+  record_key: DEC-20260508-B--notion-35a67c87082c814bbb8df7036fccf8e1
   collision:
     id: DEC-20260508-B
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260508-B--notion-35a67c87082c814bbb8df7036fccf8e1.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35a67c87082c8170a19af278e67abd46
   id: DEC-20260508-C
   title: Closing-steps Rule 17 — CC verifies worktree HEAD state at session start; adds Worktree branch-collision
     tripwire to stop-conditions.md
   historical_status: active
   source_url: https://app.notion.com/35a67c87082c8170a19af278e67abd46
+  record_key: DEC-20260508-C--notion-35a67c87082c8170a19af278e67abd46
   collision:
     id: DEC-20260508-C
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260508-C--notion-35a67c87082c8170a19af278e67abd46.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35a67c87082c817eb9b5d491786dc67b
   id: DEC-20260508-C
   title: KVK direct M2M ineligible for Swedish AB; NL primary intent reverts to Company.info as KVK recognised
     partner pending eligibility validation. Supersedes DEC-20260507-B for the eligibility question.
   historical_status: active
   source_url: https://app.notion.com/35a67c87082c817eb9b5d491786dc67b
+  record_key: DEC-20260508-C--notion-35a67c87082c817eb9b5d491786dc67b
   collision:
     id: DEC-20260508-C
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260508-C--notion-35a67c87082c817eb9b5d491786dc67b.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35a67c87082c81dd8477cdb92d1403f2
   id: DEC-20260508-C
   title: 'Audit-first template extended at point 1: adds Files I will modify sub-list and cross-worktree
     write-conflict check. Halts on file modified <1h ago in another worktree; warns on stale ≥1h modifications.'
   historical_status: active
   source_url: https://app.notion.com/35a67c87082c81dd8477cdb92d1403f2
+  record_key: DEC-20260508-C--notion-35a67c87082c81dd8477cdb92d1403f2
   collision:
     id: DEC-20260508-C
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260508-C--notion-35a67c87082c81dd8477cdb92d1403f2.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35d67c87082c81299957e2884a40d69e
   id: DEC-20260511-D
   title_sha256: a66e410e7063381aff5ecbccb9a39966bc15b1a1cb062eb69f0453d08ae842e6
@@ -2736,61 +2827,61 @@ decision_rows:
     closed to foreign EU entities
   historical_status: active
   source_url: https://app.notion.com/35e67c87082c8122a29ef35f256d5958
+  record_key: DEC-20260512-A--notion-35e67c87082c8122a29ef35f256d5958
   collision:
     id: DEC-20260512-A
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260512-A--notion-35e67c87082c8122a29ef35f256d5958.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35e67c87082c8188a014f4b1f963cf77
   id: DEC-20260512-A
   title: Scheduler and internal callers must respect vendor cost class + quota windows
   historical_status: active
   source_url: https://app.notion.com/35e67c87082c8188a014f4b1f963cf77
+  record_key: DEC-20260512-A--notion-35e67c87082c8188a014f4b1f963cf77
   collision:
     id: DEC-20260512-A
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260512-A--notion-35e67c87082c8188a014f4b1f963cf77.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35f67c87082c81269b79cb7d0367dc46
   id: DEC-20260513-F
   title: Classify guaranteed_field_missing:* as manifest_drift non-tripping in categorizeFailureReason
   historical_status: active
   source_url: https://app.notion.com/35f67c87082c81269b79cb7d0367dc46
+  record_key: DEC-20260513-F--notion-35f67c87082c81269b79cb7d0367dc46
   collision:
     id: DEC-20260513-F
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260513-F--notion-35f67c87082c81269b79cb7d0367dc46.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 35f67c87082c81c09fbfc2253cf4e24c
   id: DEC-20260513-F
   title: v1 Identity coverage verdict — 20 of 20 audited capabilities v1-ready
   historical_status: active
   source_url: https://app.notion.com/35f67c87082c81c09fbfc2253cf4e24c
+  record_key: DEC-20260513-F--notion-35f67c87082c81c09fbfc2253cf4e24c
   collision:
     id: DEC-20260513-F
-    resolution_status: unresolved
-    row_disposition: unresolved
+    resolution_status: resolved
+    row_disposition: formal_record
     kind: notion-duplicate
-  disposition: unresolved_collision
+  disposition: formally_migrated
   evidence:
-  - docs/decisions/id-collisions.yaml
-  rationale: Historical ID reused by more than one Notion row; unresolved in the collision registry, so
-    excluded from formal records and relation targets.
+  - docs/decisions/records/DEC-20260513-F--notion-35f67c87082c81c09fbfc2253cf4e24c.md
+  rationale: Formal candidate record exists with the same historical ID and cites this source row.
 - page_id: 36367c87082c81b99376c4225d38374c
   id: DEC-20260517-A
   title_sha256: 3205b19d9989ff198a16f696caff05b624c851a28fd73b4feceb17d065494680
@@ -5158,8 +5249,7 @@ exit_gaps:
   - docs/decisions/records/DEC-20260513-C.md
   - docs/decisions/records/DEC-20260513-D.md
 - id: G2
-  gap: '9 historical IDs reused across 19 Notion rows remain unresolved in the collision registry and
-    are excluded from formal records and relation targets. T10 G2 batch 1 resolved the five earliest
+  gap: 'Resolved. No unresolved_collision row remains. T10 G2 batch 1 resolved the five earliest
     collisions (ten rows, all historically active), namely DEC-20260225-P-c5d6, DEC-20260303-A,
     DEC-20260304-A, DEC-20260304-B, and DEC-20260304-C, each with two formal records under distinct
     source-qualified record keys. T10 G2 batch 2 resolved six further collisions (twelve rows, all
@@ -5174,7 +5264,13 @@ exit_gaps:
     DEC-20260420-J, DEC-20260420-K, DEC-20260421-A, DEC-20260421-B, DEC-20260421-C, and DEC-20260421-D.
     Thirteen rows became formal records (DEC-20260420-I/K and DEC-20260421-A/B/C/D each with two, all
     historically active); one row became documented_only (DEC-20260420-J''s superseded twin, naming
-    DEC-20260420-K''s formal record as its successor).'
+    DEC-20260420-K''s formal record as its successor). T10 G2 batch 5 resolved the last nine collisions
+    (nineteen rows): DEC-20260505-D, DEC-20260505-E, DEC-20260507-A, DEC-20260507-B, DEC-20260507-C,
+    DEC-20260508-B, DEC-20260508-C, DEC-20260512-A, and DEC-20260513-F. Eighteen rows became formal
+    records (DEC-20260505-D/E, DEC-20260507-A/C, DEC-20260508-B, DEC-20260512-A, and DEC-20260513-F each
+    with two, all historically active; DEC-20260507-B with one; DEC-20260508-C, a three-row collision,
+    with three); one row became documented_only (DEC-20260507-B''s superseded NL twin, naming
+    DEC-20260508-C''s KVK-ineligibility row as its successor). No unresolved_collision row remains.'
   blocking: true
   owner: session
   phase: M2
@@ -5237,6 +5333,33 @@ exit_gaps:
   - docs/decisions/records/DEC-20260420-G--notion-34867c87082c81c38c3acaca5d01d6ef.md
   - docs/decisions/records/DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6.md
   - docs/decisions/records/DEC-20260420-H--notion-34867c87082c81b58b36de5f71c0937f.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260505-D.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260505-E.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-A.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-B.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-C.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-B.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-C.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260512-A.md
+  - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260513-F.md
+  - docs/decisions/records/DEC-20260505-D--notion-35767c87082c81059f67e756f5c5eefa.md
+  - docs/decisions/records/DEC-20260505-D--notion-35767c87082c81d3897fe47a2ec7a4c1.md
+  - docs/decisions/records/DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438.md
+  - docs/decisions/records/DEC-20260505-E--notion-35767c87082c81e2ba50d630d0b95f9d.md
+  - docs/decisions/records/DEC-20260507-A--notion-35967c87082c81b0ad02d69148811b57.md
+  - docs/decisions/records/DEC-20260507-A--notion-35967c87082c81a9abc3da329b92a0f9.md
+  - docs/decisions/records/DEC-20260507-B--notion-35967c87082c81ec9db7cba5b6fecb76.md
+  - docs/decisions/records/DEC-20260507-C--notion-35967c87082c81f187e7f1881a6d74c4.md
+  - docs/decisions/records/DEC-20260507-C--notion-35967c87082c817cad56ec58c707d895.md
+  - docs/decisions/records/DEC-20260508-B--notion-35a67c87082c814bbb8df7036fccf8e1.md
+  - docs/decisions/records/DEC-20260508-B--notion-35a67c87082c8119a22bf1414e307e5f.md
+  - docs/decisions/records/DEC-20260508-C--notion-35a67c87082c81dd8477cdb92d1403f2.md
+  - docs/decisions/records/DEC-20260508-C--notion-35a67c87082c8170a19af278e67abd46.md
+  - docs/decisions/records/DEC-20260508-C--notion-35a67c87082c817eb9b5d491786dc67b.md
+  - docs/decisions/records/DEC-20260512-A--notion-35e67c87082c8122a29ef35f256d5958.md
+  - docs/decisions/records/DEC-20260512-A--notion-35e67c87082c8188a014f4b1f963cf77.md
+  - docs/decisions/records/DEC-20260513-F--notion-35f67c87082c81269b79cb7d0367dc46.md
+  - docs/decisions/records/DEC-20260513-F--notion-35f67c87082c81c09fbfc2253cf4e24c.md
 - id: G3
   gap: 'Resolved. DEC-20260422-A collided across surfaces: one Notion row and one Git-native protocol
     claim shared the ID, and the Notion-only registry could not represent it. The DEC-20260904-B identity
