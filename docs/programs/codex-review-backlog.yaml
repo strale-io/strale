@@ -41,6 +41,24 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-31
+    subject: "PR #563 — M2 G2 batch 4: seven ID collisions (DEC-20260420-I/J/K, DEC-20260421-A/B/C/D) resolved atomically with thirteen source-qualified records and one documented-only row"
+    commit: 6f2dec52
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      Irreversible collision resolutions covering the direct-connections
+      doctrine row, the Payee Assurance conditions retired by
+      DEC-20260812-A, and the superseded DEC-20260420-J twin. Whether each
+      disposition and relation edge is justified by the parsed rows and
+      each code claim traced to the file is the Codex judgement.
+    what_to_attack: >
+      Each of the thirteen records against its Notion row (by page id,
+      parsed); the DEC-20260420-J documented_only rationale; the prose
+      corrections for DEC-20260422-H and DEC-20260430-A; the register
+      arithmetic and digests via scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-30
     subject: "PR #560 — M2 G2 batch 3: seven ID collisions (DEC-20260406-C, DEC-20260409-C, DEC-20260420-D/E/F/G/H) resolved atomically with twelve source-qualified records and two documented-only rows"
     commit: 8deb296b
