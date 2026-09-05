@@ -1,5 +1,7 @@
 # Design tokens
 
+For the website brand, start at the [accepted Quiet Material kit index](brand-kit/README.md). It links all current companions, machine sources and remaining qualification.
+
 Design values are data, not prose or hardcoded literals. This directory is
 the source of truth for what every Strale surface looks like, what is being
 considered, and how a candidate becomes production.

@@ -38,4 +38,4 @@ The newer internally stored execution receipt is distinct from the customer-faci
 
 Before expanding this demo: qualify/fix PDF document blocks; reconcile the invoice-process input/output mapping; reconcile connector discovery's optional-input/null-price presentation and localhost payment links. Before making stronger inspection claims: verify the precise customer's retrieval path and decide whether the newer receipt must be exposed or the claim omitted. These are bounded follow-up candidates, not permission for money/audit code changes in this documentation batch.
 
-Return to [SYSTEM-COMPLETION.md](SYSTEM-COMPLETION.md) for the website-critical sequence and [the kit index](../../../design/brand-kit/quiet-material/README.md) for accepted design inputs. T3 remains incomplete.
+Return to [SYSTEM-COMPLETION.md](SYSTEM-COMPLETION.md) for the website-critical sequence and [the kit index](../../../design/brand-kit/README.md) for accepted design inputs. T3 remains incomplete.

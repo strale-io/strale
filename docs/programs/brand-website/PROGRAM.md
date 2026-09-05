@@ -13,9 +13,9 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
-Read [tracks.yaml](tracks.yaml), the [system completion plan](SYSTEM-COMPLETION.md), the [current consolidation register/catalogue](../../../design/brand-kit/quiet-material/README.md), and the [adopted positioning brief](POSITIONING-BRIEF.md). The founder clarified that the existing redesign is preferred and that the task is to audit and complete its design system, gradients and atmospheric images as a cohesive brand kit. Instrument and Fieldwork are rejected. Do not restart visual identity exploration.
+Read [tracks.yaml](tracks.yaml), the [system completion plan](SYSTEM-COMPLETION.md), the [current brand-kit index](../../../design/brand-kit/README.md), and the [adopted positioning brief](POSITIONING-BRIEF.md). The founder clarified that the existing redesign is preferred and that the task is to audit and complete its design system, gradients and atmospheric images as a cohesive brand kit. Instrument and Fieldwork are rejected. Do not restart visual identity exploration.
 
-Positioning remains adopted under DEC-20260905-A; T2 is done. On 6 September the founder accepted the forms, utility icons and composition studies for continued design work. All four accepted companions now resolve through [one kit entry](../../../design/brand-kit/quiet-material/README.md), with exact rule/token paths and acceptance scope in [system-completion.json](system-completion.json). The current logo and Quiet Material direction remain retained. This is a consolidated design baseline, not whole-kit production adoption.
+Positioning remains adopted under DEC-20260905-A; T2 is done. On 6 September the founder accepted the forms, utility icons and composition studies for continued design work. All four accepted companions now resolve through [one kit entry](../../../design/brand-kit/README.md), with exact rule/token paths and acceptance scope in [system-completion.json](system-completion.json). The current logo and Quiet Material direction remain retained. This is a consolidated design baseline, not whole-kit production adoption.
 
 The current batch resumes at [PROOF-QUALIFICATION.md](PROOF-QUALIFICATION.md). The live catalogue and source contract for invoice-extract were checked, but both available execution paths stopped at authentication; no successful output, latency or customer retrieval is claimed. Complete a funded authenticated synthetic call and its own-record retrieval, then close the website-critical gaps in [SYSTEM-COMPLETION.md](SYSTEM-COMPLETION.md). Further channel qualification follows each channel’s launch scope.
 
@@ -92,12 +92,11 @@ Every meaningful exported asset gets a brief, source master, approved variants, 
 
 Retain existing authorities: `design/tokens/active.json` owns adopted runtime values by surface; `docs/company/claims.yaml` owns public claim rulings; `design/PROVENANCE.md` owns design lineage. Extend them rather than create competing copies inside brandkit-lab exports.
 
-Proposed T5 additions, to specify after direction selection:
+T5 qualifies and adopts the accepted kit already indexed at `design/brand-kit/README.md`:
 
-- `design/brand/` for versioned brand-rule records with stable IDs and explanatory Markdown. Structured fields reference token/claim/asset IDs; narrative supplies rationale and good/bad examples.
-- `design/assets/` for an asset manifest and editable masters, with large binaries in the established release-asset store where appropriate.
-- Shared components/templates consumed by `apps/web` and other supported renderers.
-- Generated human guideline pages, CSS/type exports, design-tool variables, channel templates and a small task-routing skill. Each includes the source version; generated outputs are not edited as separate authorities.
+- Extend the existing companion registries with any missing rule or asset metadata. Preserve stable IDs, token/claim references, source lineage and explanatory examples. Do not create a competing `design/brand/` rule source.
+- Resolve the accepted candidate recipes into shared components/templates and the production token set consumed by `apps/web`. Record adoption and any exact supersession through the existing decision process.
+- Generate human guideline views, CSS/type exports, design-tool variables and channel templates from those shared sources. Add a small task-routing skill that starts at the same index. Generated views are not independently edited authorities.
 
 Extend enforcement to actual website and channel consumers: imported tokens/components, allowed asset IDs and icon/font families, required claim evidence, stale generated output detection, accessibility, rendered content/overflow checks and image/video budgets. Pair deterministic checks with review of representative full compositions. A linter can refuse an off-token colour; it cannot certify that the result is beautiful or persuasive.
 

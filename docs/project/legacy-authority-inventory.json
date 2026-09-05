@@ -495,7 +495,7 @@
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
-        "design/brand-kit/quiet-material/README.md",
+        "design/brand-kit/README.md",
         "design/brand-kit/quiet-material/registry.json",
         "design/explorations/2026-09-05-quiet-material-refinement/FOUNDATION.md",
         "docs/design/execution-receipt/PHASES-1-3-ACCEPTANCE.md",
@@ -636,7 +636,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "32102da6be645da11206f18df494cdf19f84465bc38621db68bf462e19579ef0",
+      "sha256": "f85041e15931fdfbaaaa770ef42c2eff26866ac2a94cafb02541f76bc9240b25",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -682,6 +682,7 @@
         "archive/README.md",
         "archive/receipts/2026-09-02-test-run-receipts-lib-t15.json",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
+        "archive/receipts/2026-09-05-check-quiet-material-kit-index-bound-proof.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-08-16-t02-quality-floor-quarantine-audit.md",
         "archive/sessions/2026-08-18-local-branch-cleanup.md",
@@ -710,6 +711,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-3.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-4.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-5.md",
+        "archive/sessions/2026-09-06-brand-kit-launch-proof/VERIFY.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",

@@ -1,6 +1,6 @@
 # Quiet Material: navigation, controls and cards
 
-**Accepted for continued design work.** The founder accepted this companion on 5 September 2026. This records design acceptance; the packaged candidate status and production tokens remain unchanged. [Start at the complete kit index](../README.md).
+**Accepted for continued design work.** The founder accepted this companion on 5 September 2026. This records design acceptance; the packaged candidate status and production tokens remain unchanged. [Start at the complete kit index](../../README.md).
 
 Current component companion candidate, revision 0.1, within the retained Quiet Material kit. Open [the interactive specimen](index.html) to try controls; [the PDF](output/pdf/navigation-controls.pdf) is its six-page review view. The same builder, tokens and rules produce both. The founder retained the existing flowing-S logo after a brief symbol exploration; generated alternatives are closed and are not build inputs. The identity/type companion and short direct-light-text dark-card direction were accepted for continued design work. Production adoption remains separate.
 

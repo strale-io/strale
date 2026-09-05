@@ -2,7 +2,7 @@
 
 **Current checkpoint, 6 September 2026:** the founder has accepted the atmosphere/surface catalogue, identity/type work, navigation/buttons/cards, and the forms/icons/composition studies for continued design work. The current flowing-S logo is retained. Instrument and Fieldwork are rejected. Do not reopen those choices.
 
-Start at the [brand-kit index](../../../design/brand-kit/quiet-material/README.md). The [structured completion record](system-completion.json) owns exact companion paths, acceptance dates, remaining gap IDs and execution status. Its `complete: false` area flags refer to the full original coverage contract; they do not undo acceptance of the supplied design specimens. Historical completed-batch descriptions retain what was known at that date.
+Start at the [brand-kit index](../../../design/brand-kit/README.md). The [structured completion record](system-completion.json) owns exact companion paths, acceptance dates, remaining gap IDs and execution status. Its `complete: false` area flags refer to the full original coverage contract; they do not undo acceptance of the supplied design specimens. Historical completed-batch descriptions retain what was known at that date.
 
 ## What is ready
 
@@ -34,4 +34,4 @@ Social/banner/OG/blog masters, actual email delivery/client support, long docume
 
 The kit README is the design entry point. This plan and its JSON record are execution records. Positioning remains DEC-20260905-A; public claims remain in the claims register; runtime values remain in active.json. Design acceptance does not silently promote any of them.
 
-The four companions are additive, so none is archived as obsolete. The old atmosphere-only root README is now ATMOSPHERE.md, linked from the kit index. Earlier rejected recipe versions, alternative directions and logo experiments remain historical with their existing evidence; they cannot become implementation defaults. The preserved v0.7 release and original source digests remain unchanged.
+The four companions are additive, so none is archived as obsolete. The atmosphere guide retains its original quiet-material/README.md path, linked from the parent kit index. Earlier rejected recipe versions, alternative directions and logo experiments remain historical with their existing evidence; they cannot become implementation defaults. The preserved v0.7 release and original source digests remain unchanged.

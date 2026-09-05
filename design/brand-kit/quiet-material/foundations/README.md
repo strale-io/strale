@@ -1,6 +1,6 @@
 # Quiet Material: identity and typography
 
-**Accepted for continued design work.** The founder accepted this companion on 5 September 2026. This records design acceptance; the packaged candidate status and production tokens remain unchanged. [Start at the complete kit index](../README.md).
+**Accepted for continued design work.** The founder accepted this companion on 5 September 2026. This records design acceptance; the packaged candidate status and production tokens remain unchanged. [Start at the complete kit index](../../README.md).
 
 This is the current **identity/type companion candidate, revision 0.1**, within the existing Quiet Material kit. The founder accepted the atmosphere/surface catalogue 0.2 on 5 September and asked us to continue with identity variants and typography. The later request to compare direct light text and a light action on dark cards is included as a candidate specimen. It does not replace the accepted reading-panel recipe or adopt production tokens.
 
