@@ -80,6 +80,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
@@ -168,6 +169,11 @@
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-G.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-H.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-K.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-B.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260507-C.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-B.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-C.md",
+        "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260512-A.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -298,6 +304,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/security-audit-api.md",
@@ -599,7 +606,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "b9134e2aed9eec9ac87b9d7ee6a363585d24cdcdc8442ffd20d85802529d5abe",
+      "sha256": "4fbb69de6a2d5b6510b12bd00c3463604fee0a886acad0b1875ae1495d0deba9",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
