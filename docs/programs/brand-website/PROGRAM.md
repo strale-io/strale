@@ -2,7 +2,7 @@
 doc_type: program-plan
 authority_scope: none
 program: brand-website
-status: proposal-awaiting-positioning
+status: brief-ready-for-review
 started: 2026-09-05
 owner: session
 ---
@@ -13,7 +13,9 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
-Read [tracks.yaml](tracks.yaml), then [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and the private [positioning assessment](https://github.com/strale-io/strale-context-archive/blob/94051a311da77151f6b05988438830c315dd3449/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). The initial research is complete. The next step is the founder's discussion of the concrete positioning recommendation, followed by an adopted short creative brief through the existing decision process. Do not jump straight to homepage implementation or generate a replacement asset library.
+Read [tracks.yaml](tracks.yaml), then the [positioning and creative brief](POSITIONING-BRIEF.md) and [rendered Quiet Material review](../../../archive/sessions/2026-09-05-quiet-material-review.md). The founder authorised preparation of this brief after the recommendation to lead with useful agent work and retain Quiet Material as the visual starting point. The concrete brief is ready for strategic review; it is not yet an adopted global decision. Next, record the agreed hierarchy and reconcile terminology through the existing decision process, then begin product-proof work and the four application examples. Do not restart discovery or generate a replacement asset library.
+
+Evidence remains in [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and the private [positioning assessment](https://github.com/strale-io/strale-context-archive/blob/94051a311da77151f6b05988438830c315dd3449/archive/sessions/2026-09-05-brand-foundation/ASSESSMENT.md). This repository program is the working continuation home. Historical Notion records are not a separate brand plan; the broader operating-model migration remains subject to its explicit M4 cutover.
 
 The founder has no first-hand knowledge of the largest customer's business or motivation. Do not invent that persona or request telemetry-derived outreach. Buying behaviour supports hypotheses, not customer identity or voice-of-customer quotes.
 
@@ -32,7 +34,7 @@ Initial release scope: the public website and essential developer conversion/dis
 | T1 Discovery | Product/usage/strategy/design-source assessment and receipts | Sources and dates recorded; customer facts separated from hypotheses; no silent strategy adoption. |
 | T2 Positioning and creative brief | Audience, jobs, category, promise, benefit hierarchy, proof, alternatives, voice principles, and commercial next action | Founder adopts the strategic choice through a decision record; contradictory older instructions are explicitly reconciled. |
 | T3 Product proof | A claim-to-evidence map and bounded remediation of any proof needed for launch | What the user can inspect and what each test establishes verified by execution route; stronger claims omitted until supported. |
-| T4 Art direction | Existing-asset audit and two or three coherent directions shown in the same real applications | Founder selects one direction from rendered examples; no merging rejected styles into the winner. |
+| T4 Art direction | Existing-asset audit and Quiet Material control/refinement shown in the same real applications | Founder selects a direction from rendered examples; further alternatives only if the comparison exposes a need. |
 | T5 Brand kit and system | Human guidelines, machine contracts, production assets, components, lint/verification integration | Required initial coverage is demonstrated; examples, masters and runtime consumers agree on the adopted version. |
 | T6 Website | Implemented website in `apps/web`, with use-case/detail/quickstart paths | Benefit-first narrative, real product truth, responsive/accessibility/performance and end-to-end conversion checks. |
 | T7 Channel starter assets | Social profile/banner/post templates, blog/OG, email, PDF and video set | Actual exports reviewed in context; source masters, licences and variants recorded; no unapproved publishing. |
@@ -74,7 +76,7 @@ A section brief records audience question, message, evidence source, visible con
 
 1. Assemble current logo/atmosphere/type assets and known versions into a comparison sheet, including light/dark variants, actual use sizes and crops. Record keep/refine/retire/unknown; the inventory is not approval.
 2. Use references for particular principles such as typography, pacing or photographic treatment. Name what each reference may influence. Strale's adopted identity controls the result.
-3. Produce two or three distinct directions using identical real copy: homepage opening, a benefit/proof section, a social post and a document cover. A direction must work beyond one attractive hero.
+3. Compare preserved Quiet Material with a refined composition using identical real copy: homepage opening, a contrasting benefit/proof section, a social post and a PDF cover plus interior example. Use the rendered review to address repetition and competing hierarchy. Explore a further identity direction only if this comparison exposes a reason; a direction must work beyond one attractive hero.
 4. Critique clarity, hierarchy, distinctiveness, cohesion, accessibility and production feasibility separately. Machine checks can verify constraints; a model score does not choose the founder's aesthetic preference.
 5. Select one direction, freeze its anchor applications, and derive the initial component/asset library. Review assets both individually and in the assembled page. Supporting parts must remain subordinate where the composition needs them.
 

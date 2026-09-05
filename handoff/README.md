@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-249 files (222 with a recorded intent, 27 without).
+251 files (224 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md`](_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md) | make every `scripts/m2-closure-register.test.mjs` fixture that locates a |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md) | resolve T10 gap G2 batch 3, seven historical decision-ID collisions |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md) | resolve T10 gap G2 batch 2, six historical decision-ID collisions |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md) | Resolve the five earliest historical ID collisions in the M2 closure |
@@ -21,6 +22,7 @@
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md`](_general/from-code/2026-09-05-m2-batch-16-march-second-half.md) | land T10 (M2 exit-gap closure) batch 16, twelve March 2026 |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md`](_general/from-code/2026-09-05-m2-batch-15-march-first-half.md) | land T10 (M2 exit-gap closure) batch 15, fourteen March 2026 |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-checkin-morning.md`](_general/from-code/2026-09-05-checkin-morning.md) | run the daily operating session (DAILY-RUN.md steps A–E), and |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-positioning-brief.md`](_general/from-code/2026-09-05-brand-positioning-brief.md) | Make the Strale positioning recommendation concrete and bring the rendered redesign review into the repo-based program. |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-foundation-discovery.md`](_general/from-code/2026-09-05-brand-foundation-discovery.md) | understand Strale's product, commercial use, catalogue, positioning and design history before defining the founder's... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md`](_general/from-code/2026-09-04-t17-drizzle-upgrade.md) | Program track T17 / WP13 second batch (drizzle-orm 0.38.4 -> 0.45.2, semver-major) -- the |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |

@@ -23,13 +23,15 @@ tracks:
     gate: none
     depends_on: [T1]
     owner: petter
-    blocker: The proposed positioning is ready for founder discussion; no new strategic direction has been adopted.
-    next_action: Discuss the working category and benefit hierarchy in the private assessment, then record the agreed strategic brief through the existing decision process.
-    resume_file: docs/programs/brand-website/PROGRAM.md
+    blocker: The founder authorised brief preparation; the completed proposed brief still needs strategic adoption and terminology reconciliation.
+    next_action: Review POSITIONING-BRIEF.md, record the agreed benefit hierarchy and reconcile tools versus data services through the existing decision process, then begin T3 and T4 in bounded batches.
+    resume_file: docs/programs/brand-website/POSITIONING-BRIEF.md
     exit:
       - Audience, jobs, promise, benefit hierarchy, proof limits and primary action agreed.
       - Any conflicting prior strategy explicitly reconciled without silently replacing decisions.
-    evidence: []
+    evidence:
+      - docs/programs/brand-website/POSITIONING-BRIEF.md
+      - archive/sessions/2026-09-05-quiet-material-review.md
   - id: T3
     title: Product proof and launch claim boundaries
     status: queued
@@ -48,7 +50,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Inventory and render current assets in context, then compare two or three coherent directions using identical real applications.
+    next_action: Use the rendered Quiet Material review to audit remaining assets and compare the preserved direction with a refined homepage opening, contrasting benefit section, social post and PDF cover/interior.
     resume_file: docs/programs/brand-website/PROGRAM.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.

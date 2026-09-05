@@ -52,29 +52,32 @@ Both rows' `Decision`, `Status`, `Scope`, `Confidence`, `Source`, and
 minor wording, punctuation, and reference-list formatting, never in
 decision substance:
 
-- The earlier row uses straight quotation marks throughout (`"processed at
-  any stage"`); the later row uses curly quotation marks in the same
-  places (`"processed at any stage"` rendered with typographic quotes) and
-  adds one clarifying parenthetical the earlier row lacks ("e.g. separate
-  `processes_pii_in_input` / `..._in_output`").
-- The later row's OQ #3 adds the word "fine" at one sentence's end ("lower
-  call volume, SA.2b.c will handle them fine" versus the earlier row's
-  "...will handle them.").
-- The References section is formatted as one flowing paragraph in the
-  earlier row and as a bulleted list in the later row, with one additional
-  line in the later row explicitly naming "Audit source:
-  audit-reports/SA_2b_a_audit.md (untracked, local) and
-  SESSION_A_audit_findings.md (tracked, 5927bfb) for F-A-003/F-A-009/F-A-004
-  verbatim", content the earlier row's paragraph form also references, but
-  less explicitly labelled.
-- The closing section is headed "## Outcome" in the earlier row and
-  "## Outcome (retrospective)" in the later row; both contain the same
-  substance (four CC sessions, ~5 hours, zero rollbacks, three manifest
-  drift classes discovered).
+- Neither row uses typographic quotation marks. The earlier row quotes with
+  straight double quotes (`"processed at any stage"`); the later row quotes
+  the same phrases with straight single quotes (`'processed at any stage'`).
+- The earlier row's OQ #2 carries one clarifying parenthetical the later row
+  lacks ("e.g. separate processes_pii_in_input / ..._in_output").
+- The earlier row's OQ #3 ends one sentence with the word "fine" ("lower call
+  volume, SA.2b.c will handle them fine"); the later row reads "...will
+  handle them."
+- The earlier row says "the updated Notion To-do" and "strictly better than
+  the pre-SA.2b.b output-only version"; the later row shortens both ("Notion
+  To-do", "strictly better than pre-SA.2b.b output-only").
+- The References section is a bulleted list in the earlier row, with one
+  line the later row lacks, "Audit source: audit-reports/SA_2b_a_audit.md
+  (untracked, local) and SESSION_A_audit_findings.md (tracked, 5927bfb) for
+  F-A-003/F-A-009/F-A-004 verbatim"; the later row's References is one
+  paragraph beginning "Commits:".
+- The closing section is headed "## Outcome (retrospective)" in the earlier
+  row and "## Outcome" in the later row; the earlier row ends "Total ~5 hours
+  of session time across the day" and "Zero rollbacks needed", the later
+  "Total ~5 hours of session time" and "Zero rollbacks"; both carry the
+  same substance (four CC sessions, about five hours, zero rollbacks, three
+  manifest drift classes discovered).
 
 No difference changes what was decided, only how the same decision's
 supporting text was phrased and organized between two Notion pages created
-59 seconds apart, evidently duplicate saves of the same session's output.
+59 seconds apart; the later page is the same text lightly trimmed.
 
 ## Implementation reconciliation
 
