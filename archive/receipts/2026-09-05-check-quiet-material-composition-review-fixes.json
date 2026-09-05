@@ -1,0 +1,1282 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e0e466215910e5ed9771730c5efe8710e527775f"
+  },
+  "at": "2026-09-05T14:23:27.864Z",
+  "inputs": {
+    "source": "design/brand-kit/quiet-material/verification.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "pages": 24,
+    "pdf_sha256": "4ec170b13e6d64113920805b5442dda8146ecd5f42f38ecb65a6c99c1181adcb",
+    "registry_sha256": "d6926cf30761ff0746b5e9be51663b5efa4a4ba8280e345d4a4ad763904fe3c1",
+    "tokens_sha256": "08357dc0a82d8837d44a01a42c3297181dd1b813817002d92d7d96b1280eca4f",
+    "pdf_bytes_before_deduplication": 51446524,
+    "pdf_bytes": 51389488,
+    "contrast_method": "WCAG relative luminance; minimum across all background pixels under each hidden text element bounding box, Chromium at device scale 1. All sampled text evaluated at 4.5:1, including headings.",
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "sampled_text_elements": 200,
+    "minimum_ratio": 5.955,
+    "optimisation_verified": true
+  },
+  "topic": "quiet-material-composition-review-fixes",
+  "raw": {
+    "ok": true,
+    "pages": 24,
+    "pdf_sha256": "4ec170b13e6d64113920805b5442dda8146ecd5f42f38ecb65a6c99c1181adcb",
+    "registry_sha256": "d6926cf30761ff0746b5e9be51663b5efa4a4ba8280e345d4a4ad763904fe3c1",
+    "tokens_sha256": "08357dc0a82d8837d44a01a42c3297181dd1b813817002d92d7d96b1280eca4f",
+    "builder_inputs": {
+      "build.mjs": "859dfb844baa92d94fe804be17f3fdbd4ebf0680de54c0f52954166e1b0614ce",
+      "catalogue.css": "d6be39942ba21242a35aaf73a2c48ac4dfa81350540766a1bbbfa486f3de07f5",
+      "registry.schema.json": "ccdec194f63c2eeac228ebfc0f123cb4c5de653e147828d28a479099565d6eea",
+      "verification.schema.json": "9df0baa978351dfce38fe0632ea2c2e3f7b98ed834e8690c7cbe488d2dcfd0d5",
+      "verify.py": "1b2f0d706a6f1b3aca6aeb629971a768efd287a3669ec753115e95eae00fc35f"
+    },
+    "render_inputs": {
+      "registry_sha256": "d6926cf30761ff0746b5e9be51663b5efa4a4ba8280e345d4a4ad763904fe3c1",
+      "tokens_sha256": "08357dc0a82d8837d44a01a42c3297181dd1b813817002d92d7d96b1280eca4f",
+      "builder_inputs": {
+        "build.mjs": "859dfb844baa92d94fe804be17f3fdbd4ebf0680de54c0f52954166e1b0614ce",
+        "catalogue.css": "d6be39942ba21242a35aaf73a2c48ac4dfa81350540766a1bbbfa486f3de07f5",
+        "registry.schema.json": "ccdec194f63c2eeac228ebfc0f123cb4c5de653e147828d28a479099565d6eea",
+        "verification.schema.json": "9df0baa978351dfce38fe0632ea2c2e3f7b98ed834e8690c7cbe488d2dcfd0d5",
+        "verify.py": "1b2f0d706a6f1b3aca6aeb629971a768efd287a3669ec753115e95eae00fc35f"
+      },
+      "pdf_sha256": "49f2bf2e74a8ef667f3fb42d969eb8f8284c39b240559834443e47fada3475b8",
+      "sample_inputs": {
+        "contrast-samples.json": "3dd137a808080d41d36954d167c827f6537facf0913bdfb7c7c70a678cddc82f",
+        "background-06.png": "9cdefb651521ed0231ec9715f0bdb1aeff16047373941883e86d0e432b258f48",
+        "background-07.png": "2420e14540d39c1d698093a3da7eee0488f6ffe5387330b19b5fdae6fe89655b",
+        "background-08.png": "1d3ad62e68685d01789ea313ec52c241b70aba5640f38f51cde1ee4ca51b5fe2",
+        "background-09.png": "75a0ce9b9708f8662c7207e7e95eebf817caefa3a769b7ca717abfeb4a262517",
+        "background-10.png": "fb33764144d300fa87b48eaa3e855fe843e3cb7959b1278d5f9d080a90afef88",
+        "background-11.png": "2b25a3d166bcec6cdbc56907893bd10f4eea55682027b7b56e37e4ebd2d8b06a",
+        "background-12.png": "c2480026db153e313f36f698f849386bbba09a99c73cde3ec169dd30e89d43da",
+        "background-13.png": "d0d0d714f5b6f528492a5fe121641b6edc164dc6ec67d41c7c23b9884dbf55eb",
+        "background-14.png": "3c7a7ceec3759aee99cd001f8623f0739715e669ca2f28fe1318fd2da580ff8c",
+        "background-15.png": "1ec5fa3266d8e9163170cce3942fb69d3a00ab4ab3ce9797d23c800a62df83ef",
+        "background-16.png": "27974d8359800061d8d74b99ef0c83ab9d73d6dc640a47af9c9ed24709aa8bb7",
+        "background-17.png": "86d1afc5b437ca28bdbba3a59e08993768c60323f411a11bd8b8ae75af4993d6",
+        "background-18.png": "1c48ee2aacf55b759492de8e86a2aae7447b3e544cccb108900e1f6dabc1de77",
+        "background-19.png": "2ae2b6199f664e715a146978ce9142442ca830130426a284a22f5ecfe76ee501",
+        "background-21.png": "7c6f2986d9722ea17318cf15d5db0256a6b1512a30bc520375f1f06cd7ee4916"
+      }
+    },
+    "pdf_bytes_before_deduplication": 51446524,
+    "pdf_bytes": 51389488,
+    "contrast_method": "WCAG relative luminance; minimum across all background pixels under each hidden text element bounding box, Chromium at device scale 1. All sampled text evaluated at 4.5:1, including headings.",
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "sampled_text_elements": 200,
+    "minimum_ratio": 5.955,
+    "failures": [],
+    "out_of_page_text": [],
+    "results": [
+      {
+        "page": 6,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "One clear idea.",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "One clear idea.",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "One clear idea.",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "One clear idea.",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "One clear idea.",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "Reading surface",
+        "ratio": 16.744,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 6,
+        "text": "One clear idea.",
+        "ratio": 5.993,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 7,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 7,
+        "text": "One clear idea.",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 7,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 7,
+        "text": "One clear idea.",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 7,
+        "text": "Reading surface",
+        "ratio": 15.948,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 7,
+        "text": "One clear idea.",
+        "ratio": 6.023,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 8,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 9,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 10,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 11,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 12,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 13,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 14,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 15,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 16,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 17,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 18,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 19,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Supporting context",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Only what helps",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Reading surface",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Primary information",
+        "ratio": 5.955,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "One idea",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      },
+      {
+        "page": 21,
+        "text": "Composition specimen",
+        "ratio": 17.766,
+        "passes_normal_text_4_5": true
+      }
+    ],
+    "optimisation_verified": true
+  }
+}

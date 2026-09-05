@@ -25,13 +25,20 @@ p { font-size: var(--c-body-size); line-height: var(--c-body-line); }
 .tile h3 { margin-top: var(--c-gap-small); }
 .tile p { font-size: var(--c-small-size); color: var(--ink-secondary); }
 .swatch { height: var(--c-swatch-height); border-radius: var(--radius-atmosphere); }
-.gradient-stage { height: var(--c-swatch-height); border-radius: var(--radius-atmosphere); display: flex; align-items: center; justify-content: center; }
+.gradient-stage { min-height: var(--c-frame-height); border-radius: var(--radius-atmosphere); display: flex; align-items: stretch; padding: var(--c-frame-inset); }
+.gradient-stage .specimen-card { border-radius: var(--c-frame-inner-radius); display: flex; flex-direction: column; justify-content: center; }
+.gradient-stage .specimen-card .row, .gradient-copy .row { margin-top: var(--c-frame-row-gap); }
+.gradient-stage.direct { padding: var(--c-direct-padding); }
+.gradient-copy { width: var(--c-card-width); color: var(--specimen-ink); display: flex; flex-direction: column; justify-content: center; }
+.gradient-copy h2 { font-size: var(--c-card-title); line-height: var(--type-product-card-title-line); }
+.gradient-copy .row { font-size: var(--c-card-label); line-height: var(--c-body-line); }
+.gradient-copy .secondary { color: var(--specimen-secondary); }
 .specimen-row { display: flex; gap: var(--c-gap); align-items: start; }
-.specimen { flex-shrink: 0; position: relative; background-size: cover; background-position: var(--crop-position); border-radius: var(--radius-atmosphere); display: flex; align-items: center; justify-content: center; }
+.specimen { flex-shrink: 0; position: relative; background-size: cover; background-position: var(--crop-position); border-radius: var(--radius-atmosphere); display: flex; align-items: end; justify-content: center; padding: var(--c-atmosphere-inset); }
 .specimen.wide { width: var(--c-wide-width); height: var(--c-wide-height); }
 .specimen.square { width: var(--c-square-size); height: var(--c-square-size); }
 .specimen.phone { width: var(--c-phone-width); height: var(--c-phone-height); }
-.specimen-card { width: var(--c-card-width); padding: var(--c-card-padding); border-radius: var(--radius-card); background: var(--specimen-surface); color: var(--specimen-ink); }
+.specimen-card { width: var(--c-card-width); padding: var(--c-card-padding); border-radius: var(--c-atmosphere-inner-radius); background: var(--specimen-surface); color: var(--specimen-ink); }
 .specimen-card h2 { font-size: var(--c-card-title); line-height: var(--type-product-card-title-line); }
 .specimen-card .row { display: flex; flex-wrap: wrap; gap: var(--c-gap-small); justify-content: space-between; margin-top: var(--c-card-row-gap); font-size: var(--c-card-label); line-height: var(--c-body-line); }
 .specimen-card .secondary { color: var(--specimen-secondary); }
@@ -48,3 +55,7 @@ p { font-size: var(--c-body-size); line-height: var(--c-body-line); }
 .identity-stage img { max-width: var(--c-square-size); max-height: var(--c-grid-image-height); }
 .identity-stage.legacy img { width: var(--c-logo-width); }
 footer { position: absolute; left: var(--c-margin); right: var(--c-margin); bottom: var(--c-footer-bottom); display: flex; justify-content: space-between; color: var(--ink-secondary); font-size: var(--c-footer-size); }
+
+.asset-sheet .intro { min-height: var(--c-specimen-intro-height); }
+.external-copy { margin-top: var(--c-gap); }
+.external-copy p { margin-top: var(--c-gap-small); font-size: var(--c-small-size); color: var(--ink-secondary); }

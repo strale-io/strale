@@ -1,52 +1,52 @@
 {
   "ok": true,
   "pages": 24,
-  "pdf_sha256": "96b2053ef18b3b4f24b461a72fda5ba78e6c7a41847d1debd144639b59b952b2",
-  "registry_sha256": "734f58e7587cc1fd96d29131361fa9fa433035dcdc5a0aa33f56dbca628b83c1",
-  "tokens_sha256": "22f05c05027ccba2cb93dfd20f62645290b02f0e6eae48fc7b7fc05c472211aa",
+  "pdf_sha256": "27703a95ab1d2dc9515cdcd6a02ff0d575f0368318ab560d7d9d4895d1428916",
+  "registry_sha256": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
+  "tokens_sha256": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
   "builder_inputs": {
-    "build.mjs": "bf792e7d68db2b3631af35e5507004f6bcf81f3dc2e30a67a40526f4a4d0b7a0",
-    "catalogue.css": "6005874106669b08173e065849e481ff91ac558f998cebbba52001d893b0bde2",
-    "registry.schema.json": "1b77aee5f60fbcdd36e23c8c42d81e18421bfe284d781148a6943a91498bd9f6",
+    "build.mjs": "8a2531bf914827a458d01525c032546eb043347c8017d75199fab8a938522e5e",
+    "catalogue.css": "3d3921e4464a90dd21d0a91e017c356f026b31137a8510c899e53bfebe3b03fc",
+    "registry.schema.json": "ccdec194f63c2eeac228ebfc0f123cb4c5de653e147828d28a479099565d6eea",
     "verification.schema.json": "9df0baa978351dfce38fe0632ea2c2e3f7b98ed834e8690c7cbe488d2dcfd0d5",
-    "verify.py": "1b2f0d706a6f1b3aca6aeb629971a768efd287a3669ec753115e95eae00fc35f"
+    "verify.py": "287ead96d0abe2fac03264e29ad60b746c554817c6f0f3b474f094d07a5108a6"
   },
   "render_inputs": {
-    "registry_sha256": "734f58e7587cc1fd96d29131361fa9fa433035dcdc5a0aa33f56dbca628b83c1",
-    "tokens_sha256": "22f05c05027ccba2cb93dfd20f62645290b02f0e6eae48fc7b7fc05c472211aa",
+    "registry_sha256": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
+    "tokens_sha256": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
     "builder_inputs": {
-      "build.mjs": "bf792e7d68db2b3631af35e5507004f6bcf81f3dc2e30a67a40526f4a4d0b7a0",
-      "catalogue.css": "6005874106669b08173e065849e481ff91ac558f998cebbba52001d893b0bde2",
-      "registry.schema.json": "1b77aee5f60fbcdd36e23c8c42d81e18421bfe284d781148a6943a91498bd9f6",
+      "build.mjs": "8a2531bf914827a458d01525c032546eb043347c8017d75199fab8a938522e5e",
+      "catalogue.css": "3d3921e4464a90dd21d0a91e017c356f026b31137a8510c899e53bfebe3b03fc",
+      "registry.schema.json": "ccdec194f63c2eeac228ebfc0f123cb4c5de653e147828d28a479099565d6eea",
       "verification.schema.json": "9df0baa978351dfce38fe0632ea2c2e3f7b98ed834e8690c7cbe488d2dcfd0d5",
-      "verify.py": "1b2f0d706a6f1b3aca6aeb629971a768efd287a3669ec753115e95eae00fc35f"
+      "verify.py": "287ead96d0abe2fac03264e29ad60b746c554817c6f0f3b474f094d07a5108a6"
     },
-    "pdf_sha256": "c1d1b9442fe60046908ba65129cf9638509093a8f6de2bd8ffc6eac569c7532b",
+    "pdf_sha256": "e1a7ca67b4b46cf5113bc2643c1a59df1b6c423894928d39f558d4ab0ba56bba",
     "sample_inputs": {
-      "contrast-samples.json": "39d96af200a717c6da0a65ef2cee774cb152c0849e0b47af8baac67a2858f558",
-      "background-06.png": "0c737da3cf5fed93c7c1e699f8aee0497eece9043ff8945fc3ee64e9f41e9265",
-      "background-07.png": "a448f75f6f8cc05030f29b203f8f5e68392c45d79d2c599ff8fe40652dcdaf28",
-      "background-08.png": "9bfcfa8120be2f9cded3768140bb186993c9a9baf0d1263487822a8184e6f801",
-      "background-09.png": "44097623ddfb508fb59f6642d9dafbb25940fb9f751c6afeca6ffcfa702c0fdc",
-      "background-10.png": "1b108f04b9f9f2148258b9d6f3346b907902072cb18d5154c819529c959a8e32",
-      "background-11.png": "2022998ed137251892a776c37dd49a61e91fa5387e9ef0e322982683641b7700",
-      "background-12.png": "ef99dd140d50240add5965e89cca761b70938e4050b7808826e1c42863dd33e3",
-      "background-13.png": "3761a4fd8471e9a71dfb296a272dc7c16c1bc4d88c0849940ef334d4b6343897",
-      "background-14.png": "fe7e845b36a45390d990cdcaf6ed992e4ecad6ad711d066e8b7114c992bbde3e",
-      "background-15.png": "de6e41661a2240b794ac00a423e886a1bed627906b905900b7d62fa3bf68d5f5",
-      "background-16.png": "44c6f94dcd36b9c4b94af72cd6ba3d711002489e34873fd8357ae12ab3e2ece4",
-      "background-17.png": "e46ce49db49739c4e753bebe4e0fe7e7c0b440969b5815c87890ee313e53853e",
-      "background-18.png": "369bbb6ae7a7aae612f8752892a43be32c3236a3b7b2f6103c5a2650265c149c",
-      "background-19.png": "80600539371a27161bfd14d438d96881f3a78600dbe055c67019b4d74e8bf64f",
-      "background-21.png": "ba24d63344d36602c8d0ced31c42fa557bbedb713b0941200870fcec503c6dc4"
+      "contrast-samples.json": "59ca638886c5d2fd4a3e0351a12b2059a19f411fd9da94811d468609c0aa79ae",
+      "background-06.png": "af68d323a2a2f10e4224251f29b56993a9bcfd755f11e3949885bc7656da1551",
+      "background-07.png": "0e1afbc5f83778217cabe0fe222f4cbce3cda8b594ab38467e374ac7a4898b24",
+      "background-08.png": "cfafc13936c5cbd4a5b25e44f51525c437bd3566a81284515c8f1c5ad5b426cf",
+      "background-09.png": "d8c7247015119d81ebac59238ea4afbed31429b403b933fe3c73f248ef6fb151",
+      "background-10.png": "4497a1db24f571c1fa19e4b413595b14c5db6a08a4c0228342d4e02bd4fbfa99",
+      "background-11.png": "798ba6def4484a2ed70c9b6765e3553b196d7b7d3a3d0456e2e13c9a5b7c3b70",
+      "background-12.png": "dd4245b1546ce761d0afb2e0c073e0bb3afbeae6a96bb5d8d30b14ef86d42871",
+      "background-13.png": "2b64c6fd634c741e8e95a6c62f4587e797001b9ee47e6dbfaa1a32d9211991e4",
+      "background-14.png": "663ba8a6a41cf041391aac429b3b471935f35ad6b968434de8041b80faa7d6e4",
+      "background-15.png": "088bd439cd6450ed3726c21ae67b996c6fde9fdc5f9403f7dedaba9576c60101",
+      "background-16.png": "a52b287c7df2c99bdc0eca40047f02a35eb552df9e2241bd89f3d9c32f9e0233",
+      "background-17.png": "9fedcf756ca6999b88a50c59c0c69b83c3dba71def35e7446cc6403a5e9da9b9",
+      "background-18.png": "fe20ec1251328d43bac2b511107b29518ebb70b54e936604dac6370590c3906d",
+      "background-19.png": "99483fa5b1f888553eb13459fe04c206535e1dbc0fa11557d68696b3b054abce",
+      "background-21.png": "99345ac9ba57730ac6a075af19a413e48a7b9af1b0a14bb65f4a2e9f311cc4ef"
     }
   },
-  "pdf_bytes_before_deduplication": 51759381,
-  "pdf_bytes": 51629427,
+  "pdf_bytes_before_deduplication": 51479266,
+  "pdf_bytes": 51420171,
   "contrast_method": "WCAG relative luminance; minimum across all background pixels under each hidden text element bounding box, Chromium at device scale 1. All sampled text evaluated at 4.5:1, including headings.",
   "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
   "sampled_text_elements": 200,
-  "minimum_ratio": 5.696,
+  "minimum_ratio": 5.955,
   "failures": [],
   "out_of_page_text": [],
   "results": [
@@ -89,25 +89,13 @@
     {
       "page": 6,
       "text": "Reading surface",
-      "ratio": 10.46,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 6,
       "text": "One clear idea.",
-      "ratio": 6.27,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 6,
-      "text": "Reading surface",
-      "ratio": 11.085,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 6,
-      "text": "One clear idea.",
-      "ratio": 6.649,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
@@ -125,13 +113,13 @@
     {
       "page": 7,
       "text": "Reading surface",
-      "ratio": 10.938,
+      "ratio": 16.744,
       "passes_normal_text_4_5": true
     },
     {
       "page": 7,
       "text": "One clear idea.",
-      "ratio": 6.551,
+      "ratio": 5.993,
       "passes_normal_text_4_5": true
     },
     {
@@ -159,8 +147,20 @@
       "passes_normal_text_4_5": true
     },
     {
+      "page": 7,
+      "text": "Reading surface",
+      "ratio": 15.948,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 7,
+      "text": "One clear idea.",
+      "ratio": 6.071,
+      "passes_normal_text_4_5": true
+    },
+    {
       "page": 8,
-      "text": "A clear reading surface",
+      "text": "Reading surface",
       "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
@@ -190,37 +190,13 @@
     },
     {
       "page": 8,
-      "text": "Design specimen. No product result.",
+      "text": "Composition specimen",
       "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 8,
-      "text": "A clear reading surface",
-      "ratio": 17.766,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 8,
-      "text": "Primary information",
-      "ratio": 5.955,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 8,
-      "text": "One idea",
-      "ratio": 17.766,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 8,
-      "text": "Design specimen. No product result.",
-      "ratio": 17.766,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 8,
-      "text": "A clear reading surface",
+      "text": "Reading surface",
       "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
@@ -238,1016 +214,1040 @@
     },
     {
       "page": 8,
-      "text": "Design specimen. No product result.",
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Composition specimen",
       "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
-      "text": "A clear reading surface",
-      "ratio": 18.358,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
       "text": "Primary information",
-      "ratio": 6.218,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
       "text": "One idea",
-      "ratio": 18.212,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
       "text": "Supporting context",
-      "ratio": 6.169,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
       "text": "Only what helps",
-      "ratio": 18.056,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
-      "text": "Design specimen. No product result.",
-      "ratio": 17.868,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
-      "text": "A clear reading surface",
-      "ratio": 18.403,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 9,
-      "text": "Primary information",
-      "ratio": 6.169,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 9,
-      "text": "One idea",
-      "ratio": 18.403,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 9,
-      "text": "Design specimen. No product result.",
-      "ratio": 18.012,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 9,
-      "text": "A clear reading surface",
-      "ratio": 18.403,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
       "text": "Primary information",
-      "ratio": 6.154,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
       "text": "One idea",
-      "ratio": 18.212,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 9,
-      "text": "Design specimen. No product result.",
-      "ratio": 18.023,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
-      "text": "A clear reading surface",
-      "ratio": 18.234,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
       "text": "Primary information",
-      "ratio": 6.214,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
       "text": "One idea",
-      "ratio": 18.201,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
       "text": "Supporting context",
-      "ratio": 6.165,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
       "text": "Only what helps",
-      "ratio": 18.056,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
-      "text": "Design specimen. No product result.",
-      "ratio": 17.856,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
-      "text": "A clear reading surface",
-      "ratio": 18.403,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 10,
-      "text": "Primary information",
-      "ratio": 6.165,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 10,
-      "text": "One idea",
-      "ratio": 18.403,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 10,
-      "text": "Design specimen. No product result.",
-      "ratio": 18.012,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 10,
-      "text": "A clear reading surface",
-      "ratio": 18.403,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
       "text": "Primary information",
-      "ratio": 6.15,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
       "text": "One idea",
-      "ratio": 18.201,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 10,
-      "text": "Design specimen. No product result.",
-      "ratio": 18.012,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
-      "text": "A clear reading surface",
-      "ratio": 18.201,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
       "text": "Primary information",
-      "ratio": 6.218,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
       "text": "One idea",
-      "ratio": 18.056,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
       "text": "Supporting context",
-      "ratio": 6.169,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
       "text": "Only what helps",
-      "ratio": 17.757,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
-      "text": "Design specimen. No product result.",
-      "ratio": 17.724,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
-      "text": "A clear reading surface",
-      "ratio": 18.37,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 11,
-      "text": "Primary information",
-      "ratio": 6.169,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 11,
-      "text": "One idea",
-      "ratio": 18.403,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 11,
-      "text": "Design specimen. No product result.",
-      "ratio": 17.979,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 11,
-      "text": "A clear reading surface",
-      "ratio": 18.403,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
       "text": "Primary information",
-      "ratio": 6.154,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
       "text": "One idea",
-      "ratio": 18.212,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 11,
-      "text": "Design specimen. No product result.",
-      "ratio": 18.012,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
-      "text": "A clear reading surface",
-      "ratio": 18.347,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
       "text": "Primary information",
-      "ratio": 6.214,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
       "text": "One idea",
-      "ratio": 18.201,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
       "text": "Supporting context",
-      "ratio": 6.169,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
       "text": "Only what helps",
-      "ratio": 18.056,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
-      "text": "Design specimen. No product result.",
-      "ratio": 17.889,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
-      "text": "A clear reading surface",
-      "ratio": 18.392,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 12,
-      "text": "Primary information",
-      "ratio": 6.165,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 12,
-      "text": "One idea",
-      "ratio": 18.403,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 12,
-      "text": "Design specimen. No product result.",
-      "ratio": 18.001,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 12,
-      "text": "A clear reading surface",
-      "ratio": 18.392,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
       "text": "Primary information",
-      "ratio": 6.15,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
       "text": "One idea",
-      "ratio": 18.201,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 12,
-      "text": "Design specimen. No product result.",
-      "ratio": 17.933,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
-      "text": "A clear reading surface",
-      "ratio": 11.109,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
       "text": "Primary information",
-      "ratio": 6.48,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
       "text": "One idea",
-      "ratio": 13.811,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
       "text": "Supporting context",
-      "ratio": 6.647,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
       "text": "Only what helps",
-      "ratio": 13.336,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.109,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
-      "text": "A clear reading surface",
-      "ratio": 11.118,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 13,
-      "text": "Primary information",
-      "ratio": 6.577,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 13,
-      "text": "One idea",
-      "ratio": 11.742,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 13,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.315,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 13,
-      "text": "A clear reading surface",
-      "ratio": 10.945,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
       "text": "Primary information",
-      "ratio": 6.565,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
       "text": "One idea",
-      "ratio": 11.615,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 13,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.981,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
-      "text": "A clear reading surface",
-      "ratio": 10.611,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
       "text": "Primary information",
-      "ratio": 6.551,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
       "text": "One idea",
-      "ratio": 13.436,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
       "text": "Supporting context",
-      "ratio": 6.836,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
       "text": "Only what helps",
-      "ratio": 13.499,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.413,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
-      "text": "A clear reading surface",
-      "ratio": 10.454,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 14,
-      "text": "Primary information",
-      "ratio": 6.357,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 14,
-      "text": "One idea",
-      "ratio": 12.413,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 14,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.413,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 14,
-      "text": "A clear reading surface",
-      "ratio": 10.61,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
       "text": "Primary information",
-      "ratio": 6.437,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
       "text": "One idea",
-      "ratio": 12.222,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 14,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.737,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
-      "text": "A clear reading surface",
-      "ratio": 11.118,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
       "text": "Primary information",
-      "ratio": 6.48,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
       "text": "One idea",
-      "ratio": 13.775,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
       "text": "Supporting context",
-      "ratio": 6.754,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
       "text": "Only what helps",
-      "ratio": 13.504,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.274,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
-      "text": "A clear reading surface",
-      "ratio": 11.118,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 15,
-      "text": "Primary information",
-      "ratio": 6.676,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 15,
-      "text": "One idea",
-      "ratio": 12.196,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 15,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.426,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 15,
-      "text": "A clear reading surface",
-      "ratio": 11.118,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
       "text": "Primary information",
-      "ratio": 6.593,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
       "text": "One idea",
-      "ratio": 12.108,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 15,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.578,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
-      "text": "A clear reading surface",
-      "ratio": 9.655,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
       "text": "Primary information",
-      "ratio": 5.696,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
       "text": "One idea",
-      "ratio": 12.887,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
       "text": "Supporting context",
-      "ratio": 6.021,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
       "text": "Only what helps",
-      "ratio": 12.902,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
-      "text": "Design specimen. No product result.",
-      "ratio": 11.072,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
-      "text": "A clear reading surface",
-      "ratio": 9.655,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 16,
-      "text": "Primary information",
-      "ratio": 5.919,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 16,
-      "text": "One idea",
-      "ratio": 11.047,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 16,
-      "text": "Design specimen. No product result.",
-      "ratio": 11.507,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 16,
-      "text": "A clear reading surface",
-      "ratio": 9.655,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
       "text": "Primary information",
-      "ratio": 6.171,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
       "text": "One idea",
-      "ratio": 11.481,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 16,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.246,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
-      "text": "A clear reading surface",
-      "ratio": 13.307,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
       "text": "Primary information",
-      "ratio": 7.864,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
       "text": "One idea",
-      "ratio": 14.301,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
       "text": "Supporting context",
-      "ratio": 7.618,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
       "text": "Only what helps",
-      "ratio": 13.535,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
-      "text": "Design specimen. No product result.",
-      "ratio": 13.111,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
-      "text": "A clear reading surface",
-      "ratio": 12.883,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 17,
-      "text": "Primary information",
-      "ratio": 7.628,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 17,
-      "text": "One idea",
-      "ratio": 13.429,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 17,
-      "text": "Design specimen. No product result.",
-      "ratio": 13.144,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 17,
-      "text": "A clear reading surface",
-      "ratio": 13.468,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
       "text": "Primary information",
-      "ratio": 7.321,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
       "text": "One idea",
-      "ratio": 12.737,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 17,
-      "text": "Design specimen. No product result.",
-      "ratio": 13.147,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
-      "text": "A clear reading surface",
-      "ratio": 11.163,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
       "text": "Primary information",
-      "ratio": 6.551,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
       "text": "One idea",
-      "ratio": 13.929,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
       "text": "Supporting context",
-      "ratio": 6.763,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
       "text": "Only what helps",
-      "ratio": 13.989,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.234,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
-      "text": "A clear reading surface",
-      "ratio": 11.0,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 18,
-      "text": "Primary information",
-      "ratio": 6.623,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 18,
-      "text": "One idea",
-      "ratio": 11.892,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 18,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.301,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 18,
-      "text": "A clear reading surface",
-      "ratio": 11.242,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
       "text": "Primary information",
-      "ratio": 6.591,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
       "text": "One idea",
-      "ratio": 12.647,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 18,
-      "text": "Design specimen. No product result.",
-      "ratio": 13.269,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
-      "text": "A clear reading surface",
-      "ratio": 9.586,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
       "text": "Primary information",
-      "ratio": 5.729,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
       "text": "One idea",
-      "ratio": 12.797,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
       "text": "Supporting context",
-      "ratio": 6.003,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
       "text": "Only what helps",
-      "ratio": 11.788,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
-      "text": "Design specimen. No product result.",
-      "ratio": 11.186,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
-      "text": "A clear reading surface",
-      "ratio": 9.653,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 19,
-      "text": "Primary information",
-      "ratio": 6.089,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 19,
-      "text": "One idea",
-      "ratio": 11.32,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 19,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.003,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 19,
-      "text": "A clear reading surface",
-      "ratio": 9.653,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
       "text": "Primary information",
-      "ratio": 6.332,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
       "text": "One idea",
-      "ratio": 11.941,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 19,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.598,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
-      "text": "A clear reading surface",
-      "ratio": 10.767,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
       "text": "Primary information",
-      "ratio": 6.47,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
       "text": "One idea",
-      "ratio": 11.581,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
       "text": "Supporting context",
-      "ratio": 6.197,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
       "text": "Only what helps",
-      "ratio": 12.258,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
-      "text": "Design specimen. No product result.",
-      "ratio": 11.748,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
-      "text": "A clear reading surface",
-      "ratio": 10.942,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 21,
-      "text": "Primary information",
-      "ratio": 6.649,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 21,
-      "text": "One idea",
-      "ratio": 12.271,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 21,
-      "text": "Design specimen. No product result.",
-      "ratio": 11.956,
-      "passes_normal_text_4_5": true
-    },
-    {
-      "page": 21,
-      "text": "A clear reading surface",
-      "ratio": 10.942,
+      "text": "Reading surface",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
       "text": "Primary information",
-      "ratio": 6.768,
+      "ratio": 5.955,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
       "text": "One idea",
-      "ratio": 12.616,
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     },
     {
       "page": 21,
-      "text": "Design specimen. No product result.",
-      "ratio": 12.601,
+      "text": "Composition specimen",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Composition specimen",
+      "ratio": 17.766,
       "passes_normal_text_4_5": true
     }
   ],

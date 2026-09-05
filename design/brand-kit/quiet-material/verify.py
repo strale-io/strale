@@ -50,6 +50,8 @@ def main():
     optimised.replace(PDF)
     pdf = fitz.open(PDF)
     assert len(pdf) == len(raw_pdf), 'Optimisation changed page count'
+    assert pdf.get_toc() == raw_pdf.get_toc(), 'Optimisation changed PDF navigation'
+    assert len([item for item in pdf.get_toc() if item[0] == 1]) == len(pdf), 'Missing page bookmarks'
     samples = json.loads((PREVIEW / 'contrast-samples.json').read_text())
     results = []
     for sample in samples:

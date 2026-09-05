@@ -12,176 +12,176 @@ Source status records the preserved package. Recipe status records this consolid
 
 | Asset | Job | Recipe status | Reading surface | Source status |
 |---|---|---|---|---|
-| Hero folded light | Opening anchor | retained | --surface | unrecorded |
-| Balanced | Default light process plate | retained | --surface-card-soft-white | unrecorded |
-| Mineral / light | Light process variation | retained | --surface-card-soft-white | unrecorded |
-| Cobalt / light | Light technical emphasis | retained | --surface-card-soft-white | unrecorded |
-| Warm / light | Light editorial variation | retained | --surface-card-soft-white | unrecorded |
-| Midnight | Neutral technical context | retained | --surface-card-inverse-neutral | unrecorded |
-| Cobalt / dark | Tools and enrichment | retained | --surface-card-inverse-neutral | unrecorded |
-| Dusk | Closing and orchestration | scoped-exception | --surface-card-inverse-neutral | unrecorded |
-| Mineral / dark | Document inspection | reconciled-proposal | --surface-card-inverse-mineral | unrecorded |
-| Spectrum | Major multi-signal proof | retained | --surface-card-inverse-spectrum | unrecorded |
-| Ember | Exceptional warm emphasis | scoped-exception | --surface-card-inverse-neutral | unrecorded |
-| Mulberry | Identity and bounded evidence | reconciled-proposal | --surface-card-inverse-mulberry | approved |
+| Hero folded light | Opening anchor | revised-proposal | --surface | unrecorded |
+| Balanced | Default light process plate | revised-proposal | --surface | unrecorded |
+| Mineral / light | Light process variation | revised-proposal | --surface | unrecorded |
+| Cobalt / light | Light technical emphasis | revised-proposal | --surface | unrecorded |
+| Warm / light | Light editorial variation | revised-proposal | --surface | unrecorded |
+| Midnight | Neutral technical context | revised-proposal | --surface | unrecorded |
+| Cobalt / dark | Tools and enrichment | revised-proposal | --surface | unrecorded |
+| Dusk | Closing and orchestration | revised-proposal | --surface | unrecorded |
+| Mineral / dark | Document inspection | revised-proposal | --surface | unrecorded |
+| Spectrum | Major multi-signal proof | revised-proposal | --surface | unrecorded |
+| Ember | Exceptional warm emphasis | revised-proposal | --surface | unrecorded |
+| Mulberry | Identity and bounded evidence | revised-proposal | --surface | approved |
 | Burnished Amber | Atmospheric field only | restricted | Image only | approved |
-| Graphite Pearl | Exceptional neutral field | restricted | --surface-card-inverse-neutral | approved |
+| Graphite Pearl | Exceptional neutral field | revised-proposal | --surface | approved |
 
 ### Hero folded light
 
-Keep the broad pearl sweep as the opening anchor. Narrow crops lose its quiet-left field; recompose the opening rather than reusing desktop text placement.
+Keep the broad pearl sweep as the opening anchor. The narrow example is a composition test; qualify it in its intended layout before use.
 
 - File: `public/strale-site/design-system/assets/hero-folded-light-background-v1.png`
 - SHA-256: `2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07`
 - Dimensions: 1586 x 992; 1055860 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: The crop loses the desktop quiet-left field. Use as a bounded image composition with a separate reading surface; no inherited hero text-safe zone.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Balanced
 
-Soft-white objects; let the folds supply depth.
+Anchor off-white paper low. Let the folds supply depth; keep gradients outside the panel.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-balanced-v1.png`
 - SHA-256: `bdfaa7a1f5673fe7d369f0afcf627fec4740aa209746597e145cba4bc256030e`
 - Dimensions: 1735 x 907; 1518133 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Mineral / light
 
-Use for a deliberate tonal change, not a success state.
+Use for gentle process variation. Keep paper neutral; decorative green does not signal success.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-mineral-v1.png`
 - SHA-256: `83c78da37771c1699834fd5a3990ad7fe2ea6a40ad326a1282a914155a4c3406`
 - Dimensions: 1735 x 907; 1622605 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Cobalt / light
 
-The rising blue edge has more visual weight; keep text on a surface.
+Use for light technical emphasis. Keep information on solid paper, with the bright fold visible above.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-cobalt-v1.png`
 - SHA-256: `cff9ae5cb32eca15966091ab7c2465089069f8dfbbd7045ffa89a4b6b173ef86`
 - Dimensions: 1734 x 907; 1543505 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Warm / light
 
-Keep the material light; avoid adding a second warm tint.
+Use for occasional editorial variation. Let the image supply warmth; keep the paper neutral.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-warm-v1.png`
 - SHA-256: `1ea4dfb038a2d3c603b5fdf024614b337ca98ddce5b9aa71dea172d7956c6c9b`
 - Dimensions: 1734 x 907; 1467276 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Midnight
 
-Neutral inverse glass belongs to the plate; paper remains a separate source.
+Pair the dark field with a solid light reading surface. Keep the atmospheric fold visible above the low-set panel.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-dark-midnight-v2.png`
 - SHA-256: `5aeef908cdf77ccd50b6e37da40d09443185a8fe9bc3742e6b70128a76289295`
 - Dimensions: 1536 x 1024; 1544621 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Cobalt / dark
 
-Preserve the bright seam around the object, not behind reading text.
+Use a light reading surface against the blue field. Avoid a second dark blue card competing with the background.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-dark-cobalt-v2.png`
 - SHA-256: `5d1f912b7b27bc842188341bd020a8b371ff2ef591153aa47755360b6e8fda13`
 - Dimensions: 1735 x 906; 1218774 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Dusk
 
-Neutral inverse reads blue against the warm field. This is a rare contrast specimen, not a default warm card; prefer a compact closing treatment.
+Use a light reading surface against the warm-to-blue field. Dusk remains the proposed closing atmosphere; the complete closing composition is still open.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-dark-dusk-v2.png`
 - SHA-256: `146cd1fd813fdef3f8ed3787e7ffaf94e63203567865e792af93f698e7f658e7`
 - Dimensions: 1672 x 941; 1250367 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Mineral / dark
 
-Use the mineral inspector as the dominant result; reserve neutral glass for a labelled context exception.
+Use a light reading surface for document information. Retain the mineral light in the background; do not tint the reading panel green.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-dark-mineral-v2.png`
 - SHA-256: `3fb6ccdee57fcf3813d16018e6f5109581b3ae51a9c87b90e3a2bf17dab01e24`
 - Dimensions: 1717 x 916; 1232443 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Spectrum
 
-One expressive moment. Use Spectrum glass, never a generic blue result.
+Keep Spectrum for a rare expressive moment. A solid light reading surface separates the information from the multi-colour field.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-dark-spectrum-v2.png`
 - SHA-256: `a36057d1413fe8a22f69a5abb2e3a2907800cc83f56eff20c2058f1e6fc3a997`
 - Dimensions: 1536 x 1024; 1551120 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Ember
 
-Neutral inverse reads blue against the warm field. Keep this contrast exceptional; matched warm glass is still undefined.
+Use the warm field sparingly. A solid light panel replaces the previous blue glass pairing.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-dark-ember-v2.png`
 - SHA-256: `17aff86bef40976f6d74039db1ca9395b4a460159fffffaef2ce730dda10697e`
 - Dimensions: 1655 x 950; 1210931 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Not recovered; original generator/date/rights not inferred. Rights: unknown.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Mulberry
 
-Keep source signals separate. The grainier material needs space around the lenses.
+Retain Mulberry for a bounded verification story. Use a solid light panel and keep source signals separate from decorative colour.
 
 - File: `public/strale-site/design-system/assets/brand-library/pattern-folded-dark-mulberry-v2.png`
 - SHA-256: `7e9936a509a5121c1d96f911537e854888f388787fd95466c49ea34a80572534`
 - Dimensions: 1672 x 941; 1371429 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Recorded in source manifest. Rights: source declaration only; not independently established.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ### Burnished Amber
 
@@ -198,44 +198,52 @@ Keep image-only. No matched amber card is defined; no invented amber glass.
 
 ### Graphite Pearl
 
-The neutral inverse token is blue-biased. Use it only when blue product context is intended; prefer the unoverlaid field for a monochrome moment.
+Keep the graphite field neutral. A solid light panel replaces blue glass; the unoverlaid image remains available for a quieter moment.
 
 - File: `public/strale-site/design-system/assets/brand-library/pattern-folded-dark-graphite-v1.png`
 - SHA-256: `fb960fcd1a7afa8e927d12a802f70f535a890a36d7faf0345c44330a240887c8`
 - Dimensions: 1672 x 941; 1439695 bytes.
 - Crop: cover, 50% 50%. Retained CSS center/cover baseline; specimen crops are comparisons, not certification.
-- Narrow: Recompose with one information row; keep type size. Do not scale down the desktop composition.
-- Square: Keep one information row on the named surface; no direct text on the plate.
+- Narrow: Keep the fixed inset and one information row. Recompose for the narrow crop; do not shrink the type or add a second surface.
+- Square: Keep the fixed inset and one information row. Anchor the panel low so the fold remains visible above.
 - Provenance: Recorded in source manifest. Rights: source declaration only; not independently established.
-- Context verification: Measured exact specimens; see verification.json. No general background/text approval.. Accessibility: not-certified.
+- Context verification: Measured for this revision in verification.json; prior glass-pair measurements do not apply.. Accessibility: not-certified.
 
 ## Gradients
 
 | Gradient | Role | Proposed reading surface | Exact CSS |
 |---|---|---|---|
-| spectrum | Major opening or primary proof | --surface (proposed-context) | `linear-gradient(138deg, #b6321c 0%, #65231e 34%, #253047 66%, #12345c 100%)` |
-| mulberry | Warm, bounded capability story | --surface (proposed-context) | `linear-gradient(145deg, #6f3046 0%, #51263a 50%, #301d2d 100%)` |
-| ember | Exceptional warm emphasis | --surface (proposed-context) | `radial-gradient(circle at 10% 8%, rgba(240, 68, 29, 0.92), transparent 38%), linear-gradient(138deg, #6b2118, var(--deep-ember) 64%, #160806)` |
-| cobalt | Tools and technical framing | --surface-card-inverse-neutral (proposed-context) | `linear-gradient(138deg, #3b6d9c 0%, #235486 44%, #143c6c 70%, #0d2b52 100%)` |
-| dusk | Closing transition | --surface-card-inverse-neutral (proposed-context) | `linear-gradient(138deg, #431d18 0%, #251a1d 36%, #151b24 64%, #091d31 100%)` |
-| frost | Quiet explanatory surface | --surface (proposed-context) | `radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.98), transparent 46%), linear-gradient(138deg, #fcfcfb, #f1f6fb 60%, #e4edf7)` |
-| midnight | Neutral technical frame | --surface-card-inverse-neutral (proposed-context) | `linear-gradient(138deg, #263a4a 0%, #162c3c 42%, #0d2231 70%, #061721 100%)` |
-| mineral | Concentrated validation framing | --surface (proposed-context) | `linear-gradient(138deg, #2d8d73 0%, #1d7159 42%, #10513f 72%, #08392f 100%)` |
-| mint | Quiet mineral support | --surface (proposed-context) | `radial-gradient(circle at 86% 80%, rgba(36, 107, 90, 0.1), transparent 38%), linear-gradient(138deg, var(--canvas), var(--mint-whisper))` |
+| spectrum | Major opening or primary proof | --surface (revised-proposal) | `linear-gradient(138deg, #b6321c 0%, #65231e 34%, #253047 66%, #12345c 100%)` |
+| mulberry | Warm, bounded capability story | --surface (revised-proposal) | `linear-gradient(145deg, #6f3046 0%, #51263a 50%, #301d2d 100%)` |
+| ember | Exceptional warm emphasis | --surface (revised-proposal) | `radial-gradient(circle at 10% 8%, rgba(240, 68, 29, 0.92), transparent 38%), linear-gradient(138deg, #6b2118, var(--deep-ember) 64%, #160806)` |
+| cobalt | Tools and technical framing | --surface (revised-proposal) | `linear-gradient(138deg, #3b6d9c 0%, #235486 44%, #143c6c 70%, #0d2b52 100%)` |
+| dusk | Closing transition | --surface (revised-proposal) | `linear-gradient(138deg, #431d18 0%, #251a1d 36%, #151b24 64%, #091d31 100%)` |
+| frost | Quiet explanatory surface | Direct dark text; no panel (revised-proposal) | `radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.98), transparent 46%), linear-gradient(138deg, #fcfcfb, #f1f6fb 60%, #e4edf7)` |
+| midnight | Neutral technical frame | --surface (revised-proposal) | `linear-gradient(138deg, #263a4a 0%, #162c3c 42%, #0d2231 70%, #061721 100%)` |
+| mineral | Concentrated validation framing | --surface (revised-proposal) | `linear-gradient(138deg, #2d8d73 0%, #1d7159 42%, #10513f 72%, #08392f 100%)` |
+| mint | Quiet mineral support | Direct dark text; no panel (revised-proposal) | `radial-gradient(circle at 86% 80%, rgba(36, 107, 90, 0.1), transparent 38%), linear-gradient(138deg, var(--canvas), var(--mint-whisper))` |
 
-Composition samples: Square and narrow specimens remove the secondary row before changing typography. These are composition samples, not approved channel templates.
+Composition revision 0.2: Founder approved the tighter-frame, dark-background/light-surface and direct-text-on-Frost/Mint revision on 2026-09-05.
+
+Predecessor: commit `2972015dedfeb8bcd30369e0b0b4259bdc62f678`. Earlier recipes remain recoverable there; this candidate does not change production.
+
+Composition samples: Atmospheric panels keep a fixed inset and sit low. Square and narrow versions remove the secondary row before changing type size. These are fixed composition specimens, not approved channel templates.
 
 ## Rules
 
-- **layering:** Choose a plain canvas, one atmospheric raster, or a bounded gradient frame. A dark raster already contains its lighting; never add a second semantic gradient.
+- **containment:** Add a reading panel only when the information needs separation. Frost and Mint use dark text directly on the gradient in the verified specimens.
 
-- **reading:** In this specimen release, reading text sits on its named surface. No direct text-on-image combination is approved by this catalogue.
+- **contrast:** Dark gradients and dark atmospheric images default to a solid light reading surface. Dark-on-dark reading panels are excluded from this revision.
 
-- **meaning:** Decorative green is not success. Atmosphere conveys tone; labelled product states need real evidence.
+- **spacing:** Simple gradient frames use a narrow, fixed inset. Larger atmospheric images use a low-set panel with visible artwork above. Do not reuse one centred percentage-width card for both jobs.
 
-- **rhythm:** Plain sections are part of the system. Use open, compact and framed compositions according to the narrative; do not alternate only by changing colours.
+- **meaning:** Atmosphere is decorative. Green is not automatically success, and an illustration does not establish a product result.
 
-- **exceptions:** Amber has no card recipe. Dusk and Ember use neutral inverse only as a rare dominant contrast object; matched warm glass remains an open gap.
+- **layering:** Keep one decorative field and, only where needed, one reading surface. No extra gradient inside a reading panel; no second atmospheric overlay.
+
+- **rhythm:** Plain sections and unframed content are part of Quiet Material. Vary composition with the story; do not create rhythm only by changing background colours.
+
+- **scope:** Direct text on Frost and Mint is verified only for these fixed specimens. Direct text on raster atmospheres and arbitrary responsive layouts remains unqualified. Amber remains image-only.
 
 ## Reconciliation record
 
@@ -253,13 +261,13 @@ Still open: Recover originals if needed; unavailable files are not build depende
 
 ### QM-03: One pairing table (proposed)
 
-The register includes Mulberry, Amber and Graphite. Mineral inverse is the primary document inspector; neutral inverse is a scoped agent-context exception.
+Revision 0.2 replaces nested same-tone panels with solid light reading surfaces; Frost and Mint use direct dark text. Amber remains image-only. Earlier glass mappings remain in the preserved source and predecessor commit.
 
-Still open: Founder review of the reconciled specimens; production adoption remains separate.
+Still open: Review revised composition quality and qualify real component/channel layouts before production adoption.
 
 ### QM-04: Verification and closing recipes (proposed)
 
-Mulberry is the proposed current verification recipe, following the later component/census/checker. Dusk is the proposed default closing atmosphere; Spectrum is reserved for a rare major opening/proof.
+Mulberry remains the proposed verification atmosphere, now with a light reading surface. Dusk is the proposed default closing atmosphere; Spectrum is reserved for a rare major opening or proof.
 
 Still open: The compact closing composition and its default readable pairing remain to be designed. Archive conflicting recipe text only at adoption; original source stays immutable.
 

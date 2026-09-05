@@ -29,7 +29,7 @@ export function validateEvidence(evidence, reg) {
   assert(check(evidence), JSON.stringify(check.errors));
   const render = evidence.render_inputs;
   for(const field of ['registry_sha256','tokens_sha256','builder_inputs']) assert.deepEqual(evidence[field],render[field],`Contradictory render input: ${field}`);
-  const counts = new Map([[6,12],[7,6]]);
+  const counts = new Map([[6,10],[7,8]]);
   reg.assets.forEach((a,i)=>{if(a.surface_token)counts.set(i+8,14)});
   assert.equal(evidence.pages,reg.assets.length+10,'Incorrect page count');
   assert.equal(evidence.sampled_text_elements,[...counts.values()].reduce((a,b)=>a+b,0),'Incomplete specimen coverage');
@@ -53,6 +53,12 @@ export function validate(reg, tokens, source) {
   for(const key of ['assets','gradients','identity','illustrations','resolutions','missing_sources','rules'])assert.equal(new Set(reg[key].map(a=>a.id)).size,reg[key].length,`Duplicate ${key} ids`);
   assert.deepEqual(reg.assets.map(a=>a.token).sort(), originals.map(a=>a.token).sort(), 'Current asset coverage drift');
   const vars = tokens.layout.css_variables;
+  const revision=reg.composition_revision;
+  assert.equal(reg.id,`quiet-material-consolidation-${revision.version}`,'Revision id drift');
+  assert.equal(tokens.name,`Quiet Material catalogue ${revision.version}`,'Token revision drift');
+  assert.equal(revision.production_adopted,reg.production_adopted,'Contradictory production adoption');
+  for(const key of ['gradient_frame_inset_token','gradient_frame_inner_radius_token'])assert(revision[key] in tokens.layout.catalogue,'Missing composition geometry token');
+  assert(revision.reading_surface_token in vars,'Missing revision reading surface');
   const consumerCss=readFileSync(resolve(here,'catalogue.css'),'utf8');
   assert(!/#[0-9a-f]{3,8}\b|\b\d+(?:\.\d+)?(?:px|rem|em)\b/i.test(consumerCss),'Off-token catalogue colour or dimension');
   for(const match of consumerCss.matchAll(/var\((--[\w-]+)/g))assert(match[1] in vars||match[1] in tokens.layout.catalogue||['--specimen-surface','--specimen-ink','--specimen-secondary','--crop-position'].includes(match[1]),`Unknown catalogue token: ${match[1]}`);
@@ -65,7 +71,12 @@ export function validate(reg, tokens, source) {
   assert.deepEqual(reg.gradients.map(g=>g.token).sort(),Object.keys(vars).filter(k=>k.startsWith('--atmosphere-')).sort(),'Gradient coverage drift');
   for (const g of reg.gradients) {
     assert.equal(g.css,vars[g.token],`Gradient drift: ${g.id}`);
-    for(const key of ['surface_token','ink_token','secondary_token'])assert(g[key] in vars,`Unknown gradient pair: ${g[key]}`);
+    for(const key of ['surface_token','ink_token','secondary_token'])if(g[key])assert(g[key] in vars,`Unknown gradient pair: ${g[key]}`);
+    const direct=['frost','mint'].includes(g.id);
+    assert.equal(g.composition,direct?'direct':'frame','Gradient composition drift');
+    assert.equal(g.surface_token,direct?null:revision.reading_surface_token,'Gradient reading surface drift');
+    assert.equal(g.ink_token,'--ink','Gradient ink drift');
+    assert.equal(g.secondary_token,'--ink-secondary','Gradient secondary ink drift');
   }
   for (const file of reg.fonts) verifiedFile(here,file.file,file.sha256);
   assert.equal(new Set(reg.fonts.map(f=>f.file)).size,reg.fonts.length,'Duplicate font files');
@@ -82,7 +93,10 @@ export function validate(reg, tokens, source) {
   assert(existsSync(inside(repo,reg.claim_source)),'Missing claims authority');
   for (const id of ['QM-01','QM-02','QM-03','QM-04','QM-05','QM-06']) assert(reg.resolutions.some(r=>r.id===id),`Missing resolution ${id}`);
   assert.equal(reg.assets.find(a=>a.id==='pattern-folded-dark-amber').surface_token,null,'Amber cannot acquire an invented card');
-  assert.equal(reg.assets.find(a=>a.id==='pattern-folded-dark-mineral').surface_token,'--surface-card-inverse-mineral');
+  for(const a of reg.assets.filter(a=>a.surface_token)) {
+    assert.equal(a.surface_token,revision.reading_surface_token,'Reading panels must use solid light paper in this revision');
+    assert.equal(a.ink_token,'--ink');assert.equal(a.secondary_token,'--ink-secondary');
+  }
   for(const image of reg.illustrations) assert.equal(image.eligible_for_implementation,false,'Reference artwork cannot silently become usable');
   if(source) {
     for (const file of [...reg.assets,...reg.identity,...reg.illustrations]) verifiedFile(source,file.source_path,file.sha256);
@@ -98,8 +112,8 @@ function registerMarkdown(reg) {
   for(const a of reg.assets) text+=`| ${a.title} | ${a.role} | ${a.recipe_status} | ${a.surface_token??'Image only'} | ${a.source_status} |\n`;
   for(const a of reg.assets) text+=`\n### ${a.title}\n\n${a.guidance}\n\n- File: \`${a.source_path}\`\n- SHA-256: \`${a.sha256}\`\n- Dimensions: ${a.width} x ${a.height}; ${a.bytes} bytes.\n- Crop: ${a.crop.fit}, ${a.crop.position}. ${a.crop.basis}\n- Narrow: ${a.crop.narrow}\n- Square: ${a.crop.square}\n- Provenance: ${a.provenance.creation_history}. Rights: ${a.provenance.rights}.\n- Context verification: ${a.verification.contextual_contrast}. Accessibility: ${a.verification.accessibility}.\n`;
   text+='\n## Gradients\n\n| Gradient | Role | Proposed reading surface | Exact CSS |\n|---|---|---|---|\n';
-  for(const g of reg.gradients) text+=`| ${g.id} | ${g.role} | ${g.surface_token} (${g.pair_status}) | \`${g.css}\` |\n`;
-  text+=`\nComposition samples: ${reg.specimens.compact_rule}\n`;
+  for(const g of reg.gradients) text+=`| ${g.id} | ${g.role} | ${g.surface_token??'Direct dark text; no panel'} (${g.pair_status}) | \`${g.css}\` |\n`;
+  text+=`\nComposition revision ${reg.composition_revision.version}: ${reg.composition_revision.basis}\n\nPredecessor: commit \`${reg.composition_revision.predecessor_commit}\`. Earlier recipes remain recoverable there; this candidate does not change production.\n\nComposition samples: ${reg.specimens.compact_rule}\n`;
   text+='\n## Rules\n';for(const r of reg.rules)text+=`\n- **${r.id}:** ${r.text}\n`;
   text+='\n## Reconciliation record\n';for(const r of reg.resolutions)text+=`\n### ${r.id}: ${r.title} (${r.status})\n\n${r.choice}\n\nStill open: ${r.remaining}\n`;
   text+='\n## Identity and illustration\n';for(const a of [...reg.identity,...reg.illustrations])text+=`\n- **${a.id}** (${a.status}): ${a.role}. ${a.reason??''} Source: \`${a.source_path}\`.\n`;
@@ -121,27 +135,27 @@ function documentHtml(reg,tokens,source) {
   let styles=readFileSync(resolve(here,'catalogue.css'),'utf8').replace('TOKEN_PAGE_SIZE',`${values['--c-page-width']} ${values['--c-page-height']}`);
   styles+=`\n:root{${Object.entries(values).map(([k,v])=>`${k}:${v}`).join(';')}}\n@font-face{font-family:'Instrument Sans';src:url('${font('Instrument')}');font-weight:400 600;}@font-face{font-family:'IBM Plex Mono';src:url('${font('Plex')}');font-weight:400;}`;
   let pages=[];
-  const sheet=(title,intro,body,tag='ATMOSPHERE / SURFACES')=>pages.push(`<section class="sheet"><header class="mast"><img class="logo" src="${files.get('flowing-s-lockup')}" alt="Strale"><span class="eyebrow">${escape(tag)}</span></header><h1>${escape(title)}</h1>${intro?`<p class="intro">${escape(intro)}</p>`:''}<div class="body">${body}</div><footer><span>QUIET MATERIAL / CONSOLIDATION 0.1 / CANDIDATE</span><span>${String(pages.length+1).padStart(2,'0')}</span></footer></section>`);
-  sheet('Quiet Material','The existing direction, made easier to use.',`<div class="cover-art" style="background-image:var(--hero-folded-light-background)"></div><div class="notes"><div><h3>Retain</h3><p>The original artwork and gradients.</p></div><div><h3>Reconcile</h3><p>One register for assets and their uses.</p></div><div><h3>Verify</h3><p>Specific combinations, not blanket approval.</p></div></div>`,'STRALE / BRAND SYSTEM');
+  const sheet=(title,intro,body,tag='ATMOSPHERE / SURFACES',className='')=>pages.push(`<section class="sheet ${className}"><header class="mast"><img class="logo" src="${files.get('flowing-s-lockup')}" alt="Strale"><span class="eyebrow">${escape(tag)}</span></header><h1>${escape(title)}</h1>${intro?`<p class="intro">${escape(intro)}</p>`:''}<div class="body">${body}</div><footer><span>QUIET MATERIAL / CONSOLIDATION 0.2 / CANDIDATE</span><span>${String(pages.length+1).padStart(2,'0')}</span></footer></section>`);
+  sheet('Quiet Material','Candidate · revision 0.2. Atmospheres and reading surfaces.',`<div class="cover-art" style="background-image:var(--hero-folded-light-background)"></div><div class="notes"><div><h3>Retain</h3><p>The original artwork and gradients.</p></div><div><h3>Scope</h3><p>Asset usage and composition. Typography, controls and channel templates follow separately.</p></div><div><h3>Verify</h3><p>Specific combinations, not blanket approval.</p></div></div>`,'STRALE / BRAND SYSTEM');
   const grid=assets=>`<div class="grid">${assets.map(a=>`<div class="tile"><div class="tile-art ${a.family==='Dark'?'dark':''}" style="background-image:var(${a.token})"></div><h3>${escape(a.title)}</h3><p>${escape(a.role)}</p></div>`).join('')}</div>`;
   sheet('The light family','One material language, with different jobs. Colour variation should serve the section.',grid(reg.assets.filter(a=>a.family==='Light')));
-  sheet('The dark family','Related light and depth. Mulberry, Amber and Graphite retain more restricted roles.',grid(reg.assets.filter(a=>a.family==='Dark')));
+  sheet('The dark family','Original artwork, revised reading surfaces. Amber remains image-only.',grid(reg.assets.filter(a=>a.family==='Dark')));
   for(const [start,title] of [[0,'Gradients: expressive frames'],[5,'Gradients: quieter fields']]) {
     const group=reg.gradients.slice(start,start===0?5:9);
     sheet(title,'Exact retained CSS. These are bounded frames and surfaces, not substitutes for the folded images.',`<div class="grid">${group.map(g=>`<div class="tile"><div class="swatch" style="background:var(${g.token})"></div><h3>${escape(g.id.charAt(0).toUpperCase()+g.id.slice(1))}</h3><p>${escape(g.role)}</p></div>`).join('')}</div>`);
   }
   const card=(a,compact=false)=>a.surface_token?`<div class="specimen-card" style="--specimen-surface:var(${a.surface_token});--specimen-ink:var(${a.ink_token});--specimen-secondary:var(${a.secondary_token})"><h2 class="contrast">${escape(reg.specimen_copy.title)}</h2><div class="row"><span class="secondary contrast">${escape(reg.specimen_copy.row1)}</span><span class="contrast">${escape(reg.specimen_copy.value1)}</span></div>${compact?'':`<div class="row"><span class="secondary contrast">${escape(reg.specimen_copy.row2)}</span><span class="contrast">${escape(reg.specimen_copy.value2)}</span></div>`}<p class="disclosure contrast">${escape(reg.specimen_copy.disclosure)}</p></div>`:'';
-  for(const start of [0,6]) {
-    sheet('Gradients with a reading surface','Proposed pairings using existing tokens. These are design specimens; no product result is implied.',`<div class="grid">${reg.gradients.slice(start,start+6).map(g=>`<div class="tile"><div class="gradient-stage" style="background:var(${g.token})"><div class="specimen-card" style="--specimen-surface:var(${g.surface_token});--specimen-ink:var(${g.ink_token});--specimen-secondary:var(${g.secondary_token})"><h2 class="contrast">${escape(reg.specimen_copy.gradient_title)}</h2><div class="row"><span class="secondary contrast">${escape(reg.specimen_copy.gradient_body)}</span></div></div></div><h3>${escape(g.id)}</h3><p>${escape(g.role)}</p></div>`).join('')}</div>`,'GRADIENT / CONTEXT SPECIMENS');
+  for(const [start,end,title,intro] of [[0,5,'Expressive gradients in use','A narrow frame separates the colour field from solid light paper.'],[5,9,'Quieter gradients in use','Frost and Mint carry dark text directly. Midnight and Mineral frame light paper.']]) {
+    sheet(title,intro,`<div class="grid">${reg.gradients.slice(start,end).map(g=>`<div class="tile"><div class="gradient-stage ${g.composition}" data-gradient="${g.id}" style="background:var(${g.token})"><div class="${g.composition === 'direct' ? 'gradient-copy' : 'specimen-card'}" style="--specimen-surface:${g.surface_token ? `var(${g.surface_token})` : 'none'};--specimen-ink:var(${g.ink_token});--specimen-secondary:var(${g.secondary_token})"><h2 class="contrast">${escape(reg.specimen_copy.gradient_title)}</h2><div class="row"><span class="secondary contrast">${escape(reg.specimen_copy.gradient_body)}</span></div></div></div><h3>${escape(g.id.charAt(0).toUpperCase()+g.id.slice(1))}</h3><p>${escape(g.role)}</p></div>`).join('')}</div>`,'CANDIDATE / GRADIENT COMPOSITIONS');
   }
   for(const a of reg.assets) {
-    const specimen=(shape,label)=>`<div><div class="specimen ${shape}" data-asset="${a.id}" data-shape="${shape}" style="background-image:var(${a.token});--crop-position:${a.crop.position}">${card(a,reg.specimens.rows_by_shape[shape]===1)}</div><p class="caption">${label}</p></div>`;
+    const specimen=(shape,label)=>`<div><div class="specimen ${shape}" data-asset="${a.id}" data-shape="${shape}" style="background-image:var(${a.token});--crop-position:${a.crop.position}">${card(a,reg.specimens.rows_by_shape[shape]===1)}</div><p class="caption">${label}${a.id==='hero-folded-light-background'&&shape==='phone'?' / COMPOSITION TEST':''}</p>${!a.surface_token&&shape==='wide'?'<div class="external-copy"><h3>Copy belongs outside the image.</h3><p>A separate plain area keeps the atmosphere clear.</p></div>':''}</div>`;
     const size=(w,h)=>`${parseInt(values[w])} x ${parseInt(values[h])}`;
-    sheet(a.title,a.guidance,`<div class="specimen-row">${specimen('wide','LANDSCAPE / '+size('--c-wide-width','--c-wide-height'))}${specimen('square','SQUARE / '+size('--c-square-size','--c-square-size'))}${specimen('phone','NARROW / '+size('--c-phone-width','--c-phone-height'))}</div><div class="notes"><div><h3>Purpose</h3><p>${escape(a.role)}</p><p>${escape(a.recipe_status)}</p></div><div><h3>Reading surface</h3><p>${escape(a.surface_token??'None. Atmospheric field only.')}</p></div><div><h3>Crop rule</h3><p>${escape(a.surface_token ? "Center / cover comparison. Narrow and square retain one information row and the same type size." : a.crop.narrow)}</p></div></div>`, 'RETAINED ASSET / CONTEXT SPECIMENS');
+    sheet(a.title,a.guidance,`<div class="specimen-row">${specimen('wide','LANDSCAPE / '+size('--c-wide-width','--c-wide-height'))}${specimen('square','SQUARE / '+size('--c-square-size','--c-square-size'))}${specimen('phone','NARROW / '+size('--c-phone-width','--c-phone-height'))}</div><div class="notes"><div><h3>Purpose</h3><p>${escape(a.role)}</p><p>${escape(a.surface_token?'Proposed composition':'Image only')}</p></div><div><h3>Reading surface</h3><p>${escape(a.surface_token?'Solid off-white paper (--surface)':'None. Atmospheric field only.')}</p></div><div><h3>Crop rule</h3><p>${escape(a.surface_token ? "Proposed centre/cover crops. Keep a fixed inset and one information row in compact formats; qualify each in its intended layout." : a.crop.narrow)}</p></div></div>`, 'CANDIDATE / CROP COMPARISONS','asset-sheet');
   }
   sheet('Identity has a specific job','Keep the flowing-S lockup. A transformation symbol does not become the brand mark.',`<div class="grid two"><div class="tile"><div class="identity-stage"><img src="${files.get('flowing-s-lockup')}" alt="Retained flowing S lockup"></div><h3>Retained identity reference</h3><p>The original lockup, unchanged. Small-size and inverse exports remain to be qualified.</p></div><div class="tile"><div class="identity-stage legacy"><img src="${files.get('legacy-compass')}" alt="Legacy compass favicon"></div><h3>Legacy identity conflict</h3><p>Comparison only. Exclude this favicon from new brand exports; keep functional glyphs separately named.</p></div></div>`,'IDENTITY / RECONCILIATION');
   sheet('Use fewer layers, deliberately','The plain canvas is part of Quiet Material.',reg.rules.slice(0,4).map(r=>`<div class="rule"><h3>${escape(r.id.toUpperCase())}</h3><p>${escape(r.text)}</p></div>`).join(''),'COMPOSITION / RULES');
-  sheet('What this release establishes','A complete register for the current atmosphere set, with the remaining work visible.',`<div class="grid two">${reg.resolutions.map(r=>`<div class="rule"><h3>${escape(r.id+' / '+r.title)}</h3><p>${escape(r.remaining)}</p></div>`).join('')}</div>`,'COVERAGE / OPEN ITEMS');
+  sheet('Recorded here. Still to resolve.','This candidate documents the current atmosphere set. It is one part of the wider brand system.',`<div class="grid two">${reg.resolutions.map(r=>`<div class="rule"><h3>${escape(r.id+' / '+r.title)}</h3><p>${escape(r.remaining)}</p></div>`).join('')}</div>`,'COVERAGE / OPEN ITEMS');
   return {html:`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Strale - Quiet Material catalogue</title><style>${styles}</style></head><body>${pages.join('')}</body></html>`,pageCount:pages.length};
 }
 export async function main(args=process.argv.slice(2)) {
@@ -196,7 +210,21 @@ export async function main(args=process.argv.slice(2)) {
     assert.deepEqual(overflow,[],'Text overflow');
     const collisions=await page.evaluate(()=>[...document.querySelectorAll('.sheet')].filter(e=>e.querySelector('.body').getBoundingClientRect().bottom>e.querySelector('footer').getBoundingClientRect().top).map(e=>e.querySelector('h1').textContent));
     assert.deepEqual(collisions,[],'Body collides with footer');
-    await page.pdf({path:output,printBackground:true,preferCSSPageSize:true,tagged:true});
+    const compositionErrors=await page.evaluate(()=>{
+      const errors=[];
+      for(const stage of document.querySelectorAll('.gradient-stage')) {
+        const card=stage.querySelector('.specimen-card');
+        if(stage.classList.contains('direct')) {if(card)errors.push('Direct gradient acquired a nested card');continue;}
+        if(!card){errors.push('Framed gradient lost its reading panel');continue;}
+        const a=stage.getBoundingClientRect(),b=card.getBoundingClientRect();
+        const inset=parseFloat(getComputedStyle(stage).paddingLeft);
+        if([b.left-a.left,a.right-b.right,b.top-a.top,a.bottom-b.bottom].some(v=>Math.abs(v-inset)>1))errors.push('Uneven gradient inset');
+        if(getComputedStyle(card).backgroundImage!=='none')errors.push('Reading panel acquired an inner gradient');
+      }
+      return errors;
+    });
+    assert.deepEqual(compositionErrors,[],'Composition rule violation');
+    await page.pdf({path:output,printBackground:true,preferCSSPageSize:true,tagged:true,outline:true});
     const samples=[];
     for(let i=0;i<doc.pageCount;i++) {
       const sheet=page.locator('.sheet').nth(i);

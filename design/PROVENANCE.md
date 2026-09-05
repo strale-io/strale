@@ -17,6 +17,8 @@ preserved as history, excluded from implementation).
 
 The [current register and catalogue](brand-kit/quiet-material/README.md) retain all fourteen atmospheric assets and nine gradients from the preserved v0.7 package. This is source/recipe consolidation inside the retained direction, not another identity. Its token candidate carries exact retained CSS values plus document-only specimen geometry; production tokens and the original package are unchanged. Reconciliation choices and remaining source/rights gaps are explicit in its register.
 
+Revision 0.2 follows founder-approved correction of excessive nested-card spacing and same-tone panels: narrow fixed gradient frames, solid light reading panels and direct dark text on Frost/Mint. Revision 0.1 is preserved at commit `2972015dedfeb8bcd30369e0b0b4259bdc62f678`; its earlier glass mappings are historical. Approval of this correction direction does not adopt production values or certify the finished brand kit.
+
 ## Instrument and Fieldwork — rejected, 2026-09-05
 
 The founder rejected these alternatives and clarified that the existing Quiet Material redesign should be retained and its system completed. [Preserved concepts](explorations/2026-09-05-brand-directions/README.md) are historical evidence, not implementation inputs. The candidate token records are rejected. Resume at the [system completion plan](../docs/programs/brand-website/SYSTEM-COMPLETION.md). No existing runtime token or artwork was changed.
