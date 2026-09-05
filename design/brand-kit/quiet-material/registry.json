@@ -1,0 +1,966 @@
+{
+  "schema_version": 1,
+  "id": "quiet-material-consolidation-0.1",
+  "status": "candidate",
+  "production_adopted": false,
+  "updated": "2026-09-05",
+  "authority": "Current consolidation proposal; active.json alone controls production.",
+  "source": {
+    "release": "https://github.com/strale-io/strale-frontend/releases/tag/preserve-2026-09-02",
+    "archive": "Strale-website-design-system-2026-09-01-213316.zip",
+    "archive_sha256": "891e905f8f7e53f466fba4b10c62c868680310bab119429d901268c42c1ce1b2",
+    "archive_digest_basis": "Previously recorded preservation receipt; extracted files verified in this batch.",
+    "documents": [
+      {
+        "path": "public/strale-site/design-system/DESIGN-SYSTEM.md",
+        "sha256": "e5362a2dd33b0daacf46886bb7bf2ce105dc73ea4397c1f3713a0e9f4252a820"
+      },
+      {
+        "path": "public/strale-site/design-system/BRAND-APPLICATION-GUIDELINES.md",
+        "sha256": "ff524809d07767277c79628eb51551c4583851bd09e9b253b8932852cb1feccd"
+      },
+      {
+        "path": "public/strale-site/design-system/IMAGERY-STRATEGY.md",
+        "sha256": "9105ade311dbc2191b8aecf4827be2ee17f24aaf53076ee3cd55ac553c63baa9"
+      },
+      {
+        "path": "public/strale-site/design-system/ASSET-LIBRARY.md",
+        "sha256": "755680ae0dc59b0ebf9d677549f93c3e4ec13d45c5fc90cd68905a5b5243ccdf"
+      },
+      {
+        "path": "public/strale-site/design-system/ADAPTIVE-LAYOUT.md",
+        "sha256": "72075b83fc0573c16ca1abc28bf834add3d37b52456ea930750294bbe966d6bd"
+      },
+      {
+        "path": "public/strale-site/design-system/SPACING-SYSTEM.md",
+        "sha256": "00e0a0ac17cd1cc86e2f523179fbb7d1fbd869e1fff44dca4f06450fbbaae633"
+      },
+      {
+        "path": "public/strale-site/design-system/LIFECYCLE.md",
+        "sha256": "035aff5bffc165dede4f6643002d9438b58b26fd84f9f395f155c93256ebc9f9"
+      },
+      {
+        "path": "public/strale-site/design-system/assets/design-tokens.css",
+        "sha256": "f970fd3be3ebd683984e5874f23907625b91e8738f0d86deb5ff591bfcd5c94f"
+      },
+      {
+        "path": "public/strale-site/design-system/design-system.html",
+        "sha256": "6a340f8109b1a9ca9f7b17e54d81b2974a83e0d24581b0885ea04c4725660552"
+      },
+      {
+        "path": "public/strale-site/design-system/assets/brand-library/asset-manifest.json",
+        "sha256": "3cf5ce5d1cfaabf27874afa0efe558e64198be8dc4e1029a8135a086e37b5958"
+      }
+    ]
+  },
+  "token_source": "design/tokens/candidates/quiet-material-catalogue.json",
+  "assets": [
+    {
+      "id": "hero-folded-light-background",
+      "title": "Hero folded light",
+      "kind": "atmosphere",
+      "family": "Light",
+      "token": "--hero-folded-light-background",
+      "source_path": "public/strale-site/design-system/assets/hero-folded-light-background-v1.png",
+      "sha256": "2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07",
+      "width": 1586,
+      "height": 992,
+      "bytes": 1055860,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Opening anchor",
+      "guidance": "Keep the broad pearl sweep as the opening anchor. Narrow crops lose its quiet-left field; recompose the opening rather than reusing desktop text placement.",
+      "recipe_status": "retained",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "The crop loses the desktop quiet-left field. Use as a bounded image composition with a separate reading surface; no inherited hero text-safe zone.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-balanced",
+      "title": "Balanced",
+      "kind": "atmosphere",
+      "family": "Light",
+      "token": "--pattern-folded-balanced",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-balanced-v1.png",
+      "sha256": "bdfaa7a1f5673fe7d369f0afcf627fec4740aa209746597e145cba4bc256030e",
+      "width": 1735,
+      "height": 907,
+      "bytes": 1518133,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Default light process plate",
+      "guidance": "Soft-white objects; let the folds supply depth.",
+      "recipe_status": "retained",
+      "surface_token": "--surface-card-soft-white",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-mineral",
+      "title": "Mineral / light",
+      "kind": "atmosphere",
+      "family": "Light",
+      "token": "--pattern-folded-mineral",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-mineral-v1.png",
+      "sha256": "83c78da37771c1699834fd5a3990ad7fe2ea6a40ad326a1282a914155a4c3406",
+      "width": 1735,
+      "height": 907,
+      "bytes": 1622605,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Light process variation",
+      "guidance": "Use for a deliberate tonal change, not a success state.",
+      "recipe_status": "retained",
+      "surface_token": "--surface-card-soft-white",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-cobalt",
+      "title": "Cobalt / light",
+      "kind": "atmosphere",
+      "family": "Light",
+      "token": "--pattern-folded-cobalt",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-cobalt-v1.png",
+      "sha256": "cff9ae5cb32eca15966091ab7c2465089069f8dfbbd7045ffa89a4b6b173ef86",
+      "width": 1734,
+      "height": 907,
+      "bytes": 1543505,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Light technical emphasis",
+      "guidance": "The rising blue edge has more visual weight; keep text on a surface.",
+      "recipe_status": "retained",
+      "surface_token": "--surface-card-soft-white",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-warm",
+      "title": "Warm / light",
+      "kind": "atmosphere",
+      "family": "Light",
+      "token": "--pattern-folded-warm",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-warm-v1.png",
+      "sha256": "1ea4dfb038a2d3c603b5fdf024614b337ca98ddce5b9aa71dea172d7956c6c9b",
+      "width": 1734,
+      "height": 907,
+      "bytes": 1467276,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Light editorial variation",
+      "guidance": "Keep the material light; avoid adding a second warm tint.",
+      "recipe_status": "retained",
+      "surface_token": "--surface-card-soft-white",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-midnight",
+      "title": "Midnight",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-midnight",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-dark-midnight-v2.png",
+      "sha256": "5aeef908cdf77ccd50b6e37da40d09443185a8fe9bc3742e6b70128a76289295",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1544621,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Neutral technical context",
+      "guidance": "Neutral inverse glass belongs to the plate; paper remains a separate source.",
+      "recipe_status": "retained",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-cobalt",
+      "title": "Cobalt / dark",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-cobalt",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-dark-cobalt-v2.png",
+      "sha256": "5d1f912b7b27bc842188341bd020a8b371ff2ef591153aa47755360b6e8fda13",
+      "width": 1735,
+      "height": 906,
+      "bytes": 1218774,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Tools and enrichment",
+      "guidance": "Preserve the bright seam around the object, not behind reading text.",
+      "recipe_status": "retained",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-dusk",
+      "title": "Dusk",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-dusk",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-dark-dusk-v2.png",
+      "sha256": "146cd1fd813fdef3f8ed3787e7ffaf94e63203567865e792af93f698e7f658e7",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1250367,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Closing and orchestration",
+      "guidance": "Neutral inverse reads blue against the warm field. This is a rare contrast specimen, not a default warm card; prefer a compact closing treatment.",
+      "recipe_status": "scoped-exception",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-mineral",
+      "title": "Mineral / dark",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-mineral",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-dark-mineral-v2.png",
+      "sha256": "3fb6ccdee57fcf3813d16018e6f5109581b3ae51a9c87b90e3a2bf17dab01e24",
+      "width": 1717,
+      "height": 916,
+      "bytes": 1232443,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Document inspection",
+      "guidance": "Use the mineral inspector as the dominant result; reserve neutral glass for a labelled context exception.",
+      "recipe_status": "reconciled-proposal",
+      "surface_token": "--surface-card-inverse-mineral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-spectrum",
+      "title": "Spectrum",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-spectrum",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-dark-spectrum-v2.png",
+      "sha256": "a36057d1413fe8a22f69a5abb2e3a2907800cc83f56eff20c2058f1e6fc3a997",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1551120,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Major multi-signal proof",
+      "guidance": "One expressive moment. Use Spectrum glass, never a generic blue result.",
+      "recipe_status": "retained",
+      "surface_token": "--surface-card-inverse-spectrum",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-ember",
+      "title": "Ember",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-ember",
+      "source_path": "public/strale-site/design-system/assets/pattern-folded-dark-ember-v2.png",
+      "sha256": "17aff86bef40976f6d74039db1ca9395b4a460159fffffaef2ce730dda10697e",
+      "width": 1655,
+      "height": 950,
+      "bytes": 1210931,
+      "source_manifest_record": null,
+      "source_status": "unrecorded",
+      "status": "candidate",
+      "role": "Exceptional warm emphasis",
+      "guidance": "Neutral inverse reads blue against the warm field. Keep this contrast exceptional; matched warm glass is still undefined.",
+      "recipe_status": "scoped-exception",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Not recovered; original generator/date/rights not inferred",
+        "rights": "unknown",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-mulberry",
+      "title": "Mulberry",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-mulberry",
+      "source_path": "public/strale-site/design-system/assets/brand-library/pattern-folded-dark-mulberry-v2.png",
+      "sha256": "7e9936a509a5121c1d96f911537e854888f388787fd95466c49ea34a80572534",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1371429,
+      "source_manifest_record": "strale-pattern-folded-dark-mulberry-v2",
+      "source_status": "approved",
+      "status": "candidate",
+      "role": "Identity and bounded evidence",
+      "guidance": "Keep source signals separate. The grainier material needs space around the lenses.",
+      "recipe_status": "reconciled-proposal",
+      "surface_token": "--surface-card-inverse-mulberry",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Recorded in source manifest",
+        "rights": "source declaration only; not independently established",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-amber",
+      "title": "Burnished Amber",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-amber",
+      "source_path": "public/strale-site/design-system/assets/brand-library/pattern-folded-dark-amber-v1.png",
+      "sha256": "7eddfa7d54b58a243873cf763a62052cca94640cc175b1c4a8de9918046cb3d2",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1323984,
+      "source_manifest_record": "strale-pattern-folded-dark-amber-v1",
+      "source_status": "approved",
+      "status": "candidate",
+      "role": "Atmospheric field only",
+      "guidance": "Keep image-only. No matched amber card is defined; no invented amber glass. ",
+      "recipe_status": "restricted",
+      "surface_token": null,
+      "ink_token": null,
+      "secondary_token": "--ink-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Recorded in source manifest",
+        "rights": "source declaration only; not independently established",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    },
+    {
+      "id": "pattern-folded-dark-graphite",
+      "title": "Graphite Pearl",
+      "kind": "atmosphere",
+      "family": "Dark",
+      "token": "--pattern-folded-dark-graphite",
+      "source_path": "public/strale-site/design-system/assets/brand-library/pattern-folded-dark-graphite-v1.png",
+      "sha256": "fb960fcd1a7afa8e927d12a802f70f535a890a36d7faf0345c44330a240887c8",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1439695,
+      "source_manifest_record": "strale-pattern-folded-dark-graphite-v1",
+      "source_status": "approved",
+      "status": "candidate",
+      "role": "Exceptional neutral field",
+      "guidance": "The neutral inverse token is blue-biased. Use it only when blue product context is intended; prefer the unoverlaid field for a monochrome moment.",
+      "recipe_status": "restricted",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "crop": {
+        "fit": "cover",
+        "position": "50% 50%",
+        "basis": "Retained CSS center/cover baseline; specimen crops are comparisons, not certification.",
+        "desktop": "Landscape field with one bounded object.",
+        "narrow": "Recompose with one information row; keep type size. Do not scale down the desktop composition.",
+        "square": "Keep one information row on the named surface; no direct text on the plate."
+      },
+      "provenance": {
+        "file_confidence": "sha256-matches-preserved-extraction",
+        "creation_history": "Recorded in source manifest",
+        "rights": "source declaration only; not independently established",
+        "parent_id": null,
+        "lineage": "Version suffix retained; no predecessor asserted without a source record"
+      },
+      "verification": {
+        "asset_integrity": "verified",
+        "crop_review": "Landscape, square and narrow centre/cover specimens visually reviewed; direct text on images remains excluded.",
+        "contextual_contrast": "Measured exact specimens; see verification.json. No general background/text approval.",
+        "accessibility": "not-certified",
+        "evidence": "verification.json"
+      }
+    }
+  ],
+  "gradients": [
+    {
+      "id": "spectrum",
+      "token": "--atmosphere-spectrum",
+      "css": "linear-gradient(138deg, #b6321c 0%, #65231e 34%, #253047 66%, #12345c 100%)",
+      "role": "Major opening or primary proof",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "mulberry",
+      "token": "--atmosphere-mulberry",
+      "css": "linear-gradient(145deg, #6f3046 0%, #51263a 50%, #301d2d 100%)",
+      "role": "Warm, bounded capability story",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "ember",
+      "token": "--atmosphere-ember",
+      "css": "radial-gradient(circle at 10% 8%, rgba(240, 68, 29, 0.92), transparent 38%), linear-gradient(138deg, #6b2118, var(--deep-ember) 64%, #160806)",
+      "role": "Exceptional warm emphasis",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "cobalt",
+      "token": "--atmosphere-cobalt",
+      "css": "linear-gradient(138deg, #3b6d9c 0%, #235486 44%, #143c6c 70%, #0d2b52 100%)",
+      "role": "Tools and technical framing",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "dusk",
+      "token": "--atmosphere-dusk",
+      "css": "linear-gradient(138deg, #431d18 0%, #251a1d 36%, #151b24 64%, #091d31 100%)",
+      "role": "Closing transition",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "frost",
+      "token": "--atmosphere-frost",
+      "css": "radial-gradient(circle at 14% 16%, rgba(255, 255, 255, 0.98), transparent 46%), linear-gradient(138deg, #fcfcfb, #f1f6fb 60%, #e4edf7)",
+      "role": "Quiet explanatory surface",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "midnight",
+      "token": "--atmosphere-midnight",
+      "css": "linear-gradient(138deg, #263a4a 0%, #162c3c 42%, #0d2231 70%, #061721 100%)",
+      "role": "Neutral technical frame",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface-card-inverse-neutral",
+      "ink_token": "--ink-inverse",
+      "secondary_token": "--ink-inverse-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "mineral",
+      "token": "--atmosphere-mineral",
+      "css": "linear-gradient(138deg, #2d8d73 0%, #1d7159 42%, #10513f 72%, #08392f 100%)",
+      "role": "Concentrated validation framing",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "proposed-context"
+    },
+    {
+      "id": "mint",
+      "token": "--atmosphere-mint",
+      "css": "radial-gradient(circle at 86% 80%, rgba(36, 107, 90, 0.1), transparent 38%), linear-gradient(138deg, var(--canvas), var(--mint-whisper))",
+      "role": "Quiet mineral support",
+      "status": "candidate",
+      "rule": "A bounded surface or frame; do not stack over a dark atmospheric raster.",
+      "surface_token": "--surface",
+      "ink_token": "--ink",
+      "secondary_token": "--ink-secondary",
+      "pair_status": "proposed-context"
+    }
+  ],
+  "identity": [
+    {
+      "id": "flowing-s-lockup",
+      "source_path": "public/strale-site/design-system/assets/strale-lockup.svg",
+      "sha256": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809",
+      "role": "Retained brand identity reference",
+      "status": "retained-reference"
+    },
+    {
+      "id": "legacy-compass",
+      "source_path": "public/favicon.svg",
+      "sha256": "0c194ee2e6b502cdbed89497d6f9f1947fa17391d5c2a86a734cc49f49bad6ea",
+      "role": "Legacy favicon; comparison only, excluded from new identity exports",
+      "status": "legacy-conflict"
+    }
+  ],
+  "illustrations": [
+    {
+      "id": "strale-product-support-constellation-light-v1",
+      "source_path": "public/strale-site/design-system/assets/brand-library/product-support-constellation-light-v1.png",
+      "sha256": "e85c833053231a3150698d47d850f04d7cb11e8fced3c4d48a5af1e93463102a",
+      "source_status": "exploration",
+      "status": "reference-only",
+      "role": "Decorative metaphor, never API evidence",
+      "eligible_for_implementation": false,
+      "reason": "Generic decorative raster rejected; a live diagram with explicit relationships is a different medium."
+    },
+    {
+      "id": "strale-editorial-evidence-stack-light-v1",
+      "source_path": "public/strale-site/design-system/assets/brand-library/editorial-evidence-stack-light-v1.png",
+      "sha256": "33d9a53b9cdce74d4dc65548130b003f475dc76afcb744402a9ac76754accafc",
+      "source_status": "candidate",
+      "status": "reference-only",
+      "role": "Decorative metaphor, never API evidence",
+      "eligible_for_implementation": false,
+      "reason": "Candidate editorial metaphor; requires a real editorial job and separate acceptance."
+    },
+    {
+      "id": "strale-editorial-global-field-dark-v1",
+      "source_path": "public/strale-site/design-system/assets/brand-library/editorial-global-field-dark-v1.png",
+      "sha256": "dee3842d7e1710f2c399a8de6ba2e74654dccd008696b75f9d2ee4c211bb0f70",
+      "source_status": "exploration",
+      "status": "reference-only",
+      "role": "Decorative metaphor, never API evidence",
+      "eligible_for_implementation": false,
+      "reason": "Generic decorative raster rejected; a live diagram with explicit relationships is a different medium."
+    }
+  ],
+  "fonts": [
+    {
+      "file": "fonts/InstrumentSans.ttf",
+      "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+      "role": "font"
+    },
+    {
+      "file": "fonts/IBMPlexMono-Regular.ttf",
+      "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+      "role": "font"
+    },
+    {
+      "file": "fonts/InstrumentSans-OFL.txt",
+      "sha256": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
+      "role": "licence"
+    },
+    {
+      "file": "fonts/IBMPlexMono-OFL.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+      "role": "licence"
+    }
+  ],
+  "font_sources": [
+    {
+      "family": "Instrument Sans",
+      "url": "https://github.com/google/fonts/tree/main/ofl/instrumentsans",
+      "licence": "SIL OFL 1.1"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "url": "https://github.com/google/fonts/tree/main/ofl/ibmplexmono",
+      "licence": "SIL OFL 1.1"
+    }
+  ],
+  "resolutions": [
+    {
+      "id": "QM-01",
+      "title": "Every current atmosphere has a record",
+      "status": "recorded",
+      "choice": "All 14 current image tokens have exact file identity, role, pairing and provenance-confidence fields. Eleven previously unrecorded assets remain honest about unknown creation history.",
+      "remaining": "Recover generator/date/rights evidence before unrestricted external exports."
+    },
+    {
+      "id": "QM-02",
+      "title": "Missing references are explicit",
+      "status": "unavailable-recorded",
+      "choice": "Neither references/ nor assets/capability-illustrations/ exists in the preserved extraction or current tracked sibling tree. No replacement image is invented.",
+      "remaining": "Recover originals if needed; unavailable files are not build dependencies."
+    },
+    {
+      "id": "QM-03",
+      "title": "One pairing table",
+      "status": "proposed",
+      "choice": "The register includes Mulberry, Amber and Graphite. Mineral inverse is the primary document inspector; neutral inverse is a scoped agent-context exception.",
+      "remaining": "Founder review of the reconciled specimens; production adoption remains separate."
+    },
+    {
+      "id": "QM-04",
+      "title": "Verification and closing recipes",
+      "status": "proposed",
+      "choice": "Mulberry is the proposed current verification recipe, following the later component/census/checker. Dusk is the proposed closing default; Spectrum is reserved for a rare major opening/proof.",
+      "remaining": "Archive the conflicting recipe text only at adoption; original source stays immutable."
+    },
+    {
+      "id": "QM-05",
+      "title": "Illustration is not evidence",
+      "status": "recorded",
+      "choice": "A live constellation diagram can explain labelled relationships. The generic constellation/global-field rasters remain excluded. Evidence-stack stays an unapproved editorial reference.",
+      "remaining": "Missing capability illustrations are unavailable; no complete icon library is claimed."
+    },
+    {
+      "id": "QM-06",
+      "title": "Identity and functional glyphs are separate",
+      "status": "proposed",
+      "choice": "Keep the flowing-S lockup as the identity reference. The compass remains a legacy favicon conflict; a four-point transformation glyph has a functional role, not an identity role.",
+      "remaining": "Produce S favicon/avatar/inverse exports from a verified mark master and test small sizes in the identity batch."
+    }
+  ],
+  "missing_sources": [
+    {
+      "id": "direction-reference",
+      "path": "public/strale-site/design-system/references/quiet-material-direction-v1.png",
+      "status": "unavailable",
+      "required_for_build": false
+    },
+    {
+      "id": "capability-illustrations",
+      "path": "public/strale-site/design-system/assets/capability-illustrations/",
+      "status": "unavailable",
+      "required_for_build": false
+    }
+  ],
+  "rules": [
+    {
+      "id": "layering",
+      "text": "Choose a plain canvas, one atmospheric raster, or a bounded gradient frame. A dark raster already contains its lighting; never add a second semantic gradient."
+    },
+    {
+      "id": "reading",
+      "text": "In this specimen release, reading text sits on its named surface. No direct text-on-image combination is approved by this catalogue."
+    },
+    {
+      "id": "meaning",
+      "text": "Decorative green is not success. Atmosphere conveys tone; labelled product states need real evidence."
+    },
+    {
+      "id": "rhythm",
+      "text": "Plain sections are part of the system. Use open, compact and framed compositions according to the narrative; do not alternate only by changing colours."
+    },
+    {
+      "id": "exceptions",
+      "text": "Amber has no card recipe. Dusk and Ember use neutral inverse only as a rare dominant contrast object; matched warm glass remains an open gap."
+    }
+  ],
+  "claim_source": "docs/company/claims.yaml",
+  "positioning": "DEC-20260905-A",
+  "specimen_copy": {
+    "title": "A clear reading surface",
+    "row1": "Primary information",
+    "row2": "Supporting context",
+    "value1": "One idea",
+    "value2": "Only what helps",
+    "disclosure": "Design specimen. No product result.",
+    "gradient_title": "Reading surface",
+    "gradient_body": "One clear idea."
+  },
+  "specimens": {
+    "rows_by_shape": {
+      "wide": 2,
+      "square": 1,
+      "phone": 1
+    },
+    "compact_rule": "Square and narrow specimens remove the secondary row before changing typography. These are composition samples, not approved channel templates."
+  },
+  "visual_review": {
+    "date": "2026-09-05",
+    "status": "reviewed-specimens-only",
+    "finding": "Core families remain coherent. Warm and graphite plates need restricted roles because available neutral inverse glass is visibly blue-biased. Narrow hero crops do not retain the desktop quiet-left field.",
+    "not_certified": [
+      "whole-website accessibility",
+      "direct text on atmospheric images",
+      "all responsive breakpoints",
+      "complete dark theme",
+      "motion",
+      "full channel templates"
+    ]
+  }
+}

@@ -1,0 +1,1252 @@
+{
+  "ok": true,
+  "pages": 24,
+  "pdf_sha256": "ef68d0932c9b53a21a4e97f4ba3f8ca4f53ac0124b0da9c9fb2f09693d9f3342",
+  "registry_sha256": "cacd46123999a3290262dc493f5a236e3bac60d7e8acf948ccc954e828677684",
+  "tokens_sha256": "7975e9e49947bf207fe999c364c839a5c51e9c4e82055d8939930cac536c0204",
+  "builder_inputs": {
+    "build.mjs": "4e02438ef4ecceaabc8b4d73f6d5a7d3084109dd82cca0fc741e0e8b47148260",
+    "catalogue.css": "6005874106669b08173e065849e481ff91ac558f998cebbba52001d893b0bde2",
+    "registry.schema.json": "624647d84f1be662e78c7e61aaa9e1336f7a7cdeb09719e6e59fc1f4595b3272",
+    "verify.py": "7128c988ac0191aab61fe5c0c42bf8326c2cb30e86883fec4ab7ce79a59f43e6"
+  },
+  "render_inputs": {
+    "registry_sha256": "cacd46123999a3290262dc493f5a236e3bac60d7e8acf948ccc954e828677684",
+    "tokens_sha256": "7975e9e49947bf207fe999c364c839a5c51e9c4e82055d8939930cac536c0204",
+    "builder_inputs": {
+      "build.mjs": "4e02438ef4ecceaabc8b4d73f6d5a7d3084109dd82cca0fc741e0e8b47148260",
+      "catalogue.css": "6005874106669b08173e065849e481ff91ac558f998cebbba52001d893b0bde2",
+      "registry.schema.json": "624647d84f1be662e78c7e61aaa9e1336f7a7cdeb09719e6e59fc1f4595b3272",
+      "verify.py": "7128c988ac0191aab61fe5c0c42bf8326c2cb30e86883fec4ab7ce79a59f43e6"
+    },
+    "pdf_sha256": "62fc38db93847aba5e6edf49d73d621579f092e3c8d0be188b797f4fe57be361",
+    "sample_inputs": {
+      "contrast-samples.json": "39d96af200a717c6da0a65ef2cee774cb152c0849e0b47af8baac67a2858f558",
+      "background-06.png": "0c737da3cf5fed93c7c1e699f8aee0497eece9043ff8945fc3ee64e9f41e9265",
+      "background-07.png": "a448f75f6f8cc05030f29b203f8f5e68392c45d79d2c599ff8fe40652dcdaf28",
+      "background-08.png": "9bfcfa8120be2f9cded3768140bb186993c9a9baf0d1263487822a8184e6f801",
+      "background-09.png": "44097623ddfb508fb59f6642d9dafbb25940fb9f751c6afeca6ffcfa702c0fdc",
+      "background-10.png": "1b108f04b9f9f2148258b9d6f3346b907902072cb18d5154c819529c959a8e32",
+      "background-11.png": "2022998ed137251892a776c37dd49a61e91fa5387e9ef0e322982683641b7700",
+      "background-12.png": "ef99dd140d50240add5965e89cca761b70938e4050b7808826e1c42863dd33e3",
+      "background-13.png": "3761a4fd8471e9a71dfb296a272dc7c16c1bc4d88c0849940ef334d4b6343897",
+      "background-14.png": "fe7e845b36a45390d990cdcaf6ed992e4ecad6ad711d066e8b7114c992bbde3e",
+      "background-15.png": "de6e41661a2240b794ac00a423e886a1bed627906b905900b7d62fa3bf68d5f5",
+      "background-16.png": "44c6f94dcd36b9c4b94af72cd6ba3d711002489e34873fd8357ae12ab3e2ece4",
+      "background-17.png": "e46ce49db49739c4e753bebe4e0fe7e7c0b440969b5815c87890ee313e53853e",
+      "background-18.png": "369bbb6ae7a7aae612f8752892a43be32c3236a3b7b2f6103c5a2650265c149c",
+      "background-19.png": "80600539371a27161bfd14d438d96881f3a78600dbe055c67019b4d74e8bf64f",
+      "background-21.png": "ba24d63344d36602c8d0ced31c42fa557bbedb713b0941200870fcec503c6dc4"
+    }
+  },
+  "pdf_bytes_before_deduplication": 51758910,
+  "pdf_bytes": 51629261,
+  "contrast_method": "WCAG relative luminance; minimum across all background pixels under each hidden text element bounding box, Chromium at device scale 1. All sampled text evaluated at 4.5:1, including headings.",
+  "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+  "sampled_text_elements": 200,
+  "minimum_ratio": 5.696,
+  "failures": [],
+  "out_of_page_text": [],
+  "results": [
+    {
+      "page": 6,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "One clear idea.",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "One clear idea.",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "One clear idea.",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "Reading surface",
+      "ratio": 10.46,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "One clear idea.",
+      "ratio": 6.27,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "Reading surface",
+      "ratio": 11.085,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "One clear idea.",
+      "ratio": 6.649,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 6,
+      "text": "One clear idea.",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 7,
+      "text": "Reading surface",
+      "ratio": 10.938,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 7,
+      "text": "One clear idea.",
+      "ratio": 6.551,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 7,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 7,
+      "text": "One clear idea.",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 7,
+      "text": "Reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 7,
+      "text": "One clear idea.",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "A clear reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Supporting context",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Only what helps",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "A clear reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "A clear reading surface",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Primary information",
+      "ratio": 5.955,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "One idea",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 8,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.766,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "A clear reading surface",
+      "ratio": 18.358,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Primary information",
+      "ratio": 6.218,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "One idea",
+      "ratio": 18.212,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Supporting context",
+      "ratio": 6.169,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Only what helps",
+      "ratio": 18.056,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.868,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "A clear reading surface",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Primary information",
+      "ratio": 6.169,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "One idea",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Design specimen. No product result.",
+      "ratio": 18.012,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "A clear reading surface",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Primary information",
+      "ratio": 6.154,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "One idea",
+      "ratio": 18.212,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 9,
+      "text": "Design specimen. No product result.",
+      "ratio": 18.023,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "A clear reading surface",
+      "ratio": 18.234,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Primary information",
+      "ratio": 6.214,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "One idea",
+      "ratio": 18.201,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Supporting context",
+      "ratio": 6.165,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Only what helps",
+      "ratio": 18.056,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.856,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "A clear reading surface",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Primary information",
+      "ratio": 6.165,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "One idea",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Design specimen. No product result.",
+      "ratio": 18.012,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "A clear reading surface",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Primary information",
+      "ratio": 6.15,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "One idea",
+      "ratio": 18.201,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 10,
+      "text": "Design specimen. No product result.",
+      "ratio": 18.012,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "A clear reading surface",
+      "ratio": 18.201,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Primary information",
+      "ratio": 6.218,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "One idea",
+      "ratio": 18.056,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Supporting context",
+      "ratio": 6.169,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Only what helps",
+      "ratio": 17.757,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.724,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "A clear reading surface",
+      "ratio": 18.37,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Primary information",
+      "ratio": 6.169,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "One idea",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.979,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "A clear reading surface",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Primary information",
+      "ratio": 6.154,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "One idea",
+      "ratio": 18.212,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 11,
+      "text": "Design specimen. No product result.",
+      "ratio": 18.012,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "A clear reading surface",
+      "ratio": 18.347,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Primary information",
+      "ratio": 6.214,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "One idea",
+      "ratio": 18.201,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Supporting context",
+      "ratio": 6.169,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Only what helps",
+      "ratio": 18.056,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.889,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "A clear reading surface",
+      "ratio": 18.392,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Primary information",
+      "ratio": 6.165,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "One idea",
+      "ratio": 18.403,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Design specimen. No product result.",
+      "ratio": 18.001,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "A clear reading surface",
+      "ratio": 18.392,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Primary information",
+      "ratio": 6.15,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "One idea",
+      "ratio": 18.201,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 12,
+      "text": "Design specimen. No product result.",
+      "ratio": 17.933,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "A clear reading surface",
+      "ratio": 11.109,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Primary information",
+      "ratio": 6.48,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "One idea",
+      "ratio": 13.811,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Supporting context",
+      "ratio": 6.647,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Only what helps",
+      "ratio": 13.336,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.109,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "A clear reading surface",
+      "ratio": 11.118,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Primary information",
+      "ratio": 6.577,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "One idea",
+      "ratio": 11.742,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.315,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "A clear reading surface",
+      "ratio": 10.945,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Primary information",
+      "ratio": 6.565,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "One idea",
+      "ratio": 11.615,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 13,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.981,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "A clear reading surface",
+      "ratio": 10.611,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Primary information",
+      "ratio": 6.551,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "One idea",
+      "ratio": 13.436,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Supporting context",
+      "ratio": 6.836,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Only what helps",
+      "ratio": 13.499,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.413,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "A clear reading surface",
+      "ratio": 10.454,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Primary information",
+      "ratio": 6.357,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "One idea",
+      "ratio": 12.413,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.413,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "A clear reading surface",
+      "ratio": 10.61,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Primary information",
+      "ratio": 6.437,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "One idea",
+      "ratio": 12.222,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 14,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.737,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "A clear reading surface",
+      "ratio": 11.118,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Primary information",
+      "ratio": 6.48,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "One idea",
+      "ratio": 13.775,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Supporting context",
+      "ratio": 6.754,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Only what helps",
+      "ratio": 13.504,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.274,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "A clear reading surface",
+      "ratio": 11.118,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Primary information",
+      "ratio": 6.676,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "One idea",
+      "ratio": 12.196,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.426,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "A clear reading surface",
+      "ratio": 11.118,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Primary information",
+      "ratio": 6.593,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "One idea",
+      "ratio": 12.108,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 15,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.578,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "A clear reading surface",
+      "ratio": 9.655,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Primary information",
+      "ratio": 5.696,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "One idea",
+      "ratio": 12.887,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Supporting context",
+      "ratio": 6.021,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Only what helps",
+      "ratio": 12.902,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Design specimen. No product result.",
+      "ratio": 11.072,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "A clear reading surface",
+      "ratio": 9.655,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Primary information",
+      "ratio": 5.919,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "One idea",
+      "ratio": 11.047,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Design specimen. No product result.",
+      "ratio": 11.507,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "A clear reading surface",
+      "ratio": 9.655,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Primary information",
+      "ratio": 6.171,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "One idea",
+      "ratio": 11.481,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 16,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.246,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "A clear reading surface",
+      "ratio": 13.307,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Primary information",
+      "ratio": 7.864,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "One idea",
+      "ratio": 14.301,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Supporting context",
+      "ratio": 7.618,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Only what helps",
+      "ratio": 13.535,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Design specimen. No product result.",
+      "ratio": 13.111,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "A clear reading surface",
+      "ratio": 12.883,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Primary information",
+      "ratio": 7.628,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "One idea",
+      "ratio": 13.429,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Design specimen. No product result.",
+      "ratio": 13.144,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "A clear reading surface",
+      "ratio": 13.468,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Primary information",
+      "ratio": 7.321,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "One idea",
+      "ratio": 12.737,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 17,
+      "text": "Design specimen. No product result.",
+      "ratio": 13.147,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "A clear reading surface",
+      "ratio": 11.163,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Primary information",
+      "ratio": 6.551,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "One idea",
+      "ratio": 13.929,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Supporting context",
+      "ratio": 6.763,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Only what helps",
+      "ratio": 13.989,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.234,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "A clear reading surface",
+      "ratio": 11.0,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Primary information",
+      "ratio": 6.623,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "One idea",
+      "ratio": 11.892,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.301,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "A clear reading surface",
+      "ratio": 11.242,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Primary information",
+      "ratio": 6.591,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "One idea",
+      "ratio": 12.647,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 18,
+      "text": "Design specimen. No product result.",
+      "ratio": 13.269,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "A clear reading surface",
+      "ratio": 9.586,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Primary information",
+      "ratio": 5.729,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "One idea",
+      "ratio": 12.797,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Supporting context",
+      "ratio": 6.003,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Only what helps",
+      "ratio": 11.788,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Design specimen. No product result.",
+      "ratio": 11.186,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "A clear reading surface",
+      "ratio": 9.653,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Primary information",
+      "ratio": 6.089,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "One idea",
+      "ratio": 11.32,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.003,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "A clear reading surface",
+      "ratio": 9.653,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Primary information",
+      "ratio": 6.332,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "One idea",
+      "ratio": 11.941,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 19,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.598,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "A clear reading surface",
+      "ratio": 10.767,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Primary information",
+      "ratio": 6.47,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "One idea",
+      "ratio": 11.581,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Supporting context",
+      "ratio": 6.197,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Only what helps",
+      "ratio": 12.258,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Design specimen. No product result.",
+      "ratio": 11.748,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "A clear reading surface",
+      "ratio": 10.942,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Primary information",
+      "ratio": 6.649,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "One idea",
+      "ratio": 12.271,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Design specimen. No product result.",
+      "ratio": 11.956,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "A clear reading surface",
+      "ratio": 10.942,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Primary information",
+      "ratio": 6.768,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "One idea",
+      "ratio": 12.616,
+      "passes_normal_text_4_5": true
+    },
+    {
+      "page": 21,
+      "text": "Design specimen. No product result.",
+      "ratio": 12.601,
+      "passes_normal_text_4_5": true
+    }
+  ]
+}

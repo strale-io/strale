@@ -1,0 +1,77 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "3a7089c5b48432a3dd359acefdd048a63af5034f"
+  },
+  "at": "2026-09-05T12:31:14.894Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/qm-consolidation-receipt-input.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "pdf_sha256": "ef68d0932c9b53a21a4e97f4ba3f8ca4f53ac0124b0da9c9fb2f09693d9f3342",
+    "pages": 24,
+    "minimum_text_contrast": 5.696,
+    "verification_file": "design/brand-kit/quiet-material/verification.json",
+    "visual_review": "All 24 PDF pages inspected through full-page/contact renders, with corrected light Mineral export; no overlap or missing background remains."
+  },
+  "topic": "quiet-material-consolidation",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
+    "pdf_sha256": "ef68d0932c9b53a21a4e97f4ba3f8ca4f53ac0124b0da9c9fb2f09693d9f3342",
+    "pages": 24,
+    "minimum_text_contrast": 5.696,
+    "verification_file": "design/brand-kit/quiet-material/verification.json",
+    "checks": [
+      {
+        "command": "npm run design:check",
+        "chunk_id": "0f22c2",
+        "wall_time_seconds": 2.2273134,
+        "exit_code": 0,
+        "original_token_count": 88,
+        "output": "\n> design:check\n> node scripts/check-design.mjs && node design/brand-kit/quiet-material/build.mjs --check\n\nchecked 7 design/tokens/*.json files, 6 distinct off-token literals (10 raw occurrences) across the internal-report consumers, 6 allowlisted\nok   design tokens contract\n{\"ok\":true,\"assets\":14,\"gradients\":9,\"source_integrity\":\"not-requested\"}\n"
+      },
+      {
+        "command": "node --test design/brand-kit/quiet-material/build.test.mjs",
+        "chunk_id": "e4be2d",
+        "wall_time_seconds": 0.0000024,
+        "exit_code": 0,
+        "original_token_count": 127,
+        "output": "✔ complete retained register passes without claiming source-file verification (59.8899ms)\n✔ a lost current asset fails even if the remaining records are valid (29.7847ms)\n✔ changing a retained source hash fails closed (20.1159ms)\n✔ an invented Amber card and silent illustration promotion fail closed (48.0684ms)\n✔ a gradient change cannot disagree with its token source (15.5466ms)\nℹ tests 5\nℹ suites 0\nℹ pass 5\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 968.7837\n"
+      },
+      {
+        "command": "npm run programs:check",
+        "chunk_id": "fd9edb",
+        "wall_time_seconds": 2.3359438,
+        "exit_code": 0,
+        "original_token_count": 38,
+        "output": "\n> programs:check\n> node scripts/check-program-tracks.mjs\n\nok   docs/programs/brand-website/tracks.yaml\nok   docs/programs/cto-readiness/tracks.yaml\n"
+      },
+      {
+        "command": "npm run docs:check",
+        "chunk_id": "b547f2",
+        "wall_time_seconds": 2.5311588,
+        "exit_code": 0,
+        "original_token_count": 32,
+        "output": "\n> docs:check\n> node scripts/check-docs-index.mjs\n\nchecked 18 docs/ subtrees against docs/README.md\nok   docs/README.md index\n"
+      }
+    ],
+    "additional_checks": [
+      {
+        "command": "npx tsc --noEmit --project tsconfig.json (apps/api)",
+        "exit_code": 0
+      },
+      {
+        "command": "npm run design:test",
+        "exit_code": 0,
+        "summary": "Existing design suite plus new register tests passed."
+      }
+    ],
+    "visual_review": "All 24 PDF pages inspected through full-page/contact renders, with corrected light Mineral export; no overlap or missing background remains."
+  }
+}

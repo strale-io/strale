@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "id", "status", "production_adopted", "source", "token_source", "assets", "gradients", "identity", "illustrations", "fonts", "resolutions", "missing_sources", "rules", "claim_source", "specimen_copy"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"const": "candidate"},
+    "production_adopted": {"const": false},
+    "assets": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/asset"}},
+    "gradients": {"type": "array", "items": {"type": "object", "required": ["id", "token", "css", "role", "status"]}},
+    "identity": {"type": "array", "items": {"$ref": "#/$defs/file"}},
+    "illustrations": {"type": "array", "items": {"$ref": "#/$defs/file"}},
+    "fonts": {"type": "array", "items": {"type": "object", "required": ["file", "sha256", "role"], "properties": {"sha256": {"$ref": "#/$defs/hash"}}}},
+    "resolutions": {"type": "array", "items": {"type": "object", "required": ["id", "title", "status", "choice", "remaining"]}},
+    "missing_sources": {"type": "array", "items": {"type": "object", "required": ["id", "path", "status", "required_for_build"], "properties": {"status": {"const": "unavailable"}, "required_for_build": {"const": false}}}}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "file": {"type": "object", "required": ["id", "source_path", "sha256"], "properties": {"sha256": {"$ref": "#/$defs/hash"}}},
+    "asset": {"allOf": [{"$ref": "#/$defs/file"}, {"type": "object", "required": ["title", "token", "width", "height", "bytes", "status", "source_status", "role", "guidance", "recipe_status", "surface_token", "ink_token", "secondary_token", "crop", "provenance", "verification"], "properties": {"status": {"const": "candidate"}, "width": {"type": "integer", "minimum": 1}, "height": {"type": "integer", "minimum": 1}, "surface_token": {"type": ["string", "null"]}, "ink_token": {"type": ["string", "null"]}, "crop": {"type": "object", "required": ["fit", "position", "basis", "desktop", "narrow", "square"]}, "provenance": {"type": "object", "required": ["file_confidence", "creation_history", "rights", "parent_id", "lineage"]}, "verification": {"type": "object", "required": ["asset_integrity", "crop_review", "contextual_contrast", "accessibility"]}}}]}
+  }
+}

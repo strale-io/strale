@@ -4,7 +4,17 @@ Current scope, clarified by the founder on 5 September: **retain the existing re
 
 Read the [system audit](../../../archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md), [asset inventory](../../../archive/sessions/2026-09-05-quiet-material-system-audit/asset-inventory.json) and [structured completion record](system-completion.json). These establish the scope and next batch. The preserved Quiet Material v0.7 package is the working visual baseline; the exact founder screenshot remains the opening reference. Existing runtime tokens are unchanged until explicit adoption.
 
-## Next batch: make the current system unambiguous
+## Current result: register and contextual catalogue
+
+The [Quiet Material consolidation package](../../../design/brand-kit/quiet-material/README.md) is the current candidate working surface for this track. It records all fourteen atmospheric assets and nine gradients, exact source hashes, semantic pairings, crop constraints, identity/symbol separation and the proposed QM-03/QM-04 reconciliations. Its generated human register and 24-page PDF resolve the same structured inputs. CI checks their consistency. [Verification](../../../design/brand-kit/quiet-material/verification.json) records the exact specimen tests; it is not whole-site accessibility certification.
+
+QM-01 through QM-06 have a recorded disposition; they are not all closed production defects. Eleven creation/rights histories and the missing reference/illustration files remain unresolved. The preferred flowing-S identity is distinguished from the legacy compass; small-size/inverse identity exports remain work. Amber is image-only. Warm/graphite contexts expose the blue bias in neutral inverse glass, and the narrow hero crop cannot inherit the desktop quiet-left text zone. Source documents remain immutable; reconciliations are proposed rather than silently adopted.
+
+## Next batch: identity, typography and component states
+
+Use the catalogue for focused review of material cohesion, especially the restricted warm/graphite treatments. Continue with the retained flowing-S mark's favicon/avatar/inverse exports, a complete type-role/fallback specimen register around the existing font families, and primary/secondary/mobile navigation and card/control states. Font files and OFL licences are now packaged; complete language, reading and fallback coverage is not yet established. Complete density/rhythm patterns after those foundations, then motion and channel templates. Do not regenerate atmosphere images or reopen identity exploration by default.
+
+## Completed first-batch scope: make the current system unambiguous
 
 Reconcile the current-system pointer, full contract, catalogue specimens, component census, CSS and partial asset manifest. Resolve QM-01 through QM-06 and record proposed answers for aesthetic conflicts with concrete existing specimens. Carry the current gradients and atmospheric images forward. No new imagery should be generated merely to fill a matrix or make the audit look more designed.
 
