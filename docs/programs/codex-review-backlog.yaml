@@ -41,6 +41,57 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-29
+    subject: "PR #507 — the caller-class partition (harness / account / x402 / anonymous), the who-called operator script, and the 2026-09-04 and 2026-09-05 operating runs"
+    commit: b9739d12
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      This batch changes what the word "customer" means to every consumer of
+      lib/metrics, and externalCustomers() is load-bearing for revenue,
+      concentration and the quality floor's population. Two defects of the
+      same shape were already found in it by review rather than by tests,
+      after it had been written specifically to prevent that shape: our own
+      health_probe rows classified as anonymous customers (77 of the 78 rows
+      in the reproduced window), and the anonymous class labelled "x402"
+      while carrying 59 free-tier rows with no wallet behind them. A third of
+      the same kind is what a Claude-only review is least able to rule out.
+    what_to_attack: >
+      Whether the four classes are still exhaustive and mutually exclusive
+      over every row of transactions, including any status value the schema
+      comment does not list; whether callerClass (TS) and callerClassSql
+      agree on all four branches AND on branch order, since health_probe and
+      x402 are both decided before user_id is looked at; whether adding the
+      status predicate to externalCustomers moved any of its seven consumers
+      in a direction other than removing our own rows — identityCoverage
+      counts rows and is the one that moves; and whether the mutation
+      evidence cited in the handoff (four planted mutations, each caught by
+      exactly one test) covers SQL semantics or only rendered SQL text, since
+      the suite renders strings and never executes the CASE.
+    claude_verdicts: 1 round, FAIL then all findings fixed (see PR body)
+  - id: CX-28
+    subject: "PR #555 — M2 G2 batch 2: six ID collisions (DEC-20260320-C/J/K, DEC-20260405-B, DEC-20260406-A/B) resolved atomically with twelve source-qualified records"
+    commit: 036f207d
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      Irreversible collision resolutions (the registry's merge-base rules
+      refuse a regression). The batch also asserts that the KYB and Invoice
+      Verify solution families are absent from the catalogue source and
+      partly retired by name, and that the au-company-data hotfix's
+      .d.ts filter no longer exists. Whether each disposition is justified
+      by its own source text and each code claim traced to the file is the
+      Codex judgement.
+    what_to_attack: >
+      Each of the twelve records against its Notion row (by page id,
+      parsed); each registry entry against the report and the register
+      rows; the solution-catalogue and retirement-script claims; the
+      auto-register.ts, pep-check.yaml, platform-facts.ts and
+      solution-executor.ts claims; the register arithmetic and digests via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-27
     subject: "PR #553 — M2 G2 batch 1: five ID collisions (DEC-20260225-P-c5d6, DEC-20260303-A, DEC-20260304-A, DEC-20260304-B, DEC-20260304-C) resolved atomically with ten source-qualified records"
     commit: 81d59db4

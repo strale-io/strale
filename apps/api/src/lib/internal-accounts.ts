@@ -87,9 +87,20 @@ export const INTERNAL_EMAIL_LIKE_PATTERNS = INTERNAL_EMAIL_SUFFIXES.map((s) => `
  * db.execute(sql\`\`) call.
  */
 export function internalAccountEmailExclusionSql(): SQL {
+  // `lower(email)` because `isInternalAccountEmail()` lowercases and Postgres
+  // LIKE/= on a `varchar` column does not. Without it the TypeScript predicate
+  // and this SQL disagree on any mixed-case address: `SYSTEM@STRALE.INTERNAL`
+  // is internal to one and a customer to the other. Found latent by review on
+  // 2026-09-04 — every `users.email` in production is currently lower-case and
+  // both auth write paths lower-case on insert, so the admitted set is
+  // unchanged today. It matters because the first writer that does not is
+  // silent: this predicate gates the quality floor, so a mixed-case internal
+  // account would start counting against capability completion rates and
+  // quarantining real inventory. Both patterns and extras are already
+  // lower-case at source, so only the column side needs folding.
   const conditions: SQL[] = [
-    ...INTERNAL_EMAIL_LIKE_PATTERNS.map((pattern) => sql`email LIKE ${pattern}`),
-    ...EXTRA_EXCLUDED_EMAILS.map((email) => sql`email = ${email}`),
+    ...INTERNAL_EMAIL_LIKE_PATTERNS.map((pattern) => sql`lower(email) LIKE ${pattern}`),
+    ...EXTRA_EXCLUDED_EMAILS.map((email) => sql`lower(email) = ${email}`),
   ];
   return sql.join(conditions, sql` OR `);
 }

@@ -9,16 +9,18 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-246 files (219 with a recorded intent, 27 without).
+249 files (222 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md) | resolve T10 gap G2 batch 3, seven historical decision-ID collisions |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-2-collisions.md) | resolve T10 gap G2 batch 2, six historical decision-ID collisions |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md`](_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md) | Resolve the five earliest historical ID collisions in the M2 closure |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md`](_general/from-code/2026-09-05-m2-batch-18-may-rows.md) | land T10 (M2 exit-gap closure) batch 18, the last thirteen Decision |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md`](_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md) | land T10 (M2 exit-gap closure) batch 17, twelve Decision rows from |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md`](_general/from-code/2026-09-05-m2-batch-16-march-second-half.md) | land T10 (M2 exit-gap closure) batch 16, twelve March 2026 |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-m2-batch-15-march-first-half.md`](_general/from-code/2026-09-05-m2-batch-15-march-first-half.md) | land T10 (M2 exit-gap closure) batch 15, fourteen March 2026 |
+| 2026-09-05 | [`handoff/_general/from-code/2026-09-05-checkin-morning.md`](_general/from-code/2026-09-05-checkin-morning.md) | run the daily operating session (DAILY-RUN.md steps A–E), and |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-brand-foundation-discovery.md`](_general/from-code/2026-09-05-brand-foundation-discovery.md) | understand Strale's product, commercial use, catalogue, positioning and design history before defining the founder's... |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t17-drizzle-upgrade.md`](_general/from-code/2026-09-04-t17-drizzle-upgrade.md) | Program track T17 / WP13 second batch (drizzle-orm 0.38.4 -> 0.45.2, semver-major) -- the |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md`](_general/from-code/2026-09-04-t10-g1-evidence-only-rule.md) | T10 batch 2 (M2 exit-gap closure). Apply the G1 evidence-only rule, DEC-20260904-A, to the closure register. |
@@ -38,6 +40,7 @@
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-free-api-capabilities-onboarded.md`](_general/from-code/2026-09-04-free-api-capabilities-onboarded.md) | Close the "not done" item of `2026-09-04-free-public-api-agent-capabilities.md` — the eight |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md`](_general/from-code/2026-09-04-codex-backlog-test-teardown-race.md) | Fix the intermittent CI teardown failure in `scripts/codex-backlog.test.mjs` |
 | 2026-09-04 | [`handoff/_general/from-code/2026-09-04-ci-docs-only-fast-path.md`](_general/from-code/2026-09-04-ci-docs-only-fast-path.md) | add a documentation-only fast path to `.github/workflows/ci.yml` so PRs |
+| 2026-09-04 | [`handoff/_general/from-code/2026-09-04-checkin-morning.md`](_general/from-code/2026-09-04-checkin-morning.md) | Run the 2026-09-04 morning operating session per docs/company/DAILY-RUN.md — |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-t17-hono-upgrade.md`](_general/from-code/2026-09-03-t17-hono-upgrade.md) | Program track T17 / WP13 first batch — upgrade `hono` in `apps/api` to close its 27 |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-handoff-gate-live-worktree.md`](_general/from-code/2026-09-03-handoff-gate-live-worktree.md) | stop the session-end gate instructing the destruction of live work, after it did so three times in one session. |
 | 2026-09-03 | [`handoff/_general/from-code/2026-09-03-founder-answers-retention-and-wp13-track.md`](_general/from-code/2026-09-03-founder-answers-retention-and-wp13-track.md) | record the founder's answers of 2026-09-03 on the dormant vendor keys, the decision briefs and DQ-28; fix the two def... |

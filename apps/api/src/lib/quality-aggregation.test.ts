@@ -52,7 +52,12 @@ describe("computeCapabilityQuality — recent_latency internal-account filter", 
     // not just capabilities/transactions.
     expect(built.sql).toContain("NOT IN");
     expect(built.sql).toMatch(/SELECT id FROM users WHERE/);
-    expect(built.sql).toContain("email LIKE");
+    // `lower(email)` since 2026-09-04 — the exclusion folds case so it agrees
+    // with isInternalAccountEmail(). Load-bearing precisely here: this predicate
+    // gates the quality floor, so an internal account the SQL failed to match
+    // would count against a capability's completion rate and could quarantine
+    // working inventory. Asserted on the folded form so removing the fold fails.
+    expect(built.sql).toContain("lower(email) LIKE");
 
     // Unaffected by this change — still gates avg/p95 on >= 5 samples.
     expect(built.sql).toContain("COUNT(*) >= 5");
