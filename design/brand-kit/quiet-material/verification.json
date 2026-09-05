@@ -1,8 +1,8 @@
 {
   "ok": true,
   "pages": 24,
-  "pdf_sha256": "691dfddb5ce6307c9985c1aa9d0b00abbd3b33ab8e961a99c23a98c9e6f4b58c",
-  "registry_sha256": "027415b0395f52965fab2fae07835831290dc00c77d129ae4b256b7746aad00d",
+  "pdf_sha256": "27703a95ab1d2dc9515cdcd6a02ff0d575f0368318ab560d7d9d4895d1428916",
+  "registry_sha256": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
   "tokens_sha256": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
   "builder_inputs": {
     "build.mjs": "8a2531bf914827a458d01525c032546eb043347c8017d75199fab8a938522e5e",
@@ -12,7 +12,7 @@
     "verify.py": "287ead96d0abe2fac03264e29ad60b746c554817c6f0f3b474f094d07a5108a6"
   },
   "render_inputs": {
-    "registry_sha256": "027415b0395f52965fab2fae07835831290dc00c77d129ae4b256b7746aad00d",
+    "registry_sha256": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
     "tokens_sha256": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
     "builder_inputs": {
       "build.mjs": "8a2531bf914827a458d01525c032546eb043347c8017d75199fab8a938522e5e",
@@ -21,16 +21,16 @@
       "verification.schema.json": "9df0baa978351dfce38fe0632ea2c2e3f7b98ed834e8690c7cbe488d2dcfd0d5",
       "verify.py": "287ead96d0abe2fac03264e29ad60b746c554817c6f0f3b474f094d07a5108a6"
     },
-    "pdf_sha256": "2cf8dd4897b689371b0af664c3a8a21aeb3cfc5d7321783a2fcd43a69b533232",
+    "pdf_sha256": "e1a7ca67b4b46cf5113bc2643c1a59df1b6c423894928d39f558d4ab0ba56bba",
     "sample_inputs": {
       "contrast-samples.json": "59ca638886c5d2fd4a3e0351a12b2059a19f411fd9da94811d468609c0aa79ae",
       "background-06.png": "af68d323a2a2f10e4224251f29b56993a9bcfd755f11e3949885bc7656da1551",
       "background-07.png": "0e1afbc5f83778217cabe0fe222f4cbce3cda8b594ab38467e374ac7a4898b24",
       "background-08.png": "cfafc13936c5cbd4a5b25e44f51525c437bd3566a81284515c8f1c5ad5b426cf",
-      "background-09.png": "1298de2f340d9ae26ab7fee2768da52cb9df3737168e54c12a41d56b9b58aff9",
-      "background-10.png": "6ff94fd069df13fdd4d281e60125b6975ff3250a9be5b27f0eee973753b27761",
-      "background-11.png": "ff1608756700b1fecb68bc36ef2435447b0a9a22fe13740f9b5b0fdd66ba2ae5",
-      "background-12.png": "99f2cfe612a64d12994ebf3b87d00d56f0f41c581e2d0de6b6d7339b2e843424",
+      "background-09.png": "d8c7247015119d81ebac59238ea4afbed31429b403b933fe3c73f248ef6fb151",
+      "background-10.png": "4497a1db24f571c1fa19e4b413595b14c5db6a08a4c0228342d4e02bd4fbfa99",
+      "background-11.png": "798ba6def4484a2ed70c9b6765e3553b196d7b7d3a3d0456e2e13c9a5b7c3b70",
+      "background-12.png": "dd4245b1546ce761d0afb2e0c073e0bb3afbeae6a96bb5d8d30b14ef86d42871",
       "background-13.png": "2b64c6fd634c741e8e95a6c62f4587e797001b9ee47e6dbfaa1a32d9211991e4",
       "background-14.png": "663ba8a6a41cf041391aac429b3b471935f35ad6b968434de8041b80faa7d6e4",
       "background-15.png": "088bd439cd6450ed3726c21ae67b996c6fde9fdc5f9403f7dedaba9576c60101",
@@ -41,8 +41,8 @@
       "background-21.png": "99345ac9ba57730ac6a075af19a413e48a7b9af1b0a14bb65f4a2e9f311cc4ef"
     }
   },
-  "pdf_bytes_before_deduplication": 51479615,
-  "pdf_bytes": 51420520,
+  "pdf_bytes_before_deduplication": 51479266,
+  "pdf_bytes": 51420171,
   "contrast_method": "WCAG relative luminance; minimum across all background pixels under each hidden text element bounding box, Chromium at device scale 1. All sampled text evaluated at 4.5:1, including headings.",
   "scope": "Exact catalogue material, card geometry and centre/cover crops only. Does not certify whole website, direct text on images, motion or arbitrary responsive layouts.",
   "sampled_text_elements": 200,

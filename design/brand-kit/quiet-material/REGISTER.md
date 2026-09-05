@@ -42,7 +42,7 @@ Keep the broad pearl sweep as the opening anchor. The narrow example is a compos
 
 ### Balanced
 
-Use solid off-white paper, anchored low. Let the folded image supply depth; do not add another gradient inside the card.
+Anchor off-white paper low. Let the folds supply depth; keep gradients outside the panel.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-balanced-v1.png`
 - SHA-256: `bdfaa7a1f5673fe7d369f0afcf627fec4740aa209746597e145cba4bc256030e`
@@ -55,7 +55,7 @@ Use solid off-white paper, anchored low. Let the folded image supply depth; do n
 
 ### Mineral / light
 
-Use Mineral for gentle process variation. Keep the paper neutral; the green in the artwork is decorative, not a success signal.
+Use for gentle process variation. Keep paper neutral; decorative green does not signal success.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-mineral-v1.png`
 - SHA-256: `83c78da37771c1699834fd5a3990ad7fe2ea6a40ad326a1282a914155a4c3406`
@@ -68,7 +68,7 @@ Use Mineral for gentle process variation. Keep the paper neutral; the green in t
 
 ### Cobalt / light
 
-Use Cobalt for light technical emphasis. Keep information on solid paper and leave the brightest fold visible above it.
+Use for light technical emphasis. Keep information on solid paper, with the bright fold visible above.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-cobalt-v1.png`
 - SHA-256: `cff9ae5cb32eca15966091ab7c2465089069f8dfbbd7045ffa89a4b6b173ef86`
@@ -81,7 +81,7 @@ Use Cobalt for light technical emphasis. Keep information on solid paper and lea
 
 ### Warm / light
 
-Use Warm for occasional editorial variation. The original image supplies the warmth; keep the reading panel neutral.
+Use for occasional editorial variation. Let the image supply warmth; keep the paper neutral.
 
 - File: `public/strale-site/design-system/assets/pattern-folded-warm-v1.png`
 - SHA-256: `1ea4dfb038a2d3c603b5fdf024614b337ca98ddce5b9aa71dea172d7956c6c9b`

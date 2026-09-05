@@ -13,3 +13,5 @@ Resume at `docs/programs/brand-website/SYSTEM-COMPLETION.md`: review revised com
 Append-only legacy Journal correction: https://www.notion.so/3d267c87082c811a8ecbc99b6d87ae24. The working brand plan and current rules remain in the repository. Foreign worktrees, including the active M2 review work, were not modified.
 
 Full-document visual inspection: reviewed all catalogue pages. Corrected inconsistent gradient grouping (now five expressive/four quieter in both views), generic light-family guidance, variable specimen start positions, raw reading-surface labels, understated candidate status and ambiguous narrow hero qualification. Amber now demonstrates copy outside the image, and the PDF has page bookmarks. Evidence: `archive/receipts/2026-09-05-check-quiet-material-document-polish.json`. No additional source-artwork changes were needed. Remaining typography, identity variants, controls and channel layouts stay in the completion plan.
+
+Final copy polish removes short orphaned lines from four light-family introductions. Final artifact evidence: archive/receipts/2026-09-05-check-quiet-material-final-copy.json.
