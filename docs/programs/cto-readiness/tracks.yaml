@@ -275,22 +275,21 @@ tracks:
     depends_on: [T1]
     owner: session
     next_action: >
-      Batches 1 to 18 done (PRs #500, #503, #509, #511, #513, #515, #517,
-      #521, #524, #526, #529, #532, #537, #539, #542, #544, #547, #549,
-      #551). Batch 18 migrated the last thirteen G1 rows, the May 2026
-      operating decisions (DEC-20260505-A to DEC-20260513-D); G1 is closed
-      in this bookkeeping batch (blocking: false, text rewritten as
-      resolved). Private projection 11 rows at archive
-      148808fd; operator verifier passes. Blocking gaps: G2 (34
-      collisions across 69 rows) and G9 (the closing independent review of
-      the full candidate set). Next: G2, one collision at a time, each
-      resolved atomically with source evidence and an independent review,
-      or given an evidence-backed documented_only disposition; start with
-      the collisions whose rows are both historically active, and record
-      the method in a brief before the first one. Then G9. This track is
-      the M2 exit gate: the closure register's validator refuses a state
-      where it is done, or any post-m2 track is active or done, while a
-      blocking gap remains.
+      G1 closed (PR #552). G2 batch 1 done (PR #553): five ID collisions
+      resolved atomically (DEC-20260225-P-c5d6, DEC-20260303-A,
+      DEC-20260304-A, DEC-20260304-B, DEC-20260304-C), each row given a
+      source-qualified record (--notion-<page id>) or an evidence-backed
+      documented_only disposition, with one resolution report per
+      collision under archive/sessions/. Method:
+      archive/sessions/2026-09-01-decision-collision-identity-plan.md and
+      the DEC-20260502-A worked example; the operator verifier passes.
+      Blocking gaps: G2 (29 collisions remain) and G9. Next: G2 batch 2,
+      the March 2026 collisions (DEC-20260320-C, DEC-20260320-J,
+      DEC-20260320-K) and the April ones through DEC-20260406-C, then the
+      April 20 to 21 group, then the May group, then G9's closing review.
+      This track is the M2 exit gate: the closure register's validator
+      refuses a state where it is done, or any post-m2 track is active or
+      done, while a blocking gap remains.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -447,6 +446,12 @@ tracks:
       - docs/decisions/records/DEC-20260513-C.md
       - docs/decisions/records/DEC-20260513-D.md
       - handoff/_general/from-code/2026-09-05-m2-batch-18-may-rows.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260225-P-c5d6.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260303-A.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-A.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-B.md
+      - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260304-C.md
+      - handoff/_general/from-code/2026-09-05-m2-g2-batch-1-collisions.md
 
   - id: T6
     title: M3 repo-native workflows

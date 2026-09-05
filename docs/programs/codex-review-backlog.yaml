@@ -41,6 +41,28 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-27
+    subject: "PR #553 — M2 G2 batch 1: five ID collisions (DEC-20260225-P-c5d6, DEC-20260303-A, DEC-20260304-A, DEC-20260304-B, DEC-20260304-C) resolved atomically with ten source-qualified records"
+    commit: 81d59db4
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The first collision resolutions after the DEC-20260502-A worked
+      example. Each resolution is irreversible history (the registry's
+      merge-base rules refuse a regression), so whether each row's
+      disposition is justified by its own source text, whether the
+      source-qualified keys map one-to-one, and whether the resolution
+      reports' implementation reconciliation is traced to code are the
+      Codex judgements.
+    what_to_attack: >
+      Each of the ten records against its Notion row (by page id, parsed);
+      each registry entry against the report and the register rows; every
+      bare collided id in existing records and prose; the register
+      arithmetic (unresolved_collision minus ten, formally_migrated plus
+      ten) and the recomputed scope_date_digest via
+      scripts/m2-closure-verify-private-rows.mjs.
+    claude_verdicts: 1 round (see PR body)
   - id: CX-26
     subject: "PR #551 — M2 batch 18: thirteen May 2026 decisions (DEC-20260505-A/B/C, DEC-20260507-I/J, DEC-20260510-A, DEC-20260511-B/E/F, DEC-20260513-A/B/C/D) migrated to formal candidate records; G1 closed"
     commit: 6832cccb
