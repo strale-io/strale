@@ -135,6 +135,113 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Measured 2026-09-05 — the largest customer brought us a new workload, we
+  refused 82% of it in a single day, and they have not come back to it since.**
+  On **2026-08-24** the wallet behind ~€175 of the last 30 days' revenue ran
+  **195 `german-company-data` calls**. 36 completed; **159 were refused**. Every
+  refused query is a German insurance broker by name — "Beckmann
+  Versicherungsmakler GmbH", "Assekuranz Stahl GmbH", "Martens & Prahl" — so
+  this is one buyer working a list, not scattered traffic. In the twelve days
+  since: **zero German calls**, while the same wallet keeps buying 160–320 calls
+  a day of everything else. `german-company-data` is the **only** thing in their
+  basket that fails: email-validate 1631/1631, google-search 297/297,
+  keyword-suggest 204/204, startup-domain-check 159/159, image-to-text 92%,
+  german-company-data **18%**.
+
+  **Nobody was charged for the refusals.** Revenue is `status = 'completed'`
+  only, so the €7.95 of list price attached to those 159 rows is *demand we
+  declined to serve*, not money taken — four times the €1.85 we actually earned
+  on the 37 we answered.
+
+  **The refusals are correct and must not be weakened.** `pickByName` refuses
+  when two distinct German registrations tie at the same confidence, because
+  "Otto GmbH" and "Otto GmbH & Co KG" are separate legal entities with separate
+  liability, and silently returning one is the #161 wrong-company class that
+  FI/NO/EE/CH were already fixed for. For a KYB product, returning the wrong
+  entity is worse than returning nothing. Trust is the product.
+
+  **What is actually broken is the shape of the refusal, not the decision to
+  refuse.** The candidates already exist — `pickByName` lists up to four of them,
+  with register type, register number and company_id — and then embeds them in
+  the prose of a thrown `Error`. An agent buyer cannot act on an English
+  sentence. The same information returned as structured candidates would turn
+  "we refused" into "here are your two options, call again with this id", which
+  the caller's own agent can resolve on the next request without a human.
+  That is the highest-value open product change we have: it is pointed at the
+  one buyer who already pays us most, it costs no trust, and the evidence for
+  it is a measured workload rather than a guess.
+
+  *Sequencing note:* this cannot be verified end-to-end until **2026-09-06
+  23:40Z**, when OpenRegister's free allowance resets — see the next entry. The
+  refusal logic itself is a pure function of (query, results) and is unit-
+  testable today; only the live path has to wait.
+
+- **Measured 2026-09-05 — the largest category of "failure" against real
+  customers is us correctly declining to answer, and nothing measures it.**
+  Every external capability with **≥20 real calls in 30 days and under 75%
+  completion** — the whole list, not a sample:
+
+  | capability | external calls | completed | declined, at list price |
+  |---|---|---|---|
+  | `german-company-data` | 196 | 19% | €7.95 |
+  | `product-reviews-extract` | 25 | 8% | €5.75 |
+  | `brazilian-company-data` | 33 | 64% | €0.60 |
+  | `url-to-text` | 49 | 71% | €0.28 |
+
+  **€14.58 of declined demand in 30 days**, against €252.87 of external
+  revenue in the same window — so about one euro refused for every seventeen
+  earned. And on inspection **not one of these is a defect**:
+  `german-company-data` refuses ambiguous entity matches (above);
+  `product-reviews-extract` refuses Trustpilot **14 times** because its Terms of
+  Service prohibit automated access, which is DEC-20260428-A working exactly as
+  written, plus 404s and 403s that are the caller's URLs and someone else's bot
+  protection. Nothing here is owed a bug fix.
+
+  **The finding is the missing instrument, not the capabilities.** Completion
+  percentage — the number the quality floor acts on, and the number a trust
+  surface displays — cannot tell "we broke" from "we declined". It scored a
+  correct ToS refusal, a correct ambiguity refusal and a caller's 404 the same
+  way, and on `german-company-data` that arithmetic reached 21% and produced a
+  deactivation proposal against a capability doing precisely what it was built
+  to do. The burst guard is what stopped it, and a burst guard is a timing
+  accident, not a semantics fix.
+
+  Two things follow, and they point in opposite directions, which is why they
+  need separating rather than averaging. A refusal is **not** a quality signal
+  and must stop being counted as one. A refusal **is** a demand signal, and a
+  good one: 14 requests for Trustpilot is a customer telling us which review
+  source they want, and the answer is a licensed one, never a doctrine
+  exception. We currently throw both signals away in the same subtraction.
+
+- **Measured 2026-09-05 — German company data is suspended until 2026-09-06,
+  and both automatic mechanisms behaved correctly.** OpenRegister reads
+  **0/500 credits** with no overage on its free plan; the vendor tower
+  auto-suspended `german-company-data` and the three German bundles
+  (`invoice-verify-de`, `kyb-complete-de`, `kyb-essentials-de`) on **2026-08-25
+  16:07Z**, "until OpenRegister reports usable credits", observed reset
+  **2026-09-06T23:40Z**. It restores itself; nothing is owed.
+
+  **Correction to the obvious hypothesis, which was mine and was wrong.** The
+  capability shows `x402_enabled = false`, and the natural read — given that
+  this repository has a tracked family for exactly it — is that the quality
+  floor delisted a capability for refusing bad input. **It did not.** The floor
+  evaluated it in `enforce` mode on 2026-08-24 and again on 2026-08-25 and both
+  times recorded `flagged_only`, `quarantined: []`, with the reason "completion
+  21% on 179 eligible calls/30d, but counted failures span only 1 day(s) (< 2) —
+  burst, not a trend; deferred". The burst guard is there for precisely this
+  shape and it held. The delisting is the **vendor suspension**, and that is
+  correct too — a capability whose upstream has no credits should not be sold.
+
+  Worth keeping because the wrong version is more memorable than the right one:
+  a capability can be off the paid rail for a reason that has nothing to do with
+  its quality, and `x402_enabled = false` alone does not say which. The
+  distinguishing evidence is in `health_monitor_events`, not in the flag.
+
+  *Also worth noting on causation:* the customer's last German attempt was
+  **2026-08-24**, and the suspension landed **2026-08-25**. They stopped
+  before we turned it off. The suspension did not cost us this workload; the
+  18% success rate did.
+
 - **Measured 2026-09-04 — the card customer's silence is now seven days, and a
   day-by-day payer series says it is not a measurement artefact.** Every day
   from 2026-08-22 to 2026-09-03 was resolved to its payers through

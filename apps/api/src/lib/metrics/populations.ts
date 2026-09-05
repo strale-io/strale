@@ -15,11 +15,31 @@ import {
   isInternalAccountEmail,
 } from "../internal-accounts.js";
 
-/** Excludes our own accounts. ~98% of platform traffic is the test harness. */
+/**
+ * Excludes traffic that is ours. ~98% of platform traffic is the test harness.
+ *
+ * Two things are ours, not one. The obvious one is an internal account. The
+ * other is `status = 'health_probe'` — 507 rows written by our own server as a
+ * database liveness check (`app.ts`, `solution_slug = '_health_probe'`), every
+ * one of them with no user, no price and no payer. They are not executions and
+ * the repository already knew it in two places (`rail-coverage.test.ts` calls
+ * them "not an execution of anything"; `integrity-hash-retry.ts` allowlists
+ * them out of the audit chain) — but this predicate did not, so a row-counting
+ * consumer treated them as anonymous customers. Revenue consumers never saw it
+ * because they all filter `status = 'completed'`; `identityCoverage()` counts
+ * rows and did. Found by independent review of PR #507, 2026-09-05.
+ */
 export function externalCustomers(alias = "t"): SQL {
   const a = sql.raw(alias);
-  return sql`(${a}.user_id IS NULL OR ${a}.user_id NOT IN (${internalUserIds()}))`;
+  return sql`(${a}.status <> ${HEALTH_PROBE_STATUS}
+    AND (${a}.user_id IS NULL OR ${a}.user_id NOT IN (${internalUserIds()})))`;
 }
+
+/**
+ * Our own database-liveness row. Not an execution, not a caller, not a customer.
+ * Named once so the partition and the filter cannot disagree about it.
+ */
+export const HEALTH_PROBE_STATUS = "health_probe";
 
 /**
  * The set of our own accounts, as a subquery. Extracted so `externalCustomers`
@@ -58,11 +78,25 @@ export function internalUserIds(): SQL {
  * is also the default, an opt-in guard is a convention, not a guard.
  *
  * The classes are exhaustive and mutually exclusive:
- *   `harness`   — one of our own accounts (the suffix rule in internal-accounts).
+ *   `harness`   — ours. One of our own accounts (the suffix rule in
+ *                 internal-accounts), or one of our own `health_probe` rows.
  *   `account`   — a registered, non-internal user. A real customer.
- *   `anonymous` — no user at all. On this platform that is the x402 rail, which
- *                 is where nearly all revenue arrives, so it is emphatically
- *                 NOT "unattributed noise".
+ *   `x402`      — no account, but a wallet paid. Where nearly all revenue
+ *                 arrives, and emphatically NOT "unattributed noise".
+ *   `anonymous` — no account and no payment: free-tier, progressive-unlock and
+ *                 the website demo. A caller, not necessarily a customer.
+ *
+ * The last two were one class until 2026-09-05, labelled "anonymous (x402)",
+ * and the label was wrong: `do.ts` says in terms that a null `user_id` serves
+ * *three* cases, and over 30 days 59 of those rows were free-tier calls with no
+ * wallet behind them — Deno and curl user agents, and browser hits refered from
+ * the website. Folding a crawler's failed free-tier calls into "N customer
+ * call(s)" is the same misreading this module exists to prevent, one level
+ * down. `x402_payer_hash` is indexed, so the split costs nothing.
+ *
+ * `health_probe` is checked FIRST and independently of `user_id`, because those
+ * rows carry no user and would otherwise land in `anonymous` — which is exactly
+ * how they were being printed as failing customer calls.
  *
  * `account` + `anonymous` is exactly the population `externalCustomers()`
  * admits, and `harness` is exactly the population it excludes — by
@@ -70,9 +104,12 @@ export function internalUserIds(): SQL {
  * `internalAccountEmailExclusionSql()`. `populations.test.ts` renders both
  * through the Postgres dialect and fails if the two ever stop agreeing.
  */
-export type CallerClass = "harness" | "account" | "anonymous";
+export type CallerClass = "harness" | "account" | "x402" | "anonymous";
 
-export const CALLER_CLASSES: readonly CallerClass[] = ["harness", "account", "anonymous"];
+export const CALLER_CLASSES: readonly CallerClass[] = ["harness", "account", "x402", "anonymous"];
+
+/** The classes that are somebody other than us. `harness` is the complement. */
+export const EXTERNAL_CALLER_CLASSES: readonly CallerClass[] = ["account", "x402", "anonymous"];
 
 /**
  * SQL classifying a `transactions` row. Needs no join — the internal-account
@@ -81,6 +118,8 @@ export const CALLER_CLASSES: readonly CallerClass[] = ["harness", "account", "an
 export function callerClassSql(alias = "t"): SQL {
   const a = sql.raw(alias);
   return sql`(CASE
+    WHEN ${a}.status = ${HEALTH_PROBE_STATUS} THEN 'harness'
+    WHEN ${a}.user_id IS NULL AND ${a}.x402_payer_hash IS NOT NULL THEN 'x402'
     WHEN ${a}.user_id IS NULL THEN 'anonymous'
     WHEN ${a}.user_id IN (${internalUserIds()}) THEN 'harness'
     ELSE 'account' END)`;
@@ -91,9 +130,20 @@ export function callerClassSql(alias = "t"): SQL {
  * `hasUser` is false when `user_id` is null — passing an email of `null` for a
  * row that *does* have a user id would otherwise be indistinguishable from an
  * anonymous row, and that conflation is the whole point of the type.
+ *
+ * `row` carries the two fields the SQL branches on before it looks at the user.
+ * They are optional so existing callers keep compiling, and both default to the
+ * shape of an ordinary execution — a defaulting that is safe in one direction
+ * only: omitting `status` can misclassify one of our probes as a caller, never
+ * a caller as ours. `populations.test.ts` pins both branches against the SQL.
  */
-export function callerClass(email: string | null | undefined, hasUser: boolean): CallerClass {
-  if (!hasUser) return "anonymous";
+export function callerClass(
+  email: string | null | undefined,
+  hasUser: boolean,
+  row: { status?: string | null; hasX402Payer?: boolean } = {},
+): CallerClass {
+  if (row.status === HEALTH_PROBE_STATUS) return "harness";
+  if (!hasUser) return row.hasX402Payer ? "x402" : "anonymous";
   return isInternalAccountEmail(email) ? "harness" : "account";
 }
 

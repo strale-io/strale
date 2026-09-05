@@ -25,6 +25,8 @@ import {
   callerClass,
   callerClassSql,
   CALLER_CLASSES,
+  EXTERNAL_CALLER_CLASSES,
+  HEALTH_PROBE_STATUS,
 } from "./populations.js";
 import {
   INTERNAL_EMAIL_SUFFIXES,
@@ -35,19 +37,38 @@ import {
 const dialect = new PgDialect();
 const render = (tag: ReturnType<typeof externalCustomers>) => dialect.sqlToQuery(tag);
 
+/**
+ * Bind placeholders are numbered by position in the whole statement, so adding
+ * one parameter ahead of the internal-identity subquery renumbers every
+ * placeholder inside it and a literal substring match breaks even though the
+ * subquery is byte-identical. That is exactly what adding the `health_probe`
+ * bind did. Normalising the numbering keeps this checking the thing it was
+ * written to check — that both expressions embed the SAME subquery — instead of
+ * incidentally checking where its parameters happen to sit.
+ */
+const anonymisePlaceholders = (sqlText: string) => sqlText.replace(/\$\d+/g, "$?");
+
+/** True when `needle` appears inside `haystack` in order, as a run. */
+const containsRun = <T,>(haystack: readonly T[], needle: readonly T[]) =>
+  needle.length === 0 ||
+  haystack.some((_, i) => needle.every((v, j) => haystack[i + j] === v));
+
 describe("the partition and the filter cannot drift apart", () => {
   it("both express 'ours' with the identical subquery and the identical binds", () => {
     const subquery = render(internalUserIds());
     const filter = render(externalCustomers("t"));
     const partition = render(callerClassSql("t"));
 
-    // Same text, embedded in both.
-    expect(filter.sql).toContain(subquery.sql);
-    expect(partition.sql).toContain(subquery.sql);
-    // Same binds, in the same order — a matching string with different
-    // parameters would classify different accounts as ours.
-    expect(filter.params).toEqual(subquery.params);
-    expect(partition.params).toEqual(subquery.params);
+    // Same text, embedded in both (modulo bind numbering — see the helper).
+    expect(anonymisePlaceholders(filter.sql)).toContain(anonymisePlaceholders(subquery.sql));
+    expect(anonymisePlaceholders(partition.sql)).toContain(anonymisePlaceholders(subquery.sql));
+    // Same binds, contiguous and in the same order — a matching string with
+    // different parameters would classify different accounts as ours. Both
+    // expressions now carry a `health_probe` bind ahead of the subquery, so
+    // this is a run-match rather than whole-list equality; reordering or
+    // dropping any identity bind still fails.
+    expect(containsRun(filter.params, subquery.params)).toBe(true);
+    expect(containsRun(partition.params, subquery.params)).toBe(true);
   });
 
   it("the filter admits exactly the two non-harness classes", () => {
@@ -135,7 +156,83 @@ describe("callerClass — the TypeScript twin", () => {
     }
   });
 
-  it("names all three classes and nothing else", () => {
-    expect([...CALLER_CLASSES].sort()).toEqual(["account", "anonymous", "harness"]);
+  it("names all four classes and nothing else", () => {
+    expect([...CALLER_CLASSES].sort()).toEqual(["account", "anonymous", "harness", "x402"]);
+  });
+
+  it("the external classes are exactly the classes that are not us", () => {
+    expect([...EXTERNAL_CALLER_CLASSES].sort()).toEqual(["account", "anonymous", "x402"]);
+    expect(EXTERNAL_CALLER_CLASSES).not.toContain("harness");
+    // Every class is either ours or theirs; nothing is unclassified.
+    expect([...EXTERNAL_CALLER_CLASSES, "harness"].sort()).toEqual([...CALLER_CLASSES].sort());
+  });
+});
+
+/**
+ * Our own database-liveness rows, which were being printed as failing customers.
+ *
+ * Found by independent review of PR #507 on 2026-09-05, and measured against
+ * production: `who-called --failing --days 20` reported "78 customer call(s),
+ * of which 78 failed" for solution-less rows. 77 of the 78 were
+ * `status = 'health_probe'` — the platform pinging its own database, written
+ * with no user, no price and no payer. They classified as `anonymous` because
+ * that branch only asked whether `user_id` was null, which for a probe it is.
+ *
+ * 507 such rows are permanently in `transactions` (2026-04-16 → 2026-08-21).
+ * They cannot be deleted — they are in the audit chain — so any window reaching
+ * back before 2026-08-21 contains them, and the tool exists to answer exactly
+ * those long-window questions.
+ *
+ * Each assertion below fails against the un-fixed code: with the probe branch
+ * removed, the SQL loses its first WHEN, `callerClass` returns "anonymous", and
+ * `externalCustomers` stops naming the status at all. Verified by removing it.
+ */
+describe("our own health probes are ours, not anonymous customers", () => {
+  it("the partition classifies a health_probe row as harness, before it looks at the user", () => {
+    const partition = render(callerClassSql("t")).sql;
+    expect(partition).toContain("t.status = $1 THEN 'harness'");
+    // Order matters and is the whole bug: a probe carries no user, so an
+    // earlier `user_id IS NULL` branch would claim it first.
+    expect(partition.indexOf("THEN 'harness'")).toBeLessThan(partition.indexOf("t.user_id IS NULL"));
+    expect(render(callerClassSql("t")).params[0]).toBe(HEALTH_PROBE_STATUS);
+  });
+
+  it("the TypeScript twin agrees, including for a probe with no user", () => {
+    expect(callerClass(null, false, { status: HEALTH_PROBE_STATUS })).toBe("harness");
+    // and the status wins over a payer hash, which no real probe carries but
+    // which must not be able to promote one into the paying population.
+    expect(callerClass(null, false, { status: HEALTH_PROBE_STATUS, hasX402Payer: true })).toBe("harness");
+  });
+
+  it("the filter excludes them too — revenue never saw this, row counts did", () => {
+    const filter = render(externalCustomers("t"));
+    expect(filter.sql).toContain("t.status <> $1");
+    expect(filter.params[0]).toBe(HEALTH_PROBE_STATUS);
+  });
+});
+
+/**
+ * `anonymous` meant "the x402 rail" and did not.
+ *
+ * `do.ts` serves three anonymous cases — free tier, progressive unlock, and an
+ * X-Payment call — and over 30 days 59 anonymous rows had no wallet behind them
+ * at all: Deno and curl user agents, and browser hits refered from the website.
+ * Counting a crawler's failed free-tier calls as "customer calls" is the same
+ * misreading this module exists to prevent, one level down.
+ */
+describe("paying anonymous callers are separated from free-tier ones", () => {
+  it("the partition splits on the payer hash, and only for rows with no user", () => {
+    const partition = render(callerClassSql("t")).sql;
+    expect(partition).toContain("t.user_id IS NULL AND t.x402_payer_hash IS NOT NULL THEN 'x402'");
+    // The unpaid branch must come after, or every anonymous row is 'anonymous'.
+    expect(partition.indexOf("THEN 'x402'")).toBeLessThan(partition.indexOf("THEN 'anonymous'"));
+  });
+
+  it("the TypeScript twin splits the same way", () => {
+    expect(callerClass(null, false, { hasX402Payer: true })).toBe("x402");
+    expect(callerClass(null, false, { hasX402Payer: false })).toBe("anonymous");
+    expect(callerClass(null, false)).toBe("anonymous");
+    // A registered user is never reclassified by a payer hash.
+    expect(callerClass("provider@dlgt.io", true, { hasX402Payer: true })).toBe("account");
   });
 });

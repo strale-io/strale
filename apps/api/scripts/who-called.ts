@@ -34,7 +34,10 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { openOperatorDrizzle } from "../src/lib/operator-db.js";
-import { callerClassSql, CALLER_CLASSES, type CallerClass } from "../src/lib/metrics/populations.js";
+import {
+  callerClassSql, CALLER_CLASSES, EXTERNAL_CALLER_CLASSES, HEALTH_PROBE_STATUS,
+  type CallerClass,
+} from "../src/lib/metrics/populations.js";
 
 // The operator handle reads DATABASE_URL when it is opened, and unlike the
 // application pool it loads no environment of its own. Without this the script
@@ -67,12 +70,35 @@ if (!Number.isFinite(days) || days <= 0) {
 
 type Row = { slug: string | null; klass: CallerClass; status: string; n: number; err: string | null };
 
+/**
+ * Printed even at zero, so a class that is empty is something you read past
+ * rather than something you have to remember to ask for.
+ *
+ * `anonymous` was labelled "(x402)" until 2026-09-05. It is not: a null user
+ * also covers free-tier and progressive-unlock calls, and over 30 days 59 of
+ * them had no wallet at all. The wallet calls are now their own class.
+ */
+const LABELS: Record<CallerClass, string> = {
+  harness: "harness   (ours)",
+  account: "account   (registered)",
+  x402: "x402      (wallet paid)",
+  anonymous: "anonymous (no account)",
+};
+
 async function main() {
   const db = openOperatorDrizzle();
   const since = sql`now() - (${String(days)} || ' days')::interval`;
   const slugFilter = slug ? sql` AND c.slug = ${slug}` : sql``;
   const errFilter = errorLike ? sql` AND t.error ILIKE ${`%${errorLike}%`}` : sql``;
-  const failingOnly = has("failing") ? sql` AND t.status <> 'completed'` : sql``;
+  // Named, not "everything that is not completed". That denylist swept in our
+  // own `health_probe` rows — 77 of the 78 "failing customer calls" this tool
+  // printed over a 20-day window were the platform pinging its own database.
+  // They are classified `harness` now, so this is belt and braces; it also
+  // keeps `pending`/`executing` (a call still in flight) out of the failed
+  // column, which the denylist would have counted as a failure the moment one
+  // existed. Found by independent review of PR #507.
+  const failingOnly = has("failing") ? sql` AND t.status = 'failed'` : sql``;
+  const noProbes = sql` AND t.status <> ${HEALTH_PROBE_STATUS}`;
 
   const res: any = await db.execute(sql`
     SELECT c.slug AS slug,
@@ -82,7 +108,7 @@ async function main() {
            ${showErrors ? sql`left(t.error, 110)` : sql`NULL::text`} AS err
       FROM transactions t
       LEFT JOIN capabilities c ON c.id = t.capability_id
-     WHERE t.created_at >= ${since}${slugFilter}${errFilter}${failingOnly}
+     WHERE t.created_at >= ${since}${noProbes}${slugFilter}${errFilter}${failingOnly}
      GROUP BY 1, 2, 3, 5
      ORDER BY 1, 2, 4 DESC`);
   const rows: Row[] = (res.rows ?? res) as Row[];
@@ -108,7 +134,7 @@ async function main() {
       const ok = mine.filter((r) => r.status === "completed").reduce((s, r) => s + r.n, 0);
       // Printed even at zero. A class that vanishes when empty is how "13
       // calls" gets read as "13 customers".
-      const label = klass === "harness" ? "harness   (ours)" : klass === "account" ? "account   (registered)" : "anonymous (x402)";
+      const label = LABELS[klass];
       console.log(`    ${label.padEnd(24)} ${String(n).padStart(5)}   completed ${String(ok).padStart(5)}   failed ${String(n - ok).padStart(5)}`);
       if (!showErrors) continue;
       for (const r of mine.filter((x) => x.status !== "completed" && x.err)) {
@@ -121,17 +147,39 @@ async function main() {
     // "13 calls" being read as "13 customers affected" is the one line that
     // reads exactly that way. Impact is the failed half; the completed half is
     // ordinary business. Caught by review, 2026-09-04.
-    const ext = group.filter((r) => r.klass !== "harness");
-    const extAll = ext.reduce((s, r) => s + r.n, 0);
-    const extOk = ext.filter((r) => r.status === "completed").reduce((s, r) => s + r.n, 0);
-    const extBad = extAll - extOk;
-    console.log(
-      extAll === 0
-        ? "    → no customer call reached this at all in this window\n"
-        : extBad === 0
-          ? `    → ${extAll} customer call(s), NONE of which failed\n`
-          : `    → ${extAll} customer call(s), of which ${extBad} failed\n`,
-    );
+    //
+    // Second correction, 2026-09-05: "customer" is a claim about who called,
+    // and this line was making it for every non-harness row. Two of those
+    // classes are people who paid us (`account`, `x402`); the third is anybody
+    // at all with a free-tier call, including the crawlers `categorise()`
+    // exists to keep out of demand figures. They are counted and named
+    // separately now, and nothing disappears — the free half is still printed.
+    const ext = group.filter((r) => EXTERNAL_CALLER_CLASSES.includes(r.klass));
+    const paidRows = group.filter((r) => r.klass === "account" || r.klass === "x402");
+    const tally = (rs: Row[]) => {
+      const all = rs.reduce((acc, r) => acc + r.n, 0);
+      const ok = rs.filter((r) => r.status === "completed").reduce((acc, r) => acc + r.n, 0);
+      return { all, bad: all - ok };
+    };
+    const e = tally(ext);
+    const paid = tally(paidRows);
+    const free = { all: e.all - paid.all, bad: e.bad - paid.bad };
+    if (e.all === 0) {
+      console.log("    → nobody outside our own harness reached this in this window\n");
+    } else {
+      const paidLine =
+        paid.all === 0
+          ? "no call from a paying caller"
+          : paid.bad === 0
+            ? `${paid.all} paying call(s), NONE of which failed`
+            : `${paid.all} paying call(s), of which ${paid.bad} failed`;
+      const freeLine =
+        free.all === 0
+          ? ""
+          : `; plus ${free.all} anonymous free-tier call(s)` +
+            `${free.bad ? `, ${free.bad} failed` : ""} — callers, not necessarily customers`;
+      console.log(`    → ${paidLine}${freeLine}\n`);
+    }
   }
 }
 
