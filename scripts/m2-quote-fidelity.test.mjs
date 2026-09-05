@@ -411,3 +411,199 @@ test("normalize() strips punctuation, case, and the declared symbol set identica
   assert.equal(normalize("go → there"), normalize("go -> there"));
   assert.equal(normalize("a … b"), normalize("a ... b"));
 });
+
+// ---------------------------------------------------------------------------
+// Reported line numbers are file-relative (the front-matter offset must be
+// added back in, not dropped).
+// ---------------------------------------------------------------------------
+
+test("a residual's reported line number is the file line, not the body-relative line", () => {
+  withTempDir((root) => {
+    const recordsDir = join(root, "docs/decisions/records");
+    mkdirSync(recordsDir, { recursive: true });
+    const quote = "this exact quote appears nowhere else in any candidate source for this check";
+    const target = record({
+      id: "DEC-LINE-A",
+      body: `Some lead-in text before the quote.\n\n"${quote}" trailing text after it.`,
+    });
+    writeFileSync(join(recordsDir, "DEC-LINE-A.md"), target.content);
+    const quoteOffset = target.content.indexOf(quote);
+    const expectedFileLine = target.content.slice(0, quoteOffset).split("\n").length;
+    const report = runFidelityCheck({
+      root,
+      records: "docs/decisions/records",
+      export: null,
+      frontend: null,
+      only: ["DEC-LINE-A.md"],
+      minChars: 25,
+    });
+    assert.equal(report.totals.residual, 1);
+    assert.equal(report.perRecord[0].residual[0].line, expectedFileLine);
+    // A body-relative count would under-report by exactly the front-matter's
+    // line span; confirm the two are not equal (guards a silent revert).
+    assert.notEqual(report.perRecord[0].residual[0].line, quote.split("\n").length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// New source class: commit messages (finding 1). A sha or full GitHub
+// commit URL mentioned near a quote makes that commit's own message a
+// candidate source.
+// ---------------------------------------------------------------------------
+
+test("a quote present only in a referenced commit's message is found through that source", () => {
+  withTempDir((root) => {
+    execFileSync("git", ["init", "-q", root]);
+    execFileSync("git", ["-C", root, "config", "user.email", "test@example.com"]);
+    execFileSync("git", ["-C", root, "config", "user.name", "Test Author"]);
+    writeFileSync(join(root, "seed.txt"), "seed content");
+    execFileSync("git", ["-C", root, "add", "seed.txt"]);
+    const commitMessageText =
+      "the wallet debit path now locks the row before checking the spend cap for every request";
+    execFileSync("git", ["-C", root, "commit", "-q", "-m", commitMessageText]);
+    const sha = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+
+    const recordsDir = join(root, "docs/decisions/records");
+    mkdirSync(recordsDir, { recursive: true });
+    const target = record({
+      id: "DEC-COMMIT-A",
+      body: `The commit ${sha} states: "${commitMessageText}" verbatim, per its own message.`,
+    });
+    writeFileSync(join(recordsDir, "DEC-COMMIT-A.md"), target.content);
+
+    const report = runFidelityCheck({
+      root,
+      records: "docs/decisions/records",
+      export: null,
+      frontend: null,
+      only: ["DEC-COMMIT-A.md"],
+      minChars: 25,
+    });
+    assert.equal(report.totals.spans, 1);
+    assert.equal(report.totals.faithful, 1);
+  });
+});
+
+test("a quote matching a commit message is NOT found when the sha does not exist in the repo", () => {
+  withTempDir((root) => {
+    execFileSync("git", ["init", "-q", root]);
+    const recordsDir = join(root, "docs/decisions/records");
+    mkdirSync(recordsDir, { recursive: true });
+    const target = record({
+      id: "DEC-COMMIT-B",
+      body:
+        'The commit deadbeefdeadbeefdeadbeefdeadbeefdeadbeef states: ' +
+        '"this text does not exist in any commit that is actually reachable here" per its message.',
+    });
+    writeFileSync(join(recordsDir, "DEC-COMMIT-B.md"), target.content);
+    const report = runFidelityCheck({
+      root,
+      records: "docs/decisions/records",
+      export: null,
+      frontend: null,
+      only: ["DEC-COMMIT-B.md"],
+      minChars: 25,
+    });
+    assert.equal(report.totals.residual, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// New source class: another record's own Notion row (finding 2). Explicitly
+// naming another record's key makes THAT record's own row fields a
+// candidate source, distinct from that record's markdown body.
+// ---------------------------------------------------------------------------
+
+test("a quote present only in another record's own Notion row (not its markdown body) is found by naming that record", () => {
+  withTempDir((root) => {
+    const recordsDir = join(root, "docs/decisions/records");
+    mkdirSync(recordsDir, { recursive: true });
+    const otherPageId = "2222333344445555666677778888999a";
+    const exportPath = join(root, "export.txt");
+    writeFileSync(
+      exportPath,
+      makeExport([
+        {
+          id: otherPageId,
+          url: `https://app.notion.com/${otherPageId}`,
+          "userDefined:ID": "DEC-OTHER-ROW",
+          Rationale: "the founder chose a slower rollout to avoid a repeat of the march incident",
+        },
+      ])
+    );
+    const other = record({
+      id: "DEC-OTHER-ROW",
+      evidence: [`https://app.notion.com/${otherPageId}`],
+      body: "This record's own markdown body never repeats the row's Rationale text at all.",
+    });
+    const target = record({
+      id: "DEC-TARGET-CROSSROW",
+      body:
+        "As DEC-OTHER-ROW's own row states: " +
+        '"the founder chose a slower rollout to avoid a repeat of the march incident" per that row.',
+    });
+    writeFileSync(join(recordsDir, "DEC-OTHER-ROW.md"), other.content);
+    writeFileSync(join(recordsDir, "DEC-TARGET-CROSSROW.md"), target.content);
+    const report = runFidelityCheck({
+      root,
+      records: "docs/decisions/records",
+      export: exportPath,
+      frontend: null,
+      only: ["DEC-TARGET-CROSSROW.md"],
+      minChars: 25,
+    });
+    assert.equal(report.totals.spans, 1);
+    assert.equal(report.totals.faithful, 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coverage gap (finding 4): a source resolver that returned every row in
+// the export, instead of only the rows a record actually resolves to,
+// would make this quote wrongly pass. It must be reported as a residual.
+// ---------------------------------------------------------------------------
+
+test("a quote matching text in an UNRELATED Notion row is reported as a residual, not faithful", () => {
+  withTempDir((root) => {
+    const recordsDir = join(root, "docs/decisions/records");
+    mkdirSync(recordsDir, { recursive: true });
+    const relatedPageId = "1111222233334444555566667777888a";
+    const unrelatedPageId = "9999888877776666555544443333222b";
+    const exportPath = join(root, "export.txt");
+    writeFileSync(
+      exportPath,
+      makeExport([
+        {
+          id: relatedPageId,
+          url: `https://app.notion.com/${relatedPageId}`,
+          "userDefined:ID": "DEC-RELATED",
+          Decision: "Nothing quoted from this row appears anywhere in the target record.",
+        },
+        {
+          id: unrelatedPageId,
+          url: `https://app.notion.com/${unrelatedPageId}`,
+          "userDefined:ID": "DEC-UNRELATED",
+          Decision: "the annual retention window is ninety days for every capability under unrelated policy",
+        },
+      ])
+    );
+    const target = record({
+      id: "DEC-TARGET-UNRELATED",
+      evidence: [`https://app.notion.com/${relatedPageId}`],
+      body:
+        'The row quotes it: "the annual retention window is ninety days for every capability under unrelated policy" per the row.',
+    });
+    writeFileSync(join(recordsDir, "DEC-TARGET-UNRELATED.md"), target.content);
+    const report = runFidelityCheck({
+      root,
+      records: "docs/decisions/records",
+      export: exportPath,
+      frontend: null,
+      only: ["DEC-TARGET-UNRELATED.md"],
+      minChars: 25,
+    });
+    assert.equal(report.totals.spans, 1);
+    assert.equal(report.totals.faithful, 0);
+    assert.equal(report.totals.residual, 1);
+  });
+});

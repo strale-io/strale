@@ -76,19 +76,32 @@ that has actually happened.
 Quotation fidelity across the records is checked by an operator script,
 `scripts/m2-quote-fidelity.mjs`, not by CI (it needs the private Notion
 export). It extracts every double-quoted span in a record's body and looks
-for it, in order, in one of six candidate sources: the record's own Notion
-row fields when `--export` is given, evidence entries that are repository
-paths, repository paths mentioned in backticks in the same paragraph as the
-span, `CLAUDE.md` and `AGENTS.md`, every other record, and `strale-io/strale-
-frontend` evidence entries read from a sibling checkout when `--frontend` is
-given. Comparison uses one declared normalization: transliterate the euro
+for it, in order, in one of eight candidate sources: the record's own
+Notion row fields when `--export` is given, evidence entries that are
+repository paths, repository paths mentioned in backticks in the same
+paragraph as the span, `CLAUDE.md` and `AGENTS.md`, every other record,
+`strale-io/strale-frontend` evidence entries read from a sibling checkout
+when `--frontend` is given, the full message of a commit named by a bare
+sha or a `github.com/.../commit/<sha>` URL in the same paragraph, evidence
+list, or front matter (when that commit exists in this repository), and
+another record's own Notion row fields when that record's key is named
+explicitly in the same paragraph as the span (resolved the same way the
+checked record's own rows are: its `--notion-` qualifier and its
+`https://app.notion.com/<32 hex>` evidence URLs; a row becomes a candidate
+only through that explicit reference, never every row in the export).
+Comparison uses one declared normalization: transliterate the euro
 sign, multiplication sign, and the greater/less-than-or-equal and arrow and
 ellipsis symbols to their letter or ASCII spelling, lowercase, then delete
 every character that is not a letter or digit, which is what lets an
 em-dash, a curly quote, markdown emphasis, and a trailing period at a
-truncation point all pass as the same text. A span containing an ellipsis is
-checked as ordered segments, so a quote may legitimately skip text but may
-not reorder it. Run it with `node scripts/m2-quote-fidelity.mjs --export
+truncation point all pass as the same text. This is a narrow, declared
+symbol substitution, not general paraphrase tolerance: a word substituted
+for punctuation (for example "to" written out where the source uses an en
+dash in a numeric range) is a word-level difference from the source, not a
+symbol transliteration, and is correctly reported as a finding. A span
+containing an ellipsis is checked as ordered segments, so a quote may
+legitimately skip text but may not reorder it. Run it with `node
+scripts/m2-quote-fidelity.mjs --export
 <path to the raw export> --frontend <path to the strale-frontend checkout>`;
 add `--only <record file>` to check one record, `--json <path>` for a
 machine-readable copy of the same report, and `--strict` to exit 1 when any

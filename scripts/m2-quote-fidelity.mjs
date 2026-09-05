@@ -5,7 +5,7 @@
  * Operator report for the M2 decision-record candidates: for every double-
  * quoted span in a record's body, checks whether the quoted text actually
  * appears, in order, in at least one candidate source. It is not a CI gate
- * (it needs the private Notion export to be complete) — run it by hand, or
+ * (it needs the private Notion export to be complete): run it by hand, or
  * from a fresh review agent that has the export.
  *
  * Declared normalization convention (apply in this order before comparing
@@ -22,8 +22,8 @@
  * A quoted span containing an ellipsis ("..." or the transliterated "…") is
  * split into ordered segments. The span is FAITHFUL to a source when every
  * segment's normalized text is found in that source's normalized text, in
- * non-decreasing order (segments need not be contiguous — that is what the
- * ellipsis is for — but they must not appear out of order).
+ * non-decreasing order (segments need not be contiguous, that is what the
+ * ellipsis is for, but they must not appear out of order).
  *
  * Usage:
  *   node scripts/m2-quote-fidelity.mjs [--root <repo root>]
@@ -97,7 +97,7 @@ export function normalize(text) {
 /**
  * Ranges of `body` that are fenced code blocks or inline code spans, as
  * [start, end) pairs. A quote is "inside code" when its opening `"` falls in
- * one of these ranges — content of a legitimate prose quote that happens to
+ * one of these ranges: content of a legitimate prose quote that happens to
  * mention a backticked identifier is NOT masked; only a quote whose own
  * delimiters sit inside a code region is excluded.
  */
@@ -145,6 +145,23 @@ function lineNumberAt(body, index) {
     if (body[i] === "\n") line += 1;
   }
   return line;
+}
+
+/**
+ * A record's `body` is everything after the closing `---` of the YAML
+ * front matter, so a line number computed against `body` alone undercounts
+ * the file's actual line by however many lines the front matter occupies.
+ * `record.content` is the whole normalized file, and `record.body` is a
+ * verbatim suffix of it, so the character offset where body begins tells
+ * us how many newlines (lines) the front matter consumed.
+ */
+export function frontMatterLineCount(record) {
+  const bodyStart = record.content.length - record.body.length;
+  let count = 0;
+  for (let i = 0; i < bodyStart; i += 1) {
+    if (record.content[i] === "\n") count += 1;
+  }
+  return count;
 }
 
 /**
@@ -232,7 +249,7 @@ export function checkSpanAgainstSources(span, sources) {
 
 // ---------------------------------------------------------------------------
 // Notion export parsing (mirrors dump_rows.py exactly: the raw export is
-// JSON inside JSON — every `"text": "<escaped JSON>"` occurrence decodes,
+// JSON inside JSON, every `"text": "<escaped JSON>"` occurrence decodes,
 // on a second JSON.parse, into an object carrying a `results` array of
 // Notion rows. Nulls stay null; we never regex-slice a row's fields.)
 // ---------------------------------------------------------------------------
@@ -385,6 +402,112 @@ function readFrontendFile(frontendRoot, sha, path) {
 }
 
 // ---------------------------------------------------------------------------
+// Commit-message source class: a paragraph, evidence entry, or front-matter
+// field that names a commit directly (a bare 7-to-40 lowercase-hex sha, or
+// a full https://github.com/strale-io/strale/commit/<sha> URL) makes that
+// commit's own message a candidate source, when the commit actually exists
+// in this repository.
+// ---------------------------------------------------------------------------
+
+const COMMIT_URL_RE = /https:\/\/github\.com\/strale-io\/strale\/commit\/([0-9a-f]{7,40})/g;
+const BARE_SHA_RE = /\b[0-9a-f]{7,40}\b/g;
+
+/** Every candidate commit sha mentioned in `text`, lowercase, deduped. A bare
+ * hex run is only accepted when it contains at least one a-f letter, so an
+ * eight-digit date like 20260518 is not mistaken for a sha. */
+export function shasInText(text) {
+  const shas = new Set();
+  const urlRe = new RegExp(COMMIT_URL_RE.source, "g");
+  let match;
+  while ((match = urlRe.exec(text))) shas.add(match[1].toLowerCase());
+  const bareRe = new RegExp(BARE_SHA_RE.source, "g");
+  while ((match = bareRe.exec(text))) {
+    const candidate = match[0].toLowerCase();
+    if (/[a-f]/.test(candidate)) shas.add(candidate);
+  }
+  return shas;
+}
+
+function shasInParagraph(paragraph) {
+  return paragraph ? shasInText(paragraph.text) : new Set();
+}
+
+/** The full commit message (`git log -1 --format=%B <sha>`) for `sha` run in
+ * `root`, or null when the commit does not exist / git is unreachable. */
+export function commitMessage(root, sha) {
+  try {
+    return execFileSync("git", ["-C", root, "log", "-1", "--format=%B", sha], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cross-record Notion-row source class: a paragraph that explicitly names
+// another record (a `DEC-...` key, with or without its own `--notion-<id>`
+// qualifier) makes THAT record's own Notion row fields a candidate source,
+// resolved the same way the checked record's own rows are: its
+// `--notion-` qualifier and its `https://app.notion.com/<32 hex>` evidence
+// URLs. The association is narrow: only a record explicitly named in the
+// same paragraph as the quote is ever consulted, never every row.
+// ---------------------------------------------------------------------------
+
+const RECORD_KEY_RE =
+  /DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?/g;
+
+function recordKeysInText(text) {
+  const keys = new Set();
+  const re = new RegExp(RECORD_KEY_RE.source, "g");
+  let match;
+  while ((match = re.exec(text))) keys.add(match[0]);
+  return keys;
+}
+
+function bareRecordId(key) {
+  return key.replace(/--notion-[0-9a-f]{32}$/, "").replace(/--git-[0-9a-f]{7,40}$/, "");
+}
+
+/** Other records (from `allRecords`, excluding `excludeFile`) explicitly named in `text`. */
+function findMentionedRecords(text, allRecords, excludeFile) {
+  const found = [];
+  for (const key of recordKeysInText(text)) {
+    const bareId = bareRecordId(key);
+    const match = allRecords.find(
+      (candidate) =>
+        candidate.file !== excludeFile &&
+        (candidate.metadata.record_key === key ||
+          candidate.metadata.record_key === bareId ||
+          candidate.metadata.id === bareId)
+    );
+    if (match) found.push(match);
+  }
+  return found;
+}
+
+/**
+ * For every other record explicitly named in `paragraph`, the Notion rows
+ * that record itself resolves to (via its own qualifier/evidence), as
+ * `{ label, text }` candidate sources. Empty when there is no export, no
+ * paragraph, or no explicit mention.
+ */
+export function notionRowsMentionedInParagraph(paragraph, record, context) {
+  if (!paragraph) return [];
+  const notionRows = context.notionRows ?? [];
+  if (notionRows.length === 0) return [];
+  const out = [];
+  for (const other of findMentionedRecords(paragraph.text, context.allRecords, record.file)) {
+    for (const row of findNotionRowsForRecord(other, notionRows)) {
+      const label = `notion-via:${other.file}:${row["userDefined:ID"] ?? pageIdOf(row)}`;
+      out.push({ label, text: rowText(row) });
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Building the candidate source set for one record
 // ---------------------------------------------------------------------------
 
@@ -420,8 +543,10 @@ export function gatherSourcesForRecord(record, context) {
   }
 
   // (c) repository paths mentioned in backticks in the same paragraph as
-  // each quoted span is handled per-span by the caller (paragraphs differ
-  // per span); expose the paragraph list on the record for that purpose.
+  // each quoted span, and (h) another record's own Notion row fields when
+  // that record is explicitly named in the same paragraph, are both
+  // handled per-span by the caller (paragraphs differ per span); expose
+  // the paragraph list on the record for that purpose.
 
   // (d) CLAUDE.md, AGENTS.md.
   addStatic("CLAUDE.md", readRepoFile(root, "CLAUDE.md"));
@@ -445,6 +570,21 @@ export function gatherSourcesForRecord(record, context) {
     }
   }
 
+  // (g) commit messages for shas mentioned in the evidence list or anywhere
+  // else in the front matter (a paragraph's own mentions are handled per-span
+  // by the caller, mirroring (c)).
+  const frontMatterMentionText = [...(record.metadata.evidence ?? []), JSON.stringify(record.metadata)].join(
+    "\n"
+  );
+  for (const sha of shasInText(frontMatterMentionText)) {
+    const label = `commit:${sha}`;
+    if (!cache.has(label)) {
+      const message = commitMessage(root, sha);
+      if (message != null) cache.set(label, normalize(message));
+    }
+    if (cache.has(label)) sources.set(label, cache.get(label));
+  }
+
   return sources;
 }
 
@@ -456,6 +596,7 @@ export function checkRecord(record, context) {
   const spans = extractQuoteSpans(record.body, context.minChars);
   const paragraphs = paragraphsOf(record.body);
   const baseSources = gatherSourcesForRecord(record, context);
+  const frontMatterLines = frontMatterLineCount(record);
   const results = [];
   for (const span of spans) {
     const paragraph = paragraphContaining(paragraphs, span.index);
@@ -468,10 +609,21 @@ export function checkRecord(record, context) {
       }
       if (context.cache.has(label)) sources.set(label, context.cache.get(label));
     }
+    for (const sha of shasInParagraph(paragraph)) {
+      const label = `commit:${sha}`;
+      if (!context.cache.has(label)) {
+        const message = commitMessage(context.root, sha);
+        if (message != null) context.cache.set(label, normalize(message));
+      }
+      if (context.cache.has(label)) sources.set(label, context.cache.get(label));
+    }
+    for (const { label, text } of notionRowsMentionedInParagraph(paragraph, record, context)) {
+      sources.set(label, normalize(text));
+    }
     const outcome = checkSpanAgainstSources(span, sources);
     results.push({
       record: record.file,
-      line: span.line,
+      line: frontMatterLines + span.line,
       span: span.raw,
       faithful: outcome.faithful,
       matchedSource: outcome.matchedSource,
