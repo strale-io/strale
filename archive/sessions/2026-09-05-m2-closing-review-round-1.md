@@ -31,7 +31,7 @@ evidence path, every relation target, at least ten code claims, and, for
 the qualified records in P5 and P6, the collision-registry and
 M2-closure-register bindings. Every reviewer worked in a detached,
 read-only worktree and made no edits. Below, each partition report's own
-`##` headings are demoted to `####` so this file keeps one heading
+`##` headings are demoted to `###` so this file keeps one heading
 hierarchy; nothing else in any report is edited.
 
 ## Partition reports
