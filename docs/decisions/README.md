@@ -55,3 +55,20 @@ Resolve collisions in two stages: land and verify any required graph mechanism
 first, then change one collision's dispositions and formal records atomically
 with source evidence and independent review. Run `npm run context:generate`, then
 `npm run context:test` and `npm run context:check` after changing records.
+
+The M2 closure register (`docs/project/m2-closure-register.yaml`) carries an
+optional `closing_review` block once the exit gate's fresh independent review
+has actually happened: the route taken, the exact commit reviewed, a `PASS`
+verdict, the review date, and an `archive/sessions/` evidence file that reads
+as that verdict. The validator checks the route against the recorded route
+(substituting the fresh read-only Claude agent while the Codex quota is out,
+per CLAUDE.md's 2026-09-03 amendment, only when the Codex re-review backlog
+holds a pending row naming the closing review), the commit's ancestry, the
+evidence file's content, that nothing which could move a Decision's
+disposition changed since the reviewed commit, and the recomputed candidate-
+set counts. Once recorded, `closing_review` is as immutable as a receipt: its
+commit, verdict, review date, and evidence may not change and the block may
+not be removed. A clean block releases the `plan.review_route` exit gap's
+blocking requirement; the gap itself must still cover that bucket regardless.
+This block records no review by itself. It only lets the validator see one
+that has actually happened.
