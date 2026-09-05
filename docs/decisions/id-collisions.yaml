@@ -186,103 +186,120 @@ collisions:
         disposition: formal_record
         record_key: DEC-20260406-B--notion-33a67c87082c81629339d9f208f65f52
   - id: "DEC-20260406-C"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-C.md
     records:
       - title: "Project Home physical tidy — canonical set at top level, ~90 pages archived to Archive — Q1 2026"
         historical_status: active
         source_url: https://app.notion.com/33a67c87082c814b8afafb2e1c6ca317
         source_page_id: "33a67c87082c814b8afafb2e1c6ca317"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260406-C--notion-33a67c87082c814b8afafb2e1c6ca317
       - title: "Rule E added to Working Rules: brand voice is institutional and human, no em dashes"
         historical_status: active
         source_url: https://app.notion.com/33a67c87082c819cabf6d47331d695ce
         source_page_id: "33a67c87082c819cabf6d47331d695ce"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260406-C--notion-33a67c87082c819cabf6d47331d695ce
   - id: "DEC-20260409-C"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260409-C.md
     records:
       - title: "Gate 4: Solution-level smoke tests in scheduler"
         historical_status: active
         source_url: https://app.notion.com/33d67c87082c81c19655cb04fb7d3ecf
         source_page_id: "33d67c87082c81c19655cb04fb7d3ecf"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260409-C--notion-33d67c87082c81c19655cb04fb7d3ecf
       - title: "Gate 4: Solution-level smoke tests in scheduler"
         historical_status: superseded
         source_url: https://app.notion.com/33d67c87082c81f4a3ffcb774b1d84e4
         source_page_id: "33d67c87082c81f4a3ffcb774b1d84e4"
-        disposition: unresolved
+        disposition: documented_only
+        rationale: "Superseded by DEC-20260409-D (\"Gate 4 (revised): Four-layer solution test pyramid, free-first\"), whose already-merged record cites this row's own Superseded By page id as its source and quotes its Rationale (\"Supersedes DEC-20260409-C\")."
   - id: "DEC-20260420-D"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-D.md
     records:
       - title: "SA.2b per-capability PII classification: manifest-declared field + 12-value category enum + heuristic fallback during backfill + blocking gate for new capabilities + 15/15 top backfill shipped"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81409ee0d6c992ce3d43
         source_page_id: "34867c87082c81409ee0d6c992ce3d43"
-        disposition: unresolved
+        disposition: documented_only
+        rationale: Identical title and historical_status to its sibling row, created
+          59 seconds later the same session. Per this batch's duplicate-title rule,
+          the earlier-created page is the formal record and this later page is a
+          documented duplicate entry.
       - title: "SA.2b per-capability PII classification: manifest-declared field + 12-value category enum + heuristic fallback during backfill + blocking gate for new capabilities + 15/15 top backfill shipped"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81f0827eedf29d133600
         source_page_id: "34867c87082c81f0827eedf29d133600"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-D--notion-34867c87082c81f0827eedf29d133600
   - id: "DEC-20260420-E"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-E.md
     records:
       - title: "F-A-005 free-tier transaction lookup redaction: always-redact (path a), asymmetric marker (unauth-only), single commit, 200 + body_redacted envelope, verify endpoint untouched"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81b590b4e8bee4b59228
         source_page_id: "34867c87082c81b590b4e8bee4b59228"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-E--notion-34867c87082c81b590b4e8bee4b59228
       - title: "Product architecture and first wedge"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81d5a898f48cc1554086
         source_page_id: "34867c87082c81d5a898f48cc1554086"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-E--notion-34867c87082c81d5a898f48cc1554086
   - id: "DEC-20260420-F"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-F.md
     records:
       - title: "Capability rationalization and site rebuild"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c810b8df1e8e459039d35
         source_page_id: "34867c87082c810b8df1e8e459039d35"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-F--notion-34867c87082c810b8df1e8e459039d35
       - title: "F-A-006 + F-A-007 HMAC audit token lifecycle: 90-day bounded expiry, two-key rotation ring, separate query params encoding, 180-day legacy grace, auth-gated re-issue endpoint. Two commits shipped."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c810b8547fccb3e75c61b
         source_page_id: "34867c87082c810b8547fccb3e75c61b"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-F--notion-34867c87082c810b8547fccb3e75c61b
   - id: "DEC-20260420-G"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-G.md
     records:
       - title: "Entity resolution as priority engineering investment"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81dcafe3dea59cc119b1
         source_page_id: "34867c87082c81dcafe3dea59cc119b1"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-G--notion-34867c87082c81dcafe3dea59cc119b1
       - title: "F-A-012 verify endpoint DoS hardening: MAX_DEPTH 200→50, DEFAULT_DEPTH 50→20, rate limit 30→10/min per IP, explicit truncated marker. Single commit shipped."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81c38c3acaca5d01d6ef
         source_page_id: "34867c87082c81c38c3acaca5d01d6ef"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-G--notion-34867c87082c81c38c3acaca5d01d6ef
   - id: "DEC-20260420-H"
-    resolution_status: unresolved
-    resolution_evidence: null
+    resolution_status: resolved
+    resolution_evidence: archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-H.md
     records:
       - title: "Option C for 238-slug manifest drift: fix Class 5.2 mapping + add backfill safety banner, defer full Class 4 cleanup to Session 1 onboarding engine rewrite. SA.2b.c will use direct-SQL backfill to avoid the pipeline entirely."
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81c6a58dfbc5f46ed3f6
         source_page_id: "34867c87082c81c6a58dfbc5f46ed3f6"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6
       - title: "Strale positioning and ICP clarification"
         historical_status: active
         source_url: https://app.notion.com/34867c87082c81b58b36de5f71c0937f
         source_page_id: "34867c87082c81b58b36de5f71c0937f"
-        disposition: unresolved
+        disposition: formal_record
+        record_key: DEC-20260420-H--notion-34867c87082c81b58b36de5f71c0937f
   - id: "DEC-20260420-I"
     resolution_status: unresolved
     resolution_evidence: null
