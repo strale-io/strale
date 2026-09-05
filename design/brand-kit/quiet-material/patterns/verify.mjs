@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {writeFileSync,mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {here,json,inputHashes,digest,render} from './build.mjs';
+import {here,json,inputHashes,digest,render,validateComposition} from './build.mjs';
 const {chromium}=await import(pathToFileURL(process.argv[2]).href);
 const r=json('registry.json'),t=json('../../../tokens/candidates/quiet-material-patterns.json');
 const browser=await chromium.launch({channel:'chrome',headless:true});
@@ -40,6 +40,13 @@ await page.locator('#preferences').evaluate(f=>{f.requestSubmit();f.requestSubmi
 await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Couldn’t'));
 assert.equal(await page.locator('#view-name').inputValue(),'Research view');assert.equal(await page.locator('#view-note').inputValue(),'Keep this description through recovery.');checks.preserved_values=true;checks.loading_guard=true;
 await page.locator('#simulate-failure').uncheck();await page.locator('#save-example').click();await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Nothing was stored'));checks.failure_recovery=true;
+assert(await page.locator('#save-status').evaluate(e=>e.classList.contains('good')));
+await page.locator('#view-name').fill('');await page.locator('#save-example').click();
+assert(await page.locator('#save-status').evaluate(e=>e.classList.contains('bad')&&!e.classList.contains('good')));
+await page.locator('#view-name').fill('Recovered view');assert.equal(await page.locator('#save-status').textContent(),'');
+await page.locator('#save-example').click();assert(await page.locator('#save-status').evaluate(e=>!e.classList.contains('bad')&&!e.classList.contains('good')));
+await page.waitForFunction(()=>document.querySelector('#save-status').textContent.includes('Nothing was stored'));
+
 assert(await page.locator('#state-Unavailable').isDisabled());assert.equal(await page.locator('#state-Read-only').getAttribute('readonly'),'');checks.read_only_disabled=true;
 const labels=await page.locator('input,select,textarea').evaluateAll(els=>els.every(e=>e.labels?.length));assert(labels);checks.labels=true;
 await page.locator('#view-name').focus();await page.keyboard.press('Tab');assert(await page.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle==='solid'));checks.focus_visible=true;
@@ -47,14 +54,24 @@ assert(await page.locator('button,a.btn,.choice,.field input,.field select').eva
 assert(await page.locator('.utility').evaluateAll(els=>els.every(e=>e.getAttribute('aria-hidden')==='true'&&e.getAttribute('focusable')==='false')));checks.icons=true;
 await page.locator('#clear-example').click();assert((await page.locator('#clear-status').textContent()).includes('Filters cleared'));
 await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.locator('#save-example').evaluate(e=>getComputedStyle(e).transitionDuration),'0s');checks.reduced_motion=true;await page.emulateMedia({reducedMotion:'no-preference'});
-await go('website.html');
-for(const id of ['hero','section','card']){
- const el=page.locator(`[data-density=${id}]`),budget=r.density.profiles.find(x=>x.id===id);
- assert((await el.locator('h1,h2').textContent()).trim().split(/\s+/).length<=budget.headline_words);
- assert((await el.locator('[data-body]').textContent()).trim().split(/\s+/).length<=budget.body_words);
- assert(await el.locator('a.primary,a.inverse').count()<=budget.primary_actions);
+const compositions={};
+for(const file of ['website.html','social.html','email.html']){
+ await go(file);
+ const measured=await page.locator('[data-density]').evaluateAll(els=>els.map(el=>{
+  const owned=selector=>[...el.querySelectorAll(selector)].filter(x=>x.closest('[data-density]')===el);
+  const count=text=>text.trim().split(/\s+/).filter(Boolean).length;
+  const proofs=[...(el.matches('[data-proof]')?[el]:[]),...el.querySelectorAll('[data-proof]')].filter(x=>{const parent=x.parentElement.closest('[data-proof]');return !parent||!el.contains(parent);});
+  const panels=[...(el.matches('.extraction,.paper-document')?[el]:[]),...el.querySelectorAll('.extraction,.paper-document')];
+  const depths=panels.map(x=>{let depth=1,parent=x.parentElement.closest('.extraction,.paper-document');while(parent){depth++;parent=parent.parentElement.closest('.extraction,.paper-document');}return depth;});
+  return {id:el.dataset.density,headline_words:count(owned('h1,h2,h3')[0]?.textContent||''),body_words:count(owned('[data-body]').map(x=>x.textContent).join(' ')),primary_actions:owned('a.primary,a.inverse,button.primary,button.inverse').length,supporting_links:owned('a:not(.primary):not(.inverse)').length,proof_objects:proofs.length,rows:el.querySelectorAll('dl>div').length,decorative_fields:el.querySelectorAll('[data-decorative-field]').length+Number(el.matches('[data-decorative-field]')),panel_depth:Math.max(0,...depths)};
+ }));
+ validateComposition(measured,r);compositions[file]=measured;
+ if(file==='website.html'){
+  const layouts=await page.locator('[data-layout]').evaluateAll(els=>els.map(x=>x.dataset.layout));assert.deepEqual(layouts,r.density.rhythm.sequence);
+  let run=0,previous='';for(const layout of layouts){run=layout===previous?run+1:1;assert(run<=r.density.rhythm.adjacent_same_layout_max);previous=layout;}
+ }
 }
-assert.equal(await page.locator('.extraction .extraction').count(),0);assert.equal(await page.locator('.extraction dl>div').count(),3);checks.density=true;
+checks.density=true;
 // Conservative bound for every interpolated Dusk colour, not a single point sample.
 const rgb=hex=>hex.match(/[a-f0-9]{2}/gi).map(x=>parseInt(x,16));
 const lum=x=>x.map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
@@ -67,6 +84,6 @@ await go('index.html');await page.setViewportSize({width:1120,height:1000});awai
 const bounds=await page.locator('.sheet').evaluateAll(sheets=>sheets.flatMap(s=>{const sb=s.getBoundingClientRect(),footer=s.querySelector('.footer').getBoundingClientRect();return [...s.querySelectorAll('.body *')].filter(e=>{const b=e.getBoundingClientRect();return b.width&&b.height&&(b.bottom>footer.top||b.left<sb.left||b.right>sb.right);}).map(e=>`${s.id}: ${e.tagName}.${e.className}`);}));assert.deepEqual(bounds,[]);checks.print_bounds=true;
 await page.pdf({path:resolve(here,'output/pdf/forms-symbols-composition.pdf'),printBackground:true,preferCSSPageSize:true,tagged:true});
 assert.deepEqual(requests,[]);assert.deepEqual(errors,[]);checks.network_blocked=true;
-const e={id:r.id,inputs:inputHashes(),widths,checks,errors,contrast,runtime:{node:process.version,chromium:browser.version()},limits:r.limits,outputs:Object.fromEntries([...outputNames,'exports/social-landscape.png','output/pdf/forms-symbols-composition.pdf'].map(p=>[p,digest(p)]))};
+const e={id:r.id,inputs:inputHashes(),widths,checks,errors,contrast,compositions,runtime:{node:process.version,chromium:browser.version()},limits:r.limits,outputs:Object.fromEntries([...outputNames,'exports/social-landscape.png','output/pdf/forms-symbols-composition.pdf'].map(p=>[p,digest(p)]))};
 writeFileSync(resolve(here,'.preview/browser-evidence.json'),JSON.stringify(e,null,2)+'\n');console.log(JSON.stringify({ok:true,checks}));
 await context.close();await browser.close();

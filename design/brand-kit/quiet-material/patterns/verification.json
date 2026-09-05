@@ -2,20 +2,21 @@
   "id": "quiet-material-patterns-0.1",
   "inputs": {
     "registry.json": "e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72",
-    "templates.mjs": "900da3ec82430c096b4b081c646b4b0b8468322d5a65e33d8ae07c24140c7566",
-    "specimen.css": "488e93449711279a70a56987ad795885e5ab5f2215f8b3e4d20a9697d0bdc30f",
-    "interactions.js": "50d29beac1823fde56dabb97b7d05b0b33757d96bdf59f21c333602f4080bd5d",
-    "build.mjs": "00fdb2f49866a2a9bb9abb11a0b96620ccb169029800063c7d892533bcc9dea7",
-    "verify.mjs": "e7171f051c5893e050577a68a12d21f91d81dc73972c5c8e9ca484327c04647a",
+    "templates.mjs": "1121c3a5dd0d7b8c0f859fab73b0cab11cefd8cbf75dad85d09d050a9777739a",
+    "specimen.css": "5bfbe18470e3cd7e7aa1da40c0c985a92105427ba4193d363b6f649324810219",
+    "interactions.js": "bc7e7173e5bee3abaee4ba2de6e2d22f064cec2dc729216cbee16d62520843e2",
+    "build.mjs": "ee3e16a566c8e5fbf3804046323833c313dff3b2b9c3346c7294071de835e30c",
+    "verify.mjs": "3e7650cf0ab974791e282b524528cab613d19c5ec93258f7a77b476d98371307",
     "verify-pdf.py": "a44a9c8b0dedda7114fda4954300798d28f6ad9ab0c1afe845089458a0669aa5",
-    "../../../tokens/candidates/quiet-material-patterns.json": "96dc5a84e2843df06aeb87eb1fc07e0f4db6c6423b161d808ea979337a969559",
+    "../../../tokens/candidates/quiet-material-patterns.json": "7e5611bf7d156e0465c9b53086c7b1a7bd757c517d20a84f73ba8d461a887f50",
     "../../../tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
     "../controls/specimen.css": "decc5d17e173e74a30bd6b26236b1542dc505ca7769ca7d0788d871db17d84b0",
     "../foundations/exports/lockup-ink.svg": "023c270b3ff74e34eccea9c1c1cec40bfa765eafb429911b9a3c7c900d754699",
     "../foundations/exports/lockup-inverse.svg": "fcbd4e1461d1341bee85e0630c03ede040164be0157bf658d6b2ce498ba73b60",
     "../fonts/InstrumentSans.ttf": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
     "../fonts/IBMPlexMono-Regular.ttf": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
-    "../../../../docs/research/2026-09-05-quiet-material-pattern-references.md": "71d331b0d4f73a5901d00194fe6c7cab30dfbd0f85f08384951d1941b5d8ed01"
+    "../../../../docs/research/2026-09-05-quiet-material-pattern-references.md": "71d331b0d4f73a5901d00194fe6c7cab30dfbd0f85f08384951d1941b5d8ed01",
+    "../../../../docs/programs/brand-website/LAUNCH-PROOF.md": "4d0c6577e07b5bc630c869b4988d8df609c95bb842789c2cc343c5a56d9226b7"
   },
   "widths": [
     320,
@@ -87,6 +88,102 @@
       "ratio": 13.529875709286966
     }
   ],
+  "compositions": {
+    "website.html": [
+      {
+        "id": "hero",
+        "headline_words": 5,
+        "body_words": 13,
+        "primary_actions": 1,
+        "supporting_links": 1,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 1,
+        "panel_depth": 1
+      },
+      {
+        "id": "result",
+        "headline_words": 2,
+        "body_words": 0,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      },
+      {
+        "id": "section",
+        "headline_words": 6,
+        "body_words": 17,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 0,
+        "rows": 0,
+        "decorative_fields": 0,
+        "panel_depth": 0
+      },
+      {
+        "id": "card",
+        "headline_words": 7,
+        "body_words": 7,
+        "primary_actions": 1,
+        "supporting_links": 0,
+        "proof_objects": 0,
+        "rows": 0,
+        "decorative_fields": 1,
+        "panel_depth": 0
+      }
+    ],
+    "social.html": [
+      {
+        "id": "social",
+        "headline_words": 5,
+        "body_words": 13,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 1,
+        "panel_depth": 1
+      },
+      {
+        "id": "result",
+        "headline_words": 2,
+        "body_words": 0,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      }
+    ],
+    "email.html": [
+      {
+        "id": "email",
+        "headline_words": 5,
+        "body_words": 39,
+        "primary_actions": 1,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      },
+      {
+        "id": "result",
+        "headline_words": 2,
+        "body_words": 0,
+        "primary_actions": 0,
+        "supporting_links": 0,
+        "proof_objects": 1,
+        "rows": 3,
+        "decorative_fields": 0,
+        "panel_depth": 1
+      }
+    ]
+  },
   "runtime": {
     "node": "v24.12.0",
     "chromium": "152.0.7977.82"
@@ -101,10 +198,10 @@
     "The utility set covers twelve common symbols; complex tables, dialogs, upload, authentication and custom comboboxes remain separate patterns."
   ],
   "outputs": {
-    "index.html": "9e40465831140f2da30a7c9839b5a7bead9533b14c0a1b8d652a227ecf0a9025",
-    "website.html": "9b02bcbc101cf3c8125ec33b15a3ee4e6eef1538be08f1555ec151259b6755d0",
-    "social.html": "acb45171c7b8dc33ac797d59dccb0fd11d994efc566852ea9519027ad6905321",
-    "email.html": "a54cce67a52838ed47c8ca69d1a70a6493182e968b01c8ea7cd0da3d77110e3f",
+    "index.html": "58012c3fc326a0c2979d4fbad8c6b39bcdf499a715dd74648634451e7f4567e5",
+    "website.html": "4e6910ea45013c64ed33a143f3bf9d91d8d3fcebfcdadfbc537f4c29f19687fa",
+    "social.html": "8643b9199db6655897abbfe54e6411b9805acb3296e12f44b9c45011cb679364",
+    "email.html": "d5146ea3de269029e9c7c5852706a009ca2d9d482528c19867c5b097a59e5844",
     "email.txt": "049369bbf8e7c7f4117b8a50e284d218c1cda6d992b76afd45af90824a8b23bb",
     "icons/search.svg": "1421c335e53b6c25d82b6792b8d7a06cd38f9bba6be9970f477e336b86883331",
     "icons/arrow-right.svg": "f4a3208446ad96613d1f0e76a4d7a65f373fe3c7d22c0611bc2ebdf4192f72c6",
@@ -121,7 +218,7 @@
     "RULES.md": "1515853a06d357ac2120425acc6a3f87e643b8dfd1a81ca37a7fddd7910af3ef",
     "icons/manifest.json": "2d4c61414bf29e908432f9b97a8fea34f05bbc17077be7dfe5a29be8e8e067fe",
     "exports/social-landscape.png": "af2609d6028405932a751440c9786f7d64037edc963898d3629f061f443c7194",
-    "output/pdf/forms-symbols-composition.pdf": "c5f8fea4c129a253f2ecaee8e431bee24ca5364d4176cdbd46eb47e8bef63c49"
+    "output/pdf/forms-symbols-composition.pdf": "a8ea15c9ee463323cde9e36e0db3c24eff22751ac72439e47dff18c5ec6fb981"
   },
   "pdf": {
     "pages": 8,

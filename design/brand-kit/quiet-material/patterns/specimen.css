@@ -58,10 +58,10 @@ input,textarea,select { font: var(--t-ui-size)/var(--t-ui-line) var(--sans); col
 .extraction dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
 .social-preview { margin: 0; }
 .social-preview img { display: block; width: 100%; height: auto; border-radius: var(--card-radius); }
-.email-mini { font-family: var(--email); background: var(--surface); border-radius: var(--menu-radius); padding: var(--card-pad); display: grid; gap: var(--gap); }
+.email-mini { font-family: var(--email-sans); background: var(--surface); border-radius: var(--menu-radius); padding: var(--card-pad); display: grid; gap: var(--gap); }
 .email-mini h2 { line-height: 1.2; }
-.email-mini p { font: var(--p-email-body)/1.6 var(--email); }
-.email-mini .btn { justify-self: start; font-family: var(--email); }
+.email-mini p { font: var(--p-email-body)/1.6 var(--email-sans); }
+.email-mini .btn { justify-self: start; font-family: var(--email-sans); }
 .study-banner { padding: var(--gap-small) var(--gap); background: var(--surface); font: var(--t-caption-size)/1.5 var(--sans); text-align: center; }
 .web-study { max-width: var(--p-page-wide); padding: 0 var(--page-pad); margin: auto; }
 .study-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--gap); padding: var(--gap) 0; }
@@ -98,12 +98,12 @@ input,textarea,select { font: var(--t-ui-size)/var(--t-ui-line) var(--sans); col
 .social-notes { padding: var(--page-pad); max-width: var(--p-page-wide); }
 .social-notes p { margin-bottom: var(--gap); }
 .email-page { background: var(--surface); }
-.email-letter { max-width: var(--p-email-width); margin: var(--gap-large) auto; padding: var(--p-email-pad); background: var(--canvas); color: var(--ink); font-family: var(--email); }
-.email-letter h1 { font: var(--p-email-title)/1.2 var(--email); letter-spacing: var(--doc-tracking); margin: var(--gap-large) 0 var(--gap); }
-.email-letter p { font: var(--p-email-body)/1.6 var(--email); margin-bottom: var(--gap); }
+.email-letter { max-width: var(--p-email-width); margin: var(--gap-large) auto; padding: var(--p-email-pad); background: var(--canvas); color: var(--ink); font-family: var(--email-sans); }
+.email-letter h1 { font: var(--p-email-title)/1.2 var(--email-sans); letter-spacing: var(--doc-tracking); margin: var(--gap-large) 0 var(--gap); }
+.email-letter p { font: var(--p-email-body)/1.6 var(--email-sans); margin-bottom: var(--gap); }
 .email-letter .extraction { background: var(--surface); margin: var(--gap) 0; }
-.email-letter .extraction h3,.email-letter .label { font-family: var(--email); }
-.email-letter .btn { font-family: var(--email); }
+.email-letter .extraction h3,.email-letter .label { font-family: var(--email-sans); }
+.email-letter .btn { font-family: var(--email-sans); }
 .email-letter .email-signoff { margin-top: var(--gap-large); margin-bottom: 0; }
 .email-notes { max-width: var(--p-email-width); margin: auto; padding: var(--gap); }
 @media (max-width: BREAKPOINT) {
