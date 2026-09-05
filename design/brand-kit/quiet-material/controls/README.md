@@ -30,4 +30,4 @@ python design/brand-kit/quiet-material/controls/verify-pdf.py
 node design/brand-kit/quiet-material/controls/build.mjs --check
 ```
 
-The checked-in HTML embeds the existing fonts and logo so it is portable. The PDF contains embedded font resources. Verification generates ignored browser/PDF images under `.preview/`; inspect them after meaningful changes. Never update a tracked receipt: write a new one after rebuilding.
+The checked-in HTML loads the original fonts from ../fonts/ and embeds the logo. Keep the kit directory structure when copying the specimen; the HTML is not a standalone download. The PDF contains embedded font resources. Verification generates ignored browser/PDF images under `.preview/`; inspect them after meaningful changes. Never update a tracked receipt: write a new one after rebuilding.
