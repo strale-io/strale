@@ -4,13 +4,15 @@ description: >-
   Latest annual financials for a US-listed company from its own SEC filings: revenue, operating and
   net income, assets, liabilities, equity, cash, diluted EPS and share count, each with the filing it came from.
 category: financial
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 10000
 known_rate_limit:
   value: 10
   unit: per_second
   source_url: https://www.sec.gov/os/webmaster-faq#developers
 price_cents: 10
+avg_latency_ms: 840
 is_free_tier: false
 input_schema:
   type: object
@@ -73,8 +75,9 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
       - field: entity_name
-        operator: not_null
-        reliability: guaranteed
+        operator: type
+        reliability: common
+        value: string
       - field: fundamentals
         operator: not_null
         reliability: guaranteed

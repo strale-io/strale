@@ -32,7 +32,7 @@ describe("fda-safety-search", () => {
   it("refuses an unknown domain and an unknown classification before any call", async () => {
     await expect(exec({ query: "aspirin", domain: "vehicle" })).rejects.toThrow(/'domain' must be one of/);
     await expect(exec({ query: "aspirin", classification: "IV" })).rejects.toThrow(/'classification' must be one of/);
-    await expect(exec({ query: "a" })).rejects.toThrow(/'query' is required/);
+    await expect(exec({ query: "a" })).rejects.toThrow(/'query' must be at least 2 characters/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

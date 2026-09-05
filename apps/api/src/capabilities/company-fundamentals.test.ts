@@ -40,8 +40,8 @@ describe("company-fundamentals", () => {
   });
 
   it("refuses a call with neither ticker nor cik, and a malformed cik", async () => {
-    await expect(exec({})).rejects.toThrow(/'ticker'.*or 'cik'.*required/);
-    await expect(exec({ cik: "not-a-cik" })).rejects.toThrow(/not a valid CIK/);
+    await expect(exec({})).rejects.toThrow(/'ticker' must be given, or 'cik'/);
+    await expect(exec({ cik: "not-a-cik" })).rejects.toThrow(/'cik' must be up to 10 digits/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -74,6 +74,6 @@ describe("company-fundamentals", () => {
 
   it("fails clearly when the filer has no annual XBRL data at all", async () => {
     fetchMock.mockResolvedValue(new Response("{}", { status: 404 }));
-    await expect(exec({ cik: "1" })).rejects.toThrow(/No annual \(10-K\) XBRL financial data/);
+    await expect(exec({ cik: "1" })).rejects.toThrow(/must be a registrant with annual \(10-K\) XBRL data/);
   });
 });

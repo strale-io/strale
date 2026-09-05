@@ -53,8 +53,8 @@ describe("doi-resolve", () => {
   });
 
   it("refuses a missing or unparseable DOI before any upstream call", async () => {
-    await expect(exec({})).rejects.toThrow(/'doi' is required/);
-    await expect(exec({ doi: "not-a-doi" })).rejects.toThrow(/does not contain a DOI/);
+    await expect(exec({})).rejects.toThrow(/'doi' must be a bare DOI/);
+    await expect(exec({ doi: "not-a-doi" })).rejects.toThrow(/must be a value containing a DOI/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -90,6 +90,6 @@ describe("doi-resolve", () => {
 
   it("reports a DOI neither agency registers", async () => {
     fetchMock.mockResolvedValue(new Response("{}", { status: 404 }));
-    await expect(exec({ doi: "10.9999/nope" })).rejects.toThrow(/not registered with Crossref or DataCite/);
+    await expect(exec({ doi: "10.9999/nope" })).rejects.toThrow(/must be a DOI registered with Crossref or DataCite/);
   });
 });

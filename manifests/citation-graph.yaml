@@ -4,13 +4,15 @@ description: >-
   Traverse the citation graph around a paper: works that cite it, works it references, and totals.
   Accepts a DOI, arXiv id, PubMed id or OpenAlex work id.
 category: data-extraction
-cost_class: free_unlimited
-quota_window: none
+cost_class: free_quota
+quota_window: daily
+quota_cap: 36000
 known_rate_limit:
   value: 10
   unit: per_second
   source_url: https://docs.openalex.org/how-to-use-the-api/rate-limits-and-authentication
 price_cents: 3
+avg_latency_ms: 890
 is_free_tier: false
 input_schema:
   type: object

@@ -8,6 +8,9 @@
  * Run: npx tsx scripts/verify-new-capabilities.ts
  */
 import { getDirectExecutor } from "../src/capabilities/index.js";
+import { isUserInputError } from "../src/lib/circuit-breaker.js";
+import { categorizeError } from "../src/lib/quality-capture.js";
+import { classifyTransactionFailure, countsAgainstCapability } from "../src/lib/transaction-failure-taxonomy.js";
 
 import "../src/capabilities/clinical-trials-search.js";
 import "../src/capabilities/doi-resolve.js";
@@ -32,15 +35,21 @@ const CASES: Case[] = [
 ];
 
 // Cases that must be refused before any upstream call is made.
+//
+// Matching the message is not enough, and asserting only that was the defect
+// independent review found in the first version of this harness: a refusal the
+// health machinery does not RECOGNISE still opens the circuit breaker, so a
+// green run here was evidence of the wrong thing. Each case is now also put
+// through the same three consumers `new-capabilities-refusal.test.ts` uses.
 const REFUSALS: Array<{ slug: string; input: Record<string, unknown>; expect: RegExp }> = [
-  { slug: "clinical-trials-search", input: {}, expect: /'query' is required/ },
-  { slug: "doi-resolve", input: { doi: "not-a-doi" }, expect: /does not contain a DOI/ },
-  { slug: "citation-graph", input: { paper_id: "???" }, expect: /not a recognised paper identifier/ },
-  { slug: "cert-transparency-search", input: { domain: "not a domain" }, expect: /'domain' is required/ },
-  { slug: "host-exposure-lookup", input: { host: "10.0.0.1" }, expect: /private, loopback or reserved/ },
-  { slug: "breach-exposure-check", input: { email: "a@b.com" }, expect: /is not accepted/ },
+  { slug: "clinical-trials-search", input: {}, expect: /'query' must be at least 2 characters/ },
+  { slug: "doi-resolve", input: { doi: "not-a-doi" }, expect: /'doi' must be a value containing a DOI/ },
+  { slug: "citation-graph", input: { paper_id: "???" }, expect: /'paper_id' must be a DOI/ },
+  { slug: "cert-transparency-search", input: { domain: "not a domain" }, expect: /'domain' is required and must be/ },
+  { slug: "host-exposure-lookup", input: { host: "10.0.0.1" }, expect: /'host' must be a public address/ },
+  { slug: "breach-exposure-check", input: { email: "a@b.com" }, expect: /'email' must be omitted/ },
   { slug: "fda-safety-search", input: { query: "aspirin", domain: "vehicle" }, expect: /'domain' must be one of/ },
-  { slug: "company-fundamentals", input: {}, expect: /'ticker'.*or 'cik'.*required/ },
+  { slug: "company-fundamentals", input: {}, expect: /'ticker' must be given, or 'cik'/ },
 ];
 
 function preview(v: unknown): string {
@@ -80,8 +89,22 @@ for (const r of REFUSALS) {
     failures++;
   } catch (err) {
     const msg = (err as Error).message;
-    if (r.expect.test(msg)) console.log(`PASS ${r.slug}: ${preview(msg)}`);
-    else { console.log(`FAIL ${r.slug}: wrong refusal -> ${msg}`); failures++; }
+    if (!r.expect.test(msg)) {
+      console.log(`FAIL ${r.slug}: wrong refusal -> ${msg}`);
+      failures++;
+      continue;
+    }
+    // The three health consumers, each of which can suspend a capability on
+    // its own if it reads a refusal as a fault.
+    const cls = classifyTransactionFailure(msg);
+    const problems = [
+      isUserInputError(msg) ? null : "circuit breaker would count it",
+      categorizeError(msg) === "capability_refusal" ? null : `quality bucket = ${categorizeError(msg)}`,
+      cls === "caller_input" ? null : `taxonomy class = ${cls}`,
+      countsAgainstCapability(cls) ? "quality floor would count it" : null,
+    ].filter((p): p is string => p !== null);
+    if (problems.length === 0) console.log(`PASS ${r.slug}: recognised — ${preview(msg)}`);
+    else { console.log(`FAIL ${r.slug}: ${problems.join("; ")} -> ${msg}`); failures++; }
   }
 }
 

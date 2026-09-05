@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { readJsonWithLimit } from "../lib/resource-limits.js";
+import { isBlockedIp } from "../lib/url-validator.js";
 import { promises as dns } from "node:dns";
 
 // Shodan InternetDB — the free, keyless tier of Shodan's host database. It
@@ -37,19 +38,21 @@ export function isIpv4(v: string): boolean {
 
 /**
  * Addresses that must never be looked up: they are not routable on the public
- * internet, so a query is either meaningless or an SSRF probe of our own
- * network. InternetDB would answer 404, but refusing here is explicit.
+ * internet, so a query is either meaningless or a probe of our own network.
+ *
+ * `isBlockedIp` in lib/url-validator.ts is the platform's canonical
+ * non-routable list and is deferred to rather than restated — a second copy is
+ * the "one list, many matchers" family that #428/#434/#436 closed, and the two
+ * had already diverged on multicast when review caught it. Only the ranges
+ * specific to *scan data* rather than to SSRF are added here.
  */
 export function isPrivateIpv4(v: string): boolean {
+  if (isBlockedIp(v)) return true;
   const o = v.split(".").map(Number);
-  if (o.length !== 4) return false;
-  if (o[0] === 10 || o[0] === 127 || o[0] === 0) return true;
-  if (o[0] === 172 && o[1] >= 16 && o[1] <= 31) return true;
-  if (o[0] === 192 && o[1] === 168) return true;
-  if (o[0] === 169 && o[1] === 254) return true;
-  if (o[0] === 100 && o[1] >= 64 && o[1] <= 127) return true; // CGNAT
-  if (o[0] >= 224) return true; // multicast + reserved
-  return false;
+  if (o.length !== 4 || o.some(Number.isNaN)) return false;
+  // 0.0.0.0/8 ("this network") and everything from 224 up (multicast, then
+  // reserved 240/4) are absent from internet scan corpora by construction.
+  return o[0] === 0 || o[0] >= 224;
 }
 
 /** Group a CVE list into the coarse buckets a caller acts on. */
@@ -70,7 +73,7 @@ export function summarizeExposure(ports: number[], vulns: string[]): {
 registerCapability("host-exposure-lookup", async (input: CapabilityInput) => {
   const raw = typeof input.host === "string" ? input.host.trim().toLowerCase() : "";
   if (raw.length === 0) {
-    throw new Error("'host' is required — an IPv4 address or a hostname to resolve.");
+    throw new Error("'host' must be an IPv4 address or a hostname to resolve.");
   }
 
   let ip = raw;
@@ -78,23 +81,30 @@ registerCapability("host-exposure-lookup", async (input: CapabilityInput) => {
 
   if (!isIpv4(raw)) {
     if (!DOMAIN_RE.test(raw)) {
-      throw new Error(`'${raw}' is neither an IPv4 address nor a hostname. IPv6 is not covered by this data source.`);
+      throw new Error(`'host' must be an IPv4 address or a hostname; '${raw}' is neither. IPv6 is not covered by this data source.`);
     }
     let addresses: string[];
     try {
-      addresses = await dns.resolve4(raw);
+      // c-ares retries on its own and can sit for ~20s with no ceiling, which
+      // would blow the sync execution budget before the fetch even starts.
+      addresses = await Promise.race([
+        dns.resolve4(raw),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("dns timeout")), 4_000).unref?.(),
+        ),
+      ]);
     } catch {
-      throw new Error(`Hostname '${raw}' has no IPv4 address (no A record, or DNS resolution failed).`);
+      throw new Error(`'host' must be a hostname with an IPv4 address; '${raw}' has no A record, or DNS resolution failed.`);
     }
     if (addresses.length === 0) {
-      throw new Error(`Hostname '${raw}' has no IPv4 address.`);
+      throw new Error(`'host' must be a hostname with an IPv4 address; '${raw}' has none.`);
     }
     ip = addresses[0];
     resolvedFrom = raw;
   }
 
   if (isPrivateIpv4(ip)) {
-    throw new Error(`'${ip}' is a private, loopback or reserved address and is not present in internet scan data.`);
+    throw new Error(`'host' must be a public address; '${ip}' is private, loopback or reserved and is not present in internet scan data.`);
   }
 
   // `ip` is a public dotted quad by this point — isIpv4 and isPrivateIpv4 have
@@ -102,7 +112,7 @@ registerCapability("host-exposure-lookup", async (input: CapabilityInput) => {
   // unguarded-fetch-ok: fixed internetdb.shodan.io host
   const res = await fetch(`${API}/${ip}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    signal: AbortSignal.timeout(12_000),
+    signal: AbortSignal.timeout(8_000),
   });
 
   // InternetDB answers 404 for an address it has never observed. That is a

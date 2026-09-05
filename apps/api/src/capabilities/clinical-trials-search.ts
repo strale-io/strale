@@ -75,7 +75,7 @@ export function normalizeStudy(study: Study): Record<string, unknown> | null {
 registerCapability("clinical-trials-search", async (input: CapabilityInput) => {
   const query = typeof input.query === "string" ? input.query.trim() : "";
   if (query.length < 2) {
-    throw new Error("'query' is required (at least 2 characters), e.g. a condition, intervention or sponsor.");
+    throw new Error("'query' must be at least 2 characters — a condition, intervention, sponsor or free text.");
   }
   const limit = readBoundedInt(input.limit, "limit", { min: 1, max: 20, fallback: 10 });
 
@@ -99,7 +99,7 @@ registerCapability("clinical-trials-search", async (input: CapabilityInput) => {
 
   const res = await fetch(`${API}?${params.toString()}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(10_000),
   });
   if (res.status === 429) {
     throw new Error("ClinicalTrials.gov is rate-limiting requests right now. Retry shortly.");

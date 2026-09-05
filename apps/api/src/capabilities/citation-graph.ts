@@ -77,7 +77,7 @@ export function normalizeWork(w: Work | null | undefined): Record<string, unknow
   };
 }
 
-async function openalex(path: string, timeoutMs = 15_000): Promise<Response> {
+async function openalex(path: string, timeoutMs = 6_000): Promise<Response> {
   const joiner = path.includes("?") ? "&" : "?";
   const res = await fetch(`${API}${path}${joiner}mailto=${encodeURIComponent(CONTACT)}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
@@ -92,11 +92,11 @@ async function openalex(path: string, timeoutMs = 15_000): Promise<Response> {
 registerCapability("citation-graph", async (input: CapabilityInput) => {
   const raw = typeof input.paper_id === "string" ? input.paper_id.trim() : "";
   if (raw.length === 0) {
-    throw new Error("'paper_id' is required — a DOI, arXiv id, PubMed id, or OpenAlex work id (W2159974629).");
+    throw new Error("'paper_id' must be a DOI, arXiv id, PubMed id, or OpenAlex work id (W2159974629).");
   }
   const path = resolveWorkPath(raw);
   if (!path) {
-    throw new Error(`'${raw}' is not a recognised paper identifier. Pass a DOI, arXiv id (2209.15001), PubMed id, or an OpenAlex work id (W2159974629).`);
+    throw new Error(`'paper_id' must be a DOI, arXiv id (2209.15001), PubMed id, or OpenAlex work id (W2159974629); '${raw}' is none of those.`);
   }
   const limit = readBoundedInt(input.limit, "limit", { min: 1, max: 50, fallback: 10 });
 
@@ -108,7 +108,7 @@ registerCapability("citation-graph", async (input: CapabilityInput) => {
   }
 
   const workRes = await openalex(`/works/${path}`);
-  if (workRes.status === 404) throw new Error(`OpenAlex has no record for '${raw}'.`);
+  if (workRes.status === 404) throw new Error(`'paper_id' must be a work OpenAlex has a record for; it has none for '${raw}'.`);
   if (!workRes.ok) throw new Error(`OpenAlex returned HTTP ${workRes.status}.`);
   const work = await readJsonWithLimit<Work>(workRes);
 

@@ -14,6 +14,18 @@
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
+// This script writes source files and restores them with `git checkout HEAD --`.
+// In this shared checkout that is exactly how a sibling session's uncommitted
+// work gets destroyed, so refuse to start unless the tree is clean. The
+// docstring above used to say "safe on a clean tree" and enforce nothing.
+try {
+  execSync("git diff --quiet && git diff --cached --quiet", { stdio: "pipe" });
+} catch {
+  console.error("refusing to run: the working tree has uncommitted changes.");
+  console.error("`git checkout HEAD --` would discard them. Commit or stash first.");
+  process.exit(2);
+}
+
 const MUTATIONS = [
   {
     name: "clinical-trials: drop the NCT id from every study",

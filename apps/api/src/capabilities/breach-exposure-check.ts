@@ -96,7 +96,7 @@ registerCapability("breach-exposure-check", async (input: CapabilityInput) => {
   for (const field of ["email", "password", "account"]) {
     if (input[field] !== undefined && input[field] !== null && input[field] !== "") {
       throw new Error(
-        `'${field}' is not accepted. This capability reports breaches of a company's own domain and takes no personal data or secrets. Pass 'domain' instead.`,
+        `'${field}' must be omitted — this capability reports breaches of a company's own domain and takes no personal data or secrets. Pass 'domain' instead.`,
       );
     }
   }
@@ -112,7 +112,7 @@ registerCapability("breach-exposure-check", async (input: CapabilityInput) => {
   // unguarded-fetch-ok: fixed haveibeenpwned.com host
   const res = await fetch(`${API}?Domain=${encodeURIComponent(domain)}`, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(10_000),
   });
   if (res.status === 429) {
     throw new Error("Have I Been Pwned is rate-limiting requests right now. Retry shortly.");

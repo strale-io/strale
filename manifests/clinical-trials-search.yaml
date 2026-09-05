@@ -7,6 +7,7 @@ category: data-extraction
 cost_class: free_unlimited
 quota_window: none
 price_cents: 3
+avg_latency_ms: 340
 is_free_tier: false
 input_schema:
   type: object

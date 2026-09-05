@@ -67,9 +67,17 @@ export function collectHostnames(names: string[][], apex: string): string[] {
   return [...seen].sort();
 }
 
+/**
+ * Both upstreams emit ISO-ish timestamps, but crt.sh omits the zone. Without
+ * an explicit `Z` those parse as LOCAL time, which is correct only because
+ * production runs UTC — on a UTC+2 machine `2026-01-01T00:00:00` became
+ * `2025-12-31T23:00:00Z`. Append the zone when none is present.
+ */
 function iso(value?: string): string | null {
   if (!value) return null;
-  const d = new Date(value.includes("T") ? value : value.replace(" ", "T") + "Z");
+  let v = value.includes("T") ? value : value.replace(" ", "T");
+  if (!/(?:Z|[+-]\d{2}:?\d{2})$/.test(v)) v += "Z";
+  const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
@@ -99,12 +107,12 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
     // The caller's domain is regex-validated by normalizeDomain and carried in
     // URLSearchParams, never in the host.
     // unguarded-fetch-ok: fixed api.certspotter.com host
-    const res = await fetch(spotterUrl, { headers, signal: AbortSignal.timeout(15_000) });
+    const res = await fetch(spotterUrl, { headers, signal: AbortSignal.timeout(6_000) });
     if (res.ok) {
       const rows = await readJsonWithLimit<SpotterIssuance[]>(res);
       if (Array.isArray(rows)) {
         nameLists = rows.map((r) => r.dns_names ?? []);
-        certificates = rows.slice(0, limit).map((r) => ({
+        certificates = rows.map((r) => ({
           id: r.id ?? null,
           dns_names: r.dns_names ?? [],
           issuer: r.issuer?.friendly_name ?? r.issuer?.name ?? null,
@@ -126,7 +134,7 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
     // The caller's domain is regex-validated by normalizeDomain and reaches only
     // an encoded query parameter, never the host.
     // unguarded-fetch-ok: fixed crt.sh host
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(8_000) });
     if (!res.ok) {
       throw new Error(`Certificate Transparency lookup failed: Cert Spotter was unavailable and crt.sh returned HTTP ${res.status}.`);
     }
@@ -136,7 +144,7 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
     }
     source = "crt.sh Certificate Transparency search (Sectigo)";
     nameLists = rows.map((r) => (r.name_value ?? "").split("\n"));
-    certificates = rows.slice(0, limit).map((r) => ({
+    certificates = rows.map((r) => ({
       id: r.id ?? null,
       dns_names: (r.name_value ?? "").split("\n").map((n) => n.trim()).filter(Boolean),
       issuer: r.issuer_name ?? null,
@@ -148,24 +156,37 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
   }
 
   const hostnames = collectHostnames(nameLists, domain);
+
+  // The window is derived from EVERY matched issuance, before `limit` cuts the
+  // list — otherwise `latest_certificate` reports the newest of the page rather
+  // than the newest that exists.
   const befores = certificates
     .map((c) => c.not_before)
     .filter((v): v is string => typeof v === "string")
     .sort();
 
+  // Cert Spotter returns issuances oldest-first (verified 2026-09-05: github.com
+  // ran 2025-09-05 → 2026-09-05 across 78 rows). Slicing that order handed back
+  // the oldest, mostly-expired certificates, which is the opposite of what a
+  // caller asking "what certificates exist for this domain" wants. Newest first.
+  const page = certificates
+    .slice()
+    .sort((a, b) => String(b.not_before ?? "").localeCompare(String(a.not_before ?? "")))
+    .slice(0, limit);
+
   return {
     output: {
       domain,
       include_subdomains: includeSubdomains,
-      certificate_count: certificates.length,
-      // The number of log entries the upstream matched, which can exceed the
-      // page returned when `limit` cuts it.
-      total_matched: nameLists.length,
+      certificate_count: page.length,
+      // Every issuance the upstream matched, which exceeds certificate_count
+      // whenever `limit` cuts the page.
+      total_matched: certificates.length,
       hostnames,
       hostname_count: hostnames.length,
       earliest_certificate: befores[0] ?? null,
       latest_certificate: befores[befores.length - 1] ?? null,
-      certificates,
+      certificates: page,
     },
     provenance: { source, fetched_at: new Date().toISOString() },
   };

@@ -51,8 +51,8 @@ describe("clinical-trials-search", () => {
   });
 
   it("refuses a missing query and an unknown status before any upstream call", async () => {
-    await expect(exec({})).rejects.toThrow(/'query' is required/);
-    await expect(exec({ query: "x" })).rejects.toThrow(/'query' is required/);
+    await expect(exec({})).rejects.toThrow(/'query' must be at least 2 characters/);
+    await expect(exec({ query: "x" })).rejects.toThrow(/'query' must be at least 2 characters/);
     await expect(exec({ query: "crispr", status: "sleeping" })).rejects.toThrow(/'status' must be one of/);
     expect(fetchMock).not.toHaveBeenCalled();
   });

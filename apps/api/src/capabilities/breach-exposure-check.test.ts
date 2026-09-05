@@ -56,7 +56,7 @@ describe("breach-exposure-check", () => {
   // The refusal is the privacy guarantee: these inputs would be persisted on
   // the transaction record for 90 days, so they must never be accepted.
   it.each(["email", "password", "account"])("refuses a '%s' input before any upstream call", async (field) => {
-    await expect(exec({ [field]: "x", domain: "adobe.com" })).rejects.toThrow(/is not accepted/);
+    await expect(exec({ [field]: "x", domain: "adobe.com" })).rejects.toThrow(/must be omitted/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

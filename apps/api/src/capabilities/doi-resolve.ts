@@ -79,18 +79,18 @@ function authorName(a: CrossrefAuthor): string | null {
 registerCapability("doi-resolve", async (input: CapabilityInput) => {
   const raw = typeof input.doi === "string" ? input.doi.trim() : "";
   if (raw.length === 0) {
-    throw new Error("'doi' is required — a bare DOI (10.1038/nature12373) or any doi.org URL containing one.");
+    throw new Error("'doi' must be a bare DOI (10.1038/nature12373), a doi: prefixed string, or a doi.org URL.");
   }
   const doi = extractDoi(raw);
   if (!doi) {
-    throw new Error(`'${raw}' does not contain a DOI. A DOI looks like 10.1038/nature12373.`);
+    throw new Error(`'doi' must be a value containing a DOI such as 10.1038/nature12373; '${raw}' does not.`);
   }
 
   const headers = { "User-Agent": USER_AGENT, Accept: "application/json" };
 
   const res = await fetch(`${CROSSREF}/${encodeURIComponent(doi)}`, {
     headers,
-    signal: AbortSignal.timeout(12_000),
+    signal: AbortSignal.timeout(7_000),
   });
 
   // Crossref registers journal articles; datasets and software are registered
@@ -98,10 +98,10 @@ registerCapability("doi-resolve", async (input: CapabilityInput) => {
   if (res.status === 404) {
     const dc = await fetch(`${DATACITE}/${encodeURIComponent(doi)}`, {
       headers,
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(7_000),
     });
     if (dc.status === 404) {
-      throw new Error(`DOI '${doi}' is not registered with Crossref or DataCite.`);
+      throw new Error(`'doi' must be a DOI registered with Crossref or DataCite; '${doi}' is not.`);
     }
     if (!dc.ok) throw new Error(`DataCite returned HTTP ${dc.status} for DOI '${doi}'.`);
     const body = await readJsonWithLimit<{ data?: { attributes?: DataCiteAttrs } }>(dc);

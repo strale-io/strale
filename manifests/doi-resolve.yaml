@@ -7,6 +7,7 @@ category: data-extraction
 cost_class: free_unlimited
 quota_window: none
 price_cents: 2
+avg_latency_ms: 400
 is_free_tier: false
 input_schema:
   type: object
@@ -74,8 +75,9 @@ test_fixtures:
         operator: not_null
         reliability: guaranteed
       - field: title
-        operator: not_null
+        operator: type
         reliability: common
+        value: string
       - field: authors
         operator: type
         reliability: guaranteed

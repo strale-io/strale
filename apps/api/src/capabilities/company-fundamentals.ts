@@ -67,7 +67,7 @@ export function pickUnit(units: Record<string, Fact[]>): { unit: string; facts: 
   return { unit, facts: units[unit] ?? [] };
 }
 
-async function secFetch(url: string, timeoutMs = 15_000): Promise<Response> {
+async function secFetch(url: string, timeoutMs = 6_000): Promise<Response> {
   return fetch(url, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     signal: AbortSignal.timeout(timeoutMs),
@@ -77,7 +77,7 @@ async function secFetch(url: string, timeoutMs = 15_000): Promise<Response> {
 async function resolveTicker(ticker: string): Promise<{ cik: string; title: string }> {
   const now = Date.now();
   if (!tickerCache || now - tickerCache.at > TICKER_TTL_MS) {
-    const res = await secFetch(TICKERS, 25_000);
+    const res = await secFetch(TICKERS, 9_000);
     if (!res.ok) throw new Error(`SEC ticker directory returned HTTP ${res.status}.`);
     const raw = await readJsonWithLimit<Record<string, TickerRow>>(res, 4 * 1024 * 1024);
     const map = new Map<string, { cik: string; title: string }>();
@@ -90,7 +90,7 @@ async function resolveTicker(ticker: string): Promise<{ cik: string; title: stri
   }
   const hit = tickerCache.map.get(ticker.toUpperCase());
   if (!hit) {
-    throw new Error(`Ticker '${ticker}' is not in the SEC's registrant directory. Only companies that file with the SEC are covered; pass 'cik' directly if you have it.`);
+    throw new Error(`'ticker' must be a symbol in the SEC's registrant directory; '${ticker}' is not. Only companies that file with the SEC are covered; pass 'cik' directly if you have it.`);
   }
   return hit;
 }
@@ -99,7 +99,7 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
   const tickerRaw = typeof input.ticker === "string" ? input.ticker.trim() : "";
   const cikRaw = input.cik === undefined || input.cik === null ? "" : String(input.cik).trim();
   if (tickerRaw.length === 0 && cikRaw.length === 0) {
-    throw new Error("One of 'ticker' (e.g. AAPL) or 'cik' (e.g. 320193) is required.");
+    throw new Error("'ticker' must be given, or 'cik' — for example ticker AAPL, or cik 320193.");
   }
 
   let cik: string;
@@ -108,7 +108,7 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
 
   if (tickerRaw.length > 0) {
     if (!/^[A-Za-z0-9.-]{1,10}$/.test(tickerRaw)) {
-      throw new Error(`'${tickerRaw}' is not a valid ticker symbol.`);
+      throw new Error(`'ticker' must be up to 10 alphanumeric characters; '${tickerRaw}' is not.`);
     }
     const hit = await resolveTicker(tickerRaw);
     cik = hit.cik;
@@ -116,7 +116,7 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
     ticker = tickerRaw.toUpperCase();
   } else {
     if (!/^\d{1,10}$/.test(cikRaw.replace(/^CIK/i, ""))) {
-      throw new Error(`'${cikRaw}' is not a valid CIK. A CIK is up to 10 digits, e.g. 320193.`);
+      throw new Error(`'cik' must be up to 10 digits, e.g. 320193; '${cikRaw}' is not.`);
     }
     cik = padCik(cikRaw.replace(/^CIK/i, ""));
   }
@@ -182,7 +182,7 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
   }
 
   if (!anyConceptFound) {
-    throw new Error(`No annual (10-K) XBRL financial data is on file at the SEC for CIK ${cik}. Foreign private issuers filing 20-F and companies that have never filed a 10-K are not covered.`);
+    throw new Error(`'cik' must be a registrant with annual (10-K) XBRL data on file; the SEC has none for ${cik}. Foreign private issuers filing 20-F and companies that have never filed a 10-K are not covered.`);
   }
 
   const periods = Object.values(fundamentals)

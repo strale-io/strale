@@ -51,9 +51,9 @@ describe("citation-graph", () => {
   });
 
   it("refuses an unrecognised identifier and an unknown direction", async () => {
-    await expect(exec({ paper_id: "???" })).rejects.toThrow(/not a recognised paper identifier/);
+    await expect(exec({ paper_id: "???" })).rejects.toThrow(/'paper_id' must be a DOI, arXiv id/);
     await expect(exec({ paper_id: "10.1038/nature12373", direction: "sideways" })).rejects.toThrow(/'direction' must be one of/);
-    await expect(exec({})).rejects.toThrow(/'paper_id' is required/);
+    await expect(exec({})).rejects.toThrow(/'paper_id' must be a DOI/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

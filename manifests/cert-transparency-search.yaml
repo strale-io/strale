@@ -8,6 +8,7 @@ cost_class: free_quota
 quota_window: daily
 quota_cap: 100
 price_cents: 5
+avg_latency_ms: 420
 is_free_tier: false
 input_schema:
   type: object

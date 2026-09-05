@@ -12,6 +12,7 @@ known_rate_limit:
   unit: per_minute
   source_url: https://open.fda.gov/apis/authentication/
 price_cents: 5
+avg_latency_ms: 930
 is_free_tier: false
 input_schema:
   type: object

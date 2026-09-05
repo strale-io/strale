@@ -70,7 +70,7 @@ export function buildSearch(term: string, classification: string | null): string
 registerCapability("fda-safety-search", async (input: CapabilityInput) => {
   const term = typeof input.query === "string" ? input.query.trim() : "";
   if (term.length < 2) {
-    throw new Error("'query' is required (at least 2 characters) — a product name, ingredient, firm or recall reason.");
+    throw new Error("'query' must be at least 2 characters — a product name, ingredient, firm or recall reason.");
   }
 
   const domain = input.domain === undefined || input.domain === null || input.domain === ""
@@ -98,7 +98,7 @@ registerCapability("fda-safety-search", async (input: CapabilityInput) => {
   // unguarded-fetch-ok: fixed api.fda.gov host
   const res = await fetch(url, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(10_000),
   });
 
   // openFDA signals an empty result set with 404 NOT_FOUND. Anything else at

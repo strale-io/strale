@@ -37,10 +37,10 @@ describe("host-exposure-lookup", () => {
   });
 
   it("refuses private, reserved and IPv6 targets before any upstream call", async () => {
-    await expect(exec({ host: "10.0.0.1" })).rejects.toThrow(/private, loopback or reserved/);
-    await expect(exec({ host: "127.0.0.1" })).rejects.toThrow(/private, loopback or reserved/);
+    await expect(exec({ host: "10.0.0.1" })).rejects.toThrow(/must be a public address/);
+    await expect(exec({ host: "127.0.0.1" })).rejects.toThrow(/must be a public address/);
     await expect(exec({ host: "2606:4700::1111" })).rejects.toThrow(/IPv6 is not covered/);
-    await expect(exec({})).rejects.toThrow(/'host' is required/);
+    await expect(exec({})).rejects.toThrow(/'host' must be an IPv4 address or a hostname/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
