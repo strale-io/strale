@@ -1,0 +1,130 @@
+slug: clinical-trials-search
+name: Clinical Trials Search
+description: >-
+  Search registered clinical trials on ClinicalTrials.gov: phase, recruitment status, conditions,
+  interventions, enrollment, sponsor and dates. Filter by recruitment status.
+category: data-extraction
+cost_class: free_unlimited
+quota_window: none
+price_cents: 3
+avg_latency_ms: 340
+is_free_tier: false
+input_schema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Search terms — a condition, intervention, sponsor or free text
+    limit:
+      type: integer
+      description: "Studies to return, 1-20. Default: 10"
+    status:
+      type: string
+      description: >-
+        Optional recruitment filter: recruiting, not_yet_recruiting, active_not_recruiting,
+        completed, terminated, withdrawn, suspended
+output_schema:
+  type: object
+  example:
+    query: crispr cas9
+    status_filter: null
+    total_results: 103
+    returned: 1
+    studies:
+      - nct_id: NCT03872479
+        title: Single Ascending Dose Study in Participants With LCA10
+        status: UNKNOWN
+        study_type: INTERVENTIONAL
+        phases:
+          - PHASE1
+          - PHASE2
+        conditions:
+          - Leber Congenital Amaurosis 10
+        interventions:
+          - type: DRUG
+            name: EDIT-101
+        enrollment: 34
+        enrollment_type: ESTIMATED
+        start_date: "2019-09-26"
+        completion_date: "2025-05-23"
+        lead_sponsor: Editas Medicine, Inc.
+        lead_sponsor_class: INDUSTRY
+        location_count: 5
+        url: https://clinicaltrials.gov/study/NCT03872479
+  properties:
+    query:
+      type: string
+    status_filter:
+      type: string
+    total_results:
+      type: number
+    returned:
+      type: number
+    studies:
+      type: array
+data_source: ClinicalTrials.gov API v2 (U.S. National Library of Medicine)
+data_source_type: api
+transparency_tag: algorithmic
+freshness_category: live-fetch
+maintenance_class: free-stable-api
+processes_personal_data: false
+geography: global
+test_fixtures:
+  known_answer:
+    input:
+      query: crispr cas9
+      limit: 3
+    expected_fields:
+      - field: query
+        operator: not_null
+        reliability: guaranteed
+      - field: total_results
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: returned
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: studies
+        operator: type
+        reliability: guaranteed
+        value: array
+  health_check_input:
+    query: crispr cas9
+    limit: 1
+output_field_reliability:
+  query: guaranteed
+  status_filter: guaranteed
+  total_results: guaranteed
+  returned: guaranteed
+  studies: guaranteed
+limitations:
+  - title: Covers the ClinicalTrials.gov registry only
+    text: >-
+      Trials registered solely with the EU Clinical Trials Information System, ISRCTN, the WHO ICTRP
+      or a national registry do not appear. Registration is voluntary in many jurisdictions, so
+      absence from this registry is not evidence a trial does not exist.
+    category: coverage
+    severity: warning
+  - title: Registration record, not results
+    text: >-
+      The response describes what the sponsor registered — design, enrollment target and status. It
+      carries no outcome data, and a large share of registered trials never post results.
+    category: coverage
+    severity: info
+  - title: Status is sponsor-maintained and often stale
+    text: >-
+      Recruitment status is whatever the sponsor last submitted. A status of UNKNOWN means the
+      sponsor has not verified the record within the registry's expected window; completed trials
+      are frequently left as recruiting for months.
+    category: accuracy
+    severity: warning
+  - title: Enrollment counts mix estimates with actuals
+    text: >-
+      enrollment_type distinguishes ESTIMATED (a target) from ACTUAL (what was reached). Treating an
+      estimated figure as achieved enrollment overstates a trial's size.
+    category: accuracy
+    severity: info
