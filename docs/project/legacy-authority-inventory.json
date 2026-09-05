@@ -44,6 +44,7 @@
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
         "archive/sessions/2026-09-04-m2-cross-surface-DEC-20260422-A-gaps.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-1.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-2.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
@@ -82,8 +83,10 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
+        "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-quote-fidelity.mjs"
       ]
     },
     {
@@ -176,6 +179,7 @@
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260508-C.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260512-A.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-1.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-2.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -308,7 +312,9 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-4-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-g9-closing-review-mechanism.md",
+        "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
+        "handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -323,6 +329,8 @@
         "scripts/handoff/handoff-check.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs",
+        "scripts/m2-quote-fidelity.mjs",
+        "scripts/m2-quote-fidelity.test.mjs",
         "scripts/receipts-lib.mjs",
         "scripts/receipts.test.mjs"
       ]
@@ -474,6 +482,7 @@
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-B.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-C.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-1.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-2.md",
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
@@ -516,6 +525,7 @@
         "scripts/claims-lib.mjs",
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
+        "scripts/m2-quote-fidelity.test.mjs",
         "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
@@ -540,6 +550,7 @@
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260406-C.md",
         "archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-E.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-1.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-2.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/kyb-coverage-research.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
@@ -613,7 +624,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "4e70cf1ef41493705e91c7636a08e65600b5f7715a70f67c74f33865232f1317",
+      "sha256": "d56bfe09ea898b1957bc2c1d08372c573a312478c803c76d7c1c3e9a6cbcd609",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -683,6 +694,7 @@
         "archive/sessions/2026-09-02-t3-session-end-gate-plan.md",
         "archive/sessions/2026-09-02-t5-cto-readable-structure-plan.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-1.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-2.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",
