@@ -47,29 +47,27 @@ voice rule, handoff hygiene, hosting); scope `technical` for the other
 nine, per the brief. `owner: petter`, `authority_scope: none`,
 `authority_active: false`, `migration_status: candidate`, `phase: M2`.
 
-## A source-data anomaly found and handled
+## Correction to an earlier draft of this batch
 
-Several rows' `Outcome` field (and one row's `Rationale` field) contain
-text that is topically unrelated to that row's own Decision statement,
-apparently cross-contaminated from other rows in the same Notion
-database edit session: DEC-20260505-A, DEC-20260505-B, DEC-20260505-C
-all carry Outcome text about company-data vendor sourcing (ES/DE/IT
-BORME/bundesAPI/Openapi.com/Kyckr), unrelated to their own topics
-(closing-step rule, lifecycle rip-out, matching tiebreaker);
-DEC-20260510-A carries Outcome text about a drizzle-orm removal
-verification, unrelated to handoff-note hygiene; DEC-20260511-B,
-DEC-20260511-E, DEC-20260511-F, DEC-20260513-A all carry the identical
-"Phase B complete 2026-05-12 via PRs #98-102. 287 caps classified..."
-text, word for word, regardless of their own distinct topics (only
-DEC-20260511-B's own topic, cost-class classification, actually matches
-that text; the other three do not). DEC-20260507-J's `Rationale` field
-is entirely about country-vendor economics (Openapi PAYG, case 151296),
-not about `capability_health`/`recordFailure`, the field its own
-Decision statement names. Each affected record's Consequences or
-Reversal-conditions section states the mismatch explicitly, quotes the
-actual field content, and draws no conclusion from it, per this batch's
-fidelity requirement (report exactly what the source states, including
-when the source itself looks wrong).
+An earlier pass through this batch reported several rows' `Outcome`,
+`Rationale`, `Source`, or `Superseded By` fields as carrying text
+belonging to a different row, and described this as cross-contaminated
+Notion data. That was wrong. The earlier extraction sliced the raw
+export with a regex that ran past each row's own boundary and picked up
+a neighbouring row's field text; the fields it quoted are, in the actual
+export, simply null. A proper JSON parse of the export
+(`rows-b18.json`, all thirteen rows, every field present with nulls
+explicit) shows: only DEC-20260513-B and DEC-20260513-C have a populated
+`Outcome`; DEC-20260507-J and DEC-20260513-A have a null `Rationale`;
+`Source` is null for DEC-20260507-I, DEC-20260511-E, DEC-20260511-F,
+DEC-20260513-A, DEC-20260513-B, DEC-20260513-C, and DEC-20260513-D;
+`Superseded By` is null for all thirteen rows. Every affected record
+under `docs/decisions/records/` has been corrected against this parse:
+the false field-content claims and the "cross-contaminated" framing were
+removed, quotes for populated fields were checked byte-for-byte against
+`rows-b18.json`, and conclusions that had rested on a false quote were
+rewritten from the fields that are actually populated (Decision,
+Rationale where present, Status, Date, Scope).
 
 ## Verification performed (per record)
 
