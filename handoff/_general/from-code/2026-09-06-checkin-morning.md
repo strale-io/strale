@@ -302,6 +302,16 @@ Guarded (`apps/api/src/lib/capability-refusal.test.ts`): German joins
 the legal form is stripped). Both existing assertions now cover it: the typed
 error, and recognition by all three consumers (breaker, floor, quality signal).
 
+**Scope stated precisely, because overclaiming is what this run spent its
+morning correcting.** German was the only registry whose ambiguity *message*
+went unrecognised. `finnish-company-data.ts:113` and `spanish-company-data.ts:176`
+also keep local implementations and also throw a plain `Error` — but both open
+with `Ambiguous `, so all three consumers recognise them from the string, which
+is the property that matters. What they lack is only the typed object, and on
+the one path where the object survives (`/v1/do` sync) `isCapabilityRefusal`
+falls back to the message anyway. So: a consistency gap in two more files, not a
+defect, and not fixed here.
+
 **Fail-before verified, both directions.** With the fixed test and the
 un-fixed executor restored from `origin/main`, `capability-refusal.test.ts`
 fails 2 of 18 with `german pickByName: breaker: expected false to be true`.
