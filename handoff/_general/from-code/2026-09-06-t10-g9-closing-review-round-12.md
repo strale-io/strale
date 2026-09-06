@@ -11,7 +11,7 @@ Partition P5 FAILed on one item; partition P6 FAILed on two items:
    414-428): asserts as fact that "library-as-product" is "not language
    `docs/decisions/records/DEC-20260812-A.md` ... uses." Fact:
    `docs/decisions/records/DEC-20260812-A.md` line 83 (Reversal
-   conditions) reads "replaces the library-as-product strategy" —
+   conditions) reads "replaces the library-as-product strategy",
    the literal phrase is present in that file, confirmed by
    `git grep -n -i "library-as-product" HEAD --
    docs/decisions/records/DEC-20260812-A.md` (one hit, line 83).
