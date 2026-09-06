@@ -167,6 +167,14 @@ registerCapability("breach-exposure-check", async (input: CapabilityInput) => {
     },
     provenance: {
       source: "Have I Been Pwned breach database (keyless /breaches endpoint)",
+      // CC BY 4.0 is what permits reselling this commercially, and attribution
+      // is the condition attached to it: the licence requires "clear and
+      // visible attribution with a link to haveibeenpwned.com ... anywhere
+      // data from the service is used". Naming the source in prose is not a
+      // link, so these two fields are the compliance, not decoration — do not
+      // drop them when trimming the payload.
+      source_url: "https://haveibeenpwned.com",
+      license: "CC BY 4.0 — data from Have I Been Pwned (https://haveibeenpwned.com)",
       fetched_at: new Date().toISOString(),
     },
   };

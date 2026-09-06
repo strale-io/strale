@@ -845,7 +845,26 @@ adminRoute.post("/create-solution", async (c) => {
 
   const db = getDb();
 
-  // Insert solution
+  // Insert solution.
+  //
+  // The ON CONFLICT branch below sets is_active conditionally rather than to a
+  // bare true. Re-running this upsert used to switch a deliberately deactivated
+  // solution back on, silently, regardless of why it was off.
+  //
+  // Observed 2026-09-06: web3-pre-trade and web3-wallet-snapshot came back four
+  // times while being deactivated for resting on CoinGecko's free Demo plan,
+  // which excludes commercial use. Each revival set is_active alone and left
+  // x402_enabled and the deactivation reason intact — this statement's
+  // fingerprint.
+  //
+  // Same convention vendor-control-tower.ts and the seeding sweep use: a
+  // deactivation_reason that is NULL or starts with "vendor:" is
+  // machine-managed and may be overwritten; anything else was written by
+  // someone who meant it, and is preserved.
+  //
+  // Keep prose OUT of the SQL template — a backtick in a SQL comment terminates
+  // the template literal, which is how the first version of this fix broke the
+  // build.
   const solResult = await db.execute(sql`
     INSERT INTO solutions (slug, name, marketing_name, description, long_description, agent_description, category, price_cents, component_sum_cents, value_tier, maintenance_level, geography, is_active, input_schema, transparency_tag)
     VALUES (
@@ -869,7 +888,13 @@ adminRoute.post("/create-solution", async (c) => {
       name = EXCLUDED.name,
       description = EXCLUDED.description,
       price_cents = EXCLUDED.price_cents,
-      is_active = true,
+      -- Guarded, not an unconditional true. See the note above this statement.
+      is_active = CASE
+        WHEN solutions.deactivation_reason IS NULL
+          OR solutions.deactivation_reason LIKE 'vendor:%'
+        THEN true
+        ELSE solutions.is_active
+      END,
       input_schema = EXCLUDED.input_schema
     RETURNING id, slug, name
   `);
