@@ -1,12 +1,11 @@
 {
-  "_comment": "Codex hooks (Claude-compatible event and output shape; needs `[features] codex_hooks = true` in ~/.codex/config.toml). SessionStart prints the orientation; Stop runs the handoff gate and returns {\"decision\":\"block\",\"reason\":...} until the checkout is clean, pushed, and its register or handoff is updated. The notify wrapper in ~/.codex/config.toml (scripts/handoff/codex-notify.mjs) records the same gate after every turn regardless of this file. Both scripts live under .claude/hooks/ because they are provider-neutral Node scripts that read the same stdin payload.",
   "hooks": {
     "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/handoff-session-start.mjs",
+            "command": "node -e \"const c=require('node:child_process');const r=c.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();const p=c.spawnSync(process.execPath,[require('node:path').join(r,'.claude/hooks/handoff-session-start.mjs')],{cwd:r,stdio:'inherit'});if(p.error)console.error(p.error.message);process.exit(p.status??1)\"",
             "timeout": 60
           }
         ]
@@ -17,11 +16,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/handoff-stop.mjs",
+            "command": "node -e \"const c=require('node:child_process');const r=c.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();const p=c.spawnSync(process.execPath,[require('node:path').join(r,'.claude/hooks/handoff-stop.mjs')],{cwd:r,stdio:'inherit'});if(p.error)console.error(p.error.message);process.exit(p.status??1)\"",
             "timeout": 180
           }
         ]
       }
     ]
-  }
+  },
+  "description": "Session orientation and handoff checks. Stop requests continuation on failure with a six-block escape; notify separately records results after the turn. Requires hooks enabled and the project and exact hook definitions trusted."
 }

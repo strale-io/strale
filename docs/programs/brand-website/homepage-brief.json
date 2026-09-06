@@ -127,11 +127,12 @@
       "motion":"None required."
     },
     {
-      "id":"shared-access-diagram", "status":"master-not-yet-authored",
+      "id":"shared-access-diagram", "status":"candidate-master-for-review",
       "job":"Make one shared access path understandable without a schema or protocol lesson.",
       "source":"docs/programs/brand-website/POSITIONING-BRIEF.md",
       "labels":["Your agent","Strale","Research","Extraction","Validation"],
-      "master_plan":"Original editable vector or semantic HTML/SVG using existing tokens. Add the master and metadata to the shared asset registry before a page imports it. No third-party provider logos.",
+      "asset_registry":"design/brand-kit/quiet-material/illustrations/registry.json",
+      "master_plan":"Use the registered desktop and narrow masters from the illustration extension. Light and inverse versions preserve the same relationship and retained logo geometry. Final page composition and production adoption remain separate.",
       "narrow":"One vertical path from Your agent through Strale, then three readable task labels; no fake sequence of tool calls.",
       "alt":"Your agent connects to Strale to access tools for research, extraction and validation.",
       "motion":"No animated traffic or concurrent completion states. The diagram explains access, not a captured run."

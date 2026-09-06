@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "d57a99547304df16baf704346abb1c5d06975923d4a936d94474d7702e4e7c34",
+      "sha256": "97ad252e72d387bc5113a35ca01b8149947b096f8f74cdecaa4bcde050264a05",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -53,6 +53,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-8.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-9.md",
+        "archive/sessions/2026-09-06-agent-hook-setup/VERIFICATION-NOTES.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
@@ -93,6 +94,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
+        "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs"
@@ -101,7 +103,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "08c4754bddcbfffd6939b8382b380b737765b3882357362cdb3ce0e8d0d97527",
+      "sha256": "f1a3312fc449ecd086a5c9f84f7470568aed205ab32c40e5f5de581d492ccae9",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -197,6 +199,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-8.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-9.md",
+        "archive/sessions/2026-09-06-agent-hook-setup/VERIFICATION-NOTES.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -332,6 +335,7 @@
         "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md",
+        "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-10.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/security-audit-api.md",
@@ -450,10 +454,13 @@
     {
       "path": ".codex/hooks.json",
       "owner_area": "codex-workflow",
-      "sha256": "a4f47372d940e04758397fc26fb9d79e970f8fdad15e50729617c4d4149d8ae0",
+      "sha256": "33d0843618bded10ca9a04f8c555dfeb0f30a45e9784c8dfb14431b970bd399e",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
+        "archive/receipts/2026-09-06-check-agent-hook-setup.json",
+        "archive/sessions/2026-09-06-agent-hook-setup/VERIFICATION-NOTES.md",
+        "archive/sessions/2026-09-06-agent-hook-setup/fixture-verification.json",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
@@ -662,7 +669,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "55e266b196065c2b6569b4735373a24c25d7562697f9752574cd4692893a2aa7",
+      "sha256": "34fb5b7e4bed7cd43d36a5a3a73bc943c1f0a82d83c8c71569da0d951a48c040",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

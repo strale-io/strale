@@ -1,0 +1,449 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f8f843ef9301c42f5a3e20f7c5d7fccb2028ba04"
+  },
+  "at": "2026-09-06T08:55:48.068Z",
+  "inputs": {
+    "source": "design/brand-kit/quiet-material/illustrations/verification.json"
+  },
+  "summary": {
+    "schema_version": 1,
+    "id": "quiet-material-illustrations.shared-access.v1",
+    "status": "verified-candidate",
+    "verified_at": "2026-09-06"
+  },
+  "topic": "brand-shared-access-reviewed",
+  "raw": {
+    "schema_version": 1,
+    "id": "quiet-material-illustrations.shared-access.v1",
+    "status": "verified-candidate",
+    "verified_at": "2026-09-06",
+    "inputs": {
+      "README.md": "5f227606eec964113989c4f8174dacf439b94a50f19caa939c8f5543c59424b0",
+      "build.mjs": "38868bf4e571e54fb0c92d7c6b68fc02194de610bb2406854a69c31a139ec9f0",
+      "build.test.mjs": "26e2558923e085996345c181cf0b4cf9822cd4512464e336f0448e234785d0af",
+      "verify.mjs": "0f774c8ce0bf192ebdd089ca20762c102ad95161c42200e6d5af1e9190a5b8c7",
+      "registry.json": "37559210cc4ba25dfb2a8280a9d1ab8fc1b7cc5a8baf0cc10a52cf01542196b8",
+      "../../../tokens/candidates/quiet-material-illustrations.json": "2025c855eb2c5ff9e1904a291d3d8ddb53dda192b52799af701fd598ea10a4de",
+      "../../../tokens/candidates/quiet-material-patterns.json": "7e5611bf7d156e0465c9b53086c7b1a7bd757c517d20a84f73ba8d461a887f50",
+      "../foundations/masters/strale-lockup.svg": "4a6e91cb81830f2960bb526cf8b90a6e93ec1e837829d4c25c70474dd61cb809",
+      "../foundations/registry.json": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
+      "../fonts/InstrumentSans.ttf": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+      "../fonts/InstrumentSans-OFL.txt": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
+      "../../../../docs/programs/brand-website/homepage-brief.json": "84e9af1ae8c778470ecb3164d22cc2d2e399091f38352b71f3ddc298c5f9157b",
+      "../../../../docs/research/2026-09-06-shared-access-illustration.md": "fe1a633f0593389d9764fb4215a8b4be8a69fbb9be4fe44bab035bf9545f4f50"
+    },
+    "scope": {
+      "widths": [
+        320,
+        375,
+        760,
+        1120,
+        1440
+      ],
+      "breakpoint_edge_widths": [
+        761
+      ],
+      "themes": [
+        "light",
+        "dark"
+      ],
+      "network": "local file and data URI only",
+      "layouts": [
+        "desktop",
+        "narrow"
+      ],
+      "motion": "static"
+    },
+    "checks": {
+      "no_overflow": true,
+      "svg_image_decode": true,
+      "labels": true,
+      "topology": true,
+      "fonts_loaded": true,
+      "narrow_label_size": true,
+      "reduced_motion_static": true,
+      "contrast": true,
+      "network_local_only": true
+    },
+    "measurements": {
+      "responsive": [
+        {
+          "width": 320,
+          "theme": "light",
+          "layout": "narrow",
+          "rendered_width": 288,
+          "rendered_height": 396
+        },
+        {
+          "width": 320,
+          "theme": "dark",
+          "layout": "narrow",
+          "rendered_width": 288,
+          "rendered_height": 396
+        },
+        {
+          "width": 375,
+          "theme": "light",
+          "layout": "narrow",
+          "rendered_width": 320,
+          "rendered_height": 440
+        },
+        {
+          "width": 375,
+          "theme": "dark",
+          "layout": "narrow",
+          "rendered_width": 320,
+          "rendered_height": 440
+        },
+        {
+          "width": 760,
+          "theme": "light",
+          "layout": "narrow",
+          "rendered_width": 320,
+          "rendered_height": 440
+        },
+        {
+          "width": 760,
+          "theme": "dark",
+          "layout": "narrow",
+          "rendered_width": 320,
+          "rendered_height": 440
+        },
+        {
+          "width": 1120,
+          "theme": "light",
+          "layout": "desktop",
+          "rendered_width": 1056,
+          "rendered_height": 352
+        },
+        {
+          "width": 1120,
+          "theme": "dark",
+          "layout": "desktop",
+          "rendered_width": 1056,
+          "rendered_height": 352
+        },
+        {
+          "width": 1440,
+          "theme": "light",
+          "layout": "desktop",
+          "rendered_width": 1080,
+          "rendered_height": 360
+        },
+        {
+          "width": 1440,
+          "theme": "dark",
+          "layout": "desktop",
+          "rendered_width": 1080,
+          "rendered_height": 360
+        },
+        {
+          "width": 761,
+          "theme": "light",
+          "layout": "desktop",
+          "rendered_width": 697,
+          "rendered_height": 232.328125
+        },
+        {
+          "width": 761,
+          "theme": "dark",
+          "layout": "desktop",
+          "rendered_width": 697,
+          "rendered_height": 232.328125
+        }
+      ],
+      "svg": [
+        {
+          "file": "masters/shared-access-desktop.svg",
+          "layout": "desktop",
+          "labels": [
+            {
+              "text": "Your agent",
+              "left": 62,
+              "right": 203.59193420410156,
+              "top": 163,
+              "bottom": 197,
+              "size": 28
+            },
+            {
+              "text": "Research",
+              "left": 880,
+              "right": 1001.09375,
+              "top": 61,
+              "bottom": 95,
+              "size": 28
+            },
+            {
+              "text": "Extraction",
+              "left": 880,
+              "right": 1015.859375,
+              "top": 163,
+              "bottom": 197,
+              "size": 28
+            },
+            {
+              "text": "Validation",
+              "left": 880,
+              "right": 1010.796875,
+              "top": 265,
+              "bottom": 299,
+              "size": 28
+            }
+          ]
+        },
+        {
+          "file": "masters/shared-access-narrow.svg",
+          "layout": "narrow",
+          "labels": [
+            {
+              "text": "Your agent",
+              "left": 106.90625,
+              "right": 213.09375,
+              "top": 30,
+              "bottom": 55,
+              "size": 21
+            },
+            {
+              "text": "Research",
+              "left": 120,
+              "right": 206.5,
+              "top": 248,
+              "bottom": 272,
+              "size": 20
+            },
+            {
+              "text": "Extraction",
+              "left": 120,
+              "right": 217.046875,
+              "top": 318,
+              "bottom": 342,
+              "size": 20
+            },
+            {
+              "text": "Validation",
+              "left": 120,
+              "right": 213.421875,
+              "top": 388,
+              "bottom": 412,
+              "size": 20
+            }
+          ]
+        },
+        {
+          "file": "exports/shared-access-desktop-light.svg",
+          "layout": "desktop",
+          "labels": [
+            {
+              "text": "Your agent",
+              "left": 62,
+              "right": 203.59193420410156,
+              "top": 163,
+              "bottom": 197,
+              "size": 28
+            },
+            {
+              "text": "Research",
+              "left": 880,
+              "right": 1001.09375,
+              "top": 61,
+              "bottom": 95,
+              "size": 28
+            },
+            {
+              "text": "Extraction",
+              "left": 880,
+              "right": 1015.859375,
+              "top": 163,
+              "bottom": 197,
+              "size": 28
+            },
+            {
+              "text": "Validation",
+              "left": 880,
+              "right": 1010.796875,
+              "top": 265,
+              "bottom": 299,
+              "size": 28
+            }
+          ]
+        },
+        {
+          "file": "exports/shared-access-desktop-dark.svg",
+          "layout": "desktop",
+          "labels": [
+            {
+              "text": "Your agent",
+              "left": 62,
+              "right": 203.59193420410156,
+              "top": 163,
+              "bottom": 197,
+              "size": 28
+            },
+            {
+              "text": "Research",
+              "left": 880,
+              "right": 1001.09375,
+              "top": 61,
+              "bottom": 95,
+              "size": 28
+            },
+            {
+              "text": "Extraction",
+              "left": 880,
+              "right": 1015.859375,
+              "top": 163,
+              "bottom": 197,
+              "size": 28
+            },
+            {
+              "text": "Validation",
+              "left": 880,
+              "right": 1010.796875,
+              "top": 265,
+              "bottom": 299,
+              "size": 28
+            }
+          ]
+        },
+        {
+          "file": "exports/shared-access-narrow-light.svg",
+          "layout": "narrow",
+          "labels": [
+            {
+              "text": "Your agent",
+              "left": 106.90625,
+              "right": 213.09375,
+              "top": 30,
+              "bottom": 55,
+              "size": 21
+            },
+            {
+              "text": "Research",
+              "left": 120,
+              "right": 206.5,
+              "top": 248,
+              "bottom": 272,
+              "size": 20
+            },
+            {
+              "text": "Extraction",
+              "left": 120,
+              "right": 217.046875,
+              "top": 318,
+              "bottom": 342,
+              "size": 20
+            },
+            {
+              "text": "Validation",
+              "left": 120,
+              "right": 213.421875,
+              "top": 388,
+              "bottom": 412,
+              "size": 20
+            }
+          ]
+        },
+        {
+          "file": "exports/shared-access-narrow-dark.svg",
+          "layout": "narrow",
+          "labels": [
+            {
+              "text": "Your agent",
+              "left": 106.90625,
+              "right": 213.09375,
+              "top": 30,
+              "bottom": 55,
+              "size": 21
+            },
+            {
+              "text": "Research",
+              "left": 120,
+              "right": 206.5,
+              "top": 248,
+              "bottom": 272,
+              "size": 20
+            },
+            {
+              "text": "Extraction",
+              "left": 120,
+              "right": 217.046875,
+              "top": 318,
+              "bottom": 342,
+              "size": 20
+            },
+            {
+              "text": "Validation",
+              "left": 120,
+              "right": 213.421875,
+              "top": 388,
+              "bottom": 412,
+              "size": 20
+            }
+          ]
+        }
+      ],
+      "minimum_narrow_label_css_px": 18,
+      "minimum_desktop_label_css_px_above_breakpoint": 18.07037037037037
+    },
+    "contrast": [
+      {
+        "theme": "light",
+        "usage": "text",
+        "foreground": "--ink",
+        "background": "--canvas",
+        "required": 4.5,
+        "ratio": 18.903394841315958
+      },
+      {
+        "theme": "light",
+        "usage": "connector",
+        "foreground": "--ink",
+        "background": "--canvas",
+        "required": 3,
+        "ratio": 18.903394841315958
+      },
+      {
+        "theme": "dark",
+        "usage": "text",
+        "foreground": "--ink-inverse",
+        "background": "--section-canvas-dark",
+        "required": 4.5,
+        "ratio": 16.523889850458268
+      },
+      {
+        "theme": "dark",
+        "usage": "connector",
+        "foreground": "--ink-inverse",
+        "background": "--section-canvas-dark",
+        "required": 3,
+        "ratio": 16.523889850458268
+      }
+    ],
+    "errors": [],
+    "runtime": {
+      "node": "v24.12.0",
+      "chromium": "152.0.7977.82",
+      "playwright_module": "supplied via argv[2]"
+    },
+    "limits": [
+      "Local Chromium verification is not production website or cross-browser certification.",
+      "The illustration is conceptual and does not evidence a captured run or route parity.",
+      "Retained logo creation and rights history remains pending; verification does not resolve it."
+    ],
+    "outputs": {
+      "masters/shared-access-desktop.svg": "e27428f51bde7e260fe82f66c24e9d39859c95ab1badd66b00a20a7e543df095",
+      "masters/shared-access-narrow.svg": "c34bfd92be867641f8f99ad2dd12b5cf9138d8a10e843a8d17ace4315f231043",
+      "exports/shared-access-desktop-light.svg": "612f207606f95560249eb543ea49a9fb08b5b6181af5142bbde1d29b5a0374e9",
+      "exports/shared-access-desktop-dark.svg": "188af7164af983c82f9ecbea2a06d062ad1e4124154c3de5e3b9c9e2b19c4ff6",
+      "exports/shared-access-narrow-light.svg": "f39d47f41ad0146cdd7b541c7c57ec0f3c839cbca23a97b4e249f0177dfc51df",
+      "exports/shared-access-narrow-dark.svg": "122ab1f5baa415bb086b0862120d9e2594d0f27d14bc8ca6a8c8300a0c72192f",
+      "index.html": "4ea0d93dd607556b58808bd171da3437f523920852489b3b97fc6f8cf0de6f0a",
+      "manifest.json": "ddcde8d72683266822db56de0fc277a58d1ad3fcbd9e7371d62789dae14bec95",
+      "exports/shared-access-desktop.png": "c14931de9772bc2c93e1985f84cbd0a975d42f578639964eaa854c560e120c2d",
+      "exports/shared-access-narrow.png": "b71fbb7edec8cf27fa2e4e3c8432a471ffe7ccc75394a298c6ee16942d53e367"
+    }
+  }
+}
