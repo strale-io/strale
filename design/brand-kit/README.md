@@ -8,7 +8,7 @@ Design acceptance is distinct from production adoption. Existing specimen regist
 
 | Need | Human guide / visual reference | Machine rules |
 |---|---|---|
-| Start next — narrative and creative brief | [Fresh-session handoff](../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md) | [Current disposition](../../docs/programs/brand-website/system-completion.json) |
+| Review next — proposed narrative and illustration objectives | [Homepage narrative](../../docs/programs/brand-website/HOMEPAGE-NARRATIVE.md) | [Current disposition](../../docs/programs/brand-website/system-completion.json) |
 | Atmosphere, gradients and reading surfaces | [Atmosphere guide](quiet-material/README.md) · [24-page catalogue](quiet-material/output/pdf/quiet-material-catalogue.pdf) | [Asset and recipe registry](quiet-material/registry.json) |
 | Logo variants, font roles and fallbacks | [Identity and typography](quiet-material/foundations/README.md) · [Visual guide](quiet-material/foundations/output/pdf/identity-typography.pdf) | [Foundation registry](quiet-material/foundations/registry.json) |
 | Navigation, buttons, links and cards | [Interactive controls](quiet-material/controls/index.html) · [Usage and limits](quiet-material/controls/README.md) | [Control registry](quiet-material/controls/registry.json) |
@@ -17,7 +17,7 @@ Design acceptance is distinct from production adoption. Existing specimen regist
 | Positioning, voice and claims | [Adopted positioning](../../docs/programs/brand-website/POSITIONING-BRIEF.md) · [Voice](../../docs/company/VOICE.md) | [Public claim rulings](../../docs/company/claims.yaml) |
 | Current acceptance, gaps and next work | [Completion plan](../../docs/programs/brand-website/SYSTEM-COMPLETION.md) | [Completion record](../../docs/programs/brand-website/system-completion.json) |
 | Product example evidence | [Current proof qualification](../../docs/programs/brand-website/PROOF-QUALIFICATION.md) | Dated observation files linked from that record |
-| Homepage copy, illustration briefs and selected-asset readiness | [Homepage brief](../../docs/programs/brand-website/HOMEPAGE-BRIEF.md) | [Editable authoring source](../../docs/programs/brand-website/homepage-brief.json) |
+| Historical homepage draft and selected-asset readiness | [Homepage brief](../../docs/programs/brand-website/HOMEPAGE-BRIEF.md) | [Editable authoring source](../../docs/programs/brand-website/homepage-brief.json) |
 | Shared-access illustration — accepted for continued design | [Preview and usage](quiet-material/illustrations/README.md) | [Illustration registry](quiet-material/illustrations/registry.json) |
 | Current visual baseline — original unfinished redesign | [Original and focused kit assessment](quiet-material/baseline/README.md) | [Source and disposition record](quiet-material/baseline/registry.json) |
 | Hero treatment B — selected for continued design | [Historical A/B comparison](quiet-material/hero-comparison/index.html) | [Current acceptance](../../docs/programs/brand-website/system-completion.json) |

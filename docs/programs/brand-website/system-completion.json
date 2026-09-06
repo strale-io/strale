@@ -12,7 +12,7 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "fresh_narrative_and_illustration_brief_before_implementation",
+    "founder_review_of_proposed_narrative_before_implementation",
     "authenticated_invoice_demo_and_own_record_retrieval",
     "selected_asset_rights_and_production_adoption"
   ],
@@ -273,9 +273,9 @@
     {
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
-      "status": "narrative-reset",
-      "action": "Create one recommended homepage argument and section/illustration briefs before further implementation; preserve accepted visual direction.",
-      "evidence": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md"
+      "status": "narrative-awaiting-founder-review",
+      "action": "Review HOMEPAGE-NARRATIVE.md with the founder before further section or asset work; preserve B and the accepted visual direction.",
+      "evidence": "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md"
     },
     {
       "id": "consumer-adoption",
@@ -340,11 +340,12 @@
     "selected_variant": "B",
     "accepted_on": "2026-09-06",
     "founder_statement": "i prefer b",
-    "next_editorial_step": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md"
+    "next_editorial_step": "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md"
   },
   "editorial_reset": {
-    "status": "narrative-brief-needed",
+    "status": "narrative-awaiting-founder-review",
     "handoff": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md",
+    "proposal": "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md",
     "hero_copy_status": "set-aside",
     "homepage_brief_status": "background-draft-not-approved-story",
     "positioning_changed": false,

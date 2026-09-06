@@ -6,7 +6,7 @@ Start at the [brand-kit index](../../../design/brand-kit/README.md). The [struct
 
 ## Current visual baseline
 
-**Current next step: [fresh-session narrative handoff](../../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md).** The founder rejected the latest copy, storyline and illustrations. The combined opening and shorter-copy studies are set aside; successful technical checks did not establish creative quality. Preserve B and the accepted kit while developing one recommended homepage argument and section/illustration briefs for review before more implementation.
+**Current next step: founder review of [the proposed narrative and illustration briefs](HOMEPAGE-NARRATIVE.md).** No new sections or assets have been built. The [reset handoff](../../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md) preserves the earlier rejection context. The founder rejected the latest copy, storyline and illustrations. The combined opening and shorter-copy studies are set aside; successful technical checks did not establish creative quality. Preserve B and the accepted kit. The single recommended argument, proposed copy and illustration objectives now await review before more implementation.
 
 The founder selected B in the [paired hero refinement](../../../design/brand-kit/quiet-material/hero-comparison/index.html) on 6 September ("i prefer b"). Its tighter frame, off-white reading surface and inner padding remain accepted for continued design. Production tokens remain unchanged. The separate hero copy pass is historical draft material, not an accepted editorial direction; the A/B comparison and its verification remain intact.
 

@@ -13,7 +13,7 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
-**Resume with the [narrative handoff](../../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md).** The founder rejected the latest copy as generic/AI-written and found the storyline and illustrations unconvincing. Stop extending the two-section study. A fresh session should recommend a coherent, evidence-backed homepage argument and section/illustration briefs before building more pages. Preserve selected B and the accepted kit; this does not change DEC-20260905-A.
+**Review the [proposed homepage narrative](HOMEPAGE-NARRATIVE.md) with the founder before further section or asset work.** One connected argument and its exact copy/illustration briefs are ready for review: useful work, other jobs, shared integration, account-call inspection, first call. This proposal is not adopted. The [reset handoff](../../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md) remains the history of rejected work; [the new checkpoint](../../../handoff/_general/from-code/2026-09-06-brand-homepage-narrative.md) records this batch. Preserve selected B and the accepted kit; DEC-20260905-A remains active.
 
 **Retained visual choice:** the founder selected B in [the paired original-hero surface study](../../../design/brand-kit/quiet-material/hero-comparison/index.html) on 6 September ("i prefer b"). B's frame inset, off-white panel and inner padding are accepted for continued design, not production token adoption. The subsequent hero copy and two-section composition are set aside as unsuccessful creative explorations. The exact screenshot still controls the original character; historical artifacts remain unchanged.
 
