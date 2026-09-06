@@ -5,8 +5,8 @@
   "verified_at": "2026-09-06",
   "inputs": {
     "README.md": "5f227606eec964113989c4f8174dacf439b94a50f19caa939c8f5543c59424b0",
-    "build.mjs": "44c0bb97c7e7d4c7be1a665a20cdd08fb71daa3dd7bd0f3c7635ac05c1f7b01e",
-    "build.test.mjs": "35bf99bab998cfc657f9a03d6eed4d4f57ed3a290ac3574f5fdd1cadbbcabbb7",
+    "build.mjs": "38868bf4e571e54fb0c92d7c6b68fc02194de610bb2406854a69c31a139ec9f0",
+    "build.test.mjs": "26e2558923e085996345c181cf0b4cf9822cd4512464e336f0448e234785d0af",
     "verify.mjs": "0f774c8ce0bf192ebdd089ca20762c102ad95161c42200e6d5af1e9190a5b8c7",
     "registry.json": "37559210cc4ba25dfb2a8280a9d1ab8fc1b7cc5a8baf0cc10a52cf01542196b8",
     "../../../tokens/candidates/quiet-material-illustrations.json": "2025c855eb2c5ff9e1904a291d3d8ddb53dda192b52799af701fd598ea10a4de",

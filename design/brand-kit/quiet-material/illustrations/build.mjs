@@ -185,17 +185,25 @@ function previewCss(token, foundation) {
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}}`;
 }
 
-function briefSection() {
-  const brief = json('../../../../docs/programs/brand-website/homepage-brief.json');
+export function validateBriefContract(brief, registry = json('registry.json')) {
   const section = brief.sections.find(item => item.id === 'shared-access');
   assert(section, 'Shared-access brief section is missing');
+  assert.equal(section.visual, registry.asset_id, 'Brief visual must match the registered asset');
+  const illustration = brief.illustrations.find(item => item.id === registry.asset_id);
+  assert(illustration, 'Shared-access illustration contract is missing');
+  assert.equal(illustration.status, 'candidate-master-for-review');
+  assert.equal(illustration.asset_registry, 'design/brand-kit/quiet-material/illustrations/registry.json');
+  assert.deepEqual(illustration.labels, registry.labels, 'Brief and registry labels must agree');
+  assert.equal(illustration.alt, registry.alt, 'Brief and registry alternatives must agree');
+  assert.equal(illustration.motion, 'No animated traffic or concurrent completion states. The diagram explains access, not a captured run.');
+  assert.equal(registry.motion, 'static');
   return section;
 }
 
 export function render(token = json('../../../tokens/candidates/quiet-material-illustrations.json'), foundation = json('../../../tokens/candidates/quiet-material-patterns.json')) {
   const registry = json('registry.json');
   validateToken(token, foundation, registry);
-  const section = briefSection();
+  const section = validateBriefContract(json('../../../../docs/programs/brand-website/homepage-brief.json'), registry);
   const svg = {
     'masters/shared-access-desktop.svg': svgDocument(token, foundation, registry, 'desktop', 'light', true),
     'masters/shared-access-narrow.svg': svgDocument(token, foundation, registry, 'narrow', 'light', true),
