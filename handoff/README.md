@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-287 files (260 with a recorded intent, 27 without).
+288 files (261 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -17,6 +17,7 @@
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-9.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-9.md) | Archive M2 closing-review round 9 plus a whole-corpus named-source |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-8.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-8.md) | Archive M2 closing-review round 8 and record its findings as an |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md) | archive round 7 (final round) of the M2 closing independent |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-13.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-13.md) | record round 13 of the M2 closing independent review and its one erratum. |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-12.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-12.md) | record round 12 of the M2 closing independent review and its |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-11.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-11.md) | record round 11 of the M2 closing independent review and its |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-10.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-10.md) | Archive M2 closing-review round 10 (the final planned round) and |
