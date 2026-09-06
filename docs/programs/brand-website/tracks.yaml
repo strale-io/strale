@@ -52,8 +52,8 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Review design/brand-kit/quiet-material/opening/index.html as two connected sections. Keep selected B and provisional shorter copy; judge the transition to three useful jobs, original illustrations and local detail previews. The new section and copy remain proposed. Historical A/B evidence stays intact; production, proof and rights gates remain open.
-    resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
+    next_action: Read the narrative reset handoff. Founder rejected generic copy, unclear storyline and weak illustrations. Preserve selected B and accepted kit; set aside the latest copy/opening. Recommend one evidence-backed homepage argument and section/illustration briefs for founder review before any more section implementation. Existing positioning remains active; proof, rights and production gates remain open.
+    resume_file: handoff/_general/from-code/2026-09-06-brand-narrative-reset.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.
       - Existing direction retained and required gradient/image/surface recipes verified in relevant contexts before brand-kit adoption.
