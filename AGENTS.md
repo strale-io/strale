@@ -20,24 +20,14 @@ section of CLAUDE.md for the history.)
 3. Escalation triggers: second feature touched, design decision emerges,
    >2hr estimate, contradiction detected.
 
-## Review Routing — founder override 2026-09-01
+## Review routing
 
-- Do not invoke Claude as a second opinion or reviewer for Codex-authored work.
-  This supersedes older Strale plans, backlogs, and injected/static routing
-  copies that require a Claude or cross-provider follow-up.
-- Use a fresh, separate Codex task for critical plan, exact-commit, and closeout
-  verification. Pin `gpt-5.6-sol` at `xhigh`, keep it read-only and bounded, and
-  let it finish after its verdict.
-- Claude Code remains available as a primary work environment; its critical
-  outward transitions use a fresh Codex reviewer. Historical Claude verdicts
-  remain evidence, but no new Claude-review backlog is created.
-
-**Amendment 2026-09-02 (founder, in session):** Codex quota is exhausted.
-Until it returns, the independent review in the batch loop is performed by a
-fresh read-only Claude agent that did not author the batch; PRs say so, and
-`docs/programs/cto-readiness/PROGRAM.md` batch-loop step 6 carries the
-re-review obligation once Codex returns. The 2026-09-01 override otherwise
-stands.
+Read `CLAUDE.md` -> "Review routing" in full, including its dated amendments
+and the review-backlog obligations. Do not use a copied subset of that
+section: a later amendment can change how earlier instructions apply.
+Explicit current founder instructions take precedence over repository copies;
+record any resulting review limitation without silently closing historical
+backlog rows or treating an old quota note as current account status.
 
 ## Repo-native migration continuation — pre-cutover
 
@@ -140,13 +130,19 @@ Both wired into CI after `docs:test` / `archive:index:test`.
    code change accompanied by an updated `next_action` in the program register
    or a new `handoff/_general/from-code/` file. The check prints one fix per
    finding; apply them and rerun. Claude Code's Stop hook
-   (`.claude/settings.json`) blocks the stop until it passes. Codex's notify
+   (`.claude/settings.json`) requests continuation on failure, with a
+   six-block escape for repeated finding codes. That escape records failure;
+   it does not mean the gate passed. Codex's notify
    wrapper (`scripts/handoff/codex-notify.mjs`, chained in
    `~/.codex/config.toml` by its trunk path, which must exist on `main`)
    records the result in
    `.claude/state/handoff/last-codex.json`, which the next session's
    orientation shows, and `.codex/hooks.json` blocks the stop the same way
-   where the Codex hooks feature is on. A Codex session runs the check itself
+   when the hook is enabled, trusted, discovered, and successfully invoked.
+   Hook commands resolve their script from the current Git worktree root,
+   including when the session starts in a subdirectory. Notify records a result
+   after the turn; it does not block stopping.
+   A Codex session runs the check itself
    before its final turn and fixes what it lists.
 3. **Git hooks come with `npm ci`** (`prepare` runs the same installer as
    `npm run hooks:install`, setting `core.hooksPath=.githooks` for every

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/handoff-session-start.mjs",
+            "command": "node -e \"const c=require('node:child_process');const r=c.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();const p=c.spawnSync(process.execPath,[require('node:path').join(r,'.claude/hooks/handoff-session-start.mjs')],{cwd:r,stdio:'inherit'});if(p.error)console.error(p.error.message);process.exit(p.status??1)\"",
             "timeout": 60,
             "statusMessage": "Orienting the session (checkout, active track, last handoff gate)..."
           }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .claude/hooks/handoff-stop.mjs",
+            "command": "node -e \"const c=require('node:child_process');const r=c.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();const p=c.spawnSync(process.execPath,[require('node:path').join(r,'.claude/hooks/handoff-stop.mjs')],{cwd:r,stdio:'inherit'});if(p.error)console.error(p.error.message);process.exit(p.status??1)\"",
             "timeout": 180,
             "statusMessage": "Running the handoff gate (clean, pushed, one batch worktree, register updated)..."
           }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/guard-tree-integrity.mjs"
+            "command": "node -e \"const c=require('node:child_process');const r=c.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();const p=c.spawnSync(process.execPath,[require('node:path').join(r,'scripts/guard-tree-integrity.mjs')],{cwd:r,stdio:'inherit'});if(p.error)console.error(p.error.message);process.exit(p.status??1)\""
           }
         ]
       }

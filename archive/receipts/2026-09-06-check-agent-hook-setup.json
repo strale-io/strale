@@ -1,0 +1,65 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "isolated hook configuration and CLI fixture verification",
+    "commit": "ffe81323c8b735e452fc170da32d9194e0a645b4"
+  },
+  "at": "2026-09-06T08:37:33.004Z",
+  "inputs": {
+    "source": "archive/sessions/2026-09-06-agent-hook-setup/fixture-verification.json"
+  },
+  "summary": {
+    "commandTests": 13,
+    "codexSession": "01a075d7-36bb-7af1-ba1c-53cc566c1865",
+    "codexTrust": "Fixture project and its two exact hook definitions reviewed through normal interactive CLI; no bypass flag used. Not a claim of trust for the actual Strale checkout.",
+    "claudeSession": "49c66a9a-852e-45cb-b7ff-732f49853715",
+    "claudeConfigLoading": "Automatic lifecycle execution verified with explicitly supplied fixture settings; initial subfolder invocation without explicit settings produced no receipts.",
+    "sourceScriptsUnchanged": true,
+    "independentReview": "No blocking regression; strale-hook-review-disposition.json",
+    "liveMainModified": false,
+    "committed": false,
+    "published": false
+  },
+  "topic": "agent-hook-setup",
+  "raw": {
+    "commandTests": 13,
+    "codexSession": "01a075d7-36bb-7af1-ba1c-53cc566c1865",
+    "codexStartAndStopMarker": {
+      "blocks": 0,
+      "lastKey": "",
+      "sessionId": "01a075d7-36bb-7af1-ba1c-53cc566c1865",
+      "startSha": "78337357a0f17ca5a12aeeb3b8a35568fca63def",
+      "startedAt": "2026-09-06T08:31:02.208Z"
+    },
+    "codexTrust": "Fixture project and its two exact hook definitions reviewed through normal interactive CLI; no bypass flag used. Not a claim of trust for the actual Strale checkout.",
+    "claudeSession": "49c66a9a-852e-45cb-b7ff-732f49853715",
+    "claudeStartAndStopMarker": {
+      "blocks": 0,
+      "lastKey": "",
+      "sessionId": "49c66a9a-852e-45cb-b7ff-732f49853715",
+      "startSha": "cce940696facd5b99904c2836d5175475bd77127",
+      "startedAt": "2026-09-06T08:27:49.673Z"
+    },
+    "claudeStopReceipt": {
+      "ok": true,
+      "mode": "session",
+      "worktree": "C:/Users/pette/Documents/Codex/2026-09-05/okay-here-s-some-background-i/outputs/strale-hook-fixture-v2",
+      "kind": "trunk",
+      "branch": "main",
+      "failures": [],
+      "warnings": [],
+      "at": "2026-09-06T08:32:09.172Z",
+      "sessionId": "49c66a9a-852e-45cb-b7ff-732f49853715"
+    },
+    "claudeConfigLoading": "Automatic lifecycle execution verified with explicitly supplied fixture settings; initial subfolder invocation without explicit settings produced no receipts.",
+    "configHashes": {
+      ".claude/settings.json": "52f3459132fc0ff9e8801807d914f3b869a913b7d8f36ff0a42d075bba536d59",
+      ".codex/hooks.json": "dd84b32613efc688deacc208adde7fcca7f6115018332c5ec173a59543279798"
+    },
+    "sourceScriptsUnchanged": true,
+    "independentReview": "No blocking regression; strale-hook-review-disposition.json",
+    "liveMainModified": false,
+    "committed": false,
+    "published": false
+  }
+}
