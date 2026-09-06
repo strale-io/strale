@@ -692,7 +692,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "9ad861fa824b6514b5395ee311ee2ea0ab31d1364b636b0438f1bfd0d03f265d",
+      "sha256": "96827a131c5b7fdc1e4097fae10205d19e20e6ca2cc0f207adadfc7ec2504160",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -779,6 +779,8 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-8.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-9.md",
         "archive/sessions/2026-09-06-brand-editorial-readiness/VERIFY.md",
+        "archive/sessions/2026-09-06-brand-homepage-narrative-codex-review.md",
+        "archive/sessions/2026-09-06-brand-homepage-narrative-opus-rereview.md",
         "archive/sessions/2026-09-06-brand-homepage-narrative-opus-review.md",
         "archive/sessions/2026-09-06-brand-kit-launch-proof/VERIFY.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
