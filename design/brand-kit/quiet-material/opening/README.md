@@ -1,6 +1,8 @@
 # The opening, followed by useful work
 
-Open [the two-section preview](index.html). This is the current review target: selected hero B with the provisional shorter copy, followed by the first breadth section. The [original B comparison](../hero-comparison/index.html) and [copy-only study](../hero-copy/README.md) remain unchanged as history. No production tokens or final copy are adopted.
+**Set aside following founder feedback on 6 September.** The copy felt generic/AI-written; the storyline and illustrations did not communicate Strale's value convincingly. Continue from the [narrative handoff](../../../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md), not this implementation. The description and artifacts below document the historical study; their verification does not establish creative acceptance.
+
+Open [the historical two-section preview](index.html): selected hero B with provisional shorter copy, followed by the first breadth section. The [original B comparison](../hero-comparison/index.html) and [copy-only study](../hero-copy/README.md) remain unchanged as history. No production tokens or final copy are adopted.
 
 Assess the transition from broad atmosphere and a substantial example into an open, lighter layout. The new section has three jobs, each with one benefit, one illustration and one detail link. There is no subtitle or enclosing card around the whole job. Mobile uses a vertical sequence, preserving the same content and links.
 

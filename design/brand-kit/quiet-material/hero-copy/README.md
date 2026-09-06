@@ -1,5 +1,7 @@
 # Shorter copy within B
 
+**Set aside as an editorial direction following founder feedback on 6 September.** B's styling remains selected; this copy is not accepted. Continue from the [narrative handoff](../../../../handoff/_general/from-code/2026-09-06-brand-narrative-reset.md). The snapshots and specification below remain unchanged as historical evidence.
+
 **Draft copy for review.** B's visual treatment is selected; this wording is proposed. The [copy specification](../../../../docs/programs/brand-website/HERO-COPY.md) owns the text and its scope. The [original B](../hero-comparison/refined.html) remains unchanged for comparison.
 
 ## Desktop
