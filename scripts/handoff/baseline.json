@@ -1,7 +1,16 @@
 {
   "canonicalWorktree": "C:/Users/pette/Projects/strale",
   "recordedAt": "2026-09-06",
-  "knownWorktrees": [],
+  "knownWorktrees": [
+    {
+      "path": "C:/tmp/strale-closing10-gates",
+      "reason": "Detached gate-run checkout belonging to the live M2 closing-review round 10 session (the one that authored DEC-20260905-K and holds two locked agent worktrees under .claude/worktrees/). Clean at 0fd6364f when recorded, and that is exactly why it is recorded rather than removed: the gate's own text says a clean tree is not proof a checkout is idle, and this session proved it the same morning by removing a spotlessly clean round-9 worktree whose branch tip had been pushed two minutes earlier (LESSONS.md F7 incident 9). Owner: the round-10 session. Delete this entry when that session ends and its checkouts are gone. Recorded 2026-09-06 by the morning run."
+    },
+    {
+      "path": "C:/tmp/strale-closing10-P5",
+      "reason": "Second detached checkout of the same live round-10 session, for its P5 partition. Same reason, same owner, same condition for deletion. Recorded 2026-09-06 by the morning run."
+    }
+  ],
   "knownBranches": [
     {
       "name": "pr-555-review",
@@ -11,7 +20,7 @@
     {
       "name": "pr-563-check",
       "commit": "ef51de5e",
-      "reason": "Local-only review checkout of PR #563 (merged 2026-09-05), carrying 'fix(m2): G2 batch 4 quote-fidelity review findings, nine plus one from sweep' on top of the PR branch. Compared file by file against origin/main on 2026-09-06: eight of the eleven decision records it edits are identical to main, THREE ARE NOT — DEC-20260420-I, DEC-20260420-J and the DEC-20260420-K record ending c0575c4. Either those review findings never merged, or main changed them afterwards; the M2 convention that amended records keep their text makes the first reading the likelier one. Not deleted, and deliberately not resolved by this run: establishing which is a G9 question, not a hygiene one. Owner: the next G9 session. Deadline: before G9 closes. Recorded 2026-09-06 by the morning run."
+      "reason": "Local-only review checkout of PR #563 (merged 2026-09-05), carrying 'fix(m2): G2 batch 4 quote-fidelity review findings, nine plus one from sweep' on top of the PR branch. Compared file by file against origin/main on 2026-09-06, and independently reproduced by the batch's read-only reviewer: eight of the eleven decision records it edits are identical to main, THREE ARE NOT — DEC-20260420-I, DEC-20260420-J and the DEC-20260420-K record ending c0575c4. Either those review findings never merged, or main changed them afterwards; the M2 convention that amended records keep their text makes the first reading the likelier one. Not deleted, and deliberately not resolved by a hygiene sweep — establishing which is a G9 question. Owner: the next G9 session. Deadline: before G9 closes. Recorded 2026-09-06 by the morning run."
     }
   ]
 }
