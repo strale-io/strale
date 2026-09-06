@@ -24,6 +24,7 @@
  */
 
 import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
+import { suitesAreSchedulable } from "../src/lib/onboard-scheduling.js";
 import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
@@ -1110,7 +1111,13 @@ function buildTestSuites(manifest: Manifest) {
     estimatedCostCents: manifest.price_cents,
   });
 
-  return suites;
+  // Whether the scheduler may run these at all. Without this the suites are
+  // inserted FALSE and skipped forever — see onboard-scheduling.ts for why the
+  // predicate keys on cost_class rather than external_cost_cents, and for the
+  // gap between it and startup-migrations block 0066 that hid this.
+  const schedulable = suitesAreSchedulable(manifest.cost_class);
+
+  return suites.map((s) => ({ ...s, scheduledTestingEligible: schedulable }));
 }
 
 // ─── Backfill existing capability ────────────────────────────────────────────
