@@ -13,6 +13,8 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
+**Current refinement:** review [the paired original-hero surface study](../../../design/brand-kit/quiet-material/hero-comparison/index.html). A is a screenshot-guided reconstruction and B changes only frame inset, panel fill and inner padding. The exact founder screenshot remains the baseline; neither B nor its tokens are adopted. Keep copy-density changes separate.
+
 **Current visual checkpoint:** the founder set aside the four-section homepage study because it drifted from the unfinished redesign. Resume at the [original-design baseline and focused kit assessment](../../../design/brand-kit/quiet-material/baseline/README.md), with [machine-readable disposition and source evidence](../../../design/brand-kit/quiet-material/baseline/registry.json). Preserve the original composition and improve its surfaces, spacing and density through controlled comparisons. The former homepage study is historical evidence, not the current review or implementation target. Accepted kit companions and positioning remain in force.
 
 Read [tracks.yaml](tracks.yaml), the [system completion plan](SYSTEM-COMPLETION.md), the [current brand-kit index](../../../design/brand-kit/README.md), and the [adopted positioning brief](POSITIONING-BRIEF.md). The founder clarified that the existing redesign is preferred and that the task is to audit and complete its design system, gradients and atmospheric images as a cohesive brand kit. Instrument and Fieldwork are rejected. Do not restart visual identity exploration.

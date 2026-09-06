@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "status": "controlled-comparison",
+  "production_adopted": false,
+  "reference": "design/brand-kit/quiet-material/baseline/README.md",
+  "tokens": "design/tokens/candidates/quiet-material-hero-comparison.json",
+  "source_bindings": [
+    {
+      "path": "design/brand-kit/quiet-material/baseline/registry.json",
+      "mode": "text-lf",
+      "sha256": "53a29e8f5e75b487141c712d8d1bfcec26eb0bb245caa9e64f6381f4071c3f3f"
+    },
+    {
+      "path": "design/brand-kit/quiet-material/baseline/evidence/founder-hero.png",
+      "mode": "raw",
+      "sha256": "6d762fe66d7286adb02867079b636924ce2c47e870ebddf62fe5ef912c7f004a"
+    },
+    {
+      "path": "design/brand-kit/quiet-material/hero-comparison/assets/hero-folded-light.png",
+      "mode": "raw",
+      "sha256": "2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07"
+    },
+    {
+      "path": "design/brand-kit/quiet-material/foundations/exports/lockup-ink.svg",
+      "mode": "text-lf",
+      "sha256": "1a70f33456dd28189480b6014c06f35e80896e671185cfd63db6292032fb19a3"
+    },
+    {
+      "path": "design/brand-kit/quiet-material/fonts/InstrumentSans.ttf",
+      "mode": "raw",
+      "sha256": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1"
+    },
+    {
+      "path": "design/brand-kit/quiet-material/fonts/IBMPlexMono-Regular.ttf",
+      "mode": "raw",
+      "sha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46"
+    },
+    {
+      "path": "design/brand-kit/quiet-material/registry.json",
+      "mode": "text-lf",
+      "sha256": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce"
+    }
+  ],
+  "control": "Screenshot-guided reconstruction, not the recovered exact revision. Mobile is a study interpretation.",
+  "common_adjustment": "Both versions replace the historical completed badge with Illustrative example. All other wording is held for visual comparison, not publication approval.",
+  "differences": [
+    "frame inset",
+    "reading surface fill",
+    "reading surface padding"
+  ],
+  "hold": [
+    "copy",
+    "task",
+    "logo",
+    "typography",
+    "navigation",
+    "outer example footprint",
+    "Spectrum gradient",
+    "atmosphere placement",
+    "row structure"
+  ],
+  "source_color_note": "Spectrum and functional colours copied from preserved v0.7 token CSS; control panel tint approximates the supplied screenshot.",
+  "limits": [
+    "Historical commercial copy is not reapproved.",
+    "No live request or product proof.",
+    "No production route or token adoption.",
+    "Original logo/raster rights gaps unchanged."
+  ]
+}
