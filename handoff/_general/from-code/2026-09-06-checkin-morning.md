@@ -102,7 +102,52 @@ known:
 - `WARNING cobalt-intelligence` / `einsearch` / `sec-api-io` — no vendor account
   record. This is DQ-30 answered: keep the keys, buy nothing, cancel nothing.
 
-No open breakers, no new quarantines, no invariant alerts. CI green on `main`.
+Breakers, monitor events and rail state read directly (scratchpad
+`health-sweep.mts`, read-only):
+
+- **One breaker open**: `us-court-search`, `state=open` since 2026-08-17
+  06:14:57Z, 1 consecutive failure. This is DQ-14 item 1 — the CourtListener
+  key expired and replacing it is founder-only. Unchanged, not new.
+- **One `regression_detected`, overnight, and it is an instrument fault.**
+  `canadian-company-data` at 2026-09-06 05:46:06Z: "was passing (90% over 10
+  runs), now failing", on the `dependency_health` suite, error `No Canadian
+  federal corporation found for "2408951"`. Triaged before writing it down:
+  - **Who it happened to.** `who-called.ts --slug canadian-company-data
+    --days 30 --errors`: **2,207 of 2,209 calls are the harness.** Two real
+    calls in thirty days — one completed, one failed on the caller's own
+    invalid number (`1234567`). **No customer has seen this.**
+  - **Whether the upstream is broken.** It is not. Probed directly, with a
+    control: `GET https://ised-isde.canada.ca/cc/lgcy/api/corporations/2408951.json?lang=eng`
+    returns **HTTP 200** and the body `["could not find corporation 2408951",
+    "Corporation 2408951 est inconnu."]`; `1234567` returns the same shape. The
+    endpoint is healthy and the registry says this corporation does not exist.
+  - **Verdict: the health-check fixture points at a corporation number the
+    registry does not have.** The executor's refusal is correct behaviour and
+    the capability is fine.
+  - **Not repaired, and the reason is structural.** Fixtures live in
+    `test_suites` in production, and there is no write route: `DATABASE_URL_WRITE`
+    is absent from both `.env` and `apps/api/.env` (grep count 0 in each,
+    checked this morning), deliberately, since the 2026-08-22 credential
+    clear-out. Fixture refresh sits in the platform-acts-alone column of
+    DEC-20260812-A, so this is **authority held and execution unavailable** —
+    the same wall as DQ-27, now with a second, independent example behind it.
+- `invariant_alert` — "lying-breaker shape" on `danish-company-data`
+  (`closed` + `last_success_at` set + `total_successes = 0`). Row last touched
+  2026-08-16; pre-existing, not overnight.
+- `sec-api-io` dependency probe reports `unhealthy — Unexpected HTTP 200`
+  hourly. The probe is a zero-cost `skipAuth` probe that expects a 401; a 200
+  means the upstream answers unauthenticated requests. There is no sec-api
+  subscription (DQ-30), so this is probe noise against a dormant vendor, not an
+  outage. Left alone; worth folding into the probe's expectations if anyone
+  touches it.
+- `meta_monitoring` reports 94 active capabilities stale beyond 4× their tier
+  interval. Expected: paid capabilities are not proactively tested
+  (DEC-20260503-B), and the scheduler's own heartbeat is healthy — 11 suites,
+  0 failed, 92 paid suites correctly skipped.
+- `uk-gazette-notice-search` still fails every call on the Gazette's own
+  HTTP 500. DQ-14 item 2, founder-only (it needs reporting to the vendor).
+
+CI green on `main`.
 
 ### The German failure census — the run's main finding
 
@@ -291,6 +336,35 @@ Deliberately **not** done, with reasons:
   gains the post-merge diff rule.
 - `scripts/handoff/baseline.json` — worktree entries cleared, two review
   branches recorded.
+
+## Independent review
+
+A fresh read-only Claude agent that did not author the batch (DEC-20260903-A),
+given a bounded adversarial scope over commit `fdcd71bd`. **Verdict PASS**, no
+blockers, two nits. It traced all three health consumers to their predicates
+rather than their comments (`circuit-breaker.ts:223`,
+`transaction-failure-taxonomy.ts:379`, `quality-capture.ts:136`), confirmed the
+taxonomy's earlier `INTERNAL_RE`/`TIMEOUT_RE`/`UPSTREAM_RE` passes do not claim
+either new message first, swept the repository for consumers of the old wording,
+traced `CapabilityRefusalError` to `outcomeFromError` on both the `/v1/do` and
+x402 paths, and re-derived the F2 and F7 counters by counting the incident
+entries. It independently reproduced the `baseline.json` claim — exactly 3 of
+the 11 records `ef51de5e` edits differ from `main` — and correctly stated that
+it could not verify the production figures itself.
+
+- **Nit taken.** `german-company-data.test.ts:98`'s `/2 distinct German entities
+  match/` was **unanchored**, so it matched the old wording too and could not
+  have caught the defect it appears to guard — a small F5 shape. Now anchored on
+  `/^Ambiguous German company name "Muster": 2 distinct .../`; 15 tests pass.
+- **Nit acknowledged, not acted on.** The F7 incident-9 report rides in a commit
+  whose title advertises the German fix. True. It is the same session's own
+  finding about its own merge and splitting it would separate the incident from
+  the run that caused it; the PR body leads with both.
+
+The reviewer also observed that `origin/main` had advanced to `0fd6364f`,
+"DEC-20260905-K corrects the round-9 record's own item count", merged 09:12:58Z
+— independent confirmation that the stale-merge defect is repaired by its owner
+and that nothing is owed from here.
 
 ## Next action
 
