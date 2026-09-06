@@ -1,0 +1,88 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a0a94b38fd9478fca50d0fe2d3ac08104bf13ea0"
+  },
+  "at": "2026-09-06T08:16:19.608Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-brand-editorial-check.json"
+  },
+  "summary": {
+    "ok": true,
+    "sections_checked": 5,
+    "forbidden_copy_matches": 0,
+    "live_output_verified": false,
+    "producer": "archive/sessions/2026-09-06-brand-editorial-readiness/VERIFY.md",
+    "hash_basis": "UTF-8 LF text; raw PNG",
+    "limits": "Draft authoring and unchanged candidate inputs; no live execution, legal clearance, visual or production qualification."
+  },
+  "topic": "brand-editorial-readiness",
+  "raw": {
+    "ok": true,
+    "sections_checked": 5,
+    "forbidden_copy_matches": 0,
+    "live_output_verified": false,
+    "producer": "archive/sessions/2026-09-06-brand-editorial-readiness/VERIFY.md",
+    "hash_basis": "UTF-8 LF text; raw PNG",
+    "word_counts": {
+      "opening": {
+        "headline": 6,
+        "body": 12
+      },
+      "breadth": {
+        "headline": 7,
+        "body": 0
+      },
+      "shared-access": {
+        "headline": 6,
+        "body": 10
+      },
+      "execution-record": {
+        "headline": 5,
+        "body": 14
+      },
+      "begin": {
+        "headline": 4,
+        "body": 11
+      }
+    },
+    "inputs": {
+      "apps/api/src/routes/do.ts": "445331d04f53d023bb14adf85530aab14e34f242e27940c57450470de4469e91",
+      "archive/sessions/2026-09-06-brand-editorial-readiness/VERIFY.md": "711474426d9ecad7964ded6f9aae8cb1849169570e65afcbaf1f4d8385d34d66",
+      "archive/sessions/2026-09-06-brand-editorial-readiness/access-check.json": "1549376819f28d2d2fd199c73a86931961c7769187d0981b3b94a711b1bd67cb",
+      "archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.png": "0a44563cb740bc71ea71b92a93deb6cdf0f70207b75edf3f7f06d93876a846ab",
+      "design/brand-kit/README.md": "5d5c91a7ae2d8c2fe743688bd818545d050954a60ec08d2af3cf761463907b8f",
+      "design/brand-kit/quiet-material/controls/registry.json": "f09a38f11da044da9ef8b58718512057616eeb76368f9c5b8d5895b99d654011",
+      "design/brand-kit/quiet-material/fonts/IBMPlexMono-OFL.txt": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d",
+      "design/brand-kit/quiet-material/fonts/InstrumentSans-OFL.txt": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
+      "design/brand-kit/quiet-material/foundations/registry.json": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
+      "design/brand-kit/quiet-material/patterns/icons/manifest.json": "2d4c61414bf29e908432f9b97a8fea34f05bbc17077be7dfe5a29be8e8e067fe",
+      "design/brand-kit/quiet-material/patterns/registry.json": "e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72",
+      "design/brand-kit/quiet-material/registry.json": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
+      "design/tokens/active.json": "c9aeffcecbbbaa3592267307a81f3e4c0a66c4989cbfdaa58377e40f414a0960",
+      "design/tokens/candidates/quiet-material-catalogue.json": "3066509f1b16ad41759528f8ddf6cb0a9f97796803065f55c9f278c9a8b9e90a",
+      "design/tokens/candidates/quiet-material-controls.json": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
+      "design/tokens/candidates/quiet-material-foundations.json": "2720ada20ec6e36f0f358ddda07f1310f43d1bb42334a351046771a971ed6b18",
+      "design/tokens/candidates/quiet-material-patterns.json": "7e5611bf7d156e0465c9b53086c7b1a7bd757c517d20a84f73ba8d461a887f50",
+      "docs/company/VOICE.md": "0bb9cb2dca0426963ddb7946a25eab5983a1a675800e89fc501c2f684a083869",
+      "docs/company/claims.yaml": "2243e70a7791a066a780164f0f4a5780fba0ece597bda24c4bfd7407677af0da",
+      "docs/programs/brand-website/HOMEPAGE-BRIEF.md": "457774b706dce216a2e8fa66186fa3ef0bcf41e739cdbc1b93244078a294dfb6",
+      "docs/programs/brand-website/LAUNCH-PROOF.md": "4d0c6577e07b5bc630c869b4988d8df609c95bb842789c2cc343c5a56d9226b7",
+      "docs/programs/brand-website/POSITIONING-BRIEF.md": "af5ec971b6552c8a04378581b054a149deba29c4ae539306992e97943bb9398d",
+      "docs/programs/brand-website/PROGRAM.md": "d84374324b0c1c56127fefd97ed8c7a7852cecf0fdc02ffa27d32b0489110aa9",
+      "docs/programs/brand-website/PROOF-QUALIFICATION.md": "3f0e67d5f13cca1e54ca54514dcb2392e87a59b540c2e88ac96d66e4aa1955d7",
+      "docs/programs/brand-website/SYSTEM-COMPLETION.md": "dd628e23e54e2011ff46c377eb310267b1aa31d693087a03778b9146dffbae76",
+      "docs/programs/brand-website/homepage-brief.json": "f59244247cd8ec6fbfee5a3dc47f8ea2816af762eb443c6f0df2d140a531588d",
+      "docs/programs/brand-website/system-completion.json": "ec08672062702714a40e10439b95e1902ab9c3dd05d22579e17d4bc7cd47d28d",
+      "docs/programs/brand-website/tracks.yaml": "4fcea44845400152265a4958cc2cd348efdb882e3ae1f108df162fa5c8764966",
+      "docs/research/2026-09-05-quiet-material-pattern-references.md": "71d331b0d4f73a5901d00194fe6c7cab30dfbd0f85f08384951d1941b5d8ed01",
+      "handoff/_general/from-code/2026-09-06-brand-editorial-readiness.md": "d952f73e3daf6a8cd835798071f1141b58f52a236d3492969418a7983946ff24",
+      "manifests/email-validate.yaml": "eeb1e57d8004fcb781c902b7d29b18e414d9da0fae9a5d7ec09a404e94dcf941",
+      "manifests/invoice-extract.yaml": "8f4dee3ef0d4225aaebeff32959b109d3a7173c88e04ac3223e028e50a562b31",
+      "manifests/swedish-company-data.yaml": "f9cf6922311a99d75bab16e908c2038924a046e2be51d167e6b8e3c6ca6fdd02",
+      "scripts/claims-lib.mjs": "4a3d86ae90ee364404e1abca5f60c6f852bb7666078fcc3f5056d5f065adc921"
+    },
+    "limits": "Draft authoring and unchanged candidate inputs; no live execution, legal clearance, visual or production qualification."
+  }
+}

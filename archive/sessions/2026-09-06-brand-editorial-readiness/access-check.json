@@ -1,0 +1,10 @@
+{
+  "checked_on": "2026-09-06",
+  "tool": "strale_balance",
+  "purpose": "Read-only check for newly connected paid authentication before attempting the synthetic invoice call",
+  "response": "API key required. For stdio: set STRALE_API_KEY env var. For HTTP: pass Authorization: Bearer sk_live_... header.",
+  "authenticated": false,
+  "execution_attempted": false,
+  "live_output_verified": false,
+  "limits": "No local credential was re-tested, no balance amount or customer data was obtained, and no paid call was made. Previous account-key rejection remains historical evidence, not a fresh local-key result."
+}

@@ -6,6 +6,8 @@ The selected first story is **extracting fields from a readable invoice image**,
 
 ## What we can use now
 
+**Access recheck, 6 September:** the connected `strale_balance` tool still requests an API key. This was a read-only authentication check; no new execution was attempted and the local key was not re-tested. [Observation](../../../archive/sessions/2026-09-06-brand-editorial-readiness/access-check.json). Continue the independent editorial/selected-asset work in [HOMEPAGE-BRIEF.md](HOMEPAGE-BRIEF.md) while funded execution remains blocked.
+
 - Keep the accepted website/social/email studies explicitly illustrative.
 - Use a synthetic PNG invoice, not a customer invoice. The [fixture](../../../archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.png) and [transcription](../../../archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.txt) contain Example Studio, INV-1042 and EUR 480.00; no payment is due.
 - Limit this example to `invoice-extract` with `inputs.base64`. Do not broaden it to PDF or the `invoice-process` solution: the source review found incompatible PDF encoding and solution input mapping. These are separate qualification/remediation work, not additional demo paths.

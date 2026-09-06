@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "id": "homepage-editorial-0.1",
+  "status": "draft-for-design",
+  "publication_approved": false,
+  "date": "2026-09-06",
+  "source_baseline": "a0a94b38",
+  "human_view": "docs/programs/brand-website/HOMEPAGE-BRIEF.md",
+  "positioning": "docs/programs/brand-website/POSITIONING-BRIEF.md",
+  "voice": "docs/company/VOICE.md",
+  "claims": "docs/company/claims.yaml",
+  "density_source": "design/brand-kit/quiet-material/patterns/registry.json",
+  "proof_checkpoint": "docs/programs/brand-website/PROOF-QUALIFICATION.md",
+  "reference_lock": "docs/research/2026-09-05-quiet-material-pattern-references.md",
+  "purpose": "Let a developer recognise useful work, find a suitable tool and reach its access instructions. The invoice is one example of a broad library, not the product category.",
+  "direction": {
+    "retain": ["Quiet Material", "flowing-S logo", "Instrument Sans", "IBM Plex Mono", "existing atmospheric and gradient roles"],
+    "basis": "Founder-approved direction and accepted companion studies; this brief changes neither their visual values nor their scope.",
+    "rhythm": ["split-atmosphere", "open-task-list", "open-access-diagram", "compact-record-conditional", "dark-invitation"],
+    "omit": ["mandatory subtitles", "decorative icon on every benefit", "four successive large rounded panels", "invented customer quotes", "static catalogue counts", "hero reliability badges", "automatic video"]
+  },
+  "destinations": [
+    {"id":"catalogue","purpose":"Browse tools by task, then inspect inputs, output, price and access.","status":"route-and-conversion-not-yet-qualified"},
+    {"id":"company-tools","purpose":"A catalogue view for company research with currently available tools.","status":"route-and-live-inventory-not-yet-qualified"},
+    {"id":"extraction-tools","purpose":"A catalogue view for document extraction, with actual format limits per tool.","status":"route-and-live-inventory-not-yet-qualified"},
+    {"id":"validation-tools","purpose":"A catalogue view for input validation, with what each check establishes.","status":"route-and-live-inventory-not-yet-qualified"},
+    {"id":"access-guide","purpose":"MCP/API setup and eligible x402 use; own inputs, price, authentication and payment rules per route.","status":"route-and-first-call-not-yet-qualified"},
+    {"id":"execution-guide","purpose":"A captured account call and retrieval, with exact record fields and provenance limits.","status":"blocked-by-live-proof"},
+    {"id":"pricing","purpose":"Current tool prices, eligibility and charging conditions from canonical live sources.","status":"route-and-commercial-copy-not-yet-qualified"}
+  ],
+  "sections": [
+    {
+      "id":"opening", "profile":"hero", "layout":"split-atmosphere",
+      "reader_question":"What useful work can my agent do with Strale?",
+      "benefit":"Add useful external functions to an agent.",
+      "headline":"Give your agents more useful tools.",
+      "body":"Research companies, extract document data and validate inputs through one Strale connection.",
+      "primary":{"label":"Explore tools","destination":"catalogue"},
+      "supporting":{"label":"Read the docs","destination":"access-guide"},
+      "proof_sources":["docs/programs/brand-website/POSITIONING-BRIEF.md","docs/programs/brand-website/PROOF-QUALIFICATION.md"],
+      "visual":"invoice-fields", "asset_ids":["hero-folded-light-background"],
+      "design_gate":"Use the existing labelled illustrative fixture while access is blocked. No completed status, timer, receipt or live badge.",
+      "publication_gate":"Qualify the synthetic call and displayed fields, selected atmosphere rights, final copy and destination. A captured example must remain dated/labelled and must not imply a request runs on page load."
+    },
+    {
+      "id":"breadth", "profile":"section", "layout":"open-task-list",
+      "reader_question":"Does the library cover the kind of work I need?",
+      "benefit":"Find relevant tools across different tasks.",
+      "headline":"Find a tool for the next step.", "body":"",
+      "primary":null, "supporting":null,
+      "choices":[
+        {"headline":"Research companies","body":"Look up company details from registry data.","destination":"company-tools","source":"manifests/swedish-company-data.yaml"},
+        {"headline":"Extract document data","body":"Turn invoice images into fields your agent can use.","destination":"extraction-tools","source":"manifests/invoice-extract.yaml"},
+        {"headline":"Check inputs","body":"Check email format, mail records and disposable domains.","destination":"validation-tools","source":"manifests/email-validate.yaml"}
+      ],
+      "proof_sources":["manifests/swedish-company-data.yaml","manifests/invoice-extract.yaml","manifests/email-validate.yaml"],
+      "visual":"task-list", "asset_ids":[],
+      "design_gate":"Three comparable text choices form one compact discovery unit. No result previews, atmosphere, decorative category icons or repeated primary buttons.",
+      "publication_gate":"Check current availability and category destinations. These are editorial examples, not a popularity ranking or exhaustive catalogue; manifest existence alone does not establish live availability. Do not copy the invoice manifest's unqualified PDF claim."
+    },
+    {
+      "id":"shared-access", "profile":"section", "layout":"open-access-diagram",
+      "reader_question":"Why use Strale instead of connecting each provider myself?",
+      "benefit":"Reuse the Strale access path when adding tools.",
+      "headline":"Add tools without another provider integration.",
+      "body":"Use the same Strale connection for research, extraction and validation.",
+      "primary":null, "supporting":{"label":"See how to connect","destination":"access-guide"},
+      "proof_sources":["docs/programs/brand-website/POSITIONING-BRIEF.md","docs/programs/brand-website/LAUNCH-PROOF.md","apps/api/src/routes/do.ts"],
+      "visual":"shared-access-diagram", "asset_ids":[],
+      "design_gate":"Explain shared access with one agent-to-Strale path branching to three named tasks. Keep it a conceptual diagram, not an execution trace.",
+      "publication_gate":"No hours-saved figure, universal schema or all-routes parity claim. Access guide must explain tool-specific inputs and eligible routes."
+    },
+    {
+      "id":"execution-record", "profile":"section", "layout":"compact-record-conditional",
+      "reader_question":"Can I look back at the result of a call?",
+      "benefit":"Inspect a completed Strale call made with an API key.",
+      "headline":"Look back at the result.",
+      "body":"Retrieve the result and source information from a call made with your API key.",
+      "primary":null, "supporting":{"label":"See an execution record","destination":"execution-guide"},
+      "proof_sources":["docs/programs/brand-website/PROOF-QUALIFICATION.md"],
+      "visual":"account-record", "asset_ids":[],
+      "design_gate":"Outline only until successful own-transaction retrieval. Do not render invented product fields or a fictional dashboard.",
+      "publication_gate":"Exclude the whole section unless both execution and retrieval succeed and the exact displayed fields support this wording. No x402 parity, complete agent trace, field citations or internal-receipt claims."
+    },
+    {
+      "id":"begin", "profile":"section", "layout":"dark-invitation",
+      "reader_question":"Where should I begin?",
+      "benefit":"Choose a useful first tool with its requirements visible.",
+      "headline":"Choose your first tool.",
+      "body":"Find the inputs, outputs and price before you make a call.",
+      "primary":{"label":"Explore tools","destination":"catalogue"},
+      "supporting":{"label":"View pricing","destination":"pricing"},
+      "proof_sources":["docs/programs/brand-website/POSITIONING-BRIEF.md"],
+      "visual":"direct-invitation", "asset_ids":["dusk"],
+      "design_gate":"Use accepted direct light text and light action on Dusk. No inner card, product window or new illustration.",
+      "publication_gate":"Actual catalogue must disclose the named information and reach a supported first-call path. No sign-in control, invented free tier or hardcoded price."
+    }
+  ],
+  "asset_readiness": [
+    {"id":"flowing-S","use":"Retained navigation/footer identity","status":"creation-record-needed","evidence":"design/brand-kit/quiet-material/foundations/registry.json","note":"Original lockup bytes and preservation lineage are recorded; original authorship/source terms are not. Founder retention is a visual decision, not evidence of creation. Keep the existing mark in design work and obtain its source record before public use."},
+    {"id":"hero-folded-light-background","use":"Opening atmosphere","status":"creation-record-needed","evidence":"design/brand-kit/quiet-material/registry.json","note":"Exact preserved raster is known, but generator/date/rights are not. This is the only unresolved legacy raster selected by this brief."},
+    {"id":"Instrument Sans","use":"Primary typography","status":"bundled-licence-present","evidence":"design/brand-kit/quiet-material/fonts/InstrumentSans-OFL.txt","note":"The current TTF and bundled OFL file are hash-bound by the foundation registry. Carry the licence with the actual distributed font assets and recheck if substituting a font build."},
+    {"id":"IBM Plex Mono","use":"Technical labels only","status":"bundled-licence-present","evidence":"design/brand-kit/quiet-material/fonts/IBMPlexMono-OFL.txt","note":"The current TTF and bundled OFL file are hash-bound by the foundation registry. This record does not approve every weight or derivative font file."},
+    {"id":"dusk","use":"Closing field","status":"retained-token-recipe","evidence":"design/brand-kit/quiet-material/registry.json","note":"Reuse the exact accepted gradient token. It has no dependency on the unresolved dark-dusk raster; token provenance and raster rights are separate records."},
+    {"id":"Strale utility outlines","use":"Navigation and labelled actions as needed","status":"original-geometry-recorded","evidence":"design/brand-kit/quiet-material/patterns/icons/manifest.json","note":"The committed source records original paths authored in the pattern batch. Preserve that record and reuse the supplied family; no new icon commission is needed for this brief."}
+  ],
+  "asset_scope_note":"Balanced is not selected here. The other ten unresolved legacy rasters therefore do not block this brief's selected imagery; reassess them only if a later composition uses them. This is an evidence/readiness snapshot, not a new licence ruling or a replacement asset registry. No third-party terms are accepted by this record.",
+  "illustrations": [
+    {
+      "id":"invoice-fields", "status":"existing-illustrative-fixture-live-proof-pending",
+      "job":"Show one readable invoice image becoming three useful fields.",
+      "source":"archive/sessions/2026-09-06-brand-kit-launch-proof/invoice-fixture.png",
+      "reuse":"design/brand-kit/quiet-material/patterns/registry.json",
+      "result_profile":"result",
+      "rows":[{"label":"Supplier","field":"vendor_name"},{"label":"Invoice","field":"invoice_number"},{"label":"Total","fields":["total_amount","currency"]}],
+      "visible_label":"Illustrative example",
+      "narrow":"Keep the request and the same three result rows in reading order. Remove decorative space, never required labels or legibility.",
+      "alt":"Illustrative invoice from Example Studio, showing supplier, invoice number INV-1042 and total EUR 480.00 as example fields.",
+      "motion":"Static first. If later animated, reveal the same information without implying measured speed; provide the complete static equivalent."
+    },
+    {
+      "id":"task-list", "status":"brief-only",
+      "job":"Let readers recognise three different jobs at a glance.",
+      "source":"docs/programs/brand-website/homepage-brief.json",
+      "narrow":"Keep all three text links visible in one column; no carousel.",
+      "alt":"Use semantic linked text; no duplicate image alternative.",
+      "motion":"None required."
+    },
+    {
+      "id":"shared-access-diagram", "status":"master-not-yet-authored",
+      "job":"Make one shared access path understandable without a schema or protocol lesson.",
+      "source":"docs/programs/brand-website/POSITIONING-BRIEF.md",
+      "labels":["Your agent","Strale","Research","Extraction","Validation"],
+      "master_plan":"Original editable vector or semantic HTML/SVG using existing tokens. Add the master and metadata to the shared asset registry before a page imports it. No third-party provider logos.",
+      "narrow":"One vertical path from Your agent through Strale, then three readable task labels; no fake sequence of tool calls.",
+      "alt":"Your agent connects to Strale to access tools for research, extraction and validation.",
+      "motion":"No animated traffic or concurrent completion states. The diagram explains access, not a captured run."
+    },
+    {
+      "id":"account-record", "status":"blocked-by-live-retrieval",
+      "job":"Show what the customer can retrieve for the exact demonstrated account call.",
+      "source":"docs/programs/brand-website/PROOF-QUALIFICATION.md",
+      "master_plan":"Create only after retrieval evidence. Select at most three useful rows from the actual response and link full detail. Keep private account data out of the export.",
+      "narrow":"One flat reading surface, with the same route qualifier and essential fields as desktop.",
+      "alt":"Write from the retrieved response; no placeholder claim of a completed run.",
+      "motion":"Static."
+    },
+    {
+      "id":"direct-invitation", "status":"reuse-accepted-composition",
+      "job":"Make the next action clear with a deliberate change of tone.",
+      "source":"design/brand-kit/quiet-material/foundations/registry.json",
+      "narrow":"Use the existing dark direct-text recipe and readable action order.",
+      "alt":"Decorative gradient; the heading and actions remain semantic text.",
+      "motion":"None required."
+    }
+  ]
+}

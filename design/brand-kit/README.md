@@ -16,6 +16,7 @@ Design acceptance is distinct from production adoption. Existing specimen regist
 | Positioning, voice and claims | [Adopted positioning](../../docs/programs/brand-website/POSITIONING-BRIEF.md) · [Voice](../../docs/company/VOICE.md) | [Public claim rulings](../../docs/company/claims.yaml) |
 | Current acceptance, gaps and next work | [Completion plan](../../docs/programs/brand-website/SYSTEM-COMPLETION.md) | [Completion record](../../docs/programs/brand-website/system-completion.json) |
 | Product example evidence | [Current proof qualification](../../docs/programs/brand-website/PROOF-QUALIFICATION.md) | Dated observation files linked from that record |
+| Homepage copy, illustration briefs and selected-asset readiness | [Homepage brief](../../docs/programs/brand-website/HOMEPAGE-BRIEF.md) | [Editable authoring source](../../docs/programs/brand-website/homepage-brief.json) |
 
 ## Use the kit
 
