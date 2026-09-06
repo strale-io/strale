@@ -1,0 +1,11 @@
+Intent: Produce the authorised controlled comparison inside the original hero, preserving its character while refining the inner reading treatment.
+
+Mode: Full. Current review is design/brand-kit/quiet-material/hero-comparison/index.html, with paired full-size pages and matching desktop/narrow captures. A is a screenshot-guided reconstruction, not the exact recovered revision; narrow layouts are interpretations. Both replace the historical completed badge with an illustrative qualifier. Historical wording is held to isolate this visual change, not adopted as launch copy.
+
+B changes only frame inset, panel fill and internal padding. The original folded atmosphere, retained Spectrum, large example footprint, typography, logo, navigation and copy are held. Candidate values are in design/tokens/candidates/quiet-material-hero-comparison.json. The exact founder screenshot remains the visual baseline, the PR600 replacement remains set aside, and no production tokens or public routes change.
+
+Reference lock: the founder screenshot and baseline assessment control this comparison. Accepted surface/type/control rules and preserved palette values supply narrow refinements. The original logo/raster rights and product-proof gaps remain open. No unrelated external direction is introduced.
+
+Verification follows the go workflow: required API typecheck, static generation/source checks, paired browser geometry/text/assets/bounds checks and fresh independent technical/product visual review. The unavailable simplify skill is replaced with a direct simplification pass. Evidence: archive/receipts/2026-09-06-check-brand-hero-surface-comparison.json. Exact-SHA review and CI results are in the PR. Sampled B-panel contrast is not a whole-site accessibility claim.
+
+Resume: assess B's frame-to-paper balance and legibility against A and the exact screenshot, then run a separate copy-density pass if the treatment is accepted. In that pass, resolve the historical plural request/result mismatch and qualify/remove unverified commercial copy. Do not change all sections, reopen identity, or infer production adoption from visual approval. Existing shared-checkout edits belong to other work and remain untouched.

@@ -1,0 +1,1333 @@
+{
+  "status": "passed",
+  "widths": [
+    320,
+    390,
+    900,
+    1100,
+    1101,
+    1120,
+    1440
+  ],
+  "manifest_sha256": "558c0c03f40006c77060a0268fbf6a652fe05ba4c55d74e50722d23a5d33013c",
+  "verifier_sha256": "b643ef316f60048d0e7eb89e583f8511746c65241e802c85a3e8cb45b547c0b4",
+  "checks": {
+    "same_content_and_outer_geometry": true,
+    "only_panel_treatment_changes": true,
+    "responsive_bounds": true,
+    "local_assets_and_fonts": true,
+    "refined_reading_text_contrast": true,
+    "keyboard_menu": true,
+    "local_destinations": true,
+    "no_remote_requests": true,
+    "no_browser_errors": true
+  },
+  "screenshots": {
+    "output/control-mobile.png": "5741cf946b8283c5bcca30b162375644ae5a1e5368d1e0ad5d0c5649f34dac19",
+    "output/refined-mobile.png": "f8d95171c5af8a0ebefec7c3693482486f93ece1d2ef7f87b61237782feff4fb",
+    "output/control-desktop.png": "bffa0e69760a0d2fe124bf4ea6b0ee209013a5ef54e233f761175dcd23058576",
+    "output/refined-desktop.png": "1d3fc35ffe2ea57c87900266058557bb0cf10dbf6d929cb7df5c4cde43479e97"
+  },
+  "measurements": [
+    {
+      "styleViolations": [],
+      "width": 320,
+      "scrollWidth": 320,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 20,
+        "y": 986.484375,
+        "width": 280,
+        "height": 510,
+        "top": 986.484375,
+        "right": 300,
+        "bottom": 1496.484375,
+        "left": 20
+      },
+      "panel": {
+        "x": 44,
+        "y": 1010.484375,
+        "width": 232,
+        "height": 462,
+        "top": 1010.484375,
+        "right": 276,
+        "bottom": 1472.484375,
+        "left": 44
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 280,
+        "height": 830.484375,
+        "top": 116,
+        "right": 300,
+        "bottom": 946.484375,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 76,
+        "top": 0,
+        "right": 320,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 62,
+        "y": 1108.46875,
+        "width": 196,
+        "height": 59.375,
+        "top": 1108.46875,
+        "right": 258,
+        "bottom": 1167.84375,
+        "left": 62
+      },
+      "route": {
+        "x": 62,
+        "y": 1176.78125,
+        "width": 196,
+        "height": 52.671875,
+        "top": 1176.78125,
+        "right": 258,
+        "bottom": 1229.453125,
+        "left": 62
+      },
+      "bounds": [],
+      "contrast": [],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "control"
+    },
+    {
+      "styleViolations": [],
+      "width": 320,
+      "scrollWidth": 320,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 20,
+        "y": 986.484375,
+        "width": 280,
+        "height": 510,
+        "top": 986.484375,
+        "right": 300,
+        "bottom": 1496.484375,
+        "left": 20
+      },
+      "panel": {
+        "x": 38,
+        "y": 1004.484375,
+        "width": 244,
+        "height": 474,
+        "top": 1004.484375,
+        "right": 282,
+        "bottom": 1478.484375,
+        "left": 38
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 280,
+        "height": 830.484375,
+        "top": 116,
+        "right": 300,
+        "bottom": 946.484375,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 76,
+        "top": 0,
+        "right": 320,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 56,
+        "y": 1105.421875,
+        "width": 208,
+        "height": 59.375,
+        "top": 1105.421875,
+        "right": 264,
+        "bottom": 1164.796875,
+        "left": 56
+      },
+      "route": {
+        "x": 56,
+        "y": 1175.109375,
+        "width": 208,
+        "height": 54.359375,
+        "top": 1175.109375,
+        "right": 264,
+        "bottom": 1229.46875,
+        "left": 56
+      },
+      "bounds": [],
+      "contrast": [
+        {
+          "selector": ".request-header strong",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".example-label",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".meta",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".request p",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".route>span",
+          "ratio": 5.4449756793705495
+        },
+        {
+          "selector": ".route code",
+          "ratio": 6.992520176653208
+        },
+        {
+          "selector": ".results dt",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".results dd",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".request-footer",
+          "ratio": 5.95508898630515
+        }
+      ],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "refined"
+    },
+    {
+      "styleViolations": [],
+      "width": 390,
+      "scrollWidth": 390,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 20,
+        "y": 833.859375,
+        "width": 350,
+        "height": 510,
+        "top": 833.859375,
+        "right": 370,
+        "bottom": 1343.859375,
+        "left": 20
+      },
+      "panel": {
+        "x": 44,
+        "y": 857.859375,
+        "width": 302,
+        "height": 462,
+        "top": 857.859375,
+        "right": 346,
+        "bottom": 1319.859375,
+        "left": 44
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 350,
+        "height": 677.859375,
+        "top": 116,
+        "right": 370,
+        "bottom": 793.859375,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 76,
+        "top": 0,
+        "right": 390,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 62,
+        "y": 955.84375,
+        "width": 266,
+        "height": 59.375,
+        "top": 955.84375,
+        "right": 328,
+        "bottom": 1015.21875,
+        "left": 62
+      },
+      "route": {
+        "x": 62,
+        "y": 1024.15625,
+        "width": 266,
+        "height": 52.671875,
+        "top": 1024.15625,
+        "right": 328,
+        "bottom": 1076.828125,
+        "left": 62
+      },
+      "bounds": [],
+      "contrast": [],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "control"
+    },
+    {
+      "styleViolations": [],
+      "width": 390,
+      "scrollWidth": 390,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 20,
+        "y": 833.859375,
+        "width": 350,
+        "height": 510,
+        "top": 833.859375,
+        "right": 370,
+        "bottom": 1343.859375,
+        "left": 20
+      },
+      "panel": {
+        "x": 38,
+        "y": 851.859375,
+        "width": 314,
+        "height": 474,
+        "top": 851.859375,
+        "right": 352,
+        "bottom": 1325.859375,
+        "left": 38
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 350,
+        "height": 677.859375,
+        "top": 116,
+        "right": 370,
+        "bottom": 793.859375,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 76,
+        "top": 0,
+        "right": 390,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 56,
+        "y": 952.796875,
+        "width": 278,
+        "height": 59.375,
+        "top": 952.796875,
+        "right": 334,
+        "bottom": 1012.171875,
+        "left": 56
+      },
+      "route": {
+        "x": 56,
+        "y": 1022.484375,
+        "width": 278,
+        "height": 54.359375,
+        "top": 1022.484375,
+        "right": 334,
+        "bottom": 1076.84375,
+        "left": 56
+      },
+      "bounds": [],
+      "contrast": [
+        {
+          "selector": ".request-header strong",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".example-label",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".meta",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".request p",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".route>span",
+          "ratio": 5.4449756793705495
+        },
+        {
+          "selector": ".route code",
+          "ratio": 6.992520176653208
+        },
+        {
+          "selector": ".results dt",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".results dd",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".request-footer",
+          "ratio": 5.95508898630515
+        }
+      ],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "refined"
+    },
+    {
+      "styleViolations": [],
+      "width": 900,
+      "scrollWidth": 900,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 125,
+        "y": 579.640625,
+        "width": 650,
+        "height": 510,
+        "top": 579.640625,
+        "right": 775,
+        "bottom": 1089.640625,
+        "left": 125
+      },
+      "panel": {
+        "x": 149,
+        "y": 603.640625,
+        "width": 602,
+        "height": 462,
+        "top": 603.640625,
+        "right": 751,
+        "bottom": 1065.640625,
+        "left": 149
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 720,
+        "height": 423.640625,
+        "top": 116,
+        "right": 740,
+        "bottom": 539.640625,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 900,
+        "height": 76,
+        "top": 0,
+        "right": 900,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 167,
+        "y": 716.46875,
+        "width": 566,
+        "height": 29.6875,
+        "top": 716.46875,
+        "right": 733,
+        "bottom": 746.15625,
+        "left": 167
+      },
+      "route": {
+        "x": 167,
+        "y": 769.9375,
+        "width": 566,
+        "height": 52.671875,
+        "top": 769.9375,
+        "right": 733,
+        "bottom": 822.609375,
+        "left": 167
+      },
+      "bounds": [],
+      "contrast": [],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "control"
+    },
+    {
+      "styleViolations": [],
+      "width": 900,
+      "scrollWidth": 900,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 125,
+        "y": 579.640625,
+        "width": 650,
+        "height": 510,
+        "top": 579.640625,
+        "right": 775,
+        "bottom": 1089.640625,
+        "left": 125
+      },
+      "panel": {
+        "x": 143,
+        "y": 597.640625,
+        "width": 614,
+        "height": 474,
+        "top": 597.640625,
+        "right": 757,
+        "bottom": 1071.640625,
+        "left": 143
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 720,
+        "height": 423.640625,
+        "top": 116,
+        "right": 740,
+        "bottom": 539.640625,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 900,
+        "height": 76,
+        "top": 0,
+        "right": 900,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 161,
+        "y": 713.40625,
+        "width": 578,
+        "height": 29.6875,
+        "top": 713.40625,
+        "right": 739,
+        "bottom": 743.09375,
+        "left": 161
+      },
+      "route": {
+        "x": 161,
+        "y": 768.265625,
+        "width": 578,
+        "height": 54.359375,
+        "top": 768.265625,
+        "right": 739,
+        "bottom": 822.625,
+        "left": 161
+      },
+      "bounds": [],
+      "contrast": [
+        {
+          "selector": ".request-header strong",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".example-label",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".meta",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".request p",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".route>span",
+          "ratio": 5.4449756793705495
+        },
+        {
+          "selector": ".route code",
+          "ratio": 6.992520176653208
+        },
+        {
+          "selector": ".results dt",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".results dd",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".request-footer",
+          "ratio": 5.95508898630515
+        }
+      ],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "refined"
+    },
+    {
+      "styleViolations": [],
+      "width": 1100,
+      "scrollWidth": 1100,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 225,
+        "y": 600.234375,
+        "width": 650,
+        "height": 510,
+        "top": 600.234375,
+        "right": 875,
+        "bottom": 1110.234375,
+        "left": 225
+      },
+      "panel": {
+        "x": 249,
+        "y": 624.234375,
+        "width": 602,
+        "height": 462,
+        "top": 624.234375,
+        "right": 851,
+        "bottom": 1086.234375,
+        "left": 249
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 720,
+        "height": 444.234375,
+        "top": 116,
+        "right": 740,
+        "bottom": 560.234375,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1100,
+        "height": 76,
+        "top": 0,
+        "right": 1100,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 267,
+        "y": 737.0625,
+        "width": 566,
+        "height": 29.6875,
+        "top": 737.0625,
+        "right": 833,
+        "bottom": 766.75,
+        "left": 267
+      },
+      "route": {
+        "x": 267,
+        "y": 790.53125,
+        "width": 566,
+        "height": 52.671875,
+        "top": 790.53125,
+        "right": 833,
+        "bottom": 843.203125,
+        "left": 267
+      },
+      "bounds": [],
+      "contrast": [],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "control"
+    },
+    {
+      "styleViolations": [],
+      "width": 1100,
+      "scrollWidth": 1100,
+      "text": "Menu\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 225,
+        "y": 600.234375,
+        "width": 650,
+        "height": 510,
+        "top": 600.234375,
+        "right": 875,
+        "bottom": 1110.234375,
+        "left": 225
+      },
+      "panel": {
+        "x": 243,
+        "y": 618.234375,
+        "width": 614,
+        "height": 474,
+        "top": 618.234375,
+        "right": 857,
+        "bottom": 1092.234375,
+        "left": 243
+      },
+      "copy": {
+        "x": 20,
+        "y": 116,
+        "width": 720,
+        "height": 444.234375,
+        "top": 116,
+        "right": 740,
+        "bottom": 560.234375,
+        "left": 20
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1100,
+        "height": 76,
+        "top": 0,
+        "right": 1100,
+        "bottom": 76,
+        "left": 0
+      },
+      "prompt": {
+        "x": 261,
+        "y": 734,
+        "width": 578,
+        "height": 29.6875,
+        "top": 734,
+        "right": 839,
+        "bottom": 763.6875,
+        "left": 261
+      },
+      "route": {
+        "x": 261,
+        "y": 788.859375,
+        "width": 578,
+        "height": 54.359375,
+        "top": 788.859375,
+        "right": 839,
+        "bottom": 843.21875,
+        "left": 261
+      },
+      "bounds": [],
+      "contrast": [
+        {
+          "selector": ".request-header strong",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".example-label",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".meta",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".request p",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".route>span",
+          "ratio": 5.4449756793705495
+        },
+        {
+          "selector": ".route code",
+          "ratio": 6.992520176653208
+        },
+        {
+          "selector": ".results dt",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".results dd",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".request-footer",
+          "ratio": 5.95508898630515
+        }
+      ],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "af2bf0b4cf3f988265171207a0a57e8f28cb9b9a3e2787e147af0af961e08008",
+      "mode": "refined"
+    },
+    {
+      "styleViolations": [],
+      "width": 1101,
+      "scrollWidth": 1101,
+      "text": "Tools\nUse cases\nDevelopers\nPricing\nDocs\nSign in\nStart building\n→\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 582.421875,
+        "y": 136.84375,
+        "width": 484.171875,
+        "height": 540,
+        "top": 136.84375,
+        "right": 1066.59375,
+        "bottom": 676.84375,
+        "left": 582.421875
+      },
+      "panel": {
+        "x": 621.140625,
+        "y": 175.5625,
+        "width": 406.734375,
+        "height": 462.5625,
+        "top": 175.5625,
+        "right": 1027.875,
+        "bottom": 638.125,
+        "left": 621.140625
+      },
+      "copy": {
+        "x": 34.40625,
+        "y": 136.84375,
+        "width": 484.171875,
+        "height": 601.71875,
+        "top": 136.84375,
+        "right": 518.578125,
+        "bottom": 738.5625,
+        "left": 34.40625
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1101,
+        "height": 84,
+        "top": 0,
+        "right": 1101,
+        "bottom": 84,
+        "left": 0
+      },
+      "prompt": {
+        "x": 645.140625,
+        "y": 288.53125,
+        "width": 358.734375,
+        "height": 29.6875,
+        "top": 288.53125,
+        "right": 1003.875,
+        "bottom": 318.21875,
+        "left": 645.140625
+      },
+      "route": {
+        "x": 645.140625,
+        "y": 342.0625,
+        "width": 358.734375,
+        "height": 52.75,
+        "top": 342.0625,
+        "right": 1003.875,
+        "bottom": 394.8125,
+        "left": 645.140625
+      },
+      "bounds": [],
+      "contrast": [],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "9910449f14e02621799f66dd4094287b98ebc1a2e13eb0a22954b6b2e17dabc1",
+      "mode": "control"
+    },
+    {
+      "styleViolations": [],
+      "width": 1101,
+      "scrollWidth": 1101,
+      "text": "Tools\nUse cases\nDevelopers\nPricing\nDocs\nSign in\nStart building\n→\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 582.421875,
+        "y": 136.84375,
+        "width": 484.171875,
+        "height": 540,
+        "top": 136.84375,
+        "right": 1066.59375,
+        "bottom": 676.84375,
+        "left": 582.421875
+      },
+      "panel": {
+        "x": 609.046875,
+        "y": 163.46875,
+        "width": 430.921875,
+        "height": 486.75,
+        "top": 163.46875,
+        "right": 1039.96875,
+        "bottom": 650.21875,
+        "left": 609.046875
+      },
+      "copy": {
+        "x": 34.40625,
+        "y": 136.84375,
+        "width": 484.171875,
+        "height": 601.71875,
+        "top": 136.84375,
+        "right": 518.578125,
+        "bottom": 738.5625,
+        "left": 34.40625
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1101,
+        "height": 84,
+        "top": 0,
+        "right": 1101,
+        "bottom": 84,
+        "left": 0
+      },
+      "prompt": {
+        "x": 637.046875,
+        "y": 282.359375,
+        "width": 374.921875,
+        "height": 29.6875,
+        "top": 282.359375,
+        "right": 1011.96875,
+        "bottom": 312.046875,
+        "left": 637.046875
+      },
+      "route": {
+        "x": 637.046875,
+        "y": 338.671875,
+        "width": 374.921875,
+        "height": 56.140625,
+        "top": 338.671875,
+        "right": 1011.96875,
+        "bottom": 394.8125,
+        "left": 637.046875
+      },
+      "bounds": [],
+      "contrast": [
+        {
+          "selector": ".request-header strong",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".example-label",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".meta",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".request p",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".route>span",
+          "ratio": 5.4449756793705495
+        },
+        {
+          "selector": ".route code",
+          "ratio": 6.992520176653208
+        },
+        {
+          "selector": ".results dt",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".results dd",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".request-footer",
+          "ratio": 5.95508898630515
+        }
+      ],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "9910449f14e02621799f66dd4094287b98ebc1a2e13eb0a22954b6b2e17dabc1",
+      "mode": "refined"
+    },
+    {
+      "styleViolations": [],
+      "width": 1120,
+      "scrollWidth": 1120,
+      "text": "Tools\nUse cases\nDevelopers\nPricing\nDocs\nSign in\nStart building\n→\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 592.46875,
+        "y": 137.75,
+        "width": 492.53125,
+        "height": 540,
+        "top": 137.75,
+        "right": 1085,
+        "bottom": 677.75,
+        "left": 592.46875
+      },
+      "panel": {
+        "x": 631.859375,
+        "y": 177.140625,
+        "width": 413.75,
+        "height": 461.21875,
+        "top": 177.140625,
+        "right": 1045.609375,
+        "bottom": 638.359375,
+        "left": 631.859375
+      },
+      "copy": {
+        "x": 35,
+        "y": 137.75,
+        "width": 492.515625,
+        "height": 604.484375,
+        "top": 137.75,
+        "right": 527.515625,
+        "bottom": 742.234375,
+        "left": 35
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1120,
+        "height": 84,
+        "top": 0,
+        "right": 1120,
+        "bottom": 84,
+        "left": 0
+      },
+      "prompt": {
+        "x": 655.859375,
+        "y": 289.796875,
+        "width": 365.75,
+        "height": 29.6875,
+        "top": 289.796875,
+        "right": 1021.609375,
+        "bottom": 319.484375,
+        "left": 655.859375
+      },
+      "route": {
+        "x": 655.859375,
+        "y": 343.171875,
+        "width": 365.75,
+        "height": 52.5625,
+        "top": 343.171875,
+        "right": 1021.609375,
+        "bottom": 395.734375,
+        "left": 655.859375
+      },
+      "bounds": [],
+      "contrast": [],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "9910449f14e02621799f66dd4094287b98ebc1a2e13eb0a22954b6b2e17dabc1",
+      "mode": "control"
+    },
+    {
+      "styleViolations": [],
+      "width": 1120,
+      "scrollWidth": 1120,
+      "text": "Tools\nUse cases\nDevelopers\nPricing\nDocs\nSign in\nStart building\n→\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 592.46875,
+        "y": 137.75,
+        "width": 492.53125,
+        "height": 540,
+        "top": 137.75,
+        "right": 1085,
+        "bottom": 677.75,
+        "left": 592.46875
+      },
+      "panel": {
+        "x": 619.546875,
+        "y": 164.828125,
+        "width": 438.375,
+        "height": 485.84375,
+        "top": 164.828125,
+        "right": 1057.921875,
+        "bottom": 650.671875,
+        "left": 619.546875
+      },
+      "copy": {
+        "x": 35,
+        "y": 137.75,
+        "width": 492.515625,
+        "height": 604.484375,
+        "top": 137.75,
+        "right": 527.515625,
+        "bottom": 742.234375,
+        "left": 35
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1120,
+        "height": 84,
+        "top": 0,
+        "right": 1120,
+        "bottom": 84,
+        "left": 0
+      },
+      "prompt": {
+        "x": 647.546875,
+        "y": 283.515625,
+        "width": 382.375,
+        "height": 29.6875,
+        "top": 283.515625,
+        "right": 1029.921875,
+        "bottom": 313.203125,
+        "left": 647.546875
+      },
+      "route": {
+        "x": 647.546875,
+        "y": 339.71875,
+        "width": 382.375,
+        "height": 56.015625,
+        "top": 339.71875,
+        "right": 1029.921875,
+        "bottom": 395.734375,
+        "left": 647.546875
+      },
+      "bounds": [],
+      "contrast": [
+        {
+          "selector": ".request-header strong",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".example-label",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".meta",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".request p",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".route>span",
+          "ratio": 5.4449756793705495
+        },
+        {
+          "selector": ".route code",
+          "ratio": 6.992520176653208
+        },
+        {
+          "selector": ".results dt",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".results dd",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".request-footer",
+          "ratio": 5.95508898630515
+        }
+      ],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "9910449f14e02621799f66dd4094287b98ebc1a2e13eb0a22954b6b2e17dabc1",
+      "mode": "refined"
+    },
+    {
+      "styleViolations": [],
+      "width": 1440,
+      "scrollWidth": 1440,
+      "text": "Tools\nUse cases\nDevelopers\nPricing\nDocs\nSign in\nStart building\n→\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 761.75,
+        "y": 159.109375,
+        "width": 633.25,
+        "height": 589.0625,
+        "top": 159.109375,
+        "right": 1395,
+        "bottom": 748.171875,
+        "left": 761.75
+      },
+      "panel": {
+        "x": 812.40625,
+        "y": 209.765625,
+        "width": 531.9375,
+        "height": 487.75,
+        "top": 209.765625,
+        "right": 1344.34375,
+        "bottom": 697.515625,
+        "left": 812.40625
+      },
+      "copy": {
+        "x": 45,
+        "y": 159.109375,
+        "width": 633.234375,
+        "height": 595.734375,
+        "top": 159.109375,
+        "right": 678.234375,
+        "bottom": 754.84375,
+        "left": 45
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 90,
+        "top": 0,
+        "right": 1440,
+        "bottom": 90,
+        "left": 0
+      },
+      "prompt": {
+        "x": 838.3125,
+        "y": 328.90625,
+        "width": 480.125,
+        "height": 30.109375,
+        "top": 328.90625,
+        "right": 1318.4375,
+        "bottom": 359.015625,
+        "left": 838.3125
+      },
+      "route": {
+        "x": 838.3125,
+        "y": 385.34375,
+        "width": 480.125,
+        "height": 56.28125,
+        "top": 385.34375,
+        "right": 1318.4375,
+        "bottom": 441.625,
+        "left": 838.3125
+      },
+      "bounds": [],
+      "contrast": [],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "aa8b2fb782de1deb65a36c0a8ddf0257eaf6931d0f489b55f9989de26e7bd8d6",
+      "mode": "control"
+    },
+    {
+      "styleViolations": [],
+      "width": 1440,
+      "scrollWidth": 1440,
+      "text": "Tools\nUse cases\nDevelopers\nPricing\nDocs\nSign in\nStart building\n→\n\nTOOLS FOR AI AGENTS\n\nOne connection to the tools your agent needs.\n\nSearch the web, research companies, enrich leads, validate data, run compliance checks and more, without integrating every provider separately.\n\nConnect through MCP or API, or let your agent pay per request with x402.\n\nExplore tools\n→\nStart building\n\nPAY PER CALL\nSTRUCTURED RESULTS\nCLEAR PRICING\nCHARGED ON SUCCESS\n\nStrale request\nILLUSTRATIVE EXAMPLE\nYOUR AGENT ASKS\n\nValidate these email addresses.\n\nTool\nemail-validate\nFormat\nValid\nMX records\nFound\nDisposable\nNo\nONE REQUEST · STRUCTURED RESULT · SOURCE CONTEXT",
+      "stage": {
+        "x": 761.75,
+        "y": 159.109375,
+        "width": 633.25,
+        "height": 589.0625,
+        "top": 159.109375,
+        "right": 1395,
+        "bottom": 748.171875,
+        "left": 761.75
+      },
+      "panel": {
+        "x": 796.578125,
+        "y": 193.9375,
+        "width": 563.59375,
+        "height": 519.40625,
+        "top": 193.9375,
+        "right": 1360.171875,
+        "bottom": 713.34375,
+        "left": 796.578125
+      },
+      "copy": {
+        "x": 45,
+        "y": 159.109375,
+        "width": 633.234375,
+        "height": 595.734375,
+        "top": 159.109375,
+        "right": 678.234375,
+        "bottom": 754.84375,
+        "left": 45
+      },
+      "header": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 90,
+        "top": 0,
+        "right": 1440,
+        "bottom": 90,
+        "left": 0
+      },
+      "prompt": {
+        "x": 827.53125,
+        "y": 320.84375,
+        "width": 501.6875,
+        "height": 30.109375,
+        "top": 320.84375,
+        "right": 1329.21875,
+        "bottom": 350.953125,
+        "left": 827.53125
+      },
+      "route": {
+        "x": 827.53125,
+        "y": 380.90625,
+        "width": 501.6875,
+        "height": 60.703125,
+        "top": 380.90625,
+        "right": 1329.21875,
+        "bottom": 441.609375,
+        "left": 827.53125
+      },
+      "bounds": [],
+      "contrast": [
+        {
+          "selector": ".request-header strong",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".example-label",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".meta",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".request p",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".route>span",
+          "ratio": 5.4449756793705495
+        },
+        {
+          "selector": ".route code",
+          "ratio": 6.992520176653208
+        },
+        {
+          "selector": ".results dt",
+          "ratio": 5.95508898630515
+        },
+        {
+          "selector": ".results dd",
+          "ratio": 17.76628077557453
+        },
+        {
+          "selector": ".request-footer",
+          "ratio": 5.95508898630515
+        }
+      ],
+      "background": "url(assets/hero-folded-light.png)",
+      "spectrum": "linear-gradient(138deg, rgb(182, 50, 28) 0%, rgb(101, 35, 30) 34%, rgb(37, 48, 71) 66%, rgb(18, 52, 92) 100%)",
+      "fonts": true,
+      "images": true,
+      "heldStyleDigest": "aa8b2fb782de1deb65a36c0a8ddf0257eaf6931d0f489b55f9989de26e7bd8d6",
+      "mode": "refined"
+    }
+  ],
+  "limits": [
+    "Screenshot-guided reconstruction; mobile is not a recovered original layout.",
+    "Contrast checks cover sampled refined-panel text, not raster-overlay copy or every interaction state.",
+    "No production or live-product qualification."
+  ]
+}

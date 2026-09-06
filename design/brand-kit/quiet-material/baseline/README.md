@@ -41,7 +41,11 @@ The document-to-fields transformation is worth keeping at this scale. The stacke
 
 The blue atmosphere, large result object and visible input-to-output relationship supply character. Three input cards, a central decorative symbol, an outer result card and its inner card create competing layers. Keep the spatial relationship; reduce the layers and redundant icon strip. Do not replace the entire demonstration with three text links.
 
-## Next controlled comparison
+## Current controlled comparison
+
+The [first paired study](../hero-comparison/index.html) is now available. It reconstructs the supplied hero for a same-content frame/surface comparison; it does not replace this exact screenshot as the reference or establish an original mobile revision. B remains proposed.
+
+### Comparison scope
 
 Refine the opening in the original composition. Keep the same headline, example task, navigation, outer illustration footprint and atmospheric placement for the first comparison; label the example illustrative in both versions. Change only frame/reading-surface treatment and its spacing. Show original and revision at matching desktop and narrow sizes. Follow with a separate copy-density pass so its effect can be judged independently. Do not rebuild the rest of the homepage first.
 

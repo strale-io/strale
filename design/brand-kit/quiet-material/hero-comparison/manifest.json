@@ -1,0 +1,16 @@
+{
+  "inputs": {
+    "registry.json": "b164406f42d422cfdda3405d6cdf650a2e28a4b316b63b3d06a4641835e10f05",
+    "style.template.css": "b0df46cbf88ef0dc9d183b40653341a465897a66cd1a5ae82164fd67667d614e",
+    "build.mjs": "62c86c594b8dc14852035e44d82e372b9797d07d10ee488ebcd850bee0cddaa6",
+    "interactions.js": "8080dc7772000714cfac9a06a838bae4568b9c36a5c58593efb09b638da871b6",
+    "design/tokens/candidates/quiet-material-hero-comparison.json": "de39a39f79c7da196c9726a3d9cb3e1fb6492d101030a5a2d199dd5ab38f300f"
+  },
+  "outputs": {
+    "style.css": "011a10e100e20e55c374e950e1aae37155d0b238ac1acb2ca43e437c32bfdbcc",
+    "tokens.css": "279b4e89cfc9edaad468a56783fd8e4cd27a63ec6c362529a6e38f5ff92327ba",
+    "control.html": "bebe4c7835984cb4f66e6c304fbd8ce39ce1e9ee698140021dc25d436cbb2dde",
+    "refined.html": "ba9f7cb16f3b1417bc340801a3d1287b62301d59e12e14b24083b6b2a93c8649",
+    "index.html": "d567547dcedaf840a337f951e66a4a948db92f1ff370ce5b355f088ee2d99888"
+  }
+}
