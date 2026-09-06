@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { classifyNameMatch } from "../lib/company-name-match.js";
+import { CapabilityRefusalError } from "../lib/capability-refusal.js";
 import { meteredVendorFetch } from "../lib/metered-vendor-fetch.js";
 
 // German company data via OpenRegister (https://api.openregister.de).
@@ -193,8 +194,19 @@ export function pickByName(query: string, results: AutocompleteResult[]): Autoco
         .slice(0, 4)
         .map((c) => `${c.name} (${c.register_type} ${c.register_number}, ${c.company_id})`)
         .join("; ");
-      throw new Error(
-        `${ids.size} distinct German entities match "${query}" equally well: ${listing}. ` +
+      // Opens with "Ambiguous " and throws the typed error for the same reason
+      // the other four registries do (PR #236): every health consumer has to
+      // recognise this as a refusal, and two of the three see only the string.
+      // The old wording opened with the candidate COUNT, so `isRefusalMessage`
+      // — which anchors its fragments at the start — matched nothing, and the
+      // taxonomy filed all 15 of these that real customers hit on 2026-08-24
+      // as `unclassified`. That bucket happens to be excused today, so nothing
+      // was delisted; it is excused as *unattributed*, though, not as a
+      // refusal, so the correct-refusal signal was invisible to every consumer
+      // and to the demand read that refusals are supposed to feed.
+      throw new CapabilityRefusalError(
+        `Ambiguous German company name "${query}": ${ids.size} distinct German entities match ` +
+          `equally well: ${listing}. ` +
           `These are separate legal registrations — pass the intended company_id, or the full ` +
           `registered name including its legal form (GmbH / SE / GmbH & Co. KG / …).`,
       );
@@ -210,7 +222,10 @@ export function pickByName(query: string, results: AutocompleteResult[]): Autoco
     const sentenceHint = query.trim().split(/\s+/).length > 6
       ? ` The query looks like free text — pass the company name alone in 'company_name'.`
       : "";
-    throw new Error(
+    // Recognised from the string already ("No confident " is a registered
+    // fragment); typed as well so the sync path, which still holds the object,
+    // does not depend on wording at all.
+    throw new CapabilityRefusalError(
       `No confident German registry match for "${query}". OpenRegister's search is fuzzy and ` +
         `returned only unrelated entities${closest ? ` (closest: ${closest})` : ""}.` +
         sentenceHint +
