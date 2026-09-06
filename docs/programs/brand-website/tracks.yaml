@@ -52,7 +52,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Continue from the original-design baseline linked in the kit index. The four-section homepage study is set aside. Refine the original opening with a controlled same-content comparison of frame, reading surface and spacing; preserve atmospheric reach, scale and the product-example footprint. Apply copy-density changes separately. Retain accepted kit companions and keep proof/rights work separate.
+    next_action: Assess the controlled A/B hero comparison linked from the kit index against the exact original screenshot. B changes only frame inset, reading surface and inner padding; it is proposed, not adopted. Keep original character and assess copy density in a subsequent separate pass. The four-section replacement remains set aside and proof/rights limits remain open.
     resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.
