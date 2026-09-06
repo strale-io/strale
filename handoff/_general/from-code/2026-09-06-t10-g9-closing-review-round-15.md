@@ -71,3 +71,15 @@ See the PR body for each gate's exit line.
 Next action: none pending from this batch; round 16 of the closing review
 is the next continuation point for the M2 closing-review program, at
 whatever commit this PR merges to.
+
+## Addendum: a false partition count, corrected and noted
+
+The independent review of this batch's own pull request found that the
+round-15 archive's Consolidated findings section said five partitions
+passed when four did, contradicting the same file's own method section.
+It is corrected here before merge. The same sentence had been copied
+from the already-merged round-12 archive, where it is equally false,
+since round 12 also had four passes and two failures. That archive is
+never amended, so DEC-20260905-Q item 4 notes it and records the true
+counts. The sentence originated in the brief that commissioned the
+round-12 erratum, not in either worker's own reading.

@@ -1037,8 +1037,9 @@ worktree remove failed (leave it; orchestrator cleans up after a junction check)
 
 ## Consolidated findings
 
-Five partitions passed and the gates were clean; the consolidated verdict
-is FAIL on P1's one item and P5's one item.
+Four partitions passed, P2, P3, P4 and P6, and all nine gates exited 0;
+partitions P1 and P5 each returned FAIL with one finding, and the
+consolidated verdict is FAIL on those two items.
 
 1. **`docs/decisions/records/DEC-20260225-P-m1n2.md`, line 109.** Found by
    partition P1. The record states, in Consequences: "Both the 'not CI
