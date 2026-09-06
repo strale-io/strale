@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "generated_by": "design/brand-kit/quiet-material/homepage/build.mjs",
+  "sources": {
+    "token-schema": "3c07c146023ed1a3ab4816c6658243e11fc59784a6d9c940070e71e0a315a088",
+    "brief": "84e9af1ae8c778470ecb3164d22cc2d2e399091f38352b71f3ddc298c5f9157b",
+    "reference-lock": "8bd488d23ae0a570b104ee5407160571441602b87b88490a4c9d46cbad4b7e12",
+    "patterns": "e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72",
+    "controls": "f09a38f11da044da9ef8b58718512057616eeb76368f9c5b8d5895b99d654011",
+    "illustrations": "37559210cc4ba25dfb2a8280a9d1ab8fc1b7cc5a8baf0cc10a52cf01542196b8",
+    "pattern-tokens": "7e5611bf7d156e0465c9b53086c7b1a7bd757c517d20a84f73ba8d461a887f50",
+    "control-tokens": "ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521",
+    "atmosphere-registry": "a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce",
+    "foundation-registry": "1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0",
+    "lockup": "1a70f33456dd28189480b6014c06f35e80896e671185cfd63db6292032fb19a3",
+    "instrument-font": "b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1",
+    "instrument-license": "9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966",
+    "plex-font": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+    "plex-license": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d",
+    "access-desktop": "f5f52cc6ce01d05dedbc805fa18e65960eddb8556db0eaf9ed83a4d57d7d91df",
+    "access-narrow": "d5eacff45284755972fa29a7f1b1e78c8e0dc1f9ecd44ad253a54a2d8e3c3009"
+  },
+  "candidate_token": "40313d6fe654019f8d214c32238aab09315022324f3ba70f4af6c36415a40630",
+  "local_sources": {
+    "registry.json": "b979d944738079a80dbb272da5e37eecb0d8d2ab72e9a7b57d3f831a66ea8915",
+    "build.mjs": "e3189dd5d1238e5e96942bbf1449405b9e47c0c9c9f221804ab50f526e9d2c66",
+    "stylesheet.css": "701d82a6b1f87f2ab99437915db8136bf25917ce25bdc9d17a000c53cef47a36",
+    "interactions.js": "44fc8ff65a21b14cd4dee45aa732c6f2de102e84dcb4fd5fc2de8b125f75eb58",
+    "verify.mjs": "207e5b91245b4a0614623f421c106a4f48b9a95e2fa56699657bfb6343c198c8"
+  },
+  "assets": {
+    "assets/hero-folded-light.png": "2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07"
+  },
+  "outputs": {
+    "index.html": "7292c6e844e6606d881b9b8eea082c099ab0c8365deb7a2a902c2c9079a96995",
+    "details.html": "522fbf92f1df8a5c49d43e970747d7f779061a8bf18e7cd0d59e5436456575cb",
+    "tokens.css": "1ee7dda927caa5f0ba7f86e7ffeb5e797bdffc621d2842ec0cb66b998adc0775"
+  }
+}

@@ -58,3 +58,10 @@ design/brand-kit/quiet-material/illustrations/masters/*.svg -text
 design/brand-kit/quiet-material/illustrations/exports/*.svg -text
 design/brand-kit/quiet-material/illustrations/masters/*.svg whitespace=cr-at-eol
 design/brand-kit/quiet-material/illustrations/exports/*.svg whitespace=cr-at-eol
+
+# Homepage composition sources and original raster bytes.
+design/tokens/candidates/quiet-material-homepage.json text eol=lf
+docs/research/2026-09-06-homepage-composition.md text eol=lf
+design/brand-kit/quiet-material/homepage/assets/*.png -text
+design/brand-kit/quiet-material/homepage/exports/*.png -text
+design/brand-kit/quiet-material/homepage/output/*.png -text
