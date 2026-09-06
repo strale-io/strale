@@ -52,8 +52,8 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Review design/brand-kit/quiet-material/opening/index.html as two connected sections. Keep selected B and provisional shorter copy; judge the transition to three useful jobs, original illustrations and local detail previews. The new section and copy remain proposed. Historical A/B evidence stays intact; production, proof and rights gates remain open.
-    resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
+    next_action: Review HOMEPAGE-NARRATIVE.md with the founder — useful work, other jobs, shared integration, account-call inspection, first call. Copy and illustration objectives are proposed; no further sections or assets before this review. Preserve hero B and the accepted kit. Positioning, proof, rights and production gates retain their existing status.
+    resume_file: docs/programs/brand-website/HOMEPAGE-NARRATIVE.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.
       - Existing direction retained and required gradient/image/surface recipes verified in relevant contexts before brand-kit adoption.

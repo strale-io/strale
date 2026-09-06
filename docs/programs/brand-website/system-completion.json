@@ -12,7 +12,7 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "review_hero_and_first_breadth_section_together",
+    "founder_review_of_proposed_narrative_before_implementation",
     "authenticated_invoice_demo_and_own_record_retrieval",
     "selected_asset_rights_and_production_adoption"
   ],
@@ -273,9 +273,9 @@
     {
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
-      "status": "original-composition-refinement",
-      "action": "B selected for continued design. Review the separate shorter hero copy in HERO-COPY.md within B; keep the original atmosphere and illustration footprint.",
-      "evidence": "design/brand-kit/quiet-material/baseline/README.md"
+      "status": "narrative-awaiting-founder-review",
+      "action": "Review HOMEPAGE-NARRATIVE.md with the founder before further section or asset work; preserve B and the accepted visual direction.",
+      "evidence": "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md"
     },
     {
       "id": "consumer-adoption",
@@ -320,13 +320,14 @@
     "disposition": "design/brand-kit/quiet-material/baseline/registry.json"
   },
   "opening_study": {
-    "status": "proposed-for-review",
+    "status": "set-aside",
     "preview": "design/brand-kit/quiet-material/opening/index.html",
     "guide": "design/brand-kit/quiet-material/opening/README.md",
     "registry": "design/brand-kit/quiet-material/opening/registry.json",
     "tokens": "design/tokens/candidates/quiet-material-opening.json",
     "verification": "design/brand-kit/quiet-material/opening/verification.json",
-    "scope": "Founder authorised the first section below selected B, with shorter copy used provisionally. Two-section design study, not full homepage or production adoption."
+    "scope": "Founder rejected generic/AI-written copy, unclear storyline and weak illustrations. Historical study only; preserve B visual treatment but do not extend this narrative.",
+    "disposition": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md"
   },
   "hero_comparison": {
     "status": "B-selected-for-continued-design",
@@ -339,6 +340,15 @@
     "selected_variant": "B",
     "accepted_on": "2026-09-06",
     "founder_statement": "i prefer b",
-    "next_copy_proposal": "docs/programs/brand-website/HERO-COPY.md"
+    "next_editorial_step": "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md"
+  },
+  "editorial_reset": {
+    "status": "narrative-awaiting-founder-review",
+    "handoff": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md",
+    "proposal": "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md",
+    "hero_copy_status": "set-aside",
+    "homepage_brief_status": "background-draft-not-approved-story",
+    "positioning_changed": false,
+    "implementation_paused_until_narrative_review": true
   }
 }
