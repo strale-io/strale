@@ -121,7 +121,7 @@ presented as a source's words is the record's own wording; judged as prose, not 
 Residual 2: `DEC-20260227-P-s9t0.md` line 82, span `"visa/work permit"`. Checker's best match was the
 record's own matched Notion row (prefix 4, i.e. barely overlapping). Classification: **checker miss,
 own wording, not a quotation.** The sentence reads "beyond unrelated strings (an 'visa/work permit'
-domain capability and airline codes reading 'TAP Portugal'...)" -- this is the record's own
+domain capability and airline codes reading 'TAP Portugal'...)" — this is the record's own
 descriptive label for a false-positive grep match it found, not a quotation of any source's exact
 words. Verified the underlying factual claim independently: `apps/api/src/capabilities/work-permit-requirements.ts`
 exists and its content concerns visa/work-permit rules; `apps/api/src/capabilities/flight-status.ts`
@@ -168,36 +168,36 @@ None. All 41 records in P1 pass every check:
 
 ## Code-claim spot checks (file : line : claim : result)
 
-1. `manifests/screenshot-url.yaml` : header + `price_cents: 5` -- matches `DEC-20260225-P-a3b4`'s
+1. `manifests/screenshot-url.yaml` : header + `price_cents: 5` — matches `DEC-20260225-P-a3b4`'s
    claim of a 2026-03-17 re-addition at 5 cents. Confirmed.
-2. `manifests/invoice-extract.yaml` line 12 : `price_cents: 50` -- matches `DEC-20260225-P-a3b4` and
+2. `manifests/invoice-extract.yaml` line 12 : `price_cents: 50` — matches `DEC-20260225-P-a3b4` and
    `DEC-20260225-P-y1z2`'s "invoice extraction price raised to EUR 0.50." Confirmed.
-3. `apps/api/src/lib/x402-gateway.ts` lines 63-68 : `USDC_CONTRACTS`, "Base mainnet" comment -- matches
+3. `apps/api/src/lib/x402-gateway.ts` lines 63-68 : `USDC_CONTRACTS`, "Base mainnet" comment — matches
    `DEC-20260225-P-q3r4` and `DEC-20260225-P-s5t6`'s claims about the x402/USDC rail. Confirmed.
-4. `packages/langchain/src/index.ts` line 16 : `export class StraleFallbackTool extends Tool` --
+4. `packages/langchain/src/index.ts` line 16 : `export class StraleFallbackTool extends Tool` —
    matches `DEC-20260225-P-e7f8`'s claim the tool exists under this exact name. Confirmed.
 5. `apps/api/src/routes/solutions.ts` lines 54/157 : comment `disclosing withdrawn ones through the
-   solution that bundles them` -- matches `DEC-20260225-P-i1j2`'s quoted comment. Confirmed.
+   solution that bundles them` — matches `DEC-20260225-P-i1j2`'s quoted comment. Confirmed.
 6. `apps/api/src/db/schema.ts` lines 355-359 : `auditTrail`, `transparencyMarker`, `dataJurisdiction`
-   column declarations -- matches `DEC-20260226-P-s3t4`'s claim all three columns exist. Confirmed.
-7. `strale-io/strale-frontend@04c9fca9:src/pages/CapabilityDetail.tsx` lines 271/304/319/358/432 --
+   column declarations — matches `DEC-20260226-P-s3t4`'s claim all three columns exist. Confirmed.
+7. `strale-io/strale-frontend@04c9fca9:src/pages/CapabilityDetail.tsx` lines 271/304/319/358/432 —
    matches `DEC-20260306-H`'s claimed section order and exact line numbers for "Parameters," "One API
    call. Structured data.," "Part of these solutions," the "HOW THIS IS VERIFIED" comment, and
    "Related guides." All five line numbers confirmed exact.
 8. `manifests/*.yaml` disclaimer-field grep : exactly `competitor-compare.yaml`, `contract-extract.yaml`,
-   `email-finder.yaml`, `landing-page-roast.yaml` carry a `disclaimer` field -- matches
+   `email-finder.yaml`, `landing-page-roast.yaml` carry a `disclaimer` field — matches
    `DEC-20260309-H`'s claim of exactly those four manifests. Confirmed.
-9. `apps/api/src/capabilities/auto-register.ts` line 411 : `await import(\`./${slug}.js\`)` -- matches
+9. `apps/api/src/capabilities/auto-register.ts` line 411 : `await import(\`./${slug}.js\`)` — matches
    `DEC-20260227-P-i9j0`'s claim of first-party dynamic-import self-registration. Confirmed.
 10. `ls manifests/*.yaml | wc -l` = 350 at the pinned commit; `git log --diff-filter=A --since
-    2026-09-05 -- manifests/` shows 8 manifests added since 2026-09-05 (350-8=342) -- reconciles the
+    2026-09-05 -- manifests/` shows 8 manifests added since 2026-09-05 (350-8=342) — reconciles the
     342-manifest figure several P1 records state "as of 2026-09-05" with the higher count now present
     at the pinned commit. Per rule (e), this drift from unrelated work merging after the record's
     stated date is not a finding.
 11. (extra) `apps/api/src/web3-assurance/evaluators/erc-8004-reputation.ts` line 2 : "trustless agent
-    reputation reader" -- matches `DEC-20260227-P-q7r8`'s quoted description. Confirmed.
+    reputation reader" — matches `DEC-20260227-P-q7r8`'s quoted description. Confirmed.
 12. (extra) `apps/api/src/capabilities/work-permit-requirements.ts` and
-    `apps/api/src/capabilities/flight-status.ts` line 71 (`TP: "TAP Portugal"`) -- underlying facts
+    `apps/api/src/capabilities/flight-status.ts` line 71 (`TP: "TAP Portugal"`) — underlying facts
     behind `DEC-20260227-P-s9t0`'s "visa/work permit" / "TAP Portugal" own-wording label. Confirmed.
 
 ## Unverifiable
@@ -339,7 +339,7 @@ Six records in this partition carry non-empty `relations`:
   convention DEC-20260905-B already used for DEC-20260314-A/DEC-20260423-A),
   and `DEC-20260905-D` item 7 substantiates the `DEC-20260409-B` edge. Both
   corrections read as accurate on their own terms (I did not re-fetch the
-  underlying Notion rows myself given round 4's own citation of both rows'
+  underlying Notion rows myself given rounds 4's own citation of both rows'
   fields, but the correction is internally consistent and matches the
   pattern already established). **Not a finding**, per rule (a).
 - `DEC-20260411-A` -> `DEC-20260302-A-0001` (`amends`): target exists,
@@ -352,7 +352,8 @@ None of the six relation targets is a bare collided id
 DEC-20260314-B, DEC-20260320-B, DEC-20260409-A, DEC-20260409-B,
 DEC-20260302-A-0001).
 
-## Corrections from amending records verified accurate (checked before treating as findings, per the partition prompt's rule (a))
+## Corrections from amending records verified accurate (checked before
+treating as findings, per the partition prompt's rule (a))
 
 Per the mandatory grep-and-read procedure, checked every place my reading of
 a P2 record's text lined up with a statement listed in DEC-20260905-B,
@@ -543,7 +544,7 @@ None. No false, fabricated, misattributed, or unverifiable statement was found i
 ## Structural checks (frontmatter, banner, sections, evidence, relations)
 
 - Frontmatter parses for all 39 records; `record_key`, `id`, and filename agree in every case (bare keys, filename = `<record_key>.md`; no `--notion-` or `--git-` qualified records fall in this partition).
-- The CAUTION banner ("M2 CANDIDATE RECORD -- NOT ACTIVE PROJECT AUTHORITY") and all five protected sections (Decision, Context, Rationale, Consequences, Reversal conditions) are present in all 39 records.
+- The CAUTION banner ("M2 CANDIDATE RECORD — NOT ACTIVE PROJECT AUTHORITY") and all five protected sections (Decision, Context, Rationale, Consequences, Reversal conditions) are present in all 39 records.
 - Every evidence-block file path resolves to an existing file at the pinned commit: `CLAUDE.md`, `AGENTS.md`, `apps/api/**`, `manifests/**`, `config/env-manifest.yaml`, `docs/**`, `archive/sessions/**`, `handoff/**`, `packages/mcp-server/package.json`, and `docs/decisions/records/DEC-20260422-A--git-3b256587.md` (cited by DEC-20260416-A) all exist. Evidence URLs (Notion pages, GitHub commit/PR links) were not individually filesystem-checked except where cited as a code claim (see below); one spot-checked commit SHA (`a2b8d69e996041bb9a21b6541918e89f4e4cef8c`, DEC-20260423-A) resolves.
 - Every `relations[].target` in the partition (DEC-20260415-A, DEC-20260421-J, DEC-20260320-B, DEC-20260423-A, DEC-20260425-B, DEC-20260422-C, DEC-20260427-A, DEC-20260428-A, DEC-20260428-B, DEC-20260424-A, DEC-20260503-B, DEC-20260505-H, DEC-20260506-G, DEC-20260504-B, DEC-20260515-B, DEC-20260507-F) exists as a record file at the pinned commit, is substantiated in the citing record's own prose (each relation is backed by an explicit sentence naming the target and what the relation rests on: "amends", "supersedes", "affirms", "related_to" are each explained), and none is a bare id listed in `docs/decisions/id-collisions.yaml` (checked by grep against all sixteen distinct targets: zero matches).
 
@@ -553,7 +554,7 @@ Pulled ten Notion rows directly (`dump_rows.py PAGE:<id>`) and cross-checked nul
 
 - DEC-20260413-A: row confirms `Outcome` and `Superseded By` both null, matching the record's Reversal-conditions claim.
 - DEC-20260415-A and DEC-20260415-B: same null-field pattern confirmed for both.
-- DEC-20260416-A: row's `Source` field is populated (`https://www.notion.so/34267c87082c81778568e9606826b243`), not null -- the record's Context claims exactly this ("The row's own `Source` field cites a further Notion page... not one of this batch's six target rows and not read for this record"), confirmed accurate. The row's `Rationale` field text matches the record's Rationale section content.
+- DEC-20260416-A: row's `Source` field is populated (`https://www.notion.so/34267c87082c81778568e9606826b243`), not null — the record's Context claims exactly this ("The row's own `Source` field cites a further Notion page... not one of this batch's six target rows and not read for this record"), confirmed accurate. The row's `Rationale` field text matches the record's Rationale section content.
 - DEC-20260422-D: row's `Rationale` field is null, `Source` field is null, `Confidence` is `"high"`. The record's "Source: <url>. Confidence: high." line in Context is the record's own citation-format convention (used identically across most records in this partition) pairing the evidence URL with the row's actual `Confidence` value, not a claim that the row's own `Source` property holds that URL string; it is not a mis-description of a null field as populated.
 - DEC-20260422-H: row's `date:Expiry Date:start` is `"2026-05-31"`, matching the record's Context claim exactly; `Rationale`, `Outcome`, `Superseded By`, `Source` all null, matching the record's claims.
 - DEC-20260503-B: row's `Rationale`, `Source`, `Related Feature`, `Outcome`, `Superseded By` are all null, matching the record's Context claim ("Its Source, Related Feature, Outcome, and Superseded By fields are all null").
@@ -563,17 +564,17 @@ No case of a null field quoted as if populated, or a populated field called null
 
 ## Code-claim spot checks (eleven, exceeding the required ten)
 
-1. DEC-20260419-A -- `apps/api/scripts/console-allowlist.json` has exactly 24 top-level keys, and `"apps/api/src/index.ts": 8` (reduced from 10). Confirmed by reading the file.
-2. DEC-20260420-A -- `apps/api/package.json` carries no `db:generate`/`db:migrate`/`db:push` script. Confirmed (`grep '"db:'` returns nothing).
-3. DEC-20260421-J -- `apps/api/scripts/archive/drop-sg-kyb.ts` and `manifests/singapore-company-data.yaml` both exist; `apps/api/src/capabilities/auto-register.ts:108` carries a "REACTIVATED 2026-04-29" comment for `singapore-company-data`, not a DEACTIVATED entry. Confirmed.
-4. DEC-20260421-L -- `apps/api/scripts/archive/park-company-intelligence-sdr.ts` and `apps/api/scripts/archive/phase-dec-b-park.ts` both exist. Confirmed.
-5. DEC-20260422-B -- `apps/api/src/capabilities/auto-register.ts:32` still lists `["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"]`. Confirmed.
-6. DEC-20260425-A -- `apps/api/src/lib/provenance-builder.ts:248` carries the "NOT YET captured (chunk 1.5 follow-up)" comment. Confirmed.
-7. DEC-20260425-B -- `apps/api/src/lib/processing-location.ts` implements the exact three-step fallback (`RAILWAY_REPLICA_REGION` -> `STRALE_PROCESSING_REGION` -> `"unknown"` with a one-time warn). Confirmed by reading lines 1-40.
-8. DEC-20260427-H -- `apps/api/src/capabilities/auto-register.ts` carries all five `DEC-20260427-H-1` through `-H-5` comments at the cited slugs (lines 154, 205, 214, 223, 232). Confirmed.
-9. DEC-20260427-I -- none of `dutch-company-data`, `portuguese-company-data`, `lithuanian-company-data`, `spanish-company-data`, `german-company-data`, `austrian-company-data` appears in the DEACTIVATED map; `apps/api/src/capabilities/austrian-company-data.ts:35` defines `FBW_ENDPOINT = "https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws"`. Confirmed.
-10. DEC-20260503-B -- `apps/api/src/db/schema.ts` still declares `qpScore`, `rpScore`, `matrixSqs`, `matrixSqsRaw` (lines 220-224) and a full `sqs_daily_snapshot` table (line 1003 onward). Confirmed still present (PR2 not shipped, as the record itself states).
-11. DEC-20260507-G / DEC-20260507-H -- `config/env-manifest.yaml`'s `OPENAPI_COM_EMAIL` row states "backing 10 EU country capabilities" (line 768) and `OPENAPI_ENABLED`'s `cost_note` (line 776) confirms it is gated off pending the resale addendum; `manifests/bulgarian-company-data.yaml`, `cypriot-company-data.yaml`, `luxembourgish-company-data.yaml`, `hungarian-company-data.yaml` all declare `data_source: Openapi.com WW-Top`, not the doctrine-clean direct paths the two records say were decided. Confirmed both records' divergence claims.
+1. DEC-20260419-A — `apps/api/scripts/console-allowlist.json` has exactly 24 top-level keys, and `"apps/api/src/index.ts": 8` (reduced from 10). Confirmed by reading the file.
+2. DEC-20260420-A — `apps/api/package.json` carries no `db:generate`/`db:migrate`/`db:push` script. Confirmed (`grep '"db:'` returns nothing).
+3. DEC-20260421-J — `apps/api/scripts/archive/drop-sg-kyb.ts` and `manifests/singapore-company-data.yaml` both exist; `apps/api/src/capabilities/auto-register.ts:108` carries a "REACTIVATED 2026-04-29" comment for `singapore-company-data`, not a DEACTIVATED entry. Confirmed.
+4. DEC-20260421-L — `apps/api/scripts/archive/park-company-intelligence-sdr.ts` and `apps/api/scripts/archive/phase-dec-b-park.ts` both exist. Confirmed.
+5. DEC-20260422-B — `apps/api/src/capabilities/auto-register.ts:32` still lists `["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"]`. Confirmed.
+6. DEC-20260425-A — `apps/api/src/lib/provenance-builder.ts:248` carries the "NOT YET captured (chunk 1.5 follow-up)" comment. Confirmed.
+7. DEC-20260425-B — `apps/api/src/lib/processing-location.ts` implements the exact three-step fallback (`RAILWAY_REPLICA_REGION` -> `STRALE_PROCESSING_REGION` -> `"unknown"` with a one-time warn). Confirmed by reading lines 1-40.
+8. DEC-20260427-H — `apps/api/src/capabilities/auto-register.ts` carries all five `DEC-20260427-H-1` through `-H-5` comments at the cited slugs (lines 154, 205, 214, 223, 232). Confirmed.
+9. DEC-20260427-I — none of `dutch-company-data`, `portuguese-company-data`, `lithuanian-company-data`, `spanish-company-data`, `german-company-data`, `austrian-company-data` appears in the DEACTIVATED map; `apps/api/src/capabilities/austrian-company-data.ts:35` defines `FBW_ENDPOINT = "https://justizonline.gv.at/jop/api/at.gv.justiz.fbw/ws"`. Confirmed.
+10. DEC-20260503-B — `apps/api/src/db/schema.ts` still declares `qpScore`, `rpScore`, `matrixSqs`, `matrixSqsRaw` (lines 220-224) and a full `sqs_daily_snapshot` table (line 1003 onward). Confirmed still present (PR2 not shipped, as the record itself states).
+11. DEC-20260507-G / DEC-20260507-H — `config/env-manifest.yaml`'s `OPENAPI_COM_EMAIL` row states "backing 10 EU country capabilities" (line 768) and `OPENAPI_ENABLED`'s `cost_note` (line 776) confirms it is gated off pending the resale addendum; `manifests/bulgarian-company-data.yaml`, `cypriot-company-data.yaml`, `luxembourgish-company-data.yaml`, `hungarian-company-data.yaml` all declare `data_source: Openapi.com WW-Top`, not the doctrine-clean direct paths the two records say were decided. Confirmed both records' divergence claims.
 
 ## Additional verifications beyond the minimum
 
@@ -581,12 +582,12 @@ No case of a null field quoted as if populated, or a populated field called null
 - Commit SHAs cited as NOT resolving (per the records' own honest disclosure): `972b860` (DEC-20260421-J), `2a1cc24` (DEC-20260421-L), `84398f7` (DEC-20260507-G and DEC-20260507-H) all fail `git cat-file -e` as the records themselves say.
 - `DEC-20260813-A.md` (cited by DEC-20260427-H) does contain the quoted phrase citing `DEC-20260427-H-4` and `DEC-20260420-H` at lines 39-40, confirmed.
 - `docs/decisions/id-collisions.yaml` confirms `DEC-20260420-E`, `DEC-20260420-F`, `DEC-20260420-H`, and `DEC-20260502-A` are all listed collided ids, supporting DEC-20260503-A's claim that its withheld relation targets are reused ids.
-- DEC-20260430-A's Consequences claims `DEC-20260420-K`'s "display ID is an unresolved collision" and that `DEC-20260422-H` is "unique but unmigrated." Both are now false at the pinned commit (`DEC-20260420-K`'s id-collisions.yaml entry is `resolution_status: resolved`; `DEC-20260422-H.md` is a migrated bare-keyed record -- it is in this very partition). Per this round's rule (a), this is not a new finding: `DEC-20260905-G` (item 6, "Relation to `DEC-20260430-A`") already withdraws exactly this "unresolved collision"/"unmigrated" characterization by name, citing the same two facts I independently verified (the collision registry entry and the existence of `DEC-20260422-H.md`), plus the archive resolution report `archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-K.md`, which flags the same gap. I checked that DEC-20260905-G's correction is itself correct (it is) rather than accepting it on faith. DEC-20260422-H.md itself quotes this same sentence from DEC-20260430-A as cited evidence, which DEC-20260905-G separately confirms remains a faithful quotation of what DEC-20260430-A says, not a fresh defect in DEC-20260422-H.
+- DEC-20260430-A's Consequences claims `DEC-20260420-K`'s "display ID is an unresolved collision" and that `DEC-20260422-H` is "unique but unmigrated." Both are now false at the pinned commit (`DEC-20260420-K`'s id-collisions.yaml entry is `resolution_status: resolved`; `DEC-20260422-H.md` is a migrated bare-keyed record — it is in this very partition). Per this round's rule (a), this is not a new finding: `DEC-20260905-G` (item 6, "Relation to `DEC-20260430-A`") already withdraws exactly this "unresolved collision"/"unmigrated" characterization by name, citing the same two facts I independently verified (the collision registry entry and the existence of `DEC-20260422-H.md`), plus the archive resolution report `archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260420-K.md`, which flags the same gap. I checked that DEC-20260905-G's correction is itself correct (it is) rather than accepting it on faith. DEC-20260422-H.md itself quotes this same sentence from DEC-20260430-A as cited evidence, which DEC-20260905-G separately confirms remains a faithful quotation of what DEC-20260430-A says, not a fresh defect in DEC-20260422-H.
 
 ## Unverifiable
 
 - The five commit URLs cited as evidence on DEC-20260423-A were only spot-checked for one (`a2b8d69e...`); the remaining four (`850d44f5...`, `94b2078c...`, `fc96a401...`, `73395b47...`) were not individually confirmed to resolve as commit objects, though nothing in the record's own text depended on disproving them and the checker found no quote-fidelity issue tied to them.
-- Several records (DEC-20260427-I, DEC-20260429-A, DEC-20260430-A, DEC-20260505-C) explicitly decline to assert current state on some downstream fact (e.g. the 15 paused KYB solutions' current `is_active` status, the 3 flagged Singapore solutions' investigation outcome) and this review did not independently resolve those either -- this matches the records' own stated scope limits, not a gap in this review.
+- Several records (DEC-20260427-I, DEC-20260429-A, DEC-20260430-A, DEC-20260505-C) explicitly decline to assert current state on some downstream fact (e.g. the 15 paused KYB solutions' current `is_active` status, the 3 flagged Singapore solutions' investigation outcome) and this review did not independently resolve those either — this matches the records' own stated scope limits, not a gap in this review.
 
 ## Partition verdict
 
@@ -654,27 +655,27 @@ Totals: 41 records, 118 spans, 112 faithful, 6 residual. All 6 residuals are
 checker misses (the quoted text is faithful to a source the checker's
 file-vs-file pass did not fetch or resolve), not defects:
 
-1. `DEC-20260518-A.md:100` -- `"Evidence Tier 1/2/3"`. This is the record's own
+1. `DEC-20260518-A.md:100` — `"Evidence Tier 1/2/3"`. This is the record's own
    search term ("no `evidence_tier` field or 'Evidence Tier 1/2/3' label was
    found anywhere in code, manifests, or `docs/company/claims.yaml`"), not a
    quotation attributed to any source. Own wording, not a quotation
    (DEC-20260905-M's clause).
-2. `DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN.md:26` -- `"The burden
+2. `DEC-20260820-B-WEBSITE-INTEGRATION-BURDEN.md:26` — `"The burden
    collapses"`. Checker miss: the evidence entry is a directory
    (`strale-io/strale-frontend@f704cb2:docs/website-redesign/homepage/`), not
    a specific file, so the checker could not resolve it. Verified directly:
    `strale-frontend` at `f704cb2a68f014bd049dd0083911050396e753aa`,
    `docs/website-redesign/homepage/integration-burden-v1.3.md`: "Adopt **The
    burden collapses** as the second homepage section." Faithful.
-3. `DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION.md:28` -- `"Selection
+3. `DEC-20260820-D-WEBSITE-ENRICHMENT-VALIDATION.md:28` — `"Selection
    Violet"`. Same directory-evidence limitation. Verified in
    `use-case-enrichment-validation-v1.5.md`: "Selection Violet is the
    dominant atmospheric family." Faithful.
-4-5. `DEC-20260820-E-WEBSITE-SEARCH-WEB.md:28,63` -- `"not a live ranking"`
+4-5. `DEC-20260820-E-WEBSITE-SEARCH-WEB.md:28,63` — `"not a live ranking"`
    (x2). Same limitation. Verified in
    `use-case-search-web-intelligence-v1.6.md`: the card is labelled
    "**Documented output example**" and "**not a live ranking**." Faithful.
-6. `DEC-20260904-A.md:180` -- the long "Every row reaches formally_migrated..."
+6. `DEC-20260904-A.md:180` — the long "Every row reaches formally_migrated..."
    quote attributed to "G1's `closes_when` clause in the M2 closure register."
    Verified against `docs/project/m2-closure-register.yaml:5179-5181`: text
    matches exactly (word for word, modulo the record's own bold markdown).
@@ -690,7 +691,7 @@ this partition at this commit.
 Two passages in this partition's records repeat statements that earlier
 rounds' withdrawal records (`DEC-20260905-B` through `-N`) already withdrew by
 name, and per this round's rule (a) these are not findings against the
-original records -- I re-verified each underlying withdrawal is itself
+original records — I re-verified each underlying withdrawal is itself
 correct:
 
 - `DEC-20260508-A.md:78` quotes "the prior row's 'no Tier-1 path exists'
@@ -704,7 +705,7 @@ correct:
   substring of either. `DEC-20260905-I`'s correction is itself accurate.
 - `DEC-20260510-A.md` cites "244 files (217 with a recorded intent, 27
   without)" from `handoff/README.md`. At c268565a that file now reads "287
-  files (260 with a recorded intent, 27 without)" -- the figure has moved
+  files (260 with a recorded intent, 27 without)" — the figure has moved
   again since `DEC-20260905-B`'s own withdrawal (which cited 257/230 at a
   different commit). Per rule (e) this is a dated observation that keeps
   moving with unrelated work, not a fresh finding, and the record itself
@@ -723,7 +724,7 @@ correct:
   Rationale, `36167c87082c814281dcd2dac911efa0` Source): correct.
   `DEC-20260515-C.md` independently makes the identical, correctly-scoped
   claim about its own commit `8eb8c0e`, confirmed non-resolving
-  (`git cat-file -e 8eb8c0e` fails) -- that one is this record's own claim,
+  (`git cat-file -e 8eb8c0e` fails) — that one is this record's own claim,
   not carried from a sibling, and is faithful.
 - `DEC-20260515-C.md:96` quotes the manifest's reactivation trigger as "a
   paid AJPES restPrsInfo contract with redistribution rights..."
@@ -734,51 +735,51 @@ correct:
 
 ## Ten-plus code-claim spot checks
 
-1. `DEC-20260507-I.md` -- `docs/company/VOICE.md` is 57 lines with no numbered
+1. `DEC-20260507-I.md` — `docs/company/VOICE.md` is 57 lines with no numbered
    sections. `wc -l docs/company/VOICE.md` = 57. Confirmed.
-2. `DEC-20260507-J.md` -- `recordFailure(` has exactly four call sites, all in
+2. `DEC-20260507-J.md` — `recordFailure(` has exactly four call sites, all in
    `apps/api/src/routes/do.ts`; `test-runner.ts` calls `recordTestEvidence`
    instead and its own comment states the Phase 3 Harden Fix B rationale
    verbatim. `grep -rn "recordFailure("` confirms 4 calls in `do.ts` (plus
    the definition in `circuit-breaker.ts` and comments elsewhere, no other
    calls); `test-runner.ts:844-847` carries the quoted comment. Confirmed.
-3. `DEC-20260508-A.md` -- `manifests/hungarian-company-data.yaml` uses
+3. `DEC-20260508-A.md` — `manifests/hungarian-company-data.yaml` uses
    Openapi.com WW-Top, gated on `OPENAPI_ENABLED`, added in commit `9ee19282`
    dated 2026-05-16 (eight days after the row). `git log -1 --format="%ci"
    9ee19282` = 2026-05-16 15:13:15 +0200. Confirmed.
-4. `DEC-20260508-D.md` -- `german-company-data.ts` fetches
+4. `DEC-20260508-D.md` — `german-company-data.ts` fetches
    `https://api.openregister.de` using `OPENREGISTER_API_KEY`; the
    env-manifest row records `holder: railway`, `required_in: [production]`.
    Confirmed by direct grep of both files.
-5. `DEC-20260510-A.md` -- `handoff/README.md`'s auto-generated-index header
+5. `DEC-20260510-A.md` — `handoff/README.md`'s auto-generated-index header
    text matches verbatim ("Regenerated by `npm run archive:index`...Do not
    edit by hand."); `docs/programs/cto-readiness/PROGRAM.md` names T15
    "Receipts and migration ledger" with the quoted rule. Confirmed.
-6. `DEC-20260511-B.md` -- both `runMigration0066_ensureEligibilityColumnAndReconcile`
+6. `DEC-20260511-B.md` — both `runMigration0066_ensureEligibilityColumnAndReconcile`
    and `runMigration0069_reconcileEligibilityFromCostClass` exist and are
    registered in `startup-migrations.ts`. Confirmed.
-7. `DEC-20260511-C.md` -- `apps/api/drizzle.config.ts` exists again,
+7. `DEC-20260511-C.md` — `apps/api/drizzle.config.ts` exists again,
    `drizzle-kit` is a devDependency in `apps/api/package.json`, no
    `db:generate`/`db:migrate`/`db:push` scripts, `apps/api/drizzle/` absent.
    All four confirmed by direct file checks.
-8. `DEC-20260511-E.md` -- `meta-monitoring.ts`'s staleness-anchor comment
+8. `DEC-20260511-E.md` — `meta-monitoring.ts`'s staleness-anchor comment
    matches verbatim; `checkValidationQueueStuck` and `checkProbationTimeout`
    both exist and are registered at `daily` schedule. Confirmed.
-9. `DEC-20260511-F.md` -- `daily-digest.ts`'s header is a manual `npx tsx`
+9. `DEC-20260511-F.md` — `daily-digest.ts`'s header is a manual `npx tsx`
    usage line, not a scheduled job; `test-scheduler.ts`'s "Weekly digest
    scheduling lived in the deleted block..." comment exists; the npm
    `"digest"` script and `POST /v1/admin/digest` route both exist;
    `sendInterruptEmail` has zero callers outside its own definition file.
    All confirmed by direct grep.
-10. `DEC-20260513-B.md` -- `manifests/swiss-company-data.yaml`'s
+10. `DEC-20260513-B.md` — `manifests/swiss-company-data.yaml`'s
     `known_answer.input.uid` is `CHE-101.602.521`; `capability_health`'s
     schema has only a `state` column, no `pinned`/`manual_override` column;
     `POST /v1/admin/reset-circuit-breaker` exists. All confirmed.
-11. `DEC-20260518-D.md` -- `danish-company-data.ts` sets
+11. `DEC-20260518-D.md` — `danish-company-data.ts` sets
     `ubo_availability = "unavailable_no_registry"` with the exact reason
     string quoted; `uk-company-data.ts` sets `"available"` with its exact
     reason string. Confirmed byte-for-byte.
-12. `DEC-20260827-A.md` -- `manifests/austrian-company-data.yaml` has
+12. `DEC-20260827-A.md` — `manifests/austrian-company-data.yaml` has
     `price_cents: 5` and `data_source: Firmenbuch (Republik Österreich, BMJ)
     via JustizOnline IWG/HVD API`; no `DEC-20260427-I-6` record or register
     entry exists anywhere in this repository. Confirmed.
@@ -790,14 +791,14 @@ record itself flags honestly); `DEC-20260513-D.md`'s
 `danish-company-data.yaml` manifest content (confirmed); `DEC-20260513-E.md`'s
 manifest prices and CHARTER.md pricing band (confirmed); `DEC-20260518-B.md`'s
 grep claims for "use_case_tier", "Enhanced Due Diligence" and "Continuity"
-(confirmed case-insensitively -- my first case-sensitive grep pass under-
+(confirmed case-insensitively — my first case-sensitive grep pass under-
 matched, corrected on retry); `DEC-20260518-C.md`'s Digiteal/SEPA-VoP absence
 and PR #131 merge (confirmed); `DEC-20260812-A.md`'s `id-collisions.yaml`
 DEC-20260502-A collision entry (confirmed); `DEC-20260813-A.md` prose
 (confirmed, no quotes); `DEC-20260820-A/C/F` cross-repo quotes against
 `strale-frontend` (confirmed, see residuals above); `DEC-20260822-A.md`'s
 claim about `production-authority.ts` and the SYSTEM_ACTING/FOUNDER_DECISION/
-AUTHORIZATION_UNAVAILABLE vocabulary -- verified this is intentional: those
+AUTHORIZATION_UNAVAILABLE vocabulary — verified this is intentional: those
 three names are not literal exports of `production-authority.ts` but are
 explicitly documented and tested as "names for shapes, not symbols" in
 `apps/api/src/lib/charter-authorization-binding.test.ts` (the actual literal
@@ -846,7 +847,7 @@ PARTITION VERDICT: PASS
 # Closing review round 13, partition P5
 
 Commit reviewed: c268565abd03aaae48eade48567dc2627a24955a
-Record count: 34 (all `--notion-` qualified, all resolved collisions: DEC-20260225-P-c5d6, DEC-20260303-A, DEC-20260304-A, DEC-20260304-B, DEC-20260304-C, DEC-20260320-C, DEC-20260320-J, DEC-20260320-K, DEC-20260405-B, DEC-20260406-A, DEC-20260406-B, DEC-20260406-C, DEC-20260409-C, DEC-20260420-D, DEC-20260420-E, DEC-20260420-F, DEC-20260420-G, DEC-20260420-H -- two formal records each)
+Record count: 34 (all `--notion-` qualified, all resolved collisions: DEC-20260225-P-c5d6, DEC-20260303-A, DEC-20260304-A, DEC-20260304-B, DEC-20260304-C, DEC-20260320-C, DEC-20260320-J, DEC-20260320-K, DEC-20260405-B, DEC-20260406-A, DEC-20260406-B, DEC-20260406-C, DEC-20260409-C, DEC-20260420-D, DEC-20260420-E, DEC-20260420-F, DEC-20260420-G, DEC-20260420-H — two formal records each)
 
 Setup: fetched origin, `git checkout --detach c268565a...` in this session's own isolated worktree (`.claude/worktrees/agent-a39e2f86aa9482102`), `npm ci` completed clean. Notion rows read only via `dump_rows.py` (35 page ids for my 34 records, plus DEC-20260420-I referenced in prose). Cross-repo evidence resolved against `strale-frontend`, fetched first.
 
@@ -860,7 +861,7 @@ I also wrote three small ad hoc scripts (deleted after use, working tree left cl
 
 ## Checker miss (found by manual reading, not reported as a residual by the checker)
 
-The checker's design includes "every other record's own text" as a generic candidate source for any quoted span (item (e) in `gatherSourcesForRecord`). Two records in my partition contain a quotation that does NOT match its true attributed source (`apps/api/src/lib/trust-grade.ts`, and `docs/company/VOICE.md`) but DOES match because a *different*, later record (`DEC-20260905-C.md`) happens to reproduce the identical defective wording while describing its own withdrawal of it. This makes the checker mark these two spans "faithful" when, against their actually-attributed source, they are not verbatim. Both are pre-existing, already-withdrawn defects (see Findings 1 and 2 below), not new problems, so the checker miss has no practical consequence for this round's verdict -- but it is worth flagging since the checker's "0 residual" reading of my partition would otherwise look stronger than warranted for these two spans specifically.
+The checker's design includes "every other record's own text" as a generic candidate source for any quoted span (item (e) in `gatherSourcesForRecord`). Two records in my partition contain a quotation that does NOT match its true attributed source (`apps/api/src/lib/trust-grade.ts`, and `docs/company/VOICE.md`) but DOES match because a *different*, later record (`DEC-20260905-C.md`) happens to reproduce the identical defective wording while describing its own withdrawal of it. This makes the checker mark these two spans "faithful" when, against their actually-attributed source, they are not verbatim. Both are pre-existing, already-withdrawn defects (see Findings 1 and 2 below), not new problems, so the checker miss has no practical consequence for this round's verdict — but it is worth flagging since the checker's "0 residual" reading of my partition would otherwise look stronger than warranted for these two spans specifically.
 
 ## Findings
 
@@ -868,43 +869,43 @@ None of the following are findings against the original records: per rule (a) of
 
 1. `DEC-20260304-C--notion-31967c87082c815cb440e586e783df0a.md` (line 93) quotes `apps/api/src/lib/trust-grade.ts` as computing a grade "the worst of (SQS grade, freshness grade, latency grade)" and, two lines later, a label reading "Reference data (stale: Nd since update, cycle Nd)." Fact, verified directly against `trust-grade.ts:211` and `:89`: the source reads "worst of (SQS grade, freshness grade, latency grade)" (no "the") and the label is a template literal, not the literal string "Nd". **Already withdrawn** by `DEC-20260905-C.md:92-93` (item 12 is a different record; the actual withdrawal is item 11, lines ~810-816, "withdraws 'the worst of...', 'Reference data (stale: Nd...)' and the inserted 'the'") and independently corroborated by `DEC-20260905-J.md` item 6. Correction verified accurate against `trust-grade.ts` directly.
 
-2. `DEC-20260406-C--notion-33a67c87082c819cabf6d47331d695ce.md` (Consequences) quotes `docs/company/VOICE.md` as stating five writing rules including "No jargon, ever," and as "verified on 2026-09-05, against `main`." Fact, verified directly against `docs/company/VOICE.md:12`: the first rule reads "Use audience-appropriate terms (DEC-20260905-A)." -- "No jargon, ever" does not appear anywhere in the file. **Already withdrawn** by `DEC-20260905-C.md` item 31 (lines 513-524), which names the exact same-day edit and the correct current first rule; I verified that correction against `VOICE.md` directly and it is accurate.
+2. `DEC-20260406-C--notion-33a67c87082c819cabf6d47331d695ce.md` (Consequences) quotes `docs/company/VOICE.md` as stating five writing rules including "No jargon, ever," and as "verified on 2026-09-05, against `main`." Fact, verified directly against `docs/company/VOICE.md:12`: the first rule reads "Use audience-appropriate terms (DEC-20260905-A)." — "No jargon, ever" does not appear anywhere in the file. **Already withdrawn** by `DEC-20260905-C.md` item 31 (lines 513-524), which names the exact same-day edit and the correct current first rule; I verified that correction against `VOICE.md` directly and it is accurate.
 
-3. `DEC-20260420-H--notion-34867c87082c81b58b36de5f71c0937f.md` quotes `DEC-20260420-I` as attributing a "direct connections only. No scraping. Full ToS compliance with every provider" doctrine to `DEC-20260420-H`, dropping the word "data" before "connections." Fact, verified directly against the Notion row for `DEC-20260420-I` (page `34867c87082c81c8b9d4c6b5568bbcef`, dumped via `dump_rows.py`): the row's own Rationale reads "direct data connections only. No scraping. Full ToS compliance with every provider." **Already withdrawn** by `DEC-20260905-C.md` items 36-37 (lines 576-596), which also note the sibling record in this same collision (`DEC-20260420-H--notion-...c6a58dfbc5f46ed3f6.md`, also in my partition) quotes the identical source correctly with "data" included -- I confirmed that sibling record does include "data" at the corresponding quote.
+3. `DEC-20260420-H--notion-34867c87082c81b58b36de5f71c0937f.md` quotes `DEC-20260420-I` as attributing a "direct connections only. No scraping. Full ToS compliance with every provider" doctrine to `DEC-20260420-H`, dropping the word "data" before "connections." Fact, verified directly against the Notion row for `DEC-20260420-I` (page `34867c87082c81c8b9d4c6b5568bbcef`, dumped via `dump_rows.py`): the row's own Rationale reads "direct data connections only. No scraping. Full ToS compliance with every provider." **Already withdrawn** by `DEC-20260905-C.md` items 36-37 (lines 576-596), which also note the sibling record in this same collision (`DEC-20260420-H--notion-...c6a58dfbc5f46ed3f6.md`, also in my partition) quotes the identical source correctly with "data" included — I confirmed that sibling record does include "data" at the corresponding quote.
 
-4. `DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6.md` (Context section) characterizes "the SA.2 + F-A series" as "the row's own subject," and separately describes `DEC-20260420-I` as "itself an unresolved collision id in a later G2 batch." Fact: the row's own Rationale (page `34867c87082c81c6a58dfbc5f46ed3f6`) reads "Prior DECs: DEC-20260420-A through DEC-20260420-G (**complete** SA.2 + F-A series)" -- the phrase is "complete SA.2 + F-A series," not an independently-occurring "the SA.2 + F-A series." **Already withdrawn**: the "SA.2 + F-A series" misquotation is withdrawn by `DEC-20260905-J.md` item 21 (lines 429-441); the "unresolved collision id in a later G2 batch" mischaracterization of `DEC-20260420-I` is withdrawn by `DEC-20260905-G.md` item 5 (lines 156-175) and its Relation-to paragraph (lines 433-435). Both corrections verified consistent with `docs/decisions/id-collisions.yaml` (`DEC-20260420-I` is listed there, `resolution_status: resolved`, not unresolved) and with each other.
+4. `DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6.md` (Context section) characterizes "the SA.2 + F-A series" as "the row's own subject," and separately describes `DEC-20260420-I` as "itself an unresolved collision id in a later G2 batch." Fact: the row's own Rationale (page `34867c87082c81c6a58dfbc5f46ed3f6`) reads "Prior DECs: DEC-20260420-A through DEC-20260420-G (**complete** SA.2 + F-A series)" — the phrase is "complete SA.2 + F-A series," not an independently-occurring "the SA.2 + F-A series." **Already withdrawn**: the "SA.2 + F-A series" misquotation is withdrawn by `DEC-20260905-J.md` item 21 (lines 429-441); the "unresolved collision id in a later G2 batch" mischaracterization of `DEC-20260420-I` is withdrawn by `DEC-20260905-G.md` item 5 (lines 156-175) and its Relation-to paragraph (lines 433-435). Both corrections verified consistent with `docs/decisions/id-collisions.yaml` (`DEC-20260420-I` is listed there, `resolution_status: resolved`, not unresolved) and with each other.
 
 No other findings. All 34 records:
 - Parse correctly; `record_key`, `id`, and filename agree (verified programmatically for all 34: bare id matches the part of `record_key` before `--notion-`, and `record_key` equals the filename minus `.md`).
-- Carry the CAUTION banner and all five protected sections (Decision, Context, Rationale, Consequences, Reversal conditions) -- verified by grepping `## ` headers in all 34 files.
+- Carry the CAUTION banner and all five protected sections (Decision, Context, Rationale, Consequences, Reversal conditions) — verified by grepping `## ` headers in all 34 files.
 - Have every `evidence` entry resolving: repo-path entries all exist at this commit (verified programmatically); the 14 `strale-io/strale-frontend@04c9fca9:...` cross-repo entries were individually resolved with `git show 04c9fca9:<path>` in the fetched sibling checkout and all returned content; Notion URLs match evidence[0]'s page id.
-- Have no missing relation targets: `DEC-20260320-C--notion-...bfa5d1ee04b7d753dc.md` -> `DEC-20260320-B` (exists, substantiated by a quoted Rationale sentence naming it); `DEC-20260406-A--notion-...816b825cdf812ef006b8.md` -> `DEC-20260405-B--notion-...810c920dd09d78aa06b6` (exists, substantiated, and explicitly reasoned as the correct one of the two same-ID rows since the other concerns an unrelated capability); `DEC-20260406-C--notion-...814b8afafb2e1c6ca317.md` -> `DEC-20260406-B--notion-...81629339d9f208f65f52` (exists, substantiated by quoted Rationale); `DEC-20260409-C--notion-...33d67c87082c81c19655cb04fb7d3ecf.md` -> `DEC-20260409-A`, `DEC-20260409-B` (both exist, bare ids, not collided); `DEC-20260420-D` through `-H` records' `related_to DEC-20260420-A` (exists, bare id, not collided) and their qualified same-collision cross-references (all exist as record keys). No relation target is a bare collided id (cross-checked every target against `docs/decisions/id-collisions.yaml`'s 35 collided ids: none of the used targets -- `DEC-20260320-B`, `DEC-20260405-B--notion-...`, `DEC-20260406-B--notion-...`, `DEC-20260409-A`, `DEC-20260409-B`, `DEC-20260420-A`, and the several `DEC-20260420-{D,E,F,G}--notion-...` keys -- is a bare id).
+- Have no missing relation targets: `DEC-20260320-C--notion-...bfa5d1ee04b7d753dc.md` -> `DEC-20260320-B` (exists, substantiated by a quoted Rationale sentence naming it); `DEC-20260406-A--notion-...816b825cdf812ef006b8.md` -> `DEC-20260405-B--notion-...810c920dd09d78aa06b6` (exists, substantiated, and explicitly reasoned as the correct one of the two same-ID rows since the other concerns an unrelated capability); `DEC-20260406-C--notion-...814b8afafb2e1c6ca317.md` -> `DEC-20260406-B--notion-...81629339d9f208f65f52` (exists, substantiated by quoted Rationale); `DEC-20260409-C--notion-...33d67c87082c81c19655cb04fb7d3ecf.md` -> `DEC-20260409-A`, `DEC-20260409-B` (both exist, bare ids, not collided); `DEC-20260420-D` through `-H` records' `related_to DEC-20260420-A` (exists, bare id, not collided) and their qualified same-collision cross-references (all exist as record keys). No relation target is a bare collided id (cross-checked every target against `docs/decisions/id-collisions.yaml`'s 35 collided ids: none of the used targets — `DEC-20260320-B`, `DEC-20260405-B--notion-...`, `DEC-20260406-B--notion-...`, `DEC-20260409-A`, `DEC-20260409-B`, `DEC-20260420-A`, and the several `DEC-20260420-{D,E,F,G}--notion-...` keys — is a bare id).
 - Have no null field quoted as populated, and no populated field called null (cross-checked every "field X is null" and "Rationale reads Y" claim against the `dump_rows.py` dump for all 35 page ids touching this partition: `DEC-20260405-B--notion-...34a67c87082c810692c8dd4374a6f9ac` (credit-report-summary), `DEC-20260420-E--notion-...34867c87082c81d5a898f48cc1554086`, `DEC-20260420-F--notion-...810b8df1e8e459039d35`, `DEC-20260420-G--notion-...81dcafe3dea59cc119b1`, and `DEC-20260420-H--notion-...81b58b36de5f71c0937f` all correctly describe Rationale/Outcome/Source as null; every other record's quoted Rationale text matches the row field verbatim).
 - Are correctly bound in `docs/decisions/id-collisions.yaml` and `docs/project/m2-closure-register.yaml`: for all 34, the collision entry's matching record carries `disposition: formal_record` with the matching `record_key`, and the register's `decision_rows` entry for that page id carries `disposition: formally_migrated`, `collision.row_disposition: formal_record`, and the same `record_key` (verified programmatically for all 34, zero mismatches).
 
 ## Checker residuals for my partition
 
-None (0 of 243 spans flagged). See "Checker miss" section above for two spans the checker marked faithful that a manual read shows are not faithful to their true attributed source -- both are pre-existing, already-withdrawn defects (Findings 1 and 2), not fresh problems.
+None (0 of 243 spans flagged). See "Checker miss" section above for two spans the checker marked faithful that a manual read shows are not faithful to their true attributed source — both are pre-existing, already-withdrawn defects (Findings 1 and 2), not fresh problems.
 
 ## Ten code-claim spot checks (file, line)
 
-1. `DEC-20260320-C--notion-32967c87082c81178c7acc8b5c396aa3.md:1085-1088` ("previous filesystem-glob discovery pulled in test files...") -- verified verbatim against `apps/api/src/capabilities/auto-register.ts:18-21`.
-2. `DEC-20260320-C--notion-32967c87082c81bfa5d1ee04b7d753dc.md:1195` (env var renamed to `ABN_LOOKUP_GUID`) -- verified against `apps/api/src/capabilities/au-company-data.ts:4,17,20` and `config/env-manifest.yaml:20`.
-3. `DEC-20260225-P-c5d6--notion-31267c87082c81279b14f3859f6f2038.md:64-79` (`failedRequests` table + 4 insert call sites) -- verified against `apps/api/src/db/schema.ts:678-681` and `apps/api/src/routes/do.ts` (4 `db.insert(failedRequests)` call sites).
-4. `DEC-20260406-C--notion-33a67c87082c819cabf6d47331d695ce.md` (VOICE.md rules) -- checked against `docs/company/VOICE.md`; found the defect described in Finding 2 above (already withdrawn).
-5. `DEC-20260420-F--notion-34867c87082c810b8547fccb3e75c61b.md:2976-2984` (audit-token.ts / audit.ts comments) -- verified verbatim against `apps/api/src/lib/audit-token.ts:21,43,100` and `apps/api/src/routes/audit.ts:419,446`.
-6. `DEC-20260420-G--notion-34867c87082c81c38c3acaca5d01d6ef.md:3181-3187` (verify.ts MAX_DEPTH, rate-limit, truncated_reason comments) -- verified verbatim against `apps/api/src/routes/verify.ts:19,24,29,218,256,362`.
-7. `DEC-20260420-D--notion-34867c87082c81f0827eedf29d133600.md:2661-2670` (`PII_CATEGORY_ENUM`, `processes_personal_data is required` unconditional) -- verified against `apps/api/src/lib/onboarding-gates.ts:242-259,369`; found the already-withdrawn 12-vs-14-value defect (matches `DEC-20260905-C.md` item 34, which I independently verified accurate).
-8. `DEC-20260420-E--notion-34867c87082c81b590b4e8bee4b59228.md:2780-2783` (transactions.ts F-A-005 comments) -- verified verbatim against `apps/api/src/routes/transactions.ts:142,168`.
-9. `DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6.md:3526-3531` (`onboard.ts` `ai_assisted` mapping, `--force`, `--force-override-authority`) -- verified against `apps/api/scripts/onboard.ts:94-108,137-153`.
-10. `DEC-20260304-C--notion-31967c87082c815cb440e586e783df0a.md:91-94` (trust-grade.ts "worst of" comment and label) -- verified against `apps/api/src/lib/trust-grade.ts:89,211`; found the already-withdrawn defect (Finding 1).
-11. `DEC-20260320-K--notion-32967c87082c81e890bfe564a3c2e917.md:1581-1587,1594-1597` (CLAUDE.md free-tier list and SQS-engine-deleted quotes) -- verified verbatim against `CLAUDE.md:341,339`.
-12. `DEC-20260406-A--notion-33967c87082c816b825cdf812ef006b8.md:1915-1917` (`solution-executor.ts` `StepTiming`/timing push) -- verified against `apps/api/src/lib/solution-executor.ts:217,219,413,518` (field names match; the exact push-site literal timing value differs by call site, consistent with the row's own general description, not a quoted literal).
-13. `DEC-20260420-D` / `DEC-20260420-H` (`apps/api/src/lib/audit-helpers.ts` "SA.2b.d: heuristic ... removed after migration 0050") -- verified verbatim against `audit-helpers.ts:40`.
+1. `DEC-20260320-C--notion-32967c87082c81178c7acc8b5c396aa3.md:1085-1088` ("previous filesystem-glob discovery pulled in test files...") — verified verbatim against `apps/api/src/capabilities/auto-register.ts:18-21`.
+2. `DEC-20260320-C--notion-32967c87082c81bfa5d1ee04b7d753dc.md:1195` (env var renamed to `ABN_LOOKUP_GUID`) — verified against `apps/api/src/capabilities/au-company-data.ts:4,17,20` and `config/env-manifest.yaml:20`.
+3. `DEC-20260225-P-c5d6--notion-31267c87082c81279b14f3859f6f2038.md:64-79` (`failedRequests` table + 4 insert call sites) — verified against `apps/api/src/db/schema.ts:678-681` and `apps/api/src/routes/do.ts` (4 `db.insert(failedRequests)` call sites).
+4. `DEC-20260406-C--notion-33a67c87082c819cabf6d47331d695ce.md` (VOICE.md rules) — checked against `docs/company/VOICE.md`; found the defect described in Finding 2 above (already withdrawn).
+5. `DEC-20260420-F--notion-34867c87082c810b8547fccb3e75c61b.md:2976-2984` (audit-token.ts / audit.ts comments) — verified verbatim against `apps/api/src/lib/audit-token.ts:21,43,100` and `apps/api/src/routes/audit.ts:419,446`.
+6. `DEC-20260420-G--notion-34867c87082c81c38c3acaca5d01d6ef.md:3181-3187` (verify.ts MAX_DEPTH, rate-limit, truncated_reason comments) — verified verbatim against `apps/api/src/routes/verify.ts:19,24,29,218,256,362`.
+7. `DEC-20260420-D--notion-34867c87082c81f0827eedf29d133600.md:2661-2670` (`PII_CATEGORY_ENUM`, `processes_personal_data is required` unconditional) — verified against `apps/api/src/lib/onboarding-gates.ts:242-259,369`; found the already-withdrawn 12-vs-14-value defect (matches `DEC-20260905-C.md` item 34, which I independently verified accurate).
+8. `DEC-20260420-E--notion-34867c87082c81b590b4e8bee4b59228.md:2780-2783` (transactions.ts F-A-005 comments) — verified verbatim against `apps/api/src/routes/transactions.ts:142,168`.
+9. `DEC-20260420-H--notion-34867c87082c81c6a58dfbc5f46ed3f6.md:3526-3531` (`onboard.ts` `ai_assisted` mapping, `--force`, `--force-override-authority`) — verified against `apps/api/scripts/onboard.ts:94-108,137-153`.
+10. `DEC-20260304-C--notion-31967c87082c815cb440e586e783df0a.md:91-94` (trust-grade.ts "worst of" comment and label) — verified against `apps/api/src/lib/trust-grade.ts:89,211`; found the already-withdrawn defect (Finding 1).
+11. `DEC-20260320-K--notion-32967c87082c81e890bfe564a3c2e917.md:1581-1587,1594-1597` (CLAUDE.md free-tier list and SQS-engine-deleted quotes) — verified verbatim against `CLAUDE.md:341,339`.
+12. `DEC-20260406-A--notion-33967c87082c816b825cdf812ef006b8.md:1915-1917` (`solution-executor.ts` `StepTiming`/timing push) — verified against `apps/api/src/lib/solution-executor.ts:217,219,413,518` (field names match; the exact push-site literal timing value differs by call site, consistent with the row's own general description, not a quoted literal).
+13. `DEC-20260420-D` / `DEC-20260420-H` (`apps/api/src/lib/audit-helpers.ts` "SA.2b.d: heuristic ... removed after migration 0050") — verified verbatim against `audit-helpers.ts:40`.
 
 ## Unverifiable
 
-Nothing in this partition was left unverifiable. The two Notion pages referenced only in prose (`31967c87082c816d9d44cd4317386a30`, the shared Discovery & Navigation spec page, and `33a67c87082c812d8ebdc1899526dd83`, the Working Rules page) are not Decisions-database rows -- `dump_rows.py` correctly returned no match for them (35 requested, 35 selected against the 35 actual Decisions rows plus DEC-20260420-I; these two are cited only as non-Decisions Source links, never as attributed quotations), consistent with how the records themselves describe them ("a shared specification page," "the Working Rules page").
+Nothing in this partition was left unverifiable. The two Notion pages referenced only in prose (`31967c87082c816d9d44cd4317386a30`, the shared Discovery & Navigation spec page, and `33a67c87082c812d8ebdc1899526dd83`, the Working Rules page) are not Decisions-database rows — `dump_rows.py` correctly returned no match for them (35 requested, 35 selected against the 35 actual Decisions rows plus DEC-20260420-I; these two are cited only as non-Decisions Source links, never as attributed quotations), consistent with how the records themselves describe them ("a shared specification page," "the Working Rules page").
 
 PARTITION VERDICT: PASS
 
@@ -928,34 +929,34 @@ Beyond the checker, every record was read in full by hand; every quotation, evid
 - `docs/decisions/records/DEC-20260905-C.md`: 83 residuals. All are self-referential parsing artifacts: `DEC-20260905-C.md` is itself a document about quotations, structured as repeating `"<quote>" ... Fact: ... reads "<quote>"` sentences; an escaped quote at `DEC-20260905-C.md:373` desyncs the checker's quote-pairing for every subsequent span in the file, so the checker's span boundaries land in connective prose ("to `CLAUDE.md`. Fact: `CLAUDE.md`'s DEC-20260812-A entry reads only", etc.) rather than on real quotations. This is explicitly documented and quantified by `DEC-20260905-D`, `-F`, `-G`, `-H`, and `-I`'s own reconciliation sections (which consistently report ~82 such residuals for this file). **Classification: checker misses, naming the withdrawn-from record (DEC-20260905-C itself) as its own source, not findings.**
 - `docs/decisions/records/DEC-20260905-D.md`: 2 residuals (lines 429, 451: `"the checker missed it"` and `"checker miss, faithful to a source"`). Both are D's own rhetorical/methodology phrases describing its reconciliation process, not quotations of any external source. **Classification: own wording (DEC-20260905-M clause), not a finding.**
 - `docs/decisions/records/DEC-20260905-F.md`: 6 residuals (e.g. lines 176, 213: `"not narrated at all"`, and the long sentence about "22 characters, three short of the checker's 25-character floor..."). All are F's own descriptive prose about its methodology, self-quoting itself or describing the reconciliation process. **Classification: own wording / checker misses, not findings.**
-- `docs/decisions/records/DEC-20260905-G.md`: 1 residual (line 348: `"Rule (a) cross-check"`). This is G's own descriptive label for a table entry in the archived P3 round-6 report (`archive/sessions/2026-09-05-m2-closing-review-round-6.md`, whose actual section heading reads "Rule (a): statements withdrawn by DEC-20260905-B/-C/-D/-F", not "Rule (a) cross-check"). The substantive quoted content that follows it in the same sentence ("verified the record's own Context sentence... names both targets by unique subject matter... Substantiation accurate") IS a faithful, correctly-ellipsized match against that archive file (verified by direct read). The short label itself is a paraphrastic description, not a claim of exact wording, and asserts nothing false. **Classification: checker miss / borderline own-wording, not a finding** -- the underlying substantive quotation is faithful and the label names no false fact.
+- `docs/decisions/records/DEC-20260905-G.md`: 1 residual (line 348: `"Rule (a) cross-check"`). This is G's own descriptive label for a table entry in the archived P3 round-6 report (`archive/sessions/2026-09-05-m2-closing-review-round-6.md`, whose actual section heading reads "Rule (a): statements withdrawn by DEC-20260905-B/-C/-D/-F", not "Rule (a) cross-check"). The substantive quoted content that follows it in the same sentence ("verified the record's own Context sentence... names both targets by unique subject matter... Substantiation accurate") IS a faithful, correctly-ellipsized match against that archive file (verified by direct read). The short label itself is a paraphrastic description, not a claim of exact wording, and asserts nothing false. **Classification: checker miss / borderline own-wording, not a finding** — the underlying substantive quotation is faithful and the label names no false fact.
 
 All other 43 files in my partition: 0 residuals at `--min-chars 12`.
 
 ## Numbered findings
 
-1. **File:** `docs/decisions/records/DEC-20260905-D.md`, item 9 (heading at line 213, item body lines 215-225).
+1. **File:** `docs/decisions/records/DEC-20260905-D.md`, item 9 (approx. lines 213-225, under the `### DEC-20260421-C--notion-34967c87082c81bd8c6bf8e92e901711` heading).
    **Claim:** "Both fields name 'government-registry' before 'API' and 'commercial' before 'aggregator'; the quotation drops both qualifiers, turning a specific sourcing requirement into a vaguer one," referring to the Decision and Rationale fields of the Notion row at page `34967c87082c81bd8c6bf8e92e901711` (`DEC-20260421-C`'s "no-scraping-commitment" row).
-   **Evidence:** Dumped the row directly via `dump_rows.py PAGE:34967c87082c81bd8c6bf8e92e901711`. The row's **Decision** field reads in full: `"No scraping" positioning commitment promoted to v1 launch blocker. All 9 EU countries currently using Browserless+LLM scraping must be migrated to direct APIs or licensed aggregator contracts before launch.` -- this field contains neither "government-registry" nor "commercial" anywhere (confirmed by direct substring test: both `False`). Only the **Rationale** field contains those qualifiers ("...must migrate to a direct government-registry API or a licensed commercial aggregator before v1 launch"). `DEC-20260905-D`'s claim that "both fields" name these qualifiers is therefore false as literally stated; only one of the two fields does.
-   **Note:** This does not disturb the underlying point that `DEC-20260421-C--notion-34967c87082c81bd8c6bf8e92e901711.md`'s own Consequences-section quotation ("migrated to a direct API or a licensed aggregator") is a looser paraphrase than the row's own wording -- that part of the withdrawal item is directionally fine -- but the specific evidentiary claim about which field(s) carry the dropped qualifiers is wrong, and no later amending record (checked `DEC-20260905-E` through `-N`, none mentions "government-registry") corrects it.
+   **Evidence:** Dumped the row directly via `dump_rows.py PAGE:34967c87082c81bd8c6bf8e92e901711`. The row's **Decision** field reads in full: `"No scraping" positioning commitment promoted to v1 launch blocker. All 9 EU countries currently using Browserless+LLM scraping must be migrated to direct APIs or licensed aggregator contracts before launch.` — this field contains neither "government-registry" nor "commercial" anywhere (confirmed by direct substring test: both `False`). Only the **Rationale** field contains those qualifiers ("...must migrate to a direct government-registry API or a licensed commercial aggregator before v1 launch"). `DEC-20260905-D`'s claim that "both fields" name these qualifiers is therefore false as literally stated; only one of the two fields does.
+   **Note:** This does not disturb the underlying point that `DEC-20260421-C--notion-34967c87082c81bd8c6bf8e92e901711.md`'s own Consequences-section quotation ("migrated to a direct API or a licensed aggregator") is a looser paraphrase than the row's own wording — that part of the withdrawal item is directionally fine — but the specific evidentiary claim about which field(s) carry the dropped qualifiers is wrong, and no later amending record (checked `DEC-20260905-E` through `-N`, none mentions "government-registry") corrects it.
    **Severity:** Small (a one-clause factual overstatement inside an amending record whose job is precision about exactly this kind of claim), but it is a false statement about repository/Notion-row state at the pinned commit, which the round's own convention treats as a defect regardless of size (see `DEC-20260905-I` item 18, `DEC-20260905-N` items 1-3, which correct comparably small errors).
 
 No other findings. Every other quotation, evidence path, relation target, and code/file claim checked in this partition was verified faithful.
 
 ## Ten (of many more) code-claim spot checks performed
 
-1. `apps/api/src/lib/onboarding-gates.ts:242-259` -- `PII_CATEGORY_ENUM` has 14 entries (12 original + `nationality`, `political_affiliation` added 2026-04-30) -- confirms `DEC-20260905-D` item 34.
-2. `apps/api/src/index.ts:10` -- `const MIN_EXPECTED_EXECUTORS = 200;` and lines 19-30 implement the startup gate with `process.exit(1)` at lines 345-394 -- confirms `DEC-20260905-C` item 29.
-3. `apps/api/src/lib/capability-persistence.ts:303,312,409` -- hook fires "OUTSIDE the transaction. Design doc §4.3" via post-commit `await onCapabilityCreated(slug);` -- confirms `DEC-20260421-A--notion-...babd...`/`DEC-20260421-B--notion-...dab7...`.
-4. `apps/api/scripts/onboard.ts:137,149,153,1609-1619` -- `--force-override-authority` guard, refused in `--batch` mode and non-TTY -- confirms `DEC-20260421-D--notion-...a2a1...` and `DEC-20260905-D` item 34's neighbourhood.
-5. `apps/api/src/lib/trust-grade.ts:211` -- `Combined grade = worst of (SQS grade, freshness grade, latency grade)` (no leading "the", "grade" repeated 3x) -- confirms `DEC-20260905-C` item 11/`DEC-20260905-J` items 6/12 withdrawals.
-6. `apps/api/src/jobs/test-scheduler.ts:392,422,495` -- cost_class gates (`IN ('free_quota','paid_with_free_tier')`, `= 'free_unlimited' OR IS NULL`) -- confirms `DEC-20260512-A--notion-...8188...`.
-7. `apps/api/src/lib/startup-migrations.ts:623,811,1130` -- "Block 0069: reconcile scheduled_testing_eligible from cost_class" -- confirms `DEC-20260512-A--notion-...8188...` and cross-checked against `CLAUDE.md`'s `external_cost_cents` description (the two mechanisms coexist, as the record itself flags).
-8. `manifests/{italian,dutch,portuguese,spanish,austrian}-company-data.yaml` `data_source:` fields -- confirms `DEC-20260505-D--notion-...d389...`/`DEC-20260507-C--notion-...58c7...`/`DEC-20260508-C--notion-...7eb9...`/`DEC-20260512-A--notion-...29ef...` exactly.
-9. `apps/api/src/capabilities/auto-register.ts:161-170` -- two separate "REACTIVATED 2026-05-16 (Phase 2a)" / "(Phase 2b)" comments, never combined "(Phase 2a/2b)" -- confirms `DEC-20260905-D` item 13.
-10. `config/env-manifest.yaml:797-806` -- `OPENSANCTIONS_API_KEY` row's actual `purpose`/`cost_note` fields, and a corpus-wide count of 43 rows carrying the "Not set in production on 2026-09-02..." boilerplate -- confirms `DEC-20260905-E` item 2 and `DEC-20260905-F` item 3.
+1. `apps/api/src/lib/onboarding-gates.ts:242-259` — `PII_CATEGORY_ENUM` has 14 entries (12 original + `nationality`, `political_affiliation` added 2026-04-30) — confirms `DEC-20260905-D` item 34.
+2. `apps/api/src/index.ts:10` — `const MIN_EXPECTED_EXECUTORS = 200;` and lines 19-30 implement the startup gate with `process.exit(1)` at lines 345-394 — confirms `DEC-20260905-C` item 29.
+3. `apps/api/src/lib/capability-persistence.ts:303,312,409` — hook fires "OUTSIDE the transaction. Design doc §4.3" via post-commit `await onCapabilityCreated(slug);` — confirms `DEC-20260421-A--notion-...babd...`/`DEC-20260421-B--notion-...dab7...`.
+4. `apps/api/scripts/onboard.ts:137,149,153,1609-1619` — `--force-override-authority` guard, refused in `--batch` mode and non-TTY — confirms `DEC-20260421-D--notion-...a2a1...` and `DEC-20260905-D` item 34's neighbourhood.
+5. `apps/api/src/lib/trust-grade.ts:211` — `Combined grade = worst of (SQS grade, freshness grade, latency grade)` (no leading "the", "grade" repeated 3x) — confirms `DEC-20260905-C` item 11/`DEC-20260905-J` items 6/12 withdrawals.
+6. `apps/api/src/jobs/test-scheduler.ts:392,422,495` — cost_class gates (`IN ('free_quota','paid_with_free_tier')`, `= 'free_unlimited' OR IS NULL`) — confirms `DEC-20260512-A--notion-...8188...`.
+7. `apps/api/src/lib/startup-migrations.ts:623,811,1130` — "Block 0069: reconcile scheduled_testing_eligible from cost_class" — confirms `DEC-20260512-A--notion-...8188...` and cross-checked against `CLAUDE.md`'s `external_cost_cents` description (the two mechanisms coexist, as the record itself flags).
+8. `manifests/{italian,dutch,portuguese,spanish,austrian}-company-data.yaml` `data_source:` fields — confirms `DEC-20260505-D--notion-...d389...`/`DEC-20260507-C--notion-...58c7...`/`DEC-20260508-C--notion-...7eb9...`/`DEC-20260512-A--notion-...29ef...` exactly.
+9. `apps/api/src/capabilities/auto-register.ts:161-170` — two separate "REACTIVATED 2026-05-16 (Phase 2a)" / "(Phase 2b)" comments, never combined "(Phase 2a/2b)" — confirms `DEC-20260905-D` item 13.
+10. `config/env-manifest.yaml:797-806` — `OPENSANCTIONS_API_KEY` row's actual `purpose`/`cost_note` fields, and a corpus-wide count of 43 rows carrying the "Not set in production on 2026-09-02..." boilerplate — confirms `DEC-20260905-E` item 2 and `DEC-20260905-F` item 3.
 
-(Additional spot checks performed beyond the ten: `apps/api/src/lib/digest-sender.ts` header vs. function docstring; `docs/company/VOICE.md`'s first writing rule; `docs/strategy/2026-08-05-direction-plan.md` lines 14/64 vs. `CLAUDE.md:302`; `docs/decisions/records/DEC-20260812-A.md` line 83 for "library-as-product"; `apps/api/src/capabilities/dutch-company-data.ts` lines 1-4; `apps/api/src/lib/provenance-builder.ts` line 39; `docs/decisions/records/DEC-20260422-D.md` line 36; `manifests/doi-resolve.yaml` lines 42/108; `manifests/*.yaml` `data_source_type` distribution and `processes_personal_data`/`personal_data_categories` coverage counts at the pinned commit (350 files, all 350/129 -- matches `DEC-20260905-I`'s stated count at commit `48339ec2`, confirming no manifest drift occurred between that commit and the reviewed commit); git ancestry/prefix check for the git-qualified record `DEC-20260422-A--git-3b256587`.)
+(Additional spot checks performed beyond the ten: `apps/api/src/lib/digest-sender.ts` header vs. function docstring; `docs/company/VOICE.md`'s first writing rule; `docs/strategy/2026-08-05-direction-plan.md` lines 14/64 vs. `CLAUDE.md:302`; `docs/decisions/records/DEC-20260812-A.md` line 83 for "library-as-product"; `apps/api/src/capabilities/dutch-company-data.ts` lines 1-4; `apps/api/src/lib/provenance-builder.ts` line 39; `docs/decisions/records/DEC-20260422-D.md` line 36; `manifests/doi-resolve.yaml` lines 42/108; `manifests/*.yaml` `data_source_type` distribution and `processes_personal_data`/`personal_data_categories` coverage counts at the pinned commit (350 files, all 350/129 — matches `DEC-20260905-I`'s stated count at commit `48339ec2`, confirming no manifest drift occurred between that commit and the reviewed commit); git ancestry/prefix check for the git-qualified record `DEC-20260422-A--git-3b256587`.)
 
 ## Structural checks (all 45 records)
 
@@ -965,18 +966,18 @@ No other findings. Every other quotation, evidence path, relation target, and co
 - Relation targets: extracted all 93 unique relation targets across the partition; every one resolves to an existing record file at the pinned commit (0 missing); none is a bare collided id (cross-checked against `docs/decisions/id-collisions.yaml`'s collision id list).
 - Null-field / populated-field-called-null checks: no instance found where a record quotes a field it should have found null, or calls a populated field null, in any dump performed.
 - Git-qualified record `DEC-20260422-A--git-3b256587`: `id` equals the key with qualifier removed; `docs/project/m2-closure-register.yaml:349-353` carries `source_kind: git-native`, `source_rows: []`, and `git_provenance` matching the record's own `evidence[0]` exactly; the commit `3b25658736bfed53eec52c8acf2619dacd54d1f5` is a confirmed ancestor of HEAD (`git merge-base --is-ancestor` succeeds) and its prefix matches.
-- Collision-registry + closure-register bindings for `--notion-` qualified records: spot-checked `DEC-20260420-I` (both rows), `DEC-20260513-F` (both rows) against `docs/project/m2-closure-register.yaml` -- record_key/id/collision fields consistent; spot-checked resolution-report existence for all 14 collision ids appearing in my partition (`DEC-20260420-I`, `-K`, `DEC-20260421-A/B/C/D`, `DEC-20260505-D/E`, `DEC-20260507-A/C`, `DEC-20260508-B/C`, `DEC-20260512-A`, `DEC-20260513-F`) -- all 14 resolution report files exist and each collision entry in `id-collisions.yaml` is `resolution_status: resolved`.
+- Collision-registry + closure-register bindings for `--notion-` qualified records: spot-checked `DEC-20260420-I` (both rows), `DEC-20260513-F` (both rows) against `docs/project/m2-closure-register.yaml` — record_key/id/collision fields consistent; spot-checked resolution-report existence for all 14 collision ids appearing in my partition (`DEC-20260420-I`, `-K`, `DEC-20260421-A/B/C/D`, `DEC-20260505-D/E`, `DEC-20260507-A/C`, `DEC-20260508-B/C`, `DEC-20260512-A`, `DEC-20260513-F`) — all 14 resolution report files exist and each collision entry in `id-collisions.yaml` is `resolution_status: resolved`.
 
 ## Rule application notes (per this round's instructions)
 
-- Confirmed rule (a): every statement that `DEC-20260905-B` through `-N`'s Decision lists withdraw from records in or referenced by my partition was checked as a correction, not a finding against the original -- e.g. the "eight HMRC_* rows" claim in `DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438.md` (withdrawn by `DEC-20260905-B` item 7, re-confirmed by `DEC-20260905-N` item 2: exactly 7 rows exist). I verified the *correction itself* is right in every sampled case (see spot checks above), and found it right in every case except the one finding above.
-- Confirmed rule (e) (dated observations): the "342 manifests"/"224 api" figures repeated in several 2026-04-20/04-21 records' Consequences sections (verified 2026-09-05) versus the actual pinned-commit counts (350 manifests, 232 `api`) is expected drift from unrelated manifest additions between the records' own verification date and the pinned commit, exactly the class `DEC-20260905-I`'s dated-observation clause excuses -- not a finding.
+- Confirmed rule (a): every statement that `DEC-20260905-B` through `-N`'s Decision lists withdraw from records in or referenced by my partition was checked as a correction, not a finding against the original — e.g. the "eight HMRC_* rows" claim in `DEC-20260505-E--notion-35767c87082c813481a8efa27ea37438.md` (withdrawn by `DEC-20260905-B` item 7, re-confirmed by `DEC-20260905-N` item 2: exactly 7 rows exist). I verified the *correction itself* is right in every sampled case (see spot checks above), and found it right in every case except the one finding above.
+- Confirmed rule (e) (dated observations): the "342 manifests"/"224 api" figures repeated in several 2026-04-20/04-21 records' Consequences sections (verified 2026-09-05) versus the actual pinned-commit counts (350 manifests, 232 `api`) is expected drift from unrelated manifest additions between the records' own verification date and the pinned commit, exactly the class `DEC-20260905-I`'s dated-observation clause excuses — not a finding.
 - Confirmed the DEC-20260905-M "own wording" clause applies to several checker residuals in the amending records themselves (see residual list above) and to some of their internal descriptive labels (e.g. `DEC-20260905-G`'s "Rule (a) cross-check").
 - Confirmed several relations substantiated only via an amending record (e.g. `DEC-20260430-A`'s two `related_to` relations, restated across `DEC-20260905-F`/`-H`/`-I`/`-J`) are not findings, per the relation-substantiation convention `DEC-20260905-D` establishes.
 
 ## Unverifiable
 
-Nothing in my partition required the Notion page-body fetch path (item (c) of the instructions) -- no record in my list cites a page-body claim outside the properties export. Nothing was left unverified; every quotation, evidence path, relation, and sampled code claim was checked to a definite conclusion (faithful, or the one finding above).
+Nothing in my partition required the Notion page-body fetch path (item (c) of the instructions) — no record in my list cites a page-body claim outside the properties export. Nothing was left unverified; every quotation, evidence path, relation, and sampled code claim was checked to a definite conclusion (faithful, or the one finding above).
 
 ## Conclusion
 
@@ -999,41 +1000,41 @@ Read every record in the partition in full at the pinned commit, in a worktree c
 
 Totals: 41 records, 223 spans, 219 faithful, 4 residual.
 
-1. `DEC-20260314-F.md:82` -- `"completion_rate\|autonomous"` -- this is a literal grep pattern the record quotes to describe a search it ran (`grep -rn "completion_rate\|autonomous" apps/api/src/lib/metrics*`), not a quotation attributed to any source's words. **Checker miss -- own wording** (DEC-20260905-M's clause), not a finding.
-2. `DEC-20260314-F.md:84` -- `"completion_rate\|autonomous_completion\|autonomousCompletion"` -- same: a quoted grep pattern describing the record's own search, not a source quotation. **Checker miss -- own wording**, not a finding.
-3. `DEC-20260317-F.md:51` -- `"automated >= 50 gate"` -- short quoted phrase used as the record's own label for a concept while explaining why no relation edge was created; not presented as any source's words. **Checker miss -- own wording**, not a finding.
-4. `DEC-20260321-A.md:67` -- `"schedule_tier\|scheduleTier\|ORDER BY"` -- another quoted grep pattern describing the record's own search command, not a source quotation. **Checker miss -- own wording**, not a finding.
+1. `DEC-20260314-F.md:82` — `"completion_rate\|autonomous"` — this is a literal grep pattern the record quotes to describe a search it ran (`grep -rn "completion_rate\|autonomous" apps/api/src/lib/metrics*`), not a quotation attributed to any source's words. **Checker miss — own wording** (DEC-20260905-M's clause), not a finding.
+2. `DEC-20260314-F.md:84` — `"completion_rate\|autonomous_completion\|autonomousCompletion"` — same: a quoted grep pattern describing the record's own search, not a source quotation. **Checker miss — own wording**, not a finding.
+3. `DEC-20260317-F.md:51` — `"automated >= 50 gate"` — short quoted phrase used as the record's own label for a concept while explaining why no relation edge was created; not presented as any source's words. **Checker miss — own wording**, not a finding.
+4. `DEC-20260321-A.md:67` — `"schedule_tier\|scheduleTier\|ORDER BY"` — another quoted grep pattern describing the record's own search command, not a source quotation. **Checker miss — own wording**, not a finding.
 
 No real quote-fidelity defects in this partition's checker output.
 
 ## Findings
 
-1. **`docs/decisions/records/DEC-20260409-D.md:64-66`** -- false claim. The record states: "No record for `DEC-20260409-C` exists in this repository (it is an unresolved collision id in `docs/decisions/id-collisions.yaml`), so no `amends`/`supersedes` relation edge to it is recorded here." At c268565a, `docs/decisions/id-collisions.yaml` lines 204-219 show `DEC-20260409-C` with `resolution_status: resolved` and a `disposition: formal_record` entry (`record_key: DEC-20260409-C--notion-33d67c87082c81c19655cb04fb7d3ecf`), and the file `docs/decisions/records/DEC-20260409-C--notion-33d67c87082c81c19655cb04fb7d3ecf.md` exists on disk. The claim that no record exists and that the id is unresolved is false.
+1. **`docs/decisions/records/DEC-20260409-D.md:64-66`** — false claim. The record states: "No record for `DEC-20260409-C` exists in this repository (it is an unresolved collision id in `docs/decisions/id-collisions.yaml`), so no `amends`/`supersedes` relation edge to it is recorded here." At c268565a, `docs/decisions/id-collisions.yaml` lines 204-219 show `DEC-20260409-C` with `resolution_status: resolved` and a `disposition: formal_record` entry (`record_key: DEC-20260409-C--notion-33d67c87082c81c19655cb04fb7d3ecf`), and the file `docs/decisions/records/DEC-20260409-C--notion-33d67c87082c81c19655cb04fb7d3ecf.md` exists on disk. The claim that no record exists and that the id is unresolved is false.
 
-2. **`docs/decisions/records/DEC-20260405-A.md:67-70`** -- false claim. The record states, of `DEC-20260405-B`: "no formal record exists for that id on `main` and it is not in `docs/decisions/id-collisions.yaml`, so it is mentioned here in prose only." At c268565a, `id-collisions.yaml` lines 140-155 list `DEC-20260405-B` as `resolution_status: resolved` with two `disposition: formal_record` entries, and both files (`DEC-20260405-B--notion-33967c87082c810c920dd09d78aa06b6.md`, `DEC-20260405-B--notion-34a67c87082c810692c8dd4374a6f9ac.md`) exist under `docs/decisions/records/`. The claim is false on both counts (formal record existence and absence from the collisions registry).
+2. **`docs/decisions/records/DEC-20260405-A.md:67-70`** — false claim. The record states, of `DEC-20260405-B`: "no formal record exists for that id on `main` and it is not in `docs/decisions/id-collisions.yaml`, so it is mentioned here in prose only." At c268565a, `id-collisions.yaml` lines 140-155 list `DEC-20260405-B` as `resolution_status: resolved` with two `disposition: formal_record` entries, and both files (`DEC-20260405-B--notion-33967c87082c810c920dd09d78aa06b6.md`, `DEC-20260405-B--notion-34a67c87082c810692c8dd4374a6f9ac.md`) exist under `docs/decisions/records/`. The claim is false on both counts (formal record existence and absence from the collisions registry).
 
-3. **`docs/decisions/records/DEC-20260405-A.md:76`** -- false/misattributed claim. The record states, of `DEC-20260225-P-m5n6`: "(the original Allabolag choice; no record exists, mentioned in prose only)." `docs/decisions/records/DEC-20260225-P-m5n6.md` exists at c268565a as a bare-key formal record, and its actual subject is fuzzy natural-language input resolution on `swedish-company-data` via an LLM call -- not "the original Allabolag choice" (the original scraper-source decision). This is both a false existence claim and a misattribution of subject matter.
+3. **`docs/decisions/records/DEC-20260405-A.md:76`** — false/misattributed claim. The record states, of `DEC-20260225-P-m5n6`: "(the original Allabolag choice; no record exists, mentioned in prose only)." `docs/decisions/records/DEC-20260225-P-m5n6.md` exists at c268565a as a bare-key formal record, and its actual subject is fuzzy natural-language input resolution on `swedish-company-data` via an LLM call — not "the original Allabolag choice" (the original scraper-source decision). This is both a false existence claim and a misattribution of subject matter.
 
-4. **`docs/decisions/records/DEC-20260320-F.md:39-42`** -- false claim. The record states, of `DEC-20260320-E`: "no formal record exists for that ID on `main` and it is not in `docs/decisions/id-collisions.yaml`." `docs/decisions/records/DEC-20260320-E.md` exists at c268565a as a bare-key formal record in this very same partition (reviewed above; title "OpenSanctions standard Commercial API tier (EUR 0.10/call) confirmed for Strale reseller use"). The "not in id-collisions.yaml" half is trivially true (it is not a collision id), but the "no formal record exists" half is false.
+4. **`docs/decisions/records/DEC-20260320-F.md:39-42`** — false claim. The record states, of `DEC-20260320-E`: "no formal record exists for that ID on `main` and it is not in `docs/decisions/id-collisions.yaml`." `docs/decisions/records/DEC-20260320-E.md` exists at c268565a as a bare-key formal record in this very same partition (reviewed above; title "OpenSanctions standard Commercial API tier (EUR 0.10/call) confirmed for Strale reseller use"). The "not in id-collisions.yaml" half is trivially true (it is not a collision id), but the "no formal record exists" half is false.
 
-5. **`docs/decisions/records/DEC-20260409-D.md`** (relations block, frontmatter lines 10-14) -- unsubstantiated relations. The record declares `related_to` edges to `DEC-20260409-A` and `DEC-20260409-B`, but the record's own body never names either id anywhere in prose. The underlying Notion row's Rationale field (verified via `dump_rows.py PAGE:33d67c87082c8118af3bf12a823aa540`) does state "DEC-20260409-A (Gate 2 null-output correctness tier) and DEC-20260409-B (code-based lookup + cross-validation) remain active" -- so the relations themselves are real and the row supports them -- but per this round's rule 6, substantiation must be in the record's own body prose, not only in the source row. Contrast with `DEC-20260409-B.md`, which does quote its own row's "RELATED:" sentence in its Context section. This is a completeness gap in DEC-20260409-D's body, not a fabricated relation.
+5. **`docs/decisions/records/DEC-20260409-D.md`** (relations block, frontmatter lines 10-14) — unsubstantiated relations. The record declares `related_to` edges to `DEC-20260409-A` and `DEC-20260409-B`, but the record's own body never names either id anywhere in prose. The underlying Notion row's Rationale field (verified via `dump_rows.py PAGE:33d67c87082c8118af3bf12a823aa540`) does state "DEC-20260409-A (Gate 2 null-output correctness tier) and DEC-20260409-B (code-based lookup + cross-validation) remain active" — so the relations themselves are real and the row supports them — but per this round's rule 6, substantiation must be in the record's own body prose, not only in the source row. Contrast with `DEC-20260409-B.md`, which does quote its own row's "RELATED:" sentence in its Context section. This is a completeness gap in DEC-20260409-D's body, not a fabricated relation.
 
 No other findings. All other claims, quotations, evidence paths, frontmatter, protected sections, and relations checked out.
 
 ## Ten-plus code-claim spot checks (file, line)
 
-1. `DEC-20260313-C` -- `apps/api/src/routes/public-trust.ts:55,57` -- `tested: boolean` and `pass_rate: number | null` fields confirmed present, matching the record's claim that a boolean/pass_rate pair replaced the "Unverified" SQS label.
-2. `DEC-20260314-F` -- `packages/mcp-server/README.md:78` -- confirmed verbatim: "`strale_ping`, `strale_search`, `strale_methodology`, and `strale_trust_profile` work without an API key. `strale_execute` and `strale_balance` require authentication."
-3. `DEC-20260315-I` -- `apps/api/src/routes/do.ts:876-877` -- confirmed verbatim two-line comment: "Verify x402 payment WITHOUT broadcasting settlement -- the settle / step runs only after the capability has produced output (DEC-14)."
-4. `DEC-20260316-A` -- `apps/api/src/lib/trust-grade.ts:171,173,214` -- confirmed `computeTrustGrade` and the "Combined Trust Grade" section header still exist as dead code with no callers outside the file.
-5. `DEC-20260317-A` -- `apps/api/src/lib/digest-sender.ts:23` -- confirmed verbatim: "Send the weekly digest (or any platform health email) via Resend."; `apps/api/src/lib/interrupt-sender.ts:172` confirmed `sendInterruptEmail` has zero callers outside its own definition file.
-6. `DEC-20260318-A` -- `apps/api/src/app.ts:513` -- confirmed comment: "// /v1/quality/:slug retired with the SQS engine (DEC-20260503-B)."
-7. `DEC-20260320-F` / `DEC-20260323-A` -- `apps/api/src/lib/test-runner.ts:2115-2117` -- confirmed "Removed" section names `persistDualProfileScores`, `computeAdaptiveInterval`, `repairStaleScores`, etc. verbatim.
-8. `DEC-20260330-B` -- `context7.json`, rule index 11 (rule 12, 1-indexed) -- confirmed the rule now reads the corrected SQS-deletion text, not the stale quote this record's own Consequences section attributes to it (already withdrawn by `DEC-20260905-B`; correction verified byte-for-byte accurate against the live file).
-9. `DEC-20260409-A` -- `apps/api/src/lib/null-field-ratio.ts:2,10-13` -- confirmed header comment and rule list match the record's quotes verbatim, including the `NULL_RATIO_RULE_ENABLED` feature flag default in `config/env-manifest.yaml:749-757`.
-10. `DEC-20260411-B` -- `apps/api/src/lib/gate5-path-coverage.ts:7,10,13-14` -- confirmed PRIMARY/SECONDARY and inward-trace/dispatch-logic language verbatim; `apps/api/scripts/onboard.ts` confirmed to cite "Gate 5" and "DEC-20260411-B" at multiple lines.
-11. (extra) `DEC-20260329-A` / `DEC-20260314-G` -- `strale-io/strale-frontend@04c9fca9:src/index.css` and `src/pages/Index.tsx`, `src/components/Header.tsx`, `src/App.tsx` -- confirmed the seven palette hex-equivalent HSL values, the exact hero headline text, the "Trust" nav item, and the `/trust` + `/trust/methodology` routes all verbatim against a fresh fetch of the frontend repo.
-12. (extra) `DEC-20260410-A` -- `apps/api/src/lib/progressive-unlock.ts:3,9,11-12`, `apps/api/src/routes/auth.ts:549-553`, `apps/api/src/routes/do.ts:1739` -- confirmed the `UNLOCK_MAP`, 24-hour TTL, `agentSignupHandler` header comment, and the exact response message text.
+1. `DEC-20260313-C` — `apps/api/src/routes/public-trust.ts:55,57` — `tested: boolean` and `pass_rate: number | null` fields confirmed present, matching the record's claim that a boolean/pass_rate pair replaced the "Unverified" SQS label.
+2. `DEC-20260314-F` — `packages/mcp-server/README.md:78` — confirmed verbatim: "`strale_ping`, `strale_search`, `strale_methodology`, and `strale_trust_profile` work without an API key. `strale_execute` and `strale_balance` require authentication."
+3. `DEC-20260315-I` — `apps/api/src/routes/do.ts:876-877` — confirmed verbatim two-line comment: "Verify x402 payment WITHOUT broadcasting settlement — the settle / step runs only after the capability has produced output (DEC-14)."
+4. `DEC-20260316-A` — `apps/api/src/lib/trust-grade.ts:171,173,214` — confirmed `computeTrustGrade` and the "Combined Trust Grade" section header still exist as dead code with no callers outside the file.
+5. `DEC-20260317-A` — `apps/api/src/lib/digest-sender.ts:23` — confirmed verbatim: "Send the weekly digest (or any platform health email) via Resend."; `apps/api/src/lib/interrupt-sender.ts:172` confirmed `sendInterruptEmail` has zero callers outside its own definition file.
+6. `DEC-20260318-A` — `apps/api/src/app.ts:513` — confirmed comment: "// /v1/quality/:slug retired with the SQS engine (DEC-20260503-B)."
+7. `DEC-20260320-F` / `DEC-20260323-A` — `apps/api/src/lib/test-runner.ts:2115-2117` — confirmed "Removed" section names `persistDualProfileScores`, `computeAdaptiveInterval`, `repairStaleScores`, etc. verbatim.
+8. `DEC-20260330-B` — `context7.json`, rule index 11 (rule 12, 1-indexed) — confirmed the rule now reads the corrected SQS-deletion text, not the stale quote this record's own Consequences section attributes to it (already withdrawn by `DEC-20260905-B`; correction verified byte-for-byte accurate against the live file).
+9. `DEC-20260409-A` — `apps/api/src/lib/null-field-ratio.ts:2,10-13` — confirmed header comment and rule list match the record's quotes verbatim, including the `NULL_RATIO_RULE_ENABLED` feature flag default in `config/env-manifest.yaml:749-757`.
+10. `DEC-20260411-B` — `apps/api/src/lib/gate5-path-coverage.ts:7,10,13-14` — confirmed PRIMARY/SECONDARY and inward-trace/dispatch-logic language verbatim; `apps/api/scripts/onboard.ts` confirmed to cite "Gate 5" and "DEC-20260411-B" at multiple lines.
+11. (extra) `DEC-20260329-A` / `DEC-20260314-G` — `strale-io/strale-frontend@04c9fca9:src/index.css` and `src/pages/Index.tsx`, `src/components/Header.tsx`, `src/App.tsx` — confirmed the seven palette hex-equivalent HSL values, the exact hero headline text, the "Trust" nav item, and the `/trust` + `/trust/methodology` routes all verbatim against a fresh fetch of the frontend repo.
+12. (extra) `DEC-20260410-A` — `apps/api/src/lib/progressive-unlock.ts:3,9,11-12`, `apps/api/src/routes/auth.ts:549-553`, `apps/api/src/routes/do.ts:1739` — confirmed the `UNLOCK_MAP`, 24-hour TTL, `agentSignupHandler` header comment, and the exact response message text.
 
 ## Unverifiable
 
@@ -1045,7 +1046,7 @@ Nothing in this partition was left unverifiable. Every evidence path resolved (f
 
 PARTITION VERDICT: FAIL
 
-#### Orchestrator note: this report is superseded and was not counted
+## Orchestrator note: this report is superseded and was not counted
 
 This reviewer reported five findings against `DEC-20260409-D`, `DEC-20260405-A`
 and `DEC-20260320-F`. The orchestrator checked each against the amending records
@@ -1066,8 +1067,7 @@ finding:
   `DEC-20260905-D` item 7, both from the underlying rows' own text.
 
 The partition was rerun by a fresh reviewer whose report is
-`closing13-review-P2.md` (reproduced above as the counted "Partition P2
-(rerun)" report). This file is retained as the record of the rerun's
+`closing13-review-P2.md`. This file is retained as the record of the rerun's
 reason and is not part of the round's evidence.
 
 ## Gate output
