@@ -28,7 +28,7 @@ The page should leave a developer able to say: “I can give my agent those func
 
 **Your agent has work to do.**
 
-Read an invoice. Look up a company. Check an email address. Give your agent the tools through Strale, without connecting each provider yourself.
+Turn an invoice image into fields your agent can use. Strale supplies the tools for this job and the next, without a separate integration for each provider.
 
 **Explore tools** · Read the docs
 
@@ -54,7 +54,7 @@ Three compact, linked examples:
 
 **Add a tool without adding a provider integration.**
 
-Use Strale's API or MCP connection to call different tools. Change the tool and its inputs; keep the connection. Your agent decides what happens next.
+Find tools and their prices in one catalogue. With account access, use the same Strale API key and balance across tools, through API or MCP. Your agent decides what happens next.
 
 **See how to connect**
 
@@ -62,23 +62,25 @@ Diagram caption: **Separate calls through the same Strale connection.**
 
 ### 4. Inspection — what did the tool return?
 
-**Go back to the call.**
+**See what ran, what came back and what it cost.**
 
 For account API and authenticated MCP calls, use the transaction ID to retrieve the tool's input, output, status and price.
 
 **See an execution record**
 
-Example caption: **Illustrative account API record · Retrieval still to be verified**
+Example caption: **Illustrative account API record**
 
 ### 5. Begin — one task to try
 
 **Start with a job on your list.**
 
-Find the tool, check its inputs and price, then follow the connection guide. Use an API key, connect through MCP, or pay per request with x402 where supported.
+Find the tool, check its inputs and price, then follow the connection guide. Use account access through API or MCP, or pay per request with x402 where supported.
 
 **Explore tools** · Read the docs
 
-These are proposed destinations by purpose, not assertions that the redesign has already implemented them. Tool detail supplies current availability, inputs, outputs, limitations, price and eligible access routes. The connection guide leads to a first call; it must not force account creation onto eligible x402 use. “See an execution record” needs a qualified, redacted example before it can be a public link.
+Internal gate for section 4: successful own-record retrieval must be qualified before this section is published; the pending verification note belongs in this review brief, not visitor-facing copy.
+
+These are proposed destinations by purpose, not assertions that the redesign has already implemented them. Tool detail supplies current availability, inputs, outputs, limitations, price and eligible access routes, including keyless access where available. Account access uses an API key; API and MCP are interfaces, not separate authentication methods. The connection guide leads to a first call; it must not force account creation onto eligible x402 use. “See an execution record” needs a qualified, redacted example before it can be a public link.
 
 ## Section and illustration briefs
 
@@ -108,17 +110,17 @@ The displayed result is a **proposed illustrative mapping**: Supplier → `vendo
 
 **Transition:** breadth raises the cost question. **Reader's question:** Why use this instead of connecting the providers myself? **One benefit:** reuse Strale access as the selected tool changes.
 
-**Illustration objective:** make the invariant visible. Two stacked call examples share one aligned `Your agent → Strale` connection. The first names `invoice-extract` with image input; the second names `swedish-company-data` with organisation-number input. The destination and inputs change; the Strale entry point stays fixed. A separate return path carries each tool's own result to the agent. Label the examples as separate calls. Do not imply one call invokes multiple tools, identical schemas, automatic workflow creation or zero application integration.
+**Illustration objective:** make the invariant visible. Two stacked call examples share one aligned `Your agent → Strale` connection. The first names `invoice-extract` with image input; the second names `swedish-company-data` with organisation-number input. Label the shared account side once with its Strale API key and balance, and show the catalogue as the source of each selected tool and its price. The destination and inputs change; access, account balance and discovery stay shared. The account label scopes this relationship; it is not an x402 account requirement. A separate return path carries each tool's own result to the agent. Label the examples as separate calls. Do not imply one call invokes multiple tools, identical schemas, automatic workflow creation or zero application integration.
 
 **Medium:** editable vector, using the accepted [shared-access companion](../../../design/brand-kit/quiet-material/illustrations/README.md) as the construction source. Its existing branch diagram is useful but needs this specific contrast to carry the argument. Preserve its accepted graphic vocabulary. A future user-controlled switch could highlight only the changed tool/input, but the first version should be static and fully understandable. On mobile repeat the shared entry-point label on each call rather than stretching a tiny network across the screen.
 
-**Evidence and detail:** [MCP execute wrapper](../../../packages/mcp-server/src/tools.ts) sends selected slug and inputs to `/v1/do`; [account route](../../../apps/api/src/routes/do.ts) supplies the common execution entry point. Different tool schemas remain visible. Protocol installation, authentication, payment mechanics, errors and complete request examples belong in the connection guide. The visual demonstrates a technical relationship, not measured savings. It earns its scale because this is the reason to choose Strale over repeated direct connections.
+**Evidence and detail:** [MCP execute wrapper](../../../packages/mcp-server/src/tools.ts) sends selected slug and inputs to `/v1/do`; [account route](../../../apps/api/src/routes/do.ts) supplies the common execution entry point. Different tool schemas remain visible. Protocol installation, authentication, payment mechanics, errors and complete request examples belong in the connection guide. The catalogue/price lookup and account key/balance reuse are visible in those same source files. This is shared account access, not a claim that upstream terms, licensing obligations or schemas are identical. The visual demonstrates a technical relationship, not measured savings. It earns its scale because this is the reason to choose Strale over repeated direct connections.
 
 ### 4. Inspect the same piece of work
 
 **Transition:** delegating a tool call raises a concrete question about what happened. **Reader's question:** Where can I inspect this Strale call? **One benefit:** retrieve the account transaction associated with a result.
 
-**Illustration objective:** connect a response's transaction ID to the record retrieved using that same ID. Return to the hero's invoice example, in a plain annotated response/record excerpt. Highlight the identifier correspondence, then show where input, output, status and price occur. For review use placeholders for the ID, status and price; never fabricate a completed event, timestamp, charge or source observation. The current caption must stay visible beside the concept.
+**Illustration objective:** connect a response's transaction ID to the record retrieved using that same ID. Return to the hero's invoice example, in a plain annotated response/record excerpt. Highlight the identifier correspondence, then show where input, output, status and price occur. For review use placeholders for the ID, status and price; never fabricate a completed event, timestamp, charge or source observation. The illustrative caption stays visible beside the concept; the retrieval gate is an internal review note.
 
 **Medium:** product-derived text excerpt with vector annotation, not a dashboard or receipt certificate. This should be a quieter, narrower section. Before drawing the final excerpt, run the existing qualification procedure and use the observed, redacted wire shape. If retrieval fails, leave the concept blocked and revise or omit this section before publication. Do not silently substitute an x402 response. On mobile show response ID immediately above matching record ID, followed by only the selected record fields. No animation or collapsible disclosure should be required to understand the scope.
 
@@ -128,7 +130,7 @@ The displayed result is a **proposed illustrative mapping**: Supplier → `vendo
 
 **Transition:** the reader has a reason to try a tool and knows what to inspect. **Reader's question:** How do I start with my task? **One benefit:** a clear route from tool selection to execution.
 
-**Visual objective and medium:** no new illustration. Reuse the accepted closing composition with short copy and a clear primary action. The catalogue and tool-detail destinations do the explanatory work. A second diagram, product montage or repeated invoice would add no information. On narrow screens retain the same action priority. The existing atmosphere may supply a closing brand moment using its accepted role and crop; it must not imply a product outcome.
+**Visual objective and medium:** no new illustration. After narrative review, design a short closing composition using the accepted typography, controls and atmosphere roles, with a clear primary action. The exact closing layout remains open under QM-04; it is not an accepted artifact. The catalogue and tool-detail destinations do the explanatory work. A second diagram, product montage or repeated invoice would add no information. On narrow screens retain the same action priority. The existing atmosphere may supply a closing brand moment using its accepted role and crop; it must not imply a product outcome.
 
 **Evidence and detail:** [adopted conversion journey](POSITIONING-BRIEF.md), [platform facts source](../../../apps/api/src/lib/platform-facts.ts), [x402 catalogue route](../../../apps/api/src/routes/x402-gateway-v2.ts). Availability, price and x402 eligibility must be bound to their current sources when implemented. No static price range, free-credit promise or “charged only on success” footer. The ending earns its place by moving the reader to a concrete tool, with access guidance at the point it is useful.
 
