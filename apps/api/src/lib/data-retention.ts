@@ -37,7 +37,7 @@ function affected(result: unknown): number {
  * Transaction retention window for GDPR Art. 30 record-of-processing
  * compliance (Colorado AI Act SB 24-205). Rows with `legal_hold = false`
  * and `created_at < now - TRANSACTION_RETENTION_DAYS` are hard-deleted
- * by the weekly retention sweep. SA.2a.3a: also surfaced in the
+ * by the daily retention sweep. SA.2a.3a: also surfaced in the
  * compliance payload returned from POST /v1/do — changes here propagate
  * to the public claim without additional edits.
  */
@@ -481,6 +481,7 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
   const db = getDb();
   let redacted = 0;
   let batches = 0;
+  let hitCap = false;
   while (true) {
     const result = await db.execute(sql`
       UPDATE transactions
@@ -499,8 +500,55 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
     `);
     const count = affected(result);
     redacted += count;
-    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
+    if (count < BATCH_SIZE) break;
+    if (++batches >= MAX_BATCHES_PER_RUN) { hitCap = true; break; }
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+  }
+
+  // A run that stops because it hit the ceiling looks exactly like a run that
+  // finished the work: both return a number and log "done". That is how a
+  // standing deficit stayed invisible from the point weekly volume crossed
+  // 50,000/week until it was found by hand on 2026-09-06, by which time the
+  // oldest unredacted row was 103 days old against a 90-day claim.
+  //
+  // So when the ceiling is reached, measure what is left and say so. The
+  // backlog count runs the same predicate, at most once per sweep and only
+  // when already over the ceiling. It is NOT index-supported — EXPLAIN on
+  // production gives a parallel seq scan, ~290ms over 1.05M rows — which is
+  // affordable once per capped run and would not be per batch.
+  // A final batch that comes back exactly full stops at the ceiling even when
+  // it cleared the table, so the count is taken first and the warning is only
+  // emitted if something is actually left. Warning "rows remain" against
+  // remaining_after_run: 0 would train the reader to ignore it.
+  if (hitCap) {
+    let remaining: number | null = null;
+    try {
+      const rows = await db.execute(sql`
+        SELECT COUNT(*)::int AS remaining
+        FROM transactions t
+        WHERE t.created_at < ${cutoff.toISOString()}::timestamptz
+          AND t.legal_hold = false
+          AND t.redacted_at IS NULL
+          AND t.deleted_at IS NULL
+      `);
+      const row = (rows as unknown as Array<{ remaining?: number }>)[0];
+      remaining = typeof row?.remaining === "number" ? row.remaining : null;
+    } catch {
+      // The count is diagnostic. Failing to take it must not fail the sweep,
+      // but it must not silently masquerade as "no backlog" either — hence
+      // null rather than 0.
+      remaining = null;
+    }
+    if (remaining !== 0) log.warn(
+      {
+        label: "retention-cleanup-backlog",
+        redacted_this_run: redacted,
+        cap_rows: BATCH_SIZE * MAX_BATCHES_PER_RUN,
+        remaining_after_run: remaining,
+        cutoff: cutoff.toISOString(),
+      },
+      "content redaction hit its per-run ceiling; rows remain past the retention window",
+    );
   }
   return redacted;
 }

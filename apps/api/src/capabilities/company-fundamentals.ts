@@ -67,7 +67,56 @@ export function pickUnit(units: Record<string, Fact[]>): { unit: string; facts: 
   return { unit, facts: units[unit] ?? [] };
 }
 
+/**
+ * The SEC asks for no more than 10 requests/second per client and blocks IPs
+ * that exceed it. One invocation issues 9-13 requests, so batching alone does
+ * not bound the rate: two concurrent customer calls double it, and nothing
+ * coordinated across invocations.
+ *
+ * This gate does. Every SEC request in this module — the ticker directory
+ * included — takes a slot from one module-level chain that spaces request
+ * STARTS by SEC_MIN_INTERVAL_MS, so the ceiling holds however many calls run
+ * at once WITHIN A PROCESS. It is deliberately not a distributed limiter: at
+ * two Railway instances the effective rate is 2 x 8.3/s and would exceed the
+ * guidance, which is part of why the interval leaves headroom rather than
+ * sitting at 10/s. Nothing bounds how long a caller waits for its slot either
+ * — at roughly 8 concurrent invocations the last request passes the 15s sync
+ * wall. Neither bites today (the capability has no production row and no
+ * traffic); both want revisiting before it carries real concurrent load.
+ * It costs latency rather than correctness: 13 spaced requests add
+ * ~1.6s, which sits inside the sync execution budget against a measured
+ * ~840ms typical.
+ *
+ * An SEC block is not a refusal — it would surface as an upstream fault and
+ * open the circuit breaker on a healthy capability, which is why this is a
+ * hard gate and not a best-effort one.
+ */
+const SEC_MIN_INTERVAL_MS = 120; // ~8.3 req/s, under the documented 10/s
+let secGate: Promise<void> = Promise.resolve();
+
+/** Serialise onto the shared chain and return once this caller's slot is due. */
+function secSlot(): Promise<void> {
+  // Deliberately NOT unref'd. An unref'd timer does not hold the event loop
+  // open, so in a plain script — the live verification harness, onboard.ts —
+  // the process can settle with the slot still pending and the await never
+  // resolves. Caught exactly that way on 2026-09-06. The timers are 120ms and
+  // bounded by the request count, so holding the loop costs nothing.
+  const slot = secGate.then(
+    () => new Promise<void>((resolve) => { setTimeout(resolve, SEC_MIN_INTERVAL_MS); }),
+  );
+  // No .catch() on the chain. The first version had one, defending against a
+  // rejected slot poisoning every later caller — but a link can only resolve:
+  // the inner promise has no reject path, and a fetch failure happens AFTER
+  // its slot has already resolved. Review of PR #598 established the guard was
+  // unreachable and its test passed identically with the line deleted, which
+  // is hollow coverage. If a rejecting link is ever introduced, reinstate the
+  // catch and give it a test that fails without it.
+  secGate = slot;
+  return slot;
+}
+
 async function secFetch(url: string, timeoutMs = 6_000): Promise<Response> {
+  await secSlot();
   return fetch(url, {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     signal: AbortSignal.timeout(timeoutMs),
@@ -121,8 +170,11 @@ registerCapability("company-fundamentals", async (input: CapabilityInput) => {
     cik = padCik(cikRaw.replace(/^CIK/i, ""));
   }
 
-  // Resolve each metric's fallback chain; run metrics in batches of five so a
-  // single invocation stays inside the SEC's 10 requests/second guidance.
+  // Resolve each metric's fallback chain, five metrics at a time. The batching
+  // bounds how many requests are in flight; it does NOT bound the rate — an
+  // earlier version of this comment claimed it kept the invocation inside the
+  // SEC's 10 requests/second, which was untrue the moment two calls overlapped.
+  // secSlot() is what actually holds the ceiling, across invocations.
   const fundamentals: Record<string, unknown> = {};
   const unavailable: string[] = [];
   let entityName: string | null = null;

@@ -90,3 +90,15 @@ limitations:
     workaround: >-
       For non-supported languages, pre-tag known PII patterns (e.g., national ID formats) with regex before calling
       pii-redact
+  - title: The text you submit is recorded on the transaction for 90 days
+    text: >-
+      Redaction happens in-process and the text reaches no third party, but capability inputs are written to the
+      transaction record like every other capability's, and are cleared on the standard 90-day schedule. This
+      capability is submitted text that is known to contain personal data — that is its purpose — so the retention
+      applies to exactly the material you are asking to have removed, including the special-category identifiers
+      named above. The output is redacted; the stored input is not.
+    category: privacy
+    severity: warning
+    workaround: >-
+      Submit the smallest span that needs redacting rather than a whole document, or run redaction in your own
+      environment where the input is never transmitted.

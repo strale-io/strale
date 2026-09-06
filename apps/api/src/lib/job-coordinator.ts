@@ -466,11 +466,34 @@ export async function consumeDueSlot(name: string, intervalMs: number): Promise<
       -- (largest delay 20min against a 24h interval) but it was a trap for the
       -- next one, and the doc above promises only that a boot cannot push a
       -- run out — not that it may drag one forward.
+      --
+      -- The fallback to last_started_at is load-bearing, and specific to THIS
+      -- helper: consumeDueSlot never writes last_finished_at (see the note
+      -- below — only the start is recorded, so a task that throws is not
+      -- booked as a success). So for every consumeDueSlot task the old
+      -- predicate was permanently true, the clamp was permanently a no-op, and
+      -- SHORTENING AN INTERVAL HAD NO EFFECT until the job next fired on its
+      -- old schedule. persistRegistration keeps the original predicate: its
+      -- runner does write last_finished_at, so its clamp already works.
+      --
+      -- Found 2026-09-06 on the retention task, whose interval goes 7d -> 24h in this
+      -- same batch. Its weekly run had fired that morning and set next_run_at
+      -- to 2026-09-13; without this fallback the deploy would have changed
+      -- interval_ms alone and the first daily run would have been a week away,
+      -- while the backlog it exists to drain rebuilt at ~9,800 rows/day.
+      --
+      -- Unchanged in the cases the comment above protects: a job that has
+      -- never run has neither column and keeps its staggered next_run_at; an
+      -- unchanged interval is a no-op (last_started + interval == next_run_at);
+      -- a LENGTHENED interval still cannot push a run out, because LEAST keeps
+      -- the earlier value.
       next_run_at = CASE
-        WHEN job_schedule.last_finished_at IS NULL THEN job_schedule.next_run_at
+        WHEN COALESCE(job_schedule.last_finished_at, job_schedule.last_started_at) IS NULL
+          THEN job_schedule.next_run_at
         ELSE LEAST(
           job_schedule.next_run_at,
-          job_schedule.last_finished_at + make_interval(secs => ${intervalSecs})
+          COALESCE(job_schedule.last_finished_at, job_schedule.last_started_at)
+            + make_interval(secs => ${intervalSecs})
         )
       END,
       updated_at = now()

@@ -12,7 +12,7 @@ known_rate_limit:
   unit: per_second
   source_url: https://www.sec.gov/os/webmaster-faq#developers
 price_cents: 10
-avg_latency_ms: 840
+avg_latency_ms: 2350
 is_free_tier: false
 input_schema:
   type: object
@@ -121,6 +121,15 @@ limitations:
       reporting under the Revenues tag in 2018. Where no tag in a chain matches, the metric is null
       and its key is listed in metrics_unavailable rather than being silently omitted.
     category: coverage
+    severity: info
+  - title: Requests are rate-gated, which costs about 1.5 seconds
+    text: >-
+      One call issues 9-13 requests to the SEC, and the SEC blocks clients exceeding roughly 10 per
+      second. All requests from this capability are therefore spaced by a shared gate that holds the
+      ceiling across concurrent calls, not just within one. Typical latency is about 2.3 seconds
+      rather than the ~0.8 seconds the raw fetches take; a company whose filings need the full
+      fallback chain sits at the upper end.
+    category: performance
     severity: info
   - title: Metric periods can differ within one response
     text: >-
