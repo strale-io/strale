@@ -265,6 +265,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260905-M`](../decisions/records/DEC-20260905-M.md) — Closing-review corrections to the M2 candidate set, round-11 findings and the own-wording clause | `DEC-20260905-M` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 | [`DEC-20260905-N`](../decisions/records/DEC-20260905-N.md) — Closing-review corrections to the M2 candidate set, round-12 findings | `DEC-20260905-N` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 | [`DEC-20260905-O`](../decisions/records/DEC-20260905-O.md) — Closing-review corrections to the M2 candidate set, round-13 finding | `DEC-20260905-O` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
+| [`DEC-20260905-P`](../decisions/records/DEC-20260905-P.md) — Closing-review corrections to the M2 candidate set, round-14 finding | `DEC-20260905-P` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 
 ## Non-active decisions
 
@@ -500,6 +501,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260904-B`](../decisions/records/DEC-20260904-B.md) | `DEC-20260904-B` | `amended_by` | [`DEC-20260905-M`](../decisions/records/DEC-20260905-M.md) | `DEC-20260905-M` |
 | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` | `amended_by` | [`DEC-20260905-D`](../decisions/records/DEC-20260905-D.md) | `DEC-20260905-D` |
 | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` | `amended_by` | [`DEC-20260905-L`](../decisions/records/DEC-20260905-L.md) | `DEC-20260905-L` |
+| [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` | `amended_by` | [`DEC-20260905-P`](../decisions/records/DEC-20260905-P.md) | `DEC-20260905-P` |
 | [`DEC-20260905-D`](../decisions/records/DEC-20260905-D.md) | `DEC-20260905-D` | `amended_by` | [`DEC-20260905-O`](../decisions/records/DEC-20260905-O.md) | `DEC-20260905-O` |
 | [`DEC-20260905-J`](../decisions/records/DEC-20260905-J.md) | `DEC-20260905-J` | `amended_by` | [`DEC-20260905-K`](../decisions/records/DEC-20260905-K.md) | `DEC-20260905-K` |
 | [`DEC-20260905-J`](../decisions/records/DEC-20260905-J.md) | `DEC-20260905-J` | `amended_by` | [`DEC-20260905-L`](../decisions/records/DEC-20260905-L.md) | `DEC-20260905-L` |

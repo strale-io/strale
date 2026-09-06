@@ -45,7 +45,7 @@ sources:
     status_file: docs/project/private-archive-status.json
   formal_records:
     path: docs/decisions/records
-    record_count: 245
+    record_count: 246
   collision_registry:
     path: docs/decisions/id-collisions.yaml
     collision_count: 35
@@ -1546,6 +1546,11 @@ formal_records:
   source_kind: git-native
   source_rows: []
   git_provenance: docs/decisions/records/DEC-20260905-D.md
+- record_key: DEC-20260905-P
+  id: DEC-20260905-P
+  source_kind: git-native
+  source_rows: []
+  git_provenance: docs/decisions/records/DEC-20260905-C.md
 decision_rows:
 - page_id: 31267c87082c81279b14f3859f6f2038
   id: DEC-20260225-P-c5d6
