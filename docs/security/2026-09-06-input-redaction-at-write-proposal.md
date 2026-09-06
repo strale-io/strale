@@ -1,6 +1,6 @@
 # Write-time input redaction — proposal
 
-**Status:** proposal, awaiting a founder decision. Nothing here is built.
+**Status:** build-ready. Both blocking questions answered 2026-09-06 (see "What it costs"); no code written yet.
 **Date:** 2026-09-06
 **Prompted by:** two disclosure corrections in two days (`password-strength`,
 `pii-redact`) that share one cause.
@@ -83,19 +83,41 @@ claim was in the manifest for months and nothing checked it.
 ## What it costs
 
 The write path is money-critical and already carries idempotency and
-hash-chain integrity. Two questions have to be answered before code:
+hash-chain integrity. Two questions had to be answered before code. **Both are
+now answered, by reading the code on 2026-09-06, and both came back
+favourable.**
 
-- **Does the audit hash chain cover `input`?** If a stored input contributes
-  to a row's hash, redacting at write changes what is hashed. That has to be
-  the *only* value ever hashed for that row, decided once, or verification
-  breaks for redacted rows — the same class of problem the 90-day sweep
-  already had to solve with `redacted_at`.
-- **Does idempotency key off the input?** `hashInput()` exists in `do.ts`. If
-  replay comparison uses the stored input rather than a digest computed
-  pre-redaction, `drop` would make two different requests look identical.
+**Does the audit hash chain cover `input`? Yes — and it does not matter.**
+`computeIntegrityHashVersioned` puts `input` in the hashed payload
+(`integrity-hash.ts`, the `base` object). But hashing is two-phase: the row is
+inserted first, and `jobs/integrity-hash-retry.ts` later SELECTs it back and
+hashes `txn.input` — *the stored column*, not an in-memory copy the route
+handler kept. So a value redacted at write is the only value that column ever
+holds, and therefore the only value ever hashed. The chain stays valid with no
+special-casing.
 
-Both are answerable by reading; neither is answered here, and neither should
-be guessed at.
+This is strictly simpler than the problem the 90-day sweep had. That sweep
+changes the value *after* it was hashed, which is exactly why it needed
+`redacted_at` and a chain walker that skips recomputation for marked rows.
+Write-time redaction needs neither.
+
+**Does idempotency key off the input? No.** Replay comparison uses
+`idempotency_fingerprint`, its own column, computed by
+`computeIdempotencyFingerprint({task, capabilitySlug, inputs, rail, ...})` from
+the incoming request before storage and compared by `isReplayable(stored,
+incoming)`. Nothing reads `transactions.input` back to decide replay.
+`hashInput()` exists in `do.ts` but feeds the audit body's `input_hash`, not
+the idempotency decision.
+
+One consequence worth stating: the fingerprint is itself a digest of the
+inputs, so a `drop`-ped field still influences it. That is the desired
+behaviour — two genuinely different requests stay distinguishable — and it
+leaks nothing, a digest being all that is retained.
+
+**So the remaining cost is the work itself**, not an unresolved integration
+risk. It is also inert by construction: no manifest declares
+`sensitive_inputs`, so shipping the mechanism changes no stored row until a
+capability opts in.
 
 ## What I would not do
 
@@ -113,9 +135,27 @@ into credential-shaped or document-shaped capabilities until it exists, and
 that every such capability meanwhile ships with a limitation instead of a
 guarantee.
 
-Suggested sequencing: answer the two hash-chain / idempotency questions first
-(a reading task, an hour), then decide. If it goes ahead it is one batch —
-manifest field, one enforcement point, one gate, one planted-failure test.
+The two blocking questions are answered above, so there is nothing left to
+investigate. It is one batch, and the next session can start writing code:
+
+1. `sensitive_inputs: {field: drop|hash}` in the manifest schema, beside
+   `input_schema`, with the two dispositions and nothing else.
+2. `redactForStorage(slug, input)` applied where `executionInput` is built,
+   before it reaches any of the four insert sites in `routes/do.ts`. The
+   executor keeps receiving the full input — this governs storage, not
+   execution. Do NOT touch `computeIdempotencyFingerprint`, which runs on the
+   request and must keep seeing the real values.
+3. A CI gate failing any capability whose `input_schema` names a field matching
+   a sensitive-name pattern without declaring a disposition for it.
+4. A planted-failure test: submit a sensitive input, run the write path, assert
+   the stored row does not contain the value — then plant the removal of
+   `redactForStorage` and require the test to fail.
+
+Why the sequencing was NOT "build it immediately" on 2026-09-06: two PRs were
+already in flight, the generated inventory file had conflicted twice that day,
+and a change touching every `/v1/do` write path is not something to land at the
+end of a long session. The mechanism is inert until a manifest opts in, so
+nothing is lost by starting it fresh.
 
 ## Decision needed
 
