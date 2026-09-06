@@ -1,0 +1,58 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "bd4590a6f618b9aadd513bf15b5577e986f43a79"
+  },
+  "at": "2026-09-06T15:41:04.352Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-hero-copy-evidence.json"
+  },
+  "summary": {
+    "status": "passed",
+    "scope": "Editorial snapshots using selected B styles; no production or full accessibility qualification."
+  },
+  "topic": "brand-hero-copy",
+  "raw": {
+    "status": "passed",
+    "scope": "Editorial snapshots using selected B styles; no production or full accessibility qualification.",
+    "measurements": [
+      {
+        "width": 1440,
+        "stage_before": {
+          "x": 761.75,
+          "y": 159.109375,
+          "width": 633.25,
+          "height": 589.0625
+        },
+        "stage_after": {
+          "x": 761.75,
+          "y": 159.109375,
+          "width": 633.25,
+          "height": 589.0625
+        },
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "stage_before": {
+          "x": 20,
+          "y": 833.859375,
+          "width": 350,
+          "height": 510
+        },
+        "stage_after": {
+          "x": 20,
+          "y": 663.484375,
+          "width": 350,
+          "height": 510
+        },
+        "overflow": false
+      }
+    ],
+    "screenshots": {
+      "copy-desktop.png": "861bd155fc717870b4d7f2543acfc9bb28a96821b6e3fde5b7975513c3ca5905",
+      "copy-mobile.png": "de02ac9a900ec62cf0f1365abff2344fff7db6e1ba7727935d1a088b3a2b4bc6"
+    }
+  }
+}

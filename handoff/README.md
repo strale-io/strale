@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-286 files (259 with a recorded intent, 27 without).
+287 files (260 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -27,6 +27,7 @@
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-original-baseline-correction.md`](_general/from-code/2026-09-06-brand-original-baseline-correction.md) | Restore the founder's unfinished redesign as the visual target and assess focused kit refinements in its actual compo... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-homepage-composition.md`](_general/from-code/2026-09-06-brand-homepage-composition.md) | Assemble the accepted Quiet Material components into a complete homepage composition and inspect hierarchy, section r... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-hero-surface-comparison.md`](_general/from-code/2026-09-06-brand-hero-surface-comparison.md) | Produce the authorised controlled comparison inside the original hero, preserving its character while refining the in... |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-hero-copy.md`](_general/from-code/2026-09-06-brand-hero-copy.md) | Record the founder's selection of hero B and deliver the separate shorter-copy editorial preview. Mode: Full, docs an... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-editorial-readiness.md`](_general/from-code/2026-09-06-brand-editorial-readiness.md) | Continue product-proof qualification and advance the independent homepage editorial and selected-asset work within th... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-agent-hook-setup.md`](_general/from-code/2026-09-06-agent-hook-setup.md) | Make agent hook commands work from subdirectories and reconcile the shared agent entry instructions. |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-6.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-6.md) | archive round 6 of the M2 closing independent review (six |
