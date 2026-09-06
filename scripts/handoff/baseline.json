@@ -3,12 +3,12 @@
   "recordedAt": "2026-09-06",
   "knownWorktrees": [
     {
-      "path": "C:/tmp/strale-closing10-gates",
-      "reason": "Detached gate-run checkout belonging to the live M2 closing-review round 10 session (the one that authored DEC-20260905-K and holds two locked agent worktrees under .claude/worktrees/). Clean at 0fd6364f when recorded, and that is exactly why it is recorded rather than removed: the gate's own text says a clean tree is not proof a checkout is idle, and this session proved it the same morning by removing a spotlessly clean round-9 worktree whose branch tip had been pushed two minutes earlier (LESSONS.md F7 incident 9). Owner: the round-10 session. Delete this entry when that session ends and its checkouts are gone. Recorded 2026-09-06 by the morning run."
+      "path": "C:/Users/pette/Documents/Codex/2026-09-05/okay-here-s-some-background-i/outputs/strale-setup-worktree",
+      "reason": "Codex session worktree on chore/agent-entry-setup-20260906, two commits ahead of main and not yet merged. Clean tree, which is precisely why it is recorded rather than removed — the gate's own text says a clean tree is not proof a checkout is idle, and this repository has an incident (LESSONS.md F7 #9) from removing a spotlessly clean checkout whose branch tip had just been pushed. Owner: that Codex session. Delete this entry when its branch lands and the checkout is gone. Recorded 2026-09-06 by the agent-data capabilities session."
     },
     {
-      "path": "C:/tmp/strale-closing10-P5",
-      "reason": "Second detached checkout of the same live round-10 session, for its P5 partition. Same reason, same owner, same condition for deletion. Recorded 2026-09-06 by the morning run."
+      "path": "C:/Users/pette/Projects/strale-wt-brand-access",
+      "reason": "Live Codex session on codex/brand-shared-access, holding 13 uncommitted paths. Never delete it to satisfy the one-batch rule: removing it destroys that session's unsaved work. Owner: that Codex session. Delete this entry when it commits and its owner removes the worktree. Recorded 2026-09-06 by the agent-data capabilities session."
     }
   ],
   "knownBranches": [
