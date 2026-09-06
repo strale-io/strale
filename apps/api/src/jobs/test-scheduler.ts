@@ -128,7 +128,8 @@ const SNAPSHOT_INTERVAL_MS          = 24 * 60 * 60 * 1000;   // 24h
 // Per-tick work is unchanged: still 1,000-row batches 100ms apart, still
 // capped at 50,000 per run. Only the frequency moves, which is
 // DEC-20260504-B's self-throttling option rather than a pre-drain — the
-// backlog clears over about three runs and then sits six-fold ahead of
+// backlog clears in a single run from where it now stands (37,987 plus a
+// day of inflow is under the 50,000 cap) and then sits 5.1x ahead of
 // inflow. `retention-cleanup-backlog` (data-retention.ts) is what says so
 // if that ever stops being true.
 const RETENTION_INTERVAL_MS         = 24 * 60 * 60 * 1000;
