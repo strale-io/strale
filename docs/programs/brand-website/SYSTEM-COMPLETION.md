@@ -4,9 +4,9 @@
 
 Start at the [brand-kit index](../../../design/brand-kit/README.md). The [structured completion record](system-completion.json) owns exact companion paths, acceptance dates, remaining gap IDs and execution status. Its `complete: false` area flags refer to the full original coverage contract; they do not undo acceptance of the supplied design specimens. Historical completed-batch descriptions retain what was known at that date.
 
-## Current whole-page review
+## Current visual baseline
 
-The founder accepted the shared-access illustration and authorised [the complete homepage composition](../../../design/brand-kit/quiet-material/homepage/index.html). This local study combines the accepted components to assess hierarchy, atmosphere balance and section rhythm on desktop and mobile. It is the current whole-page review surface; the earlier pattern website remains a component study. The invoice stays labelled illustrative and execution history is omitted. Production adoption, public destinations and the existing proof/rights gaps remain separate.
+The four-section homepage study is set aside following founder feedback that it is boring and has drifted from the unfinished redesign. Continue with the [original-design baseline and assessment](../../../design/brand-kit/quiet-material/baseline/README.md). The exact founder hero controls visual direction; the later v0.7 source is a separately identified editable reference. Compare focused improvements within that composition. The accepted companions, shared-access asset and product-proof limits remain unchanged.
 
 ## What is ready
 

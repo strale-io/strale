@@ -65,3 +65,4 @@ docs/research/2026-09-06-homepage-composition.md text eol=lf
 design/brand-kit/quiet-material/homepage/assets/*.png -text
 design/brand-kit/quiet-material/homepage/exports/*.png -text
 design/brand-kit/quiet-material/homepage/output/*.png -text
+design/brand-kit/quiet-material/baseline/evidence/*.png -text
