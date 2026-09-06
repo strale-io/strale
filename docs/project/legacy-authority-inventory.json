@@ -49,6 +49,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-4.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-5.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-6.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
@@ -89,6 +90,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md",
         "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
+        "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs"
       ]
@@ -188,6 +190,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-4.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-5.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-6.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -323,6 +326,7 @@
         "handoff/_general/from-code/2026-09-05-m2-quote-fidelity-checker.md",
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-2.md",
+        "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -495,6 +499,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-4.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-5.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-6.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
@@ -567,6 +572,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-4.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-5.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-6.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/kyb-coverage-research.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
@@ -591,6 +597,7 @@
         "handoff/_general/from-code/2026-09-04-m2-batch-13-founding-decisions.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-16-march-second-half.md",
         "handoff/_general/from-code/2026-09-05-m2-batch-17-april-to-early-may.md",
+        "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
@@ -640,7 +647,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "12a46aec83a12e5ba7b5939ba1fbd187ff3b4e9c02b437d43d6c90917287e631",
+      "sha256": "d064cae45965a7f6392b28828eee09c8bba81f801c02ee8d8a45f95dc47043ef",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -716,6 +723,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-4.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-5.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-6.md",
+        "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/2026-09-06-brand-kit-launch-proof/VERIFY.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
