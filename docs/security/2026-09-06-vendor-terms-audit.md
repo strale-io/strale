@@ -70,6 +70,57 @@ service is used"*.
 The provenance block named the source but carried no link, which does not
 satisfy CC BY. It now emits `source_url` and `license` alongside `source`.
 
+## Widening the audit to the whole catalogue
+
+The eight were the prompt, not the scope. Applying the same test to all 350
+manifests — *we charge for it, the upstream costs us nothing, and the upstream
+is not a government or open-licence source* — left 93 capabilities across 91
+distinct upstreams. Most cleared immediately: DNS and HTTP-fetch capabilities
+have no vendor at all, and the filter had simply missed government registries
+(CVR, EORI, BODACC, GEMI, Kadaster, CBS, Japan's NTA, CRO Ireland, ESMA).
+
+Three more genuine violations came out of the commercial remainder, all live,
+all on x402, all now deactivated:
+
+| Capability | Upstream | Why | Customer calls |
+|---|---|---|---|
+| `keyword-suggest` | `suggestqueries.google.com` | **Violates an active Strale decision.** DEC-20260813-A lists "DEC-20260427-H-4 Google" as a still-absolute prohibited target | 477 (EUR 14.38) |
+| `crypto-price` | CoinGecko free Demo | Demo plan excludes commercial use; commercial licence starts at the paid tiers | 9 |
+| `ip-geolocation` | ip-api.com free | "strictly limited for a non-commercial purpose ... Only members with a pro subscription can use the API in a commercial environment" | 7 |
+
+`keyword-suggest` is the worst of the four found today. Shodan, CoinGecko and
+ip-api are vendor-terms mistakes; this one broke a rule Strale wrote for
+itself, and it was the biggest earner in the set.
+
+### The downstream consequence, which nearly got missed
+
+Deactivating a capability silently breaks any solution that bundles it. Three
+active, x402-enabled solutions had a hard dependency — no gate condition, so
+the step is unconditional and the bundle fails mid-execution:
+
+- `keyword-scout` (55c, 3 steps) → `keyword-suggest`
+- `web3-pre-trade` (12c, 6 steps) → `crypto-price`
+- `web3-wallet-snapshot` (5c, 5 steps) → `crypto-price`
+
+All three are deactivated with a `deactivation_reason`. They also inherited the
+compliance problem, so this is not only a breakage fix. A closing query
+confirms **no active solution now depends on a deactivated capability**.
+
+That check belongs in the deactivation path itself. Dropping a capability
+today requires remembering to ask what bundles it, and nothing enforces the
+question.
+
+### Not yet verified
+
+The remaining commercial upstreams in the shortlist have not had their terms
+read. They are live and earning small amounts, and are the obvious next batch:
+Etherscan (`contract-verify-check`, `gas-price-check`), AviationStack
+(`flight-status`), Alternative.me (`fear-greed-index`), GoPlus Labs
+(`approval-security-check`), Adzuna (`job-board-search`), Docker Hub, GitHub's
+public API, and the public Ethereum RPC endpoints behind `ens-resolve` /
+`ens-reverse-lookup`. Absence from the violation list above means unchecked,
+not cleared.
+
 ## The rule this should have followed
 
 "Free and keyless" answers *can I call it*. It does not answer *may I sell what

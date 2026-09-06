@@ -31,6 +31,18 @@ import { getExecutor } from "./index.js";
 const DEACTIVATED = new Map<string, string>([
   ["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"],
   [
+    "ip-geolocation",
+    "deactivated 2026-09-06 (vendor-terms audit): ip-api.com's free endpoint is licensed for non-commercial use only — \"strictly limited for a non-commercial purpose and in a non-commercial environment. Only members with a pro subscription can use the API in a commercial environment.\" This was a paid capability with 7 customer calls. Reactivate on an ip-api pro subscription, or rebuild on a geolocation source whose terms permit resale.",
+  ],
+  [
+    "crypto-price",
+    "deactivated 2026-09-06 (vendor-terms audit): CoinGecko's free Demo plan excludes commercial use — a commercial licence is only included with the paid Analyst/Lite/Pro tiers, which additionally require a visible \"Data provided by CoinGecko\" attribution. 9 customer calls. Reactivate on a paid CoinGecko plan with the attribution, or another market-data source that permits resale. Took solutions web3-pre-trade and web3-wallet-snapshot down with it.",
+  ],
+  [
+    "keyword-suggest",
+    "deactivated 2026-09-06 (vendor-terms audit): it calls suggestqueries.google.com, an undocumented Google endpoint. This is not merely a terms question — DEC-20260813-A lists \"ToS-prohibited targets (DEC-20260420-H social platforms, DEC-20260427-H-4 Google)\" as STILL ABSOLUTE, so it violated an active Strale decision for its whole life. The largest earner in the audit at 477 customer calls / EUR 14.38, and the one that most needed stopping. Took solution keyword-scout down with it. There is no compliant reactivation without a licensed keyword-data vendor.",
+  ],
+  [
     "host-exposure-lookup",
     "deactivated 2026-09-06, one day after launch: Shodan's InternetDB is licensed for NON-COMMERCIAL use only — \"you can't use it to build commercial products that you charge money for\" — and this shipped as a paid EUR 0.05 capability. Caught by a vendor-terms audit prompted by the same question about VirusTotal; it should have been asked before the executor was written, not after. Contained with zero paying calls served: it was still dark (visible=false) and was deactivated and descheduled before the green week would have promoted it. Reactivate only under a Shodan enterprise licence, or rebuild on a source whose terms permit resale.",
   ],
