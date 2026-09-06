@@ -39,7 +39,7 @@ describe("retention sweep cadence", () => {
   // fails. At ~8,600/day observed, daily gives ~6x.
   it("gives capacity comfortably above the rate rows become due", () => {
     const CAP_PER_RUN = 1000 * 50; // data-retention.ts BATCH_SIZE * MAX_BATCHES_PER_RUN
-    const OBSERVED_DUE_PER_DAY = 8_605; // production, 2026-09-06
+    const OBSERVED_DUE_PER_DAY = 9_827; // production, 2026-09-06 (68,790 over 7 days)
     const runsPerDay = DAY / intervalMs("RETENTION_INTERVAL_MS");
     const capacityPerDay = CAP_PER_RUN * runsPerDay;
     expect(capacityPerDay).toBeGreaterThan(OBSERVED_DUE_PER_DAY * 3);
@@ -47,5 +47,12 @@ describe("retention sweep cadence", () => {
 
   it("still gates the weekly health sweep weekly — the two are not the same job", () => {
     expect(intervalMs("WEEKLY_SWEEP_INTERVAL_MS")).toBe(7 * DAY);
+  });
+
+  // Pinning the constant alone leaves the obvious regression green: point the
+  // call site at WEEKLY_SWEEP_INTERVAL_MS and every assertion above still
+  // passes while the sweep is weekly again. So pin the wiring too.
+  it("gates the retention task on RETENTION_INTERVAL_MS, not another constant", () => {
+    expect(SOURCE).toMatch(/shouldRun\(\s*"retention"\s*,\s*RETENTION_INTERVAL_MS\s*\)/);
   });
 });

@@ -26,21 +26,21 @@ const MUTATIONS = [
     file: "src/lib/data-retention.ts",
     from: "    if (++batches >= MAX_BATCHES_PER_RUN) { hitCap = true; break; }",
     to: "    if (++batches >= MAX_BATCHES_PER_RUN) { break; }",
-    test: "src/lib/data-retention-backlog.test.ts",
+    test: "src/lib/data-retention-backlog.test.ts src/lib/go-review-regressions.test.ts",
   },
   {
     name: "retention: report an unavailable backlog count as zero",
     file: "src/lib/data-retention.ts",
     from: "      remaining = null;",
     to: "      remaining = 0;",
-    test: "src/lib/data-retention-backlog.test.ts",
+    test: "src/lib/data-retention-backlog.test.ts src/lib/go-review-regressions.test.ts",
   },
   {
     name: "retention: let a sweep run past its ceiling",
     file: "src/lib/data-retention.ts",
     from: "const MAX_BATCHES_PER_RUN = 50;",
     to: "const MAX_BATCHES_PER_RUN = 500;",
-    test: "src/lib/data-retention-backlog.test.ts",
+    test: "src/lib/data-retention-backlog.test.ts src/lib/go-review-regressions.test.ts",
   },
   {
     name: "retention: revert the cadence to weekly",
@@ -62,6 +62,27 @@ const MUTATIONS = [
     from: "const SEC_MIN_INTERVAL_MS = 120;",
     to: "const SEC_MIN_INTERVAL_MS = 0;",
     test: "src/capabilities/company-fundamentals-rate.test.ts",
+  },
+  {
+    name: "job-coordinator: clamp only on last_finished_at (an interval change stops taking effect)",
+    file: "src/lib/job-coordinator.ts",
+    from: "WHEN COALESCE(job_schedule.last_finished_at, job_schedule.last_started_at) IS NULL",
+    to: "WHEN job_schedule.last_finished_at IS NULL",
+    test: "src/lib/job-coordinator-interval-change.test.ts",
+  },
+  {
+    name: "data-retention: drop a drain loop's per-run cap",
+    file: "src/lib/data-retention.ts",
+    from: "if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;",
+    to: "if (count < BATCH_SIZE) break;",
+    test: "src/lib/go-review-regressions.test.ts",
+  },
+  {
+    name: "retention: warn even when the capped run left nothing behind",
+    file: "src/lib/data-retention.ts",
+    from: "    if (remaining !== 0) log.warn(",
+    to: "    if (true) log.warn(",
+    test: "src/lib/data-retention-backlog.test.ts",
   },
 ];
 

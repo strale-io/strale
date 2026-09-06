@@ -110,11 +110,20 @@ const DIAGNOSTIC_INTERVAL_MS        = 24 * 60 * 60 * 1000;   // 24h
 const SNAPSHOT_INTERVAL_MS          = 24 * 60 * 60 * 1000;   // 24h
 // 24h, not 7d. The content redaction this gates is capped at
 // BATCH_SIZE * MAX_BATCHES_PER_RUN = 50,000 rows per run (data-retention.ts).
-// At weekly cadence that is 50,000/week of capacity against ~60,000/week of
-// rows crossing the 90-day line — a standing deficit of ~10,000/week that
-// compounds, because nothing ever catches up. Measured in production
-// 2026-09-06: 87,300 eligible rows, oldest 103 days against a stated 90-day
-// window, and the 2026-08-30 run hit the 50,000 cap exactly.
+// At weekly cadence that is 50,000/week of capacity against 68,790/week of
+// rows crossing the 90-day line (9,827/day, measured 2026-09-06) — a
+// deficit of 18,790/week that compounds, because nothing ever catches up.
+//
+// This is a regression, not a standing condition. Until 2026-08-23 the
+// sweep ran many times a day in small chunks, because its cadence lived in
+// an in-process map that reset on every deploy; PR #376 moved the schedule
+// into job_schedule and made the declared weekly interval real for the
+// first time. The backlog starts immediately after: 87,718 eligible rows by
+// 2026-09-06, oldest 102 days against a published 90-day window, and the
+// 2026-08-30 and 2026-09-06 runs each hit the 50,000 cap exactly.
+//
+// weekly-sweep is the other 7-day task on that table and inherited the same
+// latency; no per-run ceiling was found on it, but nobody has checked.
 //
 // Per-tick work is unchanged: still 1,000-row batches 100ms apart, still
 // capped at 50,000 per run. Only the frequency moves, which is
@@ -682,7 +691,7 @@ async function runAuxiliaryTasks(): Promise<void> {
     }
   }
 
-  // Weekly data retention cleanup (7d)
+  // Daily data retention cleanup (24h) — see RETENTION_INTERVAL_MS
   if (await shouldRun("retention", RETENTION_INTERVAL_MS)) {
     try {
       const { cleanupOldTestData } = await import("../lib/data-retention.js");

@@ -3,12 +3,16 @@
  *
  * Found in production 2026-09-06: the sweep is capped at
  * BATCH_SIZE * MAX_BATCHES_PER_RUN = 50,000 rows and ran WEEKLY, against
- * ~60,000 rows/week crossing the 90-day line. It had been ~10,000/week behind
- * for as long as volume had been above capacity, and nothing said so — a run
- * that stops at the ceiling returned the same shape as a run that finished the
- * work, so the only visible difference was a number in a log line nobody reads
- * against a threshold nobody had. The oldest unredacted row was 103 days old
- * against a published 90-day window.
+ * 68,790 rows/week crossing the 90-day line — 18,790/week behind. Nothing
+ * said so: a run that stops at the ceiling returned the same shape as a run
+ * that finished the work, so the only visible difference was a number in a
+ * log line nobody reads against a threshold nobody had. 87,718 eligible rows,
+ * oldest 102 days against a published 90-day window.
+ *
+ * It began on 2026-08-23, when PR #376 moved job cadence out of an
+ * in-process map and into job_schedule. Before that the sweep ran many times
+ * a day because the map reset on every deploy; after it, the declared weekly
+ * interval was real for the first time.
  *
  * The cadence fix is one constant in test-scheduler.ts. This file guards the
  * part that makes the fix verifiable rather than merely applied: if capacity
@@ -108,6 +112,26 @@ describe("content redaction reports its own backlog", () => {
     expect(updates).toHaveLength(MAX_BATCHES_PER_RUN);
   });
 
+  // The fake driver ignores predicates, so nothing above would notice the
+  // diagnostic COUNT drifting away from the UPDATE's selection — and then the
+  // operator acts on a backlog figure for a different set of rows than the one
+  // the sweep is draining. Compare the two WHERE clauses as emitted text.
+  it("counts the backlog over exactly the rows the update selects", async () => {
+    contentRowsPerBatch = BATCH_SIZE;
+    await runSweep();
+
+    const clauses = (text: string): string[] =>
+      (text.match(/t\.\w+ (?:<|IS NULL|= false|IS NOT NULL)[^\n]*/g) ?? []).map((c) => c.trim());
+
+    const update = issued.find((t) => t.includes("content_retention_purge"))!;
+    const count = issued.find((t) => t.includes("AS remaining"))!;
+    expect(clauses(count)).toEqual(clauses(update));
+    // And the selection is the one the retention window actually means.
+    for (const c of ["t.created_at <", "t.legal_hold = false", "t.redacted_at IS NULL", "t.deleted_at IS NULL"]) {
+      expect(count, `backlog count lost ${c}`).toContain(c);
+    }
+  });
+
   // The ordinary case: a sweep that clears the backlog must stay quiet, or the
   // warning becomes noise and stops meaning anything.
   it("says nothing when the sweep finishes the work", async () => {
@@ -115,6 +139,22 @@ describe("content redaction reports its own backlog", () => {
     await runSweep();
     expect(warn.mock.calls.find((c) => c[0]?.label === "retention-cleanup-backlog")).toBeUndefined();
     expect(issued.some((t) => t.includes("AS remaining")), "took a backlog count it did not need").toBe(false);
+  });
+
+  // A final batch that comes back exactly full stops at the ceiling even when
+  // it cleared the table. Warning "rows remain past the retention window"
+  // against remaining_after_run: 0 trains the reader to ignore the signal.
+  it("stays quiet when the capped run happened to clear the backlog", async () => {
+    contentRowsPerBatch = BATCH_SIZE; // runs to the ceiling
+    remainingRows = 0; // ...and nothing is left
+
+    await runSweep();
+
+    expect(issued.some((t) => t.includes("AS remaining")), "should still take the count").toBe(true);
+    expect(
+      warn.mock.calls.find((c) => c[0]?.label === "retention-cleanup-backlog"),
+      "warned about a backlog of zero",
+    ).toBeUndefined();
   });
 
   // A failed diagnostic count must not be reported as "no backlog", and must

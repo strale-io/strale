@@ -47,10 +47,27 @@ describe("data-retention: affected-row counting", () => {
   });
 
   it("every drain loop is capped per invocation (DEC-20260504-B)", () => {
-    const loops = src.match(/if \(count < BATCH_SIZE/g) ?? [];
-    const capped = src.match(/if \(count < BATCH_SIZE \|\| \+\+batches >= MAX_BATCHES_PER_RUN\)/g) ?? [];
+    // Matched by STRUCTURE, not by one exact line. The original required the
+    // literal `if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN)`,
+    // so splitting a loop's break in two — which purgeCustomerContent does, to
+    // record that it stopped at the ceiling rather than because the work ran
+    // out — read as an uncapped loop and failed a correctly capped drain.
+    //
+    // The property that matters is that each loop's short-batch break is
+    // accompanied by a MAX_BATCHES_PER_RUN break, in either shape. Taking the
+    // window from one `count < BATCH_SIZE` to the next keeps that per-loop:
+    // a loop that drops its cap still fails, because the reference has to
+    // appear within its own window and not a neighbour's.
+    const loops = [...src.matchAll(/if \(count < BATCH_SIZE/g)];
     expect(loops.length).toBeGreaterThan(0);
-    expect(capped.length).toBe(loops.length);
+
+    for (const [i, loop] of loops.entries()) {
+      const start = loop.index;
+      const end = i + 1 < loops.length ? loops[i + 1].index : src.length;
+      const window = src.slice(start, end);
+      expect(window, `drain loop ${i + 1} of ${loops.length} has no MAX_BATCHES_PER_RUN cap`)
+        .toMatch(/\+\+batches >= MAX_BATCHES_PER_RUN/);
+    }
   });
 });
 

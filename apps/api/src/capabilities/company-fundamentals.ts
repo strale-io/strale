@@ -76,7 +76,14 @@ export function pickUnit(units: Record<string, Fact[]>): { unit: string; facts: 
  * This gate does. Every SEC request in this module — the ticker directory
  * included — takes a slot from one module-level chain that spaces request
  * STARTS by SEC_MIN_INTERVAL_MS, so the ceiling holds however many calls run
- * at once. It costs latency rather than correctness: 13 spaced requests add
+ * at once WITHIN A PROCESS. It is deliberately not a distributed limiter: at
+ * two Railway instances the effective rate is 2 x 8.3/s and would exceed the
+ * guidance, which is part of why the interval leaves headroom rather than
+ * sitting at 10/s. Nothing bounds how long a caller waits for its slot either
+ * — at roughly 8 concurrent invocations the last request passes the 15s sync
+ * wall. Neither bites today (the capability has no production row and no
+ * traffic); both want revisiting before it carries real concurrent load.
+ * It costs latency rather than correctness: 13 spaced requests add
  * ~1.6s, which sits inside the sync execution budget against a measured
  * ~840ms typical.
  *
@@ -97,9 +104,14 @@ function secSlot(): Promise<void> {
   const slot = secGate.then(
     () => new Promise<void>((resolve) => { setTimeout(resolve, SEC_MIN_INTERVAL_MS); }),
   );
-  // Swallow on the chain itself so one rejected slot cannot poison every
-  // later caller; the awaited `slot` still surfaces to its own caller.
-  secGate = slot.catch(() => undefined);
+  // No .catch() on the chain. The first version had one, defending against a
+  // rejected slot poisoning every later caller — but a link can only resolve:
+  // the inner promise has no reject path, and a fetch failure happens AFTER
+  // its slot has already resolved. Review of PR #598 established the guard was
+  // unreachable and its test passed identically with the line deleted, which
+  // is hollow coverage. If a rejecting link is ever introduced, reinstate the
+  // catch and give it a test that fails without it.
+  secGate = slot;
   return slot;
 }
 

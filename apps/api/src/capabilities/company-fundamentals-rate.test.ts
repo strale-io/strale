@@ -68,7 +68,10 @@ describe("company-fundamentals SEC rate gate", () => {
     }
   });
 
-  // A rejected slot must not wedge the shared chain for every later caller.
+  // A failed request must not wedge the shared chain. Note what this does and
+  // does not prove: the rejection happens AFTER the slot resolved, so it never
+  // reaches the chain — which is exactly why the defensive .catch() on secGate
+  // was removed as unreachable rather than kept and "covered" by this test.
   it("keeps serving after a request rejects", async () => {
     fetchMock.mockImplementationOnce(async () => { throw new Error("network reset"); });
     await exec({ cik: "320193" }).catch(() => undefined);

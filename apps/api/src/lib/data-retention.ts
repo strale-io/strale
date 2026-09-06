@@ -37,7 +37,7 @@ function affected(result: unknown): number {
  * Transaction retention window for GDPR Art. 30 record-of-processing
  * compliance (Colorado AI Act SB 24-205). Rows with `legal_hold = false`
  * and `created_at < now - TRANSACTION_RETENTION_DAYS` are hard-deleted
- * by the weekly retention sweep. SA.2a.3a: also surfaced in the
+ * by the daily retention sweep. SA.2a.3a: also surfaced in the
  * compliance payload returned from POST /v1/do — changes here propagate
  * to the public claim without additional edits.
  */
@@ -512,8 +512,14 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
   // oldest unredacted row was 103 days old against a 90-day claim.
   //
   // So when the ceiling is reached, measure what is left and say so. The
-  // backlog count is one indexed COUNT on the same predicate, run at most
-  // once per sweep and only when already over the ceiling.
+  // backlog count runs the same predicate, at most once per sweep and only
+  // when already over the ceiling. It is NOT index-supported — EXPLAIN on
+  // production gives a parallel seq scan, ~290ms over 1.05M rows — which is
+  // affordable once per capped run and would not be per batch.
+  // A final batch that comes back exactly full stops at the ceiling even when
+  // it cleared the table, so the count is taken first and the warning is only
+  // emitted if something is actually left. Warning "rows remain" against
+  // remaining_after_run: 0 would train the reader to ignore it.
   if (hitCap) {
     let remaining: number | null = null;
     try {
@@ -533,7 +539,7 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
       // null rather than 0.
       remaining = null;
     }
-    log.warn(
+    if (remaining !== 0) log.warn(
       {
         label: "retention-cleanup-backlog",
         redacted_this_run: redacted,
