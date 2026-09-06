@@ -6,7 +6,7 @@ Start at the [brand-kit index](../../../design/brand-kit/README.md). The [struct
 
 ## Current visual baseline
 
-The [paired hero refinement](../../../design/brand-kit/quiet-material/hero-comparison/index.html) is ready for visual review within the original composition. It holds the content and outer geometry constant; only the inner treatment changes. B is proposed, with exact-screenshot and mobile-reconstruction limits in its README.
+The founder selected B in the [paired hero refinement](../../../design/brand-kit/quiet-material/hero-comparison/index.html) on 6 September ("i prefer b"). Its tighter frame, off-white reading surface and inner padding are accepted for continued design. Production tokens remain unchanged. The [separate hero copy pass](HERO-COPY.md) is the current editorial proposal; the historical A/B comparison and its verification remain intact.
 
 The four-section homepage study is set aside following founder feedback that it is boring and has drifted from the unfinished redesign. Continue with the [original-design baseline and assessment](../../../design/brand-kit/quiet-material/baseline/README.md). The exact founder hero controls visual direction; the later v0.7 source is a separately identified editable reference. Compare focused improvements within that composition. The accepted companions, shared-access asset and product-proof limits remain unchanged.
 

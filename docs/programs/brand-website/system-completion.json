@@ -12,7 +12,7 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "assess_controlled_hero_surface_comparison",
+    "review_hero_copy_within_selected_B",
     "authenticated_invoice_demo_and_own_record_retrieval",
     "selected_asset_rights_and_production_adoption"
   ],
@@ -274,7 +274,7 @@
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
       "status": "original-composition-refinement",
-      "action": "Apply accepted kit refinements inside the original design; compare frame and reading surfaces before separate copy changes.",
+      "action": "B selected for continued design. Review the separate shorter hero copy in HERO-COPY.md within B; keep the original atmosphere and illustration footprint.",
       "evidence": "design/brand-kit/quiet-material/baseline/README.md"
     },
     {
@@ -320,12 +320,16 @@
     "disposition": "design/brand-kit/quiet-material/baseline/registry.json"
   },
   "hero_comparison": {
-    "status": "proposed-for-review",
+    "status": "B-selected-for-continued-design",
     "guide": "design/brand-kit/quiet-material/hero-comparison/README.md",
     "preview": "design/brand-kit/quiet-material/hero-comparison/index.html",
     "registry": "design/brand-kit/quiet-material/hero-comparison/registry.json",
     "verification": "design/brand-kit/quiet-material/hero-comparison/verification.json",
     "tokens": "design/tokens/candidates/quiet-material-hero-comparison.json",
-    "scope": "Screenshot-guided A/B reconstruction; preserve exact original as baseline. Only inner treatment changes, no acceptance or production adoption."
+    "scope": "Founder selected B's frame inset, off-white panel and internal padding. Retain original character. Historical copy is not approved; no production token adoption. The comparison registry and evidence preserve their original proposed state.",
+    "selected_variant": "B",
+    "accepted_on": "2026-09-06",
+    "founder_statement": "i prefer b",
+    "next_copy_proposal": "docs/programs/brand-website/HERO-COPY.md"
   }
 }
