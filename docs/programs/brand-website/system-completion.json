@@ -191,6 +191,11 @@
       "id": "patterns-acceptance-and-kit-consolidation",
       "date": "2026-09-06",
       "result": "Founder accepted the pattern/application studies. One kit entry now routes human and machine readers to retained companion sources; dated batch descriptions remain historical evidence."
+    },
+    {
+      "id": "homepage-editorial-and-selected-asset-review",
+      "date": "2026-09-06",
+      "result": "Draft section copy and individual visual briefs from the retained system, with selected-asset readiness. Read-only authentication recheck still blocked; no live output, public copy or new design adoption."
     }
   ],
   "kit_entry": "design/brand-kit/README.md",
@@ -245,9 +250,9 @@
     {
       "id": "rights",
       "required_before": "public-use-of-affected-assets",
-      "status": "open",
-      "action": "Resolve original S/logo and selected atmospheric asset creation/rights history, or secure a cleared replacement. Unused missing assets need not delay launch.",
-      "evidence": "design/brand-kit/quiet-material/registry.json"
+      "status": "selected-assets-reviewed-source-records-pending",
+      "action": "Recover retained S and selected hero-folded-light-background creation records. Other unresolved rasters are not selected by the current homepage brief.",
+      "evidence": "docs/programs/brand-website/homepage-brief.json"
     },
     {
       "id": "website-qualification",
@@ -259,9 +264,9 @@
     {
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
-      "status": "open",
-      "action": "Write section briefs and concise voice examples from adopted positioning. Design product proof illustrations from verified data; use existing atmosphere only in its permitted role.",
-      "evidence": "docs/programs/brand-website/POSITIONING-BRIEF.md"
+      "status": "draft-copy-and-master-briefs-prepared",
+      "action": "Review the concise section copy in context, author/register the shared-access diagram, and use verified output for the invoice/record assets. No final copy or visual qualification is inferred.",
+      "evidence": "docs/programs/brand-website/homepage-brief.json"
     },
     {
       "id": "consumer-adoption",
@@ -284,5 +289,6 @@
       "action": "Add storyboard, caption/poster and static/reduced-motion alternatives with size/loading limits for the story that earns video.",
       "evidence": "docs/programs/brand-website/PROGRAM.md"
     }
-  ]
+  ],
+  "homepage_brief": "docs/programs/brand-website/homepage-brief.json"
 }

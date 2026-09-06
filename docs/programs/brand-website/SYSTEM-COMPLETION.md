@@ -26,6 +26,8 @@ These are accepted design inputs. They are not production tokens, a completed ho
 
 Homepage narrative and rhythm can then use this foundation. The invoice sequence is one product story within Strale’s broad tool library; it must not accidentally turn the homepage into an invoice-only positioning.
 
+The [homepage authoring brief](HOMEPAGE-BRIEF.md), generated from [its JSON source](homepage-brief.json), now supplies draft copy, five section briefs, individual illustration instructions and selected-asset evidence status. It keeps execution history conditional on real retrieval and selects only one of the eleven unresolved legacy rasters: the opening folded light. The retained logo also needs its creation record. Fonts have bundled licence records; utility icons have original-geometry provenance. This narrows the remaining work without clearing unknown rights or adopting final copy. The connected app remains unauthenticated after a read-only recheck; live proof, the new access-diagram master and final page qualification remain open.
+
 ## Scope later channels deliberately
 
 Social/banner/OG/blog masters, actual email delivery/client support, long documents/physical print and video/storyboard/poster/captions are still incomplete. Finish each before its channel is used. A static website need not wait for a launch film; an unsent email study need not pretend to be client-certified. Current reduced-motion interaction tokens do not constitute a video system.
