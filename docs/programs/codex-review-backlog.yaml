@@ -41,6 +41,48 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-35
+    subject: "PR #592 — german-company-data's ambiguity refusal was recognised by none of the three health consumers, plus the GOALS.md correction that found it"
+    commit: 91f8ecaf
+    merged: "2026-09-06"
+    priority: high
+    status: pending
+    why_codex: >
+      Two reasons, and the second is the stronger one. First, this is the
+      same defect class as CX-34 one day later — a refusal message that the
+      circuit breaker, the quality floor and the trust surfaces all fail to
+      recognise — which is the open three-strike family (LESSONS F1), and
+      german-company-data is the last registry that kept its own pickByName
+      rather than the shared one, so the 2026-08-14 consolidation never
+      reached it. Second, and this is what a different model is actually
+      for: the batch overturns a conclusion this repository had already
+      written down and acted on. GOALS.md recorded the 2026-08-24 German
+      workload as 159 refusals and named repackaging refusals the highest-
+      value open product change; grouping the same rows by error string
+      says 127 of the 159 were the vendor's own HTTP 402 and only 32 were
+      refusals. One session produced both the original reading and its
+      reversal, from the same database, a day apart. A second model should
+      say which reading is right rather than taking the newer one on trust.
+    what_to_attack: >
+      The census first, because everything else rests on it. Re-derive the
+      2026-08-24 german-company-data breakdown independently — 36 completed,
+      127 HTTP 402, 17 no-confident-match, 15 tied-refusal out of 195 — and
+      say whether grouping by error string can mislead here (are the 402s
+      really the vendor's, or could a 402 be raised on our own side before
+      the call went out?). Then the €39.00-at-list demand figure, which is
+      list price times requested calls and therefore assumes every refused
+      query would have resolved; say whether that overstates the case for
+      buying capacity. Then apps/api/src/capabilities/german-company-data.ts:
+      confirm the new "Ambiguous German company name" wording is claimed by
+      no earlier branch of classifyTransactionFailure (INTERNAL_RE,
+      TIMEOUT_RE, UPSTREAM_RE all run first), and that no caller depended on
+      the old count-first wording. Finally the two files this batch
+      deliberately did NOT change — finnish-company-data.ts:113 and
+      spanish-company-data.ts:176 throw plain Errors whose messages happen to
+      open with "Ambiguous "; is "recognised by string is enough" actually
+      true on every path, including the async one where only the message
+      survives?
+    claude_verdicts: 1 round, PASS, no blockers, two nits — one taken (an unanchored test regex that matched the pre-fix wording too), one acknowledged
   - id: CX-34
     subject: "PR #582 — eight keyless agent-data capabilities (clinical-trials-search, doi-resolve, citation-graph, cert-transparency-search, host-exposure-lookup, breach-exposure-check, fda-safety-search, company-fundamentals) plus a corrected false claim on password-strength"
     commit: 4529f778
