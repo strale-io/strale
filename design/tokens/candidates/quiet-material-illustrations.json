@@ -1,0 +1,90 @@
+{
+  "name": "Quiet Material shared-access illustration 0.1",
+  "status": "proposed",
+  "supersedes": null,
+  "superseded_by": null,
+  "notes": "Candidate illustration extension only; production and the four existing Quiet Material companions are unchanged.",
+  "palette": {
+    "--canvas": "#ffffff",
+    "--ink": "#11110f",
+    "--section-canvas-dark": "#071829",
+    "--ink-inverse": "#f3f6f9"
+  },
+  "type": {
+    "families": {"sans": "\"Instrument Sans\", Arial, sans-serif"},
+    "scale": {
+      "agent": {"desktop": 28, "narrow": 21, "weight": 500, "line": 1.2, "tracking": 0},
+      "task": {"desktop": 28, "narrow": 20, "weight": 500, "line": 1.2, "tracking": 0}
+    }
+  },
+  "spacing": [0, 16, 24, 32, 48, 56, 96],
+  "radii": [0],
+  "shadows": [],
+  "motion": {"duration": "0s", "behaviour": "static"},
+  "layout": {
+    "geometry": {
+      "desktop": {
+        "view_box": [0, 0, 1080, 360],
+        "logo": {"x": 360, "y": 145, "width": 240},
+        "connector": {"path": "M 226 180 H 344 M 616 180 H 752 M 752 78 V 282 M 752 78 H 856 M 752 180 H 856 M 752 282 H 856", "stroke_width": 2, "linecap": "round", "linejoin": "round"},
+        "labels": [
+          {"id": "agent", "text": "Your agent", "x": 62, "y": 190, "anchor": "start", "role": "agent"},
+          {"id": "strale", "text": "Strale", "x": 480, "y": 180, "anchor": "middle", "role": "logo-alternative"},
+          {"id": "research", "text": "Research", "x": 880, "y": 88, "anchor": "start", "role": "task"},
+          {"id": "extraction", "text": "Extraction", "x": 880, "y": 190, "anchor": "start", "role": "task"},
+          {"id": "validation", "text": "Validation", "x": 880, "y": 292, "anchor": "start", "role": "task"}
+        ]
+      },
+      "narrow": {
+        "view_box": [0, 0, 320, 440],
+        "logo": {"x": 74, "y": 102, "width": 172},
+        "connector": {"path": "M 160 70 V 90 M 160 164 V 220 H 56 V 400 M 56 260 H 104 M 56 330 H 104 M 56 400 H 104", "stroke_width": 2, "linecap": "round", "linejoin": "round"},
+        "labels": [
+          {"id": "agent", "text": "Your agent", "x": 160, "y": 50, "anchor": "middle", "role": "agent"},
+          {"id": "strale", "text": "Strale", "x": 160, "y": 127, "anchor": "middle", "role": "logo-alternative"},
+          {"id": "research", "text": "Research", "x": 120, "y": 267, "anchor": "start", "role": "task"},
+          {"id": "extraction", "text": "Extraction", "x": 120, "y": 337, "anchor": "start", "role": "task"},
+          {"id": "validation", "text": "Validation", "x": 120, "y": 407, "anchor": "start", "role": "task"}
+        ]
+      }
+    },
+    "palette_refs": {
+      "light": {"canvas": "--canvas", "ink": "--ink"},
+      "dark": {"canvas": "--section-canvas-dark", "ink": "--ink-inverse"}
+    },
+    "preview": {
+      "responsive_breakpoint_px": 760,
+      "content_max_width_px": 1120,
+      "artwork_desktop_max_width_px": 1080,
+      "artwork_narrow_max_width_px": 320,
+      "page_padding_wide_px": 32,
+      "page_padding_narrow_px": 16,
+      "section_padding_wide_px": 96,
+      "section_padding_narrow_px": 56,
+      "copy_gap_px": 24,
+      "artwork_gap_px": 48,
+      "specimen_gap_px": 96,
+      "headline_size_px": 40,
+      "headline_narrow_px": 30,
+      "headline_line_height": 1.15,
+      "headline_tracking_em": -0.03,
+      "headline_measure_ch": 24,
+      "body_size_px": 20,
+      "body_narrow_px": 18,
+      "body_line_height": 1.5,
+      "body_measure_ch": 52,
+      "link_size_px": 16,
+      "link_line_height": 1.4,
+      "rule_width_px": 1,
+      "link_underline_px": 2,
+      "link_offset_px": 4,
+      "focus_width_px": 3,
+      "focus_offset_px": 4
+    }
+  },
+  "provenance": {
+    "source": "design/brand-kit/quiet-material/illustrations/registry.json",
+    "captured_at": "2026-09-06",
+    "note": "Geometry authored for the shared-access candidate; palette and type roles are retained from the proposed Quiet Material pattern tokens. No private palette or production adoption."
+  }
+}

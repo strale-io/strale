@@ -132,4 +132,6 @@ Every batch ends with a precise `next_action`, evidence receipt, reviewed change
 
 ## Component continuation: accepted baseline
 
+The [shared-access illustration](../../../design/brand-kit/quiet-material/illustrations/README.md) is the next candidate asset extension: one conceptual relationship, recomposed for wide and narrow use and supplied in light/inverse variants. This is a reviewable master, not a fifth accepted companion or production adoption. The four accepted companions remain unchanged. Product execution proof and the retained logo's creation record remain separate open work.
+
 The founder accepted identity/type, navigation/controls/cards and the subsequent forms/icons/composition studies for continued design work, and explicitly retained the flowing-S logo. Generated symbol alternatives are historical. The [kit index](../../../design/brand-kit/README.md) routes to all four accepted companions. Continue from the proof and authoring checkpoints above; production adoption and remaining channel/accessibility qualification stay separate.

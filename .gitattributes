@@ -49,3 +49,12 @@ design/brand-kit/quiet-material/patterns/output/pdf/** -text
 design/brand-kit/quiet-material/patterns/exports/*.png -text
 design/tokens/candidates/quiet-material-patterns.json text eol=lf
 docs/research/2026-09-05-quiet-material-pattern-references.md text eol=lf
+
+# Shared-access evidence hashes source text and portable image bytes exactly.
+design/tokens/candidates/quiet-material-illustrations.json text eol=lf
+docs/research/2026-09-06-shared-access-illustration.md text eol=lf
+design/brand-kit/quiet-material/illustrations/exports/*.png -text
+design/brand-kit/quiet-material/illustrations/masters/*.svg -text
+design/brand-kit/quiet-material/illustrations/exports/*.svg -text
+design/brand-kit/quiet-material/illustrations/masters/*.svg whitespace=cr-at-eol
+design/brand-kit/quiet-material/illustrations/exports/*.svg whitespace=cr-at-eol
