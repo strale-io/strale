@@ -1,6 +1,6 @@
 # Strale brand kit — Quiet Material
 
-**Start here for all current brand and design work.** The atmosphere, identity/type, controls, and form/icon/composition companions are accepted for continued design work. The latest acceptance is the founder’s 6 September review of the pattern and channel studies. Keep the current flowing-S logo, Instrument Sans, IBM Plex Mono and retained Quiet Material direction.
+**Start here for all current brand and design work.** The atmosphere, identity/type, controls, and form/icon/composition companions are accepted for continued design work. The latest acceptance is the founder’s 6 September selection of hero treatment B. Keep the current flowing-S logo, Instrument Sans, IBM Plex Mono and retained Quiet Material direction.
 
 Design acceptance is distinct from production adoption. Existing specimen registries remain candidates, and [active.json](../tokens/active.json) still controls production. This index connects the accepted parts; it does not introduce another palette, rule register or design direction.
 
@@ -19,7 +19,7 @@ Design acceptance is distinct from production adoption. Existing specimen regist
 | Homepage copy, illustration briefs and selected-asset readiness | [Homepage brief](../../docs/programs/brand-website/HOMEPAGE-BRIEF.md) | [Editable authoring source](../../docs/programs/brand-website/homepage-brief.json) |
 | Shared-access illustration — accepted for continued design | [Preview and usage](quiet-material/illustrations/README.md) | [Illustration registry](quiet-material/illustrations/registry.json) |
 | Current visual baseline — original unfinished redesign | [Original and focused kit assessment](quiet-material/baseline/README.md) | [Source and disposition record](quiet-material/baseline/registry.json) |
-| Current controlled hero comparison — proposed refinement | [Compare A and B](quiet-material/hero-comparison/index.html) · [Scope](quiet-material/hero-comparison/README.md) | [Comparison registry](quiet-material/hero-comparison/registry.json) |
+| Hero treatment B — selected for continued design | [Shorter-copy preview](quiet-material/hero-copy/README.md) · [Historical A/B comparison](quiet-material/hero-comparison/index.html) | [Current acceptance](../../docs/programs/brand-website/system-completion.json) · [Copy proposal](../../docs/programs/brand-website/HERO-COPY.md) |
 
 ## Use the kit
 

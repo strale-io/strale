@@ -52,7 +52,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Assess the controlled A/B hero comparison linked from the kit index against the exact original screenshot. B changes only frame inset, reading surface and inner padding; it is proposed, not adopted. Keep original character and assess copy density in a subsequent separate pass. The four-section replacement remains set aside and proof/rights limits remain open.
+    next_action: B is founder-selected for continued design. Review the separate hero copy proposal in HERO-COPY.md within B's unchanged visual treatment. Keep original character and the email example; historical A/B evidence remains intact. Copy and production tokens are not adopted. The four-section replacement remains set aside and proof/rights limits remain open.
     resume_file: docs/programs/brand-website/SYSTEM-COMPLETION.md
     exit:
       - Current logo, atmosphere and light/dark variants visually audited with provenance.
