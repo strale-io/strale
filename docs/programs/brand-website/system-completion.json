@@ -8,9 +8,9 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
+    "review_complete_homepage_composition",
     "authenticated_invoice_demo_and_own_record_retrieval",
-    "website_scope_qualification_and_asset_rights",
-    "single_kit_adoption_then_homepage_narrative"
+    "selected_asset_rights_and_production_adoption"
   ],
   "evidence": [
     "archive/sessions/2026-09-05-quiet-material-system-audit/ASSESSMENT.md",
@@ -269,9 +269,9 @@
     {
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
-      "status": "draft-copy-and-shared-access-master-in-review",
-      "action": "Review the shared-access master in its declared light/inverse and wide/narrow contexts, then qualify whole-page compositions. Invoice and execution-record assets still need live proof.",
-      "evidence": "design/brand-kit/quiet-material/illustrations/README.md"
+      "status": "shared-access-accepted-whole-page-in-review",
+      "action": "Assess complete homepage hierarchy, atmosphere/reading-surface balance and desktop/mobile rhythm. Invoice remains illustrative; execution record omitted pending live proof.",
+      "evidence": "design/brand-kit/quiet-material/homepage/README.md"
     },
     {
       "id": "consumer-adoption",
@@ -297,11 +297,21 @@
   ],
   "homepage_brief": "docs/programs/brand-website/homepage-brief.json",
   "illustration_assets": {
-    "status": "candidate-for-review",
+    "status": "accepted-for-continued-design",
     "guide": "design/brand-kit/quiet-material/illustrations/README.md",
     "registry": "design/brand-kit/quiet-material/illustrations/registry.json",
     "tokens": "design/tokens/candidates/quiet-material-illustrations.json",
     "verification": "design/brand-kit/quiet-material/illustrations/verification.json",
-    "scope": "Shared-access conceptual diagram; no new acceptance or production adoption."
+    "scope": "Founder accepted shared-access conceptual diagram for continued design; no production adoption or publication approval.",
+    "accepted_on": "2026-09-06"
+  },
+  "homepage_composition": {
+    "status": "candidate-for-review",
+    "guide": "design/brand-kit/quiet-material/homepage/README.md",
+    "preview": "design/brand-kit/quiet-material/homepage/index.html",
+    "registry": "design/brand-kit/quiet-material/homepage/registry.json",
+    "tokens": "design/tokens/candidates/quiet-material-homepage.json",
+    "verification": "design/brand-kit/quiet-material/homepage/verification.json",
+    "scope": "Local four-section composition study; execution-history section excluded until evidence exists. Production adoption remains separate."
   }
 }

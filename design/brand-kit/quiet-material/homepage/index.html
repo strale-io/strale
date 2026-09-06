@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Strale — Homepage composition study</title>
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="stylesheet.css">
+  <script src="interactions.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand-link" href="index.html" aria-label="Strale homepage study"><img class="brand-lockup" src="../foundations/exports/lockup-ink.svg" width="116" height="34" alt="Strale"></a>
+      <nav class="desktop-nav" aria-label="Primary">
+  <a href="#breadth">Tools</a>
+  <a href="#shared-access">How it works</a>
+  <a href="details.html#pricing">Pricing</a>
+  <a href="details.html#access-guide">Read the docs</a></nav>
+      <button class="menu-trigger" type="button" data-disclosure aria-expanded="false" aria-controls="mobile-menu"><span>Menu</span><span class="caret" aria-hidden="true"></span></button>
+      <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile" hidden>
+  <a href="#breadth">Tools</a>
+  <a href="#shared-access">How it works</a>
+  <a href="details.html#pricing">Pricing</a>
+  <a href="details.html#access-guide">Read the docs</a></nav>
+    </div>
+  </header>
+  <main id="main">
+    <section class="opening" id="opening" data-section="opening">
+      <div class="hero-shell">
+        <div class="hero-copy">
+          <h1>Give your agents more useful tools.</h1>
+          <p>Research companies, extract document data and validate inputs through one Strale connection.</p>
+          <div class="action-group"><a class="action primary" href="#breadth">Explore tools</a><a class="action text" href="details.html#access-guide">Read the docs</a></div>
+        </div>
+        <div class="hero-visual" aria-label="Illustrative invoice extraction example">
+          <img class="folded-light" src="assets/hero-folded-light.png" alt="" width="1586" height="992">
+          <div class="example-composition">
+            <article class="invoice-paper" aria-label="Illustrative invoice from Example Studio, INV-1042, total EUR 480.00">
+              <div class="document-heading"><svg class="document-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h9l5 5v13H5V3Zm9 0v6h5M9 13h6M9 17h6"/></svg><span>Invoice</span></div>
+              <h2>Example Studio</h2>
+              <p class="document-number">INV-1042</p>
+              <div class="document-lines" aria-hidden="true"><i></i><i></i><i></i></div>
+              <div class="document-total"><span>Total</span><strong>EUR 480.00</strong></div>
+            </article>
+            <article class="result-panel">
+              <p class="fixture-label">Illustrative example</p>
+              <h2>Useful fields</h2>
+              <dl><div><dt>Supplier</dt><dd>Example Studio</dd></div><div><dt>Invoice</dt><dd>INV-1042</dd></div><div><dt>Total</dt><dd>EUR 480.00</dd></div></dl>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="breadth" id="breadth" data-section="breadth">
+      <div class="open-shell">
+        <h2>Find a tool for the next step.</h2>
+        <div class="task-list"><a class="task-row" href="details.html#company-tools"><span><strong>Research companies</strong><small>Look up company details from registry data.</small></span><svg class="task-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h15M13 5l7 7-7 7"/></svg></a><a class="task-row" href="details.html#extraction-tools"><span><strong>Extract document data</strong><small>Turn invoice images into fields your agent can use.</small></span><svg class="task-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h15M13 5l7 7-7 7"/></svg></a><a class="task-row" href="details.html#validation-tools"><span><strong>Check inputs</strong><small>Check email format, mail records and disposable domains.</small></span><svg class="task-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h15M13 5l7 7-7 7"/></svg></a></div>
+      </div>
+    </section>
+    <section class="shared-access" id="shared-access" data-section="shared-access">
+      <div class="open-shell">
+        <div class="access-copy">
+          <h2>Add tools without another provider integration.</h2>
+          <p>Use the same Strale connection for research, extraction and validation.</p>
+          <a class="action text" href="details.html#access-guide">See how to connect</a>
+        </div>
+        <picture class="access-picture">
+          <source media="(max-width: 760px)" srcset="../illustrations/exports/shared-access-narrow-light.svg">
+          <img src="../illustrations/exports/shared-access-desktop-light.svg" alt="Your agent connects to Strale to access tools for research, extraction and validation." width="1080" height="360">
+        </picture>
+      </div>
+    </section>
+    <section class="begin" id="begin" data-section="begin">
+      <div class="closing-shell">
+        <div>
+          <h2>Choose your first tool.</h2>
+          <p>Find the inputs, outputs and price before you make a call.</p>
+        </div>
+        <div class="action-group"><a class="action inverse" href="#breadth">Explore tools</a><a class="action inverse-text" href="details.html#pricing">View pricing</a></div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="footer-shell">
+      <span>Strale</span>
+      <nav aria-label="Footer"><a href="#breadth">Tools</a><a href="details.html#access-guide">Documentation</a><a href="details.html#pricing">Pricing</a></nav>
+    </div>
+  </footer>
+</body>
+</html>
