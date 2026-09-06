@@ -100,6 +100,43 @@ Full write-up: `docs/security/2026-09-06-read-only-database-credential.md`.
   and a change to every `/v1/do` write path should not land at the end of a
   long session.
 
+
+## The deactivations fought back — read this before re-applying anything
+
+`web3-pre-trade` and `web3-wallet-snapshot` were reactivated four times within
+minutes of being switched off, each time setting `is_active` alone and leaving
+`x402_enabled` and the deactivation reason intact.
+
+**The compliance exposure was never live, and not by luck.**
+`solution-executor.ts` takes a FRESH read of every step capability and gates on
+`isServableCapability(isActive, lifecycleState, visible)`. With `crypto-price`
+deactivated the step returns "capability is not currently servable" and no
+CoinGecko call can be made. A revived solution is a degraded bundle, not a terms
+violation. The capability-level deactivation is the line that matters, and it
+held every time.
+
+Two writers carried that fingerprint, and both are fixed on this branch:
+
+- `routes/admin.ts` — the solutions upsert ended in
+  `ON CONFLICT (slug) DO UPDATE SET is_active = true`, unconditionally.
+- `db/seed-solutions.ts` — the qualification sweep switches an inactive
+  solution back on when its steps pass, and checked nothing else.
+
+Both now use the convention `vendor-control-tower.ts` already had: a
+`deactivation_reason` that is NULL or starts with `vendor:` is machine-managed
+and may be overwritten; anything else was written deliberately and is kept.
+
+**Do not hand-re-apply the solution deactivations until PR #616 is deployed.**
+Until the guard ships, a writer wins the race again and the state reads as
+though the fix failed. Re-apply once, after deploy, and verify.
+
+Still unidentified: what invokes those writers on a few-minute cadence. Ruled
+out are `onCapabilityDeactivated` (deactivates only), the vendor-control-tower
+restore path (no suspension row for either solution), and a stale seed
+definition (the catalogue lists `crypto-price` as step 1). The guards are
+correct regardless of the caller — they make the state durable instead of
+depending on the caller behaving.
+
 ## Next
 
 1. Read the terms for the eight unverified upstreams above and drop what fails.
