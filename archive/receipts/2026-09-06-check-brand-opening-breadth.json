@@ -1,0 +1,225 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c268565abd03aaae48eade48567dc2627a24955a"
+  },
+  "at": "2026-09-06T17:14:33.290Z",
+  "inputs": {
+    "source": "design/brand-kit/quiet-material/opening/verification.json"
+  },
+  "summary": {
+    "status": "passed",
+    "manifest_sha256": "2e85b670f9e4f7730e32f7c2cf8a6f7378dd3040c9e3b89c92ce30590c1a7e55",
+    "verifier_sha256": "e9d921a2528a7e47662f4082363398caee58d93fede8756c85f95060c19ebfd1"
+  },
+  "topic": "brand-opening-breadth",
+  "raw": {
+    "status": "passed",
+    "manifest_sha256": "2e85b670f9e4f7730e32f7c2cf8a6f7378dd3040c9e3b89c92ce30590c1a7e55",
+    "verifier_sha256": "e9d921a2528a7e47662f4082363398caee58d93fede8756c85f95060c19ebfd1",
+    "widths": [
+      320,
+      390,
+      900,
+      901,
+      1100,
+      1101,
+      1440
+    ],
+    "checks": {
+      "responsive_bounds": true,
+      "held_B_dimensions": true,
+      "three_labelled_jobs": true,
+      "local_detail_and_return_links": true,
+      "keyboard_menu": true,
+      "no_remote_requests": true,
+      "no_browser_errors": true
+    },
+    "measurements": [
+      {
+        "width": 320,
+        "scrollWidth": 320,
+        "main": 1,
+        "h1": 1,
+        "jobs": 3,
+        "fonts": true,
+        "stage": {
+          "x": 20,
+          "y": 742.515625,
+          "width": 280,
+          "height": 510,
+          "top": 742.515625,
+          "right": 300,
+          "bottom": 1252.515625,
+          "left": 20
+        },
+        "overflow": 0,
+        "jobBodies": [
+          "Look up company details from public registries.",
+          "Turn documents into fields your agent can use.",
+          "Catch malformed inputs before the next step."
+        ],
+        "labels": true
+      },
+      {
+        "width": 390,
+        "scrollWidth": 390,
+        "main": 1,
+        "h1": 1,
+        "jobs": 3,
+        "fonts": true,
+        "stage": {
+          "x": 20,
+          "y": 663.484375,
+          "width": 350,
+          "height": 510,
+          "top": 663.484375,
+          "right": 370,
+          "bottom": 1173.484375,
+          "left": 20
+        },
+        "overflow": 0,
+        "jobBodies": [
+          "Look up company details from public registries.",
+          "Turn documents into fields your agent can use.",
+          "Catch malformed inputs before the next step."
+        ],
+        "labels": true
+      },
+      {
+        "width": 900,
+        "scrollWidth": 900,
+        "main": 1,
+        "h1": 1,
+        "jobs": 3,
+        "fonts": true,
+        "stage": {
+          "x": 125,
+          "y": 476.453125,
+          "width": 650,
+          "height": 510,
+          "top": 476.453125,
+          "right": 775,
+          "bottom": 986.453125,
+          "left": 125
+        },
+        "overflow": 0,
+        "jobBodies": [
+          "Look up company details from public registries.",
+          "Turn documents into fields your agent can use.",
+          "Catch malformed inputs before the next step."
+        ],
+        "labels": true
+      },
+      {
+        "width": 901,
+        "scrollWidth": 901,
+        "main": 1,
+        "h1": 1,
+        "jobs": 3,
+        "fonts": true,
+        "stage": {
+          "x": 125.5,
+          "y": 476.453125,
+          "width": 650,
+          "height": 510,
+          "top": 476.453125,
+          "right": 775.5,
+          "bottom": 986.453125,
+          "left": 125.5
+        },
+        "overflow": 0,
+        "jobBodies": [
+          "Look up company details from public registries.",
+          "Turn documents into fields your agent can use.",
+          "Catch malformed inputs before the next step."
+        ],
+        "labels": true
+      },
+      {
+        "width": 1100,
+        "scrollWidth": 1100,
+        "main": 1,
+        "h1": 1,
+        "jobs": 3,
+        "fonts": true,
+        "stage": {
+          "x": 225,
+          "y": 489.25,
+          "width": 650,
+          "height": 510,
+          "top": 489.25,
+          "right": 875,
+          "bottom": 999.25,
+          "left": 225
+        },
+        "overflow": 0,
+        "jobBodies": [
+          "Look up company details from public registries.",
+          "Turn documents into fields your agent can use.",
+          "Catch malformed inputs before the next step."
+        ],
+        "labels": true
+      },
+      {
+        "width": 1101,
+        "scrollWidth": 1101,
+        "main": 1,
+        "h1": 1,
+        "jobs": 3,
+        "fonts": true,
+        "stage": {
+          "x": 582.421875,
+          "y": 136.84375,
+          "width": 484.171875,
+          "height": 540,
+          "top": 136.84375,
+          "right": 1066.59375,
+          "bottom": 676.84375,
+          "left": 582.421875
+        },
+        "overflow": 0,
+        "jobBodies": [
+          "Look up company details from public registries.",
+          "Turn documents into fields your agent can use.",
+          "Catch malformed inputs before the next step."
+        ],
+        "labels": true
+      },
+      {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "main": 1,
+        "h1": 1,
+        "jobs": 3,
+        "fonts": true,
+        "stage": {
+          "x": 761.75,
+          "y": 159.109375,
+          "width": 633.25,
+          "height": 589.0625,
+          "top": 159.109375,
+          "right": 1395,
+          "bottom": 748.171875,
+          "left": 761.75
+        },
+        "overflow": 0,
+        "jobBodies": [
+          "Look up company details from public registries.",
+          "Turn documents into fields your agent can use.",
+          "Catch malformed inputs before the next step."
+        ],
+        "labels": true
+      }
+    ],
+    "screenshots": {
+      "output/mobile.png": "a738771c81c80ebdbdb367b7b7bb218589ccf4bf4a64b728f455ed05566395c3",
+      "output/desktop.png": "c68cee1a8ecf8e8904e8463dc879d39c60c5906208979b382364768038632073"
+    },
+    "limits": [
+      "Illustrative static design study, not live product responses or production navigation.",
+      "Fonts, bounds and interaction checks do not certify full accessibility or all browser families."
+    ]
+  }
+}
