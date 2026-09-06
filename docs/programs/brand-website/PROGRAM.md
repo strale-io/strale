@@ -13,7 +13,7 @@ Execution record for the founder's 5 September brief. This program organises the
 
 ## Resume here
 
-**Current refinement:** review [the paired original-hero surface study](../../../design/brand-kit/quiet-material/hero-comparison/index.html). A is a screenshot-guided reconstruction and B changes only frame inset, panel fill and inner padding. The exact founder screenshot remains the baseline; neither B nor its tokens are adopted. Keep copy-density changes separate.
+**Current refinement:** the founder selected B in [the paired original-hero surface study](../../../design/brand-kit/quiet-material/hero-comparison/index.html) on 6 September ("i prefer b"). B's frame inset, off-white panel and inner padding are accepted for continued design, not production token adoption. The [hero copy pass](HERO-COPY.md) now proposes a shorter opening within B. The exact screenshot still controls the original character; the historical A/B comparison remains unchanged.
 
 **Current visual checkpoint:** the founder set aside the four-section homepage study because it drifted from the unfinished redesign. Resume at the [original-design baseline and focused kit assessment](../../../design/brand-kit/quiet-material/baseline/README.md), with [machine-readable disposition and source evidence](../../../design/brand-kit/quiet-material/baseline/registry.json). Preserve the original composition and improve its surfaces, spacing and density through controlled comparisons. The former homepage study is historical evidence, not the current review or implementation target. Accepted kit companions and positioning remain in force.
 

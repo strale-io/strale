@@ -1,0 +1,9 @@
+Intent: Record the founder's selection of hero B and deliver the separate shorter-copy editorial preview. Mode: Full, docs and static image artifacts only; no application, generator, token or interactive-page code changed.
+
+The founder said "i prefer b" and authorised continuation. The program register, completion record and kit index now distinguish selected B styling from proposed copy and unchanged production tokens. HERO-COPY.md is the focused human/machine copy source. Existing A/B files remain historical evidence. The broader homepage brief's invoice proposal is not this hero's example.
+
+Preview: design/brand-kit/quiet-material/hero-copy/README.md. Reproduction operations and dimensions are documented there. Snapshots use the same B stylesheet/assets, replace support and request text, remove redundant protocol/commercial copy and the forbidden login link, and empty the example footer. Stage dimensions are held; natural mobile height decreases. Snapshot evidence: archive/receipts/2026-09-06-check-brand-hero-copy.json. These checks do not certify production destinations or whole-page accessibility.
+
+Resume: Review the desktop/mobile copy proposal with the founder. B styling is already selected; copy remains draft. Do not reopen logo, gradients or the rejected homepage direction. Following copy review, carry the accepted opening into the website narrative with benefit-led section briefs; product proof, rights and production adoption remain separate gates. The largest customer's buying motivation remains unknown.
+
+No runtime code changed, so the code-specific go gate does not apply. Documentation/receipt/generation checks and independent Codex review are recorded in the PR. The worktree belongs only to this batch; unrelated worktrees and baseline branches are preserved. Repository-backed checkpoint replaces a Notion write for this brand work, as requested in the session.
