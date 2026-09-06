@@ -265,7 +265,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260905-M`](../decisions/records/DEC-20260905-M.md) — Closing-review corrections to the M2 candidate set, round-11 findings and the own-wording clause | `DEC-20260905-M` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 | [`DEC-20260905-N`](../decisions/records/DEC-20260905-N.md) — Closing-review corrections to the M2 candidate set, round-12 findings | `DEC-20260905-N` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 | [`DEC-20260905-O`](../decisions/records/DEC-20260905-O.md) — Closing-review corrections to the M2 candidate set, round-13 finding | `DEC-20260905-O` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
-| [`DEC-20260905-P`](../decisions/records/DEC-20260905-P.md) — Closing-review corrections to the M2 candidate set, round-14 finding | `DEC-20260905-P` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
+| [`DEC-20260905-P`](../decisions/records/DEC-20260905-P.md) — Closing-review corrections to the M2 candidate set, round-14 finding and a second resolution report | `DEC-20260905-P` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 
 ## Non-active decisions
 
