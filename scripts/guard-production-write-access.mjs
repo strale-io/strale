@@ -60,6 +60,11 @@ const AUTHORISED_MENTIONS = [
   "docs/security/2026-08-22-starve-set-1-provenance.md",
   "docs/security/2026-08-22-operator-script-migration.md",
   "docs/security/2026-08-22-founder-grant-runbook.md",
+  // Records the 2026-09-06 change that made the local DATABASE_URL a read-only
+  // role and parked the superuser URL as a commented DATABASE_URL_WRITE. It has
+  // to name the variable to explain where the credential now lives and how to
+  // use it for an operator run; naming it in prose is the point of the document.
+  "docs/security/2026-09-06-read-only-database-credential.md",
   // The decision queue names it when recording that a settled production
   // change has no route to production (DQ-27, 2026-08-30). One long-lived
   // governance file, appended to over time — which is exactly what this

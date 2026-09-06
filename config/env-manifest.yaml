@@ -378,7 +378,19 @@
 - name: DATABASE_URL
   purpose: >-
     Primary Postgres connection string for the API server (production and local
-    dev). A non-loopback host MUST carry an explicit `?sslmode=` — `disable` for
+    dev). ON A DEVELOPER MACHINE THIS IS NOW A READ-ONLY ROLE. Until 2026-09-06
+    the local value was the `postgres` superuser on the primary — rolsuper, with
+    INSERT and UPDATE on every table — so the "no prod write grant for autonomous
+    sessions" control was procedural only: `operator-db.ts` refused to hand out a
+    write handle, and any script opening this URL with the driver directly
+    bypassed that entirely. The local value is now the `strale_ro` role: SELECT on
+    41 tables across `public` and `drizzle`, NOSUPERUSER/NOCREATEDB/NOCREATEROLE/
+    NOBYPASSRLS, plus a role-level `default_transaction_read_only=on`. That last
+    one is defence in depth, not the control — a client can `SET` it off, after
+    which a write still fails with `permission denied for table ...`, which is
+    the actual guarantee. Railway's own variable is UNCHANGED and still writes;
+    the API could not serve traffic otherwise. A non-loopback host MUST carry an
+    explicit `?sslmode=` — `disable` for
     the Railway public proxy (metro.proxy.rlwy.net terminates no TLS), `require`
     for a host that does. Operator scripts refuse to open a handle without it, so
     a value copied verbatim out of Railway (whose internal host needs no suffix)
@@ -419,7 +431,7 @@
     - .env
   cost_note: Same underlying Railway Postgres instance as DATABASE_URL.
 - name: DATABASE_URL_WRITE
-  purpose: "Production database write credential. Deliberately unset for autonomous sessions — see project_no_prod_write_grant: 'no prod write grant for autonomous sessions'. Only apps/api/src/lib/operator-db.ts is permitted to read it, gated by the production-authority model (DEC-20260822-B)."
+  purpose: "Production database write credential. Deliberately unset for autonomous sessions — see project_no_prod_write_grant: 'no prod write grant for autonomous sessions'. Only apps/api/src/lib/operator-db.ts is permitted to read it, gated by the production-authority model (DEC-20260822-B). Since 2026-09-06 this is where the `postgres` superuser URL lives on a developer machine: parked as a COMMENTED line in the root .env, uncommented only for the length of an operator write run (onboard.ts and friends) and commented out again after. Before that date it was DATABASE_URL itself, which is why the split exists — a session that needed one write held an unrestricted superuser connection for its whole life."
   provider: internal
   holder: petter
   cost_class: none
