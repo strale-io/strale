@@ -131,6 +131,7 @@
         "apps/api/src/lib/data-retention.test.ts",
         "apps/api/src/lib/job-coordinator-interval-change.test.ts",
         "apps/api/src/lib/migration-artifact-audit.ts",
+        "apps/api/src/lib/onboard-dependency-health.ts",
         "apps/api/src/lib/platform-refusal-breaker.test.ts",
         "apps/api/src/lib/schema-validator.ts",
         "apps/api/src/lib/solution-gate.test.ts",
