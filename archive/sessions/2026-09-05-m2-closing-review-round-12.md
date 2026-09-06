@@ -1161,7 +1161,7 @@ is FAIL on P5's one item and P6's two items.
    frontmatter line 9 (`decided_at: 2026-05-05`).** Found by partition
    P6. The record's own source Notion row (page
    `35767c87082c81d3897fe47a2ec7a4c1`) has `date:Date:start: 2026-05-04`
-   and `createdTime: 2026-05-05 09:35:36Z`; the record's own Context
+   and `createdTime: 2026-05-05 09:35:36Z`; the record's own Consequences
    (line 46) already states the row's Outcome was "recorded
    2026-05-04". The sibling collision record
    `DEC-20260505-E--notion-35767c87082c81e2ba50d630d0b95f9d.md` sets
