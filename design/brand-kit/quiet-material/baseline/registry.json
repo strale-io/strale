@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "status": "current-visual-continuation",
+  "date": "2026-09-06",
+  "basis": "Founder rejected the four-section composition and authorised returning to the unfinished redesign.",
+  "human_view": "design/brand-kit/quiet-material/baseline/README.md",
+  "production_adopted": false,
+  "publication_approved": false,
+  "assets": [
+    {
+      "file": "evidence/founder-hero.png",
+      "role": "controlling-visual-reference",
+      "sha256": "6d762fe66d7286adb02867079b636924ce2c47e870ebddf62fe5ef912c7f004a",
+      "width": 2256,
+      "height": 1236,
+      "modified": false
+    },
+    {
+      "file": "evidence/later-documents.png",
+      "role": "later-revision-context",
+      "sha256": "de1d9d81bb0ae0739a07a0f9259f0beb22d161f9ba6743aeeb98e2c70746c683",
+      "width": 1440,
+      "height": 900,
+      "modified": false
+    },
+    {
+      "file": "evidence/later-enrichment.png",
+      "role": "later-revision-context",
+      "sha256": "811a740418493fd7c46dcf7e6c9fdd112bf0ab9858cbac373318968306702d76",
+      "width": 1440,
+      "height": 900,
+      "modified": false
+    }
+  ],
+  "source_release": {
+    "url": "https://github.com/strale-io/strale-frontend/releases/tag/preserve-2026-09-02",
+    "archive": "Strale-website-design-system-2026-09-01-213316.zip",
+    "sha256": "891e905f8f7e53f466fba4b10c62c868680310bab119429d901268c42c1ce1b2",
+    "relationship": "Later editable revision, not the exact founder screenshot revision."
+  },
+  "set_aside": {
+    "path": "design/brand-kit/quiet-material/homepage",
+    "introduced_by": "https://github.com/strale-io/strale/pull/600",
+    "status": "set-aside",
+    "eligible_for_implementation": false,
+    "token_candidate": "design/tokens/candidates/quiet-material-homepage.json",
+    "frozen_record_note": "Historical candidate/evidence state is preserved; this disposition governs further use."
+  },
+  "retain": [
+    "Quiet Material",
+    "flowing-S logo",
+    "Instrument Sans",
+    "IBM Plex Mono",
+    "four accepted companions",
+    "shared-access illustration acceptance"
+  ],
+  "next_comparison": {
+    "surface": "original opening",
+    "hold": [
+      "headline",
+      "example task",
+      "navigation",
+      "outer illustration footprint",
+      "atmospheric placement"
+    ],
+    "change": [
+      "frame treatment",
+      "reading surface",
+      "spacing"
+    ],
+    "qualifier_in_both": "Illustrative example",
+    "subsequent_pass": "copy density",
+    "no_new_values_adopted": true
+  },
+  "limits": [
+    "Exact founder revision known only from supplied hero screenshot.",
+    "Later captures are historical stills, not a fresh interaction audit.",
+    "Historical screenshots do not approve their product or commercial claims.",
+    "Original rights and live-proof gaps remain open."
+  ]
+}

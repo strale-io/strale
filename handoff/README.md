@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-282 files (255 with a recorded intent, 27 without).
+283 files (256 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -22,6 +22,7 @@
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-quiet-material-consolidation.md`](_general/from-code/2026-09-06-quiet-material-consolidation.md) | Consolidate the accepted Quiet Material kit and verify the first product example before homepage narrative work. |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-checkin-morning.md`](_general/from-code/2026-09-06-checkin-morning.md) | run the 2026-09-06 morning operating session under DAILY-RUN.md — |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-shared-access.md`](_general/from-code/2026-09-06-brand-shared-access.md) | Build the shared-access illustration from the homepage brief inside the retained Quiet Material system and verify des... |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-original-baseline-correction.md`](_general/from-code/2026-09-06-brand-original-baseline-correction.md) | Restore the founder's unfinished redesign as the visual target and assess focused kit refinements in its actual compo... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-homepage-composition.md`](_general/from-code/2026-09-06-brand-homepage-composition.md) | Assemble the accepted Quiet Material components into a complete homepage composition and inspect hierarchy, section r... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-editorial-readiness.md`](_general/from-code/2026-09-06-brand-editorial-readiness.md) | Continue product-proof qualification and advance the independent homepage editorial and selected-asset work within th... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-agent-hook-setup.md`](_general/from-code/2026-09-06-agent-hook-setup.md) | Make agent hook commands work from subdirectories and reconcile the shared agent entry instructions. |

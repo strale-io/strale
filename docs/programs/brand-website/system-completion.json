@@ -3,12 +3,16 @@
   "authority_scope": "execution-record-only",
   "status": "active",
   "date": "2026-09-06",
-  "visual_baseline": "Preserved Quiet Material v0.7; founder-supplied screenshot for the exact opening",
+  "visual_baseline": {
+    "status": "retained-founder-direction",
+    "guide": "design/brand-kit/quiet-material/baseline/README.md",
+    "registry": "design/brand-kit/quiet-material/baseline/registry.json"
+  },
   "founder_constraint": "Retain existing visual direction. Audit and complete its design system and cohesive gradients/atmospheric images. Instrument and Fieldwork rejected.",
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "review_complete_homepage_composition",
+    "refine_original_hero_with_controlled_comparison",
     "authenticated_invoice_demo_and_own_record_retrieval",
     "selected_asset_rights_and_production_adoption"
   ],
@@ -269,9 +273,9 @@
     {
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
-      "status": "shared-access-accepted-whole-page-in-review",
-      "action": "Assess complete homepage hierarchy, atmosphere/reading-surface balance and desktop/mobile rhythm. Invoice remains illustrative; execution record omitted pending live proof.",
-      "evidence": "design/brand-kit/quiet-material/homepage/README.md"
+      "status": "original-composition-refinement",
+      "action": "Apply accepted kit refinements inside the original design; compare frame and reading surfaces before separate copy changes.",
+      "evidence": "design/brand-kit/quiet-material/baseline/README.md"
     },
     {
       "id": "consumer-adoption",
@@ -306,12 +310,13 @@
     "accepted_on": "2026-09-06"
   },
   "homepage_composition": {
-    "status": "candidate-for-review",
+    "status": "set-aside",
     "guide": "design/brand-kit/quiet-material/homepage/README.md",
     "preview": "design/brand-kit/quiet-material/homepage/index.html",
     "registry": "design/brand-kit/quiet-material/homepage/registry.json",
     "tokens": "design/tokens/candidates/quiet-material-homepage.json",
     "verification": "design/brand-kit/quiet-material/homepage/verification.json",
-    "scope": "Local four-section composition study; execution-history section excluded until evidence exists. Production adoption remains separate."
+    "scope": "Founder rejected visual drift; preserved as historical study, excluded from implementation inputs.",
+    "disposition": "design/brand-kit/quiet-material/baseline/registry.json"
   }
 }
