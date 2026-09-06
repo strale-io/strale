@@ -1,4 +1,6 @@
-# Quiet Material homepage composition study
+# Quiet Material homepage composition study — set aside
+
+**Disposition, 6 September 2026:** the founder rejected this page direction as boring and too far from the unfinished redesign. Do not use this page arrangement or its candidate geometry as an implementation baseline. Resume at [the original-design baseline](../baseline/README.md); [its registry](../baseline/registry.json) owns the current disposition. The source, generated page, original candidate status and verification below remain frozen historical evidence, not current acceptance.
 
 This directory assembles the accepted Quiet Material companions into a bounded responsive homepage study. It is not a production page, a route proposal or token adoption. The study tests one sequence: light split opening, compact open task list, spacious shared-access diagram, direct-text Dusk invitation and a small footer.
 

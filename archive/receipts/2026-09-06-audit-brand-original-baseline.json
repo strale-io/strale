@@ -1,0 +1,37 @@
+{
+  "kind": "audit",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "5e29af539b5a4217dd33d666138cbdd5d7e37b23"
+  },
+  "at": "2026-09-06T10:45:57.158Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/strale-baseline-evidence.json"
+  },
+  "summary": {
+    "ok": true,
+    "topic": "brand-original-baseline"
+  },
+  "topic": "brand-original-baseline",
+  "raw": {
+    "ok": true,
+    "topic": "brand-original-baseline",
+    "checks": {
+      "copies_match_original_bytes": true,
+      "preserved_release_digest": true,
+      "assessment_links_resolve": true,
+      "disposition_excludes_rejected_page": true,
+      "no_production_or_publication_adoption": true
+    },
+    "source_hashes": {
+      "evidence/founder-hero.png": "6d762fe66d7286adb02867079b636924ce2c47e870ebddf62fe5ef912c7f004a",
+      "evidence/later-documents.png": "de1d9d81bb0ae0739a07a0f9259f0beb22d161f9ba6743aeeb98e2c70746c683",
+      "evidence/later-enrichment.png": "811a740418493fd7c46dcf7e6c9fdd112bf0ab9858cbac373318968306702d76"
+    },
+    "limits": [
+      "Visual assessment of supplied and historical screenshots, not a new rendered redesign.",
+      "Exact founder revision known only from the hero.",
+      "No live product/rights/accessibility qualification."
+    ]
+  }
+}
