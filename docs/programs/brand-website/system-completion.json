@@ -196,6 +196,11 @@
       "id": "homepage-editorial-and-selected-asset-review",
       "date": "2026-09-06",
       "result": "Draft section copy and individual visual briefs from the retained system, with selected-asset readiness. Read-only authentication recheck still blocked; no live output, public copy or new design adoption."
+    },
+    {
+      "id": "shared-access-illustration",
+      "date": "2026-09-06",
+      "result": "Original shared-access diagram masters and local responsive light/inverse preview; candidate asset review, no production adoption or live execution proof."
     }
   ],
   "kit_entry": "design/brand-kit/README.md",
@@ -264,9 +269,9 @@
     {
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
-      "status": "draft-copy-and-master-briefs-prepared",
-      "action": "Review the concise section copy in context, author/register the shared-access diagram, and use verified output for the invoice/record assets. No final copy or visual qualification is inferred.",
-      "evidence": "docs/programs/brand-website/homepage-brief.json"
+      "status": "draft-copy-and-shared-access-master-in-review",
+      "action": "Review the shared-access master in its declared light/inverse and wide/narrow contexts, then qualify whole-page compositions. Invoice and execution-record assets still need live proof.",
+      "evidence": "design/brand-kit/quiet-material/illustrations/README.md"
     },
     {
       "id": "consumer-adoption",
@@ -290,5 +295,13 @@
       "evidence": "docs/programs/brand-website/PROGRAM.md"
     }
   ],
-  "homepage_brief": "docs/programs/brand-website/homepage-brief.json"
+  "homepage_brief": "docs/programs/brand-website/homepage-brief.json",
+  "illustration_assets": {
+    "status": "candidate-for-review",
+    "guide": "design/brand-kit/quiet-material/illustrations/README.md",
+    "registry": "design/brand-kit/quiet-material/illustrations/registry.json",
+    "tokens": "design/tokens/candidates/quiet-material-illustrations.json",
+    "verification": "design/brand-kit/quiet-material/illustrations/verification.json",
+    "scope": "Shared-access conceptual diagram; no new acceptance or production adoption."
+  }
 }

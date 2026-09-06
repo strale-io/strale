@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "quiet-material-illustrations.shared-access.v1",
+  "asset_id": "shared-access-diagram",
+  "status": "candidate",
+  "production_adopted": false,
+  "publication_approved": false,
+  "context": "Homepage shared-access section; conceptual access relationship only.",
+  "alt": "Your agent connects to Strale to access tools for research, extraction and validation.",
+  "labels": ["Your agent", "Strale", "Research", "Extraction", "Validation"],
+  "topology": "One agent-to-Strale path and one shared trunk branching to three parallel task labels.",
+  "source": {
+    "geometry": "design/tokens/candidates/quiet-material-illustrations.json",
+    "desktop_master": "design/brand-kit/quiet-material/illustrations/masters/shared-access-desktop.svg",
+    "narrow_master": "design/brand-kit/quiet-material/illustrations/masters/shared-access-narrow.svg",
+    "own_geometry": true,
+    "editable": true,
+    "font_embedding": "Instrument Sans TTF data URI",
+    "logo_geometry": "design/brand-kit/quiet-material/foundations/masters/strale-lockup.svg"
+  },
+  "exports": [
+    "design/brand-kit/quiet-material/illustrations/exports/shared-access-desktop-light.svg",
+    "design/brand-kit/quiet-material/illustrations/exports/shared-access-desktop-dark.svg",
+    "design/brand-kit/quiet-material/illustrations/exports/shared-access-narrow-light.svg",
+    "design/brand-kit/quiet-material/illustrations/exports/shared-access-narrow-dark.svg",
+    "design/brand-kit/quiet-material/illustrations/exports/shared-access-desktop.png",
+    "design/brand-kit/quiet-material/illustrations/exports/shared-access-narrow.png"
+  ],
+  "rights": {
+    "diagram_geometry": "Original geometry authored for this candidate.",
+    "font": "Bundled Instrument Sans; see design/brand-kit/quiet-material/fonts/InstrumentSans-OFL.txt.",
+    "logo": "pending",
+    "logo_note": "Retained Quiet Material lockup geometry; original creation and rights history are not recovered. No new rights claim."
+  },
+  "brief_source": "docs/programs/brand-website/homepage-brief.json",
+  "reference_lock": "docs/research/2026-09-06-shared-access-illustration.md",
+  "motion": "static",
+  "minimum_label_css_px": 18,
+  "contrast": {"text_min": 4.5, "connector_min": 3},
+  "prohibited": ["provider logos", "fake tool responses", "timers", "animated traffic", "badges", "nested cards", "gradients", "execution states"],
+  "limits": [
+    "Conceptual relationship only; not a captured run.",
+    "No universal input schema, all-routes parity or three-tasks-per-request claim.",
+    "Retained logo creation and rights history remains pending.",
+    "Candidate asset extension; no publication or production adoption."
+  ]
+}

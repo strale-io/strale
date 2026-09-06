@@ -78,9 +78,9 @@ All sizes, spacing, typography and surfaces resolve through existing companion t
 
 ### Shared access diagram
 
-**Status: master not yet authored.** Make one shared access path understandable without a schema or protocol lesson.
+**Status: candidate master for review.** Make one shared access path understandable without a schema or protocol lesson.
 
-- Master plan: Original editable vector or semantic HTML/SVG using existing tokens. Add the master and metadata to the shared asset registry before a page imports it. No third-party provider logos.
+- Master plan: Use the registered desktop and narrow masters from the illustration extension. Light and inverse versions preserve the same relationship and retained logo geometry. Final page composition and production adoption remain separate.
 - Narrow: One vertical path from Your agent through Strale, then three readable task labels; no fake sequence of tool calls.
 - Alt: Your agent connects to Strale to access tools for research, extraction and validation.
 - Motion: No animated traffic or concurrent completion states. The diagram explains access, not a captured run.

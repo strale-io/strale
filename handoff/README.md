@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-277 files (250 with a recorded intent, 27 without).
+278 files (251 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -19,6 +19,7 @@
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md) | archive round 7 (final round) of the M2 closing independent |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-quiet-material-consolidation.md`](_general/from-code/2026-09-06-quiet-material-consolidation.md) | Consolidate the accepted Quiet Material kit and verify the first product example before homepage narrative work. |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-checkin-morning.md`](_general/from-code/2026-09-06-checkin-morning.md) | run the 2026-09-06 morning operating session under DAILY-RUN.md — |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-shared-access.md`](_general/from-code/2026-09-06-brand-shared-access.md) | Build the shared-access illustration from the homepage brief inside the retained Quiet Material system and verify des... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-editorial-readiness.md`](_general/from-code/2026-09-06-brand-editorial-readiness.md) | Continue product-proof qualification and advance the independent homepage editorial and selected-asset work within th... |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-6.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-6.md) | archive round 6 of the M2 closing independent review (six |
 | 2026-09-05 | [`handoff/_general/from-code/2026-09-05-t10-g9-closing-review-round-5.md`](_general/from-code/2026-09-05-t10-g9-closing-review-round-5.md) | Archive M2 closing-review round 5 (the final round: six fresh |

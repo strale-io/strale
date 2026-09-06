@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "id": "shared-access-diagram",
+  "status": "candidate",
+  "production_adopted": false,
+  "source": {
+    "geometry": "design/tokens/candidates/quiet-material-illustrations.json",
+    "desktop_master": "design/brand-kit/quiet-material/illustrations/masters/shared-access-desktop.svg",
+    "narrow_master": "design/brand-kit/quiet-material/illustrations/masters/shared-access-narrow.svg",
+    "own_geometry": true,
+    "editable": true,
+    "font_embedding": "Instrument Sans TTF data URI",
+    "logo_geometry": "design/brand-kit/quiet-material/foundations/masters/strale-lockup.svg"
+  },
+  "context": "Homepage shared-access section; conceptual access relationship only.",
+  "alt": "Your agent connects to Strale to access tools for research, extraction and validation.",
+  "rights": {
+    "diagram_geometry": "Original geometry authored for this candidate.",
+    "font": "Bundled Instrument Sans; see design/brand-kit/quiet-material/fonts/InstrumentSans-OFL.txt.",
+    "logo": "pending",
+    "logo_note": "Retained Quiet Material lockup geometry; original creation and rights history are not recovered. No new rights claim."
+  },
+  "token_source": "design/tokens/candidates/quiet-material-illustrations.json",
+  "reference_lock": "docs/research/2026-09-06-shared-access-illustration.md",
+  "topology": "One agent-to-Strale path and one shared trunk branching to three parallel task labels.",
+  "motion": "static",
+  "palette_refs": {
+    "light": {
+      "canvas": "--canvas",
+      "ink": "--ink"
+    },
+    "dark": {
+      "canvas": "--section-canvas-dark",
+      "ink": "--ink-inverse"
+    }
+  },
+  "review_exports": [
+    "exports/shared-access-desktop.png",
+    "exports/shared-access-narrow.png"
+  ],
+  "files": [
+    {
+      "file": "masters/shared-access-desktop.svg",
+      "sha256": "e27428f51bde7e260fe82f66c24e9d39859c95ab1badd66b00a20a7e543df095"
+    },
+    {
+      "file": "masters/shared-access-narrow.svg",
+      "sha256": "c34bfd92be867641f8f99ad2dd12b5cf9138d8a10e843a8d17ace4315f231043"
+    },
+    {
+      "file": "exports/shared-access-desktop-light.svg",
+      "sha256": "612f207606f95560249eb543ea49a9fb08b5b6181af5142bbde1d29b5a0374e9"
+    },
+    {
+      "file": "exports/shared-access-desktop-dark.svg",
+      "sha256": "188af7164af983c82f9ecbea2a06d062ad1e4124154c3de5e3b9c9e2b19c4ff6"
+    },
+    {
+      "file": "exports/shared-access-narrow-light.svg",
+      "sha256": "f39d47f41ad0146cdd7b541c7c57ec0f3c839cbca23a97b4e249f0177dfc51df"
+    },
+    {
+      "file": "exports/shared-access-narrow-dark.svg",
+      "sha256": "122ab1f5baa415bb086b0862120d9e2594d0f27d14bc8ca6a8c8300a0c72192f"
+    }
+  ]
+}
