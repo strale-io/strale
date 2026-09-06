@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "f4f8496b8d0368824072c546ea4f0798d9fd55eec9eb58cd7d931239115d6071",
+      "sha256": "97ad252e72d387bc5113a35ca01b8149947b096f8f74cdecaa4bcde050264a05",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -52,6 +52,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-8.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-9.md",
+        "archive/sessions/2026-09-06-agent-hook-setup/VERIFICATION-NOTES.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
@@ -101,7 +102,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "32e5e666663c96467f9f21b9fac0f40db26cff8c68c5ac72f85ed84ca5a3c807",
+      "sha256": "f1a3312fc449ecd086a5c9f84f7470568aed205ab32c40e5f5de581d492ccae9",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -196,6 +197,7 @@
         "archive/sessions/2026-09-05-m2-closing-review-round-7.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-8.md",
         "archive/sessions/2026-09-05-m2-closing-review-round-9.md",
+        "archive/sessions/2026-09-06-agent-hook-setup/VERIFICATION-NOTES.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -454,6 +456,7 @@
         "AGENTS.md",
         "CLAUDE.md",
         "archive/receipts/2026-09-06-check-agent-hook-setup.json",
+        "archive/sessions/2026-09-06-agent-hook-setup/VERIFICATION-NOTES.md",
         "archive/sessions/2026-09-06-agent-hook-setup/fixture-verification.json",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",

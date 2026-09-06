@@ -174,7 +174,8 @@ Both wired into CI after `docs:test` / `archive:index:test`.
    orientation shows, and `.codex/hooks.json` blocks the stop the same way
    when the hook is enabled, trusted, discovered, and successfully invoked.
    Hook commands resolve their script from the current Git worktree root,
-   including when the session starts in a subdirectory. Notify records a result after the turn; it does not block stopping.
+   including when the session starts in a subdirectory. Notify records a result
+   after the turn; it does not block stopping.
    A Codex session runs the check itself
    before its final turn and fixes what it lists.
 3. **Git hooks come with `npm ci`** (`prepare` runs the same installer as
