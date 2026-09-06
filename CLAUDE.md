@@ -8,7 +8,16 @@
 3. Escalation triggers: second feature touched, design decision emerges, >2hr estimate, contradiction detected.
 See .claude/PROTOCOL.md for full criteria and protocol definitions.
 
-### Review routing — founder override 2026-09-01
+### Review routing
+
+Read the dated record below in full, including the backlog obligations.
+Explicit current founder instructions take precedence over repository copies.
+Historical quota notes are not evidence of current account availability, and
+a changed review route does not waive or close existing backlog obligations.
+
+#### Dated founder routing record (preserved)
+
+Founder override 2026-09-01:
 
 - Do not invoke Claude as a second opinion or reviewer for Codex-authored work.
   This supersedes older Strale plans, backlogs, and injected/static routing
@@ -155,13 +164,18 @@ Both wired into CI after `docs:test` / `archive:index:test`.
    code change accompanied by an updated `next_action` in the program register
    or a new `handoff/_general/from-code/` file. The check prints one fix per
    finding; apply them and rerun. Claude Code's Stop hook
-   (`.claude/settings.json`) blocks the stop until it passes. Codex's notify
+   (`.claude/settings.json`) requests continuation on failure, with a
+   six-block escape for repeated finding codes. That escape records failure;
+   it does not mean the gate passed. Codex's notify
    wrapper (`scripts/handoff/codex-notify.mjs`, chained in
    `~/.codex/config.toml` by its trunk path, which must exist on `main`)
    records the result in
    `.claude/state/handoff/last-codex.json`, which the next session's
    orientation shows, and `.codex/hooks.json` blocks the stop the same way
-   where the Codex hooks feature is on. A Codex session runs the check itself
+   when the hook is enabled, trusted, discovered, and successfully invoked.
+   Hook commands resolve their script from the current Git worktree root,
+   including when the session starts in a subdirectory. Notify records a result after the turn; it does not block stopping.
+   A Codex session runs the check itself
    before its final turn and fixes what it lists.
 3. **Git hooks come with `npm ci`** (`prepare` runs the same installer as
    `npm run hooks:install`, setting `core.hooksPath=.githooks` for every
