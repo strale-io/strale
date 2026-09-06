@@ -1,10 +1,14 @@
 /**
  * The content-redaction sweep must be gated on a DAILY interval.
  *
- * It ran weekly against a 50,000-row-per-run ceiling while ~60,000 rows/week
- * crossed the 90-day line, so it fell ~10,000 behind every week and never
- * caught up. Production 2026-09-06: 87,300 rows past the window, oldest 103
+ * It ran weekly against a 50,000-row-per-run ceiling while ~68,800 rows/week
+ * crossed the 90-day line, so it fell ~18,800 behind every week and never
+ * caught up. Production 2026-09-06: 87,718 rows past the window, oldest 102
  * days against a published 90-day claim.
+ *
+ * Those figures are the re-measured ones. An earlier draft of this header
+ * carried ~60,000/week and a ~10,000 deficit — 13% low — in the very file
+ * whose job is to be the arithmetic of record. Independent review caught it.
  *
  * The cadence is one constant, which is exactly the kind of thing a later edit
  * reverts without noticing. This pins it to the arithmetic rather than to the
@@ -36,7 +40,7 @@ describe("retention sweep cadence", () => {
   // The real constraint. Capacity per run is fixed by data-retention.ts's
   // BATCH_SIZE * MAX_BATCHES_PER_RUN; the cadence has to make capacity exceed
   // the rate rows become eligible, with headroom for a run that is skipped or
-  // fails. At ~8,600/day observed, daily gives ~6x.
+  // fails. At ~9,830/day observed, daily gives 5.1x.
   it("gives capacity comfortably above the rate rows become due", () => {
     const CAP_PER_RUN = 1000 * 50; // data-retention.ts BATCH_SIZE * MAX_BATCHES_PER_RUN
     const OBSERVED_DUE_PER_DAY = 9_827; // production, 2026-09-06 (68,790 over 7 days)

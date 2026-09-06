@@ -41,6 +41,39 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-36
+    subject: "PR #598 — content redaction moved weekly -> daily, a per-run-ceiling backlog warning, the job-coordinator clamp that makes any interval change take effect, a cross-invocation SEC rate gate on company-fundamentals, and the pii-redact retention disclosure"
+    commit: ff9482b5
+    merged: "2026-09-06"
+    priority: high
+    status: pending
+    why_codex: >
+      It changes how long personal data actually lives — the same reason CX-3
+      is high — and it does so by editing the shared job coordinator, which
+      every recurring job on the platform goes through. Two Claude rounds were
+      each necessary and neither sufficient: round 1 found the cadence fix
+      would have done nothing for a week (the clamp keys on a column
+      consumeDueSlot never writes) and that three of the batch's own numbers
+      were wrong; round 2 found the corrected numbers had not reached the file
+      whose whole purpose is to be the arithmetic of record. Two rounds of the
+      same model each finding real defects in the other's wake is the argument
+      for a third opinion, not against it.
+    what_to_attack: >
+      The ON CONFLICT clamp in consumeDueSlot. It was simulated against all
+      seven consumeDueSlot rows before merge and changed exactly one, but the
+      author wrote the simulation: re-derive it. Specifically whether an
+      unchanged interval is genuinely a no-op for every task (it depends on
+      consumeDueSlot writing next_run_at and last_started_at in the same
+      statement), whether a lengthened interval can push a run out, and whether
+      any path other than job-coordinator.ts writes job_schedule. Then the five
+      sibling purge loops in data-retention.ts, which this cadence change also
+      accelerates sevenfold and which carry the identical invisible-ceiling
+      shape with no backlog warning — their backlogs measured zero on
+      2026-09-06, so the question is whether that holds under load, not whether
+      it held that day. Finally weekly-sweep, the other consumeDueSlot 7-day
+      task with last_finished_at NULL, which inherited the same PR #376
+      latency and has not been checked.
+    claude_verdicts: 2 rounds — FAIL (five blockers, all fixed), then PASS WITH FINDINGS (one documentation must-fix, fixed in the follow-up carrying this row)
   - id: CX-35
     subject: "PR #592 — german-company-data's ambiguity refusal was recognised by none of the three health consumers, plus the GOALS.md correction that found it"
     commit: 91f8ecaf

@@ -509,7 +509,7 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
   // finished the work: both return a number and log "done". That is how a
   // standing deficit stayed invisible from the point weekly volume crossed
   // 50,000/week until it was found by hand on 2026-09-06, by which time the
-  // oldest unredacted row was 103 days old against a 90-day claim.
+  // oldest unredacted row was 102 days old against a 90-day claim.
   //
   // So when the ceiling is reached, measure what is left and say so. The
   // backlog count runs the same predicate, at most once per sweep and only
