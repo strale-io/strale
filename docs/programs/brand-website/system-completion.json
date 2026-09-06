@@ -273,8 +273,8 @@
     {
       "id": "editorial-and-illustration",
       "required_before": "homepage-design-freeze",
-      "status": "narrative-reset",
-      "action": "Create one recommended homepage argument and section/illustration briefs before further implementation; preserve accepted visual direction.",
+      "status": "narrative-awaiting-founder-review",
+      "action": "Review HOMEPAGE-NARRATIVE.md with the founder before further section or asset work; preserve B and the accepted visual direction.",
       "evidence": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md"
     },
     {
@@ -343,8 +343,9 @@
     "next_editorial_step": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md"
   },
   "editorial_reset": {
-    "status": "narrative-brief-needed",
+    "status": "narrative-awaiting-founder-review",
     "handoff": "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md",
+    "proposal": "docs/programs/brand-website/HOMEPAGE-NARRATIVE.md",
     "hero_copy_status": "set-aside",
     "homepage_brief_status": "background-draft-not-approved-story",
     "positioning_changed": false,
