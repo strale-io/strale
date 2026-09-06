@@ -481,6 +481,7 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
   const db = getDb();
   let redacted = 0;
   let batches = 0;
+  let hitCap = false;
   while (true) {
     const result = await db.execute(sql`
       UPDATE transactions
@@ -499,8 +500,49 @@ async function purgeCustomerContent(cutoff: Date): Promise<number> {
     `);
     const count = affected(result);
     redacted += count;
-    if (count < BATCH_SIZE || ++batches >= MAX_BATCHES_PER_RUN) break;
+    if (count < BATCH_SIZE) break;
+    if (++batches >= MAX_BATCHES_PER_RUN) { hitCap = true; break; }
     await new Promise((r) => setTimeout(r, BATCH_DELAY_MS));
+  }
+
+  // A run that stops because it hit the ceiling looks exactly like a run that
+  // finished the work: both return a number and log "done". That is how a
+  // standing deficit stayed invisible from the point weekly volume crossed
+  // 50,000/week until it was found by hand on 2026-09-06, by which time the
+  // oldest unredacted row was 103 days old against a 90-day claim.
+  //
+  // So when the ceiling is reached, measure what is left and say so. The
+  // backlog count is one indexed COUNT on the same predicate, run at most
+  // once per sweep and only when already over the ceiling.
+  if (hitCap) {
+    let remaining: number | null = null;
+    try {
+      const rows = await db.execute(sql`
+        SELECT COUNT(*)::int AS remaining
+        FROM transactions t
+        WHERE t.created_at < ${cutoff.toISOString()}::timestamptz
+          AND t.legal_hold = false
+          AND t.redacted_at IS NULL
+          AND t.deleted_at IS NULL
+      `);
+      const row = (rows as unknown as Array<{ remaining?: number }>)[0];
+      remaining = typeof row?.remaining === "number" ? row.remaining : null;
+    } catch {
+      // The count is diagnostic. Failing to take it must not fail the sweep,
+      // but it must not silently masquerade as "no backlog" either — hence
+      // null rather than 0.
+      remaining = null;
+    }
+    log.warn(
+      {
+        label: "retention-cleanup-backlog",
+        redacted_this_run: redacted,
+        cap_rows: BATCH_SIZE * MAX_BATCHES_PER_RUN,
+        remaining_after_run: remaining,
+        cutoff: cutoff.toISOString(),
+      },
+      "content redaction hit its per-run ceiling; rows remain past the retention window",
+    );
   }
   return redacted;
 }

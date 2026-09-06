@@ -108,7 +108,21 @@ const META_DAILY_INTERVAL_MS        = 24 * 60 * 60 * 1000;   // 24h — pipeline
 const WEEKLY_SWEEP_INTERVAL_MS      = 7 * 24 * 60 * 60 * 1000;
 const DIAGNOSTIC_INTERVAL_MS        = 24 * 60 * 60 * 1000;   // 24h
 const SNAPSHOT_INTERVAL_MS          = 24 * 60 * 60 * 1000;   // 24h
-const RETENTION_INTERVAL_MS         = 7 * 24 * 60 * 60 * 1000;
+// 24h, not 7d. The content redaction this gates is capped at
+// BATCH_SIZE * MAX_BATCHES_PER_RUN = 50,000 rows per run (data-retention.ts).
+// At weekly cadence that is 50,000/week of capacity against ~60,000/week of
+// rows crossing the 90-day line — a standing deficit of ~10,000/week that
+// compounds, because nothing ever catches up. Measured in production
+// 2026-09-06: 87,300 eligible rows, oldest 103 days against a stated 90-day
+// window, and the 2026-08-30 run hit the 50,000 cap exactly.
+//
+// Per-tick work is unchanged: still 1,000-row batches 100ms apart, still
+// capped at 50,000 per run. Only the frequency moves, which is
+// DEC-20260504-B's self-throttling option rather than a pre-drain — the
+// backlog clears over about three runs and then sits six-fold ahead of
+// inflow. `retention-cleanup-backlog` (data-retention.ts) is what says so
+// if that ever stops being true.
+const RETENTION_INTERVAL_MS         = 24 * 60 * 60 * 1000;
 const STALE_REFRESH_INTERVAL_MS     = 2 * 60 * 60 * 1000;    // 2h
 
 // ─── State ──────────────────────────────────────────────────────────────────
