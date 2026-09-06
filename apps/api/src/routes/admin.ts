@@ -869,7 +869,23 @@ adminRoute.post("/create-solution", async (c) => {
       name = EXCLUDED.name,
       description = EXCLUDED.description,
       price_cents = EXCLUDED.price_cents,
-      is_active = true,
+      -- NOT an unconditional `true`. Re-running this upsert used to switch a
+      -- deliberately deactivated solution back on, silently and regardless of
+      -- why it was off. Observed 2026-09-06: web3-pre-trade and
+      -- web3-wallet-snapshot came back four times while being deactivated for
+      -- resting on CoinGecko's free Demo plan, which excludes commercial use;
+      -- each revival left x402_enabled and the reason intact, which is this
+      -- statement's fingerprint.
+      --
+      -- Same convention as vendor-control-tower.ts and the seeding sweep: a
+      -- reason that is NULL or starts with `vendor:` is machine-managed and may
+      -- be overwritten; anything else was written by someone who meant it.
+      is_active = CASE
+        WHEN solutions.deactivation_reason IS NULL
+          OR solutions.deactivation_reason LIKE 'vendor:%'
+        THEN true
+        ELSE solutions.is_active
+      END,
       input_schema = EXCLUDED.input_schema
     RETURNING id, slug, name
   `);
