@@ -25,6 +25,7 @@
 
 import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
 import { suitesAreSchedulable } from "../src/lib/onboard-scheduling.js";
+import { dependencyHealthChecks } from "../src/lib/onboard-dependency-health.js";
 import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
@@ -1105,7 +1106,11 @@ function buildTestSuites(manifest: Manifest) {
     testType: "dependency_health",
     input: healthInput ?? knownAnswerEntries[0]?.input ?? {},
     validationRules: {
-      checks: [{ field: "status", operator: "not_null" }],
+      // Only when the manifest declares `status` guaranteed — see
+      // onboard-dependency-health.ts. Emitting it unconditionally pinned every
+      // capability without a `status` field at a permanent 80% against the
+      // 95% promotion bar.
+      checks: dependencyHealthChecks(manifest),
     },
     scheduleTier: "A",
     estimatedCostCents: manifest.price_cents,
