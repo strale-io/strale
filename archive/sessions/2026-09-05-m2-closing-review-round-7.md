@@ -1124,7 +1124,7 @@ same sentence, about `DEC-20260506-F`, is true and is not withdrawn); and
 Consequences section attributes the 19-character quoted phrase
 `"library-as-product"` to `docs/strategy/2026-08-05-direction-plan.md`,
 when that file's own wording is "commits to the library as the product"
-and "The library, built properly" — the exact compound phrase belongs to
+and "The library, built properly"; the exact compound phrase belongs to
 `CLAUDE.md:302`'s own summary bullet for `DEC-20260812-A` instead, not the
 direction-plan document the record names. Every gate ran clean at this
 commit (exit 0 each; `npm run context:check`, `npm run context:test`,

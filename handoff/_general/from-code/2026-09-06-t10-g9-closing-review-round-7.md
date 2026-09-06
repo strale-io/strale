@@ -37,8 +37,10 @@ false half; this record closes that gap. This batch also ran the checker
 a second time at `--min-chars 12` (122 residual vs 99 at the default),
 reconciling all 23 additional short-quotation residuals as checker
 misses; the "library-as-product" misattribution is not among either
-run's residuals at any threshold and was found only by reading the record
-and its source directly.
+run's residuals at any threshold because the checker accepts CLAUDE.md
+and AGENTS.md as sources for every span whatever file the sentence names,
+and the phrase occurs in CLAUDE.md; it was found only by reading the
+record and its source directly.
 
 The two brief-requested `DEC-20260430-A` relation-substantiation items
 (to `DEC-20260428-A` and to `DEC-20260428-B`) were added as fresh
