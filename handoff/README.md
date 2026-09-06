@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-290 files (263 with a recorded intent, 27 without).
+293 files (266 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -17,6 +17,7 @@
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-9.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-9.md) | Archive M2 closing-review round 9 plus a whole-corpus named-source |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-8.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-8.md) | Archive M2 closing-review round 8 and record its findings as an |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md) | archive round 7 (final round) of the M2 closing independent |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-15.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-15.md) | Land round 15 of the M2 closing independent review and its |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-14.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-14.md) | record round 14 of the M2 closing independent review (all pass, one finding on review of the verdict itself), and add... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-13.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-13.md) | record round 13 of the M2 closing independent review and its one erratum. |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-12.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-12.md) | record round 12 of the M2 closing independent review and its |
@@ -28,6 +29,8 @@
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-shared-access.md`](_general/from-code/2026-09-06-brand-shared-access.md) | Build the shared-access illustration from the homepage brief inside the retained Quiet Material system and verify des... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-original-baseline-correction.md`](_general/from-code/2026-09-06-brand-original-baseline-correction.md) | Restore the founder's unfinished redesign as the visual target and assess focused kit refinements in its actual compo... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-opening-breadth.md`](_general/from-code/2026-09-06-brand-opening-breadth.md) | Build the authorised first section below selected B and review the two-section rhythm. Full mode. Isolated worktree s... |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-narrative-reset.md`](_general/from-code/2026-09-06-brand-narrative-reset.md) | Transfer Strale brand work to a fresh narrative and creative-brief pass, preserving accepted visuals and setting asid... |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-homepage-narrative.md`](_general/from-code/2026-09-06-brand-homepage-narrative.md) | Prepare one homepage argument, proposed copy and illustration objectives for founder review while preserving hero B a... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-homepage-composition.md`](_general/from-code/2026-09-06-brand-homepage-composition.md) | Assemble the accepted Quiet Material components into a complete homepage composition and inspect hierarchy, section r... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-hero-surface-comparison.md`](_general/from-code/2026-09-06-brand-hero-surface-comparison.md) | Produce the authorised controlled comparison inside the original hero, preserving its character while refining the in... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-hero-copy.md`](_general/from-code/2026-09-06-brand-hero-copy.md) | Record the founder's selection of hero B and deliver the separate shorter-copy editorial preview. Mode: Full, docs an... |
