@@ -41,6 +41,261 @@ policy:
     remediation batch; it does not revert automatically.
 
 entries:
+  - id: CX-37
+    subject: "PR #573 — M2 closing review round 1 archived (verdict FAIL at 3a7089c5); DEC-20260905-B withdraws the thirteen statements the round found false, misattributed or unverifiable"
+    commit: c3691079
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The erratum record corrects candidate records the closing review found
+      defective; the corrections must themselves be exact. The fresh
+      read-only Claude agent reviewed it (one round of findings, fixed before
+      merge); the Codex re-review is owed under DEC-20260903-A.
+    what_to_attack: >
+      Every withdrawn span against the amended record; every stated fact and
+      quotation against its named source at c3691079 (repo files, CLAUDE.md,
+      the parsed Notion row fields, strale-io/strale-frontend at the sha the
+      record names); the archive file against the six partition reports it
+      reproduces; the register row and record_count.
+    claude_verdicts: 1 round (independent read-only reviewer; two narrow findings fixed before merge)
+  - id: CX-38
+    subject: "PR #574 — operator quote-fidelity checker for the M2 candidate records (scripts/m2-quote-fidelity.mjs) with the declared normalization convention"
+    commit: b29ac3b6
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      A new operator script and test suite reviewed by a fresh read-only
+      Claude agent (one FAIL round: two missing source classes, body-relative
+      line numbers, an untested association bypass; all fixed before merge).
+      The Codex re-review is owed under DEC-20260903-A.
+    what_to_attack: >
+      The normalization and segment matcher against the convention text in
+      docs/decisions/README.md; whether any source class can validate a span
+      it should not (the association test); the residual list of a real run
+      against the corpus at the review commit.
+    claude_verdicts: 1 round (independent read-only reviewer; findings fixed before merge)
+  - id: CX-39
+    subject: "PR #576 — M2 closing review round 2 and the exhaustive sweep archived; DEC-20260905-C withdraws every statement they found false, misattributed or unverifiable and states the quotation convention"
+    commit: 4318cbec
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The second amending record corrects thirty-odd candidate records; every
+      withdrawal must be exact and every correction true. Reviewed by a fresh
+      read-only Claude agent (one FAIL round, fixed before merge); the Codex
+      re-review is owed under DEC-20260903-A.
+    what_to_attack: >
+      Every withdrawn span against the amended record; every stated fact and
+      quotation against its named source at the review commit; the
+      completeness of the withdrawal list against the twelve archived
+      reports; the register row and record_count.
+    claude_verdicts: 1 round (independent read-only reviewer; findings fixed before merge)
+  - id: CX-40
+    subject: "PR #577 — M2 closing review round 3 archived; DEC-20260905-D withdraws every remaining finding and every checker residual without a located source"
+    commit: 65bf77f1
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The third amending record; same reason as CX-39. Reviewed by a fresh
+      read-only Claude agent; the Codex re-review is owed under
+      DEC-20260903-A.
+    what_to_attack: >
+      Every withdrawn span against the amended record; every stated fact
+      against its source at the review commit; the reconciliation of the
+      checker residuals (a residual classed faithful must have a located
+      source); the relation substantiations.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-41
+    subject: "PR #579 — M2 closing review round 4 archived; DEC-20260905-E withdraws the seven remaining findings and substantiates the last relation"
+    commit: 9bd7316f
+    merged: "2026-09-05"
+    priority: high
+    status: pending
+    why_codex: >
+      The fourth amending record; same reason as CX-39 and CX-40. Reviewed by
+      a fresh read-only Claude agent; the Codex re-review is owed under
+      DEC-20260903-A.
+    what_to_attack: >
+      Every withdrawn span against the amended record; the four "no record
+      exists" corrections against docs/decisions/records at the commit; the
+      env-manifest field attribution; the composite quotation; the relation
+      substantiation.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-42
+    subject: "PR #580 — M2 closing review round 5 archived; DEC-20260905-F substantiates two relations and withdraws one misattribution"
+    commit: ff8a1384
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      The fifth amending record; same reason as CX-39 to CX-41. Reviewed by
+      a fresh read-only Claude agent; the Codex re-review is owed under
+      DEC-20260903-A.
+    what_to_attack: >
+      The two relation substantiations against the rows and records; the
+      env-manifest cost_note attribution; the checker reconciliation.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-43
+    subject: "PR #584 — M2 closing review round 6 archived; DEC-20260905-G withdraws every stale sibling-state and search-result statement in the candidate set"
+    commit: f15bbdd9
+    merged: "2026-09-05"
+    priority: medium
+    status: pending
+    why_codex: >
+      The sixth amending record, with two corpus-wide sweeps (sibling-state
+      statements against the registry; search-result claims re-run). Reviewed
+      by a fresh read-only Claude agent; the Codex re-review is owed under
+      DEC-20260903-A.
+    what_to_attack: >
+      The two sweep ledgers against the registry and the records directory;
+      every withdrawn span; the misattributed quotation and the arithmetic
+      correction.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-44
+    subject: "PR #588 — M2 closing review round 7 archived; DEC-20260905-H withdraws the remaining stale sibling-state statements"
+    commit: 48339ec2
+    merged: "2026-09-06"
+    priority: medium
+    status: pending
+    why_codex: >
+      The seventh amending record, with a broad-pattern re-sweep of every
+      sibling-state statement. Reviewed by a fresh read-only Claude agent;
+      the Codex re-review is owed under DEC-20260903-A.
+    what_to_attack: >
+      The sweep ledger (every grep hit with a verdict) against the registry
+      and the records directory; every withdrawn span.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-45
+    subject: "PR #589 — M2 closing review round 8 archived; DEC-20260905-I withdraws the round-8 findings and every unsourced short quotation"
+    commit: fcfceb59
+    merged: "2026-09-06"
+    priority: medium
+    status: pending
+    why_codex: >
+      The eighth amending record, with wider sibling-state and absence-claim
+      sweeps and a source-pasted reconciliation of every short residual.
+      Reviewed by a fresh read-only Claude agent; the Codex re-review is owed
+      under DEC-20260903-A.
+    what_to_attack: >
+      The three sweep ledgers; every FAITHFUL_TO entry's pasted source; the
+      dated-observation clause and the two items it declines.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-46
+    subject: "PR #590 — M2 closing review round 9 and the named-source quotation sweep archived; DEC-20260905-J withdraws every misquotation the sweep found"
+    commit: 2801a08f
+    merged: "2026-09-06"
+    priority: medium
+    status: pending
+    why_codex: >
+      The ninth amending record, carrying the six named-source quotation
+      sweep ledgers (every quoted span in the corpus checked against the
+      source its sentence names). Reviewed by a fresh read-only Claude
+      agent; the Codex re-review is owed under DEC-20260903-A.
+    what_to_attack: >
+      The six sweep ledgers; the deduplication against DEC-20260905-B to
+      -I; every withdrawn span; the statute clause.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-47
+    subject: "PR #591 — DEC-20260905-K corrects the round-9 record's own item count"
+    commit: 0fd6364f
+    merged: "2026-09-06"
+    priority: low
+    status: pending
+    why_codex: >
+      A small amending record correcting four self-descriptions in
+      DEC-20260905-J that merged before their fix. Reviewed by a fresh
+      read-only Claude agent; the Codex re-review is owed under
+      DEC-20260903-A.
+    what_to_attack: >
+      The four withdrawn spans against DEC-20260905-J and the item count.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-48
+    subject: "PR #596 — DEC-20260905-L withdraws the three round-10 findings"
+    commit: ef16b2c6
+    merged: "2026-09-06"
+    priority: low
+    status: pending
+    why_codex: >
+      An amending record withdrawing a false sentence in DEC-20260905-C's
+      own correction, an inserted-words quotation in DEC-20260320-A, and
+      a withdrawal in DEC-20260905-J whose stated basis was false. Reviewed
+      by a fresh read-only Claude agent; the Codex re-review is owed under
+      DEC-20260903-A.
+    what_to_attack: >
+      The three withdrawn spans against their records and the stated
+      source sentences against CLAUDE.md, capability-readiness.ts and the
+      DEC-20260507-D Notion row.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-49
+    subject: "PR #603 — DEC-20260905-M withdraws two own-wording spans found by round 11 and adds the own-wording clause"
+    commit: fdf91565
+    merged: "2026-09-06"
+    priority: low
+    status: pending
+    why_codex: >
+      An amending record withdrawing, as quotations, two spans that were
+      the records' own wording inside quotation marks, and adding the
+      convention clause that judges such spans as prose. Reviewed by a
+      fresh read-only Claude agent; the Codex re-review is owed under
+      DEC-20260903-A.
+    what_to_attack: >
+      Whether either span has a source after all, and whether the clause
+      narrows the convention in a way that hides a misattribution.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-50
+    subject: "PR #605 — DEC-20260905-N withdraws the three round-12 findings"
+    commit: c268565a
+    merged: "2026-09-06"
+    priority: low
+    status: pending
+    why_codex: >
+      An amending record withdrawing a sentence in DEC-20260905-J that (with a miscounted HMRC row figure and a decided_at date that contradicts its row)
+      asserted DEC-20260812-A does not use a phrase its Reversal conditions
+      contain. Reviewed by a fresh read-only Claude agent; the Codex
+      re-review is owed under DEC-20260903-A.
+    what_to_attack: >
+      DEC-20260812-A line 83 against the withdrawn sentence, and whether
+      DEC-20260420-E's attribution is faithful under the convention.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-51
+    subject: "PR #609 — DEC-20260905-O withdraws the one round-13 finding"
+    commit: d0e21ecd
+    merged: "2026-09-06"
+    priority: low
+    status: pending
+    why_codex: >
+      An amending record withdrawing a supporting sentence in
+      DEC-20260905-D that said both of a row's fields name two qualifiers
+      when only its Rationale field does. Reviewed by a fresh read-only
+      Claude agent; the Codex re-review is owed under DEC-20260903-A.
+    what_to_attack: >
+      The row's Decision and Rationale fields against the withdrawn
+      sentence, and whether item 9's underlying withdrawal still stands.
+    claude_verdicts: 1 round (independent read-only reviewer)
+  - id: CX-52
+    subject: "PR #618 — M2 closing review: the fresh read-only Claude agent's closing independent review of the complete M2 candidate set at b014c417 (verdict PASS, archived at archive/sessions/2026-09-05-m2-closing-review.md)"
+    commit: 42f17d83
+    merged: "2026-09-06"
+    priority: high
+    status: pending
+    why_codex: >
+      The plan's M2 exit review was reserved for Codex; DEC-20260903-A
+      substituted a fresh read-only Claude agent while the quota is out and
+      made the Codex re-review of the whole set a recorded obligation. This
+      row is that obligation: the complete candidate set (every record, the
+      collision registry, the closure register and every resolution report)
+      at the exact commit the verdict names.
+    what_to_attack: >
+      The archived verdict's six partition reports and gate run against the
+      files at b014c417; any record's quotation against its parsed Notion
+      row; the register's closing_review block against
+      scripts/m2-closure-register-lib.mjs's checks; whether any finding a
+      partition raised was wrongly dismissed by the consolidator.
+    claude_verdicts: 1 round (six partition reviewers plus a consolidating reviewer; see the archived verdict)
   - id: CX-36
     subject: "PR #598 — content redaction moved weekly -> daily, a per-run-ceiling backlog warning, the job-coordinator clamp that makes any interval change take effect, a cross-invocation SEC rate gate on company-fundamentals, and the pii-redact retention disclosure"
     commit: ff9482b5

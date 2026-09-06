@@ -270,28 +270,34 @@ tracks:
 
   - id: T10
     title: M2 exit-gap closure
-    status: active
+    status: done
     gate: m2-exit
     depends_on: [T1]
     owner: session
     next_action: >
-      G1 closed (PR #552). G2 closed in this bookkeeping batch after G2
-      batch 5 (PR #569) resolved the last nine collisions (May 5 to 13,
-      including the three-row DEC-20260508-C); all 35 collisions now carry
-      a resolution report and every row a source-qualified record or an
-      evidence-backed documented_only disposition. Blocking gap: G9 only,
-      the closing independent review of the complete M2 candidate set at
-      an exact commit, with its verdict archived. Next: G9. The route is
-      the 2026-09-03 amendment (DEC-20260903-A): a fresh read-only Claude
-      agent reviews the full candidate set (every record under
-      docs/decisions/records/, the registry, the register and the
-      resolution reports) at one commit, the verdict is archived under
-      archive/sessions/ and cited from G9's evidence, and the Codex
-      re-review obligation for the whole set is recorded on the backlog.
-      Only then may this track be marked done. This track is the M2 exit
-      gate: the closure register's validator refuses a state where it is
-      done, or any post-m2 track is active or done, while a blocking gap
-      remains.
+      Done. Every blocking M2 gap is closed: G1 (rows without records)
+      through eighteen batches, G2 (35 ID collisions) through five
+      batches, G3 (the cross-surface DEC-20260422-A) through the
+      DEC-20260904-B mechanism, and G9 through the closing independent
+      review at b014c417 (PR #618; round 1 at 3a7089c5 failed and its
+      findings are withdrawn by DEC-20260905-B, PR #573; round 2 and an exhaustive
+      sweep at c3691079 by DEC-20260905-C, PR #576; round 3 at 4318cbec by
+      DEC-20260905-D, PR #577; round 4 at 65bf77f1 by DEC-20260905-E,
+      PR #579; round 5 at 9bd7316f by DEC-20260905-F, PR #580; round 6 at
+      ff8a1384 by DEC-20260905-G, PR #584; round 7 at f15bbdd9 by DEC-20260905-H,
+      PR #588; round 8 at 48339ec2 by DEC-20260905-I, PR #589; round 9 at
+      fcfceb59 by DEC-20260905-J, PR #590, its own count by DEC-20260905-K,
+      PR #591, round 10 at 0fd6364f by DEC-20260905-L, PR #596, round 11 at
+      ef16b2c6 by DEC-20260905-M, PR #603, round 12 at fdf91565 by
+      DEC-20260905-N, PR #605; round 13 at c268565a by DEC-20260905-O,
+      PR #609), whose verdict the register's
+      closing_review block records and the validator verifies. The
+      candidate set stays inactive (authority_active: false) until the M4
+      cutover, which is its own founder-gated track; the Codex re-review
+      of the whole set is CX-52 (the erratum PRs are CX-37 and CX-39 to CX-51, the checker CX-38). A later change to any record, the
+      registry or a resolution report makes the closing review stale
+      (CLOSING_REVIEW_STALE) and reopens this gate until a new review at
+      a new commit is recorded.
     resume_file: handoff/_general/from-code/2026-09-02-t1-m2-closure-audit.md
     exit:
       - counts.exit_gaps.blocking in the closure register is 0
@@ -487,6 +493,7 @@ tracks:
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260512-A.md
       - archive/sessions/2026-09-05-decision-collision-resolution-DEC-20260513-F.md
       - handoff/_general/from-code/2026-09-05-m2-g2-batch-5-collisions.md
+      - archive/sessions/2026-09-05-m2-closing-review.md
 
   - id: T6
     title: M3 repo-native workflows
