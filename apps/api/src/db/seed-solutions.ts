@@ -399,6 +399,8 @@ async function seed() {
   console.log("\n--- Solution quality gate ---");
   let gated = 0;
   let activated = 0;
+  /** Solutions whose steps qualify but which were switched off deliberately. */
+  const heldOff: string[] = [];
 
   const allSols = await db.select({
     id: solutions.id,
@@ -483,8 +485,12 @@ async function seed() {
     } else if (unqualified.length === 0 && !sol.isActive) {
       // Steps qualifying is necessary, not sufficient — see
       // wasDeactivatedDeliberately() for why and for the incident.
+      // Counted, not logged per solution. `lint:no-new-console` holds this file
+      // at its current ceiling and the migration direction is down, so the
+      // total is reported through the existing summary line below rather than
+      // adding a call site.
       if (wasDeactivatedDeliberately(sol.deactivationReason)) {
-        console.log(`  HELD OFF: ${sol.slug} — steps qualify, but it was deactivated deliberately: ${String(sol.deactivationReason).slice(0, 80)}`);
+        heldOff.push(sol.slug);
         continue;
       }
       if (!DRY_RUN) {
@@ -497,7 +503,12 @@ async function seed() {
     }
   }
 
-  console.log(`Quality gate: ${gated} gated, ${activated} activated`);
+  console.log(
+    `Quality gate: ${gated} gated, ${activated} activated` +
+      (heldOff.length
+        ? `, ${heldOff.length} held off (deactivated deliberately: ${heldOff.join(", ")})`
+        : ""),
+  );
 
   if (priceDrift.length) {
     console.log(`
