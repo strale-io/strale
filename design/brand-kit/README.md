@@ -17,6 +17,7 @@ Design acceptance is distinct from production adoption. Existing specimen regist
 | Current acceptance, gaps and next work | [Completion plan](../../docs/programs/brand-website/SYSTEM-COMPLETION.md) | [Completion record](../../docs/programs/brand-website/system-completion.json) |
 | Product example evidence | [Current proof qualification](../../docs/programs/brand-website/PROOF-QUALIFICATION.md) | Dated observation files linked from that record |
 | Homepage copy, illustration briefs and selected-asset readiness | [Homepage brief](../../docs/programs/brand-website/HOMEPAGE-BRIEF.md) | [Editable authoring source](../../docs/programs/brand-website/homepage-brief.json) |
+| Shared-access illustration — candidate asset extension | [Preview and usage](quiet-material/illustrations/README.md) | [Illustration registry](quiet-material/illustrations/registry.json) |
 
 ## Use the kit
 
