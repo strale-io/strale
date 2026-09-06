@@ -17,7 +17,8 @@ Design acceptance is distinct from production adoption. Existing specimen regist
 | Current acceptance, gaps and next work | [Completion plan](../../docs/programs/brand-website/SYSTEM-COMPLETION.md) | [Completion record](../../docs/programs/brand-website/system-completion.json) |
 | Product example evidence | [Current proof qualification](../../docs/programs/brand-website/PROOF-QUALIFICATION.md) | Dated observation files linked from that record |
 | Homepage copy, illustration briefs and selected-asset readiness | [Homepage brief](../../docs/programs/brand-website/HOMEPAGE-BRIEF.md) | [Editable authoring source](../../docs/programs/brand-website/homepage-brief.json) |
-| Shared-access illustration — candidate asset extension | [Preview and usage](quiet-material/illustrations/README.md) | [Illustration registry](quiet-material/illustrations/registry.json) |
+| Shared-access illustration — accepted for continued design | [Preview and usage](quiet-material/illustrations/README.md) | [Illustration registry](quiet-material/illustrations/registry.json) |
+| Current whole-homepage composition — candidate for review | [Complete page](quiet-material/homepage/index.html) · [Review scope](quiet-material/homepage/README.md) | [Composition record](quiet-material/homepage/registry.json) |
 
 ## Use the kit
 
@@ -35,6 +36,8 @@ The [completion record](../../docs/programs/brand-website/system-completion.json
 A listed asset is not automatically cleared for public use. Eleven original asset histories and the original logo history remain unresolved. Missing legacy illustration masters remain unavailable; they must not be silently reconstructed or described as supplied. No extra atmospheric images are needed merely to make the inventory larger.
 
 ## Current and historical
+
+The four-section homepage composition is the current whole-page review surface. The earlier three-section website/social/email studies remain component and channel examples; they are not an alternative homepage plan. The shared-access illustration was accepted for continued design on 6 September. This acceptance does not change its candidate production status.
 
 These four companions are additive parts of one kit. Their version numbers describe different scopes, not competing brands. The [atmosphere guide](quiet-material/README.md) stays at its existing path so its source-manifest references remain valid. This parent index is the single entry to the combined kit.
 

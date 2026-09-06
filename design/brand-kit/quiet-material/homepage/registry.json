@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "quiet-material.homepage-composition.v1",
+  "status": "composition-study",
+  "production_adopted": false,
+  "publication_approved": false,
+  "reference_lock": "docs/research/2026-09-06-homepage-composition.md",
+  "sections": ["opening", "breadth", "shared-access", "begin"],
+  "excluded_sections": [
+    {
+      "id": "execution-record",
+      "reason": "Live execution and own-transaction retrieval remain blocked; the canonical brief requires excluding the whole section."
+    }
+  ],
+  "source_bindings": [
+    {"id":"token-schema","path":"design/tokens/schema.json","mode":"text-lf","sha256":"3c07c146023ed1a3ab4816c6658243e11fc59784a6d9c940070e71e0a315a088"},
+    {"id":"brief","path":"docs/programs/brand-website/homepage-brief.json","mode":"text-lf","sha256":"84e9af1ae8c778470ecb3164d22cc2d2e399091f38352b71f3ddc298c5f9157b"},
+    {"id":"reference-lock","path":"docs/research/2026-09-06-homepage-composition.md","mode":"text-lf","sha256":"8bd488d23ae0a570b104ee5407160571441602b87b88490a4c9d46cbad4b7e12"},
+    {"id":"patterns","path":"design/brand-kit/quiet-material/patterns/registry.json","mode":"text-lf","sha256":"e8b9f1da55f2601312f7749e0498e3888e4e77e2b6406c39bbb4959cc0619d72"},
+    {"id":"controls","path":"design/brand-kit/quiet-material/controls/registry.json","mode":"text-lf","sha256":"f09a38f11da044da9ef8b58718512057616eeb76368f9c5b8d5895b99d654011"},
+    {"id":"illustrations","path":"design/brand-kit/quiet-material/illustrations/registry.json","mode":"text-lf","sha256":"37559210cc4ba25dfb2a8280a9d1ab8fc1b7cc5a8baf0cc10a52cf01542196b8"},
+    {"id":"pattern-tokens","path":"design/tokens/candidates/quiet-material-patterns.json","mode":"text-lf","sha256":"7e5611bf7d156e0465c9b53086c7b1a7bd757c517d20a84f73ba8d461a887f50"},
+    {"id":"control-tokens","path":"design/tokens/candidates/quiet-material-controls.json","mode":"text-lf","sha256":"ebee5b466338e3e2e22a8919a0ff2c9d9c3fb8963fb2c607a7377454bc330521"},
+    {"id":"atmosphere-registry","path":"design/brand-kit/quiet-material/registry.json","mode":"text-lf","sha256":"a7a28c0614f0dfd07f155ba8937a266f74691aa2624c43503d4e0b60ba2ebdce"},
+    {"id":"foundation-registry","path":"design/brand-kit/quiet-material/foundations/registry.json","mode":"text-lf","sha256":"1c259ab5669603838ac3e00af052060874733747751f87950c5efc9c54a483b0"},
+    {"id":"lockup","path":"design/brand-kit/quiet-material/foundations/exports/lockup-ink.svg","mode":"text-lf","sha256":"1a70f33456dd28189480b6014c06f35e80896e671185cfd63db6292032fb19a3"},
+    {"id":"instrument-font","path":"design/brand-kit/quiet-material/fonts/InstrumentSans.ttf","mode":"binary","sha256":"b24f1812584816958afcf22e22d08e44318c5e51651e25d2438efdde389b33b1"},
+    {"id":"instrument-license","path":"design/brand-kit/quiet-material/fonts/InstrumentSans-OFL.txt","mode":"text-lf","sha256":"9e27a72ed30eb49a08678f6a5d6ed98ec7ba5368f541637ee0683ec9134ef966"},
+    {"id":"plex-font","path":"design/brand-kit/quiet-material/fonts/IBMPlexMono-Regular.ttf","mode":"binary","sha256":"6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46"},
+    {"id":"plex-license","path":"design/brand-kit/quiet-material/fonts/IBMPlexMono-OFL.txt","mode":"text-lf","sha256":"37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d"},
+    {"id":"access-desktop","path":"design/brand-kit/quiet-material/illustrations/exports/shared-access-desktop-light.svg","mode":"text-lf","sha256":"f5f52cc6ce01d05dedbc805fa18e65960eddb8556db0eaf9ed83a4d57d7d91df"},
+    {"id":"access-narrow","path":"design/brand-kit/quiet-material/illustrations/exports/shared-access-narrow-light.svg","mode":"text-lf","sha256":"d5eacff45284755972fa29a7f1b1e78c8e0dc1f9ecd44ad253a54a2d8e3c3009"}
+  ],
+  "assets": [
+    {"id":"hero-folded-light-background","file":"assets/hero-folded-light.png","source_id":"hero-folded-light-background","sha256":"2dada165bd17e1806f656615e7d25ecff8d148b4688db7889c8e305023156f07","width":1586,"height":992,"role":"opening-atmosphere-only","rights":"pending"}
+  ],
+  "navigation": {
+    "desktop": "native anchors",
+    "mobile": "inline disclosure",
+    "escape": "close-and-return-focus",
+    "unqualified_destinations": "details.html"
+  },
+  "outputs": {
+    "generated": ["index.html", "details.html", "tokens.css", "manifest.json"],
+    "authored": ["stylesheet.css", "interactions.js"],
+    "evidence": ["verification.json", "output/homepage-desktop.png", "output/homepage-mobile.png"]
+  },
+  "limits": [
+    "Local composition study; no production route, publication or token adoption.",
+    "Illustrative invoice fields come from the accepted pattern fixture and are not a captured response.",
+    "The shared-access diagram is conceptual and does not depict an execution trace.",
+    "Opening raster and retained logo rights remain pending."
+  ]
+}
