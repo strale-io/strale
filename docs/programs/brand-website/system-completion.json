@@ -12,7 +12,7 @@
   "positioning": "DEC-20260905-A remains adopted",
   "production_adoption": false,
   "next_batch": [
-    "review_hero_copy_within_selected_B",
+    "review_hero_and_first_breadth_section_together",
     "authenticated_invoice_demo_and_own_record_retrieval",
     "selected_asset_rights_and_production_adoption"
   ],
@@ -318,6 +318,15 @@
     "verification": "design/brand-kit/quiet-material/homepage/verification.json",
     "scope": "Founder rejected visual drift; preserved as historical study, excluded from implementation inputs.",
     "disposition": "design/brand-kit/quiet-material/baseline/registry.json"
+  },
+  "opening_study": {
+    "status": "proposed-for-review",
+    "preview": "design/brand-kit/quiet-material/opening/index.html",
+    "guide": "design/brand-kit/quiet-material/opening/README.md",
+    "registry": "design/brand-kit/quiet-material/opening/registry.json",
+    "tokens": "design/tokens/candidates/quiet-material-opening.json",
+    "verification": "design/brand-kit/quiet-material/opening/verification.json",
+    "scope": "Founder authorised the first section below selected B, with shorter copy used provisionally. Two-section design study, not full homepage or production adoption."
   },
   "hero_comparison": {
     "status": "B-selected-for-continued-design",
