@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-287 files (260 with a recorded intent, 27 without).
+288 files (261 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -25,6 +25,7 @@
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-checkin-morning.md`](_general/from-code/2026-09-06-checkin-morning.md) | run the 2026-09-06 morning operating session under DAILY-RUN.md — |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-shared-access.md`](_general/from-code/2026-09-06-brand-shared-access.md) | Build the shared-access illustration from the homepage brief inside the retained Quiet Material system and verify des... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-original-baseline-correction.md`](_general/from-code/2026-09-06-brand-original-baseline-correction.md) | Restore the founder's unfinished redesign as the visual target and assess focused kit refinements in its actual compo... |
+| 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-opening-breadth.md`](_general/from-code/2026-09-06-brand-opening-breadth.md) | Build the authorised first section below selected B and review the two-section rhythm. Full mode. Isolated worktree s... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-homepage-composition.md`](_general/from-code/2026-09-06-brand-homepage-composition.md) | Assemble the accepted Quiet Material components into a complete homepage composition and inspect hierarchy, section r... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-hero-surface-comparison.md`](_general/from-code/2026-09-06-brand-hero-surface-comparison.md) | Produce the authorised controlled comparison inside the original hero, preserving its character while refining the in... |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-brand-hero-copy.md`](_general/from-code/2026-09-06-brand-hero-copy.md) | Record the founder's selection of hero B and deliver the separate shorter-copy editorial preview. Mode: Full, docs an... |

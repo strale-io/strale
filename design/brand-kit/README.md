@@ -8,6 +8,7 @@ Design acceptance is distinct from production adoption. Existing specimen regist
 
 | Need | Human guide / visual reference | Machine rules |
 |---|---|---|
+| Current review — hero and first breadth section | [Open combined preview](quiet-material/opening/index.html) · [Scope and sources](quiet-material/opening/README.md) | [Content register](quiet-material/opening/registry.json) |
 | Atmosphere, gradients and reading surfaces | [Atmosphere guide](quiet-material/README.md) · [24-page catalogue](quiet-material/output/pdf/quiet-material-catalogue.pdf) | [Asset and recipe registry](quiet-material/registry.json) |
 | Logo variants, font roles and fallbacks | [Identity and typography](quiet-material/foundations/README.md) · [Visual guide](quiet-material/foundations/output/pdf/identity-typography.pdf) | [Foundation registry](quiet-material/foundations/registry.json) |
 | Navigation, buttons, links and cards | [Interactive controls](quiet-material/controls/index.html) · [Usage and limits](quiet-material/controls/README.md) | [Control registry](quiet-material/controls/registry.json) |

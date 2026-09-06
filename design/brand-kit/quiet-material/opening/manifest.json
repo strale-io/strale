@@ -1,0 +1,23 @@
+{
+  "inputs": {
+    "design/tokens/candidates/quiet-material-opening.json": "597e7c56357793af2033327ba083936757af1c77a2426019de03d4153457fcf1",
+    "design/brand-kit/quiet-material/hero-comparison/refined.html": "ba9f7cb16f3b1417bc340801a3d1287b62301d59e12e14b24083b6b2a93c8649",
+    "docs/programs/brand-website/HERO-COPY.md": "66ddff729f2a4d9d80d3f88743eda710cb9a80f07917f814ea4e4a27cd0c54a0",
+    "design/brand-kit/quiet-material/opening/registry.json": "fd123a7526e8ac7da0e97b25dfa7c29b498a0ccec04256aa69fef9a5f1c72239",
+    "design/brand-kit/quiet-material/opening/style.template.css": "0d9fba147d00c5a149e6359ce707c4aa40b5f969deaf210c3b6c9db53815c70b",
+    "design/brand-kit/quiet-material/opening/build.mjs": "cc1955747e55d4c7309f688b520804f095ec1bd2687269ddb0a5a8839389a527",
+    "design/brand-kit/quiet-material/hero-comparison/style.css": "011a10e100e20e55c374e950e1aae37155d0b238ac1acb2ca43e437c32bfdbcc",
+    "design/brand-kit/quiet-material/hero-comparison/tokens.css": "279b4e89cfc9edaad468a56783fd8e4cd27a63ec6c362529a6e38f5ff92327ba",
+    "manifests/swedish-company-data.yaml": "f9cf6922311a99d75bab16e908c2038924a046e2be51d167e6b8e3c6ca6fdd02",
+    "manifests/invoice-extract.yaml": "8f4dee3ef0d4225aaebeff32959b109d3a7173c88e04ac3223e028e50a562b31",
+    "manifests/email-validate.yaml": "eeb1e57d8004fcb781c902b7d29b18e414d9da0fae9a5d7ec09a404e94dcf941"
+  },
+  "outputs": {
+    "index.html": "d496cad976d1911fcbc94e391931c846f3156f404747b13e27903fe293f60533",
+    "tokens.css": "047cdc33ea9151da421ed8f98547ae7aa5080328fe702e12120fd6833ec43743",
+    "style.css": "67b1e1233ba725b0c048dbf1c108bf431e055f8cf8e6c98833ebfebdd80627c2",
+    "research.html": "c75ddd5d41a6820ee03d13f5e882197efb084d4155ca9c64bba2d41bf32566c6",
+    "extract.html": "1b6b679e6748507bb6687e4daa05589ebc489cb23263f39fed1b39e332fbc750",
+    "validate.html": "207aecca5b4b9c38ee80e154142f96d1d96e02b0e5b22d61a1d1d589a1958613"
+  }
+}

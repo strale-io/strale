@@ -1,0 +1,13 @@
+{
+  "status": "proposed",
+  "production_adoption": false,
+  "tokens": "design/tokens/candidates/quiet-material-opening.json",
+  "hero_source": "design/brand-kit/quiet-material/hero-comparison/refined.html",
+  "copy_source": "docs/programs/brand-website/HERO-COPY.md",
+  "heading": "Find a tool for the next step.",
+  "jobs": [
+    {"id":"research","title":"Research companies","benefit":"Look up company details from public registries.","link":"Explore company tools","detail":"Look up company information from public registries. Available fields and country coverage depend on the tool you choose.","manifest":"manifests/swedish-company-data.yaml","visual":"Registry information becomes a readable company profile. Fictional example, not a live response."},
+    {"id":"extract","title":"Extract document data","benefit":"Turn documents into fields your agent can use.","link":"Explore extraction tools","detail":"Extract fields from documents such as invoices. Check the chosen tool’s input format and supported fields before connecting it to your workflow.","manifest":"manifests/invoice-extract.yaml","visual":"A sample invoice becomes supplier and total fields. Illustrative values only."},
+    {"id":"validate","title":"Check inputs","benefit":"Catch malformed inputs before the next step.","link":"Explore validation tools","detail":"Check inputs such as email addresses. Email-format, mail-record and disposable-domain checks do not guarantee that a message will reach its recipient.","manifest":"manifests/email-validate.yaml","visual":"Two example email inputs receive different format-check results. This illustrates syntax checks, not delivery."}
+  ]
+}
