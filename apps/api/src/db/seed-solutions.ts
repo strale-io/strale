@@ -146,6 +146,31 @@ import { validateSolution, enforceGates } from "../lib/onboarding-gates.js";
 
 
 
+/**
+ * Whether a solution was switched off for a stated reason, and so must not be
+ * switched back on by the qualification sweep at the end of `seed()`.
+ *
+ * That sweep can only judge whether a solution's steps currently pass their
+ * tests. It cannot see WHY the solution was turned off, and a passing test says
+ * nothing about whether we are licensed to sell the result.
+ *
+ * `vendor:` markers are excluded because vendor-control-tower.ts owns those and
+ * runs its own restore cycle — it uses this same convention on this same table
+ * (`deactivation_reason IS NULL OR LIKE 'vendor:%'`). The sweep had no such
+ * check and would revive anything whose steps happened to be green.
+ *
+ * Found 2026-09-06: `web3-pre-trade` was deactivated three times because its
+ * `crypto-price` step rests on CoinGecko's free Demo plan, which excludes
+ * commercial use, and three times came back within minutes with
+ * `x402_enabled` and the reason still intact.
+ *
+ * Exported so the test exercises THIS function rather than a copy of it.
+ */
+export function wasDeactivatedDeliberately(deactivationReason: unknown): boolean {
+  const reason = typeof deactivationReason === "string" ? deactivationReason : "";
+  return reason.trim() !== "" && !reason.startsWith("vendor:");
+}
+
 // ─── Seed logic ─────────────────────────────────────────────────────────────
 
 /** €0.02–€1.00 (charter § Authority). Outside it is a founder decision. */
@@ -379,6 +404,8 @@ async function seed() {
     id: solutions.id,
     slug: solutions.slug,
     isActive: solutions.isActive,
+    // Read by wasDeactivatedDeliberately() in the reactivation branch below.
+    deactivationReason: solutions.deactivationReason,
   }).from(solutions);
 
   for (const sol of allSols) {
@@ -454,6 +481,12 @@ async function seed() {
       console.log(`  ${DRY_RUN ? "would GATE" : "GATED"}: ${sol.slug} — unqualified: ${unqualified.join(', ')}`);
       gated++;
     } else if (unqualified.length === 0 && !sol.isActive) {
+      // Steps qualifying is necessary, not sufficient — see
+      // wasDeactivatedDeliberately() for why and for the incident.
+      if (wasDeactivatedDeliberately(sol.deactivationReason)) {
+        console.log(`  HELD OFF: ${sol.slug} — steps qualify, but it was deactivated deliberately: ${String(sol.deactivationReason).slice(0, 80)}`);
+        continue;
+      }
       if (!DRY_RUN) {
         await db.update(solutions)
           .set({ isActive: true, updatedAt: new Date() })
