@@ -100,6 +100,18 @@ function realRefusals(): Array<{ label: string; err: unknown }> {
  * any of the four wrappers, or to the shared function's override handling,
  * fails here instead of only surfacing as a caller-facing wording change in
  * production.
+ *
+ * German joined the sweep 2026-09-06 and is the reason the sweep is worth
+ * more than the consolidation was. It is the ONE registry that kept a full
+ * local `pickByName` rather than a wrapper — the German listing carries
+ * register type and number, which the shared function's `name (id)` listing
+ * cannot express — so the 2026-08-14 consolidation passed it by, and with it
+ * went the typed throw and the recognisable wording. Its ambiguity refusal
+ * opened with the candidate count ("2 distinct German entities match …"), and
+ * `isRefusalMessage` anchors its fragments at the START, so no consumer
+ * recognised it. Measured on production rows, read-only, 2026-09-06: of the
+ * 159 failures our largest customer met on 2026-08-24, 15 were this refusal
+ * and every one classified `unclassified` rather than `caller_input`.
  */
 async function consolidatedRegistryRefusals(): Promise<Array<{ label: string; err: unknown }>> {
   const out: Array<{ label: string; err: unknown }> = [];
@@ -144,6 +156,25 @@ async function consolidatedRegistryRefusals(): Promise<Array<{ label: string; er
     ]),
   );
 
+  // German keeps its own implementation (see the docstring above), so it is
+  // the one entry here that is not exercising the shared function. The pair
+  // below is the real production shape: two separate registrations whose
+  // names normalise identically once the legal form is stripped, which is
+  // exactly what "Beckmann Versicherungsmakler GmbH" hit on 2026-08-24.
+  const de = await import("../capabilities/german-company-data.js");
+  capture("german pickByName", () =>
+    de.pickByName("Beckmann Versicherungsmakler", [
+      {
+        name: "Beckmann Versicherungsmakler GmbH", company_id: "DE-HRB-K1101-1",
+        register_type: "HRB", register_number: "1",
+      },
+      {
+        name: "Beckmann Versicherungsmakler AG", company_id: "DE-HRB-K1101-2",
+        register_type: "HRB", register_number: "2",
+      },
+    ] as never),
+  );
+
   return out;
 }
 
@@ -174,10 +205,10 @@ describe("refusals are recognised as such", () => {
   });
 });
 
-describe("the four consolidated registries are classified too", () => {
+describe("every registry name-refusal is classified, consolidated or not", () => {
   it("each still refuses on an ambiguous pair, as the typed error", async () => {
     const dupes = await consolidatedRegistryRefusals();
-    expect(dupes.length, "all four wrappers must refuse on an ambiguous pair").toBe(4);
+    expect(dupes.length, "every registry name path must refuse on an ambiguous pair").toBe(5);
     for (const { label, err } of dupes) {
       // Pre-consolidation these threw a plain Error, recognised only by
       // wording. Now they throw the typed error like every other refusal
@@ -192,7 +223,7 @@ describe("the four consolidated registries are classified too", () => {
     );
     const { categorizeError } = await import("./quality-capture.js");
     const dupes = await consolidatedRegistryRefusals();
-    expect(dupes.length, "all four wrappers must refuse on an ambiguous pair").toBe(4);
+    expect(dupes.length, "every registry name path must refuse on an ambiguous pair").toBe(5);
 
     for (const { label, err } of dupes) {
       const msg = (err as Error).message;

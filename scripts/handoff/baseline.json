@@ -1,15 +1,17 @@
 {
   "canonicalWorktree": "C:/Users/pette/Projects/strale",
-  "recordedAt": "2026-09-02",
-  "knownWorktrees": [
+  "recordedAt": "2026-09-06",
+  "knownWorktrees": [],
+  "knownBranches": [
     {
-      "path": "C:/tmp/strale-review-584",
-      "reason": "Detached review checkout for PR #584, belonging to another session. Recorded 2026-09-06 by founder decision in-session, applied to a recurrence. It is not this session's to remove, and the gate's own text is the reason why: a clean tree is not proof a checkout is idle, because an agent between two steps looks exactly like an abandoned one. Whoever owns the #584 review removes it; delete this entry when they have."
+      "name": "pr-555-review",
+      "commit": "bc6c2a26",
+      "reason": "Local-only review checkout of PR #555 (merged 2026-09-05). Kept, not deleted, because it is not established that everything on it reached main: it was reviewed alongside pr-563-check, whose own review-fix commit has three decision records that still differ from main. Owner: the next G9 session. Deadline: settle with pr-563-check below, in the same pass. Recorded 2026-09-06 by the morning run."
     },
     {
-      "path": "C:/Users/pette/Projects/strale-wt-brand-consolidation",
-      "reason": "Live Codex session on codex/quiet-material-consolidation, holding uncommitted untracked work (archive/sessions/2026-09-06-brand-kit-launch-proof/). Recorded 2026-09-06 by founder decision in-session — the same decision taken for strale-wt-brand-patterns earlier the same day, applied to its successor. Never delete it to satisfy the one-batch rule: removing it destroys that session's unsaved work. Delete this entry when that session commits and its owner removes the worktree."
+      "name": "pr-563-check",
+      "commit": "ef51de5e",
+      "reason": "Local-only review checkout of PR #563 (merged 2026-09-05), carrying 'fix(m2): G2 batch 4 quote-fidelity review findings, nine plus one from sweep' on top of the PR branch. Compared file by file against origin/main on 2026-09-06: eight of the eleven decision records it edits are identical to main, THREE ARE NOT — DEC-20260420-I, DEC-20260420-J and the DEC-20260420-K record ending c0575c4. Either those review findings never merged, or main changed them afterwards; the M2 convention that amended records keep their text makes the first reading the likelier one. Not deleted, and deliberately not resolved by this run: establishing which is a G9 question, not a hygiene one. Owner: the next G9 session. Deadline: before G9 closes. Recorded 2026-09-06 by the morning run."
     }
-  ],
-  "knownBranches": []
+  ]
 }

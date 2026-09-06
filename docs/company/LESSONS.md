@@ -201,9 +201,10 @@ over time is the honest measure of whether the taxonomy is catching up.
 
 > A correctly-executed query answering a subtly different question: a 30-day
 > total labelled weekly, a one-day-old instrument read as a 30-day fact, funnel
-> steps compared over different periods, a population defined by hand.
+> steps compared over different periods, a population defined by hand, a
+> failure count read as one cause.
 
-**Count: 10.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
+**Count: 11.** 2026-08-15 produced five in one afternoon; a sixth on 2026-08-21
 (a hand-rolled filter that inner-joined `users` and therefore silently measured
 ~nothing, because nearly all revenue arrives with no user attached); a seventh
 on 2026-08-22 — a largest-buyer share compared across two windows of different
@@ -377,6 +378,31 @@ NOT CLOSED" since incident 7 for want of re-deriving the 2026-08-15 conclusions
 through `lib/metrics`. Incident 10 is a fresh argument for it rather than a
 substitute — it happened in a session that had the right helper available and
 did not use it, which no amount of module design fixes on its own.
+
+#### Incident 11 — 2026-09-06 — the failure bucket was never opened
+
+`who-called.ts` existed, was mandatory, and was run. What was not done is the
+next step: **look at what the failures actually said.** The 2026-09-05 run read
+"195 calls, 36 completed, 159 failed" off the correct population and wrote the
+whole 159 down as refusals, on the strength of the queries all being German
+insurance brokers. Grouping the same rows by error string, read-only, takes one
+command: **127 of the 159 were `OpenRegister returned HTTP 402: Payment
+Required`** — our vendor's free allowance exhausted mid-list — and only 32 were
+refusals. The conclusion built on it, "the highest-value open product change we
+have", was pointed at 20% of the problem, and a separate entry priced a vendor
+subscription against the **36 calls we answered** instead of the **195 the
+customer asked for**, understating the demand behind the decision five-fold.
+
+Same family, new arm, and the arm is what to carry forward: this file's earlier
+incidents are all about *which rows* were counted. This one counted exactly the
+right rows and never asked what they were. **A failure count is a denominator
+made of causes; grouping by cause is not optional analysis, it is what makes
+the count mean anything.** No tooling change is proposed — the grouping is one
+`GROUP BY` on a population helper that already exists, and inventing a script
+for it would repeat the incident-10 pattern of building a guard instead of
+looking. What is added is DAILY-RUN.md step B's rule, extended: never read a
+raw call count as customer impact **and never read a raw failure count as one
+cause**.
 
 ### F3 · Incorrect billing or economic judgement
 
@@ -672,7 +698,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 8. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 is a different arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 9. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -887,6 +913,36 @@ The pattern in all four: the record was written by the actor who *intended* the
 change, immediately after intending it. The repair direction is to verify
 against the system rather than the intention — the daily run already does this
 for branches and deploys, and the same discipline is owed to decisions and docs.
+
+#### Incident 9 — 2026-09-06 — a merge shipped a head that had already moved
+
+The morning run merged an open pull request whose checks were green. Ninety
+seconds before the merge, the session that owned the branch had pushed a
+correction to it. **The squash landed the older head.** `main` now carries a
+governance record whose own prose miscounts its items — it says thirty-two
+where thirty-one are numbered, and cites three items as substantiations where
+the third is a withdrawal — and the author's fix for exactly that is not in it.
+
+The drift is small; the trap around it is not, and it is why this belongs here
+rather than in a handoff note. The correction **cannot now be landed as a
+correction**: `decision-records.test.mjs` refuses `DECISION_ACTIVE_BODY_CHANGED`
+on an active record, verified by applying the author's own diff and watching two
+gates fail. On the branch it was a new file and would have merged cleanly; one
+merge of a stale head converted a routine follow-up into a defect that only a
+*further erratum record* can address. Recorded here so the next G9 round adopts
+it rather than rediscovering it.
+
+Two things follow. **Before merging, compare the merge result against the branch
+tip you actually intend to ship** — a green check and a `MERGEABLE` state say
+nothing about which commit they were computed on, and `gh pr view` output is a
+snapshot that a live session can invalidate between the read and the merge.
+**And a clean worktree is not an idle session.** This repository's own baseline
+file says so in as many words; the same run removed a merged, spotlessly clean
+agent worktree and then found the branch tip had been pushed two minutes
+earlier. Nothing was lost — everything was on the remote and the removal went
+through `git worktree remove`, which is why this is a near-miss and not an F12
+incident — but the reasoning that produced it was the reasoning the rule
+forbids.
 
 ### F8 · Duplicated authority
 

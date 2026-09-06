@@ -135,8 +135,65 @@ conversion.
 
 ## What we currently know (update as evidence lands)
 
+- **Correction, measured 2026-09-06 — four fifths of what the entry below calls
+  a refusal was not a refusal. It was our German data vendor's free allowance
+  running out in the middle of the customer's list.** Read twice, read-only
+  against production, once through the sanctioned caller-class tool
+  (`who-called.ts --slug german-company-data --days 13 --errors`) and once as a
+  per-day breakdown over `populations.ts`'s own external-customer filter. Both
+  agree, and every one of the 195 calls falls on **2026-08-24**:
+
+  | outcome | calls | share of the day |
+  |---|---|---|
+  | answered | 36 | 18% |
+  | **`OpenRegister returned HTTP 402: Payment Required`** | **127** | **65%** |
+  | refused — no confident registry match | 17 | 9% |
+  | refused — several registrations tie | 15 | 8% |
+
+  So the entry below is right that the customer walked away and right that the
+  32 genuine refusals are correct behaviour, and **wrong about what lost the
+  workload**. Two thirds of their list met "Payment Required" from us. The
+  refusal-shape change it names as "the highest-value open product change we
+  have" addresses **32 of 159 failures**; the vendor allowance addresses 127.
+  A second consequence, in the entry further down that priced OpenRegister Pro:
+  it computed break-even against the **36 calls we answered** (€7.20) rather
+  than the **195 the customer asked for** (€39.00 at list price), which is the
+  same wrong-denominator shape this file has now recorded several times. The
+  conclusion "not justified" may still be right — it rests on one day that has
+  never repeated — but it rested on the wrong number.
+
+  **Nothing is bought or changed on this today**, and that is deliberate rather
+  than blocked: the free allowance resets **2026-09-06T23:40Z**, and whether
+  this customer returns to German afterwards is measurable within a day. The
+  trigger the 08-27 entry set — "re-open if the free reset is exhausted again
+  immediately" — is the right one and now has the right arithmetic behind it.
+
+- **Measured 2026-09-06 — last week's fall in concentration has not repeated,
+  and the buyers who caused it did not come back.** The week of 08-24 closed at
+  €73.03 across 13 payers with the largest at 76%, and that was read as
+  diversification beginning. The week of 08-31, on its final day (€51.56, 9
+  payers), reads **98.6% top share — €50.85 against €0.71 from everyone else**.
+  Computed twice: once by `commercial-brief.ts` on both discrete weeks, once as
+  a per-payer carry-over through `payerFacts` on the same population.
+
+  The carry-over is the finding, not the percentage. Of the €17.54 that
+  everyone-but-the-largest paid in the 08-24 week, **€16.58 came from three
+  buyers** — the card account (€9.09), and two wallets at €5.44 and €2.05. This
+  week those three paid **€0.47 between them**, and two of them nothing at all.
+  Five wallets appeared that were not there last week; all five bought once,
+  for €0.02 to €0.05. So last week's thirteen payers were one habitual buyer
+  plus three short bursts plus nine trials, and the reading "we added buyers
+  without losing the big one" survives only in the trivial sense.
+
+  *Stated with its limit:* the 08-31 week still had ~18 hours to run when this
+  was measured, so it is not a completed-week comparison and no verdict is
+  drawn from the total. €0.71 across six days does not become €17.54 in
+  eighteen hours, which is what the concentration statement rests on.
+
 - **Measured 2026-09-05 — the largest customer brought us a new workload, we
   refused 82% of it in a single day, and they have not come back to it since.**
+  *(Superseded in its causal account by the 2026-09-06 correction above; the
+  refusal analysis in it stands for the 32 calls that were actually refusals.)*
   On **2026-08-24** the wallet behind ~€175 of the last 30 days' revenue ran
   **195 `german-company-data` calls**. 36 completed; **159 were refused**. Every
   refused query is a German insurance broker by name — "Beckmann
@@ -515,6 +572,13 @@ conversion.
   of 36 calls is €7.20. Buying it is not justified and is therefore **not a
   founder decision**. Re-open only if the 2026-09-06 free reset is exhausted
   again immediately.
+  *Denominator corrected 2026-09-06:* the €7.20 counts the calls we **answered**.
+  The customer **asked for 195** that day — €39.00 at list price, two thirds of
+  a month's subscription in one day — and 127 of the 159 failures were this
+  vendor's exhausted allowance, not a refusal. See the correction at the top of
+  this section. The verdict is left standing rather than reversed, because it
+  still rests on a single day that has not repeated; only its arithmetic is
+  replaced.
 
 - **The first customer to pay us by card arrived, and they are buying the
   compliance wedge — not the growth cluster** (measured 2026-08-25). A domain we

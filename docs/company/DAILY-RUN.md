@@ -76,6 +76,17 @@ remembering which vendor dashboard needs a manual check.
 > calls; every one of the 2,425 such calls in those capabilities' lifetimes was
 > the harness feeding its own negative tests, and no customer had ever seen the
 > error. LESSONS.md F2 incident 10.
+>
+> **And never read a raw failure count as one cause.** `who-called.ts` prints
+> the distinct error strings under each caller class; read them. On 2026-09-05 a
+> run took "195 calls, 36 completed, 159 failed" off the correct population and
+> wrote all 159 down as refusals. Grouped by error string the next morning,
+> **127 were the vendor answering `HTTP 402: Payment Required`** — our free
+> allowance exhausted mid-list — and 32 were refusals. The day's headline
+> product conclusion was aimed at a fifth of the problem, and a vendor
+> subscription was priced against the calls we answered rather than the calls
+> the customer asked for. A failure count is a denominator made of causes.
+> LESSONS.md F2 incident 11.
 
 Credential failures for Serper and Dilisense are re-armed automatically only
 after the configured API-key value changes; the tower stores a one-way key
@@ -92,6 +103,15 @@ write owner and deadline into the record. Confirm the deployed commit equals
 main's tip (`GET /health` against `git log origin/main -1`). "Still open" is not
 an allowed end state — merging and deploying are execution, never questions for
 Petter.
+
+> **After merging, confirm the merge carried the branch tip you meant to ship.**
+> `git diff <branch-tip> origin/main` must be empty. A green check and a
+> `MERGEABLE` state are computed on whatever head the API held when you read it,
+> and a live session can push between that read and the merge — which happened
+> on 2026-09-06, ninety seconds apart, and left `main` carrying a governance
+> record the author had already corrected. Fetch first, diff after. If the merge
+> took a stale head, say so in the record: on immutability-guarded files the
+> follow-up may no longer be landable as a follow-up. LESSONS.md F7 incident 9.
 
 **B2b. Local repo hygiene.**
 `cd apps/api && npx tsx scripts/session-close-check.ts --hygiene-only`. No DB, no

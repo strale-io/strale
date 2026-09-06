@@ -95,7 +95,13 @@ describe("pickByName", () => {
     // the caller must disambiguate.
     const gmbh = cand({ company_id: "DE-HRB-A-100", name: "Muster GmbH", register_number: "100" });
     const seEnt = cand({ company_id: "DE-HRB-B-200", name: "Muster SE", register_number: "200" });
-    expect(() => pickByName("Muster", [gmbh, seEnt])).toThrow(/2 distinct German entities match/);
+    // Anchored on the house-style prefix, not just the candidate count.
+    // Unanchored, this regex matched the pre-2026-09-06 wording too — which
+    // opened with the count and was recognised by none of the three health
+    // consumers — so it could not have caught the defect it looks like it
+    // guards. Independent review, 2026-09-06.
+    expect(() => pickByName("Muster", [gmbh, seEnt]))
+      .toThrow(/^Ambiguous German company name "Muster": 2 distinct German entities match/);
   });
 
   it("a duplicate listing of the SAME entity is not a tie", () => {
