@@ -96,16 +96,26 @@
           "minLength": 1,
           "description": "A repo path, never confidential content."
         },
+        "outcome": {
+          "type": "string",
+          "enum": ["permitted", "conditional", "prohibited"],
+          "description": "Present only when status is verified: what the recorded verification concluded. conditional means permitted only under a stated condition, given in note."
+        },
         "note": {
           "type": "string",
           "minLength": 1,
-          "description": "Present when status is attestation-required: says the evidence is private."
+          "description": "Required when status is attestation-required (says the evidence is private) or when outcome is conditional (states the condition)."
         }
       },
       "allOf": [
         {
           "if": { "properties": { "status": { "const": "verified" } } },
-          "then": { "required": ["status", "verified_at", "verified_by", "evidence"] }
+          "then": { "required": ["status", "verified_at", "verified_by", "evidence", "outcome"] },
+          "else": { "not": { "required": ["outcome"] } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "conditional" } }, "required": ["outcome"] },
+          "then": { "required": ["note"] }
         },
         {
           "if": { "properties": { "status": { "const": "attestation-required" } } },

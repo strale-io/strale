@@ -118,11 +118,21 @@ function register(vendors, overrides = {}) {
  * with acme (active) + old-vendor (retired), a coverage-matrix row naming
  * Acme, a coverage-matrix row naming the "Other" sentinel, and an
  * env-manifest row naming Acme plus one naming the "internal" sentinel. */
-function baseFiles(vendors = [vendor(), oldVendor()], depManifestOpts = {}) {
+/** auto-register.ts with a DEACTIVATED map in both entry shapes the real file uses. */
+function autoRegisterText(extraSlugs = []) {
+  return `const DEACTIVATED = new Map<string, string>([
+  ["unrelated-cap", "off for a test reason"],
+  ...[${["another-cap", ...extraSlugs].map((s) => JSON.stringify(s)).join(", ")}].map((slug): [string, string] => [slug, "shared reason"]),
+]);
+`;
+}
+
+function baseFiles(vendors = [vendor(), oldVendor()], depManifestOpts = {}, deactivated = []) {
   return {
     [REGISTER_PATH]: stringify(register(vendors)),
     [SCHEMA_PATH]: realSchema,
     "apps/api/src/lib/dependency-manifest.ts": dependencyManifestText(depManifestOpts),
+    "apps/api/src/capabilities/auto-register.ts": autoRegisterText(deactivated),
     "apps/api/coverage-matrix/acme-cap__us__company-registry.yaml": "capability_slug: acme-cap\ncountry: US\nprovider: Acme\nstatus: Live\n",
     "apps/api/coverage-matrix/other-row__us__other.yaml": "capability_slug: other-cap\ncountry: US\nprovider: Other\nstatus: Live\n",
     "config/env-manifest.yaml": stringify([
@@ -256,7 +266,7 @@ test("EVIDENCE_PATH_MISSING: a re-evaluation trigger citing a source that does n
 
 test("EVIDENCE_PATH_MISSING: a verification.evidence path that does not exist", (t) => {
   const files = baseFiles([
-    vendor({ verification: { ...verificationBlock(), terms: { status: "verified", verified_at: "2026-01-01", verified_by: "petter", evidence: "docs/ghost.md" } } }),
+    vendor({ verification: { ...verificationBlock(), terms: { status: "verified", verified_at: "2026-01-01", verified_by: "petter", evidence: "docs/ghost.md", outcome: "permitted" } } }),
     oldVendor(),
   ]);
   const dir = makeDir(files);
@@ -273,7 +283,65 @@ test("PROVIDER_VENDOR_MISSING: a PROVIDERS entry with no matching vendor", (t) =
   assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("PROVIDER_VENDOR_MISSING"));
 });
 
-test("PROVIDER_STATE_MISMATCH: a non-retired PROVIDERS entry mapped to a held vendor", (t) => {
+test("PROVIDER_STATE_MISMATCH: an active vendor whose every capability is in DEACTIVATED (spread entry)", (t) => {
+  const dir = makeDir(baseFiles([vendor(), oldVendor()], {}, ["acme-cap"]));
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("PROVIDER_STATE_MISMATCH"));
+});
+
+test("a held vendor whose every capability is in DEACTIVATED is clean", (t) => {
+  const held = vendor({ lifecycle: [{ state: "held", date: "2026-01-01", decision: "unknown", reason: "x" }] });
+  const dir = makeDir(baseFiles([held, oldVendor()], {}, ["acme-cap"]));
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("DEACTIVATED_UNREADABLE: an unrecognised DEACTIVATED entry shape fails, never skips", (t) => {
+  const files = baseFiles();
+  files["apps/api/src/capabilities/auto-register.ts"] =
+    'const DEACTIVATED = new Map<string, string>([\n  ["a", "b"],\n  ...buildEntries(),\n]);\n';
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("DEACTIVATED_UNREADABLE"));
+});
+
+test("SCHEMA_INVALID: a verified field without an outcome", (t) => {
+  const v = vendor({
+    verification: { ...verificationBlock(), redistribution: { status: "verified", verified_at: "2026-01-01", verified_by: "x", evidence: SCHEMA_PATH } },
+  });
+  const dir = makeDir(baseFiles([v, oldVendor()]));
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("SCHEMA_INVALID"));
+});
+
+test("SCHEMA_INVALID: an outcome on a field that is not verified", (t) => {
+  const v = vendor({ verification: { ...verificationBlock(), redistribution: { status: "unknown", outcome: "permitted" } } });
+  const dir = makeDir(baseFiles([v, oldVendor()]));
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("SCHEMA_INVALID"));
+});
+
+test("SCHEMA_INVALID: a conditional outcome without the condition in note", (t) => {
+  const v = vendor({
+    verification: { ...verificationBlock(), redistribution: { status: "verified", verified_at: "2026-01-01", verified_by: "x", evidence: SCHEMA_PATH, outcome: "conditional" } },
+  });
+  const dir = makeDir(baseFiles([v, oldVendor()]));
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("SCHEMA_INVALID"));
+});
+
+test("a verified conditional field with its condition is clean", (t) => {
+  const v = vendor({
+    verification: { ...verificationBlock(), redistribution: { status: "verified", verified_at: "2026-01-01", verified_by: "x", evidence: SCHEMA_PATH, outcome: "conditional", note: "with attribution" } },
+  });
+  const dir = makeDir(baseFiles([v, oldVendor()]));
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("PROVIDER_STATE_MISMATCH: a non-retired PROVIDERS entry mapped to a held vendor while its capabilities are live", (t) => {
   const files = baseFiles([vendor({ lifecycle: [{ state: "held", date: "2026-01-01", decision: "unknown", reason: "x" }] }), oldVendor()]);
   const dir = makeDir(files);
   t.after(() => cleanup(dir));

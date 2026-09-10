@@ -18,13 +18,17 @@
 # actually calls: openownership is unknown for that reason, and "PSC register"
 # is an alias of companies-house.
 #
-# Every verification.* and authorization.status below is "unknown" by
-# design: no repo file in this batch verifies terms, pricing, licensing,
-# redistribution rights, or authorization for any vendor here. Absence of
-# evidence is recorded as unknown, never implied as verified. The one
-# exception carrying a decision link and re-evaluation triggers is
-# dilisense, sourced from docs/decisions/records/DEC-20260429-A.md, whose
-# own text names the retention decision and the review triggers.
+# A verification.* or authorization.status is "unknown" unless a repo file
+# verifies it. Absence of evidence is recorded as unknown, never implied as
+# verified. The only verified fields are redistribution (may Strale resell
+# what the API returns?) for the ten vendors the two vendor-terms audits
+# ruled on: docs/security/2026-09-06-vendor-terms-audit.md and
+# docs/security/2026-09-10-vendor-terms-audit-batch-2.md. Each records the
+# audit's outcome (permitted, conditional, prohibited). Four vendors whose
+# every capability the audits switched off are held. The one decision link,
+# with re-evaluation triggers, is dilisense, sourced from
+# docs/decisions/records/DEC-20260429-A.md, whose own text names the
+# retention decision and the review triggers.
 #
 # non_vendor_sentinels: provider strings on other surfaces that deliberately
 # name no vendor. "Other" appears on 5 apps/api/coverage-matrix/*.yaml rows
@@ -397,10 +401,10 @@ vendors:
     name: GoPlus
     aliases: []
     lifecycle:
-      - state: active
+      - state: held
         date: 2026-09-10
         decision: unknown
-        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, kept for its health probe; every capability it lists is in apps/api/src/capabilities/auto-register.ts DEACTIVATED since the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md), whose verdict is that GoPlus's API License Agreement prohibits commercial use of its data without written permission."
     reevaluation_triggers: []
     verification:
       terms:
@@ -410,7 +414,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
     authorization:
       status: unknown
   - id: defillama
@@ -438,10 +446,10 @@ vendors:
     aliases:
       - Etherscan
     lifecycle:
-      - state: active
+      - state: held
         date: 2026-09-10
         decision: unknown
-        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, kept for its health probe; every capability it lists is in apps/api/src/capabilities/auto-register.ts DEACTIVATED, and the shared client refuses calls unless ETHERSCAN_COMMERCIAL_PLAN is true, per the vendor-terms audits (docs/security/2026-09-06-vendor-terms-audit.md, docs/security/2026-09-10-vendor-terms-audit-batch-2.md): Etherscan's API content is for personal, non-commercial use and Strale holds only a free key."
     reevaluation_triggers: []
     verification:
       terms:
@@ -451,7 +459,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
     authorization:
       status: unknown
   - id: alternative-me
@@ -471,7 +483,12 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: conditional
+        note: "Commercial use is allowed with attribution given next to the displayed data; fear-greed-index emits it in its output."
     authorization:
       status: unknown
   - id: openalex
@@ -491,7 +508,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-06
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-06-vendor-terms-audit.md
+        outcome: permitted
     authorization:
       status: unknown
   - id: arxiv
@@ -571,7 +592,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-06
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-06-vendor-terms-audit.md
+        outcome: permitted
     authorization:
       status: unknown
   - id: sec-ticker-index
@@ -651,7 +676,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
     authorization:
       status: unknown
   - id: alchemy-eth
@@ -672,7 +701,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: permitted
     authorization:
       status: unknown
   - id: jina-reader
@@ -1061,10 +1094,10 @@ vendors:
     aliases:
       - Adzuna
     lifecycle:
-      - state: active
+      - state: held
         date: 2026-09-10
         decision: unknown
-        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+        reason: "Initial population from config/env-manifest.yaml provider field. Its only capability, job-board-search, is in apps/api/src/capabilities/auto-register.ts DEACTIVATED since the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md): Adzuna permits publishing listings with branding, and other commercial use only as a 14-day trial."
     reevaluation_triggers: []
     verification:
       terms:
@@ -1074,7 +1107,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
     authorization:
       status: unknown
   - id: australian-business-register
@@ -1103,10 +1140,10 @@ vendors:
     aliases:
       - Aviationstack
     lifecycle:
-      - state: active
+      - state: held
         date: 2026-09-10
         decision: unknown
-        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+        reason: "Initial population from config/env-manifest.yaml provider field. Its only capability, flight-status, is in apps/api/src/capabilities/auto-register.ts DEACTIVATED since the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md): the free plan is personal, non-commercial use."
     reevaluation_triggers: []
     verification:
       terms:
@@ -1116,7 +1153,11 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
     authorization:
       status: unknown
   - id: better-stack
@@ -1221,7 +1262,12 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: unknown
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: conditional
+        note: "Public repository metadata through the documented API is permitted (github-repo-compare, github-repo-analyze); users' personal information is not, so github-user-profile is in DEACTIVATED."
     authorization:
       status: unknown
   - id: google

@@ -29,12 +29,14 @@ export { repoRootFrom };
 export const REGISTER_PATH = "config/vendors.yaml";
 export const SCHEMA_PATH = "config/vendors.schema.json";
 export const DEPENDENCY_MANIFEST_PATH = "apps/api/src/lib/dependency-manifest.ts";
+export const AUTO_REGISTER_PATH = "apps/api/src/capabilities/auto-register.ts";
 export const COVERAGE_MATRIX_DIR = "apps/api/coverage-matrix";
 export const ENV_MANIFEST_PATH = "config/env-manifest.yaml";
 export const DECISIONS_DIR = "docs/decisions/records";
 
 const RETIRED_STATES = new Set(["retired", "deprecated"]);
 const ACTIVE_STATES = new Set(["active", "fallback"]);
+const HELD_STATES = new Set(["held"]);
 /** Forward-only lifecycle-state ordering is not required by the design (a
  * vendor can go active -> held -> active again), so history rule 8 checks
  * only that existing entries are byte-identical and in place, never that
@@ -140,6 +142,60 @@ export function extractProviders(root) {
     if (rec.name) providers.push(rec);
   }
   return providers;
+}
+
+/**
+ * The capability slugs in apps/api/src/capabilities/auto-register.ts's
+ * DEACTIVATED map (`new Map([[slug, reason], ...])`), read with the
+ * TypeScript compiler API. A capability in that map is never registered, so
+ * a provider whose every capability is there is not in use.
+ */
+export function extractDeactivated(root) {
+  const filePath = resolve(root, AUTO_REGISTER_PATH);
+  const text = readFileSync(filePath, "utf8");
+  const sf = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let mapArray = null;
+  function find(node) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "DEACTIVATED" &&
+      node.initializer &&
+      ts.isNewExpression(node.initializer) &&
+      node.initializer.arguments?.length &&
+      ts.isArrayLiteralExpression(node.initializer.arguments[0])
+    ) {
+      mapArray = node.initializer.arguments[0];
+    }
+    ts.forEachChild(node, find);
+  }
+  find(sf);
+  if (!mapArray) throw new Error(`could not find the DEACTIVATED new Map([...]) literal in ${AUTO_REGISTER_PATH}`);
+  // Two entry shapes occur: a literal pair `[slug, reason]`, and a spread
+  // `...[slug, slug].map((slug) => [slug, reason])` sharing one reason. Any
+  // other shape is an error, never skipped: a silently missed entry would
+  // make a deactivated provider read as live.
+  const slugs = new Set();
+  for (const el of mapArray.elements) {
+    if (ts.isArrayLiteralExpression(el) && el.elements.length > 0 && ts.isStringLiteralLike(el.elements[0])) {
+      slugs.add(el.elements[0].text);
+      continue;
+    }
+    if (
+      ts.isSpreadElement(el) &&
+      ts.isCallExpression(el.expression) &&
+      ts.isPropertyAccessExpression(el.expression.expression) &&
+      el.expression.expression.name.text === "map" &&
+      ts.isArrayLiteralExpression(el.expression.expression.expression) &&
+      el.expression.expression.expression.elements.every((e) => ts.isStringLiteralLike(e))
+    ) {
+      for (const e of el.expression.expression.expression.elements) slugs.add(e.text);
+      continue;
+    }
+    const { line } = sf.getLineAndCharacterOfPosition(el.getStart(sf));
+    throw new Error(`unrecognised DEACTIVATED entry shape at ${AUTO_REGISTER_PATH}:${line + 1}`);
+  }
+  return slugs;
 }
 
 // ── coverage matrix + env manifest provider extraction ──────────────────
@@ -328,6 +384,13 @@ export function checkProvidersCrossCheck(root, register) {
     findings.push({ code: "PROVIDERS_UNREADABLE", file: DEPENDENCY_MANIFEST_PATH, detail: String(error) });
     return findings;
   }
+  let deactivated;
+  try {
+    deactivated = extractDeactivated(root);
+  } catch (error) {
+    findings.push({ code: "DEACTIVATED_UNREADABLE", file: AUTO_REGISTER_PATH, detail: String(error) });
+    return findings;
+  }
 
   for (const p of providers) {
     const vendorId = resolveOne(owners, p.name);
@@ -343,13 +406,17 @@ export function checkProvidersCrossCheck(root, register) {
     const lifecycle = vendor.lifecycle ?? [];
     const currentState = lifecycle[lifecycle.length - 1]?.state;
     const isFallbackOnly = (p.fallbackCapabilities?.length ?? 0) > 0 && (p.capabilities?.length ?? 0) === 0;
+    // A provider kept in PROVIDERS (for example for its health probe) whose
+    // every capability is in DEACTIVATED is held, not active; and held is
+    // accepted only then, so the state stays tied to what the code runs.
+    const allDeactivated = (p.capabilities?.length ?? 0) > 0 && p.capabilities.every((c) => deactivated.has(c));
     if (!p.retired) {
-      const expectSet = isFallbackOnly ? new Set(["fallback"]) : ACTIVE_STATES;
+      const expectSet = allDeactivated ? HELD_STATES : isFallbackOnly ? new Set(["fallback"]) : ACTIVE_STATES;
       if (!expectSet.has(currentState)) {
         findings.push({
           code: "PROVIDER_STATE_MISMATCH",
           file: REGISTER_PATH,
-          detail: `${vendorId} is a non-retired PROVIDERS entry ("${p.name}") but its current lifecycle state is "${currentState}", expected one of [${[...expectSet].join(", ")}]`,
+          detail: `${vendorId} is a non-retired PROVIDERS entry ("${p.name}")${allDeactivated ? " whose every capability is in DEACTIVATED" : ""} but its current lifecycle state is "${currentState}", expected one of [${[...expectSet].join(", ")}]`,
         });
       }
     } else if (!RETIRED_STATES.has(currentState)) {
