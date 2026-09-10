@@ -250,6 +250,9 @@ test("a coordinated identity edit that re-syncs every digest passes CI but fails
   // below is unchanged; it now runs against the world it describes.
   const preClosureCtx = { ...context, tracks: structuredClone(context.tracks) };
   preClosureCtx.tracks.tracks.find((x) => x.id === "T10").status = "active";
+  // Pre-closure T6 (post-m2) was queued; an active post-m2 track alongside a
+  // blocking G9 is itself a finding, TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS.
+  preClosureCtx.tracks.tracks.find((x) => x.id === "T6").status = "queued";
   delete r.closing_review;
   const g9Pre = r.exit_gaps.find((g) => g.covers.includes("plan.review_route"));
   g9Pre.blocking = true;

@@ -17,7 +17,7 @@
 schema_version: 1
 program: cto-readiness
 program_status: active
-updated: 2026-09-02
+updated: 2026-09-10
 tracks:
   - id: T1
     title: M2 closure audit
@@ -497,14 +497,18 @@ tracks:
 
   - id: T6
     title: M3 repo-native workflows
-    status: queued
+    status: active
     gate: post-m2
     depends_on: [T1, T5, T10]
     owner: session
     next_action: >
-      Per migration plan section 10 M3. First sub-batch is the
-      vendor-current-state shadow replacement named by the vendor-stack
-      closeout.
+      Started 2026-09-10: M2 exit closed (T10 done, zero blocking exit gaps,
+      closing review PASS at b014c417, archived at
+      archive/sessions/2026-09-05-m2-closing-review.md). Per migration plan
+      section 10 M3. First sub-batch is the vendor-current-state shadow
+      replacement named by the vendor-stack closeout. All M3 work is shadow
+      mode: candidate project documents stay inactive and Notion-backed
+      workflows stay authoritative until the founder-gated M4 cutover.
     resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
     exit:
       - repo-native replacements testable without changing existing authority
