@@ -28,11 +28,19 @@ review_route: author-self-verification-plus-fresh-codex-review
 >
 > **T10 is runnable again (2026-09-03, DEC-20260903-A).** It was blocked only
 > because its closing review was reserved for Codex; the founder decided
-> waiting costs more than proceeding. Its review is a fresh read-only Claude
-> agent and the batch is recorded in `docs/programs/codex-review-backlog.yaml`
-> for Codex when the quota returns. Every queued track still sits behind T10,
+> waiting costs more than proceeding. Every queued track still sits behind T10,
 > which makes it the higher-leverage of the two runnable tracks. T16 stays
 > founder-gated on legal evidence.
+>
+> **Review route, as of 2026-09-10 (DEC-20260910-A).** The founder's 2026-09-07
+> policy made cross-provider review optional: an independent review may be a
+> fresh same-provider agent in a separate context. Batches are **no longer**
+> recorded in `docs/programs/codex-review-backlog.yaml` for a later Codex pass;
+> its 36 rows were waived and the register is closed to new entries. This
+> file's front-matter `review_route` still names Codex — it is left unchanged
+> deliberately, because `scripts/m2-closure-register-lib.mjs` reads it for the
+> M2 closing review's route-consistency check, and changing it belongs to the
+> T10 batch that owns that mechanism rather than to a governance cleanup.
 
 Any fresh session, **Claude Code or Codex**, resumes this program by starting
 here and following only the pointers below:
@@ -144,16 +152,15 @@ done.
    supersession says otherwise. Where an older handoff says "do not invoke
    Claude for review" without qualification, it means this independent
    review; same-tool self-verification of Claude-authored work is permitted.
-6. **Independent review.** A fresh, separate Codex task (`gpt-5.6-sol`,
-   `xhigh`, read-only, closed after its verdict) reviews the exact final
-   commit, register change included. Blocking findings are fixed and
-   re-reviewed; nothing ships on a FAIL. **While Codex is unavailable**
-   (founder instruction 2026-09-02: Codex quota exhausted), the independent
-   review is a fresh read-only Claude agent that did not author the batch,
-   given the same brief; the PR must say the review was same-provider, and
-   the first Codex session after quota returns re-reviews anything merged
-   under this fallback that touched money, compliance, production, or the
-   M4 cutover.
+6. **Independent review.** A fresh, separate, read-only reviewer that did not
+   author the batch reviews the exact final commit, register change included,
+   and is closed after its verdict. Blocking findings are fixed and
+   re-reviewed; nothing ships on a FAIL. Under the founder's 2026-09-07 review
+   policy (DEC-20260910-A) the reviewer may be the same provider in a separate
+   context; a different provider is optional. The PR says which review ran.
+   Merged work is **not** queued for a later Codex re-review: that obligation,
+   introduced 2026-09-02 while Codex quota was exhausted, was waived with the
+   whole backlog on 2026-09-10.
 7. **Ship.** Open PR, wait for CI, merge, verify `origin/main` carries the
    commit.
 8. **After merge.** Add a Journal entry while Notion remains authoritative,
