@@ -509,12 +509,18 @@ tracks:
       2026-09-10: the repo-owned vendor-state model is designed and recorded
       at docs/strategy/2026-09-10-m3-vendor-state-model.md, per the M3
       acceptance shape in
-      archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md. Next is
-      batch 3, as that design describes: config/vendors.yaml and its schema,
-      populated with currently integrated vendors, plus vendors:check with
-      tests proven by planted failures. All M3 work is shadow mode: candidate
-      project documents stay inactive and Notion-backed workflows stay
-      authoritative until the founder-gated M4 cutover.
+      archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md. Batch 3
+      done 2026-09-10 (PR #TBD): config/vendors.yaml (71 vendors) and
+      config/vendors.schema.json, scripts/vendors-lib.mjs,
+      scripts/check-vendors.mjs, scripts/vendors.test.mjs, wired into CI as
+      vendors:check / vendors:test after env:check / env:test. Next is batch
+      4, as the design describes: derive STALE_VENDORS from the register,
+      add the dependency-edge sync between dependency-manifest.ts and
+      vendor_capability_dependencies, and retarget
+      check-vendor-roster-drift.ts to read repository decision records
+      instead of Notion. All M3 work is shadow mode: candidate project
+      documents stay inactive and Notion-backed workflows stay authoritative
+      until the founder-gated M4 cutover.
     resume_file: docs/strategy/2026-09-10-m3-vendor-state-model.md
     exit:
       - repo-native replacements testable without changing existing authority

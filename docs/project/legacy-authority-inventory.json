@@ -635,6 +635,8 @@
         "archive/superseded/manifests-drafts/product-offers-lookup.yaml",
         "archive/superseded/manifests-drafts/sec-edgar-name-search.yaml",
         "config/env-manifest.yaml",
+        "config/vendors.schema.json",
+        "config/vendors.yaml",
         "docs/README.md",
         "docs/programs/brand-website/tracks.yaml",
         "docs/programs/cto-readiness/tracks.yaml",
@@ -652,7 +654,9 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/research-lib.mjs",
-        "scripts/research.test.mjs"
+        "scripts/research.test.mjs",
+        "scripts/vendors-lib.mjs",
+        "scripts/vendors.test.mjs"
       ]
     },
     {
