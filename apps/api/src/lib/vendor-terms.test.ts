@@ -65,6 +65,8 @@ describe("no live code path reaches a prohibited upstream", () => {
     expect(files).toContain("capabilities/approval-security-check.ts");
     expect(files).toContain("capabilities/lib/etherscan-client.ts");
     expect(files).toContain("capabilities/host-exposure-lookup.ts");
+    // Plain http:// — proves the matcher still sees non-TLS references.
+    expect(files).toContain("capabilities/ip-risk-score.ts");
   });
 
   const deactivated = getDeactivatedCapabilities();
