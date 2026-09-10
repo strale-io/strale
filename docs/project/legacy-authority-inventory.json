@@ -557,6 +557,7 @@
         "docs/remediation/packages/WP17.yaml",
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "docs/x402-listing.md",
         "handoff/README.md",
         "handoff/_general/from-code/2026-08-15-checkin-defects-and-eureg-rebuild.md",
@@ -596,7 +597,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "0fffef49e60d7108c3349781ba64594717616727859ceeb31a64eab48842387c",
+      "sha256": "17327f1892d2b4b1046961e05aea47bbebf8bdd44d767d8553c94023a2508ddd",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
