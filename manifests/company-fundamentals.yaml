@@ -72,8 +72,9 @@ test_fixtures:
       ticker: AAPL
     expected_fields:
       - field: cik
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: "0000320193"
       - field: entity_name
         operator: type
         reliability: common
@@ -84,6 +85,10 @@ test_fixtures:
       - field: source_url
         operator: not_null
         reliability: guaranteed
+      - field: metrics_unavailable
+        operator: type
+        reliability: guaranteed
+        value: array
   health_check_input:
     ticker: AAPL
 output_field_reliability:

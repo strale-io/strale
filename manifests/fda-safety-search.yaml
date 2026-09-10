@@ -82,11 +82,13 @@ test_fixtures:
       limit: 3
     expected_fields:
       - field: query
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: aspirin
       - field: domain
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: drug
       - field: total_results
         operator: type
         reliability: guaranteed
@@ -95,6 +97,10 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: returned
+        operator: type
+        reliability: guaranteed
+        value: number
   health_check_input:
     query: aspirin
     domain: drug
