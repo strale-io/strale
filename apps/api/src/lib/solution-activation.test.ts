@@ -18,6 +18,13 @@
  *     solutions table must import this module. The incident was a duplicate
  *     nobody knew existed; this is what makes the next duplicate fail CI
  *     instead of production.
+ *
+ * The guard reads source text, so green means "no writer in a shape it
+ * recognises", not "no writer". Known shapes it cannot see, none present when
+ * this was written: a patch object passed by name (`.set(patch)`), the table
+ * imported under an alias (`solutions as sol`), a computed key
+ * (`["isActive"]: true`), and a local function that shadows the predicate's
+ * name. Writing any of these for `solutions` means extending the guard first.
  */
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
