@@ -14,6 +14,11 @@
  * auto-register's DEACTIVATED map, and a shared client must refuse the call
  * behind a licence gate. Removing a host from this list is a licence
  * decision — record the plan or permission that changed the answer.
+ *
+ * When the M3 vendor-state model lands `config/vendors.yaml` with its terms /
+ * redistribution verification record (docs/strategy/2026-09-10-m3-vendor-state-model.md,
+ * gap G4, batch 3), derive this list from that file's verdicts instead of
+ * keeping both — two lists for one fact is how the drift in these audits began.
  */
 export const PROHIBITED_UPSTREAM_HOSTS: ReadonlyMap<string, string> = new Map([
   // 2026-09-06
