@@ -96,7 +96,8 @@ async function main() {
       // resync can remove a real known answer as easily as a stale one.
       const d = diffChecks(keep.validation_rules, validationRules.checks);
       console.log(`  checks: ${validationRules.checks.length} (${d.kept} unchanged)`);
-      for (const c of d.removed) console.log(`    - ${c}`);
+      for (const c of d.removed) console.log(`    - ${c}   (field no longer asserted)`);
+      for (const c of d.changed) console.log(`    ~ ${c.from.join(" & ")}  ->  ${c.to.join(" & ")}`);
       for (const c of d.added) console.log(`    + ${c}`);
       continue;
     }

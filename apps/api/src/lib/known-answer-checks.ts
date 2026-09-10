@@ -36,20 +36,40 @@ export function describeCheck(c: KnownAnswerCheck): string {
   return `${c.field} ${c.operator}${v}`;
 }
 
+export interface ChecksDiff {
+  /** Fields no longer asserted at all. */
+  removed: string[];
+  /** Fields newly asserted. */
+  added: string[];
+  /** Fields still asserted, but differently (e.g. not_null -> type). */
+  changed: { field: string; from: string[]; to: string[] }[];
+  kept: number;
+}
+
 /**
  * What replacing `current` (a row's `validation_rules`, any shape) with `next`
- * would remove and add. Used by the sync script's dry run so an operator sees
- * the assertions a production write drops before making it.
+ * would do, grouped by field. Used by the sync script's dry run so an operator
+ * sees the assertions a production write drops before making it — and can tell
+ * a dropped field from one that is merely checked a different way.
  */
-export function diffChecks(current: unknown, next: readonly KnownAnswerCheck[]): { removed: string[]; added: string[]; kept: number } {
+export function diffChecks(current: unknown, next: readonly KnownAnswerCheck[]): ChecksDiff {
   const raw = (current as { checks?: unknown } | null | undefined)?.checks;
-  const before = (Array.isArray(raw) ? raw : [])
-    .filter((c): c is KnownAnswerCheck => typeof c === "object" && c !== null && typeof (c as KnownAnswerCheck).field === "string")
-    .map(describeCheck);
-  const after = next.map(describeCheck);
-  return {
-    removed: before.filter((c) => !after.includes(c)),
-    added: after.filter((c) => !before.includes(c)),
-    kept: after.filter((c) => before.includes(c)).length,
+  const beforeChecks = (Array.isArray(raw) ? raw : [])
+    .filter((c): c is KnownAnswerCheck => typeof c === "object" && c !== null && typeof (c as KnownAnswerCheck).field === "string");
+  const byField = (cs: readonly KnownAnswerCheck[]) => {
+    const m = new Map<string, string[]>();
+    for (const c of cs) m.set(c.field, [...(m.get(c.field) ?? []), describeCheck(c)]);
+    return m;
   };
+  const before = byField(beforeChecks);
+  const after = byField(next);
+  const diff: ChecksDiff = { removed: [], added: [], changed: [], kept: 0 };
+  for (const [field, from] of before) {
+    const to = after.get(field);
+    if (!to) diff.removed.push(...from);
+    else if (from.length === to.length && from.every((c) => to.includes(c))) diff.kept += to.length;
+    else diff.changed.push({ field, from, to });
+  }
+  for (const [field, to] of after) if (!before.has(field)) diff.added.push(...to);
+  return diff;
 }

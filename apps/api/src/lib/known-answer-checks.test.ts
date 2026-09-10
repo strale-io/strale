@@ -33,23 +33,32 @@ describe("diffChecks", () => {
     { field: "resolved_id", operator: "equals", value: "W2159974629" },
     { field: "citations", operator: "type", value: "array" },
   ]);
-  it("names what a resync drops and adds", () => {
+  it("names the fields a resync stops asserting, and the new ones", () => {
     const d = diffChecks({ checks: [
       { field: "resolved_id", operator: "equals", value: "W2159974629" },
       { field: "citations_unavailable", operator: "equals", value: false },
     ] }, next);
     expect(d.removed).toEqual(["citations_unavailable equals false"]);
     expect(d.added).toEqual(["citations type \"array\""]);
+    expect(d.changed).toEqual([]);
     expect(d.kept).toBe(1);
   });
-  it("treats a value change as a removal plus an addition", () => {
-    const d = diffChecks({ checks: [{ field: "resolved_id", operator: "equals", value: "W1" }] }, next);
-    expect(d.removed).toEqual(["resolved_id equals \"W1\""]);
-    expect(d.added).toContain("resolved_id equals \"W2159974629\"");
+  it("reports a field checked differently as changed, not as a drop", () => {
+    const d = diffChecks({ checks: [
+      { field: "resolved_id", operator: "equals", value: "W1" },
+      { field: "citations", operator: "not_null" },
+    ] }, next);
+    expect(d.removed).toEqual([]);
+    expect(d.added).toEqual([]);
+    expect(d.changed).toEqual([
+      { field: "resolved_id", from: ["resolved_id equals \"W1\""], to: ["resolved_id equals \"W2159974629\""] },
+      { field: "citations", from: ["citations not_null"], to: ["citations type \"array\""] },
+    ]);
+    expect(d.kept).toBe(0);
   });
   it("reads any current shape without throwing", () => {
     for (const cur of [null, undefined, {}, { checks: null }, { checks: [null, 3, { operator: "x" }] }]) {
-      expect(diffChecks(cur, next)).toEqual({ removed: [], added: next.map(describeCheck), kept: 0 });
+      expect(diffChecks(cur, next)).toEqual({ removed: [], added: next.map(describeCheck), changed: [], kept: 0 });
     }
   });
 });
