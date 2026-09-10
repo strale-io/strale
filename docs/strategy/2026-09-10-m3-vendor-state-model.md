@@ -186,6 +186,14 @@ manifest-to-database onboarding pipeline; DEC-20260517-A for the coverage
 matrix), and repo declarations are reviewed through pull requests while
 database rows have no reviewed source.
 
+Correction, 2026-09-11: the sync already exists for most of the table.
+`startup-migrations.ts` rebuilds `vendor_capability_dependencies` from
+`PROVIDERS` on every boot for paid and self-hosted providers with a
+`vendor_accounts` row, so for those providers the repo is already canonical
+and the table derived. The duplication described above remains only for the
+providers that loop skips. See "Batch 4 rescoped" for what M3 does about it
+and what waits for M4.
+
 ### 4. Two hand-maintained lists become derived from the register in later batches
 
 - `STALE_VENDORS` in `apps/api/src/lib/platform-facts.ts` (confirmed at
@@ -339,6 +347,9 @@ one of its premises was wrong.
   Any new writer to that table is a production database write at deploy,
   read by the control tower to decide which capabilities and solutions to
   suspend, so it is outside M3. Batch 4 only reports the skipped providers.
+  Whether to extend the sync to them, and inverting
+  `deriveVendorInventoryIssues` (point 3), move to the M4 cutover with the
+  other runtime changes; nothing from the original batch 4 is dropped.
 - **Deriving `STALE_VENDORS` from the register** would make runtime tooling
   read a register that is `authority_active: false`. Batch 4 compares the
   two instead; the derivation, and deriving `STATIC_FACTS.vendors`, move to
