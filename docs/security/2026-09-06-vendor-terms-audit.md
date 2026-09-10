@@ -121,6 +121,12 @@ public API, and the public Ethereum RPC endpoints behind `ens-resolve` /
 `ens-reverse-lookup`. Absence from the violation list above means unchecked,
 not cleared.
 
+> **2026-09-10:** all of these were checked in
+> `docs/security/2026-09-10-vendor-terms-audit-batch-2.md`, which also found
+> that this audit missed three Etherscan wallet capabilities and `ip-risk-score`
+> on ip-api.com, and that the database switch alone did not stop
+> web3-assurance's direct executor calls.
+
 ## The rule this should have followed
 
 "Free and keyless" answers *can I call it*. It does not answer *may I sell what

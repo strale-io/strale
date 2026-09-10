@@ -1,0 +1,72 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "310d6aa59040390bdd5b8b42361b3aaab2abccea"
+  },
+  "at": "2026-09-10T21:49:17.245Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/427e7490-26c0-4cc7-aa84-9031a101914a/scratchpad/mut-terms-receipt.json"
+  },
+  "summary": {
+    "ok": true,
+    "test_file": "apps/api/src/lib/vendor-terms.test.ts",
+    "unit_tests_passed": 22,
+    "unit_tests_total": 22,
+    "planted_failures": 10,
+    "planted_caught": 10,
+    "notes": "first run: 8/10 — one flawed plant (landed inside a comment), one real hole (an exemption could cover a capability executor), fixed in the test before this run"
+  },
+  "topic": "vendor-terms-guard-mutations",
+  "raw": {
+    "ok": true,
+    "test_file": "apps/api/src/lib/vendor-terms.test.ts",
+    "unit_tests_passed": 22,
+    "unit_tests_total": 22,
+    "planted_failures": 10,
+    "planted_caught": 10,
+    "plants": [
+      {
+        "plant": "a newly found violator left live (ip-risk-score not DEACTIVATED)",
+        "result": "caught"
+      },
+      {
+        "plant": "a GoPlus capability quietly reactivated",
+        "result": "caught"
+      },
+      {
+        "plant": "a free public RPC slipped back into the pool",
+        "result": "caught"
+      },
+      {
+        "plant": "Etherscan gate removed",
+        "result": "caught"
+      },
+      {
+        "plant": "Etherscan gate accepts any value",
+        "result": "caught"
+      },
+      {
+        "plant": "fear-greed attribution dropped",
+        "result": "caught"
+      },
+      {
+        "plant": "probe falls back to a prohibited host",
+        "result": "caught"
+      },
+      {
+        "plant": "a web3-assurance evaluator calls GoPlus directly",
+        "result": "caught"
+      },
+      {
+        "plant": "matcher loses plain http",
+        "result": "caught"
+      },
+      {
+        "plant": "exemption list swallows a capability",
+        "result": "caught"
+      }
+    ],
+    "notes": "first run: 8/10 — one flawed plant (landed inside a comment), one real hole (an exemption could cover a capability executor), fixed in the test before this run"
+  }
+}
