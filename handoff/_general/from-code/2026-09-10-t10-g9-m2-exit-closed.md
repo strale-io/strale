@@ -15,8 +15,6 @@ itself reviewed by a fresh read-only agent before merge. This change records it:
 - Track T10 is done. Track T6 (M3 repo-native workflows) is now the active
   track, because the M2 exit gate existed to unblock it and every one of its
   dependencies is met.
-- `docs/programs/codex-review-backlog.yaml` gains rows CX-37 through CX-52,
-  one per batch in this loop that would otherwise have gone to Codex.
 
 The candidate record set stays inactive. Nothing here is the M4 cutover, which
 remains founder-gated; Notion-backed workflows stay authoritative.
@@ -55,17 +53,16 @@ guards was deliberately broken, the test was confirmed to fail, the library was
 restored from git, and the test was confirmed to pass again. All five failed
 when broken and passed when restored, and both libraries were clean afterwards.
 
-## Needs a founder decision
+## Review routing for this batch
 
-`npm run codex:check` reports `REVIEW_OVERDUE`: backlog rows CX-2 and CX-3 are
-still pending after the register's `policy.review_by` date of 2026-09-07. This
-is date-driven and fails identically on an untouched `main`; this change did
-not cause it. The checker refuses to move `review_by` later, or to close a row
-by waiver, without a founder decision recorded in the repository. Separately,
-the founder's review policy of 2026-09-07 removed the cross-provider review
-requirement, which bears directly on why this backlog exists. Whether to waive
-the backlog under that policy, extend `review_by`, or keep it open is the
-founder's call and has not been made here.
+No rows are added to `docs/programs/codex-review-backlog.yaml`. Under the
+founder's 2026-09-07 review policy, recorded as DEC-20260910-A, cross-provider
+review is optional and no new batches are added to that register; an
+independent same-provider review in a separate context satisfies the review
+requirement. Every batch in this loop, including this one, was reviewed that
+way: each erratum and verdict pull request by a fresh read-only agent that did
+not author it. DEC-20260910-A also waived the register's 36 pending rows, whose
+overdue `policy.review_by` had made `codex:check` fail on `main` from 2026-09-07.
 
 ## Next
 

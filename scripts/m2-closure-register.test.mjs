@@ -1505,17 +1505,25 @@ test("a clean closing_review releases plan.review_route and clears the track gat
   });
 });
 
-test("CLOSING_REVIEW_ROUTE_MISMATCH: fresh-read-only-claude-agent needs a pending backlog row naming the closing review", () => {
-  withClosingReviewFixture({ backlog: { entries: [{ status: "pending", subject: "PR #999 — unrelated batch" }] } }, ({ r, ctx }) => {
-    has(r, "CLOSING_REVIEW_ROUTE_MISMATCH", ctx);
-  });
-  withClosingReviewFixture({ backlog: { entries: [{ status: "reviewed", subject: "the M2 closing review" }] } }, ({ r, ctx }) => {
-    has(r, "CLOSING_REVIEW_ROUTE_MISMATCH", ctx);
-  });
-  // fresh-codex-task never needs the backlog row.
-  withClosingReviewFixture({ route: "fresh-codex-task", backlog: { entries: [] } }, ({ r, ctx }) => {
-    assert.ok(!codes(r, ctx).includes("CLOSING_REVIEW_ROUTE_MISMATCH"));
-  });
+test("DEC-20260910-A: either recorded route yields a clean closing_review with no Codex backlog row", () => {
+  // fresh-read-only-claude-agent once needed a pending Codex re-review row
+  // naming the closing review (DEC-20260903-A). DEC-20260910-A retired that
+  // obligation. With every other closing_review check passing, neither route
+  // may produce any CLOSING_REVIEW_ finding, whether the backlog is empty,
+  // holds only an unrelated pending row, or holds only a reviewed one.
+  const backlogs = [
+    { entries: [] },
+    { entries: [{ status: "pending", subject: "PR #999 — unrelated batch" }] },
+    { entries: [{ status: "reviewed", subject: "the M2 closing review" }] },
+  ];
+  for (const backlog of backlogs) {
+    for (const route of ["fresh-read-only-claude-agent", "fresh-codex-task"]) {
+      withClosingReviewFixture({ route, backlog }, ({ r, ctx }) => {
+        const c = codes(r, ctx);
+        assert.ok(!c.some((code) => code.startsWith("CLOSING_REVIEW_")), `${route}, ${backlog.entries.length} row(s): ${c.join(",")}`);
+      });
+    }
+  }
 });
 
 test("CLOSING_REVIEW_COMMIT_NOT_ANCESTOR and COMMIT_UNVERIFIABLE: the reviewed commit must be checkable and an ancestor of HEAD", () => {
@@ -1719,11 +1727,14 @@ test("CLOSING_REVIEW_MUTATED: verdict, reviewed_at, and evidence are each indivi
 
 test("plan.review_route stays a blocking requirement when closing_review is present but not clean", () => {
   withClosingReviewFixture({
-    backlog: { entries: [] }, // makes the route mismatch, so closing_review is not clean
+    // A reviewed commit that is not an ancestor of HEAD makes closing_review
+    // not clean. This test used a missing Codex backlog row as its unclean
+    // case until DEC-20260910-A retired that requirement.
+    isAncestor: () => false,
     mutateRegister: (r, g9) => { g9.blocking = false; },
   }, ({ r, ctx }) => {
     const c = codes(r, ctx);
-    assert.ok(c.includes("CLOSING_REVIEW_ROUTE_MISMATCH"), c.join(","));
+    assert.ok(c.includes("CLOSING_REVIEW_COMMIT_NOT_ANCESTOR"), c.join(","));
     assert.ok(c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
   });
 });

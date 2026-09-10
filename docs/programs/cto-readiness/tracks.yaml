@@ -279,7 +279,8 @@ tracks:
       through eighteen batches, G2 (35 ID collisions) through five
       batches, G3 (the cross-surface DEC-20260422-A) through the
       DEC-20260904-B mechanism, and G9 through the closing independent
-      review at b014c417 (PR #618; round 1 at 3a7089c5 failed and its
+      review at b014c417 (PR #618; each round below is named by the commit it
+      reviewed, as its archive's frontmatter records: round 1 at 3a7089c5 failed and its
       findings are withdrawn by DEC-20260905-B, PR #573; round 2 and an exhaustive
       sweep at c3691079 by DEC-20260905-C, PR #576; round 3 at 4318cbec by
       DEC-20260905-D, PR #577; round 4 at 65bf77f1 by DEC-20260905-E,
@@ -290,11 +291,11 @@ tracks:
       PR #591, round 10 at 0fd6364f by DEC-20260905-L, PR #596, round 11 at
       ef16b2c6 by DEC-20260905-M, PR #603, round 12 at fdf91565 by
       DEC-20260905-N, PR #605; round 13 at c268565a by DEC-20260905-O,
-      PR #609), whose verdict the register's
+      PR #609; round 14 at d0e21ecd by DEC-20260905-P, PR #612; round 15 at
+      dd8dd3e1 by DEC-20260905-Q, PR #614), whose verdict the register's
       closing_review block records and the validator verifies. The
       candidate set stays inactive (authority_active: false) until the M4
-      cutover, which is its own founder-gated track; the Codex re-review
-      of the whole set is CX-52 (the erratum PRs are CX-37 and CX-39 to CX-51, the checker CX-38). A later change to any record, the
+      cutover, which is its own founder-gated track. A later change to any record, the
       registry or a resolution report makes the closing review stale
       (CLOSING_REVIEW_STALE) and reopens this gate until a new review at
       a new commit is recorded.
