@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { createPublicClient, http, namehash, type Hex } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
-import { getEthRpcEndpoints, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
+import { getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
 
 // F-0-006 Bucket D: ENS resolution uses viem's RPC against the hardcoded
 // Ethereum mainnet endpoint pool in lib/eth-rpc-endpoints.ts. User input
@@ -52,6 +52,7 @@ registerCapability("ens-resolve", async (input: CapabilityInput) => {
   const now = new Date().toISOString();
 
   const endpoints = getEthRpcEndpoints();
+  if (endpoints.length === 0) throw new Error(NO_LICENSED_ETH_RPC);
   let lastError: unknown;
   for (let i = 0; i < endpoints.length; i++) {
     const rpcUrl = endpoints[i];

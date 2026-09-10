@@ -39,6 +39,8 @@ output_schema:
       type: number
     classification:
       type: string
+    attribution:
+      type: string
 data_source: Alternative.me (Crypto Fear & Greed Index)
 data_source_type: api
 transparency_tag: algorithmic
@@ -56,6 +58,9 @@ test_fixtures:
       - field: classification
         operator: not_null
         reliability: common
+      - field: attribution
+        operator: not_null
+        reliability: guaranteed
 output_field_reliability:
   trend: common
   average: common
@@ -63,6 +68,7 @@ output_field_reliability:
   timestamp: common
   current_value: common
   classification: common
+  attribution: guaranteed
 limitations:
   - title: null
     text: >-

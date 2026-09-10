@@ -46,6 +46,49 @@ const DEACTIVATED = new Map<string, string>([
     "host-exposure-lookup",
     "deactivated 2026-09-06, one day after launch: Shodan's InternetDB is licensed for NON-COMMERCIAL use only — \"you can't use it to build commercial products that you charge money for\" — and this shipped as a paid EUR 0.05 capability. Caught by a vendor-terms audit prompted by the same question about VirusTotal; it should have been asked before the executor was written, not after. Contained with zero paying calls served: it was still dark (visible=false) and was deactivated and descheduled before the green week would have promoted it. Reactivate only under a Shodan enterprise licence, or rebuild on a source whose terms permit resale.",
   ],
+  // Vendor-terms audit batch 2, 2026-09-10 — docs/security/2026-09-10-vendor-terms-audit-batch-2.md.
+  // Being listed here is what stops a direct caller: web3-assurance's
+  // evaluators run executors via getDirectExecutor, which never reads
+  // capabilities.is_active, so the database switch alone did not reach them.
+  ...[
+    "token-security-check",
+    "wallet-risk-score",
+    "approval-security-check",
+    "phishing-site-check",
+  ].map((slug): [string, string] => [
+    slug,
+    "deactivated 2026-09-10 (vendor-terms audit batch 2): GoPlus's API License Agreement — \"You shall not directly use our original data to conduct any commercial activities and generate revenue without Goplus's explicit written permission.\" Reactivate only with that written permission, displaying the \"Powered by Go+ Security\" attribution it also requires. Took solutions web3-counterparty-dd, web3-dapp-trust and web3-wallet-identity down with it.",
+  ]),
+  [
+    "ip-risk-score",
+    "deactivated 2026-09-10 (vendor-terms audit batch 2): it calls the same ip-api.com free endpoint that took ip-geolocation down on 2026-09-06 — \"The use of the API is strictly limited for a non-commercial purpose and in a non-commercial environment.\" That audit missed it; vendor-terms.test.ts caught it on its first run. Reactivate on an ip-api pro subscription, or an IP-intelligence source whose terms permit resale.",
+  ],
+  [
+    "flight-status",
+    "deactivated 2026-09-10 (vendor-terms audit batch 2): AviationStack's free plan is labelled \"Personal use\" and \"Non-Commercial Use\"; its FAQ says commercial use requires a paid subscription. Reactivate on a paid AviationStack plan, or a flight-data source whose terms permit resale.",
+  ],
+  [
+    "job-board-search",
+    "deactivated 2026-09-10 (vendor-terms audit batch 2): Adzuna permits publishing its listings (with \"Jobs by Adzuna\" branding), salary estimates and personal research. Any other commercial use is a 14-day trial, after which the data \"may not be used in its original format ... to deliver any ongoing work ... without written consent\". Reactivate only under an Adzuna licence.",
+  ],
+  [
+    "docker-hub-info",
+    "deactivated 2026-09-10 (vendor-terms audit batch 2): Docker's Terms of Use bar using the Services \"to mirror or replicate content for an unauthorized commercial service\"; reselling Docker Hub repository metadata per call is that. Reactivate only with Docker's authorisation.",
+  ],
+  [
+    "github-user-profile",
+    "deactivated 2026-09-10 (vendor-terms audit batch 2): GitHub's Acceptable Use Policies — personal information collected from the Service may be used \"only ... for the purpose for which that User has authorized it\" — and its API terms bar selling users' personal information. A per-call profile lookup sells a named person's profile. Not reactivatable on GitHub data. (github-repo-compare and github-repo-analyze stay: public repository metadata through the documented API.)",
+  ],
+  ...[
+    "gas-price-check",
+    "contract-verify-check",
+    "wallet-age-check",
+    "wallet-transactions-lookup",
+    "wallet-balance-lookup",
+  ].map((slug): [string, string] => [
+    slug,
+    "deactivated (vendor-terms audit; gas-price-check and contract-verify-check 2026-09-06 in the database only, the three wallet lookups 2026-09-10): Etherscan's API terms prohibit selling or providing \"our API Content or access to our service for commercial purposes\" and license API Content \"strictly for personal use only but not for commercial use\". Strale holds only a free key. Reactivate only on a commercial Etherscan plan, and set ETHERSCAN_COMMERCIAL_PLAN=true (capabilities/lib/etherscan-client.ts) at the same time.",
+  ]),
   [
     "product-search",
     "deactivated 2026-08-12 (money-integrity batch): its only source is a Strale-operated Google Shopping scrape — the exact target DEC-20260427-H-4 prohibits (it evaded the blocklist via ccTLDs, now closed). No compliant source exists; sibling price-compare kept its licensed PriceRunner path, this capability has none. Reactivate only with a licensed product-search API.",
