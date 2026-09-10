@@ -518,6 +518,15 @@
   set_in:
     - railway
   cost_note: Free tier with registration, rate-limited.
+- name: ETHERSCAN_COMMERCIAL_PLAN
+  purpose: Licence gate for the shared etherscan-client. Etherscan's free API is personal, non-commercial use only, so the client refuses every call unless this is "true". Set it only once Strale holds a commercial Etherscan plan (a spend decision), at the same time as removing the Etherscan capabilities from DEACTIVATED.
+  provider: internal
+  holder: railway
+  cost_class: none
+  required_in: []
+  set_in:
+    - none
+  cost_note: Flag only. Unset by design since the 2026-09-10 vendor-terms audit.
 - name: EUR_USD_RATE
   purpose: Test-only override for the EUR/USD conversion rate used by x402-gateway pricing logic, so exchange-rate tests are deterministic.
   provider: internal

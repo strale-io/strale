@@ -118,9 +118,13 @@ async function main() {
   // fallback base URLs (so one throttled endpoint doesn't trip the probe) or
   // explicitly accept the risk. This enforces the lesson from the publicnode
   // 429 incident — a single free endpoint is not a production dependency.
+  // A provider with an envVar authenticates at execution time even when its
+  // probe does not (skipAuth), so it has a known quota rather than an opaque
+  // anonymous limit — alchemy-eth is the case.
   const risky = getActiveProviders().filter(
     (p) =>
       p.authType === "none" &&
+      !p.envVar &&
       (!p.fallbackBaseUrls || p.fallbackBaseUrls.length === 0) &&
       p.tier === "free",
   );

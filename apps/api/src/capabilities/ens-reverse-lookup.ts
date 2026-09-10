@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { createPublicClient, http, type Address } from "viem";
 import { mainnet } from "viem/chains";
 import { normalize } from "viem/ens";
-import { getEthRpcEndpoints, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
+import { getEthRpcEndpoints, NO_LICENSED_ETH_RPC, rpcEndpointHost } from "../lib/eth-rpc-endpoints.js";
 
 function makeClient(rpcUrl: string) {
   return createPublicClient({
@@ -24,6 +24,7 @@ registerCapability("ens-reverse-lookup", async (input: CapabilityInput) => {
   const now = new Date().toISOString();
 
   const endpoints = getEthRpcEndpoints();
+  if (endpoints.length === 0) throw new Error(NO_LICENSED_ETH_RPC);
   let lastError: unknown;
   for (let i = 0; i < endpoints.length; i++) {
     const rpcUrl = endpoints[i];

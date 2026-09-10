@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-296 files (269 with a recorded intent, 27 without).
+297 files (270 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-10 | [`handoff/_general/from-code/2026-09-10-vendor-terms-audit-batch-2.md`](_general/from-code/2026-09-10-vendor-terms-audit-batch-2.md) | read the terms of the seven commercial upstreams the 2026-09-06 |
 | 2026-09-10 | [`handoff/_general/from-code/2026-09-10-t10-g9-m2-exit-closed.md`](_general/from-code/2026-09-10-t10-g9-m2-exit-closed.md) | close the last M2 exit gap (G9), mark track T10 done, and hand the cto-readiness program to its next track. |
 | 2026-09-10 | [`handoff/_general/from-code/2026-09-10-solution-revival-fix-and-known-answer-resync.md`](_general/from-code/2026-09-10-solution-revival-fix-and-known-answer-resync.md) | stop four deliberately-deactivated solutions from reviving, unfreeze |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-vendor-terms-audit-and-readonly-credential.md`](_general/from-code/2026-09-06-vendor-terms-audit-and-readonly-credential.md) | finish the founder's open queue without his involvement — and, in |

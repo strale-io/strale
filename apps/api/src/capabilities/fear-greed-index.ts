@@ -3,6 +3,13 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 // Alternative.me — Crypto Fear & Greed Index (free, no key required)
 const API = "https://api.alternative.me/fng";
 
+// Alternative.me permits commercial use "as long as the attribution is given
+// right next to the display of the data" (vendor-terms audit, 2026-09-10).
+// It travels inside the output, beside the values, so it reaches whatever
+// displays them — provenance alone is not next to the data.
+const SOURCE_URL = "https://alternative.me/crypto/fear-and-greed-index/";
+export const FEAR_GREED_ATTRIBUTION = `Data: Crypto Fear & Greed Index by Alternative.me (${SOURCE_URL})`;
+
 registerCapability("fear-greed-index", async (input: CapabilityInput) => {
   let days = 1;
   const rawDays = (input.days as number) ?? (input.limit as number) ?? (input.history as number) ?? (input.period as number);
@@ -33,6 +40,7 @@ registerCapability("fear-greed-index", async (input: CapabilityInput) => {
     current_value: currentValue,
     classification: current.value_classification,
     timestamp: currentDate,
+    attribution: FEAR_GREED_ATTRIBUTION,
   };
 
   if (days > 1 && data.data.length > 1) {
@@ -58,6 +66,6 @@ registerCapability("fear-greed-index", async (input: CapabilityInput) => {
 
   return {
     output,
-    provenance: { source: "alternative.me", fetched_at: now },
+    provenance: { source: "alternative.me", source_url: SOURCE_URL, fetched_at: now },
   };
 });
