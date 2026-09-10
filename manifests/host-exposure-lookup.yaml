@@ -94,6 +94,15 @@ output_field_reliability:
   remote_admin_ports: guaranteed
   resolved_from: common
 limitations:
+  - title: Deactivated 2026-09-06 — Shodan InternetDB is licensed for non-commercial use only
+    text: >-
+      Shodan states the InternetDB API may not be used to build commercial products that you charge
+      money for, and this is a paid capability. Deactivated one day after launch, before it had
+      served any paying call — it was still dark from the dark-launch path, and production confirms
+      zero paying calls. Reactivating requires a Shodan enterprise licence, or a rebuild on a source
+      whose terms permit resale. Audit: docs/security/2026-09-06-vendor-terms-audit.md.
+    category: legal
+    severity: warning
   - title: Reports Shodan's last scan, not the live host
     text: >-
       InternetDB serves cached scan results and never probes on demand. A port closed yesterday can
