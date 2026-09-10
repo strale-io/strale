@@ -26,6 +26,7 @@ import { sql, eq, and, inArray, asc, desc } from "drizzle-orm";
 import postgres from "postgres";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps, testSuites, testResults } from "../db/schema.js";
+import { mayAutoActivateSolution, wasDeactivatedDeliberately } from "../lib/solution-activation.js";
 import { runTests } from "../lib/test-runner.js";
 import { logHealthEvent } from "../lib/health-monitor.js";
 import { isCacheExpired, refreshUpstreamMapping } from "../lib/upstream-health-gate.js";
@@ -51,9 +52,16 @@ async function checkSolutionGates(capabilitySlug: string): Promise<void> {
   if (solutionIds.length === 0) return;
 
   for (const solId of solutionIds) {
-    const [sol] = await db.select({ slug: solutions.slug, isActive: solutions.isActive })
+    const [sol] = await db.select({
+      slug: solutions.slug,
+      isActive: solutions.isActive,
+      deactivationReason: solutions.deactivationReason,
+    })
       .from(solutions).where(eq(solutions.id, solId)).limit(1);
     if (!sol || sol.isActive) continue; // Already active
+    // Cheap early exit before the per-step queries; mayAutoActivateSolution()
+    // below re-checks it, so this is an optimisation, not the guard.
+    if (wasDeactivatedDeliberately(sol.deactivationReason)) continue;
 
     // Check all steps
     const steps = await db.select({ capabilitySlug: solutionSteps.capabilitySlug })
@@ -76,8 +84,24 @@ async function checkSolutionGates(capabilitySlug: string): Promise<void> {
       ((Array.isArray(passingRows) ? passingRows : (passingRows as any)?.rows ?? []) as { capability_slug: string }[])
         .map((r) => r.capability_slug),
     );
-    const allQualified = slugs.every((s) => passingSet.has(s));
-    if (allQualified && slugs.length > 0) {
+    // Current state, not history. A passing result from last week says nothing
+    // about whether the capability is still switched on — this read is what
+    // the previous version of this gate lacked.
+    const activeRows = slugs.length === 0 ? [] : await db
+      .select({ slug: capabilities.slug, isActive: capabilities.isActive })
+      .from(capabilities)
+      .where(inArray(capabilities.slug, slugs));
+    const activeSet = new Set(activeRows.filter((r) => r.isActive).map((r) => r.slug));
+
+    const allQualified = mayAutoActivateSolution({
+      deactivationReason: sol.deactivationReason,
+      steps: slugs.map((s) => ({
+        capabilitySlug: s,
+        capabilityActive: activeSet.has(s),
+        hasRecentPass: passingSet.has(s),
+      })),
+    });
+    if (allQualified) {
       await db.update(solutions)
         .set({ isActive: true, updatedAt: new Date() })
         .where(eq(solutions.id, solId));

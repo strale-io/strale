@@ -29,6 +29,7 @@ if (!process.env.DATABASE_URL) {
 import { capabilities, solutions, solutionSteps } from "../src/db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 import { validateSolution, enforceGates } from "../src/lib/onboarding-gates.js";
+import { wasDeactivatedDeliberately } from "../src/lib/solution-activation.js";
 
 // ─── Country definitions ───────────────────────────────────────────────────
 
@@ -682,10 +683,17 @@ async function seed() {
     await db.transaction(async (tx) => {
       // Upsert solution
       const [existing] = await tx
-        .select({ id: solutions.id })
+        .select({
+          id: solutions.id,
+          isActive: solutions.isActive,
+          deactivationReason: solutions.deactivationReason,
+        })
         .from(solutions)
         .where(eq(solutions.slug, sol.slug))
         .limit(1);
+      // Re-seeding refreshes a solution's content; it must not switch back on
+      // a solution that was turned off on purpose. See lib/solution-activation.ts.
+      const keepOff = existing != null && wasDeactivatedDeliberately(existing.deactivationReason);
 
       let solutionId: string;
 
@@ -710,7 +718,7 @@ async function seed() {
             marketingName: sol.marketingName,
             transparencyTag: sol.transparencyTag,
             extendsWith: sol.extendsWith,
-            isActive: true,
+            isActive: keepOff ? existing.isActive : true,
             displayOrder: displayOrder,
             updatedAt: new Date(),
           })
