@@ -226,6 +226,22 @@ describe("every code path that can switch a solution on consults the shared pred
     expect(offenders, `switches solutions on without calling lib/solution-activation.ts:\n${offenders.join("\n")}`).toEqual([]);
   });
 
+  // The generic check above accepts either predicate, because operator paths
+  // (admin endpoint, seed scripts) legitimately need only the reason check. An
+  // AUTOMATED sweep needs both conditions. The scheduler calls
+  // wasDeactivatedDeliberately() as a cheap early exit too, so dropping
+  // mayAutoActivateSolution() would still satisfy the generic check while
+  // silently losing the "step capability is switched on now" condition — the
+  // exact 2026-09-06 failure. Found by planting it: it survived the generic
+  // check.
+  it("the scheduler's automated gate decides through mayAutoActivateSolution, not the reason check alone", () => {
+    const p = "apps/api/src/jobs/test-scheduler.ts";
+    const a = activators.find((x) => x.path === p);
+    expect(a, `${p} is no longer an activator`).toBeDefined();
+    const code = a!.src.split(/\r?\n/).filter((l) => !/^\s*(import|export)\b.*from\s+["']/.test(l)).join("\n");
+    expect(/\bmayAutoActivateSolution\s*\(/.test(code), `${p} must decide through mayAutoActivateSolution()`).toBe(true);
+  });
+
   it("keeps every exemption pointing at a file that is still an activator", () => {
     const paths = new Set(activators.map((a) => a.path));
     for (const p of Object.keys(EXEMPT)) expect(paths, `stale exemption: ${p}`).toContain(p);
