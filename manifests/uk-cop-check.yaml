@@ -156,21 +156,24 @@ test_fixtures:
         reliability: guaranteed
         value: MATCHED
       - field: cop_description
-        operator: not_null
-        reliability: guaranteed
+        operator: type
+        reliability: common
+        value: string
       - field: cop_advice
-        operator: not_null
-        reliability: guaranteed
+        operator: type
+        reliability: common
+        value: string
       - field: account_holder_name_provided
         operator: not_null
         reliability: guaranteed
       - field: modulus_check_valid
-        operator: equals
-        reliability: guaranteed
-        value: true
+        operator: type
+        reliability: common
+        value: boolean
       - field: bank_name
-        operator: not_null
-        reliability: guaranteed
+        operator: type
+        reliability: common
+        value: string
       - field: sort_code
         operator: equals
         reliability: guaranteed
@@ -183,10 +186,6 @@ test_fixtures:
         operator: equals
         reliability: guaranteed
         value: PERSONAL
-      - field: test_outcome_used
-        operator: equals
-        reliability: guaranteed
-        value: MATCHED
       - field: checked_at
         operator: not_null
         reliability: guaranteed

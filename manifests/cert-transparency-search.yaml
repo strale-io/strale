@@ -74,8 +74,9 @@ test_fixtures:
       limit: 5
     expected_fields:
       - field: domain
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: strale.dev
       - field: certificate_count
         operator: type
         reliability: guaranteed
@@ -88,6 +89,18 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: include_subdomains
+        operator: equals
+        reliability: guaranteed
+        value: true
+      - field: total_matched
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: hostname_count
+        operator: type
+        reliability: guaranteed
+        value: number
   health_check_input:
     domain: strale.dev
     limit: 1

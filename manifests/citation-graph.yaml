@@ -94,8 +94,9 @@ test_fixtures:
       limit: 3
     expected_fields:
       - field: resolved_id
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: W2159974629
       - field: reference_count
         operator: type
         reliability: guaranteed
@@ -108,6 +109,17 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: paper
+        operator: not_null
+        reliability: guaranteed
+      - field: citations_unavailable
+        operator: type
+        reliability: guaranteed
+        value: boolean
+      - field: references_unavailable
+        operator: type
+        reliability: guaranteed
+        value: boolean
   health_check_input:
     paper_id: 10.1038/nature12373
     limit: 1
