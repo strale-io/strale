@@ -72,7 +72,8 @@ amendments above.
 That left `docs/programs/codex-review-backlog.yaml` tracking an obligation that
 no longer existed, and on 2026-09-07 every one of its 36 rows passed
 `policy.review_by`, so `codex:check` failed on `main` and blocked every PR in
-the repository — nothing merged from 2026-09-06 to 2026-09-10. On 2026-09-10
+the repository from 2026-09-07 until this waiver (the last merge before it was
+on 2026-09-06). On 2026-09-10
 the founder directed, in session, that all 36 be waived (DEC-20260910-A). They
 are closed as `waived`, `waived_by: petter`, citing that decision. **No new
 batches are added to the register**: an independent same-provider review in a
