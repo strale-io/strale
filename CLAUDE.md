@@ -59,6 +59,27 @@ is *recorded in a reviewed file*, not that the founder made it. When Codex retur
 starting work that adds to it. A Codex FAIL on merged work opens a
 remediation batch; it does not revert anything automatically.
 
+**Founder review policy 2026-09-07, and DEC-20260910-A.** On 2026-09-07 the
+founder removed the mandatory cross-provider review requirement: a required
+independent review may use the same provider in a separate review context, a
+different provider is optional, and work is not blocked solely because another
+provider is unavailable or has not reviewed it. The independent-review
+requirement itself, required tests, and authorization requirements for
+sending, publishing, deploying, spending and destructive actions all remain.
+This supersedes the provider-diversity parts of the 2026-09-01 override and its
+amendments above.
+
+That left `docs/programs/codex-review-backlog.yaml` tracking an obligation that
+no longer existed, and on 2026-09-07 every one of its 36 rows passed
+`policy.review_by`, so `codex:check` failed on `main` and blocked every PR in
+the repository — nothing merged from 2026-09-06 to 2026-09-10. On 2026-09-10
+the founder directed, in session, that all 36 be waived (DEC-20260910-A). They
+are closed as `waived`, `waived_by: petter`, citing that decision. **No new
+batches are added to the register**: an independent same-provider review in a
+separate context satisfies the review requirement, and the PR says which review
+ran. The register and `codex:check` stay in place, so the waived history cannot
+be edited, deleted or reopened.
+
 ### Repo-native migration continuation — pre-cutover
 
 When a session is asked to continue the repo-native operating-model migration,
@@ -303,6 +324,7 @@ strale/
 - **DEC-20260428-B** (global, active): Engineering bar for Strale-built data services (sanctions/PEP, UBO, adverse media, future registry self-builds). Codifies regulatory-grade requirements: versioned dataset with stale-data circuit breaker, source-list manifest per response, Merkle-rooted ingest, match explainability, confidence buckets, dispute endpoint with disposition tracking, replay capability, golden test suite, canary deploys, per-list kill switches, GDPR Art. 22 compliance, threat-model document and public methodology page mandatory before production. AI synthesis steps (e.g. risk-narrative-generate) must require per-flag source citation, "screening checks found" framing, and never assert facts not present in input. Pairs with DEC-20260428-A.
 
 #### Current Decisions (September 2026)
+- **DEC-20260910-A** (global, active): **The Codex review backlog is waived under the founder's 2026-09-07 review policy.** Directed by Petter in session on 2026-09-10 ("go with option 1, waive all 36"). The 2026-09-07 policy made cross-provider review optional — an independent review may be same-provider in a separate context — which removed the obligation `docs/programs/codex-review-backlog.yaml` existed to track. All 36 pending rows (CX-1 to CX-36; 23 high, 13 medium) passed `policy.review_by` of 2026-09-07 and made `codex:check` fail on `main`, blocking every PR from 2026-09-07 to 2026-09-10. They are closed `waived`, `waived_by: petter`, citing this decision. No new batches are added to the register; `codex:check` remains so the waived history stays immutable. Amends DEC-20260903-A (does not delete its register). Full text: the Review routing section above.
 - **DEC-20260905-A** (global, active): **Benefit-first positioning for the redesign.** Founder approved the reviewed positioning brief on 5 September: tools and data for AI agents; useful recurring agent work first, shared access/integration benefit next, customer-visible execution evidence with route-specific limits. Marketing uses tools; data services remains explanatory and technical identifiers remain in API contexts. Quiet Material is the control for refinement, not newly adopted production tokens or final artwork. Broad-library strategy, x402 priority and claim/publication gates remain. Supersedes DEC-20260302-C and DEC-20260303-G homepage composition prescriptions for the redesign while preserving their outcome-first and evidence-near-claim rationale. Adoption and narrow VOICE.md reconciliation: `docs/strategy/2026-09-05-brand-direction-adoption.md`; execution resumes at `docs/programs/brand-website/PROGRAM.md`.
 - **DEC-20260904-C** (global, active): **Capabilities labelled Unverified are listed on the website with the label, not hidden.** Directed by Petter 2026-09-04 on an M2 batch-9 finding whose premise turned out stale: the website's `isSQSUnqualified` filter would have hidden every capability labelled Unverified, but it has had no callers since the 2026-08 audit follow-up, and strale.dev already lists such capabilities dimmed with an "Awaiting traffic" badge. Affirms DEC-20260313-C and the current behaviour; pending and Building-track-record states keep their behaviour. The dead filter was aligned with the decision in `strale-frontend` PR #24 (kept in maintenance under DEC-20260902-A) so a revived caller cannot reintroduce hiding. Lesson: a comment is not evidence of behaviour; check the callers. Notion Decisions DB entry filed 2026-09-04; repo-native record follows through the M2 closure path.
 - **DEC-20260904-B** (operational, active): **Cross-surface identity mechanism for the M2 closure register (git-qualified record keys).** The record-key grammar gains a second source qualifier, symmetric to `--notion-<32 hex page id>`: `--git-<7 to 40 lowercase hex>`, naming the commit that introduced the claim directly in Git (`^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$`). A git-qualified record must have `id` equal to the key with the qualifier removed, `source_kind: git-native`/`source_rows: []`, and `git_provenance` equal to its own first evidence entry, a full-sha `https://github.com/strale-io/strale/commit/<sha>` URL whose prefix matches and which is an ancestor of HEAD (findings `RECORD_GIT_KEY_ID_MISMATCH`/`_SOURCE_KIND`/`_PROVENANCE_MISMATCH`/`_NOT_ANCESTOR`; `COMMIT_UNVERIFIABLE` when git is unreachable). A bare collided id — now including a cross-surface collision id — is never a record key (`RECORD_KEY_BARE_CROSS_SURFACE_ID`). A cross-surface row may resolve to `resolved_collision`/`documented_only` only when a git-qualified record exists for the collision id AND a gap report cited in the row's own evidence names its page id; `row_disposition: formal_record` stays unsupported on a cross-surface row this stage (`CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED`); any other combination is `DECISION_ROW_CROSS_SURFACE_STATE_INVALID`. Stage 1 only (lands and verifies the mechanism): creates no `DEC-20260422-A.md` record in either meaning and does not change that row's disposition. Full text in the formal candidate record for this id (M2 candidate path, inactive); mechanism gap: `archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md`.
