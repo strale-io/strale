@@ -513,14 +513,20 @@ tracks:
       done 2026-09-10 (PR #634): config/vendors.yaml (70 vendors) and
       config/vendors.schema.json, scripts/vendors-lib.mjs,
       scripts/check-vendors.mjs, scripts/vendors.test.mjs, wired into CI as
-      vendors:check / vendors:test after env:check / env:test. Next is batch
-      4, as the design describes: derive STALE_VENDORS from the register,
-      add the dependency-edge sync between dependency-manifest.ts and
-      vendor_capability_dependencies, and retarget
-      check-vendor-roster-drift.ts to read repository decision records
-      instead of Notion. All M3 work is shadow mode: candidate project
-      documents stay inactive and Notion-backed workflows stay authoritative
-      until the founder-gated M4 cutover.
+      vendors:check / vendors:test after env:check / env:test; merged
+      2026-09-11. Next is batch 4 as rescoped in the design document's
+      "Batch 4 rescoped" section: shadow checks only, with no production
+      write, no runtime behaviour change and no change of authority. Add
+      every STALE_VENDORS name to the register with an evidenced state and
+      compare STALE_VENDORS with the register both ways in vendors:check;
+      compare the edges the existing boot-time sync in startup-migrations.ts
+      writes with dependency-manifest.ts and report the providers it skips;
+      add a Notion-roster-versus-register comparison to
+      check-vendor-roster-drift.ts while Notion stays the authority. The
+      derivations and the drift-check retarget are M4 cutover steps. All M3
+      work is shadow mode: candidate project documents stay inactive and
+      Notion-backed workflows stay authoritative until the founder-gated M4
+      cutover.
     resume_file: docs/strategy/2026-09-10-m3-vendor-state-model.md
     exit:
       - repo-native replacements testable without changing existing authority

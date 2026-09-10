@@ -238,7 +238,7 @@ One row per vendor fact; exactly one owner.
 | Re-evaluation triggers | `config/vendors.yaml` (new) | No current owner (gap G3) |
 | Terms/pricing/licensing/redistribution verification (date + verifier, no confidential content) | `config/vendors.yaml` (new) for vendors outside coverage-matrix scope; `apps/api/coverage-matrix/*.yaml` (`provider_tos_notes`, `last_verified`, `evidence_grade`) for the capability×country×evidence-type rows it already covers | Coverage-matrix schema confirmed (`apps/api/coverage-matrix/schema.json:70-100`); no equivalent for out-of-scope vendors (gap G4) |
 | Operational integration (health probe, `tier`, capability dependency edges) | `apps/api/src/lib/dependency-manifest.ts` `PROVIDERS` (unchanged owner) | Confirmed at `apps/api/src/lib/dependency-manifest.ts:45-71`, `:73-` |
-| Capability dependency edges (DB copy) | `vendor_capability_dependencies` table, derived from `dependency-manifest.ts` by a sync (this design, point 3) | Currently a second hand-reconciled copy (`apps/api/src/db/schema.ts:1126-1144`), drift-checked but not derived |
+| Capability dependency edges (DB copy) | `vendor_capability_dependencies` table, derived from `dependency-manifest.ts` by a sync (this design, point 3) | Table at `apps/api/src/db/schema.ts:1126-1144`. Corrected 2026-09-11: already derived on every boot by `startup-migrations.ts` for paid and self-hosted providers with a `vendor_accounts` row; a hand-kept copy only for the providers that loop skips (see "Batch 4 rescoped") |
 | Solution dependency links | No owner of their own: derived, never stored. A solution depends on a vendor through its steps' capabilities (see gap G6 below) | Computed at runtime by joining `vendor_capability_dependencies` to `solution_steps` on `capability_slug` (`apps/api/src/lib/vendor-control-tower.ts:432`); the table has no solution column (`schema.ts:1126-1144`) and `PROVIDERS` has no solution field |
 | Account usability (balance, credentials, suspension) | `vendorAccounts` + suspension tables, written only by `vendor-control-tower.ts` (unchanged owner) | Confirmed at `apps/api/src/db/schema.ts:1099-1124`, `:1150-1175`, `:1177-1201` |
 | Per capability/country/evidence-type sourcing | `apps/api/coverage-matrix/*.yaml` (unchanged owner) | Confirmed via `apps/api/coverage-matrix/schema.json` |
@@ -309,11 +309,43 @@ semantics.
 - **Batch 3**: adds `config/vendors.yaml` and its schema, populated with
   currently integrated vendors, plus `vendors:check` with tests proven by
   planted failures.
-- **Batch 4**: derives `STALE_VENDORS`, adds the dependency-edge sync
-  (point 3), and retargets `check-vendor-roster-drift.ts` to read
-  repository decision records instead of Notion.
+- **Batch 4** (rescoped 2026-09-11, see "Batch 4 rescoped" below): shadow
+  checks only. Adds every `STALE_VENDORS` name to the register with an
+  honest, evidenced state, and has `vendors:check` compare `STALE_VENDORS`
+  with the register's states in both directions; has `vendors:check`
+  compare the dependency edges the boot-time sync writes with
+  `dependency-manifest.ts` and report providers the sync skips; and adds to
+  `check-vendor-roster-drift.ts` a comparison of the Notion Vendor Roster
+  with the register that reports disagreements while Notion stays the
+  authority.
 - **Batch 5**: generates the agent-context and customer-facing views and
   prepares, without activating, the `vendor-switch` skill's cutover.
+
+### Batch 4 rescoped
+
+The original batch 4 would have crossed M3's boundaries in two places, and
+one of its premises was wrong.
+
+- **The dependency-edge sync mostly exists.** `apps/api/src/lib/startup-migrations.ts`
+  (the loop over `getActiveProviders()` filtered to `tier` `paid` or
+  `self-hosted`) already upserts `vendor_capability_dependencies` from
+  `PROVIDERS` `capabilities` (required) and `fallbackCapabilities`
+  (fallback) on every boot, for providers that have a `vendor_accounts`
+  row, and deletes edges the manifest no longer declares. For those
+  providers the table is already derived from the repository, so point 3's
+  direction is the runtime reality; the "second hand-reconciled copy"
+  description earlier in this document holds only for providers the loop
+  skips (free-tier providers, and paid providers without an account row).
+  Any new writer to that table is a production database write at deploy,
+  read by the control tower to decide which capabilities and solutions to
+  suspend, so it is outside M3. Batch 4 only reports the skipped providers.
+- **Deriving `STALE_VENDORS` from the register** would make runtime tooling
+  read a register that is `authority_active: false`. Batch 4 compares the
+  two instead; the derivation, and deriving `STATIC_FACTS.vendors`, move to
+  the M4 cutover.
+- **Retargeting `check-vendor-roster-drift.ts` away from Notion** would stop
+  reading the authority before cutover. Batch 4 adds a comparison beside the
+  Notion read; replacing it is an M4 cutover step.
 
 Each batch stays shadow mode: candidate documents remain inactive and
 Notion-backed workflows remain authoritative until the founder-gated M4
