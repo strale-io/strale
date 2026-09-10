@@ -514,7 +514,7 @@ tracks:
       config/vendors.schema.json, scripts/vendors-lib.mjs,
       scripts/check-vendors.mjs, scripts/vendors.test.mjs, wired into CI as
       vendors:check / vendors:test after env:check / env:test; merged
-      2026-09-11. Batch 4a done 2026-09-11 (PR #PENDING): added fourteen
+      2026-09-11. Batch 4a done 2026-09-11 (PR #636): added fourteen
       STALE_VENDORS-named vendors to config/vendors.yaml with an evidenced
       state each, and two shadow checks in vendors-lib.mjs -
       checkStaleVendorsCrossCheck (STALE_VENDOR_UNREGISTERED,
