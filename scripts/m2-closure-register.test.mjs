@@ -260,6 +260,10 @@ test("a coordinated identity edit that re-syncs every digest passes CI but fails
     blocking: r.exit_gaps.filter((g) => g.blocking).length,
     non_blocking: r.exit_gaps.filter((g) => !g.blocking).length,
   };
+  // The pre-closure world has a pre-closure base too. The live merge-base is
+  // main, which has carried a closing_review since the G9 closure merged, so
+  // deleting it above would read as CLOSING_REVIEW_MUTATED against that base.
+  preClosureCtx.base = { available: true, ref: "test", register: structuredClone(r) };
   r.digests.public_rows.scope_date_digest = sha256("forged\n");
   assert.deepEqual(codesExcept(r, preClosureCtx), [], "CI cannot see the archive, so a forged aggregate scope/date digest passes");
   // Synthetic export rows as the archive stores them.
@@ -1460,8 +1464,16 @@ const closingReviewFixture = (overrides = {}) => {
   writeFileSync(join(dir, "docs/project/m2-closure-register.yaml"), YAML.stringify(r));
 
   const backlog = overrides.backlog ?? { entries: [{ status: "pending", subject: "closing review of the complete M2 candidate set", commit: "abc1234" }] };
+  // The fixture models the change that records a closing_review, so its base
+  // is the register without one. Left to `context.base` (the live merge-base
+  // with main), these tests passed on the branch that added the real
+  // closing_review and failed on main as soon as it merged: the fixture's
+  // synthetic block then reads as a mutation of main's (CLOSING_REVIEW_MUTATED).
+  const preClosureBase = base();
+  delete preClosureBase.closing_review;
   const ctx = {
     ...context,
+    base: { available: true, ref: "test", register: preClosureBase },
     root: dir,
     tracked: new Set([...context.tracked, evidenceRel]),
     isAncestor: overrides.isAncestor === undefined ? () => true : overrides.isAncestor,
