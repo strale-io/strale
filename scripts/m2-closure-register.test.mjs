@@ -237,8 +237,31 @@ const withSyntheticCollision = (register, ctx = context) => {
 
 test("a coordinated identity edit that re-syncs every digest passes CI but fails the raw-export comparison", () => {
   const r = base();
+  // The G9 closure landed on the committed register: it added a closing_review
+  // block and flipped G9 (plan.review_route) to non-blocking. This test's own
+  // mutation (a forged digest) is not one of the fields
+  // stripForClosingReviewComparison ignores, so with closing_review left in
+  // place the mutation alone would trip CLOSING_REVIEW_STALE, which is not
+  // what this test is about. Reconstruct the pre-closure precondition: no
+  // closing_review, G9 blocking again, counts.exit_gaps recomputed from the
+  // gaps, and T10 active again in the track register (a blocking G9 with T10
+  // done is itself a finding, TRACKS_GATE_DONE_WITH_BLOCKING_GAPS), so the
+  // only finding this test can produce is the one it targets. The assertion
+  // below is unchanged; it now runs against the world it describes.
+  const preClosureCtx = { ...context, tracks: structuredClone(context.tracks) };
+  preClosureCtx.tracks.tracks.find((x) => x.id === "T10").status = "active";
+  // Pre-closure T6 (post-m2) was queued; an active post-m2 track alongside a
+  // blocking G9 is itself a finding, TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS.
+  preClosureCtx.tracks.tracks.find((x) => x.id === "T6").status = "queued";
+  delete r.closing_review;
+  const g9Pre = r.exit_gaps.find((g) => g.covers.includes("plan.review_route"));
+  g9Pre.blocking = true;
+  r.counts.exit_gaps = {
+    blocking: r.exit_gaps.filter((g) => g.blocking).length,
+    non_blocking: r.exit_gaps.filter((g) => !g.blocking).length,
+  };
   r.digests.public_rows.scope_date_digest = sha256("forged\n");
-  assert.deepEqual(codesExcept(r), [], "CI cannot see the archive, so a forged aggregate scope/date digest passes");
+  assert.deepEqual(codesExcept(r, preClosureCtx), [], "CI cannot see the archive, so a forged aggregate scope/date digest passes");
   // Synthetic export rows as the archive stores them.
   const exportRows = [
     { url: `https://app.notion.com/${"1".repeat(32)}`, "userDefined:ID": "DEC-20260901-Q", Status: "active", Scope: "global", "date:Date:start": "2026-09-01", createdTime: "2026-09-01T00:00:00Z", Decision: "q" },
@@ -709,6 +732,19 @@ test("the track register cannot start M3 or close the gate while blocking M2 gap
     return { ...context, tracks };
   };
   const r = base();
+  // The G9 closure flipped G9 (plan.review_route) to non-blocking and left no
+  // other blocking exit gap. This test exists to prove the track-gate checks
+  // still fire while a blocking M2 gap remains, so reconstruct that
+  // pre-closure precondition here: G9 blocking again, counts.exit_gaps
+  // recomputed. stripForClosingReviewComparison ignores exactly the
+  // plan.review_route gap's blocking flag and counts.exit_gaps, so
+  // closing_review (left in place) stays clean and does not interfere.
+  const g9Pre = r.exit_gaps.find((g) => g.covers.includes("plan.review_route"));
+  g9Pre.blocking = true;
+  r.counts.exit_gaps = {
+    blocking: r.exit_gaps.filter((g) => g.blocking).length,
+    non_blocking: r.exit_gaps.filter((g) => !g.blocking).length,
+  };
   assert.ok(r.exit_gaps.some((g) => g.blocking), "the committed register has blocking gaps");
   has(r, "TRACKS_GATE_DONE_WITH_BLOCKING_GAPS", withTracks((t) => { t.tracks.find((x) => x.id === "T10").status = "done"; }));
   has(r, "TRACKS_POST_M2_STARTED_WITH_BLOCKING_GAPS", withTracks((t) => { t.tracks.find((x) => x.id === "T6").status = "active"; }));
@@ -1469,17 +1505,25 @@ test("a clean closing_review releases plan.review_route and clears the track gat
   });
 });
 
-test("CLOSING_REVIEW_ROUTE_MISMATCH: fresh-read-only-claude-agent needs a pending backlog row naming the closing review", () => {
-  withClosingReviewFixture({ backlog: { entries: [{ status: "pending", subject: "PR #999 — unrelated batch" }] } }, ({ r, ctx }) => {
-    has(r, "CLOSING_REVIEW_ROUTE_MISMATCH", ctx);
-  });
-  withClosingReviewFixture({ backlog: { entries: [{ status: "reviewed", subject: "the M2 closing review" }] } }, ({ r, ctx }) => {
-    has(r, "CLOSING_REVIEW_ROUTE_MISMATCH", ctx);
-  });
-  // fresh-codex-task never needs the backlog row.
-  withClosingReviewFixture({ route: "fresh-codex-task", backlog: { entries: [] } }, ({ r, ctx }) => {
-    assert.ok(!codes(r, ctx).includes("CLOSING_REVIEW_ROUTE_MISMATCH"));
-  });
+test("DEC-20260910-A: either recorded route yields a clean closing_review with no Codex backlog row", () => {
+  // fresh-read-only-claude-agent once needed a pending Codex re-review row
+  // naming the closing review (DEC-20260903-A). DEC-20260910-A retired that
+  // obligation. With every other closing_review check passing, neither route
+  // may produce any CLOSING_REVIEW_ finding, whether the backlog is empty,
+  // holds only an unrelated pending row, or holds only a reviewed one.
+  const backlogs = [
+    { entries: [] },
+    { entries: [{ status: "pending", subject: "PR #999 — unrelated batch" }] },
+    { entries: [{ status: "reviewed", subject: "the M2 closing review" }] },
+  ];
+  for (const backlog of backlogs) {
+    for (const route of ["fresh-read-only-claude-agent", "fresh-codex-task"]) {
+      withClosingReviewFixture({ route, backlog }, ({ r, ctx }) => {
+        const c = codes(r, ctx);
+        assert.ok(!c.some((code) => code.startsWith("CLOSING_REVIEW_")), `${route}, ${backlog.entries.length} row(s): ${c.join(",")}`);
+      });
+    }
+  }
 });
 
 test("CLOSING_REVIEW_COMMIT_NOT_ANCESTOR and COMMIT_UNVERIFIABLE: the reviewed commit must be checkable and an ancestor of HEAD", () => {
@@ -1683,11 +1727,14 @@ test("CLOSING_REVIEW_MUTATED: verdict, reviewed_at, and evidence are each indivi
 
 test("plan.review_route stays a blocking requirement when closing_review is present but not clean", () => {
   withClosingReviewFixture({
-    backlog: { entries: [] }, // makes the route mismatch, so closing_review is not clean
+    // A reviewed commit that is not an ancestor of HEAD makes closing_review
+    // not clean. This test used a missing Codex backlog row as its unclean
+    // case until DEC-20260910-A retired that requirement.
+    isAncestor: () => false,
     mutateRegister: (r, g9) => { g9.blocking = false; },
   }, ({ r, ctx }) => {
     const c = codes(r, ctx);
-    assert.ok(c.includes("CLOSING_REVIEW_ROUTE_MISMATCH"), c.join(","));
+    assert.ok(c.includes("CLOSING_REVIEW_COMMIT_NOT_ANCESTOR"), c.join(","));
     assert.ok(c.includes("EXIT_GAP_NOT_BLOCKING"), c.join(","));
   });
 });
@@ -1699,6 +1746,18 @@ test("EXIT_GAP_NOT_BLOCKING isolates the plan.review_route branch: no closing_re
   // closing_review block whatsoever, so closingReviewClean is false purely
   // because the block is absent, not because any of its checks failed.
   const { register: r, context: ctx } = withSyntheticCollision(base());
+  // The G9 closure landed on the committed register: it added a
+  // closing_review block and flipped G9 to non-blocking. This test needs a
+  // register with no closing_review at all, so reconstruct the pre-closure
+  // state: delete closing_review, set G9 back to blocking, recompute
+  // counts.exit_gaps from the gaps.
+  delete r.closing_review;
+  const g9Pre = r.exit_gaps.find((g) => g.covers.includes("plan.review_route"));
+  g9Pre.blocking = true;
+  r.counts.exit_gaps = {
+    blocking: r.exit_gaps.filter((g) => g.blocking).length,
+    non_blocking: r.exit_gaps.filter((g) => !g.blocking).length,
+  };
   assert.equal(r.closing_review, undefined);
   // G2 is non-blocking once every live collision is resolved, so the gap that
   // covers the synthetic bucket is made blocking here; otherwise that bucket,

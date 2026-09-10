@@ -60,10 +60,10 @@ The M2 closure register (`docs/project/m2-closure-register.yaml`) carries an
 optional `closing_review` block once the exit gate's fresh independent review
 has actually happened: the route taken, the exact commit reviewed, a `PASS`
 verdict, the review date, and an `archive/sessions/` evidence file that reads
-as that verdict. The validator checks the route against the recorded route
-(substituting the fresh read-only Claude agent while the Codex quota is out,
-per CLAUDE.md's 2026-09-03 amendment, only when the Codex re-review backlog
-holds a pending row naming the closing review), the commit's ancestry, the
+as that verdict. The validator checks the route is one of the schema's two recorded values
+(under DEC-20260910-A an independent same-provider review in a separate
+context satisfies the review requirement, so the fresh read-only Claude agent
+route needs no pending Codex re-review row), the commit's ancestry, the
 evidence file's content, that nothing which could move a Decision's
 disposition changed since the reviewed commit, and the recomputed candidate-
 set counts. Once recorded, `closing_review` is as immutable as a receipt: its
