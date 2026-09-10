@@ -14,10 +14,14 @@ import {
   extractProviders,
   extractCoverageMatrixProviders,
   extractEnvManifestProviders,
+  extractStaleVendors,
+  extractVendorAccountsSeed,
   loadRegister,
   repoRootFrom,
   SCHEMA_PATH,
   REGISTER_PATH,
+  PLATFORM_FACTS_PATH,
+  STARTUP_MIGRATIONS_PATH,
 } from "./vendors-lib.mjs";
 
 const realRoot = repoRootFrom(import.meta.url);
@@ -127,12 +131,46 @@ function autoRegisterText(extraSlugs = []) {
 `;
 }
 
-function baseFiles(vendors = [vendor(), oldVendor()], depManifestOpts = {}, deactivated = []) {
+/** A small but real platform-facts.ts, structurally identical to the real
+ * file's STALE_VENDORS declaration (an `as const` array of string literals). */
+function platformFactsText(names = ["Old Vendor"]) {
+  return `export const STALE_VENDORS = [
+${names.map((n) => `  ${JSON.stringify(n)},`).join("\n")}
+] as const;
+`;
+}
+
+/** A small but real startup-migrations.ts, structurally identical to the
+ * real file's INSERT INTO vendor_accounts shape: a column list, then a
+ * VALUES tuple per seeded provider, then an ON CONFLICT clause whose own
+ * "(provider_name)" column list must never be read as a data tuple. */
+function startupMigrationsText(seededProviders = ["acme"]) {
+  const tuples = seededProviders.map((name) => `      ('${name}', 'Display ${name}', 'free_allowance', NULL, 'EUR', 'none', 'api_balance', 'healthy', 'seed', NULL, NULL, NULL, NULL, 'unit', NULL, NULL, NULL, '{}'::jsonb)`).join(",\n");
+  return `import { sql } from "drizzle-orm";
+
+export async function runStartupMigrations(tx) {
+  await tx.execute(sql\`
+    INSERT INTO vendor_accounts (
+      provider_name, display_name, billing_model, plan_name, currency,
+      payment_method, monitor_mode, status, status_reason, included_units,
+      used_units, remaining_units, overage_units, usage_unit,
+      low_balance_threshold_units, reset_at, expires_at, metadata
+    ) VALUES
+${tuples}
+    ON CONFLICT (provider_name) DO NOTHING
+  \`);
+}
+`;
+}
+
+function baseFiles(vendors = [vendor(), oldVendor()], depManifestOpts = {}, deactivated = [], staleNames = ["Old Vendor"], seededProviders = ["acme"]) {
   return {
     [REGISTER_PATH]: stringify(register(vendors)),
     [SCHEMA_PATH]: realSchema,
     "apps/api/src/lib/dependency-manifest.ts": dependencyManifestText(depManifestOpts),
     "apps/api/src/capabilities/auto-register.ts": autoRegisterText(deactivated),
+    [PLATFORM_FACTS_PATH]: platformFactsText(staleNames),
+    [STARTUP_MIGRATIONS_PATH]: startupMigrationsText(seededProviders),
     "apps/api/coverage-matrix/acme-cap__us__company-registry.yaml": "capability_slug: acme-cap\ncountry: US\nprovider: Acme\nstatus: Live\n",
     "apps/api/coverage-matrix/other-row__us__other.yaml": "capability_slug: other-cap\ncountry: US\nprovider: Other\nstatus: Live\n",
     "config/env-manifest.yaml": stringify([
@@ -402,6 +440,162 @@ test("extractCoverageMatrixProviders and extractEnvManifestProviders read the pl
   );
 });
 
+// ── rule 5b: STALE_VENDORS resolve + state (T6 batch 4a) ──────────────────
+
+test("a clean fixture's default STALE_VENDORS entry has no findings", (t) => {
+  const dir = makeDir(baseFiles());
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("STALE_VENDOR_UNREGISTERED: a STALE_VENDORS name with no matching vendor", (t) => {
+  const files = baseFiles(undefined, undefined, undefined, ["Nobody Registered This"]);
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STALE_VENDOR_UNREGISTERED"));
+});
+
+test("STALE_VENDOR_STATE_MISMATCH: a STALE_VENDORS name resolving to an active vendor", (t) => {
+  const files = baseFiles(undefined, undefined, undefined, ["Acme"]);
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STALE_VENDOR_STATE_MISMATCH"));
+});
+
+test("a STALE_VENDORS name resolving to a held vendor is clean", (t) => {
+  const held = vendor({ id: "held-vendor", name: "Held Vendor", aliases: [], lifecycle: [{ state: "held", date: "2026-01-01", decision: "unknown", reason: "x" }] });
+  const files = baseFiles([vendor(), oldVendor(), held], undefined, undefined, ["Old Vendor", "Held Vendor"]);
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("STALE_VENDOR_LIST_MISSING: a rejected register vendor absent from STALE_VENDORS is a warning, not a failure", (t) => {
+  const rejected = vendor({ id: "rejected-vendor", name: "Rejected Vendor", aliases: [], lifecycle: [{ state: "rejected", date: "2026-01-01", decision: "unknown", reason: "x" }] });
+  const files = baseFiles([vendor(), oldVendor(), rejected], undefined, undefined, ["Old Vendor"]);
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+  assert.ok(r.warnings.some((w) => w.code === "STALE_VENDOR_LIST_MISSING" && w.detail.includes("rejected-vendor")));
+});
+
+test("STALE_VENDORS_UNREADABLE: platform-facts.ts with no STALE_VENDORS declaration fails, never silently reports zero", (t) => {
+  const files = baseFiles();
+  files[PLATFORM_FACTS_PATH] = "export const SOMETHING_ELSE = [1, 2, 3];\n";
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STALE_VENDORS_UNREADABLE"));
+});
+
+test("STALE_VENDORS_UNREADABLE: a non-string STALE_VENDORS element fails, never skips it", (t) => {
+  const files = baseFiles();
+  files[PLATFORM_FACTS_PATH] = "export const STALE_VENDORS = [\n  `Old Vendor`,\n  1 + 1,\n] as const;\n";
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STALE_VENDORS_UNREADABLE"));
+});
+
+test("extractStaleVendors reads the STALE_VENDORS array via the TS compiler API", (t) => {
+  const dir = makeDir(baseFiles(undefined, undefined, undefined, ["Old Vendor", "Ghost Co"]));
+  t.after(() => cleanup(dir));
+  assert.deepEqual(extractStaleVendors(dir), ["Old Vendor", "Ghost Co"]);
+});
+
+// ── rule 5c: providers the boot-time dependency sync skips (T6 batch 4a) ──
+
+test("a clean fixture's default seeded, paid provider has no DEPENDENCY_SYNC_SKIPPED warning", (t) => {
+  const dir = makeDir(baseFiles());
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, []);
+  assert.equal(r.warnings.some((w) => w.code === "DEPENDENCY_SYNC_SKIPPED"), false);
+});
+
+test("DEPENDENCY_SYNC_SKIPPED: a non-retired provider whose tier is not paid or self-hosted", (t) => {
+  const files = baseFiles();
+  // acme's tier switched from "paid" to "free": still non-retired, still has
+  // capabilities, but no longer a tier the boot-time sync loops over.
+  files["apps/api/src/lib/dependency-manifest.ts"] = `export const PROVIDERS = [
+  {
+    name: "acme",
+    displayName: "Acme",
+    description: "test provider",
+    baseUrl: "https://acme.test",
+    authType: "none",
+    healthProbe: { path: "/", method: "GET", healthyStatuses: [200], timeoutMs: 1000 },
+    capabilities: ["acme-cap"],
+    tier: "free",
+  },
+  {
+    name: "old-vendor",
+    displayName: "Old Vendor (RETIRED)",
+    description: "test retired provider",
+    baseUrl: "https://old.test",
+    authType: "none",
+    healthProbe: { path: "/", method: "GET", healthyStatuses: [200], timeoutMs: 1000 },
+    capabilities: [],
+    tier: "free",
+    retired: true,
+  },
+];
+`;
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, []);
+  assert.ok(r.warnings.some((w) => w.code === "DEPENDENCY_SYNC_SKIPPED" && w.detail.includes("acme") && w.detail.includes('tier "free"')));
+});
+
+test("DEPENDENCY_SYNC_SKIPPED: a paid provider with no seeded vendor_accounts row", (t) => {
+  const files = baseFiles(undefined, undefined, undefined, undefined, ["someone-else"]); // acme itself never seeded
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, []);
+  assert.ok(r.warnings.some((w) => w.code === "DEPENDENCY_SYNC_SKIPPED" && w.detail.includes("acme") && w.detail.includes("not seeded at boot")));
+});
+
+test("a retired provider is never reported by DEPENDENCY_SYNC_SKIPPED even when unseeded", (t) => {
+  const files = baseFiles(undefined, { retiredNoCapabilities: false }, undefined, undefined, ["acme"]); // old-vendor now has capabilities but is never seeded; acme still seeded
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.ok(!r.warnings.some((w) => w.code === "DEPENDENCY_SYNC_SKIPPED" && w.detail.includes("old-vendor")));
+});
+
+test("VENDOR_ACCOUNTS_SEED_UNREADABLE: startup-migrations.ts with no INSERT INTO vendor_accounts statement fails, never reports zero seeded providers", (t) => {
+  const files = baseFiles();
+  files[STARTUP_MIGRATIONS_PATH] = 'import { sql } from "drizzle-orm";\nexport async function runStartupMigrations(tx) {\n  await tx.execute(sql`SELECT 1`);\n}\n';
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("VENDOR_ACCOUNTS_SEED_UNREADABLE"));
+});
+
+test("VENDOR_ACCOUNTS_SEED_UNREADABLE: an INSERT INTO vendor_accounts statement whose first tuple value is not a plain string literal", (t) => {
+  const files = baseFiles();
+  files[STARTUP_MIGRATIONS_PATH] =
+    'import { sql } from "drizzle-orm";\n' +
+    "export async function runStartupMigrations(tx) {\n" +
+    "  await tx.execute(sql`\n" +
+    "    INSERT INTO vendor_accounts (provider_name, display_name) VALUES\n" +
+    "      (providerVar, 'x')\n" +
+    "    ON CONFLICT (provider_name) DO NOTHING\n" +
+    "  `);\n" +
+    "}\n";
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("VENDOR_ACCOUNTS_SEED_UNREADABLE"));
+});
+
+test("extractVendorAccountsSeed reads the seeded provider_name values and ignores the ON CONFLICT column list", (t) => {
+  const dir = makeDir(baseFiles(undefined, undefined, undefined, undefined, ["acme", "another-one"]));
+  t.after(() => cleanup(dir));
+  assert.deepEqual(extractVendorAccountsSeed(dir), ["acme", "another-one"]);
+});
+
 // ── rule 7: dead alias / sentinel ─────────────────────────────────────────
 
 test("DEAD_ALIAS: an alias that appears on no surface", (t) => {
@@ -409,6 +603,14 @@ test("DEAD_ALIAS: an alias that appears on no surface", (t) => {
   const dir = makeDir(files);
   t.after(() => cleanup(dir));
   assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("DEAD_ALIAS"));
+});
+
+test("a stale vendor whose alias appears only in STALE_VENDORS is not a dead alias", (t) => {
+  const staleOnly = vendor({ id: "stale-only", name: "Stale Only Co", aliases: ["Stale Only Co"], lifecycle: [{ state: "rejected", date: "2026-01-01", decision: "unknown", reason: "x" }] });
+  const files = baseFiles([vendor(), oldVendor(), staleOnly], undefined, undefined, ["Old Vendor", "Stale Only Co"]);
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.equal(codes(checkAllVendors(dir, { skipHistory: true })).includes("DEAD_ALIAS"), false);
 });
 
 test("DEAD_SENTINEL: a sentinel that appears on no surface", (t) => {

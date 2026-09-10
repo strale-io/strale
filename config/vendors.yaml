@@ -8,10 +8,11 @@
 # `npm run vendors:check` validates this file against config/vendors.schema.json
 # and cross-checks it against apps/api/src/lib/dependency-manifest.ts
 # PROVIDERS, apps/api/coverage-matrix/*.yaml provider values,
-# config/env-manifest.yaml provider values, and history against the base
-# branch. The env-manifest field is free text (the design document's recorded
-# evidence conflict), so it is resolved by exact string lookup against each
-# vendor's id, name and aliases, not by a schema reference.
+# config/env-manifest.yaml provider values, apps/api/src/lib/platform-facts.ts
+# STALE_VENDORS, and history against the base branch. The env-manifest field
+# is free text (the design document's recorded evidence conflict), so it is
+# resolved by exact string lookup against each vendor's id, name and aliases,
+# not by a schema reference.
 #
 # A surface's label is not evidence of use. Vendors named only by the
 # coverage matrix were checked against the host their capability's executor
@@ -32,6 +33,27 @@
 # with re-evaluation triggers, is dilisense, sourced from
 # docs/decisions/records/DEC-20260429-A.md, whose own text names the
 # retention decision and the review triggers.
+#
+# T6 batch 4a (this batch, shadow checks only, no runtime code touched) added
+# fourteen vendors from apps/api/src/lib/platform-facts.ts STALE_VENDORS:
+# opensanctions-self-host (held, DEC-20260429-A, the record text names the
+# self-host deferral directly), and thirteen rejected/held entries whose
+# code comment cites DEC-20260430-A or names no decision at all -
+# surepay, monitorpay, movitz, banfico, ipid, bottomline, yapily, middesk,
+# persona, socure, govlink and complyadvantage (rejected, decision: unknown,
+# because DEC-20260430-A.md's own text does not name any of them as rejected
+# even though the code comment attributes the rejection to it) - plus a new
+# appended lifecycle entry on the existing openownership vendor (held, on
+# apps/api/docs/ubo-resolve-uk-bods-evaluation.md's own "Recommendation:
+# DEFER" text). vendors:check now cross-checks STALE_VENDORS in both
+# directions (STALE_VENDOR_UNREGISTERED, STALE_VENDOR_STATE_MISMATCH failures;
+# STALE_VENDOR_LIST_MISSING warning) and reports, as a warning, every provider
+# the boot-time vendor_capability_dependencies sync in startup-migrations.ts
+# skips (DEPENDENCY_SYNC_SKIPPED): a non-retired provider whose tier is not
+# paid or self-hosted, or which is paid/self-hosted but was never seeded a
+# vendor_accounts row at boot. Neither check changes runtime code or reads
+# this register from production; both are read-only reports over the
+# existing dependency-manifest.ts and startup-migrations.ts source.
 #
 # non_vendor_sentinels: provider strings on other surfaces that deliberately
 # name no vendor. "Other" appears on apps/api/coverage-matrix/*.yaml rows
@@ -784,6 +806,10 @@ vendors:
         date: 2026-09-10
         decision: unknown
         reason: "Named by two coverage-matrix rows of beneficial-ownership-lookup (DK: Committed, UK: Live), but not shown in current use: apps/api/src/capabilities/beneficial-ownership-lookup.ts calls only api.company-information.service.gov.uk (Companies House) and never OpenOwnership, and apps/api/src/lib/platform-facts.ts STALE_VENDORS records OpenOwnership BODS as evaluated 2026-04-02 and deferred with no Strale integration. The coverage-matrix label is therefore inaccurate; correcting it and setting this vendor's lifecycle from its evaluation record is later work."
+      - state: held
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 155) names OpenOwnership, with the code comment citing apps/api/docs/ubo-resolve-uk-bods-evaluation.md as 'evaluated 2026-04-02 ... and deferred (no Strale integration)'. That document's own text confirms this: 'Status: Evaluation only - no implementation' and, under Phase 3, 'Recommendation: DEFER. Do not implement now.' No capability calls OpenOwnership today, confirming the deferral held. State moves from unknown to held on this evidence (unknown is not an allowed STALE_VENDORS state); no decision record names this deferral, so decision stays unknown."
     reevaluation_triggers: []
     verification:
       terms:
@@ -1555,6 +1581,279 @@ vendors:
         date: 2026-09-10
         decision: unknown
         reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: opensanctions-self-host
+    name: OpenSanctions self-host
+    aliases:
+      - OpenSanctions self-host
+    lifecycle:
+      - state: held
+        date: 2026-09-11
+        decision: DEC-20260429-A
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 136), whose code comment groups it under a self-host-deferred-2026-04-29-per-DEC-20260429-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260429-A.md's own text names this deferral directly: 'Operate sanctions and PEP screening as a Tier-2 wrapper of Dilisense and defer an OpenSanctions/Yente self-hosted service' and, in Consequences, 'Current code still names Dilisense for sanctions and PEP and classifies OpenSanctions self-host as stale/deferred.' This is the same company as the retired opensanctions PROVIDERS entry (the hosted API Strale once called, since replaced by Dilisense) but a different product (a self-hosted deployment never built), so it is registered as its own vendor id rather than an alias of opensanctions."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: surepay
+    name: SurePay
+    aliases:
+      - SurePay
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 138), whose code comment groups it under an IBAN/name-match-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name SurePay; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which IBAN/name-match vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: monitorpay
+    name: MonitorPay
+    aliases:
+      - MonitorPay
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 139), whose code comment groups it under an IBAN/name-match-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name MonitorPay; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which IBAN/name-match vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: movitz
+    name: Movitz
+    aliases:
+      - Movitz
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 140), whose code comment groups it under an IBAN/name-match-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and names Movitz twice, but neither line is a rejection statement: 'attempted to retire conflicting candidate lists and Movitz-dependent pricing work' (Context) and 'the Movitz-dependent path in the unique but unmigrated DEC-20260422-H' (Consequences, about a withheld graph edge, not a rejection of Movitz itself). Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: banfico
+    name: Banfico
+    aliases:
+      - Banfico
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 141), whose code comment groups it under an IBAN/name-match-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name Banfico; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which IBAN/name-match vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: ipid
+    name: iPiD
+    aliases:
+      - iPiD
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 142), whose code comment groups it under an IBAN/name-match-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name iPiD; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which IBAN/name-match vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: bottomline
+    name: Bottomline
+    aliases:
+      - Bottomline
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 143), whose code comment groups it under an IBAN/name-match-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name Bottomline; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which IBAN/name-match vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: yapily
+    name: Yapily
+    aliases:
+      - Yapily
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 144), whose code comment groups it under an IBAN/name-match-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name Yapily; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which IBAN/name-match vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: middesk
+    name: Middesk
+    aliases:
+      - Middesk
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 146), whose code comment groups it under a US-registry/EIN/KYB-workflow-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name Middesk; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which US registry/EIN/KYB vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: persona
+    name: Persona
+    aliases:
+      - Persona
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 147), whose code comment groups it under a US-registry/EIN/KYB-workflow-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name Persona; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which US registry/EIN/KYB vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: socure
+    name: Socure
+    aliases:
+      - Socure
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 148), whose code comment groups it under a US-registry/EIN/KYB-workflow-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name Socure; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which US registry/EIN/KYB vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: govlink
+    name: GovLink
+    aliases:
+      - GovLink
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 149), whose code comment groups it under a US-registry/EIN/KYB-workflow-all-rejected-per-DEC-20260430-A label (rendered here without the source's em dash). docs/decisions/records/DEC-20260430-A.md was read in full and its text does not name GovLink; the record is a governance decision about treating the Vendor Roster as the selection surface and does not itself state which US registry/EIN/KYB vendors were rejected. Decision recorded unknown rather than assumed from the code comment."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: complyadvantage
+    name: ComplyAdvantage
+    aliases:
+      - ComplyAdvantage
+    lifecycle:
+      - state: rejected
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 151), whose code comment groups it as a rejected sanctions/PEP/adverse-media competitor and names no decision at all. Decision recorded unknown."
     reevaluation_triggers: []
     verification:
       terms:
