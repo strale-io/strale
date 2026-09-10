@@ -652,8 +652,10 @@ export const PROVIDERS: DependencyProvider[] = [
     //
     // The probe hits /v2/probe (an invalid key segment) with skipAuth:true
     // and accepts 401 as healthy — 401 proves the service is reachable
-    // without consuming compute units. If Alchemy itself is unreachable,
-    // fallbackBaseUrls (free public pool) are tried and 200 is accepted.
+    // without consuming compute units. No fallback pool: the free public
+    // endpoints it used to fall back to were removed from the executors by
+    // the 2026-09-10 vendor-terms audit, and a probe that stays green on an
+    // endpoint the capability no longer uses would report the wrong thing.
     //
     // The real Alchemy URL with the API key is built at request time inside
     // the ENS executors (see src/lib/eth-rpc-endpoints.ts).
@@ -661,12 +663,6 @@ export const PROVIDERS: DependencyProvider[] = [
     displayName: "Alchemy Ethereum RPC",
     description: "Authenticated Ethereum JSON-RPC for ENS resolution. 100k compute units/day free tier.",
     baseUrl: "https://eth-mainnet.g.alchemy.com",
-    fallbackBaseUrls: [
-      "https://ethereum-rpc.publicnode.com",
-      "https://eth.llamarpc.com",
-      "https://cloudflare-eth.com",
-      "https://rpc.ankr.com/eth",
-    ],
     authType: "none",
     envVar: "ALCHEMY_API_KEY",
     replacedFrom: "publicnode",
