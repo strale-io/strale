@@ -100,6 +100,27 @@ describe("no live code path reaches a prohibited upstream", () => {
     }
   });
 
+  it("no operator script under apps/api/scripts calls a prohibited upstream", () => {
+    // Review of #633: scripts run against production too, and are not executors,
+    // so no DEACTIVATED entry or gate can cover them — any reference fails.
+    const SCRIPTS = resolve(SRC, "..", "scripts");
+    const scan = (dir: string, out: string[] = []): string[] => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) { if (name !== "archive" && name !== "node_modules") scan(full, out); }
+        else if (/\.(ts|mjs|js)$/.test(name) && !/\.test\./.test(name)) out.push(full);
+      }
+      return out;
+    };
+    const files = scan(SCRIPTS);
+    expect(files.length, "scanned no scripts").toBeGreaterThan(20);
+    const hits = files
+      .map((f) => ({ f: relative(SCRIPTS, f).replace(/\\/g, "/"), hosts: prohibitedHostsIn(codeOnly(readFileSync(f, "utf8"))) }))
+      .filter((h) => h.hosts.length > 0)
+      .map((h) => `${h.f}: ${h.hosts.join(", ")}`);
+    expect(hits).toEqual([]);
+  });
+
   it("no dependency probe falls back to a prohibited host", () => {
     for (const p of PROVIDERS) {
       for (const u of p.fallbackBaseUrls ?? []) {
