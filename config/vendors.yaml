@@ -7,10 +7,16 @@
 #
 # `npm run vendors:check` validates this file against config/vendors.schema.json
 # and cross-checks it against apps/api/src/lib/dependency-manifest.ts
-# PROVIDERS, apps/api/coverage-matrix/*.yaml, and history against the base
-# branch. It does not check config/env-manifest.yaml's provider field against
-# this register (that field is free text today, per the design document's
-# recorded evidence conflict); a future batch.
+# PROVIDERS, apps/api/coverage-matrix/*.yaml provider values,
+# config/env-manifest.yaml provider values, and history against the base
+# branch. The env-manifest field is free text (the design document's recorded
+# evidence conflict), so it is resolved by exact string lookup against each
+# vendor's id, name and aliases, not by a schema reference.
+#
+# A surface's label is not evidence of use. Vendors named only by the
+# coverage matrix were checked against the host their capability's executor
+# actually calls: openownership is unknown for that reason, and "PSC register"
+# is an alias of companies-house.
 #
 # Every verification.* and authorization.status below is "unknown" by
 # design: no repo file in this batch verifies terms, pricing, licensing,
@@ -108,9 +114,12 @@ vendors:
       - kind: price
         condition: Monthly Dilisense bill exceeds EUR 1500.
         source: docs/decisions/records/DEC-20260429-A.md
+      - kind: other
+        condition: Customer or regulator demand for Strale-controlled dataset replay.
+        source: docs/decisions/records/DEC-20260429-A.md
       - kind: date
-        condition: Annual review of the sanctions/PEP self-host deferral.
-        date: 2027-04-29
+        condition: Annual review in April 2027 of the sanctions/PEP self-host deferral (the record names the month, not a day).
+        date: 2027-04-01
         source: docs/decisions/records/DEC-20260429-A.md
       - kind: licensing
         condition: Dilisense-initiated material change to terms.
@@ -259,11 +268,12 @@ vendors:
     aliases:
       - UK Companies House
       - Companies House
+      - PSC register
     lifecycle:
       - state: active
         date: 2026-09-10
         decision: unknown
-        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities. The coverage-matrix label 'PSC register' (UK row of uk-company-data) is Companies House's register of people with significant control; apps/api/src/capabilities/uk-company-data.ts calls api.company-information.service.gov.uk, so it is an alias here, not a separate vendor."
     reevaluation_triggers: []
     verification:
       terms:
@@ -734,10 +744,10 @@ vendors:
     aliases:
       - OpenOwnership
     lifecycle:
-      - state: active
+      - state: unknown
         date: 2026-09-10
         decision: unknown
-        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (DK: Committed, UK: Live)."
+        reason: "Named by two coverage-matrix rows of beneficial-ownership-lookup (DK: Committed, UK: Live), but not shown in current use: apps/api/src/capabilities/beneficial-ownership-lookup.ts calls only api.company-information.service.gov.uk (Companies House) and never OpenOwnership, and apps/api/src/lib/platform-facts.ts STALE_VENDORS records OpenOwnership BODS as evaluated 2026-04-02 and deferred with no Strale integration. The coverage-matrix label is therefore inaccurate; correcting it and setting this vendor's lifecycle from its evaluation record is later work."
     reevaluation_triggers: []
     verification:
       terms:
@@ -1034,27 +1044,6 @@ vendors:
         date: 2026-09-10
         decision: unknown
         reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (CH row, status: Live) and config/env-manifest.yaml provider field, both current."
-    reevaluation_triggers: []
-    verification:
-      terms:
-        status: unknown
-      pricing:
-        status: unknown
-      licensing:
-        status: unknown
-      redistribution:
-        status: unknown
-    authorization:
-      status: unknown
-  - id: psc-register
-    name: PSC register
-    aliases:
-      - PSC register
-    lifecycle:
-      - state: active
-        date: 2026-09-10
-        decision: unknown
-        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (UK row, status: Live)."
     reevaluation_triggers: []
     verification:
       terms:

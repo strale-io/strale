@@ -510,7 +510,7 @@ tracks:
       at docs/strategy/2026-09-10-m3-vendor-state-model.md, per the M3
       acceptance shape in
       archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md. Batch 3
-      done 2026-09-10 (PR #634): config/vendors.yaml (71 vendors) and
+      done 2026-09-10 (PR #634): config/vendors.yaml (70 vendors) and
       config/vendors.schema.json, scripts/vendors-lib.mjs,
       scripts/check-vendors.mjs, scripts/vendors.test.mjs, wired into CI as
       vendors:check / vendors:test after env:check / env:test. Next is batch
