@@ -126,10 +126,25 @@ export function activatorSites(src: string): string[] {
   return hits;
 }
 
-/** True when the file CALLS the predicate somewhere other than an import line. */
+/**
+ * Source with comments and import/export-from lines removed, so a check for a
+ * CALL cannot be satisfied by prose. Planting showed both leaks: an import line
+ * names the function, and a comment reading "mayAutoActivateSolution() below
+ * re-checks it" matched `name\s*\(` exactly like a call. `(^|[^:])//` leaves
+ * URLs such as https:// intact.
+ */
+export function codeOnly(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split(/\r?\n/)
+    .filter((l) => !/^\s*(import|export)\b.*from\s+["']/.test(l))
+    .map((l) => l.replace(/(^|[^:])\/\/.*$/, "$1"))
+    .join("\n");
+}
+
+/** True when the file CALLS the predicate in code — not in an import, not in a comment. */
 export function callsPredicate(src: string): boolean {
-  const code = src.split(/\r?\n/).filter((l) => !/^\s*(import|export)\b.*from\s+["']/.test(l)).join("\n");
-  return /\b(wasDeactivatedDeliberately|mayAutoActivateSolution)\s*\(/.test(code);
+  return /\b(wasDeactivatedDeliberately|mayAutoActivateSolution)\s*\(/.test(codeOnly(src));
 }
 
 /**
@@ -174,6 +189,12 @@ describe("the activator detector itself (proved before the real scan is trusted)
 
   it("sees a raw UPDATE that restores is_active from a variable", () => {
     expect(activatorSites("sql`UPDATE solutions SET is_active = ${prev}, updated_at = now() WHERE slug = ${s}`")).toHaveLength(1);
+  });
+
+  it("does not accept a comment as a call", () => {
+    expect(callsPredicate("// mayAutoActivateSolution() below re-checks it\nconst ok = true;")).toBe(false);
+    expect(callsPredicate("/* see wasDeactivatedDeliberately(reason) */\nconst ok = true;")).toBe(false);
+    expect(callsPredicate("const u = \"https://x\"; if (wasDeactivatedDeliberately(r)) return;")).toBe(true);
   });
 
   it("does not accept an import as a call", () => {
@@ -238,8 +259,7 @@ describe("every code path that can switch a solution on consults the shared pred
     const p = "apps/api/src/jobs/test-scheduler.ts";
     const a = activators.find((x) => x.path === p);
     expect(a, `${p} is no longer an activator`).toBeDefined();
-    const code = a!.src.split(/\r?\n/).filter((l) => !/^\s*(import|export)\b.*from\s+["']/.test(l)).join("\n");
-    expect(/\bmayAutoActivateSolution\s*\(/.test(code), `${p} must decide through mayAutoActivateSolution()`).toBe(true);
+    expect(/\bmayAutoActivateSolution\s*\(/.test(codeOnly(a!.src)), `${p} must decide through mayAutoActivateSolution()`).toBe(true);
   });
 
   it("keeps every exemption pointing at a file that is still an activator", () => {
