@@ -6,6 +6,7 @@ import { adminOnly } from "../lib/admin-auth.js";
 import { log, logError } from "../lib/log.js";
 import { persistCapability } from "../lib/capability-persistence.js";
 import { SYSTEM_ACCOUNT_EMAIL } from "../lib/internal-accounts.js";
+import { wasDeactivatedDeliberately } from "../lib/solution-activation.js";
 import type { AppEnv } from "../types.js";
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -865,6 +866,21 @@ adminRoute.post("/create-solution", async (c) => {
   // Keep prose OUT of the SQL template — a backtick in a SQL comment terminates
   // the template literal, which is how the first version of this fix broke the
   // build.
+  //
+  // The rule is decided here, by lib/solution-activation.ts, rather than
+  // restated in SQL. The 2026-09-06 version of this fix hand-copied the rule
+  // into a CASE expression, which is the "one list, many matchers" shape that
+  // let the test scheduler keep an older copy for four days. Read the current
+  // reason, ask the shared predicate, pass the answer in as a literal.
+  //
+  // Deliberately only the reason check, not "every step capability active":
+  // this is an operator creating or updating a solution on purpose, not an
+  // automated sweep deciding to switch one on.
+  const existing = toRows(await db.execute(sql`
+    SELECT deactivation_reason FROM solutions WHERE slug = ${body.slug} LIMIT 1
+  `)) as Array<{ deactivation_reason: string | null }>;
+  const keepOff = wasDeactivatedDeliberately(existing[0]?.deactivation_reason);
+
   const solResult = await db.execute(sql`
     INSERT INTO solutions (slug, name, marketing_name, description, long_description, agent_description, category, price_cents, component_sum_cents, value_tier, maintenance_level, geography, is_active, input_schema, transparency_tag)
     VALUES (
@@ -889,12 +905,9 @@ adminRoute.post("/create-solution", async (c) => {
       description = EXCLUDED.description,
       price_cents = EXCLUDED.price_cents,
       -- Guarded, not an unconditional true. See the note above this statement.
-      is_active = CASE
-        WHEN solutions.deactivation_reason IS NULL
-          OR solutions.deactivation_reason LIKE 'vendor:%'
-        THEN true
-        ELSE solutions.is_active
-      END,
+      -- keepOff is decided in TypeScript by the shared predicate, so this
+      -- endpoint does not carry its own SQL copy of the rule.
+      is_active = CASE WHEN ${keepOff} THEN solutions.is_active ELSE true END,
       input_schema = EXCLUDED.input_schema
     RETURNING id, slug, name
   `);
