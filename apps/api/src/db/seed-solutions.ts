@@ -146,30 +146,12 @@ import { validateSolution, enforceGates } from "../lib/onboarding-gates.js";
 
 
 
-/**
- * Whether a solution was switched off for a stated reason, and so must not be
- * switched back on by the qualification sweep at the end of `seed()`.
- *
- * That sweep can only judge whether a solution's steps currently pass their
- * tests. It cannot see WHY the solution was turned off, and a passing test says
- * nothing about whether we are licensed to sell the result.
- *
- * `vendor:` markers are excluded because vendor-control-tower.ts owns those and
- * runs its own restore cycle — it uses this same convention on this same table
- * (`deactivation_reason IS NULL OR LIKE 'vendor:%'`). The sweep had no such
- * check and would revive anything whose steps happened to be green.
- *
- * Found 2026-09-06: `web3-pre-trade` was deactivated three times because its
- * `crypto-price` step rests on CoinGecko's free Demo plan, which excludes
- * commercial use, and three times came back within minutes with
- * `x402_enabled` and the reason still intact.
- *
- * Exported so the test exercises THIS function rather than a copy of it.
- */
-export function wasDeactivatedDeliberately(deactivationReason: unknown): boolean {
-  const reason = typeof deactivationReason === "string" ? deactivationReason : "";
-  return reason.trim() !== "" && !reason.startsWith("vendor:");
-}
+// The predicate lives in lib/solution-activation.ts, shared with the test
+// scheduler's gate. It used to be defined here, and the scheduler kept its own
+// older rule — that divergence is what revived four deliberately deactivated
+// solutions for four days after 2026-09-06. Re-exported for existing importers.
+import { wasDeactivatedDeliberately } from "../lib/solution-activation.js";
+export { wasDeactivatedDeliberately };
 
 // ─── Seed logic ─────────────────────────────────────────────────────────────
 

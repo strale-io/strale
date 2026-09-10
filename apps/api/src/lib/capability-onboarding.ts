@@ -20,6 +20,7 @@ import { getOutputChecks, assignTier } from "./test-generation.js";
 import { checkReadiness, clearReadinessCache } from "./capability-readiness.js";
 import { validateCapabilitySchema, validateCapabilityStructure, enforceGates, runGate5 } from "./onboarding-gates.js";
 import { log, logWarn } from "./log.js";
+import { wasDeactivatedDeliberately } from "./solution-activation.js";
 
 /**
  * Call after a capability is inserted or updated in the database.
@@ -793,7 +794,7 @@ export async function onCapabilityReactivated(
 
   // Find inactive solutions that reference this capability
   const candidateSolutions = await db.execute(sql`
-    SELECT DISTINCT s.slug, s.id, s.name
+    SELECT DISTINCT s.slug, s.id, s.name, s.deactivation_reason
     FROM solutions s
     INNER JOIN solution_steps ss ON ss.solution_id = s.id
     WHERE ss.capability_slug = ${capabilitySlug}
@@ -806,9 +807,16 @@ export async function onCapabilityReactivated(
     slug: string;
     id: string;
     name: string;
+    deactivation_reason: string | null;
   }>;
 
   for (const sol of rows) {
+    // A capability coming back on is not a reason to revive a solution that
+    // was switched off for its own reasons. Only the reason check applies here:
+    // this path deliberately does NOT require recent passing results, because
+    // paid capabilities are never scheduled and would then never reactivate.
+    // See lib/solution-activation.ts for the incident this closes.
+    if (wasDeactivatedDeliberately(sol.deactivation_reason)) continue;
     // Check if ALL steps of this solution now have active capabilities
     const allStepsActive = await db.execute(sql`
       SELECT COUNT(*) FILTER (WHERE c.is_active = false OR c.slug IS NULL)::text AS inactive_count
