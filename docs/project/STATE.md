@@ -144,8 +144,10 @@ the marketing website design system.
   historical status must not be confused with current runtime vendor state.
 - The vendor-stack closeout identified an M3 need: a shadow, refreshable
   separation of runtime vendor facts, operator-only account readiness, and
-  historical Decisions/research. That work remains queued behind the M2 exit
-  gate; it is not the immediate continuation task.
+  historical Decisions/research. That work is now active as T6 batch 1
+  (inventory) and batch 2 (the repo-owned vendor-state model, recorded at
+  `docs/strategy/2026-09-10-m3-vendor-state-model.md`); the M2 exit gate it
+  was queued behind is closed.
 
 The [Operating Charter](../company/CHARTER.md) remains the authority for the
 division of decisions. Codex/Claude decide technical execution and ordinary

@@ -1,9 +1,9 @@
 # Repo-native operating model migration
 
-**Status:** M0/M1 COMPLETE — M2 canonical state, operator/pending, decision graph, and first load-bearing topic batches merged; M2 closure audit is next; M3/M4 are not authorized
+**Status:** M0/M1 COMPLETE. M2 is closed (T10 done, zero blocking exit gaps). M3 is active as track T6; M4 remains founder-gated.
 **Date:** 2026-08-31
 **Owner:** Codex
-**Active review route:** fresh separate Codex task, `gpt-5.6-sol`/xhigh (founder override 2026-09-01)
+**Active review route:** an independent same-provider review in a separate context, per DEC-20260910-A
 **Base audited:** `origin/main@1f222c6ae43e87fc47ea07ef4a6c708b142a2144`
 **Decision state:** Petter confirmed the direction on 2026-08-31: the Strale repo
 becomes the active project system of record; Notion is retired as an active
@@ -25,7 +25,59 @@ Codex task pinned to `gpt-5.6-sol` at `xhigh`. Historical Claude reviews and
 timeouts below remain evidence of what occurred; they are not queued work and
 must not cause a future session to invoke Claude again.
 
-## Current continuation checkpoint — 2026-09-02
+## Current continuation checkpoint (2026-09-10)
+
+This section is the current resume instruction. It supersedes the "Superseded
+continuation checkpoint (2026-09-02)" section below, whose body is left
+unchanged as a historical record.
+
+**M2 exit is closed.** Track T1 (M2 closure audit) is done, and track T10 (M2
+exit-gap closure) is done: zero blocking exit gaps remain in
+`docs/project/m2-closure-register.yaml`, and the closing independent review of
+the full M2 candidate set is archived at
+`archive/sessions/2026-09-05-m2-closing-review.md` (per `docs/programs/cto-readiness/tracks.yaml`).
+
+**M3 is active as track T6** (`docs/programs/cto-readiness/tracks.yaml`,
+`gate: post-m2`, `status: active`). Batch 1 produced the inventory of every
+current reader and writer of vendor state,
+`archive/sessions/2026-09-10-m3-vendor-state-inventory.md`. Batch 2 designated
+the one repo-owned vendor-state model, per the M3 acceptance shape in
+`archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md`, recorded at
+`docs/strategy/2026-09-10-m3-vendor-state-model.md`.
+
+**What comes next is named by the program register, not by this plan.** The
+next bounded task is T6's `next_action` in
+`docs/programs/cto-readiness/tracks.yaml`; on 2026-09-10 it names batch 3 of
+the design document above. The register says which track is active and what
+comes next; this plan remains the detailed M2-through-M7 specification behind
+it. Where the two disagree on *what is next*, the register wins; where they
+disagree on *what a milestone requires*, this plan wins.
+
+This checkpoint deliberately states no next task in the plan's directive line
+forms (a `Next:` bullet or a bold next-bounded-task label). The M2 closure
+register reconciles every line in those forms in this plan as an M2 forward
+statement (`scripts/m2-closure-register-lib.mjs`, `PLAN_STATEMENT_PATTERNS`).
+An M3 task is not an M2 statement, and quoting one in the closed M2 register
+would stale its closing review and reopen the M2 exit. Post-M2 forward work is
+therefore stated in the program register only. Scoping that scan to M2-era
+sections would be a deliberate change to the scanner, with a planted-failure
+test, not a wording choice.
+
+**Start safely:** use a new isolated worktree from current `origin/main`, the
+same rule as every prior batch.
+
+**Review route:** an independent same-provider review in a separate context,
+under DEC-20260910-A. This is not Codex; the 2026-09-01/09-02/09-03 Codex
+routing overrides recorded below are superseded on this point by the founder's
+2026-09-07 review policy and DEC-20260910-A (see `CLAUDE.md`'s Review routing
+section).
+
+**Hard boundaries still hold**, unchanged from every prior M3 batch: no vendor
+contact, account, terms acceptance, licensing commitment, or spend; no
+production write, runtime vendor switch, or routing change; candidate
+surfaces stay inactive until the founder-gated M4 cutover.
+
+## Superseded continuation checkpoint (2026-09-02)
 
 This section supersedes older `Next:` sentences elsewhere in this dated plan.
 Those sentences remain historical progress notes; they are not the current

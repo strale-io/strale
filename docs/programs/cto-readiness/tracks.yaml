@@ -505,15 +505,17 @@ tracks:
     next_action: >
       Batch 1 done 2026-09-10: inventory of every current reader and writer
       of vendor state, archived at
-      archive/sessions/2026-09-10-m3-vendor-state-inventory.md. Batch 2
-      designates the one repo-owned vendor-state model (or deliberately
-      joined set of canonical tables) the inventory feeds, per the M3
+      archive/sessions/2026-09-10-m3-vendor-state-inventory.md. Batch 2 done
+      2026-09-10: the repo-owned vendor-state model is designed and recorded
+      at docs/strategy/2026-09-10-m3-vendor-state-model.md, per the M3
       acceptance shape in
-      archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md. All M3
-      work is shadow mode: candidate project documents stay inactive and
-      Notion-backed workflows stay authoritative until the founder-gated M4
-      cutover.
-    resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
+      archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md. Next is
+      batch 3, as that design describes: config/vendors.yaml and its schema,
+      populated with currently integrated vendors, plus vendors:check with
+      tests proven by planted failures. All M3 work is shadow mode: candidate
+      project documents stay inactive and Notion-backed workflows stay
+      authoritative until the founder-gated M4 cutover.
+    resume_file: docs/strategy/2026-09-10-m3-vendor-state-model.md
     exit:
       - repo-native replacements testable without changing existing authority
       - no path writes to both repo-native truth and Notion
