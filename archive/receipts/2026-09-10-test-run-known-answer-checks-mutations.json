@@ -1,0 +1,74 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "1c77ddd33a2f8dcc9a887b450c0564bd062f3a24"
+  },
+  "at": "2026-09-10T16:33:30.831Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/427e7490-26c0-4cc7-aa84-9031a101914a/scratchpad/mut-ka-receipt-src.json"
+  },
+  "summary": {
+    "ok": true,
+    "test_file": "apps/api/src/lib/known-answer-checks.test.ts",
+    "unit_tests_passed": 7,
+    "unit_tests_total": 7,
+    "planted_failures": 9,
+    "planted_caught": 9,
+    "mutation_script": "scratchpad mut-ka.mjs (restores each plant with git checkout HEAD --, clean tree only)"
+  },
+  "topic": "known-answer-checks-mutations",
+  "raw": {
+    "ok": true,
+    "test_file": "apps/api/src/lib/known-answer-checks.test.ts",
+    "unit_tests_passed": 7,
+    "unit_tests_total": 7,
+    "planted_failures": 9,
+    "planted_caught": 9,
+    "plants": [
+      {
+        "plant": "sync script grows its private copy back",
+        "result": "caught"
+      },
+      {
+        "plant": "onboard stops calling the shared mapping",
+        "result": "caught"
+      },
+      {
+        "plant": "falsy values dropped",
+        "result": "caught"
+      },
+      {
+        "plant": "reliability leaks into the row",
+        "result": "caught"
+      },
+      {
+        "plant": "values dropped",
+        "result": "caught"
+      },
+      {
+        "plant": "dry-run diff hides dropped fields",
+        "result": "caught"
+      },
+      {
+        "plant": "a changed field passes as unchanged",
+        "result": "caught"
+      },
+      {
+        "plant": "new fields hidden",
+        "result": "caught"
+      },
+      {
+        "plant": "diff throws on odd shapes",
+        "result": "caught"
+      }
+    ],
+    "live_verification": {
+      "capabilities": 7,
+      "checks": 40,
+      "result": "all checks pass on live output",
+      "planted_wrong_answer": "citation-graph resolved_id W0000000001 -> FAIL (verifier can fail)"
+    },
+    "mutation_script": "scratchpad mut-ka.mjs (restores each plant with git checkout HEAD --, clean tree only)"
+  }
+}

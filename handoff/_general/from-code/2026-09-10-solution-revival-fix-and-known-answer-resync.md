@@ -48,7 +48,8 @@ paid, the harness refuses it).
 - `lib/known-answer-checks.ts` is now the single `expected_fields` → checks
   mapping; `onboard.ts` and `sync-known-answer-fixtures.ts` each had a copy.
 - `sync-known-answer-fixtures --dry-run` prints per-field removed / changed /
-  added. 9/9 planted failures caught by the new test.
+  added. Planted failures and live verification:
+  `archive/receipts/2026-09-10-test-run-known-answer-checks-mutations.json`.
 
 Catalogue-wide survey (read-only, 367 active known_answer suites): 23 date
 equals on 14 capabilities; almost all are historical registration dates (good
