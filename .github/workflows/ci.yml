@@ -468,6 +468,13 @@ jobs:
       # REGISTER (env:*) — always runs.
       - run: npm run env:check
       - run: npm run env:test
+      # Shadow vendor register (M3 batch 3, T6, config/vendors.yaml). Not
+      # authoritative until the founder-gated M4 cutover, but validated and
+      # cross-checked (dependency-manifest.ts PROVIDERS, coverage-matrix,
+      # env-manifest, decision-record links, history against the base
+      # branch) the same way the other cheap-extras registers are.
+      - run: npm run vendors:check
+      - run: npm run vendors:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
       # Voyage/GPT model id lives in one place with a pinned_at date and a
       # decision reference: fails on a model-id literal anywhere else in

@@ -32,6 +32,8 @@
     "env:check": "node scripts/check-env.mjs",
     "env:test": "node --test scripts/env.test.mjs",
     "env:example": "node scripts/generate-env-example.mjs",
+    "vendors:check": "node scripts/check-vendors.mjs",
+    "vendors:test": "node --test scripts/vendors.test.mjs",
     "models:check": "node apps/api/scripts/check-model-literals.mjs",
     "models:test": "node --test apps/api/scripts/check-model-literals.test.mjs",
     "claims:check": "node scripts/check-claims.mjs",
@@ -67,6 +69,7 @@
   "devDependencies": {
     "ajv": "^8.20.0",
     "commonmark": "^0.31.2",
+    "typescript": "^5.7.3",
     "yaml": "^2.8.1"
   }
 }
