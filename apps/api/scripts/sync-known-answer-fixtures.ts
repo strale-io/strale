@@ -107,10 +107,13 @@ async function main() {
       // call signature — a known upstream typing limitation, not a real
       // runtime issue. Cast to the callable base type once per transaction.
       const t = tx as unknown as typeof sql;
+      // Check values come from YAML, so they are JSON by construction; the
+      // shared type keeps them `unknown`, which `tx.json()`'s JSONValue refuses.
+      const rulesJson = validationRules as unknown as Parameters<typeof tx.json>[0];
       await t`
         UPDATE test_suites
         SET input = ${tx.json(ka.input)},
-            validation_rules = ${tx.json(validationRules)},
+            validation_rules = ${tx.json(rulesJson)},
             baseline_output = NULL,
             baseline_captured_at = NULL
         WHERE id = ${keep.id}`;
