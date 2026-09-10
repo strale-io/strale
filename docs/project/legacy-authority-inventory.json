@@ -603,6 +603,7 @@
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/src/lib/attribution.ts",
+        "apps/api/src/lib/vendor-terms.ts",
         "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
         "archive/sessions/2026-08-31-m1-foundation-extraction-boundary.md",
