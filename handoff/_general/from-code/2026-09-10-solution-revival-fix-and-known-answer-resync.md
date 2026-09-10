@@ -24,8 +24,16 @@ Compliance was contained throughout: `x402_enabled` stayed false and
 **Production write, 2026-09-10 16:11 UTC, after the deploy:** the four rows
 flipped to `is_active = false` once (only rows still carrying a non-vendor
 deactivation reason). Watched afterwards with a read-only checker that also
-counts the tests run on their sibling steps in the window. Result: see the
-closing note at the bottom.
+counts the tests run on their sibling steps in the window. **Held:** off
+through 17:06 UTC (55 min), during which 13 tests ran on the four step
+capabilities. Under the old scheduler each of those revived the bundles
+within minutes.
+
+**`main` red since #627 (fixed in #630).** Three `context:test` fixtures in
+`scripts/m2-closure-register.test.mjs` read the live merge-base as their base
+register; once #627 put a real `closing_review` on main, their synthetic one
+read as a mutation of it. Test-only fix pins those fixtures to a pre-closure
+base.
 
 **Codex review backlog (#628).** All 36 rows waived under the founder's
 2026-09-07 review policy as `DEC-20260910-A` (founder instruction in chat:
