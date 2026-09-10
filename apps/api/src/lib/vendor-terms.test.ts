@@ -85,6 +85,14 @@ describe("no live code path reaches a prohibited upstream", () => {
     });
   }
 
+  it("no exemption covers capability code — an exempt executor would sell the data unchecked", () => {
+    for (const f of Object.keys(EXEMPT)) {
+      expect(f.startsWith("capabilities/") || f.startsWith("web3-assurance/"), `${f} may not be exempt`).toBe(false);
+      const src = readFileSync(join(SRC, f), "utf8");
+      expect(/registerCapability\(/.test(codeOnly(src)), `${f} registers a capability and may not be exempt`).toBe(false);
+    }
+  });
+
   it("every exemption and gate still names a prohibited host (no stale entries)", () => {
     const named = new Set(references.map((r) => r.file));
     for (const f of [...Object.keys(EXEMPT).filter((f) => f !== "lib/vendor-terms.ts"), ...Object.keys(GATED)]) {
