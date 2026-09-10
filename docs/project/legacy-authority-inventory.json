@@ -597,7 +597,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "2761b94c065bf6e13ca4151f9a2972ae001de71003e3dbf885d3455ca9f1879d",
+      "sha256": "26724982e4b16b7ef83880b387a99cdad21cf4b1f23ca4168100a09b833ff44e",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
