@@ -46,7 +46,15 @@ entries:
     commit: ff9482b5
     merged: "2026-09-06"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       It changes how long personal data actually lives — the same reason CX-3
       is high — and it does so by editing the shared job coordinator, which
@@ -79,7 +87,15 @@ entries:
     commit: 91f8ecaf
     merged: "2026-09-06"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Two reasons, and the second is the stronger one. First, this is the
       same defect class as CX-34 one day later — a refusal message that the
@@ -121,7 +137,15 @@ entries:
     commit: 4529f778
     merged: "2026-09-06"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Eight new executors on the paid rail at once, and the Claude review
       round found a defect class the repo has an open three-strike
@@ -156,7 +180,15 @@ entries:
     commit: f7b1f651
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       The last collision batch, after which the closure register records
       G2 resolved and only G9 blocks the M2 exit. Includes the three-row
@@ -176,7 +208,15 @@ entries:
     commit: 135e556d
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       It overrides an automatic quality gate to put capabilities on sale, and
       it does so from a block that runs at boot, where a throw crash-loops
@@ -209,7 +249,15 @@ entries:
     commit: 6f2dec52
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Irreversible collision resolutions covering the direct-connections
       doctrine row, the Payee Assurance conditions retired by
@@ -227,7 +275,15 @@ entries:
     commit: 8deb296b
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Irreversible collision resolutions including the first two
       documented_only rows (a superseded twin and an identical-title
@@ -249,7 +305,15 @@ entries:
     commit: b9739d12
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       This batch changes what the word "customer" means to every consumer of
       lib/metrics, and externalCustomers() is load-bearing for revenue,
@@ -278,7 +342,15 @@ entries:
     commit: 036f207d
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Irreversible collision resolutions (the registry's merge-base rules
       refuse a regression). The batch also asserts that the KYB and Invoice
@@ -300,7 +372,15 @@ entries:
     commit: 81d59db4
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       The first collision resolutions after the DEC-20260502-A worked
       example. Each resolution is irreversible history (the registry's
@@ -322,7 +402,15 @@ entries:
     commit: 6832cccb
     merged: "2026-09-05"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       The last G1 batch, after which the closure register records G1
       resolved. The records judge the scheduled_testing_eligible decoupling
@@ -345,7 +433,15 @@ entries:
     commit: 892a1f75
     merged: "2026-09-05"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Twelve records including the SQS redesign row itself and the two
       catalogue deactivation rows, whose Consequences enumerate the
@@ -366,7 +462,15 @@ entries:
     commit: ccece2b2
     merged: "2026-09-05"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Twelve records whose Consequences sections judge what survived the
       SQS deletion and the never-executed provider programme (billing on
@@ -389,7 +493,15 @@ entries:
     commit: fdb38591
     merged: "2026-09-05"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Fourteen launch-month records whose Consequences sections judge what
       the SQS deletion and later work did with each (no ranking-explanation
@@ -412,7 +524,15 @@ entries:
     commit: cc936d78
     merged: "2026-09-05"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Fourteen founding-week records whose Consequences sections judge what
       survived (no LLM fuzzy input despite CLAUDE.md, TED shipped, the EU AI
@@ -434,7 +554,15 @@ entries:
     commit: 8ebfafa9
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Fourteen founding-era records whose Consequences sections judge what
       survived of each decision (the pivot, the seed set, the payment
@@ -453,7 +581,15 @@ entries:
     commit: e4b6376a
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Twelve records whose Consequences sections state that production
       sourcing diverged from the decided paths (Bolagsverket shipped, the
@@ -472,7 +608,15 @@ entries:
     commit: 7ca52b3c
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Seven records for a product framing the readiness program retired;
       each states the retirement and what survives in code. The batch also
@@ -491,7 +635,15 @@ entries:
     commit: d858a695
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Records about the distribution surfaces and the x402 rail, with live
       anchors (the CDP facilitator, the AgentCash discovery compatibility,
@@ -510,7 +662,15 @@ entries:
     commit: deb08103
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Six records whose subject, the SQS and its display, was deleted on
       2026-05-05; each Consequences section says what survives. Whether the
@@ -529,7 +689,15 @@ entries:
     commit: 746c3beb
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       These records describe the pipeline the Capability Onboarding Protocol
       (DEC-20260320-B) enforces, and one of them (the 12-category risk
@@ -548,7 +716,15 @@ entries:
     commit: c309a8ca
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Pricing records with live contradictions: the vendor cost basis moved
       (OpenSanctions to Dilisense), the compliance-screening prices never
@@ -568,7 +744,15 @@ entries:
     commit: 5bf6c43d
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       New executors on the money path that build upstream URLs from caller
       input. Three Claude rounds were needed: round 1 found query-parameter
@@ -591,7 +775,15 @@ entries:
     commit: 167e46e0
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       DEC-20260425-A's record states that the decision's core mechanism
       (manifest-declared jurisdictions) was never implemented and that the
@@ -610,7 +802,15 @@ entries:
     commit: fa869015
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Three operating patterns transcribed with a contradiction the worker
       found itself: the exemplar retired capability was reactivated eight
@@ -627,7 +827,15 @@ entries:
     commit: 47d69050
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       A semver-major on the ORM every query goes through. The first pass
       claimed no source change was needed; CI and two Claude reviews found
@@ -649,7 +857,15 @@ entries:
     commit: 8b124678
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Decision-record fidelity is the work the 2026-09-01 routing reserved
       for Codex. These three records transcribe engineering conventions that
@@ -669,7 +885,15 @@ entries:
     commit: cf20869f
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       A formal record was transcribed from CLAUDE.md's Distribution PR
       Integrity Protocol, the protocol Codex itself helped shape after the
@@ -690,7 +914,15 @@ entries:
     commit: 88d8c0c0
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Codex mapped the collision identity plan the closure register rests
       on; this batch extends the record-key grammar and the validator's
@@ -709,7 +941,15 @@ entries:
     commit: 90c1c798
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       A classification rule moved 76 rows out of migration scope in one step.
       The Claude review recomputed the population and digests independently
@@ -729,7 +969,15 @@ entries:
     commit: bd755ea8
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       The Claude review of the first pass was the thing that caught the real
       defect, and that is precisely the argument for a second model here. The
@@ -758,7 +1006,15 @@ entries:
     commit: 7d6343e1
     merged: "2026-09-04"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       Decision-record fidelity is exactly the work the 2026-09-01 routing
       reserved for Codex: the doctrine batch failed its first Codex review
@@ -777,7 +1033,15 @@ entries:
     commit: 2a2519f0
     merged: "2026-09-04"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       A framework minor upgrade on the request path of every endpoint. The
       Claude review reproduced the audit numbers and reachability by grep and
@@ -796,7 +1060,15 @@ entries:
     commit: 0daa93c9
     merged: "2026-09-03"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       The largest single change of the day and the one where a Claude-only
       review is least adequate: five consecutive Claude rounds each returned
@@ -818,7 +1090,15 @@ entries:
     commit: 1f4339f2
     merged: "2026-09-03"
     priority: medium
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       It weakens a safety gate on purpose. The reasoning is that the gate was
       wrong about what a state licensed rather than wrong about the state,
@@ -835,7 +1115,15 @@ entries:
     commit: 0daa93c9
     merged: "2026-09-03"
     priority: high
-    status: pending
+    status: waived
+    waived_by: petter
+    waived_decision: DEC-20260910-A
+    waived_reason: >
+      Waived by the founder in session on 2026-09-10. The 2026-09-07 review
+      policy made cross-provider review optional, and this row tracked only a
+      second-provider (Codex) re-review of work that had already passed an
+      independent same-provider review before it merged. Every pending row
+      passed review_by on 2026-09-07 and blocked every PR until this waiver.
     why_codex: >
       It changes how long personal data can live. Two Claude rounds got the
       predicate wrong in opposite directions — one left records unprotected,
