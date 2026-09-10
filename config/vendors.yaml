@@ -1,0 +1,1570 @@
+# Vendor state register (M3 batch 3, T6). SHADOW MODE: authority_active is
+# false and stays false until the founder-gated M4 cutover. The Notion
+# Vendor Roster and Active Vendor Stack remain the authority until then;
+# nothing here is read by production code or by any runtime decision.
+# Design: docs/strategy/2026-09-10-m3-vendor-state-model.md. Inventory this
+# register was populated from: archive/sessions/2026-09-10-m3-vendor-state-inventory.md.
+#
+# `npm run vendors:check` validates this file against config/vendors.schema.json
+# and cross-checks it against apps/api/src/lib/dependency-manifest.ts
+# PROVIDERS, apps/api/coverage-matrix/*.yaml provider values,
+# config/env-manifest.yaml provider values, and history against the base
+# branch. The env-manifest field is free text (the design document's recorded
+# evidence conflict), so it is resolved by exact string lookup against each
+# vendor's id, name and aliases, not by a schema reference.
+#
+# A surface's label is not evidence of use. Vendors named only by the
+# coverage matrix were checked against the host their capability's executor
+# actually calls, for every row whatever its status: openownership is unknown
+# for that reason, "PSC register" is an alias of companies-house, and the ES
+# row's "Openapi.com" label is stale (see openapi-com). Those coverage-matrix
+# labels are wrong on the coverage matrix itself; this register does not edit
+# it.
+#
+# A verification.* or authorization.status is "unknown" unless a repo file
+# verifies it. Absence of evidence is recorded as unknown, never implied as
+# verified. The only verified fields are redistribution (may Strale resell
+# what the API returns?) for the ten vendors the two vendor-terms audits
+# ruled on: docs/security/2026-09-06-vendor-terms-audit.md and
+# docs/security/2026-09-10-vendor-terms-audit-batch-2.md. Each records the
+# audit's outcome (permitted, conditional, prohibited). Four vendors whose
+# every capability the audits switched off are held. The one decision link,
+# with re-evaluation triggers, is dilisense, sourced from
+# docs/decisions/records/DEC-20260429-A.md, whose own text names the
+# retention decision and the review triggers.
+#
+# non_vendor_sentinels: provider strings on other surfaces that deliberately
+# name no vendor. "Other" appears on apps/api/coverage-matrix/*.yaml rows
+# (adverse-media-check, fr-bodacc-lookup, slovenian-company-data,
+# uk-cop-check, us-ein-match). "internal" appears on config/env-manifest.yaml
+# rows for platform-internal config with no external vendor. Counts are left
+# out on purpose: vendors:check reads both surfaces live (rule 7).
+schema_version: 1
+authority_active: false
+non_vendor_sentinels:
+  - Other
+  - internal
+vendors:
+  - id: browserless
+    name: Browserless (Chromium)
+    aliases:
+      - Browserless.io
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: anthropic
+    name: Anthropic
+    aliases:
+      - Anthropic
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: serper
+    name: Serper
+    aliases:
+      - Serper.dev
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: dilisense
+    name: Dilisense
+    aliases:
+      - Dilisense
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: DEC-20260429-A
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers:
+      - kind: price
+        condition: Monthly Dilisense bill exceeds EUR 1500.
+        source: docs/decisions/records/DEC-20260429-A.md
+      - kind: other
+        condition: Customer or regulator demand for Strale-controlled dataset replay.
+        source: docs/decisions/records/DEC-20260429-A.md
+      - kind: date
+        condition: Annual review in April 2027 of the sanctions/PEP self-host deferral (the record names the month, not a day).
+        date: 2027-04-01
+        source: docs/decisions/records/DEC-20260429-A.md
+      - kind: licensing
+        condition: Dilisense-initiated material change to terms.
+        source: docs/decisions/records/DEC-20260429-A.md
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: openregister
+    name: OpenRegister
+    aliases:
+      - OpenRegister (Germany)
+      - OpenRegister
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: justizonline
+    name: JustizOnline / BRZ
+    aliases:
+      - JustizOnline / BRZ (Austria)
+      - Firmenbuch (Republik Österreich, BMJ) via JustizOnline IWG/HVD API
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: esortcode
+    name: eSortCode
+    aliases:
+      - eSortCode (UK)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: cobalt-intelligence
+    name: Cobalt Intelligence
+    aliases:
+      - Cobalt Intelligence
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: einsearch
+    name: EINsearch
+    aliases:
+      - EINsearch
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: sec-api-io
+    name: sec-api.io
+    aliases:
+      - sec-api.io
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: companies-house
+    name: UK Companies House
+    aliases:
+      - UK Companies House
+      - Companies House
+      - PSC register
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities. The coverage-matrix label 'PSC register' (UK row of uk-company-data) is Companies House's register of people with significant control; apps/api/src/capabilities/uk-company-data.ts calls api.company-information.service.gov.uk, so it is an alias here, not a separate vendor."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: vies
+    name: VIES
+    aliases:
+      - VIES
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: gleif
+    name: GLEIF
+    aliases:
+      - GLEIF
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: brreg
+    name: Brreg
+    aliases:
+      - Brreg
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: sudreg
+    name: Sudreg
+    aliases:
+      - Sudreg
+      - Sudski registar (Croatia)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: gemi
+    name: GEMI
+    aliases:
+      - GEMI (Greece)
+      - GEMI
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: goplus
+    name: GoPlus
+    aliases: []
+    lifecycle:
+      - state: held
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, kept for its health probe; every capability it lists is in apps/api/src/capabilities/auto-register.ts DEACTIVATED since the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md), whose verdict is that GoPlus's API License Agreement prohibits commercial use of its data without written permission."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
+    authorization:
+      status: unknown
+  - id: defillama
+    name: DefiLlama
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: etherscan
+    name: Etherscan
+    aliases:
+      - Etherscan
+    lifecycle:
+      - state: held
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, kept for its health probe; every capability it lists is in apps/api/src/capabilities/auto-register.ts DEACTIVATED, and the shared client refuses calls unless ETHERSCAN_COMMERCIAL_PLAN is true, per the vendor-terms audits (docs/security/2026-09-06-vendor-terms-audit.md, docs/security/2026-09-10-vendor-terms-audit-batch-2.md): Etherscan's API content is for personal, non-commercial use and Strale holds only a free key."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
+    authorization:
+      status: unknown
+  - id: alternative-me
+    name: Alternative.me
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: conditional
+        note: "Commercial use is allowed with attribution given next to the displayed data; fear-greed-index emits it in its output."
+    authorization:
+      status: unknown
+  - id: openalex
+    name: OpenAlex
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-06
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-06-vendor-terms-audit.md
+        outcome: permitted
+    authorization:
+      status: unknown
+  - id: arxiv
+    name: arXiv
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: ncbi-eutils
+    name: NCBI E-utilities
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: hn-algolia
+    name: Hacker News (Algolia)
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: sec-edgar
+    name: SEC EDGAR
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-06
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-06-vendor-terms-audit.md
+        outcome: permitted
+    authorization:
+      status: unknown
+  - id: sec-ticker-index
+    name: SEC ticker index
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: nvd
+    name: NVD (NIST)
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: usgs-earthquake
+    name: USGS Earthquake
+    aliases: []
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: publicnode
+    name: PublicNode Ethereum RPC
+    aliases: []
+    lifecycle:
+      - state: retired
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, retired: true."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
+    authorization:
+      status: unknown
+  - id: alchemy-eth
+    name: Alchemy
+    aliases:
+      - Alchemy
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: permitted
+    authorization:
+      status: unknown
+  - id: jina-reader
+    name: Jina Reader
+    aliases:
+      - Jina AI
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: opensanctions
+    name: OpenSanctions
+    aliases:
+      - OpenSanctions
+    lifecycle:
+      - state: retired
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, retired: true."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: openapi-com
+    name: Openapi.com
+    aliases:
+      - Openapi.com
+      - Openapi.com + DRCOR open data
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field. In current use: nine executors call the Openapi.com client (executeOpenapiCapability): bulgarian, cypriot, dutch, hungarian, italian, luxembourgish, maltese, portuguese and romanian-company-data. The CY row's combined 'Openapi.com + DRCOR open data' string is aliased here because cypriot-company-data.ts calls Openapi.com as the Tier-1 identity source and DRCOR open data only as a Tier-2 legal_representatives augmentation. The ES row also names Openapi.com, but its label is stale: spanish-company-data.ts replaced the Openapi ES-Advanced path on 2026-08-12 and calls openmercantil.es, so the ES row is not evidence of use."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: openownership
+    name: OpenOwnership
+    aliases:
+      - OpenOwnership
+    lifecycle:
+      - state: unknown
+        date: 2026-09-10
+        decision: unknown
+        reason: "Named by two coverage-matrix rows of beneficial-ownership-lookup (DK: Committed, UK: Live), but not shown in current use: apps/api/src/capabilities/beneficial-ownership-lookup.ts calls only api.company-information.service.gov.uk (Companies House) and never OpenOwnership, and apps/api/src/lib/platform-facts.ts STALE_VENDORS records OpenOwnership BODS as evaluated 2026-04-02 and deferred with no Strale integration. The coverage-matrix label is therefore inaccurate; correcting it and setting this vendor's lifecycle from its evaluation record is later work."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: cbeapi-be
+    name: cbeapi.be
+    aliases:
+      - cbeapi.be
+      - CBE API (Belgium)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (BE row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: ares
+    name: ARES
+    aliases:
+      - ARES
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (CZ row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: cvrapi-dk
+    name: cvrapi.dk
+    aliases:
+      - cvrapi.dk
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (DK row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: ariregister
+    name: Ariregister
+    aliases:
+      - Ariregister
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (EE row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: prh
+    name: PRH
+    aliases:
+      - PRH
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (FI row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: insee
+    name: INSEE
+    aliases:
+      - INSEE
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (FR row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: cro
+    name: CRO
+    aliases:
+      - CRO
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (IE row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: uznemumu-registrs
+    name: Uzņēmumu reģistrs
+    aliases:
+      - Uznemumu registrs
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (LV row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: registru-centras
+    name: Registru centras
+    aliases:
+      - Registru centras
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (LT row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: krs
+    name: KRS
+    aliases:
+      - KRS
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (PL row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: acra
+    name: ACRA
+    aliases:
+      - ACRA
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (SG row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: rpo
+    name: RPO
+    aliases:
+      - RPO
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (SK row, status: Live)."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: bolagsverket
+    name: Bolagsverket
+    aliases:
+      - Bolagsverket
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (SE row, status: Live) and config/env-manifest.yaml provider field (same string), both current."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: zefix
+    name: Zefix
+    aliases:
+      - Zefix
+      - Zefix (Switzerland)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field (CH row, status: Live) and config/env-manifest.yaml provider field, both current."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: adzuna
+    name: Adzuna
+    aliases:
+      - Adzuna
+    lifecycle:
+      - state: held
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from config/env-manifest.yaml provider field. Its only capability, job-board-search, is in apps/api/src/capabilities/auto-register.ts DEACTIVATED since the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md): Adzuna permits publishing listings with branding, and other commercial use only as a 14-day trial."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
+    authorization:
+      status: unknown
+  - id: australian-business-register
+    name: Australian Business Register
+    aliases:
+      - Australian Business Register
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: aviationstack
+    name: Aviationstack
+    aliases:
+      - Aviationstack
+    lifecycle:
+      - state: held
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from config/env-manifest.yaml provider field. Its only capability, flight-status, is in apps/api/src/capabilities/auto-register.ts DEACTIVATED since the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md): the free plan is personal, non-commercial use."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: prohibited
+    authorization:
+      status: unknown
+  - id: better-stack
+    name: Better Stack
+    aliases:
+      - Better Stack
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: codex-cli-openai
+    name: Codex CLI (OpenAI)
+    aliases:
+      - Codex CLI (OpenAI)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: coinbase-cdp
+    name: Coinbase CDP
+    aliases:
+      - Coinbase CDP
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: courtlistener
+    name: CourtListener (Free Law Project)
+    aliases:
+      - CourtListener (Free Law Project)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: github
+    name: GitHub
+    aliases:
+      - GitHub
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-10
+        verified_by: "vendor-terms audit, read against the live terms pages"
+        evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
+        outcome: conditional
+        note: "Public repository metadata through the documented API is permitted (github-repo-compare, github-repo-analyze); users' personal information is not, so github-user-profile is in DEACTIVATED."
+    authorization:
+      status: unknown
+  - id: google
+    name: Google
+    aliases:
+      - Google
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: hmrc-uk
+    name: HMRC (UK)
+    aliases:
+      - HMRC (UK)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: kadaster
+    name: Kadaster (Dutch BAG)
+    aliases:
+      - Kadaster (Dutch BAG)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: notion
+    name: Notion
+    aliases:
+      - Notion
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: rvo-ep-online
+    name: RVO EP-Online (Netherlands)
+    aliases:
+      - RVO EP-Online (Netherlands)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: railway
+    name: Railway
+    aliases:
+      - Railway
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: rekt-database
+    name: Rekt Database
+    aliases:
+      - Rekt Database
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: resend
+    name: Resend
+    aliases:
+      - Resend
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: sdda-latvia
+    name: SDDA (Latvia)
+    aliases:
+      - SDDA (Latvia)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: stripe
+    name: Stripe
+    aliases:
+      - Stripe
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: supabase-beacon
+    name: Supabase (Beacon project)
+    aliases:
+      - Supabase (Beacon project)
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: tenderly
+    name: Tenderly
+    aliases:
+      - Tenderly
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: uspto
+    name: USPTO
+    aliases:
+      - USPTO
+    lifecycle:
+      - state: unknown
+        date: 2026-09-10
+        decision: unknown
+        reason: "Initial population from config/env-manifest.yaml provider field: USPTO_ODP_API_KEY is retired: 2026-09-03 with purpose text 'No code has ever read it, no capability was built on it. Kept on purpose (DQ-30, founder's call 2026-09-03) against a future US intellectual-property capability.' Not shown in current use on this surface, so state is unknown rather than active per the population rule."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: voyage-ai
+    name: Voyage AI
+    aliases:
+      - Voyage AI
+    lifecycle:
+      - state: active
+        date: 2026-09-10
+        decision: unknown
+        reason: Initial population from config/env-manifest.yaml provider field, currently read (not retired).
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+

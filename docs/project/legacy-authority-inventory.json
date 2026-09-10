@@ -597,7 +597,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "22369232937cacd024f17edb16fee76d1a178b00742ea454a33be2f26a6f1d21",
+      "sha256": "2761b94c065bf6e13ca4151f9a2972ae001de71003e3dbf885d3455ca9f1879d",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -636,6 +636,8 @@
         "archive/superseded/manifests-drafts/product-offers-lookup.yaml",
         "archive/superseded/manifests-drafts/sec-edgar-name-search.yaml",
         "config/env-manifest.yaml",
+        "config/vendors.schema.json",
+        "config/vendors.yaml",
         "docs/README.md",
         "docs/programs/brand-website/tracks.yaml",
         "docs/programs/cto-readiness/tracks.yaml",
@@ -653,7 +655,9 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/research-lib.mjs",
-        "scripts/research.test.mjs"
+        "scripts/research.test.mjs",
+        "scripts/vendors-lib.mjs",
+        "scripts/vendors.test.mjs"
       ]
     },
     {

@@ -250,7 +250,12 @@ One row per vendor fact; exactly one owner.
 ## Cross-checks that join the surfaces
 
 - `dependency-manifest.ts` providers must resolve to a register `id` whose
-  current lifecycle state is `active` or `fallback` (point 2).
+  current lifecycle state is `active` or `fallback` (point 2). Refined in
+  batch 3 (PR #634): a non-retired provider whose every capability is in
+  `apps/api/src/capabilities/auto-register.ts` `DEACTIVATED` must be `held`,
+  and `held` is accepted only then. The 2026-09-10 vendor-terms audit left
+  two such providers (GoPlus, Etherscan) in `PROVIDERS` for their health
+  probes while switching every capability off.
 - `apps/api/coverage-matrix/*.yaml` rows' `provider` field must resolve to a
   register `id` (point 2).
 - `config/env-manifest.yaml`'s `provider` values should resolve to register
