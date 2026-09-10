@@ -69,11 +69,13 @@ test_fixtures:
       doi: 10.1038/nature12373
     expected_fields:
       - field: doi
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: 10.1038/nature12373
       - field: registration_agency
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: Crossref
       - field: title
         operator: type
         reliability: common
@@ -85,6 +87,10 @@ test_fixtures:
       - field: url
         operator: not_null
         reliability: guaranteed
+      - field: issn
+        operator: type
+        reliability: guaranteed
+        value: array
   health_check_input:
     doi: 10.1038/nature12373
 output_field_reliability:

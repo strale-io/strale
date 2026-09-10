@@ -78,8 +78,9 @@ test_fixtures:
       limit: 3
     expected_fields:
       - field: query
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: crispr cas9
       - field: total_results
         operator: type
         reliability: guaranteed

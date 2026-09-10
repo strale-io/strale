@@ -71,12 +71,13 @@ test_fixtures:
       domain: adobe.com
     expected_fields:
       - field: domain
-        operator: not_null
+        operator: equals
         reliability: guaranteed
+        value: adobe.com
       - field: breached
-        operator: type
+        operator: equals
         reliability: guaranteed
-        value: boolean
+        value: true
       - field: breach_count
         operator: type
         reliability: guaranteed
@@ -85,6 +86,14 @@ test_fixtures:
         operator: type
         reliability: guaranteed
         value: array
+      - field: credential_breach_count
+        operator: type
+        reliability: guaranteed
+        value: number
+      - field: total_accounts_exposed
+        operator: type
+        reliability: guaranteed
+        value: number
   health_check_input:
     domain: adobe.com
 output_field_reliability:

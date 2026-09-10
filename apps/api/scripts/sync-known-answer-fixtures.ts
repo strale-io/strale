@@ -28,6 +28,7 @@
 
 import { openOperatorWriteDb } from "../src/lib/operator-db.js";
 import { autonomousAuthority } from "../src/lib/production-authority.js";
+import { diffChecks, expectedFieldsToChecks } from "../src/lib/known-answer-checks.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
@@ -74,18 +75,11 @@ async function main() {
       console.log(`${slug}: SKIP — manifest has no usable known_answer fixture`);
       continue;
     }
-    // Same mapping onboard.ts uses at insert time.
-    const validationRules = {
-      checks: ka.expected_fields.map((ef: any) => {
-        const check: Record<string, unknown> = { field: ef.field, operator: ef.operator };
-        if (ef.value !== undefined) check.value = ef.value;
-        if (ef.values !== undefined) check.values = ef.values;
-        return check;
-      }),
-    };
+    // The mapping onboard.ts uses at insert time — one shared function.
+    const validationRules = { checks: expectedFieldsToChecks(ka.expected_fields) };
 
-    const rows = await sql<{ id: string; test_status: string; test_mode: string | null }[]>`
-      SELECT id, test_status, test_mode FROM test_suites
+    const rows = await sql<{ id: string; test_status: string; test_mode: string | null; validation_rules: unknown }[]>`
+      SELECT id, test_status, test_mode, validation_rules FROM test_suites
       WHERE capability_slug = ${slug} AND test_type = 'known_answer' AND active = true
       ORDER BY (test_status = 'normal') DESC, (test_mode = 'live') DESC, created_at ASC, id ASC`;
     if (rows.length === 0) {
@@ -98,7 +92,13 @@ async function main() {
     if (dryRun) {
       console.log(`${slug}: would update row ${keep.id} (${keep.test_status}/${keep.test_mode})${extras.length ? `, deactivate [${extras.join(",")}]` : ""} + schema_check input`);
       console.log(`  input: ${JSON.stringify(ka.input)}`);
-      console.log(`  checks: ${validationRules.checks.length}`);
+      // Show the assertions this write would drop, not just a count — a
+      // resync can remove a real known answer as easily as a stale one.
+      const d = diffChecks(keep.validation_rules, validationRules.checks);
+      console.log(`  checks: ${validationRules.checks.length} (${d.kept} unchanged)`);
+      for (const c of d.removed) console.log(`    - ${c}   (field no longer asserted)`);
+      for (const c of d.changed) console.log(`    ~ ${c.from.join(" & ")}  ->  ${c.to.join(" & ")}`);
+      for (const c of d.added) console.log(`    + ${c}`);
       continue;
     }
 
@@ -108,10 +108,13 @@ async function main() {
       // call signature — a known upstream typing limitation, not a real
       // runtime issue. Cast to the callable base type once per transaction.
       const t = tx as unknown as typeof sql;
+      // Check values come from YAML, so they are JSON by construction; the
+      // shared type keeps them `unknown`, which `tx.json()`'s JSONValue refuses.
+      const rulesJson = validationRules as unknown as Parameters<typeof tx.json>[0];
       await t`
         UPDATE test_suites
         SET input = ${tx.json(ka.input)},
-            validation_rules = ${tx.json(validationRules)},
+            validation_rules = ${tx.json(rulesJson)},
             baseline_output = NULL,
             baseline_captured_at = NULL
         WHERE id = ${keep.id}`;

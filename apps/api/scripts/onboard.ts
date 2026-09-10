@@ -26,6 +26,7 @@
 import { openOperatorWriteDrizzle } from "../src/lib/operator-db.js";
 import { suitesAreSchedulable } from "../src/lib/onboard-scheduling.js";
 import { dependencyHealthChecks } from "../src/lib/onboard-dependency-health.js";
+import { expectedFieldsToChecks } from "../src/lib/known-answer-checks.js";
 import { autonomousAuthority } from "../src/lib/production-authority.js";
 import { config } from "dotenv";
 import { resolve } from "node:path";
@@ -1029,17 +1030,7 @@ function buildTestSuites(manifest: Manifest) {
         testName: `${slug}-known-answer${suffix}`,
         testType: "known_answer",
         input: entry.input,
-        validationRules: {
-          checks: entry.expected_fields.map((ef) => {
-            const check: Record<string, unknown> = {
-              field: ef.field,
-              operator: ef.operator,
-            };
-            if (ef.value !== undefined) check.value = ef.value;
-            if (ef.values !== undefined) check.values = ef.values;
-            return check;
-          }),
-        },
+        validationRules: { checks: expectedFieldsToChecks(entry.expected_fields) },
         scheduleTier: "B",
         estimatedCostCents: manifest.price_cents,
       });
