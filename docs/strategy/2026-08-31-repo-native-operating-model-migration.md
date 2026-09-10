@@ -45,9 +45,23 @@ the one repo-owned vendor-state model, per the M3 acceptance shape in
 `archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md`, recorded at
 `docs/strategy/2026-09-10-m3-vendor-state-model.md`.
 
-The next bounded task is batch 3, as that design document describes:
-`config/vendors.yaml` and its schema, populated with currently integrated
-vendors, plus `vendors:check` with tests proven by planted failures.
+**What comes next is named by the program register, not by this plan.** The
+next bounded task is T6's `next_action` in
+`docs/programs/cto-readiness/tracks.yaml`; on 2026-09-10 it names batch 3 of
+the design document above. The register says which track is active and what
+comes next; this plan remains the detailed M2-through-M7 specification behind
+it. Where the two disagree on *what is next*, the register wins; where they
+disagree on *what a milestone requires*, this plan wins.
+
+This checkpoint deliberately states no next task in the plan's directive line
+forms (a `Next:` bullet or a bold next-bounded-task label). The M2 closure
+register reconciles every line in those forms in this plan as an M2 forward
+statement (`scripts/m2-closure-register-lib.mjs`, `PLAN_STATEMENT_PATTERNS`).
+An M3 task is not an M2 statement, and quoting one in the closed M2 register
+would stale its closing review and reopen the M2 exit. Post-M2 forward work is
+therefore stated in the program register only. Scoping that scan to M2-era
+sections would be a deliberate change to the scanner, with a planted-failure
+test, not a wording choice.
 
 **Start safely:** use a new isolated worktree from current `origin/main`, the
 same rule as every prior batch.

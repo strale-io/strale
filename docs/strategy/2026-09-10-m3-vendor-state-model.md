@@ -62,9 +62,19 @@ inventory. Its Findings section identified:
 - **Gap G5** - `deactivation_reason LIKE 'vendor:%'` is a string convention,
   not a structured link (`apps/api/src/lib/vendor-control-tower.ts:394`,
   verified below).
+- **Gap G6 (found in this batch's review, not in the inventory)** - the M3
+  acceptance shape asks for "capability and solution dependency links with
+  required/fallback semantics". Solution links have no owner of their own.
+  They exist only as a runtime join: `vendor-control-tower.ts:425-437`
+  suspends every solution that has a step (`solution_steps`, `schema.ts:775-799`)
+  whose capability has a `required` edge to the failing provider. A solution
+  step carries no required or fallback flag of its own (`gate_condition` is a
+  refund precondition, not a fallback), so one required capability edge
+  suspends the whole solution.
 
 This document designates the model that fills G1-G4, resolves the R4/R5
-capability-edge duplication, and leaves G5 as a named future migration.
+capability-edge duplication, keeps solution links derived (G6), and leaves G5
+as a named future migration.
 
 ## The model
 
@@ -195,8 +205,10 @@ The control tower's `deactivation_reason LIKE 'vendor:%'` string convention
 (gap G5) remains its runtime marker. Confirmed: the marker is produced at
 `apps/api/src/lib/vendor-control-tower.ts:394`
 (`` const marker = `vendor:${providerName}:${status}`; ``) and matched by the
-`LIKE 'vendor:%'` predicate at lines 408, 436-437, 458, 464, 470, 476 in the
-same file. It is noted here as a future migration, not part of this model.
+`LIKE 'vendor:%'` predicate at lines 408, 436-437, 464 and 476 in the same
+file. Lines 458 and 470 write the marker into `deactivation_reason`
+(`COALESCE(..., suspension_marker)`); they are not matchers. It is noted here
+as a future migration, not part of this model.
 
 ### 6. Confidential content never enters the public repository
 
@@ -226,7 +238,8 @@ One row per vendor fact; exactly one owner.
 | Re-evaluation triggers | `config/vendors.yaml` (new) | No current owner (gap G3) |
 | Terms/pricing/licensing/redistribution verification (date + verifier, no confidential content) | `config/vendors.yaml` (new) for vendors outside coverage-matrix scope; `apps/api/coverage-matrix/*.yaml` (`provider_tos_notes`, `last_verified`, `evidence_grade`) for the capability×country×evidence-type rows it already covers | Coverage-matrix schema confirmed (`apps/api/coverage-matrix/schema.json:70-100`); no equivalent for out-of-scope vendors (gap G4) |
 | Operational integration (health probe, `tier`, capability dependency edges) | `apps/api/src/lib/dependency-manifest.ts` `PROVIDERS` (unchanged owner) | Confirmed at `apps/api/src/lib/dependency-manifest.ts:45-71`, `:73-` |
-| Capability/solution dependency edges (DB copy) | `vendor_capability_dependencies` table, derived from `dependency-manifest.ts` by a sync (this design, point 3) | Currently a second hand-reconciled copy (`apps/api/src/db/schema.ts:1126-1144`), drift-checked but not derived |
+| Capability dependency edges (DB copy) | `vendor_capability_dependencies` table, derived from `dependency-manifest.ts` by a sync (this design, point 3) | Currently a second hand-reconciled copy (`apps/api/src/db/schema.ts:1126-1144`), drift-checked but not derived |
+| Solution dependency links | No owner of their own: derived, never stored. A solution depends on a vendor through its steps' capabilities (see gap G6 below) | Computed at runtime by joining `vendor_capability_dependencies` to `solution_steps` on `capability_slug` (`apps/api/src/lib/vendor-control-tower.ts:432`); the table has no solution column (`schema.ts:1126-1144`) and `PROVIDERS` has no solution field |
 | Account usability (balance, credentials, suspension) | `vendorAccounts` + suspension tables, written only by `vendor-control-tower.ts` (unchanged owner) | Confirmed at `apps/api/src/db/schema.ts:1099-1124`, `:1150-1175`, `:1177-1201` |
 | Per capability/country/evidence-type sourcing | `apps/api/coverage-matrix/*.yaml` (unchanged owner) | Confirmed via `apps/api/coverage-matrix/schema.json` |
 | Rationale / durable prose | `docs/decisions/records/*.md` (unchanged owner) | Confirmed present |
@@ -275,6 +288,16 @@ Per point 5: the control tower's `deactivation_reason LIKE 'vendor:%'`
 string convention (gap G5) is explicitly out of scope for this model. It
 remains the runtime marker for vendor-caused deactivation and is recorded
 here as a future migration, not part of this batch's design.
+
+Solution dependency links (gap G6) stay derived: capability edges joined to
+`solution_steps`, with no second stored copy, consistent with point 2's rule
+that nothing gets a second copy. The register does not model solution
+composition. Solution-level fallback semantics, meaning a solution that
+survives one vendor failing because a step has an alternative, are a
+solution-execution design question, not vendor state, and are recorded here
+as a named gap rather than designed. The acceptance shape's solution clause is
+therefore met for required semantics (derived) and left open for fallback
+semantics.
 
 ## Batch plan
 
