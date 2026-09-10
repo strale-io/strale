@@ -199,14 +199,19 @@ test("a dependency cycle is rejected", () => {
 
 test("an active track whose dependency is not done is rejected", () => {
   const r = base();
-  activate(r, idx(r, "T6")); // T6 depends on T5 and T10, both open
-  byId(r, "T6").resume_file = "README.md";
+  // T7 depends on T3 and T6. Activating T7 demotes the current active track
+  // (T6) to queued, so T6 is an open dependency. (T6 served as the example
+  // until the G9 closure made T5 and T10, its own dependencies, done.)
+  activate(r, idx(r, "T7"));
+  byId(r, "T7").resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_WITH_OPEN_DEPENDENCY"));
 });
 
 test("a done track whose dependency is not done is rejected", () => {
   const r = base();
-  finish(byId(r, "T6"));
+  // T7 depends on T6, which is active and not done. (T6 served as the example
+  // until the G9 closure made its own dependencies done.)
+  finish(byId(r, "T7"));
   assert.ok(codes(r).includes("DONE_WITH_OPEN_DEPENDENCY"));
 });
 

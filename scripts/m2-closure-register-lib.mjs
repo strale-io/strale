@@ -13,8 +13,7 @@
 //
 // closing_review (optional; see docs/decisions/README.md) is the G9 stage-1
 // mechanism that lets the M2 exit's fresh independent review actually be
-// seen once it happens: CLOSING_REVIEW_ROUTE_MISMATCH (route not backed by
-// the recorded route or a pending Codex-backlog row),
+// seen once it happens:
 // CLOSING_REVIEW_COMMIT_NOT_ANCESTOR / COMMIT_UNVERIFIABLE (commit ancestry),
 // CLOSING_REVIEW_EVIDENCE_MISSING / CLOSING_REVIEW_EVIDENCE_NOT_VERDICT
 // (the evidence must be a tracked file under archive/sessions/, not a URL,
@@ -890,21 +889,16 @@ export function validateClosureRegister(register, context, { schema, relativePat
     const crFindings = [];
     const crFinding = (code, detail) => crFindings.push({ code, path: relativePath, detail });
 
-    // Route consistency: the recorded route is PROGRAM.md's review_route,
-    // substituted per CLAUDE.md's 2026-09-03 amendment (DEC-20260903-A)
-    // while the Codex quota is out. fresh-codex-task is always the real
-    // route and needs no substitute-route evidence; the schema enum already
-    // excludes anything else. fresh-read-only-claude-agent is accepted only
-    // when the Codex re-review obligation for this closing review is
-    // actually recorded in the backlog (a pending row naming it).
-    if (closingReview.route === "fresh-read-only-claude-agent") {
-      const backlog = context.codexBacklog;
-      const named = Array.isArray(backlog?.entries)
-        && backlog.entries.some((e) => e.status === "pending" && typeof e.subject === "string" && /closing review/i.test(e.subject));
-      if (!named) {
-        crFinding("CLOSING_REVIEW_ROUTE_MISMATCH", "fresh-read-only-claude-agent requires a pending row in docs/programs/codex-review-backlog.yaml whose subject names the closing review");
-      }
-    }
+    // Route: both schema-permitted routes stand on their own. Until
+    // DEC-20260910-A, fresh-read-only-claude-agent was accepted only as a
+    // substitute for Codex (DEC-20260903-A), backed by a pending Codex
+    // re-review row naming the closing review. DEC-20260910-A, which records
+    // the founder's 2026-09-07 review policy, retired that obligation: an
+    // independent same-provider review in a separate context satisfies the
+    // review requirement, and no new batches are added to the backlog. The
+    // schema enum still restricts route to its two recorded values, and the
+    // ancestry, evidence, staleness and count checks below still prove the
+    // review is real.
 
     // Commit ancestry, checked the way git_provenance already is.
     if (context.isAncestor) {

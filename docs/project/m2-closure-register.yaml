@@ -32,6 +32,16 @@ phase: M2
 authority_active: false
 audited_at: '2026-09-02'
 audited_main: dea316a22a3c3130faf3e222da6fc46e95c8c112
+closing_review:
+  route: fresh-read-only-claude-agent
+  commit: b014c41767d46d73be743a1cc121045194f58714
+  verdict: PASS
+  reviewed_at: '2026-09-06'
+  evidence: archive/sessions/2026-09-05-m2-closing-review.md
+  candidate_set:
+    formal_records: 247
+    collisions_resolved: 35
+    resolution_reports: 36
 sources:
   legacy_inventory:
     path: docs/project/legacy-authority-inventory.json
@@ -88,8 +98,8 @@ counts:
     total: 5
     superseded: 0
   exit_gaps:
-    blocking: 1
-    non_blocking: 8
+    blocking: 0
+    non_blocking: 9
 legacy_inventory:
 - path: AGENTS.md
   owner_area: root-agent-entrypoint
@@ -5533,9 +5543,15 @@ exit_gaps:
   - docs/project/legacy-authority-inventory.json
   - docs/project/PROTOCOL-ROUTER.md
 - id: G9
-  gap: The plan's M2 exit requires a fresh independent review of the reconciled truth before M4; the review
-    route changed on 2026-09-01 and no closing review of the full M2 candidate set has been recorded.
-  blocking: true
+  gap: 'Resolved. The closing independent review of the complete M2 candidate set passed at commit
+    b014c417 (route: fresh read-only Claude agent per the 2026-09-03 amendment, DEC-20260903-A;
+    verdict archived at archive/sessions/2026-09-05-m2-closing-review.md, recorded in this register''s closing_review block, which the
+    validator verifies for ancestry, evidence, staleness and counts). The Codex re-review of the
+    whole set is owed on docs/programs/codex-review-backlog.yaml. The schema''s exit_gaps object has
+    no separate closed state distinct from blocking: false; this gap is recorded resolved by its
+    rewritten text and non-blocking status. History follows. The plan''s M2 exit requires a fresh independent review of the reconciled truth before M4; the review
+    route changed on 2026-09-01 and no closing review of the full M2 candidate set has been recorded.'
+  blocking: false
   owner: session
   phase: M2
   covers:
@@ -5545,6 +5561,7 @@ exit_gaps:
   evidence:
   - docs/strategy/2026-08-31-repo-native-operating-model-migration.md
   - archive/sessions/2026-09-01-m2-claude-verification-backlog.md
+  - archive/sessions/2026-09-05-m2-closing-review.md
 next_decision_batch:
   name: 2026-08 operating-window batch
   selection_rule: Every not_yet_reconciled row whose historical ID is unique across all preserved rows,
