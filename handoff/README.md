@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-294 files (267 with a recorded intent, 27 without).
+295 files (268 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-10 | [`handoff/_general/from-code/2026-09-10-solution-revival-fix-and-known-answer-resync.md`](_general/from-code/2026-09-10-solution-revival-fix-and-known-answer-resync.md) | stop four deliberately-deactivated solutions from reviving, unfreeze |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-vendor-terms-audit-and-readonly-credential.md`](_general/from-code/2026-09-06-vendor-terms-audit-and-readonly-credential.md) | finish the founder's open queue without his involvement — and, in |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-9b.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-9b.md) | Fix `DEC-20260905-J`'s own item-count arithmetic, which merged at |
 | 2026-09-06 | [`handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-9.md`](_general/from-code/2026-09-06-t10-g9-closing-review-round-9.md) | Archive M2 closing-review round 9 plus a whole-corpus named-source |
