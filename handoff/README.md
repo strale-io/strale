@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-299 files (272 with a recorded intent, 27 without).
+300 files (273 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-11 | [`handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md`](_general/from-code/2026-09-11-t6-vendor-strand-complete.md) | continue T6 (M3 repo-native workflows) as architect and reviewer, delegating implementation to Sonnet workers; this s... |
+| 2026-09-11 | [`handoff/_general/from-code/2026-09-11-free-source-rebuilds.md`](_general/from-code/2026-09-11-free-source-rebuilds.md) | founder asked (2026-09-11) to keep every capability that can be |
 | 2026-09-11 | [`handoff/_general/from-code/2026-09-11-checkin-morning.md`](_general/from-code/2026-09-11-checkin-morning.md) | run the 2026-09-11 morning operating session under DAILY-RUN.md — |
 | 2026-09-10 | [`handoff/_general/from-code/2026-09-10-vendor-terms-audit-batch-2.md`](_general/from-code/2026-09-10-vendor-terms-audit-batch-2.md) | read the terms of the seven commercial upstreams the 2026-09-06 |
 | 2026-09-10 | [`handoff/_general/from-code/2026-09-10-t10-g9-m2-exit-closed.md`](_general/from-code/2026-09-10-t10-g9-m2-exit-closed.md) | close the last M2 exit gap (G9), mark track T10 done, and hand the cto-readiness program to its next track. |

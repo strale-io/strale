@@ -68,10 +68,6 @@ const DEACTIVATED = new Map<string, string>([
     "deactivated 2026-09-10 (vendor-terms audit batch 2): AviationStack's free plan is labelled \"Personal use\" and \"Non-Commercial Use\"; its FAQ says commercial use requires a paid subscription. Reactivate on a paid AviationStack plan, or a flight-data source whose terms permit resale.",
   ],
   [
-    "job-board-search",
-    "deactivated 2026-09-10 (vendor-terms audit batch 2): Adzuna permits publishing its listings (with \"Jobs by Adzuna\" branding), salary estimates and personal research. Any other commercial use is a 14-day trial, after which the data \"may not be used in its original format ... to deliver any ongoing work ... without written consent\". Reactivate only under an Adzuna licence.",
-  ],
-  [
     "docker-hub-info",
     "deactivated 2026-09-10 (vendor-terms audit batch 2): Docker's Terms of Use bar using the Services \"to mirror or replicate content for an unauthorized commercial service\"; reselling Docker Hub repository metadata per call is that. Reactivate only with Docker's authorisation.",
   ],
@@ -79,16 +75,6 @@ const DEACTIVATED = new Map<string, string>([
     "github-user-profile",
     "deactivated 2026-09-10 (vendor-terms audit batch 2): GitHub's Acceptable Use Policies — personal information collected from the Service may be used \"only ... for the purpose for which that User has authorized it\" — and its API terms bar selling users' personal information. A per-call profile lookup sells a named person's profile. Not reactivatable on GitHub data. (github-repo-compare and github-repo-analyze stay: public repository metadata through the documented API.)",
   ],
-  ...[
-    "gas-price-check",
-    "contract-verify-check",
-    "wallet-age-check",
-    "wallet-transactions-lookup",
-    "wallet-balance-lookup",
-  ].map((slug): [string, string] => [
-    slug,
-    "deactivated (vendor-terms audit; gas-price-check and contract-verify-check 2026-09-06 in the database only, the three wallet lookups 2026-09-10): Etherscan's API terms prohibit selling or providing \"our API Content or access to our service for commercial purposes\" and license API Content \"strictly for personal use only but not for commercial use\". Strale holds only a free key. Reactivate only on a commercial Etherscan plan, and set ETHERSCAN_COMMERCIAL_PLAN=true (capabilities/lib/etherscan-client.ts) at the same time.",
-  ]),
   [
     "product-search",
     "deactivated 2026-08-12 (money-integrity batch): its only source is a Strale-operated Google Shopping scrape — the exact target DEC-20260427-H-4 prohibits (it evaded the blocklist via ccTLDs, now closed). No compliant source exists; sibling price-compare kept its licensed PriceRunner path, this capability has none. Reactivate only with a licensed product-search API.",

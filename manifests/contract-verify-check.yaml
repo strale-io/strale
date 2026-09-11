@@ -7,16 +7,12 @@
 slug: contract-verify-check
 name: Contract Verification Check
 description: >-
-  Check if a smart contract's source code is verified on Etherscan. Returns compiler version, license type, proxy
-  status, and contract name. Unverified contracts are a red flag for token safety. Supports 60+ EVM chains.
+  Check whether a smart contract's source code is verified on Sourcify, the open verification repository. Returns
+  contract name, compiler version, optimizer and EVM settings, and proxy status. Works across EVM chains by chain id.
 category: web3
 cost_class: free_quota
 quota_window: daily
 quota_cap: 100000
-known_rate_limit:
-  value: 100000
-  unit: per_day
-  source_url: https://docs.etherscan.io/etherscan-v2/rate-limits
 price_cents: 2
 is_free_tier: false
 input_schema:
@@ -62,7 +58,15 @@ output_schema:
       type: boolean
     implementation_address:
       type: string
-data_source: Etherscan (Smart Contract Verification API)
+    evm_version:
+      type: string
+    match:
+      type: string
+    verification_source:
+      type: string
+    note:
+      type: string
+data_source: Sourcify (sourcify.dev) verified-contract repository
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: pure-computation
@@ -91,7 +95,17 @@ output_field_reliability:
   contract_address: common
   optimization_used: common
   implementation_address: common
+  evm_version: common
+  match: common
+  verification_source: guaranteed
+  note: rare
 limitations:
+  - title: "Sourcify coverage only"
+    text: >-
+      is_verified reports verification on Sourcify. A contract verified only on another explorer (for example Etherscan) reads as not verified. license_type is always null. Rebuilt 2026-09-11 off Etherscan, whose free API does not permit commercial use.
+    category: coverage
+    severity: warning
+    workaround: null
   - title: null
     text: >-
       Computed from on-chain/reference data at query time. Freshness reflects the underlying source snapshot — not a

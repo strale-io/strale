@@ -21,7 +21,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | id | name | current state | state date | decision | redistribution |
 |---|---|---|---|---|---|
 | acra | ACRA | active | 2026-09-10 | unknown | unknown |
-| adzuna | Adzuna | held | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |
+| adzuna | Adzuna | held | 2026-09-11 | unknown | prohibited (verified 2026-09-10) |
 | alchemy-eth | Alchemy | active | 2026-09-10 | unknown | permitted (verified 2026-09-10) |
 | alternative-me | Alternative.me | active | 2026-09-10 | unknown | conditional (verified 2026-09-10) |
 | anthropic | Anthropic | active | 2026-09-10 | unknown | unknown |
@@ -50,7 +50,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | dilisense | Dilisense | active | 2026-09-10 | DEC-20260429-A | unknown |
 | einsearch | EINsearch | active | 2026-09-10 | unknown | unknown |
 | esortcode | eSortCode | active | 2026-09-10 | unknown | unknown |
-| etherscan | Etherscan | held | 2026-09-10 | unknown | prohibited (verified 2026-09-10) |
+| etherscan | Etherscan | held | 2026-09-11 | unknown | prohibited (verified 2026-09-10) |
 | gemi | GEMI | active | 2026-09-10 | unknown | unknown |
 | github | GitHub | active | 2026-09-10 | unknown | conditional (verified 2026-09-10) |
 | gleif | GLEIF | active | 2026-09-10 | unknown | unknown |
@@ -93,6 +93,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | sec-ticker-index | SEC ticker index | active | 2026-09-10 | unknown | unknown |
 | serper | Serper | active | 2026-09-10 | unknown | unknown |
 | socure | Socure | rejected | 2026-09-11 | unknown | unknown |
+| sourcify | Sourcify | active | 2026-09-11 | unknown | conditional (verified 2026-09-11) |
 | stripe | Stripe | active | 2026-09-10 | unknown | unknown |
 | sudreg | Sudreg | active | 2026-09-10 | unknown | unknown |
 | supabase-beacon | Supabase (Beacon project) | active | 2026-09-10 | unknown | unknown |

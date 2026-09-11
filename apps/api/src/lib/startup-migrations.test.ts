@@ -1633,6 +1633,19 @@ describe("startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invaria
     const { PHASE_C1_THROTTLED_UPSTREAM_SOURCE } = await import("./startup-migrations.js");
     const manifestsDir = resolve(import.meta.dirname, "../../../../manifests");
 
+    // Slugs whose upstream changed after this block was written, so the
+    // block's citation no longer describes their source. The block itself is
+    // append-only and still runs (it only touches free_unlimited rows, and
+    // these stay free_quota), so the manifest keeps cost_class/quota_cap in
+    // step with the DB and simply drops the stale citation.
+    const REBUILT_OFF_CITED_UPSTREAM: Record<string, string> = {
+      "gas-price-check": "Etherscan → Alchemy, 2026-09-11 (vendor-terms audit batch 2)",
+      "wallet-age-check": "Etherscan → Alchemy, 2026-09-11 (vendor-terms audit batch 2)",
+      "wallet-balance-lookup": "Etherscan → Alchemy, 2026-09-11 (vendor-terms audit batch 2)",
+      "wallet-transactions-lookup": "Etherscan → Alchemy, 2026-09-11 (vendor-terms audit batch 2)",
+      "contract-verify-check": "Etherscan → Sourcify, 2026-09-11 (vendor-terms audit batch 2)",
+    };
+
     for (const source of PHASE_C1_THROTTLED_UPSTREAM_SOURCE as ReadonlyArray<{
       slug: string;
       rateLimit: { value: number; unit: string; source_url: string };
@@ -1640,7 +1653,18 @@ describe("startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invaria
       const manifestPath = resolve(manifestsDir, `${source.slug}.yaml`);
       const manifest = yaml.load(readFileSync(manifestPath, "utf8")) as {
         known_rate_limit?: { value: number; unit: string; source_url: string };
+        data_source?: string;
+        cost_class?: string;
       };
+      if (source.slug in REBUILT_OFF_CITED_UPSTREAM) {
+        // The exemption must stay true: the manifest has left the cited
+        // vendor and does not claim its citation, and it is still free_quota
+        // so this block leaves the DB row alone.
+        expect(manifest.data_source ?? "", `${source.slug} data_source`).not.toMatch(/etherscan/i);
+        expect(manifest.known_rate_limit, `${source.slug} must not keep the stale citation`).toBeUndefined();
+        expect(manifest.cost_class, `${source.slug} cost_class`).toBe("free_quota");
+        continue;
+      }
       expect(manifest.known_rate_limit, `${source.slug} manifest has known_rate_limit`).toBeDefined();
       expect(manifest.known_rate_limit?.value, `${source.slug} value`).toBe(source.rateLimit.value);
       expect(manifest.known_rate_limit?.unit, `${source.slug} unit`).toBe(source.rateLimit.unit);

@@ -1,37 +1,48 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { etherscanFetch } from "./lib/etherscan-client.js";
+import { alchemyRpc, hexToBigInt, requireMainnet } from "./lib/alchemy-client.js";
+
+// Fee tiers computed from eth_feeHistory: the next block's base fee plus the
+// median priority fee paid at the 10th / 50th / 90th percentile over the last
+// 20 blocks. Rebuilt 2026-09-11 off Etherscan's gas oracle, whose free API
+// forbids commercial use; the tiers are Strale's own computation.
+const BLOCKS = 20;
+const PERCENTILES = [10, 50, 90];
+
+interface FeeHistory {
+  baseFeePerGas: string[];
+  gasUsedRatio: number[];
+  reward?: string[][];
+}
+
+const toGwei = (wei: bigint): number => Math.round(Number(wei) / 1e6) / 1e3;
+
+function median(values: bigint[]): bigint {
+  if (values.length === 0) return 0n;
+  const sorted = [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+/** Pure: fee tiers from an eth_feeHistory result. Exported for tests. */
+export function feeTiers(h: FeeHistory) {
+  const nextBase = hexToBigInt(h.baseFeePerGas[h.baseFeePerGas.length - 1]);
+  if (nextBase === null) throw new Error("Gas price data unavailable: no base fee in the fee history.");
+  const rewards = Array.isArray(h.reward) ? h.reward : [];
+  const tip = (i: number) => median(rewards.map((r) => hexToBigInt(r[i]) ?? 0n));
+  return {
+    safe_gas_gwei: toGwei(nextBase + tip(0)),
+    proposed_gas_gwei: toGwei(nextBase + tip(1)),
+    fast_gas_gwei: toGwei(nextBase + tip(2)),
+    base_fee_gwei: toGwei(nextBase),
+    // Same shape Etherscan's oracle returned: the last five blocks' ratios, comma-separated.
+    gas_used_ratio: h.gasUsedRatio.slice(-5).map((r) => String(Math.round(r * 1e6) / 1e6)).join(","),
+  };
+}
 
 registerCapability("gas-price-check", async (input: CapabilityInput) => {
-  const chainId = (
-    (input.chain_id as string) ??
-    (input.chain as string) ??
-    (input.network as string) ??
-    "1"
-  ).trim();
-
-  const data = await etherscanFetch({
-    chainid: chainId,
-    module: "gastracker",
-    action: "gasoracle",
-  });
-
-  const now = new Date().toISOString();
-
-  if (data.status === "0" || !data.result) {
-    throw new Error(`Gas price data unavailable for chain ${chainId}.`);
-  }
-
-  const r = data.result;
-
+  const chainId = requireMainnet(input, "chain_id", "chain", "network");
+  const history = await alchemyRpc<FeeHistory>("eth_feeHistory", [`0x${BLOCKS.toString(16)}`, "latest", PERCENTILES]);
   return {
-    output: {
-      chain_id: chainId,
-      safe_gas_gwei: parseFloat(r.SafeGasPrice) || null,
-      proposed_gas_gwei: parseFloat(r.ProposeGasPrice) || null,
-      fast_gas_gwei: parseFloat(r.FastGasPrice) || null,
-      base_fee_gwei: parseFloat(r.suggestBaseFee) || null,
-      gas_used_ratio: r.gasUsedRatio ?? null,
-    },
-    provenance: { source: "etherscan.io", fetched_at: now },
+    output: { chain_id: chainId, ...feeTiers(history), blocks_sampled: BLOCKS },
+    provenance: { source: "ethereum-mainnet (eth_feeHistory via Alchemy)", fetched_at: new Date().toISOString() },
   };
 });

@@ -7,16 +7,12 @@
 slug: gas-price-check
 name: Gas Price Check
 description: >-
-  Get current gas prices for an EVM chain. Returns safe, proposed, and fast gas prices in Gwei plus the base fee. Useful
-  for agents deciding whether to execute a transaction now or wait.
+  Current Ethereum mainnet gas fees: safe, proposed and fast prices in Gwei plus the base fee, computed from the
+  priority fees actually paid over the last 20 blocks. Useful for deciding whether to send a transaction now or wait.
 category: web3
 cost_class: free_quota
 quota_window: daily
 quota_cap: 100000
-known_rate_limit:
-  value: 100000
-  unit: per_day
-  source_url: https://docs.etherscan.io/etherscan-v2/rate-limits
 price_cents: 2
 is_free_tier: false
 input_schema:
@@ -24,7 +20,7 @@ input_schema:
   properties:
     chain_id:
       type: string
-      description: "Chain ID (1=Ethereum, 8453=Base). Default: 1"
+      description: "Chain ID. Only 1 (Ethereum mainnet) is supported. Default: 1"
 output_schema:
   type: object
   example:
@@ -45,7 +41,11 @@ output_schema:
       type: number
     proposed_gas_gwei:
       type: number
-data_source: Etherscan (Gas Oracle API)
+    gas_used_ratio:
+      type: string
+    blocks_sampled:
+      type: number
+data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -69,11 +69,25 @@ output_field_reliability:
   fast_gas_gwei: common
   safe_gas_gwei: common
   proposed_gas_gwei: common
+  gas_used_ratio: common
+  blocks_sampled: guaranteed
 limitations:
   - title: null
     text: >-
-      Output reflects Etherscan (Gas Oracle API) at query time. Dependent on upstream API availability; may degrade if
-      the provider rate-limits or is temporarily unavailable.
+      Output reflects Ethereum fee history (eth_feeHistory via Alchemy) at query time. Dependent on upstream API availability; may degrade
+      if the provider rate-limits or is temporarily unavailable.
     category: availability
+    severity: info
+    workaround: null
+  - title: "Ethereum mainnet only"
+    text: >-
+      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+    category: coverage
+    severity: info
+    workaround: null
+  - title: "Fee tiers are computed, not quoted"
+    text: >-
+      Safe, proposed and fast are the next block's base fee plus the median priority fee paid at the 10th, 50th and 90th percentile over the last 20 blocks. They are estimates of what recent transactions paid, not a guarantee of inclusion.
+    category: accuracy
     severity: info
     workaround: null
