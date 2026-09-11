@@ -92,7 +92,7 @@ and `:778` already document this exact confusion in both variables' own
 
 | Variable | Env-manifest row | Read by | Set in | Removable at M4 after section 1's consumers are gone? |
 |---|---|---|---|---|
-| `NOTION_API_KEY` | `config/env-manifest.yaml:768-776` (`required_in: [production]`, `set_in: [railway]`, `holder: petter`, `cost_class: free`) | `fetch-notion.ts:9`, `fetch-shiplog.ts:12` (both rows 1-3 above) | Railway (`strale-digest-cron` service variables - outside this repository) | Yes, once rows 1-3 above have repo-native readers wired in and the digest stops calling Notion. Removing the Railway variable itself is a Railway console action, not a repository commit - founder-only per section 8. |
+| `NOTION_API_KEY` | `config/env-manifest.yaml:768-776` (`required_in: [production]`, `set_in: [railway]`, `holder: petter`, `cost_class: free`) | `fetch-notion.ts:9`, `fetch-shiplog.ts:12` (both rows 1-3 above), and `scripts/digest-shadow.mjs:117` (the M3 shadow comparison, a GitHub Actions secret mapping in `m3-digest-shadow.yml`) | Railway (`strale-digest-cron` service variables - outside this repository) | Yes, once rows 1-3 above have repo-native readers wired in and the digest stops calling Notion. Removing the Railway variable itself is a Railway console action, not a repository commit - founder-only per section 8. |
 | `NOTION_TOKEN` | `config/env-manifest.yaml:777-787` (`required_in: [local, ci]`, `set_in: [.env, workflow]`) | `check-vendor-roster-drift.ts:260` (row 4 above) | Local `.env` (developer machine) and the `weekly-drift.yml` `secrets.NOTION_TOKEN` (GitHub Actions repository secret) | Yes for the workflow secret, once `check-vendor-roster-drift.ts` is retargeted off the Notion read at M4 and the `--roster-fixture`/register comparison becomes the only path. Removing the GitHub Actions secret is a GitHub repository-settings action, not a repository commit - founder-only per section 8 (GitHub secret removal is named explicitly in the brief's section 8 list). |
 
 Both rows appear in `config/env-manifest.yaml` and pass `npm run env:check`
@@ -281,9 +281,11 @@ header comment states its purpose and never-fails-the-build discipline). To
 be retired or converted at M4: once the repo-native readers are wired into
 the actual production digest under the settled Dockerfile-`COPY` design
 (section 5, condition 3), this workflow's shadow-comparison role is either
-folded into the production path's own logging or retired as redundant. This
-report does not choose between "retire" and "convert"; that is section 7
-batch 5 work.
+folded into the production path's own logging or retired as redundant.
+Decided in review of PR #664: retire it in section 7 batch 5. It compares
+the repo-native readers with Notion, and once batch 5 removes the Notion
+readers there is nothing to compare against; the repo-native reader tests
+stay.
 
 **`config/scheduled-mechanisms.yaml`, other entries with a Notion input.**
 Read the full register (`config/scheduled-mechanisms.yaml`; entry count
@@ -478,7 +480,8 @@ sequence below starts from the settled record.
    this batch, including a new `M1_ENTRYPOINT_ACTIVATED` finding from
    `checkPrecutoverEntrypoint()` (`scripts/check-project-context.mjs:83-87`)
    once `CLAUDE.md` references `docs/project/` - expected and warning-only,
-   but batch 8 must retire or rescope this specific check, since after
+   but batch 7 must retire or rescope this specific check, in the same
+   batch that makes context:check blocking, since after
    cutover pointing at `docs/project/` is correct, not premature). What
    could go wrong: a `protocols:check` failure if the rewrite changes a
    mirrored section's text without updating the mirror in the same commit
@@ -546,10 +549,15 @@ sequence below starts from the settled record.
    `.claude/commands/end-session.md`, `.agents/skills/source-command-end-session/SKILL.md`,
    `.claude/skills/vendor-switch/SKILL.md`, `.agents/skills/vendor-switch/SKILL.md`,
    and whatever handoff/register file the end-session draft writes to
-   instead of Notion. Tests: `npm run candidates:test` (must now assert the
-   *live* files match the drafted behavior, not merely that the draft is
-   inert - this test's assertions change meaning at this batch and should be
-   rewritten, not just left passing by accident), `npm run vendors:test`.
+   instead of Notion. The draft `docs/project/candidates/end-session.md`
+   has served its purpose once its steps are live: this batch moves it
+   with `git mv` to `archive/sessions/` as the design record, and rewrites
+   `scripts/candidates.test.mjs` to assert against the live files instead:
+   both end-session files contain the repo-native steps, carry their own
+   tool's actor and owner values, and contain no Notion Journal write or
+   To-do read; both vendor-switch files contain the drafted Step 5 and no
+   Notion Decisions DB step. Each new assertion gets a planted failure.
+   Tests: `npm run candidates:test` as rewritten, `npm run vendors:test`.
    What could go wrong: the Codex mirror's Actor/owner distinction silently
    collapsing despite the draft already documenting it, if the batch copies
    text without checking each mirror's own Actor/owner field (the exact
@@ -562,12 +570,28 @@ sequence below starts from the settled record.
    `getPriorities()`/`getDistributionSurfaces()`/`fetchNotionWorkspaceActivity()`
    with the repo-native readers inside `gatherDigestData()`
    (`apps/api/src/lib/daily-digest/index.ts:122`), and print the image
-   commit in the digest output. Remove `NOTION_API_KEY` from
-   `config/env-manifest.yaml` in this same batch: it is the row whose last
-   reader (`fetch-notion.ts:9`, `fetch-shiplog.ts:12`) this batch deletes,
-   and `env:check` fails on a dead row (`CLAUDE.md`'s Cheap Extras section).
-   Files: `Dockerfile`, `apps/api/src/lib/daily-digest/*`,
-   `config/env-manifest.yaml`. Tests: `npm run digest:shadow:test` promoted
+   commit in the digest output. The same batch retires the digest shadow
+   comparison (section 5): delete `.github/workflows/m3-digest-shadow.yml`
+   and `scripts/digest-shadow.mjs`, remove the `digest:shadow` npm script,
+   and remove the `m3-digest-shadow-comparison` entry from
+   `config/scheduled-mechanisms.yaml`, because `scripts/digest-shadow.mjs`
+   is a third reader of `NOTION_API_KEY` (`scripts/digest-shadow.mjs:117`,
+   inside `env:check`'s scanned `scripts/` tree), and because
+   `scheduled:check` would otherwise fail on a removed workflow. The
+   repo-native reader tests (`scripts/digest-repo-native.test.mjs`, run
+   by `npm run digest:shadow:test`) stay; rename the npm script if the
+   word shadow no longer fits, updating `ci.yml` in the same commit. Also
+   update the `strale-digest-cron` entry in
+   `config/scheduled-mechanisms.yaml` if its declared inputs change. Then
+   remove `NOTION_API_KEY` from `config/env-manifest.yaml` in this same
+   batch: with those three readers gone (`fetch-notion.ts:9`,
+   `fetch-shiplog.ts:12`, `scripts/digest-shadow.mjs:117`) it is a dead
+   row, and `env:check` fails on a dead row (`CLAUDE.md`'s Cheap Extras
+   section); confirm with a repository search that no other reader
+   remains. Files: `Dockerfile`, `apps/api/src/lib/daily-digest/*`,
+   `.github/workflows/m3-digest-shadow.yml`, `scripts/digest-shadow.mjs`,
+   `package.json`, `.github/workflows/ci.yml` (if renamed),
+   `config/scheduled-mechanisms.yaml`, `config/env-manifest.yaml`. Tests: `npm run digest:shadow:test` promoted
    from shadow-only to asserting production behavior; a new integration-style
    test verifying the four paths are present in a built image, matching the
    discipline DEC-20260504-C already requires ("confirm reach by file path,
@@ -583,11 +607,18 @@ sequence below starts from the settled record.
    (remove the `api.notion.com` call and `NOTION_TOKEN` read, make the
    register comparison the primary check and its exit code meaningful),
    `.github/workflows/weekly-drift.yml` (remove the `secrets.NOTION_TOKEN`
-   env line from the `vendor-roster` step). Remove `NOTION_TOKEN` from
-   `config/env-manifest.yaml` in this same batch: it is the row whose last
-   reader this batch deletes, and `env:check` fails on a dead row. Tests:
-   `npm run vendors:test`, `npm run env:check` (a planted-failure proof that
-   removing the workflow reference without updating the manifest fails).
+   env line from the `vendor-roster` step), and
+   `config/scheduled-mechanisms.yaml` (set the `weekly-drift-vendor-roster`
+   entry's `secrets` map to match the step's new `env:`, because
+   `scheduled:check` compares the declared map with the step's actual
+   secrets exactly and raises `MECHANISM_SECRET_MISMATCH` on any
+   difference, `scripts/scheduled-reachability-lib.mjs:512-524`). Remove
+   `NOTION_TOKEN` from `config/env-manifest.yaml` in this same batch: it is
+   the row whose last reader this batch deletes (confirm by repository
+   search), and `env:check` fails on a dead row. Tests:
+   `npm run vendors:test`, `npm run scheduled:check`, `npm run env:check`
+   (a planted-failure proof that removing the workflow reference without
+   updating the manifest fails).
    What could go wrong: `env:check`'s dead-row detection firing if the
    manifest update lags the workflow change by even one commit within the
    batch.
