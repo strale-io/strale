@@ -654,6 +654,29 @@ sequence below starts from the settled record.
    explicitly (as section 1's table 11 already enumerates them) rather than
    by a broad pattern exclusion.
 
+   Amendment (2026-09-11, architect, after batch 1): batch 7 must also
+   freeze the M2 closing review as history, or the first decision the
+   repository records after cutover fails CI. `CLOSING_REVIEW_STALE`
+   (`scripts/m2-closure-register-lib.mjs:49-53` and `:941-960`) fires on
+   any change under `docs/decisions/records/`,
+   `docs/decisions/id-collisions.yaml` or a collision-resolution report
+   after the reviewed commit, and `CLOSING_REVIEW_COUNTS_MISMATCH`
+   (`:963-971`) compares the reviewed record count with the live one.
+   After cutover both are expected changes: the Contradiction Protocol
+   (now in the entrypoints' Workflow Invariants) records a new decision
+   and marks the old one superseded, and M6 fixture 7 requires that
+   adding a superseding record and transitioning the old status passes.
+   The batch rescopes both checks so they evaluate the decision surfaces
+   as they stood at the reviewed commit (the M2 exit stays proven by its
+   archived review), and leaves post-cutover record integrity to the
+   decision-record checks that already refuse an edit to a record's
+   protected body. Tests: a new record and a status transition after the
+   reviewed commit pass; editing the closure register itself still fails.
+   The same batch adds the six archived starter-kit file names
+   (`archive/sessions/claude-starter-kit/`) to the repository-wide
+   anti-regression scan, since batch 1's live-link test covers only the
+   entrypoints, commands, skills and hooks (batch 1 review, PR #665).
+
 8. **The cutover commit itself: flip authority markers.** This must be the
    **last** batch. The project-document schema
    (`docs/project/schemas/project-document.schema.json:21-29,71-82`) today
