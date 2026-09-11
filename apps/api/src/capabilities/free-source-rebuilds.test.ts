@@ -140,6 +140,16 @@ describe("wallet-age-check (Alchemy transfer index)", () => {
     const r = await run("wallet-age-check", { address: W });
     expect(r.output).toMatchObject({ has_activity: false, first_tx_date: null, age_days: 0 });
   });
+  it("dates a wallet from its first outgoing transfer when that came first", async () => {
+    mockUpstreams({
+      alchemy_getAssetTransfers: (p) => ({ transfers: (p[0] as { fromAddress?: string }).fromAddress
+        ? [tx({ hash: "0xout", blockNum: "0x5", metadata: { blockTimestamp: "2016-01-01T00:00:00.000Z" } })]
+        : [tx({ hash: "0xin", blockNum: "0x9", metadata: { blockTimestamp: "2017-01-01T00:00:00.000Z" } })] }),
+    });
+    const r = await run("wallet-age-check", { address: W });
+    expect(r.output).toMatchObject({ first_tx_hash: "0xout", first_tx_date: "2016-01-01T00:00:00.000Z" });
+  });
+
   it("dates the wallet from its first transfer", async () => {
     mockUpstreams({ alchemy_getAssetTransfers: () => ({ transfers: [tx({ hash: "0xfirst" })] }) });
     const r = await run("wallet-age-check", { address: W });
@@ -162,6 +172,10 @@ describe("contract-verify-check (Sourcify)", () => {
       evm_version: "byzantium", license_type: null, verification_source: "sourcify",
     });
   });
+  it("treats a record without a match as not verified", () => {
+    expect(fromSourcify(USDC, "1", { ...record, match: null })).toMatchObject({ is_verified: false, verification_source: "sourcify" });
+  });
+
   it("reads a 404 as not verified on Sourcify, and says so", async () => {
     mockUpstreams({}, () => new Response("", { status: 404 }));
     const r = await run("contract-verify-check", { contract_address: USDC, chain_id: "56" });
