@@ -61,6 +61,7 @@
         "archive/sessions/2026-09-06-agent-hook-setup/VERIFICATION-NOTES.md",
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/operations/operator-actions.yaml",
@@ -221,6 +222,7 @@
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
@@ -400,6 +402,7 @@
         "AGENTS.md",
         "CLAUDE.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "scripts/m2-closure-register-lib.mjs"
@@ -411,6 +414,7 @@
       "sha256": "960ae702ce504e1b1877d154d486dd9419bfa374c9ae48da90deefa53b6d18b5",
       "detected_references": [
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "handoff/_general/from-code/2026-05-13-lovable-cancellation-audit.md",
         "handoff/_general/from-code/2026-05-13-lovable-cancellation-cleanup-execution.md",
@@ -425,6 +429,7 @@
         ".claude/BUILD.md",
         ".claude/PROTOCOL.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -436,6 +441,7 @@
         ".claude/DISPATCH.yaml",
         ".claude/WORKFLOW.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -447,6 +453,7 @@
         ".claude/DISPATCH.yaml",
         ".claude/RUNBOOK.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "docs/operations/distribution-registry.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "scripts/m2-closure-register-lib.mjs"
@@ -460,6 +467,7 @@
         ".claude/RUNBOOK.md",
         ".claude/WORKFLOW.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
@@ -472,6 +480,7 @@
         ".github/workflows/ci.yml",
         "apps/api/scripts/archive/README.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
@@ -490,6 +499,7 @@
         "AGENTS.md",
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "docs/company/LESSONS.md",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
@@ -576,6 +586,7 @@
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
         "design/README.md",
@@ -669,6 +680,7 @@
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/catalog-buildout-strategy.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/kyb-coverage-research.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
@@ -847,6 +859,7 @@
         "archive/sessions/2026-09-06-brand-kit-launch-proof/VERIFY.md",
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
+        "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",
         "archive/sessions/FIX_PHASE_C_report.md",
