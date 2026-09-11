@@ -84,9 +84,12 @@ async function main(): Promise<void> {
     for (const row of accounts) {
       const reset = row.reset_at ? `; resets ${new Date(row.reset_at).toISOString()}` : "";
       const expiry = row.expires_at ? `; expires ${new Date(row.expires_at).toISOString()}` : "";
+      // The reason is what separates "healthy" from "healthy, but nothing
+      // checks the credential" — Browserless read as the first for 16 days.
+      const reason = row.status_reason ? `\n    ${row.status_reason}` : "";
       console.log(
         `- ${row.display_name}: ${row.status}; ${units(row)}; ${row.billing_model}; ` +
-        `payment-option=${row.payment_method ?? "unknown"}; monitor=${row.monitor_mode}${reset}${expiry}`,
+        `payment-option=${row.payment_method ?? "unknown"}; monitor=${row.monitor_mode}${reset}${expiry}${reason}`,
       );
     }
     for (const issue of issues) {

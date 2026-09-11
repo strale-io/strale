@@ -1,0 +1,50 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "4bda56b3cb53e9764e4ae910e8931452a2db1e68"
+  },
+  "at": "2026-09-11T07:11:02.858Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/73ad86d8-dfd4-46aa-a2a5-3ca84e02026c/scratchpad/mut-followup.json"
+  },
+  "summary": {
+    "ok": true,
+    "follows": "archive/receipts/2026-09-11-test-run-vendor-breaker-mutations.json",
+    "finding": "Found by reading production before merge: the browserless row's last_success_at (2026-09-11 06:18Z) had been stamped by the cloud balance read, not by a render. The first version of recordBalanceNotApplicable would have reported the refused container healthy, with a reason claiming a render had succeeded, for up to 24 hours after deploy.",
+    "fix": "only a last_success_at later than metadata.balance_not_applicable_since (set on the first not-applicable pass; cleared by writeAssessment) counts as endpoint evidence",
+    "test_file": "apps/api/src/lib/vendor-control-tower.integration.test.ts",
+    "tests_passed": 40,
+    "tests_total": 40,
+    "planted_failures": 1,
+    "planted_caught": 1
+  },
+  "topic": "vendor-breaker-mutations-followup",
+  "raw": {
+    "ok": true,
+    "follows": "archive/receipts/2026-09-11-test-run-vendor-breaker-mutations.json",
+    "finding": "Found by reading production before merge: the browserless row's last_success_at (2026-09-11 06:18Z) had been stamped by the cloud balance read, not by a render. The first version of recordBalanceNotApplicable would have reported the refused container healthy, with a reason claiming a render had succeeded, for up to 24 hours after deploy.",
+    "fix": "only a last_success_at later than metadata.balance_not_applicable_since (set on the first not-applicable pass; cleared by writeAssessment) counts as endpoint evidence",
+    "test_file": "apps/api/src/lib/vendor-control-tower.integration.test.ts",
+    "tests_passed": 40,
+    "tests_total": 40,
+    "planted_failures": 1,
+    "planted_caught": 1,
+    "plants": [
+      {
+        "plant": "drop the balance_not_applicable_since condition, so any success in 24h counts",
+        "result": "caught",
+        "failed": [
+          "reads a not-applicable balance check from live evidence and never lifts a block"
+        ]
+      }
+    ],
+    "corrects": {
+      "receipt": "archive/receipts/2026-09-11-audit-browserless-credential-outage.json",
+      "field": "cloud_account_usage_since_period_start_2026-08-25T22:47Z",
+      "says": "52 direct calls were attempted",
+      "correct": "60 direct calls were refused: 52 screenshot/PDF (20 paying) plus 8 paying web-extract/company-enrich calls that call the container the same way; 28 paying in all",
+      "found_by": "second independent review, 2026-09-11"
+    }
+  }
+}

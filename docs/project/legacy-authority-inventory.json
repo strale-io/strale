@@ -509,7 +509,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "82ccf05dd09ca31664b9e8ea58dfd496c4c032d5c1b293bfc0dc7bc6b76a1e20",
+      "sha256": "0cddc770ef295dfbdc51694f16056419367f533200ccb86070f073f050fcc4a7",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -610,6 +610,7 @@
         "handoff/_general/from-code/2026-09-05-m2-g2-batch-3-collisions.md",
         "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md",
         "handoff/_general/from-code/2026-09-06-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-11-checkin-morning.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -737,7 +738,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "028352681f68eb0c0543dc4b54ca94908933f5be459b0d1be1f30f0151906147",
+      "sha256": "90e912fcb64a0887a3ee798d8936de42e2de5654640875d8e0aaf81717040249",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -786,6 +787,7 @@
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
         "archive/receipts/2026-09-05-check-quiet-material-kit-index-bound-proof.json",
         "archive/receipts/2026-09-06-check-brand-editorial-readiness.json",
+        "archive/receipts/2026-09-11-audit-browserless-credential-outage.json",
         "archive/receipts/README.md",
         "archive/sessions/2026-08-16-t02-quality-floor-quarantine-audit.md",
         "archive/sessions/2026-08-18-local-branch-cleanup.md",

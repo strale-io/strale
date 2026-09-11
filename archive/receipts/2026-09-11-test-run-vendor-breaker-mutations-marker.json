@@ -1,0 +1,48 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "e2d627665fc9e1c9a7675404a2eaf0da36993ed4"
+  },
+  "at": "2026-09-11T07:19:23.246Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/73ad86d8-dfd4-46aa-a2a5-3ca84e02026c/scratchpad/mut-marker.json"
+  },
+  "summary": {
+    "ok": true,
+    "follows": "archive/receipts/2026-09-11-test-run-vendor-breaker-mutations-followup.json",
+    "review": "third independent read-only review of commit 4bda56b3: PASS, 0 blockers; two should-fix test gaps, closed here",
+    "test_file": "apps/api/src/lib/vendor-control-tower.integration.test.ts",
+    "tests_passed": 7,
+    "tests_total": 7,
+    "planted_failures": 2,
+    "planted_caught": 2
+  },
+  "topic": "vendor-breaker-mutations-marker",
+  "raw": {
+    "ok": true,
+    "follows": "archive/receipts/2026-09-11-test-run-vendor-breaker-mutations-followup.json",
+    "review": "third independent read-only review of commit 4bda56b3: PASS, 0 blockers; two should-fix test gaps, closed here",
+    "test_file": "apps/api/src/lib/vendor-control-tower.integration.test.ts",
+    "tests_passed": 7,
+    "tests_total": 7,
+    "planted_failures": 2,
+    "planted_caught": 2,
+    "plants": [
+      {
+        "plant": "refresh balance_not_applicable_since on every pass instead of keeping the first",
+        "result": "caught",
+        "failed": [
+          "reads a not-applicable balance check from live evidence and never lifts a block"
+        ]
+      },
+      {
+        "plant": "writeAssessment leaves balance_not_applicable_since in place",
+        "result": "caught",
+        "failed": [
+          "clears the not-applicable marker when a balance reading applies again"
+        ]
+      }
+    ]
+  }
+}
