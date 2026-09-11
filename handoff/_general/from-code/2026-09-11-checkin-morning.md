@@ -259,7 +259,7 @@ Branch `chore/checkin-2026-09-11`. Four changes.
    And the vendor report prints each account's reason under its line.
 
 Tests (receipt `archive/receipts/2026-09-11-test-run-vendor-breaker-mutations.json`):
-40/40 across the four vendor files + the probe test; **8 planted failures, 8
+41/41 across the four vendor files + the probe test; **10 planted failures, 10
 caught**, including the production statement as it stood. `tsc --noEmit` clean.
 Neighbouring suites (web-provider, screenshot-url, html-to-pdf, chromium-health,
 vendor-morning-status): 143 passed.
@@ -301,6 +301,18 @@ now dates incident 10 to 08-25; DAILY-RUN says the alarm rate was measured over
 five of the sixteen days. Not taken: after a successful render
 `recordVendorUsage` sets `healthy` but keeps the "unconfirmed" reason until the
 next hourly run — cosmetic, at most an hour.
+
+**Third independent review** — a fresh read-only agent over the marker fix
+alone (`4bda56b3`). **PASS, no blockers.** It confirmed the first pass reads the
+pre-update row (so the marker cannot vouch for itself), that the JSON timestamp
+round-trips exactly, that every timestamp comes from the database clock, and
+that nothing else writes `last_success_at` on this row except a genuine render.
+Two test gaps closed: a marker refreshed every pass, and a marker surviving a
+real balance reading, both now caught (receipt
+`archive/receipts/2026-09-11-test-run-vendor-breaker-mutations-marker.json`).
+Nits left as recorded: a marker could outlive a cloud period in which every
+balance check failed; a malformed marker would pin the row to `unknown`; until
+the first hourly tick after deploy the row keeps the old `healthy`.
 
 ## E. Authorities updated
 
