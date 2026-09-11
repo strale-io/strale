@@ -11,6 +11,7 @@ import { stringify } from "yaml";
 import {
   checkAllVendors,
   checkLifecycleOrdering,
+  compareRosterWithRegister,
   extractProviders,
   extractCoverageMatrixProviders,
   extractEnvManifestProviders,
@@ -18,6 +19,7 @@ import {
   extractVendorAccountsSeed,
   loadRegister,
   repoRootFrom,
+  ROSTER_STATUS_STATE_MAP,
   SCHEMA_PATH,
   REGISTER_PATH,
   PLATFORM_FACTS_PATH,
@@ -679,6 +681,112 @@ test("history: git-unreachable is reported as a distinct warning, not silently s
   const r = checkAllVendors(dir, {});
   assert.deepEqual(r.findings, []);
   assert.ok(r.warnings.some((w) => w.code === "GIT_UNREACHABLE"));
+});
+
+// ── shadow comparison with the Notion Vendor Roster (T6 batch 4b) ─────────
+
+function rosterRow(overrides = {}) {
+  return { vendor: "Acme", status: "Active", url: "https://app.notion.com/p/demo", ...overrides };
+}
+
+function findingKinds(disagreements) {
+  return disagreements.map((d) => d.kind);
+}
+
+test("a clean roster that agrees with the register has no disagreements", () => {
+  const reg = register([
+    vendor({ id: "acme", name: "Acme", aliases: ["Acme Corp"], lifecycle: [{ state: "active", date: "2026-01-01", decision: "unknown", reason: "x" }] }),
+    vendor({ id: "held-vendor", name: "Held Vendor", aliases: [], lifecycle: [{ state: "held", date: "2026-01-01", decision: "unknown", reason: "x" }] }),
+  ]);
+  const rows = [
+    rosterRow({ vendor: "Acme", status: "Active" }),
+    rosterRow({ vendor: "Held Vendor", status: "Deferred" }),
+  ];
+  assert.deepEqual(compareRosterWithRegister(rows, reg), []);
+});
+
+test("case-insensitive and alias match resolves the same vendor cleanly", () => {
+  const reg = register([
+    vendor({ id: "acme", name: "Acme", aliases: ["Acme Corp"], lifecycle: [{ state: "active", date: "2026-01-01", decision: "unknown", reason: "x" }] }),
+  ]);
+  const rows = [
+    rosterRow({ vendor: "  acme corp  ", status: "Active" }), // alias, different case, padded
+  ];
+  assert.deepEqual(compareRosterWithRegister(rows, reg), []);
+});
+
+test("ROSTER_VENDOR_UNREGISTERED: a roster vendor name matching no register vendor", () => {
+  // The register's only vendor (Acme, active) also gets no roster row here,
+  // so this fixture legitimately reports both kinds - this test asserts
+  // only that ROSTER_VENDOR_UNREGISTERED is one of them.
+  const reg = register([vendor()]);
+  const rows = [rosterRow({ vendor: "Nobody Registered This Vendor", status: "Active" })];
+  const r = compareRosterWithRegister(rows, reg);
+  assert.ok(findingKinds(r).includes("ROSTER_VENDOR_UNREGISTERED"));
+  assert.equal(r.filter((f) => f.kind === "ROSTER_VENDOR_UNREGISTERED").length, 1);
+});
+
+test("ROSTER_STATUS_UNMAPPED: a roster status not in the known mapping", () => {
+  const reg = register([vendor()]);
+  const rows = [rosterRow({ vendor: "Acme", status: "Some Status Nobody Mapped" })];
+  const r = compareRosterWithRegister(rows, reg);
+  assert.deepEqual(findingKinds(r), ["ROSTER_STATUS_UNMAPPED"]);
+});
+
+test("ROSTER_STATUS_UNMAPPED: an empty roster status", () => {
+  const reg = register([vendor()]);
+  const rows = [rosterRow({ vendor: "Acme", status: "" }), rosterRow({ vendor: "Acme", status: null })];
+  const r = compareRosterWithRegister(rows, reg);
+  assert.deepEqual(findingKinds(r), ["ROSTER_STATUS_UNMAPPED", "ROSTER_STATUS_UNMAPPED"]);
+});
+
+test("ROSTER_STATE_DISAGREES: a mapped status whose allowed states exclude the current register state", () => {
+  const reg = register([vendor({ lifecycle: [{ state: "active", date: "2026-01-01", decision: "unknown", reason: "x" }] })]);
+  const rows = [rosterRow({ vendor: "Acme", status: "Rejected" })]; // Rejected maps to {rejected}, vendor is active
+  const r = compareRosterWithRegister(rows, reg);
+  assert.deepEqual(findingKinds(r), ["ROSTER_STATE_DISAGREES"]);
+  assert.ok(r[0].detail.includes("active"));
+});
+
+test("REGISTER_VENDOR_NOT_ON_ROSTER: a non-unknown register vendor with no roster row", () => {
+  const reg = register([
+    vendor({ id: "acme", lifecycle: [{ state: "active", date: "2026-01-01", decision: "unknown", reason: "x" }] }),
+    oldVendor(), // retired, not on the roster below
+  ]);
+  const rows = [rosterRow({ vendor: "Acme", status: "Active" })];
+  const r = compareRosterWithRegister(rows, reg);
+  assert.deepEqual(findingKinds(r), ["REGISTER_VENDOR_NOT_ON_ROSTER"]);
+  assert.ok(r[0].detail.includes("old-vendor"));
+});
+
+test("REGISTER_VENDOR_NOT_ON_ROSTER: a register vendor whose current state is unknown is not reported", () => {
+  const reg = register([
+    vendor({ id: "acme", lifecycle: [{ state: "active", date: "2026-01-01", decision: "unknown", reason: "x" }] }),
+    vendor({ id: "mystery-vendor", name: "Mystery Vendor", aliases: [], lifecycle: [{ state: "unknown", date: "2026-01-01", decision: "unknown", reason: "x" }] }),
+  ]);
+  const rows = [rosterRow({ vendor: "Acme", status: "Active" })];
+  assert.deepEqual(compareRosterWithRegister(rows, reg), []);
+});
+
+test("the ROSTER_STATUS_STATE_MAP constant covers every status the manual procedure lists", () => {
+  const listed = ["Active", "Rejected", "Deferred", "Pending eval", "Backup", "Self-built"];
+  for (const status of listed) {
+    assert.ok(Object.prototype.hasOwnProperty.call(ROSTER_STATUS_STATE_MAP, status), `missing mapping for "${status}"`);
+  }
+});
+
+test("Self-built disagrees only with rejected, deprecated, or candidate; every other state is clean", () => {
+  const stateOf = (state) => register([vendor({ lifecycle: [{ state, date: "2026-01-01", decision: "unknown", reason: "x" }] })]);
+  const disagreeing = ["rejected", "deprecated", "candidate"];
+  const clean = ["active", "held", "fallback", "retired", "evaluating", "unknown"];
+  for (const state of disagreeing) {
+    const r = compareRosterWithRegister([rosterRow({ vendor: "Acme", status: "Self-built" })], stateOf(state));
+    assert.deepEqual(findingKinds(r), ["ROSTER_STATE_DISAGREES"], `expected a disagreement for state "${state}"`);
+  }
+  for (const state of clean) {
+    const r = compareRosterWithRegister([rosterRow({ vendor: "Acme", status: "Self-built" })], stateOf(state));
+    assert.deepEqual(r, [], `expected no disagreement for state "${state}"`);
+  }
 });
 
 // ── real repo ──────────────────────────────────────────────────────────────
