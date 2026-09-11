@@ -9,6 +9,7 @@ import {
   DECISION_DISPOSITIONS,
   INVENTORY_DISPOSITIONS,
   buildContext,
+  candidateSetAtCommit,
   canonicalDigest,
   checkClosureRegister,
   compareRowsToExport,
@@ -1055,7 +1056,14 @@ const gitQualifiedSummary = (overrides = {}) => ({
   decided_at: "2026-05-04",
   ...overrides,
 });
-const withRecord = (summary) => ({ ...context, records: [...context.records, summary] });
+// recordPathsAtCommit is overridden alongside records: the committed register
+// under test here carries a real closing_review, so without this the
+// validator would read the record set at that real reviewed commit (which
+// does not include the synthetic summary) instead of this synthetic set.
+const withRecord = (summary) => {
+  const records = [...context.records, summary];
+  return { ...context, records, recordPathsAtCommit: () => new Set(records.map((r) => r.file)) };
+};
 const addFormalRecord = (r, entry) => {
   r.formal_records.push({
     record_key: GIT_QUALIFIED_KEY,
@@ -1189,8 +1197,13 @@ test("cross-surface rows resolve only with a git-qualified record for the collis
     return cross;
   };
   // A context with no formal record for DEC-20260422-A, simulating "no
-  // git-qualified record exists" without touching the real files.
-  const withoutGitRecord = { ...context, records: context.records.filter((rec) => rec.id !== "DEC-20260422-A") };
+  // git-qualified record exists" without touching the real files. The
+  // committed register carries a real closing_review, so recordPathsAtCommit
+  // must be overridden too, or the validator would read the real record set
+  // at the real reviewed commit (which does have DEC-20260422-A) instead of
+  // this synthetic one.
+  const withoutGitRecordSet = context.records.filter((rec) => rec.id !== "DEC-20260422-A");
+  const withoutGitRecord = { ...context, records: withoutGitRecordSet, recordPathsAtCommit: () => new Set(withoutGitRecordSet.map((r) => r.file)) };
 
   // The committed state -- resolved/documented_only -- is valid and matches the derivation.
   lacks(base(), "DECISION_ROW_CROSS_SURFACE_STATE_INVALID");
@@ -1263,8 +1276,12 @@ test("the committed DEC-20260422-A row derives resolved_collision from a real gi
   has(droppedCitation, "DECISION_ROW_DERIVATION_MISMATCH");
 
   // Dropping the git-qualified record itself (context-only, real files
-  // untouched) must be rejected the same way.
-  const withoutGitRecord = { ...context, records: context.records.filter((rec) => rec.id !== "DEC-20260422-A") };
+  // untouched) must be rejected the same way. recordPathsAtCommit is overridden
+  // too: the committed register carries a real closing_review, so without
+  // this the validator would read the real record set at the real reviewed
+  // commit (which does have DEC-20260422-A) instead of this synthetic one.
+  const withoutGitRecordSet2 = context.records.filter((rec) => rec.id !== "DEC-20260422-A");
+  const withoutGitRecord = { ...context, records: withoutGitRecordSet2, recordPathsAtCommit: () => new Set(withoutGitRecordSet2.map((r) => r.file)) };
   has(committed, "DECISION_ROW_CROSS_SURFACE_STATE_INVALID", withoutGitRecord);
 });
 
@@ -1450,6 +1467,23 @@ const closingReviewFixture = (overrides = {}) => {
   const expectedCollisionsResolved = (context.collisions.collisions ?? []).filter((c) => c.resolution_status === "resolved").length;
   const expectedResolutionReports = [...context.tracked].filter((f) => /^archive\/sessions\/.*-decision-collision-resolution-.*\.md$/.test(f)).length;
 
+  // The register side and the default candidateSetAtCommit mock below must
+  // use the same override precedence. Without this, a test that pins
+  // formalRecords (to isolate itself from the live records directory, see
+  // stableRecords() further down) leaves the *other* side of the comparison
+  // reading the live count, so the two sides silently diverge the moment the
+  // repository gains a real decision record. Pinning both to the same
+  // overrides keeps the fixture's default "clean" state clean regardless of
+  // how many records exist on disk; a test that deliberately wants the two
+  // sides to differ overrides candidateSetAtCommit itself (see
+  // "CLOSING_REVIEW_COUNTS_MISMATCH: candidate_set must equal what the lib
+  // computes now", which mutates candidate_set after fixture construction,
+  // and "COMMIT_UNVERIFIABLE when the candidate set cannot be read", which
+  // overrides candidateSetAtCommit directly).
+  const pinnedFormalRecords = overrides.formalRecords ?? expectedFormalRecords;
+  const pinnedCollisionsResolved = overrides.collisionsResolved ?? expectedCollisionsResolved;
+  const pinnedResolutionReports = overrides.resolutionReports ?? expectedResolutionReports;
+
   r.closing_review = {
     route: overrides.route ?? "fresh-read-only-claude-agent",
     commit,
@@ -1457,9 +1491,9 @@ const closingReviewFixture = (overrides = {}) => {
     reviewed_at: "2026-09-05",
     evidence: evidenceRel,
     candidate_set: {
-      formal_records: overrides.formalRecords ?? expectedFormalRecords,
-      collisions_resolved: overrides.collisionsResolved ?? expectedCollisionsResolved,
-      resolution_reports: overrides.resolutionReports ?? expectedResolutionReports,
+      formal_records: pinnedFormalRecords,
+      collisions_resolved: pinnedCollisionsResolved,
+      resolution_reports: pinnedResolutionReports,
     },
   };
   if (overrides.mutateRegister) overrides.mutateRegister(r, g9);
@@ -1487,6 +1521,15 @@ const closingReviewFixture = (overrides = {}) => {
     changedPathsBetween: overrides.changedPathsBetween === undefined ? () => [] : overrides.changedPathsBetween,
     workingTreeDirty: overrides.workingTreeDirty === undefined ? () => [] : overrides.workingTreeDirty,
     registerAtCommit: overrides.registerAtCommit === undefined ? () => r : overrides.registerAtCommit,
+    // Mirrors the pre-fix "compute from HEAD" behaviour by default (the real
+    // commit-based reader cannot see this synthetic fixture, which has no
+    // git repository behind it): the counts already baked into
+    // closing_review.candidate_set above, as a stand-in for "the reviewed
+    // commit's own tree held exactly this many". Tests that need to exercise
+    // the reviewed-commit read itself pass a real override.
+    candidateSetAtCommit: overrides.candidateSetAtCommit === undefined
+      ? () => ({ formalRecords: pinnedFormalRecords, collisionsResolved: pinnedCollisionsResolved, resolutionReports: pinnedResolutionReports })
+      : overrides.candidateSetAtCommit,
     codexBacklog: backlog,
     ...overrides.contextOverrides,
   };
@@ -1709,6 +1752,144 @@ test("CLOSING_REVIEW_COUNTS_MISMATCH: candidate_set must equal what the lib comp
   });
 });
 
+test("CLOSING_REVIEW_COUNTS_MISMATCH: COMMIT_UNVERIFIABLE when the candidate set cannot be read at the reviewed commit", () => {
+  withClosingReviewFixture({ candidateSetAtCommit: () => null }, ({ r, ctx }) => {
+    hasDetail(r, "COMMIT_UNVERIFIABLE", "could not read the candidate set at", ctx);
+  });
+});
+
+test("candidateSetAtCommit reads the reviewed commit's own tree, not HEAD: a record added afterward does not move it", () => {
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-candidate-set-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    writeFileSync(join(dir, "docs/decisions/records/DEC-20260911-A.md"), "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    assert.deepEqual(candidateSetAtCommit(dir, head), { formalRecords: 1, collisionsResolved: 0, resolutionReports: 0 });
+
+    // Plant: a second record lands after the reviewed commit, uncommitted (a
+    // batch's working tree before it commits). The reviewed commit's own
+    // tree is unchanged, so what it reads back must be unchanged too.
+    writeFileSync(join(dir, "docs/decisions/records/DEC-20260911-B.md"), "---\nid: DEC-20260911-B\nstatus: active\n---\n\nBody.\n");
+    assert.deepEqual(candidateSetAtCommit(dir, head), { formalRecords: 1, collisionsResolved: 0, resolutionReports: 0 });
+
+    assert.equal(candidateSetAtCommit(dir, "0".repeat(40)), null, "an unreadable commit reads as null, not zero counts");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSING_REVIEW_STALE: a new decision record after the reviewed commit does not invalidate the review", () => {
+  // Real git, not a mock: proves CLOSING_REVIEW_STALE_PATHSPECS itself no
+  // longer scans docs/decisions/records/, the way the pre-existing blind-spot
+  // test below proves the working-tree half of this same mechanism.
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-new-record-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: a brand-new record lands after the reviewed commit, uncommitted.
+    writeFileSync(join(dir, "docs/decisions/records/DEC-20260911-A.md"), "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+
+    withClosingReviewFixture(
+      { commit: head, isAncestor: () => true, changedPathsBetween: () => [], workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps) },
+      ({ r, ctx }) => {
+        const c = codes(r, ctx);
+        assert.ok(!c.includes("CLOSING_REVIEW_STALE"), c.join(","));
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSING_REVIEW_STALE: an active-to-superseded status transition after the reviewed commit does not invalidate the review", () => {
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-transition-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    const recordPath = join(dir, "docs/decisions/records/DEC-20260911-A.md");
+    writeFileSync(recordPath, "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: the record transitions active -> superseded after the reviewed
+    // commit, uncommitted -- the routine supersession the Contradiction
+    // Protocol requires. Per-record integrity for this transition (and a
+    // refusal of a protected-body edit disguised as one) is
+    // validateActiveBodyChange's job, pinned separately at
+    // scripts/decision-records.test.mjs:812 (allowed transition) and
+    // scripts/decision-records.test.mjs:884 (status regression refused).
+    writeFileSync(recordPath, "---\nid: DEC-20260911-A\nstatus: superseded\n---\n\nBody.\n");
+
+    withClosingReviewFixture(
+      { commit: head, isAncestor: () => true, changedPathsBetween: () => [], workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps) },
+      ({ r, ctx }) => {
+        const c = codes(r, ctx);
+        assert.ok(!c.includes("CLOSING_REVIEW_STALE"), c.join(","));
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSING_REVIEW_STALE: a new collision-resolution report after the reviewed commit still invalidates the review", () => {
+  // The narrowest rescope keeps the collision registry and its resolution
+  // reports in CLOSING_REVIEW_STALE_PATHSPECS (see that constant's comment):
+  // a brand-new, still-unresolved collision or report is not something the
+  // per-record and per-collision immutability checks would ever flag, so
+  // without this the closing review's own collisions_resolved /
+  // resolution_reports counts could go stale silently.
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-resolution-report-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "archive/sessions"), { recursive: true });
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: a collision-resolution report lands after the reviewed commit.
+    writeFileSync(
+      join(dir, "archive/sessions/2026-09-11-decision-collision-resolution-test.md"),
+      "Resolved.\n",
+    );
+
+    withClosingReviewFixture(
+      { commit: head, isAncestor: () => true, changedPathsBetween: () => [], workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps) },
+      ({ r, ctx }) => {
+        hasDetail(r, "CLOSING_REVIEW_STALE", "decision-collision-resolution", ctx);
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("CLOSING_REVIEW_MUTATED: once recorded on the base, closing_review's identity fields and its presence are immutable", () => {
   withClosingReviewFixture({}, ({ r, ctx }) => {
     const baseRegister = structuredClone(r);
@@ -1802,4 +1983,160 @@ test("EXIT_GAP_NOT_BLOCKING isolates the plan.review_route branch: no closing_re
   };
   const after = codes(mutated, ctx);
   assert.ok(after.includes("EXIT_GAP_NOT_BLOCKING"), after.join(","));
+});
+
+// ---- Once closing_review is recorded, formal-record-based checks read the
+// reviewed commit's own record set, not the live one (m2-closure-register-lib.mjs
+// header comment). These tests plant the scenarios the freeze covers.
+
+// The base register's own formal_records list, filtered from the live
+// context.records set. A concurrent batch that lands new record files on
+// disk without touching this register (the exact traffic this freeze is
+// about) would otherwise make context.records.length drift past
+// register.sources.formal_records.record_count for reasons that have nothing
+// to do with what a given test plants; anchoring on the register's own list
+// keeps these tests isolated from that ambient drift.
+const stableRecords = () => {
+  const keys = new Set(base().formal_records.map((fr) => fr.record_key));
+  return context.records.filter((r) => keys.has(r.record_key));
+};
+
+test("a record added after the reviewed commit produces no finding at all: formal-record listing, source counts, staleness, or exit gaps", () => {
+  // recordPathsAtCommit simulates the reviewed commit's own tree, matching what
+  // closing_review.candidate_set already describes. The override's records
+  // array simulates a new record landing afterward, one more than the
+  // reviewed commit held. Every formal-record-based check must read
+  // recordPathsAtCommit's result, not the inflated set, or this plants
+  // FORMAL_RECORD_MISSING and the formal_records SOURCE_COUNT_DRIFT.
+  const stable = stableRecords();
+  const newRecord = {
+    file: "docs/decisions/records/DEC-20260911-NEW.md",
+    record_key: "DEC-20260911-NEW",
+    id: "DEC-20260911-NEW",
+    evidence: ["docs/decisions/records/DEC-20260911-NEW.md"],
+    pageIds: [],
+    decided_at: "2026-09-11",
+  };
+  withClosingReviewFixture(
+    {
+      formalRecords: stable.length,
+      contextOverrides: {
+        recordPathsAtCommit: () => new Set(stable.map((r) => r.file)),
+        records: [...stable, newRecord],
+      },
+    },
+    ({ r, ctx }) => {
+      const findings = validateClosureRegister(r, ctx, { schema });
+      const c = findings.map((f) => f.code);
+      assert.ok(!c.includes("FORMAL_RECORD_MISSING"), c.join(","));
+      assert.ok(!c.includes("FORMAL_RECORD_UNKNOWN"), c.join(","));
+      assert.ok(!c.includes("SOURCE_COUNT_DRIFT"), c.join(","));
+      assert.ok(!c.some((code) => code.startsWith("CLOSING_REVIEW_")), c.join(","));
+      assert.ok(
+        !findings.some((f) => f.code === "EXIT_GAP_NOT_BLOCKING" && f.detail.includes("plan.review_route")),
+        JSON.stringify(findings.filter((f) => f.code === "EXIT_GAP_NOT_BLOCKING")),
+      );
+    },
+  );
+});
+
+test("an active-to-superseded status transition after the reviewed commit produces no formal-record or staleness finding", () => {
+  // Extends the CLOSING_REVIEW_STALE-only plant above (this file, "an
+  // active-to-superseded status transition ... does not invalidate the
+  // review") to the broader formal-record checks this freeze pins: a status
+  // transition does not change a record's record_key, id, evidence, or
+  // pageIds (the only fields parseRecordSummary reads), so it cannot move
+  // FORMAL_RECORD_MISSING/UNKNOWN/SOURCE_COUNT_DRIFT either way -- this
+  // confirms that directly rather than assuming it. Per-record integrity for
+  // the transition itself (refusing a protected-body edit disguised as one)
+  // stays validateActiveBodyChange's job: scripts/decision-records.test.mjs:812
+  // (allowed transition) and scripts/decision-records.test.mjs:884 (status
+  // regression refused).
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-transition-full-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    const recordPath = join(dir, "docs/decisions/records/DEC-20260911-A.md");
+    writeFileSync(recordPath, "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: the record transitions active -> superseded after the reviewed
+    // commit, uncommitted.
+    writeFileSync(recordPath, "---\nid: DEC-20260911-A\nstatus: superseded\n---\n\nBody.\n");
+
+    // recordPathsAtCommit is pinned to the register's own formal-record list (see
+    // stableRecords above), not this test's own throwaway dir: this repo's
+    // real committed record population is what register.sources.formal_records
+    // must keep matching, independent of the one-record dir this test builds
+    // purely to exercise a real git status transition.
+    const stable = stableRecords();
+    withClosingReviewFixture(
+      {
+        commit: head,
+        isAncestor: () => true,
+        changedPathsBetween: () => [],
+        workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps),
+        formalRecords: stable.length,
+        contextOverrides: { recordPathsAtCommit: () => new Set(stable.map((r) => r.file)) },
+      },
+      ({ r, ctx }) => {
+        const findings = validateClosureRegister(r, ctx, { schema });
+        const c = findings.map((f) => f.code);
+        assert.ok(!c.some((code) => code.startsWith("CLOSING_REVIEW_")), c.join(","));
+        assert.ok(!c.includes("FORMAL_RECORD_MISSING"), c.join(","));
+        assert.ok(!c.includes("FORMAL_RECORD_UNKNOWN"), c.join(","));
+        assert.ok(!c.includes("SOURCE_COUNT_DRIFT"), c.join(","));
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a deleted or renamed record does not trip CLOSING_REVIEW_STALE either; that protection is validateActiveDecisionImmutability's job", () => {
+  // docs/decisions/records/ was already removed from CLOSING_REVIEW_STALE_PATHSPECS
+  // for additions (the WIP's own test above); this confirms the same holds
+  // for a deletion or a rename, by design -- m2-closure-register-lib.mjs
+  // never re-verifies the record set's continuity for a record that existed
+  // at the reviewed commit, because validateActiveDecisionImmutability
+  // (scripts/decision-records-lib.mjs) already refuses that unconditionally,
+  // independent of any closing review: scripts/decision-records.test.mjs:965
+  // ("removing superseded history is detected against a later merge base")
+  // and :987 ("removing proposed or rejected history is detected against a
+  // later merge base"). A deletion here must therefore produce no
+  // CLOSING_REVIEW_STALE finding from THIS file -- the repository is not
+  // left unprotected, the protection is just not duplicated here.
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-deleted-record-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    const recordPath = join(dir, "docs/decisions/records/DEC-20260911-A.md");
+    writeFileSync(recordPath, "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: the record is deleted after the reviewed commit, uncommitted.
+    rmSync(recordPath);
+
+    withClosingReviewFixture(
+      { commit: head, isAncestor: () => true, changedPathsBetween: () => [], workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps) },
+      ({ r, ctx }) => {
+        const c = codes(r, ctx);
+        assert.ok(!c.includes("CLOSING_REVIEW_STALE"), c.join(","));
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
