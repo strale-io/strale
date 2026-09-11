@@ -13,7 +13,7 @@ vi.mock("./vendor-control-tower.js", () => ({
 }));
 vi.mock("./log.js", () => ({ logWarn: vi.fn() }));
 
-import { meteredVendorFetch, vendorReachabilityFetch } from "./metered-vendor-fetch.js";
+import { browserlessFetch, meteredVendorFetch, vendorReachabilityFetch } from "./metered-vendor-fetch.js";
 
 describe("meteredVendorFetch", () => {
   beforeEach(() => {
@@ -72,5 +72,26 @@ describe("meteredVendorFetch", () => {
     expect(assertVendorAvailable).toHaveBeenCalledWith("browserless");
     expect(recordVendorHttpFailure).not.toHaveBeenCalled();
     expect(recordVendorUsage).not.toHaveBeenCalled();
+  });
+
+  it("never reads a Browserless 403 as our account failing, since it relays the target's status", async () => {
+    // Shape of the 42 production target refusals seen with a valid token.
+    const response = new Response("<html>Access denied</html>", { status: 403 });
+    const network = vi.fn().mockResolvedValue(response);
+
+    await expect(browserlessFetch("http://chromium.railway.internal:8080/content?token=t", {}, 1, network))
+      .resolves.toBe(response);
+    expect(assertVendorAvailable).toHaveBeenCalledWith("browserless");
+    expect(recordVendorHttpFailure).not.toHaveBeenCalled();
+    expect(recordVendorUsage).not.toHaveBeenCalled();
+  });
+
+  it("still meters a successful Browserless render", async () => {
+    const response = new Response("<html></html>", { status: 200 });
+    const network = vi.fn().mockResolvedValue(response);
+
+    await expect(browserlessFetch("http://chromium.railway.internal:8080/content?token=t", {}, 1, network))
+      .resolves.toBe(response);
+    expect(recordVendorUsage).toHaveBeenCalledWith("browserless", 1);
   });
 });

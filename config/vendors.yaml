@@ -16,11 +16,17 @@
 #
 # A surface's label is not evidence of use. Vendors named only by the
 # coverage matrix were checked against the host their capability's executor
-# actually calls, for every row whatever its status: openownership is unknown
-# for that reason, "PSC register" is an alias of companies-house, and the ES
-# row's "Openapi.com" label is stale (see openapi-com). Those coverage-matrix
-# labels are wrong on the coverage matrix itself; this register does not edit
-# it.
+# actually calls, for every row whatever its status, and "PSC register" is
+# an alias of companies-house. Three coverage-matrix labels were found stale
+# this way (spanish-company-data's ES row named Openapi.com; both
+# beneficial-ownership-lookup rows named OpenOwnership) and were corrected
+# in fix(coverage-matrix): correct three provider labels to what the
+# executors call (2026-09-11): the ES row now names openmercantil.es
+# (registered below as vendor id openmercantil), the UK row now names
+# Companies House, and the DK row was deleted (no committed Danish
+# beneficial-ownership source exists in the repository). openapi-com and
+# openownership each carry an appended lifecycle entry recording the fix;
+# see their reason text below.
 #
 # A verification.* or authorization.status is "unknown" unless a repo file
 # verifies it. Absence of evidence is recorded as unknown, never implied as
@@ -838,6 +844,10 @@ vendors:
         date: 2026-09-10
         decision: unknown
         reason: "Initial population from apps/api/coverage-matrix/*.yaml provider field. In current use: nine executors call the Openapi.com client (executeOpenapiCapability): bulgarian, cypriot, dutch, hungarian, italian, luxembourgish, maltese, portuguese and romanian-company-data. The CY row's combined 'Openapi.com + DRCOR open data' string is aliased here because cypriot-company-data.ts calls Openapi.com as the Tier-1 identity source and DRCOR open data only as a Tier-2 legal_representatives augmentation. The ES row also names Openapi.com, but its label is stale: spanish-company-data.ts replaced the Openapi ES-Advanced path on 2026-08-12 and calls openmercantil.es, so the ES row is not evidence of use."
+      - state: active
+        date: 2026-09-11
+        decision: unknown
+        reason: "fix(coverage-matrix): correct three provider labels to what the executors call. apps/api/coverage-matrix/spanish-company-data__es__company-registry.yaml's provider was corrected from 'Openapi.com' to 'openmercantil.es' (registered separately as vendor id openmercantil), matching what spanish-company-data.ts actually calls. State is unchanged (active, on the other nine executors still calling Openapi.com); this entry records that the stale ES coverage-matrix label this vendor's prior lifecycle reason flagged is now fixed."
     reevaluation_triggers: []
     verification:
       terms:
@@ -863,6 +873,32 @@ vendors:
         date: 2026-09-11
         decision: unknown
         reason: "T6 batch 4a. apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 155) names OpenOwnership, with the code comment citing apps/api/docs/ubo-resolve-uk-bods-evaluation.md as 'evaluated 2026-04-02 ... and deferred (no Strale integration)'. That document's own text confirms this: 'Status: Evaluation only - no implementation' and, under Phase 3, 'Recommendation: DEFER. Do not implement now.' No capability calls OpenOwnership today, confirming the deferral held. State moves from unknown to held on this evidence (unknown is not an allowed STALE_VENDORS state); no decision record names this deferral, so decision stays unknown."
+      - state: held
+        date: 2026-09-11
+        decision: unknown
+        reason: "fix(coverage-matrix): correct three provider labels to what the executors call. Both apps/api/coverage-matrix/beneficial-ownership-lookup__*__beneficial-ownership.yaml rows that named OpenOwnership were corrected: the UK row's provider is now 'Companies House' (apps/api/src/capabilities/beneficial-ownership-lookup.ts calls only api.company-information.service.gov.uk), and the DK row was deleted (no committed Danish beneficial-ownership source exists anywhere in the repository; apps/api/docs/ubo-resolve-uk-bods-evaluation.md's own DEFER recommendation is the only OpenOwnership evidence, and it names no DK plan). State is unchanged (held); this entry records that the stale coverage-matrix labels this vendor's own prior lifecycle reason described are now fixed."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: openmercantil
+    name: OpenMercantil.es
+    aliases:
+      - openmercantil.es
+      - OpenMercantil.es
+    lifecycle:
+      - state: active
+        date: 2026-09-11
+        decision: unknown
+        reason: "fix(coverage-matrix): correct three provider labels to what the executors call. apps/api/src/capabilities/spanish-company-data.ts replaced the Openapi ES-Advanced path on 2026-08-12 (file header) and now calls openmercantil.es (OM_API = \"https://openmercantil.es/api/v1\"), a Tier-2 vendor aggregation of the official BORME gazette (DEC-20260428-A Tier 2; provenance.upstream_vendor = \"OpenMercantil.es\"). spanish-company-data is not in apps/api/src/capabilities/auto-register.ts DEACTIVATED, so this is a live, active capability. Neither docs/security/2026-09-06-vendor-terms-audit.md nor docs/security/2026-09-10-vendor-terms-audit-batch-2.md covers this vendor, so verification and authorization fields stay unknown pending a vendor-terms audit."
     reevaluation_triggers: []
     verification:
       terms:

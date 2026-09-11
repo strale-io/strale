@@ -72,7 +72,8 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | notion | Notion | active | 2026-09-10 | unknown | unknown |
 | nvd | NVD (NIST) | active | 2026-09-10 | unknown | unknown |
 | openalex | OpenAlex | active | 2026-09-10 | unknown | permitted (verified 2026-09-06) |
-| openapi-com | Openapi.com | active | 2026-09-10 | unknown | unknown |
+| openapi-com | Openapi.com | active | 2026-09-11 | unknown | unknown |
+| openmercantil | OpenMercantil.es | active | 2026-09-11 | unknown | unknown |
 | openownership | OpenOwnership | held | 2026-09-11 | unknown | unknown |
 | openregister | OpenRegister | active | 2026-09-10 | unknown | unknown |
 | opensanctions | OpenSanctions | retired | 2026-09-10 | unknown | unknown |

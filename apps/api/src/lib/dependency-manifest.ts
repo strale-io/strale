@@ -321,7 +321,10 @@ export const PROVIDERS: DependencyProvider[] = [
     authType: "api-key-query",
     envVar: "SEC_API_IO_TOKEN",
     authQueryParam: "token",
-    healthProbe: { path: "/", method: "GET", healthyStatuses: [400, 401, 403, 404], timeoutMs: 5000, skipAuth: true },
+    // sec-api.io answers an unauthenticated GET / with 200 (checked
+    // 2026-09-11). Without 200 here the probe logged "Unexpected HTTP 200" and
+    // raised "sec-api-io is not responding" every hour against a live service.
+    healthProbe: { path: "/", method: "GET", healthyStatuses: [200, 400, 401, 403, 404], timeoutMs: 5000, skipAuth: true },
     capabilities: ["us-sec-filings-extended"],
     tier: "paid",
   },
