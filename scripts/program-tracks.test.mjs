@@ -54,6 +54,15 @@ const activeIdx = (r) => r.tracks.findIndex((t) => t.status === "active");
 const byId = (r, id) => r.tracks.find((t) => t.id === id);
 const idx = (r, id) => r.tracks.findIndex((t) => t.id === id);
 const queuedIdx = (r) => r.tracks.findIndex((t) => t.status === "queued");
+// A track that depends on the currently active track. Which track is active
+// moves as work lands, so the dependency tests derive their example from the
+// committed register instead of naming a track id.
+const dependentOfActive = (r) => {
+  const active = r.tracks[activeIdx(r)].id;
+  const dependent = r.tracks.find((t) => (t.depends_on ?? []).includes(active));
+  assert.ok(dependent, `some track depends on the active track ${active}`);
+  return dependent;
+};
 const finish = (t) => {
   t.status = "done";
   t.evidence = ["README.md"];
@@ -199,19 +208,19 @@ test("a dependency cycle is rejected", () => {
 
 test("an active track whose dependency is not done is rejected", () => {
   const r = base();
-  // T7 depends on T3 and T6. Activating T7 demotes the current active track
-  // (T6) to queued, so T6 is an open dependency. (T6 served as the example
-  // until the G9 closure made T5 and T10, its own dependencies, done.)
-  activate(r, idx(r, "T7"));
-  byId(r, "T7").resume_file = "README.md";
+  // Activating a track that depends on the current active track demotes that
+  // track to queued, so it becomes an open dependency. (T7 then T6 served as
+  // named examples until their own dependencies were done.)
+  const dependent = dependentOfActive(r);
+  activate(r, idx(r, dependent.id));
+  dependent.resume_file = "README.md";
   assert.ok(codes(r).includes("ACTIVE_WITH_OPEN_DEPENDENCY"));
 });
 
 test("a done track whose dependency is not done is rejected", () => {
   const r = base();
-  // T7 depends on T6, which is active and not done. (T6 served as the example
-  // until the G9 closure made its own dependencies done.)
-  finish(byId(r, "T7"));
+  // A track that depends on the active track, which is not done.
+  finish(dependentOfActive(r));
   assert.ok(codes(r).includes("DONE_WITH_OPEN_DEPENDENCY"));
 });
 

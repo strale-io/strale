@@ -17,7 +17,7 @@
 schema_version: 1
 program: cto-readiness
 program_status: active
-updated: 2026-09-10
+updated: 2026-09-11
 tracks:
   - id: T1
     title: M2 closure audit
@@ -498,7 +498,7 @@ tracks:
 
   - id: T6
     title: M3 repo-native workflows
-    status: active
+    status: done
     gate: post-m2
     depends_on: [T1, T5, T10]
     owner: session
@@ -859,8 +859,8 @@ tracks:
       the digest prints the image commit so a stale deploy is visible.
       Rejected: a GitHub read at runtime (a token and a network dependency)
       and moving the digest to GitHub Actions (production database
-      credentials in GitHub). All three M3 conditions are settled. Next:
-      T7, M4 cutover preparation, which the founder gates.
+      credentials in GitHub). All three M3 conditions are settled. Done
+      2026-09-11; work continues in T7, M4 cutover preparation.
     resume_file: archive/sessions/2026-09-11-m3-milestone-review.md
     exit:
       - repo-native replacements testable without changing existing authority
@@ -868,20 +868,40 @@ tracks:
       - scheduled and deployment mechanisms verified, not assumed
       - every mandatory protocol represented in the coverage manifest
       - old entrypoints remain in force
-    evidence: []
+    evidence:
+      - archive/sessions/2026-09-11-m3-milestone-review.md
+      - archive/sessions/2026-09-11-m3-remaining-scope-inventory.md
 
   - id: T7
     title: M4 atomic authority cutover
-    status: queued
+    status: active
     gate: post-m2
     depends_on: [T3, T6]
     owner: session
     next_action: >
-      Per migration plan section 10 M4. Prepare the single cutover PR, then
-      set this track to founder_gated with the exact reviewed commit named as
-      the blocker; on the founder's yes, merge and verify both entrypoints
-      load the same truth.
-    resume_file: docs/strategy/2026-08-31-repo-native-operating-model-migration.md
+      Per migration plan section 10 M4. The founder approved starting the
+      preparation on 2026-09-11; the cutover merge itself stays his yes or
+      no. The evidence base is the cutover inventory
+      (archive/sessions/2026-09-11-m4-cutover-inventory.md), whose section 7
+      sets the batch sequence: (1) extract the unique live rules from the
+      .claude/ starter-kit files and retarget the PROTOCOL.md pointers; (2)
+      rewrite CLAUDE.md as a peer entrypoint; (3) rewrite AGENTS.md and add
+      an entrypoint-parity check; (4) activate the repo-native end-session
+      and vendor-switch flows; (5) wire the digest's repo-native readers
+      into production with the Dockerfile COPY lines and a built-image
+      check; (6) retarget the weekly vendor-roster drift off Notion; (7) add
+      the Notion anti-regression check and make the report-only checks
+      blocking; (8) last, the schema change and authority-marker flip.
+      Each batch is reviewed and merged into the integration branch
+      m4/cutover, cut from main, never into main; main keeps the old
+      authority until the founder's yes. m4/cutover merges main in
+      regularly so the final PR stays current. When batch 8 is reviewed,
+      open one PR from m4/cutover to main, give it an independent review,
+      and set this track to founder_gated with that exact commit as the
+      blocker; on the founder's yes, squash-merge it as one revertible
+      unit and verify both entrypoints load the same truth. Batch 1 is
+      the first to run.
+    resume_file: archive/sessions/2026-09-11-m4-cutover-inventory.md
     exit:
       - both tools load the same project truth and pass entrypoint parity
       - no active state read from or written to Notion

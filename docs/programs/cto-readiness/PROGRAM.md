@@ -16,6 +16,13 @@ review_route: author-self-verification-plus-fresh-codex-review
 
 ## Resume here
 
+> **State on 2026-09-11.** T6 (M3) is done, with its milestone review's
+> three conditions settled. **Active: T7, the M4 cutover preparation.** Its
+> batches merge into the integration branch `m4/cutover`, not into
+> `main`, and the cutover reaches `main` only on the founder's yes. The
+> track's `next_action` in `tracks.yaml` names the batch to run; the
+> older state notes below are history.
+>
 > **State on 2026-09-02, end of the founder's authority plan.** Every
 > track the founder approved that day is done (T3, T11–T15, T5). The
 > `.env` files were rebuilt from Railway the same evening (DQ-29 resolved)
