@@ -7,16 +7,12 @@
 slug: wallet-age-check
 name: Wallet Age Check
 description: >-
-  Check when a wallet address made its first transaction. Returns the wallet's age in days. A new wallet transacting
-  large amounts is a red flag. Supports Ethereum, Base, and other EVM chains via Etherscan V2.
+  Check when an Ethereum mainnet wallet was first active: the earliest ETH or token transfer to or from it, and its
+  age in days. A new wallet moving large amounts is a red flag.
 category: web3
 cost_class: free_quota
 quota_window: daily
 quota_cap: 100000
-known_rate_limit:
-  value: 100000
-  unit: per_day
-  source_url: https://docs.etherscan.io/etherscan-v2/rate-limits
 price_cents: 2
 is_free_tier: false
 input_schema:
@@ -29,7 +25,7 @@ input_schema:
       description: Wallet address (0x...)
     chain_id:
       type: string
-      description: "Chain ID (1=Ethereum, 8453=Base). Default: 1"
+      description: "Chain ID. Only 1 (Ethereum mainnet) is supported. Default: 1"
 output_schema:
   type: object
   example:
@@ -52,7 +48,7 @@ output_schema:
       type: string
     first_tx_hash:
       type: string
-data_source: Etherscan (Account History API)
+data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -82,8 +78,14 @@ output_field_reliability:
 limitations:
   - title: null
     text: >-
-      Output reflects Etherscan (Account History API) at query time. Dependent on upstream API availability; may degrade
+      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
       if the provider rate-limits or is temporarily unavailable.
     category: availability
+    severity: info
+    workaround: null
+  - title: "Ethereum mainnet only"
+    text: >-
+      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+    category: coverage
     severity: info
     workaround: null

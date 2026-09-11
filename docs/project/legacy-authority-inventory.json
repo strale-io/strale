@@ -738,7 +738,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f145c4ac9e4419c9d7b971f0c038b7ee91b5f926e47be768061bba93b8b59386",
+      "sha256": "e955d0baf8041ddccaf0c21ed745bce982b40244762ff48b5e4d9a213090be1e",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -859,6 +859,7 @@
         "archive/sessions/handoff-from-code/2026-04-16-frontend-redesign-session1.md",
         "archive/superseded/manifests-drafts/mexican-company-data.yaml",
         "config/env-manifest.schema.json",
+        "config/vendors.yaml",
         "context7.json",
         "design/PROVENANCE.md",
         "design/README.md",

@@ -24,18 +24,20 @@ not a mapping exercise.
 Every row cites a URL or a repository path as `evidence`. No row was
 populated from memory.
 
-**The source set is closed and named (settled in review round 2).** This
-population reads exactly five sources, listed below. The fifth,
-`docs/company/DIRECTORY-MAP.md`, is included because it is the current
-compiled map of directory presence (as of 2026-08-15) and already backed
-the Glama and Smithery rows; every surface it records gets a row, cited as
-`evidence` and never copied into the row. An earlier wording ("any
-repository document that records evidence is a source") was open-ended:
-each review round found one more document, so it could never be complete.
-Other repository documents that also record distribution evidence are
-named under "What was considered and excluded", with the reason, and
-reconciling them against this register is a named follow-up, not silently
-skipped.
+**The source set is closed and named.** This population reads exactly
+eight sources, listed below. The fifth, `docs/company/DIRECTORY-MAP.md`,
+is included because it is the current compiled map of directory presence
+(as of 2026-08-15) and already backed the Glama and Smithery rows; every
+surface it records gets a row, cited as `evidence` and never copied into
+the row. An earlier wording ("any repository document that records
+evidence is a source") was open-ended: each review round found one more
+document, so it could never be complete. The sixth, seventh and eighth
+sources -- `archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md`,
+its sibling `traffic-generation-plan.md`, and
+`docs/company/DISTRIBUTION-FINDINGS.md` -- were named under "What was
+considered and excluded" when this register was first populated, and were
+reconciled into it in a follow-up batch (M3, 2026-09-11); see that
+section, now retitled, for what the reconciliation found and changed.
 
 1. **The four root discovery manifests.** Read in full: `context7.json`,
    `glama.json`, `server.json`, `smithery.yaml`. One `registry-listing` row
@@ -177,22 +179,81 @@ skipped.
      itself records x402scan's presence as unconfirmed, not this file's
      to resolve.
 
-## What was considered and excluded
+6. **`archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md`**,
+   a 2026-08-12 read-only audit of every machine-discovery channel. Read in
+   full for the reconciliation batch (M3, 2026-09-11). Named as a source
+   because its verified findings covered surfaces the register held as
+   `unknown` (agent-tools.cloud, upgraded to `listed` after a today-dated
+   re-check) and surfaces it did not track at all (PulseMCP, the LangChain
+   providers page PR, Merit's awesome-agentic-commerce list, LobeHub Skills
+   marketplace, and several verified-absent x402/MCP surfaces: x402-list.com,
+   the x402.org ecosystem page, Anthropic Connectors Directory). See
+   "Reconciliation batch (M3, 2026-09-11)" below for the row-by-row
+   changes.
 
-- **Other repository documents with distribution evidence, outside the
-  closed source set.** `archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md`
-  and its sibling `traffic-generation-plan.md` (a 2026-08-12 audit with
-  verified listing findings, some for surfaces this register tracks as
-  `unknown`, for example an API-verified agent-tools.cloud listing, and
-  some for surfaces it does not track, such as PulseMCP, the LangChain
-  providers page, Merit's awesome-agentic-commerce list and LobeHub
-  Skills), and `docs/company/DISTRIBUTION-FINDINGS.md` (a business analysis
-  whose Coinbase Bazaar figure `DIRECTORY-MAP.md` later corrected). They
-  are left out of this population to keep the source set closed, not
-  because their evidence is weaker: some of it is stronger than the
-  crawler counts used for rows here. **Follow-up:** a reconciliation batch
-  should read them, add the surfaces they prove, and upgrade rows whose
-  status they prove, each citing the document and its date.
+7. **`archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md`**,
+   the playbook's sibling document (same date), which corrects three of the
+   playbook's own claims (endpoint counts, `?src=` gateway safety, the
+   `composio-strale` authenticity flag) and adds its own verified findings:
+   the confirmed Smithery duplicate listing (C-5), the YellowMCP uptime
+   grading (D-5), and several more verified-absent surfaces (Onyx Bazaar,
+   gold-402, Signal402, mcpservers.org) plus two "already listed, thought
+   unverified" corrections (mcp.so, mcpmarket.com).
+
+8. **`docs/company/DISTRIBUTION-FINDINGS.md`**, a 2026-08-15 business
+   analysis. Its Coinbase Bazaar count (41 of 334 endpoints) was a partial
+   first-page scan of the CDP index later corrected the same day by
+   `DIRECTORY-MAP.md`'s complete walk to 95 -- the register already used
+   the corrected figure; this document is named as a source because its
+   later (2026-08-15) finding on x402scan ("presence plausible but
+   unconfirmed") superseded the register's prior `listed` status, sourced
+   from an earlier (2026-04-27) handoff.
+
+## Reconciliation batch (M3, 2026-09-11)
+
+The three documents above were read in full and reconciled row by row
+against the register that existed at the time (46 surfaces, PR #642).
+Where a finding could be re-checked read-only today, it was, and a
+conclusive re-check's URL and result replaced the document as `evidence`
+(the document's finding is preserved in `notes` either way). Full detail
+is in the PR body; summary:
+
+- **7 existing rows updated:** `mcp-registry-io-github` (`unknown` ->
+  `listed`, re-verified via the registry's own API -- also refines the
+  version-drift finding to a three-way mismatch), `smithery-listing`
+  (`unknown` -> `listed`, re-verified via the real listing URL --
+  also confirms the C-5 duplicate listing is still live), `agent-tools-cloud-listing`
+  (`unknown` -> `listed`, re-verified via the venue's own API),
+  `yellowmcp-listing` (`unknown` -> `listed`, re-verified via the venue's
+  own page, closely matching the document's uptime figure),
+  `x402scan-registration` (`listed` -> `unknown`, the later document's
+  finding wins because today's re-check was inconclusive),
+  `coinbase-x402-bazaar-listing` (status unchanged; notes gained the
+  corrected-count history), `glama-listing` (status unchanged; notes
+  gained the unclaimed-listing detail).
+- **13 rows added**, each citing one of the three documents (or a
+  conclusive today-dated re-check): `pulsemcp-listing`,
+  `langchain-providers-page-pr`, `merit-awesome-agentic-commerce-listing`,
+  `lobehub-skills-listing`, `x402-list-listing`, `x402-org-ecosystem-listing`,
+  `onyx-bazaar-listing`, `gold-402-listing`, `signal402-listing`,
+  `mcpservers-org-listing`, `anthropic-connectors-listing`,
+  `mcp-so-listing` (re-verified `listed` via a today-dated redirect
+  check), `mcpmarket-com-listing`.
+- **Rows named in the documents but not added**, on the same "no evidenced
+  Strale-relevant status" basis the original population already used to
+  exclude bare candidate targets: awesome-list repositories named only as
+  active PR-accepting targets with no verified finding for or against a
+  Strale listing (`kyrolabs/awesome-langchain`,
+  `slavakurilyak/awesome-ai-agents`, `aloth/awesome-ai-agents`,
+  `kyrolabs/awesome-agents`), Composio (package exists, no submission
+  attempted or evidenced), the CrewAI Enterprise Marketplace (a
+  speculative future artifact, not a current finding), and A2A registries
+  whose fetch was blocked with no earlier evidence either way
+  (`a2a-registry.org`, `a2aregistry.org`) -- consistent with the schema's
+  own rule that a verified absence is `unknown`, never a row invented from
+  an unverified guess.
+
+## What was considered and excluded
 
 - **`packages/skill/`** (a `SKILL.md` file distributed via the universal
   agent-skill convention, referenced against `agentskills.io`) carries no
@@ -205,11 +266,11 @@ skipped.
 
 ## Population summary
 
-46 surfaces (34 from sources 1-4, plus 12 from `DIRECTORY-MAP.md`, source
-5, added in review rounds 1 and 2): 18 `registry-listing`, 10
-`directory`, 6 `framework-pr`, 12 `package`. By status: 12 `published`, 13
-`open`, 3 `closed`, 13 `unknown`, 3 `listed`, 1 `rejected`, 1
-`submitted`. `npm run
+59 surfaces (46 from the original five-source population, plus 13 added in
+the M3 reconciliation batch from sources 6-8): 28 `registry-listing`, 12
+`directory`, 7 `framework-pr`, 12 `package`. By status: 12 `published`, 13
+`open`, 3 `closed`, 18 `unknown`, 10 `listed`, 1 `rejected`, 1
+`submitted`, 1 `merged`. `npm run
 distribution:check` confirms these counts against the committed file at
 every run.
 
