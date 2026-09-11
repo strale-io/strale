@@ -1,0 +1,200 @@
+# Protocol coverage manifest (T6 M3 batch 7).
+#
+# Each row maps a mandatory protocol/rule currently governing this repository:
+# the ten CLAUDE.md protocols/rules mirrored under docs/governance/protocols/
+# (T6 M3 batches 6a, 6b and 7), plus production authority, whose full text
+# lives in docs/company/CHARTER.md rather than CLAUDE.md. Checked by
+# scripts/protocol-coverage-lib.mjs (npm run protocols:coverage):
+# schema validity, unique ids, that every full_body / decision_record /
+# enforced_by path exists, that every mirror file under
+# docs/governance/protocols/ and every protocol-shaped CLAUDE.md heading has
+# a row, and that docs/project/PROTOCOL-ROUTER.md (generated from this file)
+# is up to date. authority_active stays false: this manifest and the router
+# it generates carry no authority of their own until the founder-gated M4
+# cutover. CLAUDE.md remains the sole authority for the ten mirrored rows;
+# docs/company/CHARTER.md remains the authority for production authority.
+schema_version: 1
+authority_active: false
+protocols:
+  - id: session-contract
+    name: "Session contract (both tools, every session)"
+    trigger: >-
+      Every session, both tools, at start (orient via docs/programs/README.md
+      and the active track) and before stopping (the handoff gate must pass).
+    full_body: docs/governance/protocols/SESSION_CONTRACT.md
+    source: "CLAUDE.md heading: Session contract — both tools, every session"
+    decision: none
+    decision_reason: >-
+      Establishes session workflow directly in CLAUDE.md; not tied to a
+      numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/handoff/handoff-check.mjs
+      - .githooks/pre-commit
+      - .githooks/pre-push
+      - .claude/settings.json
+
+  - id: distribution-pr-integrity
+    name: "Distribution PR Integrity Protocol (DEC-20260422-A)"
+    trigger: >-
+      A session touches a PR on a repo outside strale-io/* or publishes/
+      modifies a *-strale package.
+    full_body: docs/governance/protocols/DISTRIBUTION_PR_INTEGRITY.md
+    source: "CLAUDE.md heading: Distribution PR Integrity Protocol (DEC-20260422-A)"
+    decision: DEC-20260422-A
+    decision_record: docs/decisions/records/DEC-20260422-A--git-3b256587.md
+    enforced_by:
+      - docs/governance/protocols/DISTRIBUTION_PR_PREFLIGHT.md
+      - apps/api/scripts/check-framework-packages.mjs
+
+  - id: capability-onboarding
+    name: "Capability Onboarding Protocol (DEC-20260320-B)"
+    trigger: >-
+      A session creates, modifies, or onboards a capability: new executor
+      file in src/capabilities/, new or modified capabilities DB row, new
+      slug, manifest file, seed entry, or the prompt mentions adding a
+      capability.
+    full_body: docs/governance/protocols/CAPABILITY_ONBOARDING.md
+    source: "CLAUDE.md heading: Capability Onboarding Protocol (DEC-20260320-B)"
+    decision: DEC-20260320-B
+    decision_record: docs/decisions/records/DEC-20260320-B.md
+    enforced_by:
+      - apps/api/scripts/onboard.ts
+      - apps/api/scripts/validate-capability.ts
+      - apps/api/scripts/smoke-test.ts
+
+  - id: audit-followup-test-coverage
+    name: "Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
+    trigger: >-
+      A commit introduces or substantially modifies a code path in response
+      to a cert-audit finding (Y-, A-, B-, RED-, MED-, CRIT-, F-AUDIT-
+      numbered), or touches a wallet transaction, audit-trail builder,
+      chain-integrity primitive, spend-cap check, or idempotency check.
+    full_body: docs/governance/protocols/AUDIT_FOLLOWUP_TEST_COVERAGE.md
+    source: "CLAUDE.md heading: Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
+    decision: DEC-20260504-A
+    decision_record: docs/decisions/records/DEC-20260504-A.md
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by PR review alone. No dedicated script checks that a
+      cert-audit-numbered commit carries a regression test.
+
+  - id: bulk-operation-deploy
+    name: "Bulk-Operation Deploy Protocol (DEC-20260504-B)"
+    trigger: >-
+      A deploy fixes a long-silent bulk operation (retention, archival,
+      reconciliation, batch processing, periodic cleanup).
+    full_body: docs/governance/protocols/BULK_OPERATION_DEPLOY.md
+    source: "CLAUDE.md heading: Bulk-Operation Deploy Protocol (DEC-20260504-B)"
+    decision: DEC-20260504-B
+    decision_record: docs/decisions/records/DEC-20260504-B.md
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by PR review alone. No dedicated script audits accumulated
+      workload before a bulk-operation deploy.
+
+  - id: deploy-mechanism-verification
+    name: "Deploy Mechanism Verification Protocol (DEC-20260504-C)"
+    trigger: >-
+      A PR adds a code path that depends on a deploy-pipeline behavior:
+      migrations running, env vars read, build steps, startup hooks,
+      scheduled jobs, cron triggers.
+    full_body: docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md
+    source: "CLAUDE.md heading: Deploy Mechanism Verification Protocol (DEC-20260504-C)"
+    decision: DEC-20260504-C
+    decision_record: docs/decisions/records/DEC-20260504-C.md
+    enforced_by:
+      - scripts/scheduled-reachability-lib.mjs
+      - scripts/check-scheduled-reachability.mjs
+
+  - id: shared-checkout-rule
+    name: "Shared-Checkout Rule (concurrency safety)"
+    trigger: >-
+      Any session or agent works in this checkout at all; before branch-
+      switching or a git-history-editing command in a non-isolated worktree.
+    full_body: docs/governance/protocols/SHARED_CHECKOUT_RULE.md
+    source: "CLAUDE.md heading: Shared-Checkout Rule (concurrency safety)"
+    decision: none
+    decision_reason: >-
+      Concurrency-safety rule established directly in CLAUDE.md; not tied
+      to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/guard-tree-integrity.mjs
+      - scripts/guard-worktree-isolation.mjs
+      - .claude/settings.json
+
+  - id: worktree-node-modules-hazard
+    name: "Worktree node_modules Hazard"
+    trigger: >-
+      A session creates a worktree and considers linking or junctioning its
+      node_modules to the main checkout, or removes a worktree.
+    full_body: docs/governance/protocols/WORKTREE_NODE_MODULES_HAZARD.md
+    source: "CLAUDE.md heading: Worktree node_modules Hazard"
+    decision: none
+    decision_reason: >-
+      Concurrency-safety rule established directly in CLAUDE.md; not tied
+      to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/guard-worktree-isolation.mjs
+
+  - id: test-infrastructure-cost-principles
+    name: "Test Infrastructure Cost Principles (always enforce)"
+    trigger: >-
+      Always: writing or modifying a health probe, a capability that calls
+      a paid external API, or a test suite's scheduling behavior.
+    full_body: docs/governance/protocols/TEST_INFRASTRUCTURE_COST_PRINCIPLES.md
+    source: "CLAUDE.md heading: Test Infrastructure Cost Principles (always enforce)"
+    decision: none
+    decision_reason: >-
+      Cost-control principles established directly in CLAUDE.md; not tied
+      to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - apps/api/src/lib/dependency-manifest.ts
+      - apps/api/src/lib/test-runner.ts
+
+  - id: wire-shape-trust-endpoints
+    name: "Wire-shape rule for /v1/public/ops/trust/* endpoints"
+    trigger: >-
+      An endpoint under /v1/public/ops/trust/* (or any future endpoint
+      surfacing money values, scores, or anything formattable) is added or
+      changed.
+    full_body: docs/governance/protocols/WIRE_SHAPE_TRUST_ENDPOINTS.md
+    source: "CLAUDE.md heading: Wire-shape rule for /v1/public/ops/trust/* endpoints"
+    decision: none
+    decision_reason: >-
+      Serialization rule established directly in CLAUDE.md following a
+      2026-04-30 cert-audit finding; not tied to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by PR review alone. No dedicated script or test currently
+      asserts the *_cents / no-formatted-string invariant on
+      /v1/public/ops/trust/* responses.
+
+  - id: production-authority
+    name: "Production authority (DEC-20260822-B)"
+    trigger: >-
+      Any code path that checks or constructs write-credential authority
+      for a production mutation, or that reasons about SYSTEM_ACTING,
+      FOUNDER_DECISION, or AUTHORIZATION_UNAVAILABLE status.
+    full_body: docs/company/CHARTER.md
+    source: >-
+      docs/company/CHARTER.md heading: What "authorized" means is defined
+      in code, not here
+    decision: DEC-20260822-B
+    decision_record: null
+    decision_record_note: >-
+      DEC-20260822-B is named in CLAUDE.md's DEC-20260822-A entry and in
+      docs/company/CHARTER.md; no docs/decisions/records/DEC-20260822-B.md
+      file exists in this repository.
+    enforced_by:
+      - apps/api/src/lib/production-authority.ts
+      - apps/api/src/lib/charter-authorization-binding.test.ts

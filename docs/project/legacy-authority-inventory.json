@@ -104,7 +104,8 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
-        "scripts/m2-quote-fidelity.mjs"
+        "scripts/m2-quote-fidelity.mjs",
+        "scripts/protocol-coverage-lib.mjs"
       ]
     },
     {
@@ -367,6 +368,7 @@
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
         "scripts/candidates.test.mjs",
+        "scripts/check-protocol-coverage.mjs",
         "scripts/check-protocol-extraction.mjs",
         "scripts/codex-backlog-lib.mjs",
         "scripts/codex-backlog.test.mjs",
@@ -377,6 +379,8 @@
         "scripts/m2-closure-register.test.mjs",
         "scripts/m2-quote-fidelity.mjs",
         "scripts/m2-quote-fidelity.test.mjs",
+        "scripts/protocol-coverage-lib.mjs",
+        "scripts/protocol-coverage.test.mjs",
         "scripts/protocol-extraction-lib.mjs",
         "scripts/protocol-extraction.test.mjs",
         "scripts/receipts-lib.mjs",
@@ -622,6 +626,7 @@
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.test.mjs",
+        "scripts/protocol-coverage-lib.mjs",
         "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs"
@@ -691,6 +696,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
         "scripts/m2-closure-register-lib.mjs",
+        "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs",
         "scripts/vendors-lib.mjs",

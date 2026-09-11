@@ -506,6 +506,18 @@ jobs:
       # cutover; this only proves the two copies have not silently diverged.
       - run: npm run protocols:check
       - run: npm run protocols:test
+      # Protocol coverage manifest (T6 M3 batch 7,
+      # docs/project/protocol-coverage.yaml): maps every mandatory
+      # protocol/rule to its trigger, full-body path, governing decision,
+      # decision record, and enforcing code/tests, proves every referenced
+      # path exists, proves every mirror file and every protocol-shaped or
+      # already-mirrored CLAUDE.md heading has a row, and proves the
+      # generated docs/project/PROTOCOL-ROUTER.md is up to date. A single
+      # additional check (a decision id named next to "protocol" with no
+      # manifest row) is report-only until the M4 cutover. authority_active
+      # stays false.
+      - run: npm run protocols:coverage
+      - run: npm run protocols:coverage:test
       # Scheduled mechanism reachability (T6 M3 batch 5,
       # config/scheduled-mechanisms.yaml): parses every
       # .github/workflows/*.yml with the yaml package and proves, for every

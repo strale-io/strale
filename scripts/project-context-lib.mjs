@@ -11,6 +11,7 @@ import { dirname, extname, resolve, sep } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
 import { decisionGeneratedFiles } from "./decision-records-lib.mjs";
+import { protocolRouterGeneratedFiles } from "./protocol-coverage-lib.mjs";
 
 export const M1_BANNER =
   "> [!CAUTION]\n" +
@@ -68,13 +69,12 @@ No authoritative recent-work feed is published during M1.`,
     `This template will define document contracts, promotion from evidence to
 truth, update duties, and session-close behavior after cutover review.`,
   ),
-  "docs/project/PROTOCOL-ROUTER.md": skeleton(
-    "protocol-router",
-    "Protocol Router",
-    `No protocol routes are active in M1. Mandatory protocol text remains in the
-existing entrypoints and Claude workflow files until it is extracted and
-coverage-checked in later milestones.`,
-  ),
+  // "docs/project/PROTOCOL-ROUTER.md" moved out of the M1 skeleton set in
+  // T6 M3 batch 7: it is now a generated M2 candidate document (see
+  // M2_GENERATED_DOCUMENTS and protocolRouterGeneratedFiles below),
+  // produced from docs/project/protocol-coverage.yaml rather than a
+  // hand-authored placeholder. It stays inactive (authority_active: false)
+  // until the founder-gated M4 cutover.
   "docs/governance/README.md": skeleton(
     "governance-navigation",
     "Governance",
@@ -120,10 +120,19 @@ diverges from the \`CLAUDE.md\` section it copies.
 - \`SHARED_CHECKOUT_RULE.md\`: Shared-Checkout Rule (concurrency safety).
   The "Worktree node_modules Hazard" section that follows it in
   \`CLAUDE.md\` is a separate rule, not part of this mirror.
+- \`WORKTREE_NODE_MODULES_HAZARD.md\`: Worktree node_modules Hazard, the
+  rule that follows \`SHARED_CHECKOUT_RULE.md\` above in \`CLAUDE.md\`.
+- \`TEST_INFRASTRUCTURE_COST_PRINCIPLES.md\`: Test Infrastructure Cost
+  Principles (always enforce).
+- \`WIRE_SHAPE_TRUST_ENDPOINTS.md\`: Wire-shape rule for
+  \`/v1/public/ops/trust/*\` endpoints.
 
-All seven mandatory protocols now have inactive, checked mirrors (M3 batch
-6a and 6b). Next is the protocol coverage manifest and a populated router,
-\`docs/project/PROTOCOL-ROUTER.md\` (M3 batch 7).`,
+All ten mandatory protocols/rules now have inactive, checked mirrors (M3
+batches 6a, 6b and 7). Each one, its governing decision (or the reason it
+has none), and its enforcing code/tests are recorded in
+\`docs/project/protocol-coverage.yaml\`, checked by \`npm run
+protocols:coverage\`; \`docs/project/PROTOCOL-ROUTER.md\` is generated from
+that manifest and stays inactive until the founder-gated M4 cutover.`,
   ),
 });
 
@@ -140,6 +149,7 @@ export const M2_CANDIDATE_DOCUMENTS = Object.freeze({
 
 export const M2_GENERATED_DOCUMENTS = Object.freeze({
   "docs/project/DECISIONS.md": "generated-decision-index",
+  "docs/project/PROTOCOL-ROUTER.md": "protocol-router",
 });
 
 export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
@@ -601,6 +611,7 @@ export function generatedFiles(root) {
   return {
     ...SKELETON_DOCUMENTS,
     ...decisionGeneratedFiles(root),
+    ...protocolRouterGeneratedFiles(root),
     "docs/project/schemas/project-document.schema.json":
       `${JSON.stringify(PROJECT_DOCUMENT_SCHEMA, null, 2)}\n`,
     "docs/project/schemas/operator-actions.schema.json":

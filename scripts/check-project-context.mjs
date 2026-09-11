@@ -31,6 +31,7 @@ function finding(code, path, detail) {
 
 const GENERATED_CONTEXT_FILES = [
   "docs/project/DECISIONS.md",
+  "docs/project/PROTOCOL-ROUTER.md",
   "docs/project/RECENT.md",
   "docs/project/legacy-authority-inventory.json",
   "docs/project/schemas/project-document.schema.json",

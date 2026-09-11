@@ -40,6 +40,8 @@
     "candidates:test": "node --test scripts/candidates.test.mjs",
     "protocols:check": "node scripts/check-protocol-extraction.mjs",
     "protocols:test": "node --test scripts/protocol-extraction.test.mjs",
+    "protocols:coverage": "node scripts/check-protocol-coverage.mjs",
+    "protocols:coverage:test": "node --test scripts/protocol-coverage.test.mjs",
     "scheduled:check": "node scripts/check-scheduled-reachability.mjs",
     "scheduled:test": "node --test scripts/scheduled-reachability.test.mjs",
     "distribution:check": "node scripts/check-distribution.mjs",
