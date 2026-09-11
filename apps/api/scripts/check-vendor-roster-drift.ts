@@ -77,7 +77,7 @@ const ACTIVE_VENDOR_STACK_PAGE = "https://app.notion.com/p/35367c87082c812e88d1d
 
 // This file is apps/api/scripts/check-vendor-roster-drift.ts; the repository
 // root is three levels up (scripts -> api -> apps -> root). Resolved from
-// the script's own location, never from process.cwd() — the
+// the script's own location, never from process.cwd(), because
 // weekly-drift.yml job runs this with
 // `cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts`, so cwd is
 // apps/api, not the repository root.
