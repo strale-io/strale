@@ -33,10 +33,23 @@ export const AUTO_REGISTER_PATH = "apps/api/src/capabilities/auto-register.ts";
 export const COVERAGE_MATRIX_DIR = "apps/api/coverage-matrix";
 export const ENV_MANIFEST_PATH = "config/env-manifest.yaml";
 export const DECISIONS_DIR = "docs/decisions/records";
+export const PLATFORM_FACTS_PATH = "apps/api/src/lib/platform-facts.ts";
+export const STARTUP_MIGRATIONS_PATH = "apps/api/src/lib/startup-migrations.ts";
 
 const RETIRED_STATES = new Set(["retired", "deprecated"]);
 const ACTIVE_STATES = new Set(["active", "fallback"]);
 const HELD_STATES = new Set(["held"]);
+/** States a STALE_VENDORS-named vendor's current lifecycle state is allowed
+ * to be in (T6 batch 4a, item 1). active/fallback/unknown are excluded: a
+ * vendor Strale is actually using, or whose state is not recorded, has no
+ * business being on the never-active-in-customer-copy list. */
+const STALE_ALLOWED_STATES = new Set(["candidate", "evaluating", "held", "rejected", "deprecated", "retired"]);
+/** States that make a register vendor a candidate for the STALE_VENDOR_LIST_MISSING warning. */
+const STALE_LIST_CANDIDATE_STATES = new Set(["rejected", "deprecated", "retired"]);
+/** dependency-manifest.ts tiers the boot-time sync in startup-migrations.ts
+ * actually loops over (T6 batch 4a, item 2). Every other tier is skipped by
+ * construction, never by the register's own choice. */
+const SYNCED_TIERS = new Set(["paid", "self-hosted"]);
 /** Forward-only lifecycle-state ordering is not required by the design (a
  * vendor can go active -> held -> active again), so history rule 8 checks
  * only that existing entries are byte-identical and in place, never that
@@ -124,7 +137,7 @@ export function extractProviders(root) {
   for (const el of providersArrayNode.elements) {
     const obj = unwrapObjectLiteral(el);
     if (!obj || !ts.isObjectLiteralExpression(obj)) continue;
-    const rec = { name: null, retired: false, capabilities: [], fallbackCapabilities: [] };
+    const rec = { name: null, retired: false, tier: null, capabilities: [], fallbackCapabilities: [] };
     for (const prop of obj.properties) {
       if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
       const key = prop.name.text;
@@ -133,6 +146,8 @@ export function extractProviders(root) {
       } else if (key === "retired") {
         const init = unwrapObjectLiteral(prop.initializer);
         rec.retired = init?.kind === ts.SyntaxKind.TrueKeyword;
+      } else if (key === "tier" && ts.isStringLiteralLike(prop.initializer)) {
+        rec.tier = prop.initializer.text;
       } else if (key === "capabilities") {
         rec.capabilities = stringArrayLiteral(sf, prop.initializer);
       } else if (key === "fallbackCapabilities") {
@@ -142,6 +157,127 @@ export function extractProviders(root) {
     if (rec.name) providers.push(rec);
   }
   return providers;
+}
+
+/**
+ * Parses apps/api/src/lib/platform-facts.ts with the TypeScript compiler API
+ * and returns the string literals in the `STALE_VENDORS` array (an
+ * `as const` wrapper, if present, is unwrapped). Any element that is not a
+ * plain string literal is a finding, never silently skipped: a computed or
+ * templated entry would make a stale-vendor name invisible to the
+ * cross-check.
+ */
+export function extractStaleVendors(root) {
+  const filePath = resolve(root, PLATFORM_FACTS_PATH);
+  const text = readFileSync(filePath, "utf8");
+  const sf = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  let arrayNode = null;
+  function find(node) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "STALE_VENDORS" &&
+      node.initializer
+    ) {
+      const init = unwrapObjectLiteral(node.initializer);
+      if (ts.isArrayLiteralExpression(init)) arrayNode = init;
+    }
+    ts.forEachChild(node, find);
+  }
+  find(sf);
+  if (!arrayNode) {
+    throw new Error(`could not find STALE_VENDORS array literal in ${PLATFORM_FACTS_PATH}`);
+  }
+
+  const names = [];
+  for (const el of arrayNode.elements) {
+    if (!ts.isStringLiteralLike(el)) {
+      const { line } = sf.getLineAndCharacterOfPosition(el.getStart(sf));
+      throw new Error(`unrecognised STALE_VENDORS element shape at ${PLATFORM_FACTS_PATH}:${line + 1}`);
+    }
+    names.push(el.text);
+  }
+  return names;
+}
+
+/**
+ * Parses apps/api/src/lib/startup-migrations.ts with the TypeScript compiler
+ * API, locates the `sql` tagged template containing the
+ * `INSERT INTO vendor_accounts (...) VALUES ...` statement, and returns the
+ * first (provider_name) value of every top-level VALUES tuple. The tuple
+ * text itself is split by balanced-paren scanning of the isolated template
+ * literal, never by a regex over the whole file. Any shape the parser does
+ * not recognise (no such tagged template, no VALUES keyword, a tuple whose
+ * first value is not a plain string literal) throws, so a future rewrite of
+ * this statement fails the check instead of silently reporting zero seeded
+ * providers.
+ */
+export function extractVendorAccountsSeed(root) {
+  const filePath = resolve(root, STARTUP_MIGRATIONS_PATH);
+  const text = readFileSync(filePath, "utf8");
+  const sf = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  let templateText = null;
+  function find(node) {
+    if (ts.isTaggedTemplateExpression(node) && ts.isIdentifier(node.tag) && node.tag.text === "sql") {
+      const template = node.template;
+      if (ts.isNoSubstitutionTemplateLiteral(template) && template.text.includes("INSERT INTO vendor_accounts")) {
+        templateText = template.text;
+      }
+    }
+    ts.forEachChild(node, find);
+  }
+  find(sf);
+  if (templateText === null) {
+    throw new Error(`could not find a sql\`INSERT INTO vendor_accounts (...) VALUES ...\` tagged template in ${STARTUP_MIGRATIONS_PATH}`);
+  }
+
+  const valuesMatch = /\bVALUES\b/i.exec(templateText);
+  if (!valuesMatch) {
+    throw new Error(`the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH} has no VALUES keyword`);
+  }
+  let tuplesText = templateText.slice(valuesMatch.index + valuesMatch[0].length);
+  // The tuple list ends at "ON CONFLICT" (its "(provider_name)" column list is
+  // not a data tuple); cut there when present so the scan below never walks
+  // past the last real VALUES tuple.
+  const onConflictMatch = /\bON\s+CONFLICT\b/i.exec(tuplesText);
+  if (onConflictMatch) tuplesText = tuplesText.slice(0, onConflictMatch.index);
+
+  // Balanced-paren scan: each top-level "(...)" after VALUES is one tuple.
+  const tuples = [];
+  let i = 0;
+  while (i < tuplesText.length) {
+    if (tuplesText[i] === "(") {
+      let depth = 1;
+      let j = i + 1;
+      while (j < tuplesText.length && depth > 0) {
+        if (tuplesText[j] === "(") depth++;
+        else if (tuplesText[j] === ")") depth--;
+        j++;
+      }
+      if (depth !== 0) {
+        throw new Error(`unbalanced parentheses in the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH}`);
+      }
+      tuples.push(tuplesText.slice(i + 1, j - 1));
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  if (tuples.length === 0) {
+    throw new Error(`found no VALUES tuples in the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH}`);
+  }
+
+  const names = [];
+  for (const tuple of tuples) {
+    const m = /^\s*'([^']*)'/.exec(tuple);
+    if (!m) {
+      throw new Error(`a VALUES tuple in the INSERT INTO vendor_accounts statement in ${STARTUP_MIGRATIONS_PATH} does not start with a plain string literal: ${tuple.slice(0, 40)}`);
+    }
+    names.push(m[1]);
+  }
+  return names;
 }
 
 /**
@@ -430,6 +566,131 @@ export function checkProvidersCrossCheck(root, register) {
   return findings;
 }
 
+// ── rule 5b: STALE_VENDORS resolve + state (T6 batch 4a, item 1) ────────
+
+/**
+ * Every apps/api/src/lib/platform-facts.ts STALE_VENDORS string must resolve
+ * to exactly one register vendor (STALE_VENDOR_UNREGISTERED otherwise), and
+ * that vendor's current lifecycle state must be one of the "not in use"
+ * states (STALE_VENDOR_STATE_MISMATCH otherwise). Separately, every register
+ * vendor whose current state is rejected/deprecated/retired but whose name
+ * and aliases are all absent from STALE_VENDORS is reported as a warning
+ * (STALE_VENDOR_LIST_MISSING) - closing that gap means editing
+ * platform-facts.ts, which is runtime tooling and waits for M4.
+ */
+export function checkStaleVendorsCrossCheck(root, register) {
+  const findings = [];
+  const warnings = [];
+  const vendors = register.vendors ?? [];
+  const owners = buildResolutionIndex(vendors);
+  const byId = new Map(vendors.map((v) => [v.id, v]));
+
+  let staleNames;
+  try {
+    staleNames = extractStaleVendors(root);
+  } catch (error) {
+    findings.push({ code: "STALE_VENDORS_UNREADABLE", file: PLATFORM_FACTS_PATH, detail: String(error) });
+    return { findings, warnings };
+  }
+
+  const staleSet = new Set(staleNames);
+
+  for (const name of staleNames) {
+    const vendorId = resolveOne(owners, name);
+    if (!vendorId) {
+      findings.push({
+        code: "STALE_VENDOR_UNREGISTERED",
+        file: PLATFORM_FACTS_PATH,
+        detail: `STALE_VENDORS entry "${name}" has no matching vendor id, name, or alias in ${REGISTER_PATH}`,
+      });
+      continue;
+    }
+    const vendor = byId.get(vendorId);
+    const lifecycle = vendor.lifecycle ?? [];
+    const currentState = lifecycle[lifecycle.length - 1]?.state;
+    if (!STALE_ALLOWED_STATES.has(currentState)) {
+      findings.push({
+        code: "STALE_VENDOR_STATE_MISMATCH",
+        file: REGISTER_PATH,
+        detail: `${vendorId} is named in STALE_VENDORS ("${name}") but its current lifecycle state is "${currentState}", expected one of [${[...STALE_ALLOWED_STATES].join(", ")}]`,
+      });
+    }
+  }
+
+  for (const v of vendors) {
+    const lifecycle = v.lifecycle ?? [];
+    const currentState = lifecycle[lifecycle.length - 1]?.state;
+    if (!STALE_LIST_CANDIDATE_STATES.has(currentState)) continue;
+    const namesToCheck = [v.name, ...(v.aliases ?? [])];
+    if (!namesToCheck.some((n) => staleSet.has(n))) {
+      warnings.push({
+        code: "STALE_VENDOR_LIST_MISSING",
+        file: PLATFORM_FACTS_PATH,
+        detail: `${v.id} is currently "${currentState}" but neither its name nor any of its aliases appears in STALE_VENDORS`,
+      });
+    }
+  }
+
+  return { findings, warnings };
+}
+
+// ── rule 5c: providers the boot-time dependency sync skips (T6 batch 4a, item 2) ─
+
+/**
+ * The loop in startup-migrations.ts that upserts vendor_capability_dependencies
+ * from PROVIDERS only runs for providers whose tier is paid or self-hosted
+ * AND which have a vendor_accounts row seeded by that same file's
+ * INSERT INTO vendor_accounts statement. A non-retired provider outside that
+ * set is reported (DEPENDENCY_SYNC_SKIPPED, warning): its capability edges
+ * are never written, so vendor-control-tower.ts (which reads that table to
+ * decide which capabilities/solutions to suspend) suspends nothing if this
+ * provider fails.
+ */
+export function checkDependencySyncSkipped(root) {
+  const findings = [];
+  const warnings = [];
+
+  let providers;
+  try {
+    providers = extractProviders(root);
+  } catch (error) {
+    findings.push({ code: "PROVIDERS_UNREADABLE", file: DEPENDENCY_MANIFEST_PATH, detail: String(error) });
+    return { findings, warnings };
+  }
+
+  let seededNames;
+  try {
+    seededNames = new Set(extractVendorAccountsSeed(root));
+  } catch (error) {
+    findings.push({ code: "VENDOR_ACCOUNTS_SEED_UNREADABLE", file: STARTUP_MIGRATIONS_PATH, detail: String(error) });
+    return { findings, warnings };
+  }
+
+  for (const p of providers) {
+    if (p.retired) continue;
+    const hasDependencies = (p.capabilities?.length ?? 0) > 0 || (p.fallbackCapabilities?.length ?? 0) > 0;
+    if (!hasDependencies) continue;
+
+    if (!SYNCED_TIERS.has(p.tier)) {
+      warnings.push({
+        code: "DEPENDENCY_SYNC_SKIPPED",
+        file: DEPENDENCY_MANIFEST_PATH,
+        detail: `${p.name}: tier "${p.tier}" is not paid or self-hosted, so the boot-time sync in ${STARTUP_MIGRATIONS_PATH} never writes its vendor_capability_dependencies rows`,
+      });
+      continue;
+    }
+    if (!seededNames.has(p.name)) {
+      warnings.push({
+        code: "DEPENDENCY_SYNC_SKIPPED",
+        file: DEPENDENCY_MANIFEST_PATH,
+        detail: `${p.name}: tier "${p.tier}" but not seeded at boot by ${STARTUP_MIGRATIONS_PATH}'s INSERT INTO vendor_accounts, so the sync's JOIN to vendor_accounts matches no rows for it`,
+      });
+    }
+  }
+
+  return { findings, warnings };
+}
+
 // ── rule 6: coverage-matrix + env-manifest resolution ────────────────────
 
 export function checkCoverageMatrixCrossCheck(root, register) {
@@ -487,6 +748,11 @@ export function checkDeadAliasesAndSentinels(root, register) {
   for (const p of providers) surfaceStrings.add(p.name);
   for (const row of extractCoverageMatrixProviders(root)) surfaceStrings.add(row.provider);
   for (const row of extractEnvManifestProviders(root)) surfaceStrings.add(row.provider);
+  try {
+    for (const name of extractStaleVendors(root)) surfaceStrings.add(name);
+  } catch {
+    /* STALE_VENDORS_UNREADABLE already reported by the STALE_VENDORS cross-check */
+  }
 
   for (const v of vendors) {
     for (const a of v.aliases ?? []) {
@@ -639,6 +905,12 @@ export function checkAllVendors(root, options = {}) {
   findings.push(...checkLifecycleOrdering(register));
   findings.push(...checkReferences(root, register));
   findings.push(...checkProvidersCrossCheck(root, register));
+  const staleResult = checkStaleVendorsCrossCheck(root, register);
+  findings.push(...staleResult.findings);
+  warnings.push(...staleResult.warnings);
+  const syncResult = checkDependencySyncSkipped(root);
+  findings.push(...syncResult.findings);
+  warnings.push(...syncResult.warnings);
   findings.push(...checkCoverageMatrixCrossCheck(root, register));
   findings.push(...checkEnvManifestCrossCheck(root, register));
   findings.push(...checkDeadAliasesAndSentinels(root, register));
