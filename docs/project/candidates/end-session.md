@@ -47,10 +47,15 @@ collapse to one.
 |---|---|---|
 | Live file | `.claude/commands/end-session.md` | `.agents/skills/source-command-end-session/SKILL.md` |
 | Root entrypoint referenced | `CLAUDE.md` | `AGENTS.md` |
-| Workflow directory referenced | `.claude/` | `.codex/` |
 | Journal `Actor` field (live, step 3) | `claude-code` | `Codex` |
 | To-do "in progress" ownership filter (live, step 4) | `Claude code` | `Codex` |
-| Repo-native handoff `actor` front-matter value (this draft, step 3 replacement) | `claude-code` | `codex` |
+| Repo-native handoff `actor` front-matter value (this draft, step 3 replacement) | `claude-code` | `Codex` |
+
+The draft keeps each tool's identity value exactly as the live command
+writes it today (`claude-code` and `Codex`, case included), so nothing
+that later filters on it has to learn a new spelling. The two live files
+differ only in the rows above plus their front matter and the Codex skill
+wrapper's preamble; neither refers to a `.claude/` or `.codex/` directory.
 
 ## Every live step, and its repo-native replacement
 
@@ -87,7 +92,7 @@ to the top of the same handoff file step 2 already writes:
 title: "Session log - <topic> YYYY-MM-DD"
 type: session
 source: code
-actor: claude-code        # codex on the Codex mirror
+actor: claude-code        # Codex on the Codex mirror
 action_required: false    # true if the session left explicit follow-ups
 ---
 Intent: <one line, as today>
@@ -213,6 +218,9 @@ state, DB-to-code parity, loose threads, "ready to close?") is unchanged.
   anyway and flag loudly" has no repo-native equivalent to replace - nothing
   in this draft depends on network access or an external service, so there
   is no unavailability case to guard against. Removed, not replaced.
+- If `DATABASE_URL` isn't set, skip DB checks and flag in the report.
+  Unchanged: this rule guards the close-check script's database checks and
+  has nothing to do with Notion.
 - Distinguish pre-existing issues from new ones honestly; do not hide issues
   introduced this session; do not take credit for issues not introduced this
   session. Unchanged.

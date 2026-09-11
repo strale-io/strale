@@ -8,8 +8,9 @@
 //      front matter (status: candidate, authority_active: false), and
 //      carries an M4-draft caution block.
 //   2. It names both tools' identities from its own per-tool table (the
-//      Claude Code / Codex Actor values, and the CLAUDE.md/.claude/ versus
-//      AGENTS.md/.codex/ path-naming split), so a future generator has both
+//      Claude Code / Codex Actor values, kept exactly as the live files
+//      write them, and the CLAUDE.md versus AGENTS.md entrypoint split), so a
+//      future generator has both
 //      identities to read from one text.
 //   3. Neither live command file
 //      (.claude/commands/end-session.md,
@@ -84,9 +85,12 @@ test("candidate file names both tools' identities from its per-tool table", () =
   assert.match(content, /CLAUDE\.md/, "must name CLAUDE.md");
   assert.match(content, /AGENTS\.md/, "must name AGENTS.md");
 
-  // Workflow directory naming split.
-  assert.match(content, /\.claude\//, "must name the .claude/ directory");
-  assert.match(content, /\.codex\//, "must name the .codex/ directory");
+  // The draft's handoff actor values match the live identities exactly.
+  assert.match(
+    content,
+    /handoff `actor` front-matter value[^\n]*\|\s*`claude-code`\s*\|\s*`Codex`\s*\|/,
+    "the handoff actor row must carry claude-code and Codex exactly as the live files write them",
+  );
 
   // Both live file paths, so the draft is traceable to what it replaces.
   assert.match(
