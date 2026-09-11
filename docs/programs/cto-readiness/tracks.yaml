@@ -782,6 +782,52 @@ tracks:
       sequence), and protocol full-body extraction followed by the
       coverage manifest (batches 6-7, each with its own concrete check).
       Every batch stays shadow or inactive.
+
+      M3 batch 6b merged (PR #651). M3 batch 7 is this PR:
+      docs/project/protocol-coverage.yaml, with a row for every mirrored
+      protocol/rule plus production authority, whose full text lives in
+      docs/company/CHARTER.md rather than CLAUDE.md, and
+      docs/project/protocol-coverage.schema.json, plus further mirrors
+      under docs/governance/protocols/ generated with
+      extractClaudeSectionText, never retyped:
+      TEST_INFRASTRUCTURE_COST_PRINCIPLES.md, WIRE_SHAPE_TRUST_ENDPOINTS.md,
+      and WORKTREE_NODE_MODULES_HAZARD.md. Each manifest row carries a
+      trigger, its full-body path, the CLAUDE.md (or CHARTER.md) heading it
+      is sourced from, its governing decision or the reason it has none, a
+      decision-record path or a note saying the decision is recorded only
+      in CLAUDE.md, and the enforced_by code/tests that check it (an empty
+      enforced_by carries a note that the protocol is enforced by review
+      alone). docs/project/PROTOCOL-ROUTER.md moved out of the M1 skeleton
+      set into M2_GENERATED_DOCUMENTS (project-context-lib.mjs) and is now
+      generated from the manifest by
+      protocolRouterMarkdown/protocolRouterGeneratedFiles in the new
+      scripts/protocol-coverage-lib.mjs, wired into generatedFiles() the
+      same way decisionGeneratedFiles() already is, so npm run
+      context:generate writes it and npm run context:check catches drift;
+      it stays candidate/authority_active: false and well under the plan's
+      word target. scripts/check-protocol-coverage.mjs (npm run
+      protocols:coverage, blocking) and scripts/protocol-coverage.test.mjs
+      (npm run protocols:coverage:test), wired into ci.yml next to
+      protocols:check/test, cover: schema validity, duplicate ids, a
+      missing full_body/decision_record/enforced_by path, a mirror file
+      with no manifest row, a protocol-shaped or already-mirrored CLAUDE.md
+      heading with no manifest row, and the router going stale -- one
+      planted-failure fixture each, plus a clean fixture and a real-repo
+      test. A decision id CLAUDE.md names inside a covered section (or
+      apps/api/src code cites next to the word "protocol") with no manifest
+      row is a report-only warning today, per the plan's M3-versus-M4 split;
+      the library header states it becomes blocking at the M4 cutover.
+      Planted-failure proofs were also run directly against the real
+      repository and restored: an added mirror file with no manifest row
+      confirmed MIRROR_UNCOVERED, an enforced_by path pointed at a missing
+      file confirmed ENFORCED_BY_MISSING, and a hand-edited router confirmed
+      ROUTER_STALE, each restored with git checkout before this batch's
+      commit. CLAUDE.md and docs/company/CHARTER.md are unchanged. With this
+      batch every M3 change item named in the migration plan (docs/strategy/
+      2026-08-31-repo-native-operating-model-migration.md section M3) has
+      landed in shadow or inactive form. Next is the M3 milestone review --
+      an independent review of the M3 exit criteria against the plan -- and
+      then founder-gated M4 cutover preparation.
     resume_file: archive/sessions/2026-09-11-m3-remaining-scope-inventory.md
     exit:
       - repo-native replacements testable without changing existing authority

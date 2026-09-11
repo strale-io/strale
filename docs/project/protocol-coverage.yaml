@@ -1,0 +1,445 @@
+# Protocol coverage manifest (T6 M3 batch 7; review round 1 adds
+# excluded_sections and verified_at).
+#
+# Each row maps a mandatory protocol/rule currently governing this repository:
+# the CLAUDE.md protocols/rules mirrored under docs/governance/protocols/
+# (T6 M3 batches 6a, 6b and 7), plus production authority, whose full text
+# lives in docs/company/CHARTER.md rather than CLAUDE.md. Every level-2 and
+# level-3 CLAUDE.md heading is either covered by a row here or listed in
+# excluded_sections with the reason it is not a protocol row -- there is no
+# third state. Checked by scripts/protocol-coverage-lib.mjs
+# (npm run protocols:coverage): schema validity, unique ids, that every
+# full_body / decision_record / enforced_by path exists, that every mirror
+# file under docs/governance/protocols/ has a row (MIRROR_UNCOVERED), that
+# every level-2/3 CLAUDE.md heading is covered or excluded
+# (HEADING_UNCLASSIFIED) and every excluded_sections entry still names a
+# real heading (EXCLUSION_STALE), and that docs/project/PROTOCOL-ROUTER.md
+# (generated from this file) is up to date. authority_active stays false:
+# this manifest and the router it generates carry no authority of their own
+# until the founder-gated M4 cutover. CLAUDE.md remains the sole authority
+# for the mirrored rows; docs/company/CHARTER.md remains the authority for
+# production authority.
+schema_version: 1
+authority_active: false
+verified_at: "2026-09-11"
+protocols:
+  - id: session-contract
+    name: "Session contract (both tools, every session)"
+    trigger: >-
+      Every session, both tools, at start (orient via docs/programs/README.md
+      and the active track) and before stopping (the handoff gate must pass).
+    full_body: docs/governance/protocols/SESSION_CONTRACT.md
+    source: "CLAUDE.md heading: Session contract — both tools, every session"
+    decision: none
+    decision_reason: >-
+      Establishes session workflow directly in CLAUDE.md; not tied to a
+      numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/handoff/handoff-check.mjs
+      - .githooks/pre-commit
+      - .githooks/pre-push
+      - .claude/settings.json
+
+  - id: distribution-pr-integrity
+    name: "Distribution PR Integrity Protocol (DEC-20260422-A)"
+    trigger: >-
+      A session touches a PR on a repo outside strale-io/* or publishes/
+      modifies a *-strale package.
+    full_body: docs/governance/protocols/DISTRIBUTION_PR_INTEGRITY.md
+    source: "CLAUDE.md heading: Distribution PR Integrity Protocol (DEC-20260422-A)"
+    decision: DEC-20260422-A
+    decision_record: docs/decisions/records/DEC-20260422-A--git-3b256587.md
+    enforced_by:
+      - apps/api/scripts/check-framework-packages.mjs
+
+  - id: capability-onboarding
+    name: "Capability Onboarding Protocol (DEC-20260320-B)"
+    trigger: >-
+      A session creates, modifies, or onboards a capability: new executor
+      file in src/capabilities/, new or modified capabilities DB row, new
+      slug, manifest file, seed entry, or the prompt mentions adding a
+      capability.
+    full_body: docs/governance/protocols/CAPABILITY_ONBOARDING.md
+    source: "CLAUDE.md heading: Capability Onboarding Protocol (DEC-20260320-B)"
+    decision: DEC-20260320-B
+    decision_record: docs/decisions/records/DEC-20260320-B.md
+    enforced_by:
+      - apps/api/scripts/onboard.ts
+      - apps/api/scripts/validate-capability.ts
+      - apps/api/scripts/smoke-test.ts
+
+  - id: capability-onboarding-pipeline
+    name: "Adding New Capabilities (MANDATORY PIPELINE)"
+    trigger: >-
+      A session is about to write a new capability's manifest and executor
+      and needs the exact pipeline steps and flags (--discover, --backfill,
+      --fix, --strict) rather than the protocol's trigger/rules text.
+    full_body: docs/governance/protocols/CAPABILITY_ONBOARDING_PIPELINE.md
+    source: "CLAUDE.md heading: Adding New Capabilities (MANDATORY PIPELINE)"
+    decision: DEC-20260320-B
+    decision_record: docs/decisions/records/DEC-20260320-B.md
+    enforced_by:
+      - apps/api/scripts/onboard.ts
+      - apps/api/scripts/validate-capability.ts
+      - apps/api/scripts/smoke-test.ts
+
+  - id: audit-followup-test-coverage
+    name: "Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
+    trigger: >-
+      A commit introduces or substantially modifies a code path in response
+      to a cert-audit finding (Y-, A-, B-, RED-, MED-, CRIT-, F-AUDIT-
+      numbered), or touches a wallet transaction, audit-trail builder,
+      chain-integrity primitive, spend-cap check, or idempotency check.
+    full_body: docs/governance/protocols/AUDIT_FOLLOWUP_TEST_COVERAGE.md
+    source: "CLAUDE.md heading: Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
+    decision: DEC-20260504-A
+    decision_record: docs/decisions/records/DEC-20260504-A.md
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by PR review alone. No dedicated script checks that a
+      cert-audit-numbered commit carries a regression test.
+
+  - id: bulk-operation-deploy
+    name: "Bulk-Operation Deploy Protocol (DEC-20260504-B)"
+    trigger: >-
+      A deploy fixes a long-silent bulk operation (retention, archival,
+      reconciliation, batch processing, periodic cleanup).
+    full_body: docs/governance/protocols/BULK_OPERATION_DEPLOY.md
+    source: "CLAUDE.md heading: Bulk-Operation Deploy Protocol (DEC-20260504-B)"
+    decision: DEC-20260504-B
+    decision_record: docs/decisions/records/DEC-20260504-B.md
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by PR review alone. No dedicated script audits accumulated
+      workload before a bulk-operation deploy.
+
+  - id: deploy-mechanism-verification
+    name: "Deploy Mechanism Verification Protocol (DEC-20260504-C)"
+    trigger: >-
+      A PR adds a code path that depends on a deploy-pipeline behavior:
+      migrations running, env vars read, build steps, startup hooks,
+      scheduled jobs, cron triggers.
+    full_body: docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md
+    source: "CLAUDE.md heading: Deploy Mechanism Verification Protocol (DEC-20260504-C)"
+    decision: DEC-20260504-C
+    decision_record: docs/decisions/records/DEC-20260504-C.md
+    enforced_by:
+      - scripts/scheduled-reachability-lib.mjs
+      - scripts/check-scheduled-reachability.mjs
+
+  - id: shared-checkout-rule
+    name: "Shared-Checkout Rule (concurrency safety)"
+    trigger: >-
+      Any session or agent works in this checkout at all; before branch-
+      switching or a git-history-editing command in a non-isolated worktree.
+    full_body: docs/governance/protocols/SHARED_CHECKOUT_RULE.md
+    source: "CLAUDE.md heading: Shared-Checkout Rule (concurrency safety)"
+    decision: none
+    decision_reason: >-
+      Concurrency-safety rule established directly in CLAUDE.md; not tied
+      to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/guard-tree-integrity.mjs
+      - scripts/guard-worktree-isolation.mjs
+      - .claude/settings.json
+
+  - id: worktree-node-modules-hazard
+    name: "Worktree node_modules Hazard"
+    trigger: >-
+      A session creates a worktree and considers linking or junctioning its
+      node_modules to the main checkout, or removes a worktree.
+    full_body: docs/governance/protocols/WORKTREE_NODE_MODULES_HAZARD.md
+    source: "CLAUDE.md heading: Worktree node_modules Hazard"
+    decision: none
+    decision_reason: >-
+      Concurrency-safety rule established directly in CLAUDE.md; not tied
+      to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by review and instruction alone (this batch's review-round
+      enforcement-overclaim finding).
+      scripts/guard-worktree-isolation.mjs, previously listed here, only
+      names this hazard inside the text of a refusal message it prints for
+      an unrelated check (--require-isolated / --require-clean); it does
+      not detect a node_modules junction and does not detect an rm -rf of a
+      linked worktree. The shared-checkout guard advises against the hazard
+      without detecting it.
+
+  - id: test-infrastructure-cost-principles
+    name: "Test Infrastructure Cost Principles (always enforce)"
+    trigger: >-
+      Always: writing or modifying a health probe, a capability that calls
+      a paid external API, or a test suite's scheduling behavior.
+    full_body: docs/governance/protocols/TEST_INFRASTRUCTURE_COST_PRINCIPLES.md
+    source: "CLAUDE.md heading: Test Infrastructure Cost Principles (always enforce)"
+    decision: none
+    decision_reason: >-
+      Cost-control principles established directly in CLAUDE.md; not tied
+      to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - apps/api/src/lib/dependency-manifest.ts
+      - apps/api/src/lib/test-runner.ts
+
+  - id: wire-shape-trust-endpoints
+    name: "Wire-shape rule for /v1/public/ops/trust/* endpoints"
+    trigger: >-
+      An endpoint under /v1/public/ops/trust/* (or any future endpoint
+      surfacing money values, scores, or anything formattable) is added or
+      changed.
+    full_body: docs/governance/protocols/WIRE_SHAPE_TRUST_ENDPOINTS.md
+    source: "CLAUDE.md heading: Wire-shape rule for /v1/public/ops/trust/* endpoints"
+    decision: none
+    decision_reason: >-
+      Serialization rule established directly in CLAUDE.md following a
+      2026-04-30 cert-audit finding; not tied to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by PR review alone. No dedicated script or test currently
+      asserts the *_cents / no-formatted-string invariant on
+      /v1/public/ops/trust/* responses.
+
+  - id: production-authority
+    name: "Production authority (DEC-20260822-B)"
+    trigger: >-
+      Any code path that checks or constructs write-credential authority
+      for a production mutation, or that reasons about SYSTEM_ACTING,
+      FOUNDER_DECISION, or AUTHORIZATION_UNAVAILABLE status.
+    full_body: docs/company/CHARTER.md
+    source: >-
+      docs/company/CHARTER.md heading: What "authorized" means is defined
+      in code, not here
+    decision: DEC-20260822-B
+    decision_record: null
+    decision_record_note: >-
+      DEC-20260822-B is named in CLAUDE.md's DEC-20260822-A entry and in
+      docs/company/CHARTER.md; no docs/decisions/records/DEC-20260822-B.md
+      file exists in this repository.
+    enforced_by:
+      - apps/api/src/lib/production-authority.ts
+      - apps/api/src/lib/charter-authorization-binding.test.ts
+
+  - id: review-routing
+    name: "Review routing"
+    trigger: >-
+      A session needs to know which reviewer performs a required
+      independent review of its work, or whether a batch that would have
+      gone to Codex must be recorded in the review backlog.
+    full_body: docs/governance/protocols/REVIEW_ROUTING.md
+    source: "CLAUDE.md heading: Review routing"
+    decision: DEC-20260903-A
+    decision_record: null
+    decision_record_note: >-
+      Recorded only in CLAUDE.md's Active Decisions section and the Notion
+      Decisions DB. The same CLAUDE.md section also carries the 2026-09-07
+      founder review policy and DEC-20260910-A, which amend it without a
+      separate decision record file either.
+    enforced_by:
+      - scripts/check-codex-backlog.mjs
+
+  - id: program-register
+    name: "Program register — where multi-batch work resumes"
+    trigger: >-
+      A session starts or resumes multi-batch work tracked in
+      docs/programs/, or needs to find where a program's next bounded task
+      is recorded.
+    full_body: docs/governance/protocols/PROGRAM_REGISTER.md
+    source: "CLAUDE.md heading: Program register — where multi-batch work resumes"
+    decision: none
+    decision_reason: >-
+      Program-register convention established directly in CLAUDE.md; not
+      tied to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/check-program-tracks.mjs
+
+  - id: research-and-ideas
+    name: "Research and ideas — where each one lives"
+    trigger: >-
+      A session writes up a research finding or a product idea and needs to
+      decide between docs/research/ and docs/company/IDEAS.md.
+    full_body: docs/governance/protocols/RESEARCH_AND_IDEAS.md
+    source: "CLAUDE.md heading: Research and ideas — where each one lives"
+    decision: none
+    decision_reason: >-
+      Research/ideas filing convention established directly in CLAUDE.md;
+      not tied to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/check-research.mjs
+
+  - id: design-tokens
+    name: "Design tokens — where design values live"
+    trigger: >-
+      A session needs a colour, font, spacing, or radius value for a
+      surface design/check covers, or is exploring or promoting a
+      candidate token direction.
+    full_body: docs/governance/protocols/DESIGN_TOKENS.md
+    source: "CLAUDE.md heading: Design tokens — where design values live"
+    decision: none
+    decision_reason: >-
+      Design-token convention established directly in CLAUDE.md; not tied
+      to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/check-design.mjs
+
+  - id: cheap-extras-registers
+    name: "Cheap extras — env manifest, model registry, claims register (T14)"
+    trigger: >-
+      A session adds or reads a process.env.NAME under apps/api/src,
+      apps/api/scripts, packages, or scripts; imports a Claude/Voyage/GPT
+      model id; or writes a public claim about the platform.
+    full_body: docs/governance/protocols/CHEAP_EXTRAS_REGISTERS.md
+    source: "CLAUDE.md heading: Cheap extras — env manifest, model registry, claims register (T14)"
+    decision: none
+    decision_reason: >-
+      Env-manifest, model-registry and claims-register conventions
+      established directly in CLAUDE.md (T14); not tied to a numbered
+      decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/check-env.mjs
+      - apps/api/scripts/check-model-literals.mjs
+      - scripts/check-claims.mjs
+
+  - id: evidence-receipts-migration-ledger
+    name: "Evidence receipts and the migration ledger (T15)"
+    trigger: >-
+      A session needs to cite test or production evidence for a decision
+      record, program track, or remediation package, or adds/edits a
+      startup-migration block in apps/api/src/lib/startup-migrations.ts.
+    full_body: docs/governance/protocols/EVIDENCE_RECEIPTS_MIGRATION_LEDGER.md
+    source: "CLAUDE.md heading: Evidence receipts and the migration ledger (T15)"
+    decision: none
+    decision_reason: >-
+      Receipt and migration-ledger conventions established directly in
+      CLAUDE.md (T15); not tied to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - scripts/check-receipts.mjs
+      - apps/api/scripts/check-migration-ledger.mjs
+
+  - id: scoring-integrity-retired
+    name: "Scoring Integrity (retired with the SQS engine — DEC-20260503-B)"
+    trigger: >-
+      A capability scores poorly under a future routing-engine signal and a
+      session is deciding how to respond.
+    full_body: docs/governance/protocols/SCORING_INTEGRITY_RETIRED.md
+    source: "CLAUDE.md heading: Scoring Integrity (retired with the SQS engine — DEC-20260503-B)"
+    decision: DEC-20260503-B
+    decision_record: docs/decisions/records/DEC-20260503-B.md
+    enforced_by: []
+    enforced_by_note: >-
+      Enforced by PR review and root-cause discipline alone; no script
+      checks that a future routing-engine response avoids bending the
+      substrate to mask one capability's behaviour.
+
+  - id: drift-prevention-surfaces
+    name: "Drift-prevention surfaces"
+    trigger: >-
+      A session changes a fact that appears on multiple surfaces
+      (capability count, country count, retention period, vendor names,
+      free-tier list, processing region).
+    full_body: docs/governance/protocols/DRIFT_PREVENTION_SURFACES.md
+    source: "CLAUDE.md heading: Drift-prevention surfaces"
+    decision: none
+    decision_reason: >-
+      Drift-prevention convention established directly in CLAUDE.md; not
+      tied to a numbered decision id.
+    decision_record: null
+    decision_record_note: "Recorded only in CLAUDE.md."
+    enforced_by:
+      - apps/api/scripts/check-platform-facts-drift.ts
+
+excluded_sections:
+  - heading: "Workflow Protocol"
+    reason: >-
+      Section header grouping the workflow-protocol subsections that
+      follow; each subsection is classified on its own below.
+  - heading: "Session Start"
+    reason: >-
+      Prescribes declaring session intent and choosing Quick or Full mode,
+      but names no governing decision and is not enforced by any
+      repository check; full criteria live in .claude/PROTOCOL.md.
+  - heading: "Repo-native migration continuation — pre-cutover"
+    reason: >-
+      States explicitly that it is a navigation pointer to the migration
+      checkpoint document, not a protocol in its own right.
+  - heading: "Notion Access (REQUIRED)"
+    reason: "Reference list of Notion workspace URLs and page ids, not a protocol."
+  - heading: "Notion Workspace Structure (8 sections under Project Home)"
+    reason: "Structural reference describing the Notion workspace layout, not a protocol."
+  - heading: "Notion Governance Rules (enforced)"
+    reason: >-
+      Governs conduct inside Notion, which lives outside this repository,
+      so no repository check can verify it, and no decision id names it.
+  - heading: "GitHub Access (REQUIRED)"
+    reason: "Reference data naming the repository and branch pattern, not a protocol."
+  - heading: "Project Spec"
+    reason: "Pointer to the Notion project home for the build plan, not a protocol."
+  - heading: "Tech Stack"
+    reason: "Reference list of technology choices, not a protocol."
+  - heading: "Project Structure"
+    reason: "Reference file-tree diagram of the repository layout, not a protocol."
+  - heading: "Active Decisions"
+    reason: >-
+      A running decision log; each entry is governed by its own decision
+      id and record, not by this heading.
+  - heading: "Capabilities & Quality"
+    reason: >-
+      Descriptive platform facts about the capability catalog and quality
+      history, not a session protocol.
+  - heading: "Quick Session Checklist"
+    reason: >-
+      A per-session checklist that mostly restates the Session Start and
+      Session contract headings, plus Notion steps (to-do archiving, a
+      Journal entry) while Notion is the authority. One step is its own:
+      run /go before /end-session and never end a session over unreviewed
+      code. No repository check enforces that step and it names no
+      decision, so under this manifest's test the section is excluded;
+      the M4 cutover, which retires the Notion steps, should decide
+      whether the review-before-close step becomes a protocol row.
+  - heading: "Full Session Checklist"
+    reason: >-
+      The Quick Session Checklist expanded for full sessions, including the
+      same review-before-close step; excluded for the same reason, and the
+      same M4 note applies.
+  - heading: "Report Filing Convention"
+    reason: >-
+      Prescribes where reports are filed and names the repository-root
+      allowlist, but no repository check enforces placement and no
+      decision id governs it.
+  - heading: "Workflow Invariants (Non-Negotiable)"
+    reason: >-
+      Mostly conduct inside Notion (never edit Journal, Decision or
+      Deferred content, no deletion, corrections as new entries). Its
+      conflict duty (state a conflict with an active decision before
+      acting) and its supersession rule (which includes a CLAUDE.md update)
+      also bind work in this repository. It names no decision id and no
+      repository check enforces it, so it is excluded under this
+      manifest's test; the M4 cutover should carry the conflict duty and
+      supersession rule into the repository's decision process.
+  - heading: "Degraded Mode"
+    reason: >-
+      Short operational fallback guidance for Notion or Git unavailability,
+      not code-enforced and not tied to a decision id.
+  - heading: "Cross-Repo Updates"
+    reason: >-
+      Section header introducing the frontend-file update triggers; the
+      governing rules are its two subsections, classified separately
+      below.

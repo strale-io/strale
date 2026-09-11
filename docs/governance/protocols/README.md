@@ -52,7 +52,16 @@ diverges from the `CLAUDE.md` section it copies.
 - `SHARED_CHECKOUT_RULE.md`: Shared-Checkout Rule (concurrency safety).
   The "Worktree node_modules Hazard" section that follows it in
   `CLAUDE.md` is a separate rule, not part of this mirror.
+- `WORKTREE_NODE_MODULES_HAZARD.md`: Worktree node_modules Hazard, the
+  rule that follows `SHARED_CHECKOUT_RULE.md` above in `CLAUDE.md`.
+- `TEST_INFRASTRUCTURE_COST_PRINCIPLES.md`: Test Infrastructure Cost
+  Principles (always enforce).
+- `WIRE_SHAPE_TRUST_ENDPOINTS.md`: Wire-shape rule for
+  `/v1/public/ops/trust/*` endpoints.
 
-All seven mandatory protocols now have inactive, checked mirrors (M3 batch
-6a and 6b). Next is the protocol coverage manifest and a populated router,
-`docs/project/PROTOCOL-ROUTER.md` (M3 batch 7).
+All ten mandatory protocols/rules now have inactive, checked mirrors (M3
+batches 6a, 6b and 7). Each one, its governing decision (or the reason it
+has none), and its enforcing code/tests are recorded in
+`docs/project/protocol-coverage.yaml`, checked by `npm run
+protocols:coverage`; `docs/project/PROTOCOL-ROUTER.md` is generated from
+that manifest and stays inactive until the founder-gated M4 cutover.
