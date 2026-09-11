@@ -102,6 +102,7 @@
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
+        "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs"
       ]
@@ -364,6 +365,7 @@
         "manifests/sanctions-check.yaml",
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
+        "scripts/candidates.test.mjs",
         "scripts/codex-backlog-lib.mjs",
         "scripts/codex-backlog.test.mjs",
         "scripts/guard-tree-integrity.mjs",
@@ -457,12 +459,15 @@
       "owner_area": "claude-commands",
       "sha256": "ae217db0246687b6f652246cebaf904f05c55d9ca4c0e99db06dac611bb37123",
       "detected_references": [
+        ".github/workflows/ci.yml",
         "apps/api/scripts/archive/README.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "handoff/_general/from-code/2026-04-30-cert-audit-drift-prevention-and-bucket-c.md",
+        "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -471,13 +476,16 @@
       "owner_area": "shared-agent-skills",
       "sha256": "1cbc5be8ddad10125e5da22522e85dec0545f28fb1aa1d344a6b79ea651af0b3",
       "detected_references": [
+        ".github/workflows/ci.yml",
         "AGENTS.md",
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "docs/company/LESSONS.md",
+        "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "handoff/_general/from-code/2026-08-19-checkin-morning.md",
+        "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -887,6 +895,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "package.json",
+        "scripts/candidates.test.mjs",
         "scripts/check-receipts.mjs",
         "scripts/digest-repo-native-lib.mjs",
         "scripts/digest-shadow.mjs",
