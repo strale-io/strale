@@ -27,6 +27,16 @@
 // (candidate_set vs what the lib computes from the reviewed commit's own
 // tree, not from HEAD), and CLOSING_REVIEW_MUTATED (merge-base immutability
 // once recorded). It records no review and closes nothing by itself.
+//
+// Once closing_review is recorded, every check that compares the register's
+// formal_records list or counts against the live formal-record set
+// (FORMAL_RECORD_MISSING, FORMAL_RECORD_UNKNOWN, the formal_records
+// SOURCE_COUNT_DRIFT, and the decision-row derivations that match a row to a
+// record by page id) reads the reviewed commit's own record set instead of
+// the working tree, for the same reason CLOSING_REVIEW_COUNTS_MISMATCH does:
+// a record added, or transitioned active to superseded, after the review is
+// routine post-review traffic the review never needed to see. Without a
+// closing_review, all of this reads the live set exactly as before.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -373,10 +383,20 @@ export function readRegisterAtCommit(root, sha, relativePath = REGISTER_PATH) {
   return content === null ? null : YAML.parse(content);
 }
 
-/** Files a commit's own tree held under a path. Null when the commit cannot be read. */
+/**
+ * Files a commit's own tree held under a path. Null when the commit cannot
+ * be read. Memoized per (sha, pathspec): validateClosureRegister runs many
+ * times in one process (every test case builds a register and validates it),
+ * and each call would otherwise spawn git again for the same answer.
+ */
+const treeFileCache = new Map();
 function treeFilesAtCommit(root, sha, pathspec) {
+  const key = `${root}\u0000${sha}\u0000${pathspec}`;
+  if (treeFileCache.has(key)) return treeFileCache.get(key);
   const out = gitQuiet(root, ["ls-tree", "-r", "--name-only", sha, "--", pathspec]);
-  return out === null ? null : out.split(/\r?\n/).filter(Boolean);
+  const files = out === null ? null : out.split(/\r?\n/).filter(Boolean);
+  treeFileCache.set(key, files);
+  return files;
 }
 
 /** A YAML file's content as a commit's own tree held it. Null when unreadable. */
@@ -386,20 +406,20 @@ function readYamlAtCommit(root, sha, relativePath) {
 }
 
 /**
- * Formal-record summaries as the reviewed commit's own tree held them, not
- * the working tree or HEAD. Null when the commit, the records directory
- * listing, or any listed file cannot be read.
+ * The record FILE PATHS the reviewed commit's own tree held, as a Set. Null
+ * when the commit or the listing cannot be read.
+ *
+ * Paths, not contents, are what the closing-review scoping needs: the
+ * question it answers is "which records did the review actually see", and
+ * each such record's substance is then compared live, so a later edit to a
+ * reviewed record is still caught. Reading every record's blob out of git
+ * instead (the first shape of this change) spawned git once per record per
+ * validation, which made one test file take longer than a CI job.
  */
-export function readFormalRecordSummariesAtCommit(root, sha) {
+export function recordPathsAtCommit(root, sha) {
   const files = treeFilesAtCommit(root, sha, RECORDS_DIR);
   if (files === null) return null;
-  const summaries = [];
-  for (const f of files.filter((f) => f.endsWith(".md")).sort()) {
-    const content = gitQuiet(root, ["show", `${sha}:${f}`]);
-    if (content === null) return null;
-    summaries.push(parseRecordSummary(f, content));
-  }
-  return summaries;
+  return new Set(files.filter((f) => f.endsWith(".md")));
 }
 
 /**
@@ -412,12 +432,12 @@ export function readFormalRecordSummariesAtCommit(root, sha) {
  * the commit predates a path this checks).
  */
 export function candidateSetAtCommit(root, sha) {
-  const records = readFormalRecordSummariesAtCommit(root, sha);
+  const records = recordPathsAtCommit(root, sha);
   const collisions = readYamlAtCommit(root, sha, COLLISIONS_PATH);
   const resolutionReportFiles = treeFilesAtCommit(root, sha, "archive/sessions");
   if (records === null || collisions === null || resolutionReportFiles === null) return null;
   return {
-    formalRecords: records.length,
+    formalRecords: records.size,
     collisionsResolved: (collisions.collisions ?? []).filter((c) => c.resolution_status === "resolved").length,
     resolutionReports: resolutionReportFiles.filter((f) => RESOLUTION_REPORT_PATTERN.test(f)).length,
   };
@@ -532,6 +552,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     workingTreeDirty: (pathspecs) => workingTreeDirtyPaths(root, pathspecs),
     registerAtCommit: (sha) => readRegisterAtCommit(root, sha),
     candidateSetAtCommit: (sha) => candidateSetAtCommit(root, sha),
+    recordPathsAtCommit: (sha) => recordPathsAtCommit(root, sha),
   };
 }
 
@@ -612,6 +633,22 @@ export function validateClosureRegister(register, context, { schema, relativePat
     }
   };
 
+  // The formal-record set every comparison below reads. Once closing_review
+  // is recorded, this is the reviewed commit's own tree, not the working
+  // tree: a record added, or transitioned active to superseded, after the
+  // review is expected routine traffic and must not retroactively invalidate
+  // a passed review (see the header comment and CLOSING_REVIEW_STALE_PATHSPECS).
+  // Falls back to the live set when there is no closing_review, or when the
+  // reviewed commit cannot be read (COMMIT_UNVERIFIABLE is already reported
+  // for that case by the candidate-set check further down, which reads the
+  // same commit).
+  const closingReview = register.closing_review;
+  let records = context.records;
+  if (closingReview !== undefined && context.recordPathsAtCommit) {
+    const reviewedPaths = context.recordPathsAtCommit(closingReview.commit);
+    if (reviewedPaths !== null) records = context.records.filter((r) => reviewedPaths.has(r.file));
+  }
+
   if (context.public && context.public.available === false) {
     finding("PUBLIC_BASE_UNAVAILABLE", `${context.public.ref} is not readable; the public-boundary check did not run`);
   }
@@ -670,7 +707,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
   }
 
   // ---- Formal records: every record file is listed exactly once, and vice versa.
-  const recordByKey = new Map(context.records.map((r) => [r.record_key, r]));
+  const recordByKey = new Map(records.map((r) => [r.record_key, r]));
   const listedKeys = new Set();
   for (const fr of register.formal_records) {
     if (listedKeys.has(fr.record_key)) finding("FORMAL_RECORD_DUPLICATE", fr.record_key);
@@ -686,8 +723,8 @@ export function validateClosureRegister(register, context, { schema, relativePat
     if (fr.git_provenance !== undefined && fr.git_provenance !== actual.evidence[0]) finding("FORMAL_RECORD_PROVENANCE_MISMATCH", `${fr.record_key}: ${fr.git_provenance} vs record evidence ${actual.evidence[0]}`);
   }
   for (const key of recordByKey.keys()) if (!listedKeys.has(key)) finding("FORMAL_RECORD_MISSING", key);
-  if (register.sources.formal_records.record_count !== context.records.length) {
-    finding("SOURCE_COUNT_DRIFT", `formal_records.record_count ${register.sources.formal_records.record_count} vs ${context.records.length}`);
+  if (register.sources.formal_records.record_count !== records.length) {
+    finding("SOURCE_COUNT_DRIFT", `formal_records.record_count ${register.sources.formal_records.record_count} vs ${records.length}`);
   }
 
   // ---- A bare collided id is never a record key. Cross-surface collision ids
@@ -896,7 +933,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // such row must be formally_migrated to that record, and formal_records must
   // state exactly that set.
   const derivedSourceRows = new Map();
-  for (const rec of context.records) {
+  for (const rec of records) {
     const own = rec.pageIds.filter((p) => rowsByPage.get(p)?.id === rec.id);
     derivedSourceRows.set(rec.record_key, own);
     for (const p of own) {
@@ -922,9 +959,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // whose id is a Git-native protocol label with no formal record of that id
   // must be an unresolved cross-surface collision, and only such rows may be.
   if (context.gitNativeClaims) {
-    const recordIds = new Set(context.records.map((r) => r.id));
+    const recordIds = new Set(records.map((r) => r.id));
     const recordCitedPages = new Set();
-    for (const rec of context.records) for (const p of rec.pageIds) if (rowsByPage.get(p)?.id === rec.id) recordCitedPages.add(p);
+    for (const rec of records) for (const p of rec.pageIds) if (rowsByPage.get(p)?.id === rec.id) recordCitedPages.add(p);
     for (const row of register.decision_rows) {
       // A row whose id is a Git-native claim (protocol label) or a formal record's
       // id, and which no same-id record cites, competes with that Git-native
@@ -949,9 +986,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // (no id -> unclear; superseded/reversed -> obsolete_or_superseded; else
   // not_yet_reconciled).
   if (context.gapCitations && context.gitNativeClaims) {
-    const recordIds = new Set(context.records.map((r) => r.id));
+    const recordIds = new Set(records.map((r) => r.id));
     const recordCited = new Set();
-    for (const rec of context.records) for (const p of rec.pageIds) if (rowsByPage.get(p)?.id === rec.id) recordCited.add(p);
+    for (const rec of records) for (const p of rec.pageIds) if (rowsByPage.get(p)?.id === rec.id) recordCited.add(p);
     const gapCited = new Set();
     for (const set of context.gapCitations.values()) for (const p of set) gapCited.add(p);
     for (const row of register.decision_rows) {
@@ -1001,8 +1038,9 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // every invariant below holds, releases the plan.review_route blocking
   // requirement further down. It records no review by itself; see
   // docs/decisions/README.md. `closingReviewClean` is read at the blocking
-  // check below, so this must run before it.
-  const closingReview = register.closing_review;
+  // check below, so this must run before it. (closingReview itself was read
+  // at the top of this function, before the formal-record checks, so those
+  // checks can pin the record set to the reviewed commit.)
   let closingReviewClean = false;
   if (closingReview !== undefined) {
     const crFindings = [];
@@ -1140,7 +1178,7 @@ export function validateClosureRegister(register, context, { schema, relativePat
   // ---- Next batch: cutoff anchored to a public row; public eligibility exact.
   const nb = register.next_decision_batch;
   if (nb.cutoff_anchor_id !== READINESS_ANCHOR_ID) finding("NEXT_BATCH_ANCHOR_NOT_READINESS", `${nb.cutoff_anchor_id} is not ${READINESS_ANCHOR_ID}`);
-  const anchorRecord = context.records.find((r) => r.id === READINESS_ANCHOR_ID);
+  const anchorRecord = records.find((r) => r.id === READINESS_ANCHOR_ID);
   if (!anchorRecord) finding("NEXT_BATCH_ANCHOR_UNKNOWN", `${READINESS_ANCHOR_ID} has no formal record`);
   else if (anchorRecord.decided_at !== nb.decided_on_or_after) finding("NEXT_BATCH_CUTOFF_MISMATCH", `${nb.decided_on_or_after} vs record ${READINESS_ANCHOR_ID} decided ${anchorRecord.decided_at}`);
   // Uniqueness is judged over the public rows plus the collision registry; every
