@@ -52,35 +52,62 @@ surfaces:
       docs/company/DIRECTORY-MAP.md records glama.ai/mcp/servers/@strale-io/strale
       returning 200 ("live, confirmed by page load") plus 43 crawler hits in
       the trailing 30 days as of that date. README.md also carries a live
-      status badge from this listing.
+      status badge from this listing. distribution-playbook.md (2026-08-12,
+      older) additionally found the listing unclaimed ("no verification
+      badge; admin claim option available"), with grades License A / Quality
+      A / Maintenance C -- a claim action, not a status change, and not
+      re-verified by a later document.
 
   - id: mcp-registry-io-github
     surface: Official MCP registry (io.github.strale-io/strale)
     kind: registry-listing
     target: registry.modelcontextprotocol.io
-    status: unknown
-    status_date: 2026-09-04
-    evidence: handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md
+    status: listed
+    status_date: 2026-09-11
+    evidence: https://registry.modelcontextprotocol.io/v0/servers?search=strale
     notes: >-
-      DEC-20260313-F recorded initial publication at v0.1.1. server.json
-      (root) now states version 0.2.3, while packages/mcp-server/package.json
-      states 0.2.8 -- five patch versions ahead. This version drift, found
-      by the cited handoff, means the repository cannot confirm the live
-      registry entry actually matches the current manifest.
+      Previously: unknown, as of 2026-09-04, per
+      handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md
+      (DEC-20260313-F recorded initial publication at v0.1.1; server.json
+      root stated 0.2.3 while packages/mcp-server/package.json stated 0.2.8,
+      five patch versions ahead, so the repository could not confirm the
+      live entry matched the current manifest). distribution-playbook.md
+      (2026-08-12) separately confirmed the registry API returned all 7
+      published versions with isLatest true. Re-checked today: `curl -sS
+      "https://registry.modelcontextprotocol.io/v0/servers?search=strale&limit=20"`
+      returned 7 versions; the one marked isLatest: true is 0.2.4, published
+      2026-04-12 -- neither the 0.2.3 in server.json nor the 0.2.8 in
+      packages/mcp-server/package.json. The registry entry is confirmed
+      live and active, and the version drift is a three-way mismatch
+      (registry 0.2.4, server.json 0.2.3, package.json 0.2.8), worse than
+      the two-way drift previously recorded.
 
   - id: smithery-listing
     surface: Smithery MCP directory
     kind: registry-listing
-    target: smithery.ai/server/strale-mcp
-    status: unknown
-    status_date: 2026-08-16
-    evidence: docs/company/DIRECTORY-MAP.md
+    target: smithery.ai/servers/strale-io/strale
+    status: listed
+    status_date: 2026-09-11
+    evidence: https://smithery.ai/server/strale-io/strale
     notes: >-
-      smithery-probe crawled 110 times in the trailing 30 days as of this
-      date, but the expected listing URL (smithery.ai/server/strale-mcp)
-      returns 404. The listing may exist under a different slug, or be
-      unpublished while still crawled; the real URL was not found in the
-      repository.
+      Previously: unknown, as of 2026-08-16, per docs/company/DIRECTORY-MAP.md
+      (smithery-probe crawled 110 times in the trailing 30 days, but the
+      expected listing URL smithery.ai/server/strale-mcp returned 404; the
+      real URL was not found in the repository). traffic-generation-plan.md
+      (2026-08-12, C-5) additionally found the suspected duplicate listing
+      was real: two live entries, `strale/agent-tools` (owner handle
+      `strale`, published 2026-02-27, score 82/100) and `strale-io/strale`
+      (owner handle `strale-io`, published 2026-03-30, score 62/100), with
+      no GitHub repository existing at `strale/agent-tools` -- flagged
+      [Petter], needs account access to resolve. Re-checked today: `curl
+      -sSL -o /dev/null -w "%{http_code} final=%{url_effective}"
+      https://smithery.ai/server/strale-io/strale` returned 200 at final URL
+      smithery.ai/servers/strale-io/strale (confirms listed, resolving the
+      "unknown" status -- the old expected URL used /server/ singular and a
+      different slug, not /servers/ plural with the org/repo slug); the same
+      check against smithery.ai/server/strale/agent-tools also returned 200
+      at smithery.ai/servers/strale/agent-tools, confirming the duplicate
+      is still live today; smithery.ai/server/strale-mcp still 404s.
 
   - id: docker-mcp-registry-pr
     surface: Docker MCP registry submission
@@ -108,6 +135,12 @@ surfaces:
       contains exactly the resources that settled an x402 payment in the
       trailing 30 days -- so this status reflects revenue, not a
       submission, and the document records nothing to submit or fix.
+      docs/company/DISTRIBUTION-FINDINGS.md, dated the same day, originally
+      reported 41 of 334 x402-enabled endpoints listed (12%) -- a partial
+      first-page scan of the CDP index (limit=200) mistaken for a total.
+      DIRECTORY-MAP.md's complete walk corrected this the same day to 95,
+      which is the figure this row already uses; DIRECTORY-MAP.md is the
+      later, corrected source.
 
   - id: glimind-listing
     surface: Glimind
@@ -153,28 +186,49 @@ surfaces:
   - id: yellowmcp-listing
     surface: YellowMCP
     kind: registry-listing
-    target: YellowMCP
-    status: unknown
-    status_date: 2026-08-15
-    evidence: docs/company/DIRECTORY-MAP.md
+    target: yellowmcp.com/servers/strale
+    status: listed
+    status_date: 2026-09-11
+    evidence: https://yellowmcp.com/servers/strale
     notes: >-
-      docs/company/DIRECTORY-MAP.md records 146 crawler hits in the
-      trailing 30 days from yellowmcp-health as of 2026-08-15. No listing
-      URL is probed for this venue in the document, so crawler traffic is
-      the only in-repository evidence.
+      Previously: unknown, as of 2026-08-15, per docs/company/DIRECTORY-MAP.md
+      (146 crawler hits in the trailing 30 days from yellowmcp-health; no
+      listing URL probed, so crawler traffic was the only in-repository
+      evidence). traffic-generation-plan.md (2026-08-12, D-5) found a live
+      listing page reporting 30-day uptime 75.0% (flagged below YellowMCP's
+      80% threshold), avg latency 2,598 ms, P95 10,005 ms, 8 tools
+      discovered, and a flagged overly-permissive CORS finding (security
+      score 85/Good) -- single-source, not independently re-verified at the
+      time, and recommended verifying against Strale's own health data
+      before acting. Re-checked today: `curl -sSL
+      https://yellowmcp.com/servers/strale` returned 200; the page content
+      confirms the listing ("Strale", "strale.io/mcp",
+      "strale-io/strale" repo link) and reports "uptime is 74.7% (below
+      80%)" -- confirms listed and closely matches the earlier 75.0%
+      figure. The uptime and CORS findings themselves are a platform
+      reliability question, not a distribution-listing one; not
+      independently re-verified against Strale's own `transactions` /
+      `health_monitor_events` data by this batch.
 
   - id: agent-tools-cloud-listing
     surface: agent-tools.cloud
     kind: registry-listing
     target: agent-tools.cloud
-    status: unknown
-    status_date: 2026-08-15
-    evidence: docs/company/DIRECTORY-MAP.md
+    status: listed
+    status_date: 2026-09-11
+    evidence: https://agent-tools.cloud/api/v1/search?q=strale
     notes: >-
-      docs/company/DIRECTORY-MAP.md records 114 crawler hits in the
-      trailing 30 days from the agent-tools.cloud crawler as of
-      2026-08-15. No listing URL is probed for this venue in the document,
-      so crawler traffic is the only in-repository evidence.
+      Previously: unknown, as of 2026-08-15, per docs/company/DIRECTORY-MAP.md
+      (114 crawler hits in the trailing 30 days from the agent-tools.cloud
+      crawler; no listing URL probed, so crawler traffic was the only
+      in-repository evidence). distribution-playbook.md (2026-08-12) had
+      already API-probed this venue directly (`agent-tools.cloud/api/v1/search?q=strale`)
+      and found 20 endpoint entries, health "ok", reliability ~81.6/100 --
+      partial (only 20 of then-456 endpoints indexed) with no MCP or A2A
+      entry. Re-checked today: `curl -sS "https://agent-tools.cloud/api/v1/search?q=strale"`
+      returned count: 20, health "ok", confidence 1.0, tx_30d 4419,
+      resource_count 352 -- confirms listed and still live, count of
+      indexed endpoint entries unchanged at 20.
 
   - id: x402-observatory-listing
     surface: x402 Observatory
@@ -394,16 +448,31 @@ surfaces:
     surface: x402scan paid-route registration
     kind: registry-listing
     target: x402scan.com
-    status: listed
-    status_date: 2026-04-27
-    evidence: handoff/_general/from-code/2026-04-27-x402scan-indexing-and-pr-cleanup.md
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DISTRIBUTION-FINDINGS.md
     notes: >-
-      Not a pull request: registration happens automatically once Strale's
-      x402 discovery routes are spec-compliant. The cited handoff records
-      358/358 paid endpoints registered with zero failures, verified via
-      x402scan's own registerFromOrigin endpoint and its public listings.
-      No root manifest or package covers this surface, so it is populated
-      from the handoff alone, per the design's fourth source.
+      Previously: listed, as of 2026-04-27, per
+      handoff/_general/from-code/2026-04-27-x402scan-indexing-and-pr-cleanup.md
+      (registration happens automatically once Strale's x402 discovery
+      routes are spec-compliant; the handoff recorded 358/358 paid
+      endpoints registered with zero failures, verified via x402scan's own
+      registerFromOrigin endpoint and its public listings). Not a pull
+      request; no root manifest or package covers this surface.
+      distribution-playbook.md (2026-08-12) had already flagged the site as
+      an unverifiable JS SPA ([U]) needing a manual browser check.
+      docs/company/DISTRIBUTION-FINDINGS.md (2026-08-15, later than the
+      row's prior status_date) found only "one mention of Strale on the
+      site; presence plausible but unconfirmed," and noted most x402
+      scanners mirror the CDP facilitator index, which is settlement-derived
+      (see coinbase-x402-bazaar-listing) rather than acquirable by
+      submission. Re-checked today: `curl -sS --compressed -o /dev/null -w
+      "%{http_code}" https://www.x402scan.com/resources` returned 404 (the
+      page has moved or been renamed since 2026-04-27); a content grep for
+      "strale" on a guessed query URL and an API-path guess both returned
+      no match / 404 NOT_FOUND. Inconclusive -- JS-rendered SPA, could not
+      confirm either way without a browser -- so the later document's
+      finding stands per the reconciliation rule.
 
   # -- Published packages under packages/ (name/registry from each manifest,
   #    confirmed live by npm view / a PyPI JSON fetch on 2026-09-11) --
@@ -527,3 +596,219 @@ surfaces:
       docs/company/DIRECTORY-MAP.md (section "Other x402 registries", as of
       2026-08-15) records that agent402.tools did not resolve. No evidence of
       a listing or of the site operating.
+
+  # -- Reconciliation batch (M3): rows added and updated from the three
+  #    documents named in "What was considered and excluded" above --
+  #    archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md,
+  #    its sibling traffic-generation-plan.md, and
+  #    docs/company/DISTRIBUTION-FINDINGS.md. Every new row below cites one
+  #    of those three as evidence, or a URL checked read-only today
+  #    (2026-09-11) where the finding was re-verifiable and conclusive. --
+  - id: pulsemcp-listing
+    surface: PulseMCP
+    kind: registry-listing
+    target: pulsemcp.com
+    status: listed
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
+    notes: >-
+      distribution-playbook.md records pulsemcp.com/servers/strale live and
+      classified "Official" as of 2026-08-12, verified by fetch. The
+      document also notes PulseMCP appears to mirror the official MCP
+      registry (see mcp-registry-io-github), inferred from exact naming and
+      version-history consistency, not from a documented guarantee.
+      Re-checked today: `curl -sS -o /dev/null -w "%{http_code}"
+      https://www.pulsemcp.com/servers/strale` returned 403; inconclusive,
+      kept the document's finding.
+
+  - id: langchain-providers-page-pr
+    surface: LangChain providers page Strale card
+    kind: framework-pr
+    target: langchain-ai/docs
+    status: merged
+    status_date: 2026-09-11
+    evidence: https://github.com/langchain-ai/docs/pull/3445
+    notes: >-
+      distribution-playbook.md (2026-08-12) recorded this PR ("docs: add
+      langchain-strale integration"), opened by petterlindstrom79, merged
+      2026-08-07, adding a `<Card title="Strale">` to
+      `all_providers.mdx` between "Spidra" and "Stardog" -- confirmed by two
+      independent reads at the time (the raw file and the PR itself). The
+      merged card links only to strale.dev/docs and contains no code or
+      import example, so there is no fabricated-import surface under
+      DEC-20260422-A. Re-verified today: `gh pr view
+      https://github.com/langchain-ai/docs/pull/3445 --json
+      state,mergedAt,closedAt` returned state MERGED, mergedAt
+      2026-08-07T09:07:49Z -- confirmed.
+
+  - id: merit-awesome-agentic-commerce-listing
+    surface: Merit awesome-agentic-commerce list
+    kind: directory
+    target: Merit awesome-agentic-commerce
+    status: listed
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
+    notes: >-
+      distribution-playbook.md records Strale listed twice in Merit's
+      awesome-agentic-commerce README (the Ecosystem section and the Open
+      Source/SDKs section), verified by reading the raw README, as of
+      2026-08-12. The exact repository slug was not re-identified for a
+      read-only re-check this batch; kept the document's finding
+      unverified today.
+
+  - id: lobehub-skills-listing
+    surface: LobeHub Skills marketplace
+    kind: registry-listing
+    target: lobehub.com
+    status: listed
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
+    notes: >-
+      distribution-playbook.md records Strale listed on LobeHub's Skills
+      marketplace (stale count, "233+") as of 2026-08-12, verified by
+      fetch. Distinct from LobeHub's separate MCP marketplace
+      (lobehub.com/mcp), which the same document could not confirm either
+      way ([U], fetch not attempted) -- no row added for that surface since
+      there is no verified finding either direction. Re-checked today:
+      guessed listing-URL slugs (lobehub.com/skills/strale,
+      lobehub.com/skills/strale-io) both 404'd after redirecting to
+      market.lobehub.com; inconclusive -- could not find the real slug
+      without a browser -- kept the document's finding.
+
+  - id: x402-list-listing
+    surface: x402-list.com
+    kind: registry-listing
+    target: x402-list.com
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
+    notes: >-
+      distribution-playbook.md verified Strale absent via `GET
+      /api/v1/services?q=strale` returning `"total": 0`, as of 2026-08-12.
+      Free-hosting/dev-tunnel domains are barred from submission;
+      api.strale.io is a real owned domain, so this is satisfied. A
+      ready-to-submit form draft exists in the document (service name, base
+      URL, category, description, endpoint paths); no submission has been
+      made, per this batch's read-only boundary.
+
+  - id: x402-org-ecosystem-listing
+    surface: x402.org ecosystem page
+    kind: registry-listing
+    target: x402-foundation/x402
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
+    notes: >-
+      distribution-playbook.md verified Strale absent from
+      x402.org/ecosystem as of 2026-08-12. Submission is a PR to
+      x402-foundation/x402 (repo moved from coinbase/x402) adding
+      `typescript/site/app/ecosystem/partners-data/strale/metadata.json`
+      plus a logo PNG; a draft metadata.json exists in the document. No PR
+      has been opened, per this batch's read-only boundary and DEC-20260422-A.
+
+  - id: onyx-bazaar-listing
+    surface: Onyx Bazaar
+    kind: registry-listing
+    target: onyx-actions.onrender.com/bazaar
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md
+    notes: >-
+      traffic-generation-plan.md verified zero matches for Strale in Onyx
+      Bazaar's full JSON dump as of 2026-08-12. No submission path exists --
+      it auto-indexes from the CDP Bazaar discovery API every 15 minutes, so
+      absence is explained by the same facilitator gap that limits Strale's
+      own Coinbase x402 Bazaar coverage (see coinbase-x402-bazaar-listing),
+      not a distinct gap to close.
+
+  - id: gold-402-listing
+    surface: gold-402
+    kind: directory
+    target: Haustorium12/gold-402
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md
+    notes: >-
+      traffic-generation-plan.md verified Strale absent as of 2026-08-12.
+      Submission is a one-line PR (`[Name](url) -- Description.`),
+      hand-verified by the maintainer against a live endpoint answering
+      `X-Payment`, with no marketing language permitted.
+
+  - id: signal402-listing
+    surface: Signal402
+    kind: registry-listing
+    target: signal402.com
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md
+    notes: >-
+      traffic-generation-plan.md verified Strale absent as of 2026-08-12.
+      Submission is a paid web form ($0.01 via x402: name, HTTPS URL,
+      category, price/request, description, email) plus manual editorial
+      review.
+
+  - id: mcpservers-org-listing
+    surface: mcpservers.org
+    kind: registry-listing
+    target: mcpservers.org
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md
+    notes: >-
+      traffic-generation-plan.md verified Strale absent as of 2026-08-12.
+      Submission is a free hosted form (name, short description, link,
+      category, email); a $39 "premium review" upsell exists and should be
+      skipped.
+
+  - id: anthropic-connectors-listing
+    surface: Anthropic Connectors Directory
+    kind: registry-listing
+    target: claude.ai
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
+    notes: >-
+      distribution-playbook.md verified Strale not listed as of 2026-08-12.
+      Submission (`claude.ai/admin-settings/directory/submissions/new`) is
+      gated on two hard requirements: a Team or Enterprise Claude.ai
+      organization (admin settings do not exist on individual plans), and
+      mandatory OAuth 2.0 for authenticated services -- Strale's MCP uses
+      Bearer API-key auth. Also required: tool `title` and
+      `readOnlyHint`/`destructiveHint` annotations, a privacy-policy URL, a
+      docs URL, test-account credentials, 7 compliance acknowledgments, and
+      3-5 PNG screenshots. The document recommends raising this as a
+      scoping question rather than building an OAuth wrapper in a
+      Quick-mode session; not actioned.
+
+  - id: mcp-so-listing
+    surface: mcp.so
+    kind: registry-listing
+    target: mcp.so
+    status: listed
+    status_date: 2026-09-11
+    evidence: https://mcp.so/servers/strale
+    notes: >-
+      traffic-generation-plan.md (C-6, 2026-08-12) found Strale listed via
+      search-index snippets only ([I], stale count "233+"), with direct
+      fetch blocked (403/429) at the time -- moved from the "submit" column
+      to the "refresh" column on that basis, not independently confirmed by
+      a direct page read. Re-checked today: `curl -sSL -o /dev/null -w
+      "%{http_code} final=%{url_effective}" https://mcp.so/server/strale`
+      redirected (301) to https://mcp.so/servers/strale, which returned 200
+      -- confirmed listed and live.
+
+  - id: mcpmarket-com-listing
+    surface: mcpmarket.com
+    kind: registry-listing
+    target: mcpmarket.com
+    status: unknown
+    status_date: 2026-08-12
+    evidence: archive/sessions/audit-output/parallel-audits-2026-08-12/traffic-generation-plan.md
+    notes: >-
+      traffic-generation-plan.md (C-6, 2026-08-12) found Strale listed via
+      search-index snippets only ([I], stale count "225+", title "Strale:
+      Verified AI Agent Capabilities & Trust Layer"), with direct fetch
+      blocked (403/429) at the time -- not independently confirmed by a
+      direct page read. Re-checked today: `curl -sS -o /dev/null -w
+      "%{http_code}" https://mcpmarket.com/server/strale` returned 403;
+      inconclusive, kept the document's finding.
