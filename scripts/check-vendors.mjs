@@ -4,11 +4,12 @@
 // Exit 1 on any failing finding.
 //
 // Usage: node scripts/check-vendors.mjs [--json]
-import { checkAllVendors, repoRootFrom, REGISTER_PATH } from "./vendors-lib.mjs";
+import { checkAllVendors, checkVendorViewFresh, repoRootFrom, REGISTER_PATH } from "./vendors-lib.mjs";
 
 const root = repoRootFrom(import.meta.url);
 const json = process.argv.includes("--json");
 const { findings, warnings, vendorCount } = checkAllVendors(root);
+findings.push(...checkVendorViewFresh(root));
 
 if (json) {
   console.log(

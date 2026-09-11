@@ -61,6 +61,25 @@
 # uk-cop-check, us-ein-match). "internal" appears on config/env-manifest.yaml
 # rows for platform-internal config with no external vendor. Counts are left
 # out on purpose: vendors:check reads both surfaces live (rule 7).
+#
+# T6 batch 5 added the public vendor-list cross-check: every value in
+# apps/api/src/lib/platform-facts.ts STATIC_FACTS.vendors must resolve to
+# exactly one vendor here (STATIC_VENDOR_UNREGISTERED otherwise) whose
+# current state is active or fallback (STATIC_VENDOR_STATE_MISMATCH
+# otherwise); STATIC_FACTS_UNREADABLE if the map itself cannot be parsed.
+# STATIC_FACTS.vendors is also a surface for the dead-alias rule (rule 7).
+# This is the check that would have caught the two vendors STATIC_FACTS
+# named with no register entry: BODACC (fr_litigation), added below as its
+# own vendor, and Liberty Data (us_ein), which is not a separate vendor from
+# the existing einsearch entry - apps/api/src/lib/dependency-manifest.ts:7
+# names the company operating einsearch.com as "Liberty Data Solutions", so
+# "Liberty Data" is registered as an alias of einsearch, not a second
+# identity for the same vendor. Four more STATIC_FACTS.vendors values named
+# an existing vendor by a display string its aliases did not yet carry
+# (Serper.dev (Google), Anthropic Claude, Coinbase x402 facilitator (USDC on
+# Base), GLEIF L2); each was added as an alias of its existing vendor
+# (serper, anthropic, coinbase-cdp, gleif respectively) for the same reason
+# - same vendor, a different display string than the one already on file.
 schema_version: 1
 authority_active: false
 non_vendor_sentinels:
@@ -92,6 +111,7 @@ vendors:
     name: Anthropic
     aliases:
       - Anthropic
+      - Anthropic Claude
     lifecycle:
       - state: active
         date: 2026-09-10
@@ -113,6 +133,7 @@ vendors:
     name: Serper
     aliases:
       - Serper.dev
+      - Serper.dev (Google)
     lifecycle:
       - state: active
         date: 2026-09-10
@@ -254,6 +275,7 @@ vendors:
     name: EINsearch
     aliases:
       - EINsearch
+      - Liberty Data
     lifecycle:
       - state: active
         date: 2026-09-10
@@ -340,6 +362,7 @@ vendors:
     name: GLEIF
     aliases:
       - GLEIF
+      - GLEIF L2
     lifecycle:
       - state: active
         date: 2026-09-10
@@ -1235,6 +1258,7 @@ vendors:
     name: Coinbase CDP
     aliases:
       - Coinbase CDP
+      - Coinbase x402 facilitator (USDC on Base)
     lifecycle:
       - state: active
         date: 2026-09-10
@@ -1854,6 +1878,27 @@ vendors:
         date: 2026-09-11
         decision: unknown
         reason: "T6 batch 4a. Added from apps/api/src/lib/platform-facts.ts STALE_VENDORS (line 151), whose code comment groups it as a rejected sanctions/PEP/adverse-media competitor and names no decision at all. Decision recorded unknown."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: bodacc
+    name: BODACC
+    aliases:
+      - BODACC
+    lifecycle:
+      - state: active
+        date: 2026-09-11
+        decision: unknown
+        reason: "T6 batch 5. Added as one of the two vendors STATIC_FACTS.vendors names (fr_litigation: \"BODACC\") with no prior register entry (confirmed absent by the M3 batch-1 inventory, S20). BODACC is the Bulletin officiel des annonces civiles et commerciales, the French official gazette that publishes commercial and insolvency notices; two live executors call it directly (apps/api/src/capabilities/fr-bodacc-lookup.ts and apps/api/src/capabilities/french-insolvency-check.ts, both against https://bodacc-datadila.opendatasoft.com/api/explore/v2.1/...), and neither slug is in apps/api/src/capabilities/auto-register.ts DEACTIVATED, so the state is active. Recorded as a public-source registry vendor, the same shape as companies-house, vies and the other per-country registries in this file. No decision record names it, so decision stays unknown."
     reevaluation_triggers: []
     verification:
       terms:
