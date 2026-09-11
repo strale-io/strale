@@ -30,7 +30,25 @@ decisions.
 meaning applies when the repo-native digest replaces it at the M4 cutover, and
 the cutover work builds the "what happened" section from the handoff files.
 
-**DQ-31** · `your_call` · owner Petter · raised 2026-09-11T06:30Z · no deadline — **screenshots and PDFs are broken until the browser service gets its key back; I need the Railway sign-in to do it**
+**DQ-31** · `resolved` · owner Petter → Claude · raised 2026-09-11T06:30Z · resolved 2026-09-11 — **screenshots and PDFs work again: the API has the browser service's own key back**
+*Resolution:* Petter signed Railway in on this machine and asked for the fix.
+The precondition held first: the monitor change (PR #647, merged 2026-09-11)
+only checks the balance on a `*.browserless.io` host, so restoring the key
+cannot re-trigger the 25 August suspension. The API service's
+`BROWSERLESS_API_KEY` is now a Railway reference to the browser service's
+own `TOKEN` (`${{chromium.TOKEN}}`), so the two cannot drift apart again;
+no key value was shown in the session. The API redeployed, and the
+production correctness tests for `screenshot-url` and `html-to-pdf` then
+passed, each a real render through the browser service. Screenshots, PDF
+rendering, page extraction, company enrichment, Estonian company data and
+landing-page review were still listed for customers throughout. Left over:
+the other test suites of the browser capabilities were locked during the
+outage after their saved test data failed to refresh three times, a lock
+that only a person may clear by design (`apps/api/src/lib/health-sweep.ts`);
+clearing it is a production database write and is asked separately. The
+account key that replaced the token on 25 August was overwritten; production
+does not use it.
+*Original text:*
 *Status:* `AUTHORIZATION_UNAVAILABLE`. Nothing here is a judgement; what should
 happen is settled and the only thing missing is access.
 *Settled:* since 2026-08-26 every direct call to our self-hosted browser service
