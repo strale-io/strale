@@ -502,3 +502,28 @@ surfaces:
     status: published
     status_date: 2026-09-11
     evidence: https://www.npmjs.com/package/strale-capabilities
+
+  - id: zeroclick-listing
+    surface: ZeroClick
+    kind: registry-listing
+    target: ZeroClick
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md (section "Other x402 registries", as of
+      2026-08-15) records ZeroClick as reachable with no mention of Strale
+      and no known submission path. Not listed as far as the repository can
+      show; recorded so the surface is tracked rather than forgotten.
+
+  - id: agent402-tools-listing
+    surface: agent402.tools
+    kind: registry-listing
+    target: agent402.tools
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md (section "Other x402 registries", as of
+      2026-08-15) records that agent402.tools did not resolve. No evidence of
+      a listing or of the site operating.

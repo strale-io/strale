@@ -24,18 +24,18 @@ not a mapping exercise.
 Every row cites a URL or a repository path as `evidence`. No row was
 populated from memory.
 
-**The rule (added review round 1):** a repository document is a
-population source when it records evidence for a distribution surface's
-status. `docs/company/DIRECTORY-MAP.md` already backed the Glama and
-Smithery rows below before this rule was written down -- the original
-version of this document cited it as evidence there while separately
-refusing to add a Coinbase x402 Bazaar row on the ground that
-`DIRECTORY-MAP.md` was not one of the named sources. That was
-inconsistent: the document was already doing the job of a source for two
-rows. Review round 1 corrects it: `DIRECTORY-MAP.md` is now the fifth
-named source, every surface it documents with evidence gets a row, and
-the document itself stays the analysis behind the status -- cited as
-`evidence`, never copied into the row.
+**The source set is closed and named (settled in review round 2).** This
+population reads exactly five sources, listed below. The fifth,
+`docs/company/DIRECTORY-MAP.md`, is included because it is the current
+compiled map of directory presence (as of 2026-08-15) and already backed
+the Glama and Smithery rows; every surface it records gets a row, cited as
+`evidence` and never copied into the row. An earlier wording ("any
+repository document that records evidence is a source") was open-ended:
+each review round found one more document, so it could never be complete.
+Other repository documents that also record distribution evidence are
+named under "What was considered and excluded", with the reason, and
+reconciling them against this register is a named follow-up, not silently
+skipped.
 
 1. **The four root discovery manifests.** Read in full: `context7.json`,
    `glama.json`, `server.json`, `smithery.yaml`. One `registry-listing` row
@@ -160,6 +160,12 @@ the document itself stays the analysis behind the status -- cited as
      "domain verified." That is evidence of a completed verification
      step, not a probed live listing page, so `submitted` is the closest
      honest value rather than `listed`.
+   - **ZeroClick** and **agent402.tools** (added review round 2): `unknown`,
+     one row each, from the document's "Other x402 registries" section,
+     which records ZeroClick as reachable with no mention of Strale and no
+     known submission path, and agent402.tools as not resolving. x402scan,
+     the third registry that section names, already has a row from source
+     4.
    - The document's other served verification files
      (`/.well-known/glama.json`, `/.well-known/mcp.json`,
      `/.well-known/agent.json`, `/.well-known/ai-catalog.json`,
@@ -173,6 +179,21 @@ the document itself stays the analysis behind the status -- cited as
 
 ## What was considered and excluded
 
+- **Other repository documents with distribution evidence, outside the
+  closed source set.** `archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md`
+  and its sibling `traffic-generation-plan.md` (a 2026-08-12 audit with
+  verified listing findings, some for surfaces this register tracks as
+  `unknown`, for example an API-verified agent-tools.cloud listing, and
+  some for surfaces it does not track, such as PulseMCP, the LangChain
+  providers page, Merit's awesome-agentic-commerce list and LobeHub
+  Skills), and `docs/company/DISTRIBUTION-FINDINGS.md` (a business analysis
+  whose Coinbase Bazaar figure `DIRECTORY-MAP.md` later corrected). They
+  are left out of this population to keep the source set closed, not
+  because their evidence is weaker: some of it is stronger than the
+  crawler counts used for rows here. **Follow-up:** a reconciliation batch
+  should read them, add the surfaces they prove, and upgrade rows whose
+  status they prove, each citing the document and its date.
+
 - **`packages/skill/`** (a `SKILL.md` file distributed via the universal
   agent-skill convention, referenced against `agentskills.io`) carries no
   `package.json` or `pyproject.toml`, so it does not fit "published package
@@ -184,10 +205,11 @@ the document itself stays the analysis behind the status -- cited as
 
 ## Population summary
 
-44 surfaces (34 from sources 1-4, plus 10 from `DIRECTORY-MAP.md`, source
-5, added review round 1): 16 `registry-listing`, 10 `directory`, 6
-`framework-pr`, 12 `package`. By status: 12 `published`, 13 `open`, 3
-`closed`, 11 `unknown`, 3 `listed`, 1 `rejected`, 1 `submitted`. `npm run
+46 surfaces (34 from sources 1-4, plus 12 from `DIRECTORY-MAP.md`, source
+5, added in review rounds 1 and 2): 18 `registry-listing`, 10
+`directory`, 6 `framework-pr`, 12 `package`. By status: 12 `published`, 13
+`open`, 3 `closed`, 13 `unknown`, 3 `listed`, 1 `rejected`, 1
+`submitted`. `npm run
 distribution:check` confirms these counts against the committed file at
 every run.
 
