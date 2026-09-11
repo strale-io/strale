@@ -488,6 +488,16 @@ jobs:
       # in .github/workflows/m3-digest-shadow.yml, report only, and is not
       # part of this PR gate.
       - run: npm run digest:shadow:test
+      # Inactive project-document candidates (T6 M3 batch 4,
+      # docs/project/candidates/end-session.md): the /end-session
+      # repo-native replacement draft. Structural only - the candidate
+      # exists with inactive front matter and its M4 caution block, names
+      # both tools' identities, and neither live end-session file
+      # (.claude/commands/, .agents/skills/source-command-end-session/)
+      # references the candidates directory. Nothing here is executed by
+      # either tool; the check only proves the draft stays inert and
+      # findable.
+      - run: npm run candidates:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
       # Voyage/GPT model id lives in one place with a pinned_at date and a
       # decision reference: fails on a model-id literal anywhere else in
