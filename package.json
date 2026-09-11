@@ -38,6 +38,8 @@
     "digest:shadow": "npx tsx scripts/digest-shadow.mjs",
     "digest:shadow:test": "node --test scripts/digest-repo-native.test.mjs",
     "candidates:test": "node --test scripts/candidates.test.mjs",
+    "protocols:check": "node scripts/check-protocol-extraction.mjs",
+    "protocols:test": "node --test scripts/protocol-extraction.test.mjs",
     "scheduled:check": "node scripts/check-scheduled-reachability.mjs",
     "scheduled:test": "node --test scripts/scheduled-reachability.test.mjs",
     "distribution:check": "node scripts/check-distribution.mjs",

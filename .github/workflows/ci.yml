@@ -498,6 +498,14 @@ jobs:
       # either tool; the check only proves the draft stays inert and
       # findable.
       - run: npm run candidates:test
+      # Protocol-extraction check (T6 M3 batch 6a,
+      # docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md): the
+      # first mandatory protocol extracted, byte-identical, from its
+      # CLAUDE.md section, located by heading text (never by line number).
+      # CLAUDE.md stays the sole authority until the founder-gated M4
+      # cutover; this only proves the two copies have not silently diverged.
+      - run: npm run protocols:check
+      - run: npm run protocols:test
       # Scheduled mechanism reachability (T6 M3 batch 5,
       # config/scheduled-mechanisms.yaml): parses every
       # .github/workflows/*.yml with the yaml package and proves, for every

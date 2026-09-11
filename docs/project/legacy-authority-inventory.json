@@ -367,6 +367,7 @@
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
         "scripts/candidates.test.mjs",
+        "scripts/check-protocol-extraction.mjs",
         "scripts/codex-backlog-lib.mjs",
         "scripts/codex-backlog.test.mjs",
         "scripts/guard-tree-integrity.mjs",
@@ -376,6 +377,8 @@
         "scripts/m2-closure-register.test.mjs",
         "scripts/m2-quote-fidelity.mjs",
         "scripts/m2-quote-fidelity.test.mjs",
+        "scripts/protocol-extraction-lib.mjs",
+        "scripts/protocol-extraction.test.mjs",
         "scripts/receipts-lib.mjs",
         "scripts/receipts.test.mjs"
       ]

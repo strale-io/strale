@@ -25,3 +25,20 @@ Distribution PR Integrity Protocol links the first; sessions writing a
 review-findings file follow the second) and are unaffected by the M1/M2
 candidate status of this README — they were already live governance
 documents before the move, just filed at the repo root.
+
+## Extracted protocol mirrors (inactive, T6 M3 batch 6)
+
+The files below are byte-identical, inactive mirrors of a mandatory
+protocol's full text in `CLAUDE.md`, marked with `authority_active: false`
+front matter and a `<!-- BEGIN/END VERBATIM FROM CLAUDE.md -->` block.
+`CLAUDE.md` remains the sole authority for all of them until the
+founder-gated M4 cutover; `npm run protocols:check` fails if a mirror ever
+diverges from the `CLAUDE.md` section it copies.
+
+- `DEPLOY_MECHANISM_VERIFICATION.md`: Deploy Mechanism Verification
+  Protocol (DEC-20260504-C).
+
+The remaining six mandatory protocols/rules (session contract, Distribution
+PR Integrity, Capability Onboarding, Audit-Follow-up Test Coverage,
+Bulk-Operation Deploy, Shared-Checkout Rule) are extracted together in the
+next batch (M3 batch 6b), once this batch's check has proven the pattern.
