@@ -843,16 +843,19 @@ tracks:
       Condition 2 is settled (2026-09-11): the Session Start mode
       declaration and the review-before-close step stay outside the
       protocol-coverage manifest, recorded in its excluded_sections reasons
-      (review-before-close is covered in substance by the review-routing and
-      session-contract rows; the M4 entrypoint rewrite restates both).
+      (nothing enforces review-before-close; the review before merge keeps
+      unreviewed code out of main; the M4 entrypoint rewrite restates both
+      steps).
       Condition 3 is settled (2026-09-11): after cutover the production
       digest reads repository data from files copied into the API image,
-      because Railway deploys every merge to main (GET /health returned the
-      just-merged commit ed29d691), so the image carries main's current
-      files with no new secret and no network dependency; the M4 cutover PR
-      adds the Dockerfile COPY lines for the files the readers use
-      (docs/company/DECISION-QUEUE.md, handoff/_general/from-code/,
-      docs/operations/distribution-registry.yaml, config/vendors.yaml) and
+      which carry main's files with no new secret and no network
+      dependency. Evidence for freshness is one observation, not a
+      guarantee: GET /health returned ed29d691, the tip of main right after
+      that merge. The M4 cutover PR adds the Dockerfile COPY lines for the
+      files the readers use (docs/company/DECISION-QUEUE.md,
+      handoff/_general/from-code/, docs/operations/distribution-registry.yaml,
+      config/vendors.yaml), a check that the built image actually contains
+      them (per DEC-20260504-C, deploy mechanism verified, not assumed), and
       the digest prints the image commit so a stale deploy is visible.
       Rejected: a GitHub read at runtime (a token and a network dependency)
       and moving the digest to GitHub Actions (production database
