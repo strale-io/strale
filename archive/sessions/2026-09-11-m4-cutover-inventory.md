@@ -150,7 +150,7 @@ two, and notes where `AGENTS.md` diverges.
 | Tech Stack | 247 | Keep as is | No Notion dependency. |
 | Project Structure | 257 | Keep as is | No Notion dependency. |
 | Active Decisions | 281 | Rewrite | Currently a running prose decision log citing Notion Decisions DB page ids for several entries (e.g. `DEC-20260428-A`, `DEC-20260428-B`, `DEC-20260813-A`, `DEC-20260815-A` - each cites a Notion page id in `CLAUDE.md`'s text, verified by reading lines 281-341). At M4 these become pointers to `docs/decisions/records/*.md` / generated `docs/project/DECISIONS.md`, per the target authority model (migration plan section 4, "Settled product/project decisions" row). |
-| Capabilities & Quality | 342 | Keep as is | No Notion dependency; excluded from protocol coverage as "descriptive platform facts," which is a different (correct) reason to leave it alone rather than rewrite it. |
+| Capabilities & Quality | 342 | Rewrite | No Notion dependency, and excluded from protocol coverage as "descriptive platform facts". But it is mostly mutable project fact (capability and solution counts, prices, dated capability lists, the free-tier list), which the plan's blocking check #4 bars from the entrypoints, so batch 2 moves those facts to their owning source (the M2 candidate project documents under `docs/project/` or the live `GET /v1/platform/facts`) and leaves a pointer; any durable rule in it (for example the `scheduled_testing_eligible` boot-rewrite warning) stays. |
 | Adding New Capabilities (MANDATORY PIPELINE) | 370 | Keep as is | The how-to workflow the Capability Onboarding Protocol governs; `docs/project/protocol-coverage.yaml`'s `capability-onboarding` row's `full_body` note explicitly separates this section from the mirrored protocol text and does not claim to cover it. No Notion dependency in the section body itself. |
 | Scoring Integrity (retired with the SQS engine - DEC-20260503-B) | 481 | Keep as is | Historical/retired-system note, no Notion dependency, not a live protocol. |
 | Test Infrastructure Cost Principles (always enforce) | 492 | Move behind a pointer | Mirror at `docs/governance/protocols/TEST_INFRASTRUCTURE_COST_PRINCIPLES.md`, covered by `docs/project/protocol-coverage.yaml`. |
@@ -484,6 +484,23 @@ sequence below starts from the settled record.
    mirrored section's text without updating the mirror in the same commit
    (section 3 names this exact risk); a `HEADING_UNCLASSIFIED` failure if a
    heading is dropped or renamed without updating `excluded_sections`.
+   Two further changes belong in this batch (added after the independent
+   review of PR #664). First, moving a section behind a pointer breaks the
+   mirror mechanism itself, not only one mirror: `protocols:check` finds
+   each mirror's `source_heading` in `CLAUDE.md` and byte-compares the
+   section body with the text between the mirror's `BEGIN VERBATIM FROM
+   CLAUDE.md` and `END VERBATIM FROM CLAUDE.md` markers, so a section
+   reduced to a pointer fails it. The batch therefore inverts the
+   direction: the mirror under `docs/governance/protocols/` becomes the
+   canonical text (its verbatim markers and wording updated to say so),
+   `protocols:check` changes to require that the `CLAUDE.md` heading
+   exists and links that mirror path, and the coverage manifest's rows
+   keep resolving their `source_heading`; `protocols:test` gains planted
+   failures for a pointer to the wrong mirror and a missing mirror.
+   Second, batch 3's parity check bars mutable project facts from the
+   entrypoints, so this batch moves them out of `CLAUDE.md` first (the
+   "Capabilities & Quality" section above, and any count, price or dated
+   state left in a kept section), or batch 3's check fails on arrival.
 
 3. **Rewrite `AGENTS.md` as `CLAUDE.md`'s peer entrypoint, and add an
    entrypoint-parity check.** Apply the equivalent condensed rewrite to
@@ -502,7 +519,9 @@ sequence below starts from the settled record.
    sketch: reuse the pattern `apps/api/scripts/check-platform-facts-drift.ts`
    already applies to other surfaces, scanning for number-and-unit patterns
    next to known fact keywords, with a narrow allowlist for the two files'
-   own structural headings. Files: `AGENTS.md`,
+   own structural headings. Run it on the integration branch before wiring
+   it blocking; it must already be clean on the rewritten `CLAUDE.md` from
+   batch 2. Files: `AGENTS.md`,
    `docs/project/protocol-coverage.yaml`, `docs/project/PROTOCOL-ROUTER.md`,
    the new parity-check script, wired blocking into `ci.yml`. Tests: the new
    script's own test file with a planted-failure fixture per rule (a),
