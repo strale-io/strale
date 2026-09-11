@@ -11,8 +11,10 @@ the health window below is five days, not one.
 ## Headline
 
 1. **Screenshots, PDFs and every other capability that calls our browser
-   service directly have failed on every call since 2026-08-26 — 52 of 52, 28
-   of them paying customers, none charged — while every monitor said healthy.**
+   service directly have failed on every call since 2026-08-26 — screenshots
+   and PDFs 52 of 52 (20 paying), plus 8 paying calls on page extraction and
+   company enrichment: 28 paying customers, none charged — while every monitor
+   said healthy.**
    Cause: on 2026-08-25 a session replaced the production Browserless key with a
    browserless.io cloud key because the new vendor monitor tested the key
    against the cloud account, which production does not use. Restoring the key
@@ -22,7 +24,7 @@ the health window below is five days, not one.
    parameter $4"). Fixed in this batch, with Browserless deliberately excluded
    from it because Browserless relays target sites' 403s.
 3. **Revenue fell for the first time in five completed weeks** (€73.03 →
-   €58.77), and all of the fall is the smaller buyers not returning; the largest
+   €58.77), and 91% of the fall is the smaller buyers not returning; the largest
    buyer was flat.
 
 ---
@@ -60,17 +62,17 @@ weekly total and share:
 | `x402:v1:42a6…` | €0.11 | €3.15 | €0.94 |
 | everyone else | €0.85 | €0.24 | €1.22 |
 
-So the €14.26 fall is entirely non-largest: the largest buyer moved −€1.23
+So €13.03 of the €14.26 fall (91%) is non-largest: the largest buyer moved −€1.23
 (−2%). In the partial week the largest runs ~€8.7/day against ~€7.8/day last
 week. `42a6…` is the only non-largest payer seen in three separate weeks
 (08-27, 09-06, 09-10; €4.20; first slugs address-geocode, serp-analyze,
-iban-to-bank). Card customer last bought 2026-08-28T19:16Z — **14 days silent**.
+iban-to-bank). Card customer last bought 2026-08-28T19:16Z — **13.5 days silent**.
 Two registered accounts bought this week (`user:v1:703c…` on 09-09/10/11 for
 €0.12; `user:v1:fa6a…` €0.02) — recorded, not interpreted.
 
 *Instrument gap, still open from 09-06:* the pack's quiet list reports the card
 customer as "9d ago" because `quietPayers(lastFull)` asks as of the end of the
-last completed week. Real silence is 14 days. Not fixed today (the day went to
+last completed week. Real silence is 13.5 days. Not fixed today (the day went to
 the outage); the proposed shape in the 09-06 record stands.
 
 **German — watch closed.** OpenRegister reset; the tower restored
@@ -101,26 +103,33 @@ Evidence (all read-only; receipt
 `archive/receipts/2026-09-11-audit-browserless-credential-outage.json`):
 
 - First 403: screenshot-url 2026-08-26T13:50:15Z, html-to-pdf 16:04:16Z. Last
-  success 2026-08-25 12:50 / 15:04. Since: **52 of 52** direct calls failed, and
-  the distinct failure strings are exactly three, all "HTTP 403: Unauthorized".
+  success 2026-08-25 12:50 / 15:04. Since: **52 of 52** screenshot/PDF calls
+  failed, and the distinct failure strings are exactly three, all "HTTP 403:
+  Unauthorized". The 8 paying web-extract / company-enrich failures below come
+  on top of the 52 — **60** refused direct calls in all. (The committed audit
+  receipt says "52 direct calls were attempted" against the cloud counter; the
+  correct figure is 60, which only strengthens that point. Receipts are
+  immutable; the correction lives in the follow-up receipt.)
 - Who: `who-called.ts` + `externalCustomers()` split — **28 paid attempts
   failed**: screenshot-url 20 (x402), web-extract 4 (told "the site blocks
   automated access… not a Strale issue"), company-enrich 4 ("could not access
-  website"). html-to-pdf, landing-page-roast, estonian-company-data: harness
-  only. None charged (failed executions do not settle).
+  website"). html-to-pdf: harness only. landing-page-roast,
+  estonian-company-data: no customer calls; their harness calls were refused
+  by cost class before reaching the browser. None charged (failed executions
+  do not settle).
 - Before 2026-08-25T16:00Z, 75 days: **zero** 401/403 on direct callers; 172 and
   169 completions on screenshot-url / html-to-pdf in the two weeks before.
 - Production is the self-hosted v1 container: pre-change failures carry Joi
   messages (`"options.format" must be one of …`), the pinned
   `browserless/chrome:1.61.1` validator (`railway-config.md`). The cloud
   account's own counter moved **2 of 1000 units** since 2026-08-25T22:47Z while
-  52 calls were attempted.
+  60 direct calls were attempted.
 - The change: `handoff/_general/from-code/2026-08-25-vendor-control-tower-and-german-company-data.md`
   line 8 — "Railway had a stale 19-character Browserless credential while root
   `.env` held the verified 49-character key. Replaced only that existing
   environment variable." The 19-character value was the container's token.
 - `vendor_capability_suspensions` for browserless after 2026-08-25: **0**, though
-  each of the 52 refusals reached `recordVendorHttpFailure` (see D).
+  every refusal reached `recordVendorHttpFailure` (see D).
 - `unverified:` the Railway values themselves (`BROWSERLESS_URL`, the chromium
   service's `TOKEN`). `railway whoami` → "Unauthorized. Please run `railway
   login` again." The conclusion rests on the three independent observations
@@ -138,8 +147,9 @@ existing decision resolve this?* The *what* — yes, and it is resolved: restore
 the container's token. The *execution* is blocked only by access (a signed-out
 Railway CLI; authenticating is the founder's). → `AUTHORIZATION_UNAVAILABLE`,
 DQ-31. Order matters: this batch's monitor change must deploy first, or the
-restored token will fail the cloud account check and the tower will suspend
-seven capabilities exactly as on 2026-08-25.
+restored token will fail the cloud account check and the tower will suspend the
+Browserless-required capabilities exactly as on 2026-08-25 (seven dependency
+edges; six live today, since `annual-report-extract` is already inactive).
 
 ### Everything else overnight
 
@@ -230,24 +240,36 @@ Branch `chore/checkin-2026-09-11`. Four changes.
    URL. Withdrawn before commit.
 3. **The Browserless balance adapter runs only for a browserless.io
    `BROWSERLESS_URL`.** Otherwise `recordBalanceNotApplicable` clears the
-   allowance figures and reads live evidence: `healthy` if a render succeeded
-   (`last_success_at`) in 24h, else `unknown` — a morning WARNING carrying the
-   reason. Never lifts a block, never restores. This is also what makes DQ-31
-   safe to execute.
+   allowance figures and reads live evidence: `healthy` only if a metered call
+   succeeded in the last 24h **and after the account entered this mode**
+   (`metadata.balance_not_applicable_since`, set on the first pass, cleared if
+   the balance check ever applies again), else `unknown` — a morning WARNING
+   carrying the reason. Never lifts a block, never restores. This is also what
+   makes DQ-31 safe to execute.
+   *The "after this mode began" clause was found twice, independently, before
+   merge.* Reading production for a post-deploy baseline showed Browserless's
+   `last_success_at` at 06:18Z — stamped by the cloud balance read, which runs
+   hourly. The first version would have reported the refused container
+   `healthy`, with a reason claiming a render had succeeded, for ~24h after
+   deploy: F7 incident 10 repeating inside its own fix. The second reviewer
+   flagged the same thing as its one blocker. Fixed, with a production-shaped
+   integration case (receipt
+   `archive/receipts/2026-09-11-test-run-vendor-breaker-mutations-followup.json`).
 4. **`sec-api-io` probe accepts its real unauthenticated 200.**
    And the vendor report prints each account's reason under its line.
 
 Tests (receipt `archive/receipts/2026-09-11-test-run-vendor-breaker-mutations.json`):
-40/40 across the four vendor files + the probe test; **7 planted failures, 7
+40/40 across the four vendor files + the probe test; **8 planted failures, 8
 caught**, including the production statement as it stood. `tsc --noEmit` clean.
 Neighbouring suites (web-provider, screenshot-url, html-to-pdf, chromium-health,
 vendor-morning-status): 143 passed.
 
-*Expected production effect after deploy:* within the hour, Browserless's row
-reads the self-hosted reason with no allowance figures; `last_success_at` is the
-09-11 05:18Z cloud reading, so it flips to `unknown` about 24h later unless a
-render succeeds. Nothing is suspended by this change. Serper/Dilisense/
-OpenRegister/eSortcode refusals will now be recorded and act.
+*Expected production effect after deploy:* at the first hourly tower run,
+Browserless's row reads `unknown` with the self-hosted "no render has succeeded"
+reason and no allowance figures, and the morning report raises a WARNING for it
+until the key is restored and a render succeeds. Nothing is suspended by this
+change. Serper/Dilisense/OpenRegister/eSortcode refusals will now be recorded
+and act.
 
 **Independent review** — a fresh read-only same-provider agent (DEC-20260910-A
 policy; no Codex backlog row). **PASS, no blockers.** It read all 37 `sql`
@@ -261,6 +283,24 @@ production no longer matches DEC-7; the "Unauthorized" body claim is now in the
 receipt; the integration-test comment no longer overstates production evidence;
 the race above. Nit 6 (restore of `last_checked_at` in the Serper test) judged
 safe by the reviewer.
+
+**Second independent review** — a separate fresh read-only agent over the
+post-review code delta and every documentation claim. **FAIL on one blocker**,
+the `last_success_at` provenance above, already fixed by the time it reported
+(found from the production baseline read). It re-walked the status transitions
+(healthy→403, auth_error→429, exhausted→401, exhausted→402, absent row) and the
+bind types and found them clean. Should-fix items, all taken: the "52 of 52, 28
+paying" arithmetic (the 52 are screenshots/PDFs with 20 paying; the other 8
+paying failures are extra, 60 refused calls in all) corrected in DQ-31, GOALS,
+LESSONS and here; LESSONS repeated the DEC-7 citation; GOALS said page
+extraction kept working through its fallback, which is true of last-resort
+Browserless users and false of `web-extract` — reworded. Nits taken: "entirely"
+→ 91%; 14 → 13.5 days; DQ-31's raised time; "the key the service checks" →
+"the key our API presents"; six vs seven capabilities; the LESSONS count line
+now dates incident 10 to 08-25; DAILY-RUN says the alarm rate was measured over
+five of the sixteen days. Not taken: after a successful render
+`recordVendorUsage` sets `healthy` but keeps the "unconfirmed" reason until the
+next hourly run — cosmetic, at most an hour.
 
 ## E. Authorities updated
 

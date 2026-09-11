@@ -14,15 +14,16 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-31** · `your_call` · owner Petter · raised 2026-09-11T08:00Z · no deadline — **screenshots and PDFs are broken until the browser service gets its key back; I need the Railway sign-in to do it**
+**DQ-31** · `your_call` · owner Petter · raised 2026-09-11T06:30Z · no deadline — **screenshots and PDFs are broken until the browser service gets its key back; I need the Railway sign-in to do it**
 *Status:* `AUTHORIZATION_UNAVAILABLE`. Nothing here is a judgement; what should
 happen is settled and the only thing missing is access.
 *Settled:* since 2026-08-26 every direct call to our self-hosted browser service
-has been refused — 52 of 52, of which 28 were paying customers (20 screenshots,
-4 page extractions, 4 company enrichments; none charged). The cause is one
-setting: on 2026-08-25 the key the service checks was replaced with a
-browserless.io account key, because a new monitor tested the key against that
-account, which production does not use. The fix is to put the service's own key
+has been refused. Screenshots and PDF rendering: 52 of 52, of which 20 were
+paying customers. Page extraction and company enrichment, which take the same
+path: 8 more paying calls failed. So 28 paying customers in all, none charged.
+The cause is one setting: on 2026-08-25 the key our API presents to the service
+was replaced with a browserless.io account key, because a new monitor tested
+the key against that account, which production does not use. The fix is to put the service's own key
 back into the API's `BROWSERLESS_API_KEY`, copied from the browser service's
 `TOKEN` on Railway, and redeploy. The monitor change that stops this recurring
 merges first, so restoring the key cannot re-trigger the 25 August suspension.
@@ -37,7 +38,8 @@ record it here. Nothing else is asked of you.
 failing. Observed failing: screenshots, PDF rendering, page extraction and
 company enrichment, at about two paying attempts a day between them. Landing-page
 review and Estonian company data take the same path with the same key and had no
-calls in the window to observe.
+customer calls in the window to observe (only our own test traffic, which was
+refused before reaching the browser).
 
 **DQ-30** · `answered` · owner Petter · raised 2026-09-02T22:15Z · answered 2026-09-03 — **keep all five dormant vendor keys; buy nothing, cancel nothing**
 *Answered:* Petter, in chat: leave Cobalt, EINsearch and sec-api in place, he

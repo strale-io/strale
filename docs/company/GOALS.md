@@ -136,13 +136,14 @@ conversion.
 ## What we currently know (update as evidence lands)
 
 - **Measured 2026-09-11 — revenue fell for the first time in five completed
-  weeks, and the whole fall is the smaller buyers not coming back.** Week of
+  weeks, and nine-tenths of the fall is the smaller buyers not coming back.**
+  Week of
   08-31 closed at **€58.77 / 1,168 calls** against €73.03 / 1,295; `growth()`
   reads falling, ending the run 07-27 €10.85 · 08-03 €27.38 · 08-10 €39.24 ·
   08-17 €66.31 · 08-24 €73.03. Decomposed through `payerFacts` over both
   discrete weeks (second source to `commercial-brief.ts`, which agrees on every
-  total): the largest buyer went **€55.49 → €54.26**, flat; everyone else went
-  **€17.54 → €4.51**. Ten payers, top share 92.3%, two bought on more than one
+  total): the largest buyer went **€55.49 → €54.26** (−€1.23, flat); everyone
+  else went **€17.54 → €4.51** (−€13.03 of the −€14.26). Ten payers, top share 92.3%, two bought on more than one
   day, someone paid on all seven.
 
   *The week in progress (day 5 of 7, no verdict drawn):* €38.97 across 11
@@ -154,8 +155,8 @@ conversion.
   now bought in **three separate weeks** (08-27, 09-06, 09-10; €4.20 in all,
   address, search and bank-code utilities) — the only cross-week habit outside
   the largest buyer, and again a general utility rather than the compliance
-  wedge. And the card customer is **fourteen days silent**, against a previous
-  longest gap of two.
+  wedge. And the card customer has been silent **thirteen and a half days**
+  (last purchase 2026-08-28T19:16Z), against a previous longest gap of two.
 
   *German, closed as a watch.* OpenRegister's allowance reset and the tower
   restored `german-company-data` and the three German bundles at
@@ -166,15 +167,17 @@ conversion.
   remain.
 
 - **Measured 2026-09-11 — screenshots and PDFs have failed on every call since
-  2026-08-26, and the monitors said everything was healthy.** 52 of 52 direct
-  browser calls refused, 28 of them paying customers, none charged. The cause is
-  a key replaced on 2026-08-25 to satisfy a monitor that was reading the wrong
-  account; the fix is one setting, blocked only on a Railway sign-in
-  (DECISION-QUEUE DQ-31). Worth knowing when reading any capability's history in
-  that window: page-extraction capabilities kept working through their
-  plain-fetch fallback, so their numbers look normal while pages that need a real
-  browser quietly got worse. That degradation is not measured and is not
-  claimed. Evidence: `archive/receipts/2026-09-11-audit-browserless-credential-outage.json`;
+  2026-08-26, and the monitors said everything was healthy.** Screenshots and
+  PDFs: 52 of 52 refused, 20 of them paying. Page extraction and company
+  enrichment, which call the browser the same way: 8 more paying calls failed.
+  28 paying customers in all, none charged. The cause is a key replaced on
+  2026-08-25 to satisfy a monitor that was reading the wrong account; the fix is
+  one setting, blocked only on a Railway sign-in (DECISION-QUEUE DQ-31). Worth
+  knowing when reading any capability's history in that window: the capabilities
+  that use the browser only as a last resort (reading pricing pages, reviews,
+  policies and the like) kept answering from their plain-fetch tiers, so their
+  numbers look normal while pages that need a real browser may quietly have got
+  worse. That degradation is not measured and is not claimed. Evidence: `archive/receipts/2026-09-11-audit-browserless-credential-outage.json`;
   mechanism in LESSONS.md F7 incident 10 and F5 incident 10.
 
 - **Correction, measured 2026-09-06 — four fifths of what the entry below calls

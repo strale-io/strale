@@ -722,7 +722,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 10. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 on 2026-09-11 is incident 8's arm again — see below.** A capability recorded as switched off that served errors for two
+**Count: 10. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -976,14 +976,17 @@ found a 19-character value on Railway against a 49-character browserless.io key
 in the local `.env`, judged the Railway value stale and replaced it; the tower
 then read 959/1000 units and restored seven capabilities. Both readings were
 accurate and the conclusion was not. Production serves Browserless from a
-self-hosted container (pinned v1, DEC-7) that checks the key against its own
+self-hosted container (pinned v1 per `apps/api/railway-config.md`; DEC-7 chose
+the managed product, and production no longer matches it) that checks the key
+against its own
 token, and the 19-character value was that token. The monitor was reading an
 account production never calls.
 
 From the next deploy — first refusal 2026-08-26T13:50Z — every direct
-Browserless call returned HTTP 403 "Unauthorized": 52 of 52, among them 28 paid
-attempts by customers (20 screenshots, 4 page extractions, 4 company
-enrichments), none charged. For sixteen days the morning report said
+Browserless call was refused. Screenshots and PDFs returned HTTP 403
+"Unauthorized" 52 times out of 52, 20 of them paid attempts by customers; page
+extraction and company enrichment, which call the container the same way,
+failed on 8 more paid attempts. 28 paying customers in all, none charged. For sixteen days the morning report said
 "Browserless Cloud: healthy; 998/1000 units", and the cloud account's own
 counter moved by 2 units in that time — the second source that production never
 called it. Evidence: `archive/receipts/2026-09-11-audit-browserless-credential-outage.json`.

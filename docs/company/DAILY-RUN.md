@@ -90,10 +90,11 @@ remembering which vendor dashboard needs a manual check.
 >
 > **Group the alarms; never sample them.** Aggregate invariant violations and
 > alerts by capability over the whole window since the previous run, with no
-> row cap. From 2026-08-26 the harness raised "correctness 0%" about six times a
-> day on each of two Browserless capabilities, for sixteen days, while every
-> direct Browserless call was refused; the run's health sweep read the latest 25
-> events, where a steady low-rate alarm never ranked. An alarm that recurs on the
+> row cap. While every direct Browserless call was being refused (from
+> 2026-08-26, sixteen days), the harness raised "correctness 0%" on each of two
+> Browserless capabilities about six times a day — measured over the last five
+> of those days — and the run's health sweep read the latest 25 events, where a
+> steady low-rate alarm never ranked. An alarm that recurs on the
 > same capability on more than one day is a finding until it is explained. And a
 > `healthy` in the vendor report is only as good as the account it read — print
 > each account's reason and check it names what production actually calls.
