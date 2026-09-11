@@ -475,6 +475,13 @@ jobs:
       # branch) the same way the other cheap-extras registers are.
       - run: npm run vendors:check
       - run: npm run vendors:test
+      # Shadow distribution-surfaces register (M3 batch 3, T6,
+      # docs/operations/distribution-registry.yaml). Not authoritative
+      # until the founder-gated M4 cutover, but validated (schema, unique
+      # ids, authority_active false, evidence paths, status_date not in
+      # the future) the same way the other cheap-extras registers are.
+      - run: npm run distribution:check
+      - run: npm run distribution:test
       # Repo-native digest priority readers (M3 batch 2, T6). Pure-function
       # tests only here (parser, 14-day split, handoff window, comparison,
       # workflow reachability) -- the shadow comparison itself runs daily
