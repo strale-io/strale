@@ -9,7 +9,10 @@ Branch: `feat/multichain-and-job-countries`
 
 ## Chains
 
-One Alchemy key serves every network, so this needs no new account or spend.
+This needs no new account or spend. **Correction after deploy:** one key
+serves only the networks enabled on its Alchemy app, and Strale's app has
+only Ethereum mainnet. Every other chain answers HTTP 403 until the founder
+enables it (see "After deploy" below).
 
 | Capability | Chains served | Why not more |
 |---|---|---|
@@ -84,12 +87,15 @@ transactions) was killed by adding a Polygon test.
 2. **USAJOBS.** Request a key at developer.usajobs.gov with the Strale email
    address. Read the terms shown there for the reposting clause quoted above.
    If it says anything different, tell me before setting the key.
-3. In Railway (project desirable-serenity, service strale), set
+3. **Alchemy:** enable the Base, Arbitrum One, OP Mainnet, Polygon PoS and BNB
+   Smart Chain mainnets on the app behind `ALCHEMY_API_KEY`. This is free.
+   Until then only Ethereum works; see "After deploy".
+4. In Railway (project desirable-serenity, service strale), set
    `FRANCE_TRAVAIL_CLIENT_ID`, `FRANCE_TRAVAIL_CLIENT_SECRET`,
    `USAJOBS_API_KEY`, and `USAJOBS_USER_AGENT` (the email the key was registered
    to).
 
-After step 3, a session adds fr/us known answers to
+After step 4, a session adds fr/us known answers to
 `manifests/job-board-search.yaml`, backfills them, verifies them in production,
 and sets those env-manifest rows' `set_in` to `railway`.
 
@@ -103,3 +109,37 @@ and sets those env-manifest rows' `set_in` to `railway`.
   `job-board-search`.
 - Verify each chain's known-answer result in `test_results`, using real latency
   rather than a schema check.
+
+### Done 2026-09-11, and what it found
+
+- #659 merged, and production served `20274087` at 11:05Z.
+- Manifests synced, and the backfill added the per-chain suites. The first
+  backfill pass stopped after inserting suites, because `DATABASE_URL` was
+  unset in the worktree. The re-run completed with no duplicate suites.
+- Run through `POST /v1/internal/tests/run?slug=…` at 11:08Z:
+  - **Ethereum passes on all four capabilities** with real calls: gas 74ms,
+    balance 133ms, transactions 65ms, age 90ms.
+  - **Job search passed 6/6**, known answer 394ms.
+  - **Every non-Ethereum chain failed with "`<chain>` RPC returned HTTP 403"**:
+    Base, Arbitrum, OP and Polygon on the three wallet capabilities; Polygon and
+    BNB on gas. The Alchemy app has only Ethereum mainnet enabled.
+- The 14 non-Ethereum known-answer suites are **paused** (`active = false`) so
+  they stop recording failures. Their 14 failed results leave the promotion
+  job's 7-day window by 2026-09-18.
+- Circuit breakers are closed with 0 consecutive failures. No customer is
+  affected, because all four capabilities are still dark (not visible, x402
+  off). A caller asking for those chains today gets the 403 error, not wrong
+  data.
+
+**Founder step (free, account setting):** in the Alchemy dashboard, open the
+app whose key is `ALCHEMY_API_KEY` on Railway, go to its Networks settings, and
+enable the mainnets for Base, Arbitrum One, OP Mainnet, Polygon PoS and BNB
+Smart Chain.
+
+**Then (session):**
+1. Resume the suites. From a directory holding the scratch script, run it with
+   the write grant: it sets `active = true` on exactly those 14 known-answer
+   suites (`capability_slug` in the four, `input->>'chain_id'` in
+   8453/42161/10/137/56).
+2. Trigger `POST /v1/internal/tests/run?slug=<slug>` for each capability.
+3. Confirm every chain's known answer passes with real latency.
