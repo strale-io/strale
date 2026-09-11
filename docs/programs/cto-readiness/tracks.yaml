@@ -717,15 +717,15 @@ tracks:
       Deploy Protocol, DEC-20260504-B), and SHARED_CHECKOUT_RULE.md
       (Shared-Checkout Rule, concurrency safety; its caution block notes the
       following "Worktree node_modules Hazard" section is separate and not
-      part of this mirror). npm run protocols:check now reports 7 candidate
-      mirrors with zero findings. Two planted-failure proofs were run
+      part of this mirror). npm run protocols:check passes on every mirror.
+      Two planted-failure proofs were run
       directly against the real repository and restored: one character
       changed inside a new file's verbatim block, and one character changed
       in a scratch, uncommitted edit of the corresponding CLAUDE.md section,
       each confirmed to fail protocols:check naming the file and line before
       being restored with git checkout, before this batch's commit. The
       README template in scripts/project-context-lib.mjs was updated to list
-      all seven mirrors and regenerated into
+      every mirror and regenerated into
       docs/governance/protocols/README.md; docs/project/PROTOCOL-ROUTER.md
       stays the inert M1 skeleton this batch does not touch. CLAUDE.md,
       AGENTS.md, DISTRIBUTION_PR_PREFLIGHT.md, and REVIEW_TEMPLATE.md are
