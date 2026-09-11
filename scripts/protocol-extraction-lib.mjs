@@ -128,6 +128,28 @@ export function listCandidateProtocolFiles(root) {
     .sort();
 }
 
+/** Extracts the exact CLAUDE.md section text for `headingText` (the heading
+ * line through the last line before the next heading of the same or higher
+ * level, trailing blank lines trimmed), using the identical lookup and
+ * extraction logic checkProtocolFile compares against. Throws if the heading
+ * is missing or duplicated, the same conditions checkProtocolFile reports as
+ * PROTOCOL_HEADING_NOT_FOUND / PROTOCOL_HEADING_DUPLICATE. Returns a single
+ * LF-joined string (no trailing newline). Used by mirror-generation scripts
+ * so a copy can never hand-diverge from what the check itself extracts;
+ * never used by the check's own code path. */
+export function extractClaudeSectionText(root, headingText) {
+  const claudeContent = readTextNormalized(join(root, CLAUDE_MD_PATH));
+  const claudeLines = claudeContent.split("\n");
+  const headingOccurrences = findHeadingOccurrences(claudeLines, headingText);
+  if (headingOccurrences.length === 0) {
+    throw new Error(`source_heading not found in CLAUDE.md: ${headingText}`);
+  }
+  if (headingOccurrences.length > 1) {
+    throw new Error(`source_heading found ${headingOccurrences.length} times in CLAUDE.md: ${headingText}`);
+  }
+  return trimTrailingBlank(extractSection(claudeLines, headingOccurrences[0])).join("\n");
+}
+
 /** Runs every check on one candidate protocol file. Returns an array of
  * findings, each { code, file, detail }. Stops extending checks past a
  * point where a prerequisite (a single marker pair, a usable source_heading)
