@@ -15,7 +15,7 @@ created_at: 2026-09-11
 > This report inventories what the M4 atomic authority cutover
 > (`docs/strategy/2026-08-31-repo-native-operating-model-migration.md`,
 > section "M4 - Atomic authority cutover and Notion retirement") needs, as of
-> `origin/main` at `ed29d691`. It designs nothing, activates nothing, and
+> `origin/main` at `7aa24d43`. It designs nothing, activates nothing, and
 > changes no code, schema, workflow, Notion content, or production state.
 > Candidate project documents stay inactive and Notion-backed workflows stay
 > authoritative until the founder-gated cutover. The architect turns this
@@ -37,8 +37,15 @@ assumed from an earlier report's summary, since several things the M3
 remaining-scope inventory (`archive/sessions/2026-09-11-m3-remaining-scope-inventory.md`)
 described as not yet built (the protocol coverage manifest, the distribution
 registry, the scheduled-mechanisms register) exist today because T6's later
-batches landed them. Base audited: `origin/main@ed29d691315c41c4a1d22f271e4f7662d5c3c2de`
-(also this branch's `HEAD` before this report's own commit).
+batches landed them. PR #663 (`docs(m3): settle the three M3
+milestone-review conditions`) merged all three M3 milestone-review
+conditions into `docs/company/DECISION-QUEUE.md` (DQ-32),
+`docs/project/protocol-coverage.yaml` (`excluded_sections`), and
+`docs/programs/cto-readiness/tracks.yaml` (T6 `next_action`); this revision
+was written after that merge. Base audited:
+`origin/main@7aa24d4387d794c4383065fd92f69669871579bb`
+(also this branch's `HEAD` after merging `origin/main`, before this report's
+own revision commit).
 
 ## 1. Active Notion consumers
 
@@ -50,17 +57,17 @@ Search terms run: `NOTION_API_KEY`, `NOTION_TOKEN`, `api.notion.com`,
 
 | # | Path:line | What it does | Runs in | Repo-native replacement |
 |---|---|---|---|---|
-| 1 | `apps/api/src/lib/daily-digest/fetch-notion.ts:109-134` `getPriorities()` -> `fetchUnreviewedDecisions()` (Decisions DB `ea57671f-...`, `Reviewed = false`, lines 136-157) and `fetchActionRequired()` (Journal DB `f275be62-...`, `Action Required = yes`, lines 159-184) | Reads | Production, Railway `strale-digest-cron` cron `30 5 * * *` UTC (`apps/api/railway-config.md:165-197`), via `gatherDigestData()` (`apps/api/src/lib/daily-digest/index.ts:122`) called from `apps/api/src/jobs/daily-digest.ts:30`. Not invoked by any `.github/workflows/*.yml` (0 hits for `daily-digest`). | `scripts/digest-repo-native-lib.mjs` (`parseDecisionQueue`, `repoNativePriorities`, `comparePriorities`), shadow-run only by `.github/workflows/m3-digest-shadow.yml`, never wired into the Railway digest itself (Dockerfile carries no `docs/company/DECISION-QUEUE.md`, see section 5). PR #641. Semantic gap open: repo 0 unreviewed / Notion 1, repo 1 action-required / Notion 10 on the first live comparison run (GitHub Actions run 34561747548) - this is M3 milestone-review condition 1, unresolved (see section 6). |
-| 2 | `apps/api/src/lib/daily-digest/fetch-notion.ts:50-105` `getDistributionSurfaces()` (Distribution Registry page/database `32e67c87-082c-81de-861f-dcc53576304c`) | Reads | Same digest path as row 1 | `docs/operations/distribution-registry.yaml` (34 rows, `docs/operations/distribution-registry.md:1-25`), `scripts/distribution-lib.mjs` / `scripts/check-distribution.mjs` (`npm run distribution:check`, blocking in CI, `.github/workflows/ci.yml:483-484`). `scripts/digest-shadow.mjs` prints the register and compares against `getDistributionSurfaces()` when `NOTION_API_KEY` is set (PR #642/#645). |
-| 3 | `apps/api/src/lib/daily-digest/fetch-shiplog.ts:76-147` `fetchNotionWorkspaceActivity()` -> `extractJournalEntries`/`extractSocialPosts` (lines 151-176, `JOURNAL_DB_ID = f275be62-...`, `SOCIAL_DB_ID = 7d0819c8-...`) | Reads | Same digest path as row 1 | None for the Journal-entry-shaped half; `docs/programs/cto-readiness/tracks.yaml:544-551` names it as remaining scope. Social-post tracking was deliberately dropped from the digest at M4 (`docs/programs/cto-readiness/tracks.yaml:601-607`; no code posts to social media from this repo, confirmed by the M3 remaining-scope inventory's S23). |
-| 4 | `apps/api/scripts/check-vendor-roster-drift.ts:169` (`https://api.notion.com/v1/databases/${dataSourceId}/query`), plus `NOTION_TOKEN` reads at lines 260-262 | Reads (Vendor Roster + Decisions DB) | Scheduled: `.github/workflows/weekly-drift.yml:80-86` (`vendor-roster` step), `secrets.NOTION_TOKEN` (line 82) | `config/vendors.yaml` (83 entries) + `scripts/vendors-lib.mjs` `compareRosterWithRegister`, run as a shadow comparison inside the same script (`printShadowComparison()`, lines 202-234) that never changes the script's exit code. A `--roster-fixture` flag exercises the comparison without `NOTION_TOKEN` (lines 236-257). PR #637. |
+| 1 | `apps/api/src/lib/daily-digest/fetch-notion.ts:109-134` `getPriorities()` -> `fetchUnreviewedDecisions()` (Decisions DB `ea57671f-...`, `Reviewed = false`, lines 136-157) and `fetchActionRequired()` (Journal DB `f275be62-...`, `Action Required = yes`, lines 159-184) | Reads | Production, Railway `strale-digest-cron` cron `30 5 * * *` UTC (`apps/api/railway-config.md:165-197`), via `gatherDigestData()` (`apps/api/src/lib/daily-digest/index.ts:122`) called from `apps/api/src/jobs/daily-digest.ts:30`. Not invoked by any `.github/workflows/*.yml` (confirmed by grepping every workflow file for `daily-digest`). | `scripts/digest-repo-native-lib.mjs` (`parseDecisionQueue`, `repoNativePriorities`, `comparePriorities`), shadow-run only by `.github/workflows/m3-digest-shadow.yml`, never wired into the Railway digest itself (Dockerfile carries no `docs/company/DECISION-QUEUE.md`, see section 5). PR #641. M3 milestone-review condition 1 (what the digest's "unreviewed"/"action required" lists should mean) is settled: `docs/company/DECISION-QUEUE.md:17` (DQ-32, `answered`) records that after cutover the digest's "action required" list shows only `your_call` entries from that file, and recent session activity gets its own "what happened" section (see row 3 below and section 6). |
+| 2 | `apps/api/src/lib/daily-digest/fetch-notion.ts:50-105` `getDistributionSurfaces()` (Distribution Registry page/database `32e67c87-082c-81de-861f-dcc53576304c`) | Reads | Same digest path as row 1 | `docs/operations/distribution-registry.yaml` (row count recomputed from the file, not quoted here; see `docs/operations/distribution-registry.md:1-25` for the register's own design and source log), `scripts/distribution-lib.mjs` / `scripts/check-distribution.mjs` (`npm run distribution:check`, blocking in CI, `.github/workflows/ci.yml:483-484`). `scripts/digest-shadow.mjs` prints the register and compares against `getDistributionSurfaces()` when `NOTION_API_KEY` is set (PR #642/#645). |
+| 3 | `apps/api/src/lib/daily-digest/fetch-shiplog.ts:76-147` `fetchNotionWorkspaceActivity()` -> `extractJournalEntries`/`extractSocialPosts` (lines 151-176, `JOURNAL_DB_ID = f275be62-...`, `SOCIAL_DB_ID = 7d0819c8-...`) | Reads | Same digest path as row 1 | For the Journal-entry-shaped half: `recentHandoffActivity()` (`scripts/digest-repo-native-lib.mjs:236-268`), which reads `handoff/_general/from-code/*.md` filenames for their date prefix and each file's first `Intent:` line as the repo-native equivalent of a Journal entry's date and title (design note at `scripts/digest-repo-native-lib.mjs:46-58`). Per DQ-32 (`docs/company/DECISION-QUEUE.md:17-30`), this reader is the replacement for the digest's "what happened" section, distinct from the founder-decision "action required" list (row 1). Social-post tracking was deliberately dropped from the digest at M4 (`docs/programs/cto-readiness/tracks.yaml:601-607`; no code posts to social media from this repo, confirmed by the M3 remaining-scope inventory's S23). |
+| 4 | `apps/api/scripts/check-vendor-roster-drift.ts:169` (`https://api.notion.com/v1/databases/${dataSourceId}/query`), plus `NOTION_TOKEN` reads at lines 260-262 | Reads (Vendor Roster + Decisions DB) | Scheduled: `.github/workflows/weekly-drift.yml:80-86` (`vendor-roster` step), `secrets.NOTION_TOKEN` (line 82) | `config/vendors.yaml` (entry count changes as vendors are added; recompute with the `vendors` list length in the file rather than quoting a number here - it was already stale once in this report's own predecessor) + `scripts/vendors-lib.mjs` `compareRosterWithRegister`, run as a shadow comparison inside the same script (`printShadowComparison()`, lines 202-234) that never changes the script's exit code. A `--roster-fixture` flag exercises the comparison without `NOTION_TOKEN` (lines 236-257). PR #637. |
 | 5 | `.claude/skills/vendor-switch/SKILL.md:101` ("Vendor switches always need a DEC entry in Notion (Decisions DB - `ea57671f-...`)"); byte-identical at `.agents/skills/vendor-switch/SKILL.md:101` | Writes (instructs an agent to create a Notion page) | Only when a session follows the skill | Drafted, not activated: `docs/strategy/2026-09-10-m3-vendor-state-model.md:504-534` ("Item 6") gives the exact replacement text for the skill's "Step 5" section (decision goes to `docs/decisions/records/*.md` plus a `config/vendors.yaml` lifecycle-history append). The live skill file is unedited. |
 | 6 | `.claude/skills/vendor-switch/SKILL.md:83` ("the Notion DPA template"); same line in the `.agents/` mirror | Reads (points a person at a Notion template) | Only when a session follows the skill | None named. Out of scope for the M3 vendor-state model's own batch plan; not covered by any repo-native replacement found in this search. |
 | 7 | `.claude/commands/end-session.md:32-75` (Journal entry via `collection://8f54383b-...`, line 32; To-do DB query `collection://33a67c87-...`, line 50; "Never mutate Notion to-do status", line 108) | Writes (Journal) and reads (To-do DB) | Only when a session follows the command | `docs/project/candidates/end-session.md` (inactive draft, front matter `authority_active: false`, `status: candidate`), covering every live step as unchanged or replaced. `scripts/candidates.test.mjs` (`npm run candidates:test`, wired into CI, `.github/workflows/ci.yml:500`) asserts the draft carries inactive markers and that neither live end-session file references the candidates directory. |
 | 8 | `.agents/skills/source-command-end-session/SKILL.md:38-116` (the Codex mirror of row 7; not identical to the Claude version - `Actor: claude-code` vs. `Actor: Codex`, and an ownership filter `Claude code` vs. `Codex`, per the M3 remaining-scope inventory's diff S25) | Writes (Journal) and reads (To-do DB) | Only when a Codex session follows the mirror | Same candidate draft as row 7; the M3 remaining-scope inventory (section 2) requires any repo-native draft to preserve the per-tool Actor/owner distinction rather than collapse it. Not yet drafted as of this report - `docs/project/candidates/end-session.md` exists but this report did not re-verify whether its content covers the mirror's identity split; that verification is a task for whichever batch activates the draft. |
-| 9 | `.claude/PROTOCOL.md` (1453 lines; the M3 remaining-scope inventory's S8 counted 71 case-insensitive `notion` hits in this file) | Reads (a person consulting session-mode criteria) | Only when a session follows `CLAUDE.md`'s pointer ("See `.claude/PROTOCOL.md` for full criteria and protocol definitions", `CLAUDE.md:9`; mirrored at `AGENTS.md:19`) | None found. `.claude/PROTOCOL.md` is linked from both live entrypoints (not orphaned), so it is an active consumer, not an excluded historical document. Its Notion content was not line-by-line inventoried in this report; that is M4 batch work (see section 7). |
-| 10 | `.claude/NOTION.md` (161 lines, the Notion workspace map already inlined in `CLAUDE.md`'s "Notion Access"/"Notion Workspace Structure"/"Notion Governance Rules" headings) | Reads (reference only) | Not linked from `CLAUDE.md` or `AGENTS.md` (`grep -rn "NOTION.md" CLAUDE.md AGENTS.md .claude/settings.json` returns nothing) | Not an active entrypoint consumer by this report's definition (no live link points at it), but its content duplicates what is inline in `CLAUDE.md`, so it is retired alongside `CLAUDE.md`'s own Notion headings at M4, not independently. |
-| 11 | `.claude/WORKFLOW.md`, `.claude/RUNBOOK.md`, `.claude/BUILD.md`, `.claude/DISPATCH.yaml` (4, 13, 6, and 33 case-insensitive `notion` hits respectively, per the M3 remaining-scope inventory's S8, corrected count) | Not verifiable from this report's search alone whether read | Not linked from `CLAUDE.md` or `AGENTS.md` by the same grep as row 10 | None found; excluded from the "active Notion authority" scope by the migration plan's own instruction to "exclude archive/, docs/decisions/records/, raw imports, and dated strategy/history documents" and by the M2 M3 boundary already treating these as an "uninitialised generic protocol with placeholders" (`docs/strategy/2026-08-31-repo-native-operating-model-migration.md:353`). Not re-verified content-by-content in this report; listed for completeness because the brief asks to name every excluded file an active entrypoint links to - none of these four is linked, so none is escalated to "active" here, but M4 should confirm this with its own search before deleting them. |
+| 9 | `.claude/PROTOCOL.md` (the M3 remaining-scope inventory's S8 found it carries multiple case-insensitive `notion` mentions; recompute with `rg -i notion .claude/PROTOCOL.md` rather than a count here) | Reads (a person consulting session-mode criteria) | Only when a session follows `CLAUDE.md`'s pointer ("See `.claude/PROTOCOL.md` for full criteria and protocol definitions", `CLAUDE.md:9`; mirrored at `AGENTS.md:19`) | None found. `.claude/PROTOCOL.md` is linked from both live entrypoints (not orphaned), so it is an active consumer, not an excluded historical document. Its Notion content was not line-by-line inventoried in this report; extracting its unique live rules (keep/obsolete per rule, repo-native home named for each kept rule) and archiving the file is its own batch, before the entrypoint rewrite (see section 7 batch 1). |
+| 10 | `.claude/NOTION.md` (the Notion workspace map already inlined in `CLAUDE.md`'s "Notion Access"/"Notion Workspace Structure"/"Notion Governance Rules" headings) | Reads (reference only) | Not linked from `CLAUDE.md` or `AGENTS.md`; confirmed by grepping `CLAUDE.md`, `AGENTS.md`, `.claude/settings.json`, `.claude/commands/`, `.claude/skills/`, `.claude/hooks/`, and `.codex/` for `NOTION.md` - no hit outside `.claude/NOTION.md` itself | Not an active entrypoint consumer by this report's definition (no live link points at it), but its content duplicates what is inline in `CLAUDE.md`, so it is retired alongside `CLAUDE.md`'s own Notion headings at M4, not independently; covered by the same protocol-extraction batch as row 9. |
+| 11 | `.claude/WORKFLOW.md`, `.claude/RUNBOOK.md`, `.claude/BUILD.md`, `.claude/DISPATCH.yaml` (each carries case-insensitive `notion` mentions per the M3 remaining-scope inventory's S8; recompute per file with `rg -i notion` rather than quoting counts here) | Not verifiable from this report's search alone whether read | Not linked from `CLAUDE.md` or `AGENTS.md`, nor from `.claude/settings.json`, `.claude/commands/`, `.claude/skills/`, `.claude/hooks/`, or `.codex/`, by the same grep sweep as row 10 | None found; excluded from the "active Notion authority" scope by the migration plan's own instruction to "exclude archive/, docs/decisions/records/, raw imports, and dated strategy/history documents" and by the M2 M3 boundary already treating these as an "uninitialised generic protocol with placeholders" (`docs/strategy/2026-08-31-repo-native-operating-model-migration.md:353`). Not re-verified content-by-content in this report; listed for completeness because the brief asks to name every excluded file an active entrypoint links to - none of these four is linked, so none is escalated to "active" here. `scripts/project-context-lib.mjs:172-178` and `scripts/m2-closure-register-lib.mjs:88-94` both already track all six `.claude/` starter-kit files (this row's four plus `PROTOCOL.md` and `NOTION.md`) with disposition `archive` (`m2-closure-register-lib.mjs:88`, comment: "extract unique live rules; archive obsolete starter-kit system"), which is the same instruction section 7 batch 1 carries out. |
 
 **Files this table excludes per the brief's instruction**, because they are
 archive, decision-record, or dated-history documents, not active
@@ -111,8 +118,10 @@ treats it as founder-only per the brief's explicit instruction to name
 
 ## 3. Entrypoints
 
-`CLAUDE.md` has 30 level-2/level-3 headings (`grep -n "^## \|^### " CLAUDE.md`);
-`AGENTS.md` has 22 (`grep -n "^## \|^### " AGENTS.md`). `AGENTS.md` is
+`CLAUDE.md`'s and `AGENTS.md`'s level-2/level-3 headings are enumerated by
+`grep -n "^## \|^### " CLAUDE.md` and the same against `AGENTS.md`; the count
+changes as the files are edited, so it is not quoted here - recompute with
+that command rather than trusting a number in this report. `AGENTS.md` is
 declared a "condensed derivative" of `CLAUDE.md` in `CLAUDE.md`'s own Report
 Filing Convention section (line 745: "`AGENTS.md` is a condensed derivative
 of `CLAUDE.md` for Codex-CLI sessions - `CLAUDE.md` is canon; `AGENTS.md`
@@ -222,11 +231,11 @@ also not implemented as a script today.
 
 | Flow | Inactive candidate/draft | What "activate" means mechanically | Test currently asserting inactive | Old flow replaced |
 |---|---|---|---|---|
-| Session start | Already fully repo-native (`.claude/hooks/handoff-session-start.mjs` -> `scripts/handoff/orient.mjs`, 0 Notion references) | No activation needed; this flow requires no M4 change. | None needed. | N/A |
+| Session start | Already fully repo-native (`.claude/hooks/handoff-session-start.mjs` -> `scripts/handoff/orient.mjs`, grepped clean of any Notion reference) | No activation needed; this flow requires no M4 change. | None needed. | N/A |
 | Session end | `docs/project/candidates/end-session.md` (front matter `status: candidate`, `authority_active: false`, `phase: M3`) | Replace `.claude/commands/end-session.md` step 3's Notion Journal-entry write with the draft's YAML-front-matter-on-handoff-file approach, and `.agents/skills/source-command-end-session/SKILL.md`'s equivalent step, in both mirrors, preserving each tool's Actor/owner identity. | `scripts/candidates.test.mjs` (`npm run candidates:test`) asserts the draft carries inactive front matter and its M4 caution block, and that neither live end-session file references the candidates directory - confirmed by reading the test file's assertions list in `docs/programs/cto-readiness/tracks.yaml:625-636`. | The live Notion Journal-entry write (`.claude/commands/end-session.md:32`) and To-do DB read (line 50). |
-| `go` | Already Notion-free (0 hits, confirmed by `.claude/skills/go/SKILL.md` and its `.agents/` mirror both grepped clean) | No activation needed for Notion; the M3 remaining-scope inventory's S24 found only path-naming differences between the two mirrors, no behavioral gap. | None needed for Notion; the mirror-consistency diff (S24) is the closest analogue. | N/A |
+| `go` | Already Notion-free (`.claude/skills/go/SKILL.md` and its `.agents/` mirror both grepped clean) | No activation needed for Notion; the M3 remaining-scope inventory's S24 found only path-naming differences between the two mirrors, no behavioral gap. | None needed for Notion; the mirror-consistency diff (S24) is the closest analogue. | N/A |
 | `vendor-switch` | `docs/strategy/2026-09-10-m3-vendor-state-model.md:504-534` ("Item 6," inactive prose replacement for "Step 5 - Log the decision") | Copy the replacement text into both `.claude/skills/vendor-switch/SKILL.md` and `.agents/skills/vendor-switch/SKILL.md`, replacing the current Notion-Decisions-DB step, verbatim in both. Requires `config/vendors.yaml`'s `vendors:check` (already exists) to be usable for the append-only lifecycle-history rule the replacement text cites. | No dedicated test found for this specific replacement text's presence; `scripts/vendors.test.mjs` tests the register and its checks, not the skill file prose. | The Notion Decisions DB DEC-entry step (`.claude/skills/vendor-switch/SKILL.md:101`). The DPA-template line (`:83`) has no replacement drafted and is not part of this activation. |
-| Daily-digest priorities (Decisions/Journal "action required") | `scripts/digest-repo-native-lib.mjs`, shadow-run by `.github/workflows/m3-digest-shadow.yml` | Wire the repo-native reader into `gatherDigestData()` (`apps/api/src/lib/daily-digest/index.ts:122`) in place of (or alongside, then removing) `getPriorities()`, and change the Railway digest's Docker image or runtime to have the repository data available (see section 5 - unresolved). Requires the M3 milestone review's condition 1 to be settled first (what "unreviewed"/"action required" should mean). | `scripts/digest-repo-native.test.mjs` (wired into CI, `npm run digest:shadow:test`) tests the parser/reader in isolation; nothing asserts the production digest does NOT yet call it, because the production code path is untouched by M3 by design. | `getPriorities()`'s two Notion database queries. |
+| Daily-digest priorities (Decisions/Journal "action required") | `scripts/digest-repo-native-lib.mjs`, shadow-run by `.github/workflows/m3-digest-shadow.yml` | Wire the repo-native reader into `gatherDigestData()` (`apps/api/src/lib/daily-digest/index.ts:122`) in place of (or alongside, then removing) `getPriorities()`, and add the `Dockerfile` `COPY` lines plus a built-image verification step for the four repository paths the readers need (see section 5, condition 3, settled). M3 milestone-review condition 1 (what "unreviewed"/"action required" should mean) is also settled per DQ-32 (`docs/company/DECISION-QUEUE.md:17-30`). | `scripts/digest-repo-native.test.mjs` (wired into CI, `npm run digest:shadow:test`) tests the parser/reader in isolation; nothing asserts the production digest does NOT yet call it, because the production code path is untouched by M3 by design. | `getPriorities()`'s two Notion database queries. |
 | Daily-digest distribution surfaces | `docs/operations/distribution-registry.yaml` + `scripts/distribution-lib.mjs` | Same wiring pattern as the row above, into the same `gatherDigestData()` call site, for `getDistributionSurfaces()`. | `scripts/distribution.test.mjs` (`npm run distribution:test`, CI) tests the register's own validity; the shadow comparison in `scripts/digest-shadow.mjs` is report-only. | `getDistributionSurfaces()`. |
 | Weekly vendor-roster drift | `scripts/vendors-lib.mjs` `compareRosterWithRegister`, already wired as a shadow section inside `check-vendor-roster-drift.ts` | Remove the Notion Vendor Roster/Decisions DB read from `check-vendor-roster-drift.ts`, make the register comparison the sole check, and change its exit code to reflect register-only drift. | `scripts/vendors.test.mjs` (CI) tests the comparison function itself, not that the live script still reads Notion - that is asserted only by reading the script's own source today. | The `api.notion.com` query at `check-vendor-roster-drift.ts:169` and the Vendor Roster/Decisions DB reads it feeds. |
 | Protocol coverage / router | `docs/project/protocol-coverage.yaml` (`authority_active: false`) and `docs/project/PROTOCOL-ROUTER.md` (generated from it) | Flip `authority_active` to `true` on the manifest, make `npm run protocols:coverage`'s currently report-only "decision id named with no manifest row" warning blocking (per its own library header, quoted in `docs/programs/cto-readiness/tracks.yaml:817-819`: "the library header states it becomes blocking at the M4 cutover"), and make `PROTOCOL-ROUTER.md` the mandatory startup context in place of scattered `CLAUDE.md` protocol sections. | `scripts/protocol-coverage.test.mjs` (`npm run protocols:coverage:test`, CI) tests the manifest's structural validity; no test asserts the manifest is inactive (unlike `candidates.test.mjs`), because `authority_active: false` is a plain front-matter field the checker reads, not a separately enforced marker. | The `CLAUDE.md` protocol sections themselves become pointers per section 3's table. |
@@ -266,19 +275,20 @@ mechanical action the settled decision requires, and it is not yet done.
 of this report's audited commit. Retargeting this step off Notion is the M4
 action named in section 4's "Weekly vendor-roster drift" row.
 
-**Digest shadow workflow (`m3-digest-shadow.yml`).** Confirmed at
-`.github/workflows/m3-digest-shadow.yml:1-40` (read in full to line 40; the
-file's own header comment states its purpose and never-fails-the-build
-discipline). To be retired or converted at M4: once the repo-native readers
-are wired into the actual production digest (whichever runtime approach
-M4 picks per the open condition below), this workflow's shadow-comparison
-role is either folded into the production path's own logging or retired as
-redundant. This report does not choose between "retire" and "convert";
-that is an M4 design decision.
+**Digest shadow workflow (`m3-digest-shadow.yml`).** Confirmed present at
+`.github/workflows/m3-digest-shadow.yml` (read in full; the file's own
+header comment states its purpose and never-fails-the-build discipline). To
+be retired or converted at M4: once the repo-native readers are wired into
+the actual production digest under the settled Dockerfile-`COPY` design
+(section 5, condition 3), this workflow's shadow-comparison role is either
+folded into the production path's own logging or retired as redundant. This
+report does not choose between "retire" and "convert"; that is section 7
+batch 5 work.
 
 **`config/scheduled-mechanisms.yaml`, other entries with a Notion input.**
-Read the full register (`config/scheduled-mechanisms.yaml`, 9 entries per
-its own header comment: seven `weekly-drift.yml` steps, one
+Read the full register (`config/scheduled-mechanisms.yaml`; entry count
+recomputed from the file rather than quoted here, per its own header
+comment: seven `weekly-drift.yml` steps, one
 `m3-digest-shadow.yml` step, plus the Railway `strale-digest-cron` job
 recorded `verifiable: false`). Of the seven `weekly-drift.yml` entries, one
 (`vendor-roster`, matching the workflow step named above) declares
@@ -297,11 +307,21 @@ comment, lines 30-33) - this is the same "not verifiable from the
 repository" gap the M3 remaining-scope inventory named and this report
 confirms is still open.
 
-**Open condition, unresolved by any batch found in this report:** how the
-production Railway digest reads repository data after cutover (image
-contents via new `COPY` lines, a GitHub API read at runtime, or moving the
-digest job to GitHub Actions entirely). This is M3 milestone-review
-condition 3, still open (see section 6).
+**Settled decision:** how the production Railway digest reads repository
+data after cutover. M3 milestone-review condition 3 is settled
+(`docs/programs/cto-readiness/tracks.yaml:849-863`): the digest reads
+repository data from files copied into the API image (the four paths named
+above), a build-time check confirms the built image actually contains them
+(per DEC-20260504-C, "confirm reach by file path, not by historical
+pattern," not assumed), and the digest prints the image commit so a stale
+deploy is visible. A GitHub API read at runtime (a token and a network
+dependency) and moving the digest job to GitHub Actions entirely (production
+database credentials in GitHub) were both considered and rejected
+(`docs/programs/cto-readiness/tracks.yaml:860-861`). None of this is
+implemented yet: the Dockerfile still carries none of the four `COPY` lines
+(confirmed above), and no build-time verification step or image-commit
+print exists in the digest code today. The settled decision is the design
+this report's section 7 batch builds to, not yet-built code.
 
 ## 6. Checks to make blocking
 
@@ -328,16 +348,19 @@ reading the full step list): `programs:check`/`test` (442-443),
   migration plan's own rollout-mode design (section 8: "Foundation PR:
   checker runs in report/warning mode. Cutover PR: all deterministic checks
   become blocking.") names this exact transition as M4 work, not yet done.
-- `docs/project/protocol-coverage.yaml`'s "a decision id `CLAUDE.md` names
-  inside a covered section... with no manifest row" check - confirmed
-  report-only today by the manifest's own header comment (quoted in
-  `docs/programs/cto-readiness/tracks.yaml:817-819`): "a report-only warning
-  today, per the plan's M3-versus-M4 split; the library header states it
-  becomes blocking at the M4 cutover." This is the brief's example
-  (`DECISION_ID_UNCOVERED`-shaped finding, though this report did not find a
-  literally-named `DECISION_ID_UNCOVERED` code string in the manifest or its
-  checker script - the closest matching finding is this uncovered-decision-id
-  warning as described in the manifest's own header prose).
+- The `DECISION_ID_UNCOVERED` finding: a decision id `CLAUDE.md` names inside
+  a covered protocol section (or that `apps/api/src` code cites next to the
+  word "protocol") with no `docs/project/protocol-coverage.yaml` row citing
+  it as its decision. The code string exists at
+  `scripts/protocol-coverage-lib.mjs:366` (`code: "DECISION_ID_UNCOVERED"`,
+  pushed to `warnings`, never `findings`) and `npm run protocols:coverage`
+  prints it as `warn DECISION_ID_UNCOVERED <file>: <detail>`
+  (`scripts/check-protocol-coverage.mjs:35`). Confirmed report-only today:
+  the check's exit code (`scripts/check-protocol-coverage.mjs:44`,
+  `process.exit(findings.length === 0 ? 0 : 1)`) only reflects `findings`,
+  never `warnings`, and the manifest's own header
+  comment (quoted in `docs/programs/cto-readiness/tracks.yaml:817-819`) states
+  it "becomes blocking at the M4 cutover."
 - Every shadow comparison in section 1 (rows 1, 2, 4) is, by construction,
   report-only: `printShadowComparison()` "never changes the script's exit
   code" (`check-vendor-roster-drift.ts`, per the M3 vendor-state model
@@ -376,7 +399,9 @@ reading the full step list): `programs:check`/`test` (442-443),
   add a new flag), and a CI job that runs it with `NOTION_TOKEN` unset to
   prove no dependency remains.
 - **An entrypoint parity check** (migration plan blocking check #3): does not
-  exist, per section 3's analysis above.
+  exist, per section 3's analysis above. Sketched in section 7 batch 3
+  (pointer parity, heading-coverage equivalence, and the mutable-fact scan
+  below, together).
 - **A mutable-fact scan on `CLAUDE.md`/`AGENTS.md`** (migration plan blocking
   check #4): does not exist as a script; today both files carry dated
   decisions, prices, and counts inline (e.g. the "Active Decisions" section,
@@ -394,40 +419,104 @@ current digest, current vendor-roster drift) stays authoritative on `main`
 until then. No batch dual-writes to both Notion and a repo-native
 destination.
 
-1. **Settle the three M3 milestone-review conditions** (not a code batch;
-   a decision batch). Condition 1 (digest meaning: founder-decision reading
-   or reading-list reading) is explicitly the founder's call per the M3
-   milestone review. Conditions 2 (Session Start mode declaration / review-
-   before-close as protocol-coverage rows) and 3 (Railway digest's post-
-   cutover data-access design) are technical calls this report found still
-   open; they should be recorded as small decision batches before the
-   cutover batches below, since batch 4's digest wiring and batch 2's
-   `CLAUDE.md` Session Start rewrite both depend on their outcome. What
-   could go wrong: proceeding to wire the digest (batch 4) or rewrite
-   `CLAUDE.md`'s Session Start heading (batch 2) before these are settled
-   risks a second rewrite once the founder's answer lands.
+**PR #663 already settled all three M3 milestone-review conditions**
+(`docs/company/DECISION-QUEUE.md:17-30` DQ-32 for condition 1;
+`docs/project/protocol-coverage.yaml:374-433` `excluded_sections` for
+condition 2; `docs/programs/cto-readiness/tracks.yaml:849-863` for
+condition 3). None of the three needs its own decision batch; the batch
+sequence below starts from the settled record.
 
-2. **Rewrite `CLAUDE.md` and `AGENTS.md` as peer entrypoints**, per section
-   3's table: drop the three Notion-only headings, rewrite Project Spec /
-   Active Decisions / Session Start / Session Checklists / Workflow
-   Invariants / Degraded Mode, and add the two files' pointer to
-   `START-HERE.md`/`PROTOCOL-ROUTER.md`. Files: `CLAUDE.md`, `AGENTS.md`,
-   `docs/project/protocol-coverage.yaml` (update `excluded_sections` for any
-   heading whose classification changes), `docs/project/PROTOCOL-ROUTER.md`
-   (regenerate). Tests: `npm run protocols:check`, `npm run
-   protocols:coverage`, `npm run protocols:coverage:test`, `npm run
-   context:check` (still report-only at this batch), a new entrypoint-parity
-   check if built in this batch or the next. What could go wrong: a
-   `protocols:check` failure if the rewrite changes a mirrored section's
-   text without updating the mirror in the same commit (section 3 names this
-   exact risk); a `HEADING_UNCLASSIFIED` failure if a heading is dropped or
-   renamed without updating `excluded_sections`.
+1. **Extract the unique live rules from the `.claude/` starter-kit files and
+   archive them.** Read `.claude/PROTOCOL.md`, `.claude/WORKFLOW.md`,
+   `.claude/RUNBOOK.md`, `.claude/BUILD.md`, `.claude/DISPATCH.yaml`, and
+   `.claude/NOTION.md` in full; for every rule in them that is not already
+   covered by a `docs/governance/protocols/` mirror, `docs/project/protocol-coverage.yaml`
+   row, or `CLAUDE.md`/`AGENTS.md` text, decide keep (name the repo-native
+   home the rule moves to) or obsolete (say why it is safe to drop); then
+   move each file to `archive/` and update the two data files that already
+   track them (`scripts/project-context-lib.mjs:172-178`'s
+   `owner_area: "claude-workflow"` list and
+   `scripts/m2-closure-register-lib.mjs:88-94`'s `archive` disposition map,
+   which already carries the comment "extract unique live rules; archive
+   obsolete starter-kit system" for exactly this work). Confirmed today that
+   only `CLAUDE.md:9` and `AGENTS.md:19` link `.claude/PROTOCOL.md` live (a
+   grep across `.claude/settings.json`, `.claude/commands/`, `.claude/skills/`,
+   `.claude/hooks/`, and `.codex/` for all six filenames found no other
+   reference); this batch must update both pointers in the same commit it
+   archives the file, or batch 2/3 below inherits a dangling link. Files:
+   the six `.claude/` files (moved), `CLAUDE.md:9`, `AGENTS.md:19`,
+   `scripts/project-context-lib.mjs`, `scripts/m2-closure-register-lib.mjs`,
+   `docs/project/legacy-authority-inventory.json` (regenerate; it is one of
+   `checkGeneratedFileState`'s tracked files,
+   `scripts/check-project-context.mjs:32-42`). Tests: `npm run context:check`
+   (still report-only), a new assertion (in `scripts/check-project-context.test.mjs`
+   or similar) that none of the six filenames appears in `CLAUDE.md`,
+   `AGENTS.md`, `.claude/settings.json`, `.claude/commands/`, `.claude/skills/`,
+   or `.codex/` after the move. What could go wrong: a rule inside one of
+   the six files that governs live behavior nobody names elsewhere (for
+   example a dispatch rule in `DISPATCH.yaml` with no repo-native analogue)
+   being archived without a keep decision, silently dropping a safety rule
+   this report did not itself audit line-by-line.
 
-3. **Activate `end-session` and `vendor-switch` repo-native flows**, per
+2. **Rewrite `CLAUDE.md` as a peer entrypoint**, per section 3's table: drop
+   the three Notion-only headings, rewrite Project Spec / Active Decisions /
+   Session Start / Session Checklists / Workflow Invariants / Degraded Mode,
+   update its `.claude/PROTOCOL.md` pointer per batch 1's outcome, and add
+   the file's pointer to `docs/project/START-HERE.md`/`PROTOCOL-ROUTER.md`.
+   Files: `CLAUDE.md`, `docs/project/protocol-coverage.yaml` (update
+   `excluded_sections` for any heading whose classification changes),
+   `docs/project/PROTOCOL-ROUTER.md` (regenerate via
+   `protocolRouterGeneratedFiles()`, `scripts/protocol-coverage-lib.mjs:199-206`).
+   Tests: `npm run protocols:check`, `npm run protocols:coverage`, `npm run
+   protocols:coverage:test`, `npm run context:check` (still report-only at
+   this batch, including a new `M1_ENTRYPOINT_ACTIVATED` finding from
+   `checkPrecutoverEntrypoint()` (`scripts/check-project-context.mjs:83-87`)
+   once `CLAUDE.md` references `docs/project/` - expected and warning-only,
+   but batch 8 must retire or rescope this specific check, since after
+   cutover pointing at `docs/project/` is correct, not premature). What
+   could go wrong: a `protocols:check` failure if the rewrite changes a
+   mirrored section's text without updating the mirror in the same commit
+   (section 3 names this exact risk); a `HEADING_UNCLASSIFIED` failure if a
+   heading is dropped or renamed without updating `excluded_sections`.
+
+3. **Rewrite `AGENTS.md` as `CLAUDE.md`'s peer entrypoint, and add an
+   entrypoint-parity check.** Apply the equivalent condensed rewrite to
+   `AGENTS.md` (per its own condensed-derivative convention,
+   `CLAUDE.md`'s Report Filing Convention section), update its
+   `.claude/PROTOCOL.md`-equivalent pointer, and add its own pointer to
+   `docs/project/START-HERE.md`/`PROTOCOL-ROUTER.md`. Build the entrypoint-
+   parity check section 3 found missing: a new script (for example
+   `scripts/check-entrypoint-parity.mjs`) that verifies (a) both files point
+   at the same `docs/project/START-HERE.md`/`PROTOCOL-ROUTER.md` target, (b)
+   every heading batch 2 classified "keep as is" or "move behind a pointer"
+   has an equivalent canonical pointer in `AGENTS.md` (condensed prose is
+   fine; a different pointer target is not), and (c) neither file contains a
+   mutable project fact (dated state, prices, counts, active work, roadmap
+   items, decision summaries) per the migration plan's blocking check #4 -
+   sketch: reuse the pattern `apps/api/scripts/check-platform-facts-drift.ts`
+   already applies to other surfaces, scanning for number-and-unit patterns
+   next to known fact keywords, with a narrow allowlist for the two files'
+   own structural headings. Files: `AGENTS.md`,
+   `docs/project/protocol-coverage.yaml`, `docs/project/PROTOCOL-ROUTER.md`,
+   the new parity-check script, wired blocking into `ci.yml`. Tests: the new
+   script's own test file with a planted-failure fixture per rule (a),
+   (b), and (c); `npm run protocols:check`. What could go wrong: rule (b)'s
+   "equivalent form" test being too strict (failing on `AGENTS.md`'s
+   legitimate condensation) or too loose (missing a real content gap) if the
+   comparison is prose-diffed instead of pointer-diffed - this report
+   recommends comparing canonical pointers and heading presence, never
+   rendered text length or wording.
+
+4. **Activate `end-session` and `vendor-switch` repo-native flows**, per
    section 4's rows: replace the live Notion Journal-entry write and To-do
    DB read in both `.claude/commands/end-session.md` and
    `.agents/skills/source-command-end-session/SKILL.md` with the candidate
-   draft's approach, preserving per-tool Actor identity; replace
+   draft's approach. `docs/project/candidates/end-session.md` already
+   preserves the Claude Code/Codex Actor and ownership-filter split this
+   activation must carry into the live files (`docs/project/candidates/end-session.md:46-57`'s
+   comparison table, `:95`'s `actor: claude-code # Codex on the Codex
+   mirror`, and `:127`'s "owned by `Claude code` / `Codex`"), so this batch
+   copies that split, not one tool's value into both mirrors. Also replace
    `vendor-switch`'s Step 5 in both mirrors with the drafted text. Files:
    `.claude/commands/end-session.md`, `.agents/skills/source-command-end-session/SKILL.md`,
    `.claude/skills/vendor-switch/SKILL.md`, `.agents/skills/vendor-switch/SKILL.md`,
@@ -436,102 +525,121 @@ destination.
    *live* files match the drafted behavior, not merely that the draft is
    inert - this test's assertions change meaning at this batch and should be
    rewritten, not just left passing by accident), `npm run vendors:test`.
-   What could go wrong: the Codex mirror's Actor/owner distinction
-   (`claude-code` vs. `Codex`) silently collapsing if the batch copies one
-   tool's draft into both mirrors without adjusting the identity fields
-   (the exact drift class the M3 remaining-scope inventory warned against).
+   What could go wrong: the Codex mirror's Actor/owner distinction silently
+   collapsing despite the draft already documenting it, if the batch copies
+   text without checking each mirror's own Actor/owner field (the exact
+   drift class the M3 remaining-scope inventory warned against).
 
-4. **Wire the daily-digest repo-native readers into production**, contingent
-   on batch 1's condition 3 answer. If the answer is "add `COPY` lines to
-   the Dockerfile": add `docs/company/DECISION-QUEUE.md`,
+5. **Wire the daily-digest repo-native readers into production**, per the
+   settled condition 3 design (section 5): add `docs/company/DECISION-QUEUE.md`,
    `handoff/_general/from-code/`, `docs/operations/distribution-registry.yaml`,
-   `config/vendors.yaml` to `Dockerfile`, replace `getPriorities()`/
-   `getDistributionSurfaces()`/`fetchNotionWorkspaceActivity()`'s Journal half
-   with the repo-native readers inside `gatherDigestData()`, and print the
-   image commit per the settled decision. If the answer is "move the digest
-   to GitHub Actions": this batch instead retires `apps/api/src/jobs/daily-digest.ts`'s
-   Railway invocation and builds a new scheduled workflow, a materially
-   larger batch that should be split further. Files depend on which path is
-   chosen; this report does not choose. Tests: `npm run digest:shadow:test`
-   promoted from shadow-only to asserting production behavior, plus a new
-   integration-style test if the Dockerfile changes (verifying the four
-   paths are present in a built image, matching the discipline
-   DEC-20260504-C already requires: "confirm reach by file path, not by
-   historical pattern"). What could go wrong: exactly the DEC-20260504-C
-   failure class if the Dockerfile `COPY` lines are added but nothing
-   confirms the running container actually has the files (a build-time
-   `ls` step or equivalent verification is needed, not just the `COPY` line
-   itself).
+   `config/vendors.yaml` to the `Dockerfile`'s `COPY` list, replace
+   `getPriorities()`/`getDistributionSurfaces()`/`fetchNotionWorkspaceActivity()`
+   with the repo-native readers inside `gatherDigestData()`
+   (`apps/api/src/lib/daily-digest/index.ts:122`), and print the image
+   commit in the digest output. Remove `NOTION_API_KEY` from
+   `config/env-manifest.yaml` in this same batch: it is the row whose last
+   reader (`fetch-notion.ts:9`, `fetch-shiplog.ts:12`) this batch deletes,
+   and `env:check` fails on a dead row (`CLAUDE.md`'s Cheap Extras section).
+   Files: `Dockerfile`, `apps/api/src/lib/daily-digest/*`,
+   `config/env-manifest.yaml`. Tests: `npm run digest:shadow:test` promoted
+   from shadow-only to asserting production behavior; a new integration-style
+   test verifying the four paths are present in a built image, matching the
+   discipline DEC-20260504-C already requires ("confirm reach by file path,
+   not by historical pattern"); `npm run env:check` (a planted-failure proof
+   that removing `fetch-notion.ts`'s import without removing the manifest
+   row fails). What could go wrong: exactly the DEC-20260504-C failure class
+   if the Dockerfile `COPY` lines are added but nothing confirms the running
+   container actually has the files (a build-time `ls` step or equivalent
+   verification is needed, not just the `COPY` line itself).
 
-5. **Retarget the weekly vendor-roster drift check off Notion**, achieving
+6. **Retarget the weekly vendor-roster drift check off Notion**, achieving
    M6 fixture 3. Files: `apps/api/scripts/check-vendor-roster-drift.ts`
    (remove the `api.notion.com` call and `NOTION_TOKEN` read, make the
    register comparison the primary check and its exit code meaningful),
    `.github/workflows/weekly-drift.yml` (remove the `secrets.NOTION_TOKEN`
-   env line from the `vendor-roster` step), `config/env-manifest.yaml`
-   (mark `NOTION_TOKEN`'s `weekly-drift.yml` `set_in: workflow` row dead or
-   remove it - `env:check` fails on a dead row per `CLAUDE.md:137-138`, so
-   this must happen in the same commit as the workflow change). Tests:
+   env line from the `vendor-roster` step). Remove `NOTION_TOKEN` from
+   `config/env-manifest.yaml` in this same batch: it is the row whose last
+   reader this batch deletes, and `env:check` fails on a dead row. Tests:
    `npm run vendors:test`, `npm run env:check` (a planted-failure proof that
    removing the workflow reference without updating the manifest fails).
    What could go wrong: `env:check`'s dead-row detection firing if the
    manifest update lags the workflow change by even one commit within the
    batch.
 
-6. **Add the permanent Notion anti-regression check and make report-only
+7. **Add the permanent Notion anti-regression check and make report-only
    checks blocking.** Files: new `scripts/check-no-notion-regression.mjs`
    (per section 6's sketch) and its wiring into `ci.yml` as blocking;
    `scripts/check-project-context.mjs` changed from
    `process.exitCode = 0` to a real exit code reflecting its findings'
    severities (the migration plan's own rollout-mode design names this
-   exact transition); `docs/project/protocol-coverage.yaml`'s
-   uncovered-decision-id warning promoted from report-only to blocking, per
-   its own header's stated intent. Tests: a planted-failure fixture proving
-   the anti-regression check catches a reintroduced `NOTION_API_KEY` string
-   outside the allowlist; `npm run context:test` updated for the new exit
-   behavior; `npm run protocols:coverage:test` updated for the newly
-   blocking finding. What could go wrong: the anti-regression check firing
-   false-positive on the legitimate historical citations named in section 1
-   (the `_source_notion_page_id` coverage-matrix field, the three source-code
-   comments citing a Notion page) if its allowlist is not precise about
-   comments-and-data-fields versus executable code paths - this report
-   recommends allowlisting by file/field name explicitly (as section 1's
-   table 11 already enumerates them) rather than by a broad pattern
-   exclusion.
+   exact transition), and `checkPrecutoverEntrypoint()`
+   (`scripts/check-project-context.mjs:83-87`) rescoped or retired now that
+   `CLAUDE.md`/`AGENTS.md` legitimately reference `docs/project/`;
+   `docs/project/protocol-coverage.yaml`'s `DECISION_ID_UNCOVERED` warning
+   (`scripts/protocol-coverage-lib.mjs:357-370`) promoted from `warnings` to
+   `findings`. Tests: a planted-failure fixture proving the anti-regression
+   check catches a reintroduced `NOTION_API_KEY` string outside the
+   allowlist; `npm run context:test` updated for the new exit behavior;
+   `npm run protocols:coverage:test` updated for the newly blocking finding.
+   What could go wrong: the anti-regression check firing false-positive on
+   the legitimate historical citations named in section 1 (the coverage-
+   matrix field, the source-code comments citing a Notion page id) if its
+   allowlist is not precise about comments-and-data-fields versus executable
+   code paths - this report recommends allowlisting by file/field name
+   explicitly (as section 1's table 11 already enumerates them) rather than
+   by a broad pattern exclusion.
 
-7. **The cutover commit itself: flip authority markers and remove dead
-   credentials.** This must be the **last** batch. Files:
-   `config/vendors.yaml` (`authority_active: true`),
-   `docs/project/protocol-coverage.yaml` and `PROTOCOL-ROUTER.md`
-   (`authority_active: true`), `docs/operations/distribution-registry.yaml`
-   (`authority_active: true`), every `docs/project/*.md` M2 candidate file
-   (`PRODUCT.md`, `STATE.md`, `ROADMAP.md`, `DECISIONS.md` - flip
-   `authority_scope`/`authority_active`/`status`), `config/env-manifest.yaml`
-   (remove or mark dead the two Notion rows once code search after batches
-   3-5 confirms zero remaining consumers), `.claude/NOTION.md` and the
-   Notion-heavy sections of `.claude/PROTOCOL.md`/`WORKFLOW.md`/`RUNBOOK.md`/
-   `BUILD.md`/`DISPATCH.yaml` (archived per the migration map's "Extract
-   unique live rules; archive obsolete starter-kit system" instruction - this
-   report did not extract their unique live rules, if any, and that
-   extraction must happen before this batch, not inside it). Tests: the full
-   CI suite green, including the newly blocking checks from batch 6; the M6
-   clean-session acceptance run (migration plan section 10, M6) as a
-   separate, later milestone, not part of this PR's own gate. **Rollback:**
-   revert this single merge commit. The plan is explicit ("Once repo-native
-   writes occur, do not restore Notion writes; repair forward to avoid
-   split authority," migration plan line 905-906) - rollback is only safe
-   before any repo-native write has happened under the new authority, which
-   is why this batch does nothing except flip markers and remove dead
-   config; it should not also be the batch that, for instance, first
-   creates a decision record under the new authority, or a rollback would
-   leave a repo-native decision with no corresponding Notion entry and no
-   clean revert path.
+8. **The cutover commit itself: flip authority markers.** This must be the
+   **last** batch. The project-document schema
+   (`docs/project/schemas/project-document.schema.json:21-29,71-82`) today
+   permits only `status: skeleton|candidate`, `phase: M1|M2`, and, when
+   `status: candidate`, requires `authority_active: const false` - the same
+   literal `authority_active: false` check `validateCandidateDocument`
+   enforces per file (`scripts/project-context-lib.mjs:687-699`). Neither
+   the schema nor the checker has a state that permits `authority_active:
+   true` today, so this batch is a schema-and-checker change plus the marker
+   flips, not a marker flip alone: add a permitted post-cutover combination
+   (for example `status: active`, `phase: M4`, `authority_active: true`) to
+   the schema's `oneOf` and to `validateCandidateDocument`'s (or a new
+   `validateActiveDocument`'s) expected-value table, then flip
+   `config/vendors.yaml:90`, `docs/operations/distribution-registry.yaml:27`,
+   and `docs/project/protocol-coverage.yaml:23` (each currently
+   `authority_active: false`) plus the `docs/project/*.md` M2 candidate
+   files that carry the same marker (`PRODUCT.md`, `STATE.md`, `ROADMAP.md`,
+   `STRUCTURE.md`, and the generated `DECISIONS.md`/`PROTOCOL-ROUTER.md`) to
+   the new state. `DECISIONS.md` is generated by `decisionGeneratedFiles()`
+   (`scripts/decision-records-lib.mjs:1388`) from `docs/decisions/records/DEC-*.md`;
+   `PROTOCOL-ROUTER.md` is generated by `protocolRouterGeneratedFiles()`
+   (`scripts/protocol-coverage-lib.mjs:199-206`) from
+   `docs/project/protocol-coverage.yaml` - regenerate both from their
+   generator functions rather than hand-editing, and `npm run
+   context:generate` twice to converge, per this report's own Finish
+   instructions. Files: the schema, `scripts/project-context-lib.mjs`,
+   `config/vendors.yaml`, `docs/operations/distribution-registry.yaml`,
+   `docs/project/protocol-coverage.yaml`, the named `docs/project/*.md`
+   files, `docs/project/legacy-authority-inventory.json` (regenerate).
+   Batch 1 already archived the `.claude/` starter-kit files and extracted
+   their unique rules, so this batch has no extraction work left to do.
+   Tests: the full CI suite green, including the newly blocking checks from
+   batch 7; the M6 clean-session acceptance run (migration plan section 10,
+   M6) as a separate, later milestone, not part of this PR's own gate.
+   **Rollback:** revert this single merge commit. The plan is explicit
+   ("Once repo-native writes occur, do not restore Notion writes; repair
+   forward to avoid split authority," migration plan line 905-906) -
+   rollback is only safe before any repo-native write has happened under the
+   new authority, which is why this batch does nothing except the schema
+   change and marker flips; it should not also be the batch that, for
+   instance, first creates a decision record under the new authority, or a
+   rollback would leave a repo-native decision with no corresponding Notion
+   entry and no clean revert path.
 
-**Sequencing note:** batches 2-6 can be reordered or parallelized somewhat
-(for instance, batch 5's vendor-roster retarget does not depend on batch 4's
-digest wiring), but batch 1 (settling the three conditions) must precede
-batch 2 and batch 4 specifically, and batch 7 must be last, per the plan's
-own no-dual-write and atomic-cutover rules.
+**Sequencing note:** batch 1 must precede batches 2 and 3, since both rewrite
+the `CLAUDE.md`/`AGENTS.md` pointer to `.claude/PROTOCOL.md` that batch 1
+either retargets or removes. Batches 4-7 can be reordered or parallelized
+somewhat (for instance, batch 6's vendor-roster retarget does not depend on
+batch 5's digest wiring), but batch 8 must be last, per the plan's own
+no-dual-write and atomic-cutover rules.
 
 ## 8. Founder-only items
 
@@ -541,7 +649,7 @@ own no-dual-write and atomic-cutover rules.
   credential for Railway configuration.
 - **Removing the `NOTION_TOKEN` GitHub Actions repository secret.** A
   session can remove a workflow's reference to `secrets.NOTION_TOKEN`
-  (batch 5 above), but deleting the secret itself from GitHub repository
+  (section 7 batch 6 above), but deleting the secret itself from GitHub repository
   settings is a GitHub-account-level action the brief names explicitly as
   founder-only.
 - **Freezing the historical Notion workspace as read-only evidence**
@@ -553,11 +661,6 @@ own no-dual-write and atomic-cutover rules.
   here per the brief's instruction to enumerate the category; no vendor
   contract, terms acceptance, or account action was found as part of any
   M4 batch this report proposes.
-- **Settling M3 milestone-review condition 1** (the digest's "action
-  required"/"unreviewed decisions" meaning: founder-decision reading or
-  reading-list reading) - explicitly named as the founder's call in
-  `archive/sessions/2026-09-11-m3-milestone-review.md`'s "Open items for M4
-  or the founder" section, because "it changes what he reads each morning."
 - **The founder's yes to merge the integration branch into `main`** - the
   migration plan's own no-dual-authority rule requires this as the single
   gating approval for the whole cutover, distinct from any individual
