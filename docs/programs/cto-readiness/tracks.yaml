@@ -503,18 +503,364 @@ tracks:
     depends_on: [T1, T5, T10]
     owner: session
     next_action: >
-      Done 2026-09-11. M3 prepared every repo-native replacement in shadow
-      or inactive form without changing authority: the vendor register and
-      its roster comparison, the digest's repo-native priorities and
-      activity readers, the distribution registry, the scheduled-mechanism
-      register, the inactive end-session and vendor-switch drafts, and the
-      protocol coverage manifest with its generated router. The M3
-      milestone review (archive/sessions/2026-09-11-m3-milestone-review.md)
-      found the exit met with conditions; PR #663 settled all three: DQ-32
-      (the digest's action-required list means founder decisions), the
-      protocol-coverage exclusion reasons for Session Start and
-      review-before-close, and the production digest reading repository
-      files copied into the API image. Work continues in T7.
+      Batch 1 done 2026-09-10: inventory of every current reader and writer
+      of vendor state, archived at
+      archive/sessions/2026-09-10-m3-vendor-state-inventory.md. Batch 2 done
+      2026-09-10: the repo-owned vendor-state model is designed and recorded
+      at docs/strategy/2026-09-10-m3-vendor-state-model.md, per the M3
+      acceptance shape in
+      archive/sessions/2026-09-01-m2-vendor-stack-authority-gaps.md. Batch 3
+      done 2026-09-10 (PR #634): config/vendors.yaml (70 vendors) and
+      config/vendors.schema.json, scripts/vendors-lib.mjs,
+      scripts/check-vendors.mjs, scripts/vendors.test.mjs, wired into CI as
+      vendors:check / vendors:test after env:check / env:test; merged
+      2026-09-11. Batch 4a done 2026-09-11 (PR #636): added fourteen
+      STALE_VENDORS-named vendors to config/vendors.yaml with an evidenced
+      state each, and two shadow checks in vendors-lib.mjs -
+      checkStaleVendorsCrossCheck (STALE_VENDOR_UNREGISTERED,
+      STALE_VENDOR_STATE_MISMATCH failures; STALE_VENDOR_LIST_MISSING
+      warning) and checkDependencySyncSkipped (DEPENDENCY_SYNC_SKIPPED
+      warning, one per non-retired dependency-manifest.ts provider the
+      startup-migrations.ts boot-time vendor_capability_dependencies sync
+      never reaches). No production write, no runtime behaviour change, no
+      change of authority. Batch 4 is now done (4a in PR #636; 4b in
+      PR #637): scripts/vendors-lib.mjs's compareRosterWithRegister compares
+      the Notion Vendor Roster's Vendor/Status rows against
+      config/vendors.yaml by the Status-to-lifecycle-state mapping the
+      design named, and check-vendor-roster-drift.ts prints the
+      disagreements in a separately-headed shadow section after its
+      existing Decisions-DB drift check, never changing the script's exit
+      code in --check or --strict. A --roster-fixture flag exercises the
+      comparison against a JSON fixture without NOTION_TOKEN or a Decisions
+      DB call. All M3 work is shadow mode: candidate project documents stay
+      inactive and Notion-backed workflows stay authoritative until the
+      founder-gated M4 cutover. The remaining-scope inventory for
+      everything M3 needs beyond the vendor strand is at
+      archive/sessions/2026-09-11-m3-remaining-scope-inventory.md (review
+      round 1: corrected protocol-location table, appendix counts, mirror
+      characterization, added a Notion-reference sweep beyond .claude/, and
+      closed batch-sequence gaps - see the report's "Review round 1"
+      section, PR #638). Batch 2 of the proposed sequence is done (PR #641): repo-native
+      digest priority readers, shadow-run in GitHub Actions. Added
+      scripts/digest-repo-native-lib.mjs (parseDecisionQueue, repoNativePriorities,
+      recentHandoffActivity, comparePriorities), mapping
+      docs/company/DECISION-QUEUE.md `decided` entries to the digest's
+      "unreviewed decisions" and `your_call` entries to "action required"
+      (the mapping and its CHARTER.md quotes are recorded in that library's
+      own header comment), plus a Journal-shaped reader over
+      handoff/_general/from-code/*.md. scripts/digest-shadow.mjs prints
+      both and, only when NOTION_API_KEY is set, loads the live Notion
+      getPriorities() (fetch-notion.ts) and compares; always exits 0
+      (report only). The scheduled workflow
+      .github/workflows/m3-digest-shadow.yml runs it daily plus
+      workflow_dispatch, with NOTION_API_KEY mapped from the same
+      secrets.NOTION_TOKEN weekly-drift.yml already uses for Notion. This
+      runs in GitHub Actions rather than the Railway digest because the
+      digest's own Docker image does not carry
+      docs/company/DECISION-QUEUE.md or handoff/ at runtime (see this
+      track's prior note on the Dockerfile copy list, unchanged by this
+      batch). scripts/digest-repo-native.test.mjs covers every entry shape
+      DECISION-QUEUE.md actually uses, the unparseable-line and
+      unknown-status throws, the 14-day split, the handoff window, the
+      comparison, a reachability test on the workflow file, and a
+      real-repo parse of the live DECISION-QUEUE.md; wired into CI next to
+      vendors:test. Shadow mode throughout: nothing under apps/api/src,
+      the Dockerfile, or the rendered digest email changed.
+
+      M3 batch 2 is merged (PR #641), and its first live run (GitHub
+      Actions run 34561747548, 2026-09-11, with the Notion token) showed
+      the two sources measure different things: unreviewed decisions repo
+      0, Notion 1 (the Notion item, "Benefit-first positioning and brand
+      exploration for Strale", never entered DECISION-QUEUE.md); action
+      required repo 1, Notion 10, where nine of Notion's ten are session
+      logs, reports or course corrections flagged "Action Required", used
+      as a reading list rather than as decisions awaiting the founder.
+      Before M4, what the digest's two lists should mean (the queue's
+      founder-decision meaning, or the Journal's reading-list meaning) has
+      to be settled, because it changes what the founder reads each
+      morning.
+
+      M3 batch 3 is this PR: docs/operations/distribution-registry.yaml
+      (34 rows: 6 registry-listing, 10 directory, 6 framework-pr, 12
+      package; by status 12 published, 13 open, 3 closed, 3 unknown, 2
+      listed, 1 rejected) and its schema, populated from the four root
+      discovery manifests, every published package under packages/
+      (confirmed live by npm view / a PyPI JSON fetch), pull requests on
+      repositories outside strale-io authored by the project's GitHub
+      account (gh search prs, cross-checked per-repo), and four surfaces
+      named by a distribution-focused handoff that the other three
+      sources missed. scripts/distribution-lib.mjs + check-distribution.mjs
+      (npm run distribution:check, blocking, wired into CI next to
+      vendors:check/test) validate schema (Ajv 2020), unique ids,
+      authority_active: false, evidence-path existence, and status_date
+      not in the future; scripts/distribution.test.mjs plants one failure
+      per finding. scripts/digest-shadow.mjs now also prints the register's
+      surfaces and, when NOTION_API_KEY is set, compares them against
+      fetch-notion.ts's getDistributionSurfaces(); the existing
+      m3-digest-shadow.yml workflow needed no change since it already runs
+      that script. The social-media-post tracking decision (searched every
+      writer of the Notion Social Media Posts DB in code, scripts,
+      workflows, skills/commands, and handoffs; found none live -- the one
+      script that ever wrote to it is archived and untouched since a
+      2026-08-11 credential scrub): tracking is dropped from the digest at
+      M4, and the register carries no social-post rows. Full design,
+      source log, and decision: docs/operations/distribution-registry.md.
+      Shadow mode throughout: nothing under apps/api/src, the Dockerfile,
+      or the rendered digest changed; no Notion write, no production
+      write, no change of authority.
+
+      M3 batch 4 is done (PR #643): docs/project/candidates/end-session.md, an
+      inactive design draft for the repo-native replacement of the live
+      /end-session command. For every live step it states unchanged or
+      replaced, replacing the Journal-entry write with YAML front matter
+      (title/type/source/actor/action_required) on the same handoff file
+      the live command already writes, the To-do DB query with a read of
+      the active track's next_action in tracks.yaml, and the Decisions DB
+      check with docs/company/DECISION-QUEUE.md plus
+      docs/decisions/records/. Preserves the per-tool identity split
+      (claude-code/Claude code versus Codex, CLAUDE.md/.claude/ versus
+      AGENTS.md/.codex/) in one table so a future generator can produce
+      both mirrors from one text. Does not resolve the Action Required
+      reading-list-versus-founder-decision question batch 2 found open;
+      that stays for M4. scripts/candidates.test.mjs (npm run
+      candidates:test, wired into CI next to digest:shadow:test) asserts
+      the draft carries inactive front matter and its M4 caution block,
+      names both tools' identities, and that neither live end-session
+      file (.claude/commands/, .agents/skills/source-command-end-session/)
+      references the candidates directory; both planted failures (a
+      pointer added to the live Claude command, authority_active: false
+      removed from the draft) were confirmed to fail and restored before
+      this batch's own commit. The handoff front-matter shape was verified
+      accepted by handoff:check and receipts:check against an uncommitted
+      sample file, deleted before this batch's commit, not against a
+      fixture. Shadow/inactive throughout: the live .claude/ and .agents/
+      end-session files are byte-unchanged, nothing under apps/api/src or
+      the Dockerfile changed, no Notion write, no production write, no
+      change of authority.
+
+      M3 batch 5 is this PR: config/scheduled-mechanisms.yaml (9 entries -
+      seven weekly-drift.yml steps, one m3-digest-shadow.yml step, plus the
+      Railway strale-digest-cron job recorded verifiable: false since its
+      cron schedule lives in Railway's own project configuration, not
+      this repository) and config/scheduled-mechanisms.schema.json.
+      scripts/scheduled-reachability-lib.mjs parses every
+      .github/workflows/*.yml with the yaml package (never a regex over
+      raw text) and checks the register in both directions:
+      MECHANISM_WORKFLOW_MISSING, MECHANISM_NOT_SCHEDULED,
+      MECHANISM_STEP_MISSING, MECHANISM_SCRIPT_MISSING,
+      MECHANISM_SECRET_MISMATCH, WORKFLOWS_UNREADABLE, RUN_UNPARSEABLE, and
+      the completeness rule SCHEDULED_STEP_UNDECLARED (every scheduled
+      step invoking a repository script must be declared). npm run
+      scheduled:check / scheduled:test, wired into ci.yml next to
+      candidates:test, blocking. scripts/digest-repo-native.test.mjs's
+      former bespoke workflow-parsing test was replaced with an assertion
+      that the register carries the m3-digest-shadow-comparison entry,
+      since the generic check now proves that wiring. Planted-failure
+      proof, one per finding code, in throwaway fixtures
+      (scripts/scheduled-reachability.test.mjs), plus a real-repository
+      proof that editing weekly-drift.yml's vendor-roster step to a
+      different script makes scheduled:check fail with
+      MECHANISM_STEP_MISSING and SCHEDULED_STEP_UNDECLARED, restored with
+      git checkout before this batch's commit. No workflow's steps,
+      triggers, schedules or secrets changed; the only workflow file this
+      PR edits is ci.yml, adding the two new blocking steps.
+
+      M3 batch 5 merged (PR #644). M3 batch 6a is this PR: the
+      protocol-extraction check and the first extracted protocol.
+      docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md mirrors the
+      Deploy Mechanism Verification Protocol (DEC-20260504-C) section of
+      CLAUDE.md (lines 639-664) byte-identical, with authority_active: false
+      front matter, a source_heading pointer, and a
+      BEGIN/END VERBATIM FROM CLAUDE.md marker pair around the copied text.
+      scripts/protocol-extraction-lib.mjs / check-protocol-extraction.mjs
+      (npm run protocols:check, blocking, wired into ci.yml next to
+      candidates:test) locate every docs/governance/protocols/*.md file that
+      carries a verbatim marker (files without one, like README.md and the
+      two existing checklists, are ignored by rule, not by name), require
+      exactly one BEGIN and one END marker, require authority_active: false
+      and a non-empty source_heading in front matter, locate that heading
+      text (never a line number) as a unique CLAUDE.md heading at any level,
+      and compare the CLAUDE.md section it owns (through the last line
+      before the next same-or-higher-level heading, trailing blank lines
+      trimmed, CRLF normalized to LF on both sides) line-for-line against
+      the marked verbatim block. Seven finding codes, one planted-failure
+      fixture each in scripts/protocol-extraction.test.mjs (npm run
+      protocols:test, wired next to protocols:check): PROTOCOL_HEADING_NOT_FOUND,
+      PROTOCOL_HEADING_DUPLICATE, PROTOCOL_MARKER_MISSING,
+      PROTOCOL_MARKER_DUPLICATE, PROTOCOL_VERBATIM_MISMATCH,
+      PROTOCOL_FRONTMATTER_MISSING, PROTOCOL_FRONTMATTER_INVALID; plus a
+      clean-fixture test, a fixture proving CLAUDE.md can grow an unrelated
+      earlier section without breaking heading lookup, and a real-repository
+      test that the committed extraction passes today. Two planted-failure
+      proofs were run directly against the real repository and restored
+      (one word changed inside the new file's verbatim block; one word
+      changed in a scratch, uncommitted edit of CLAUDE.md's own protocol
+      section) before this batch's commit. CLAUDE.md is unchanged and
+      remains the authority until M4.
+
+      M3 batch 6a merged (PR #650). M3 batch 6b is this PR: the remaining six
+      mandatory protocols/rules now have inactive, byte-identical mirrors
+      under the same check, generated by calling
+      scripts/protocol-extraction-lib.mjs's own extraction function (a small
+      new export, extractClaudeSectionText, that factors out the exact
+      lookup and section logic checkProtocolFile already used, so the copy
+      and the check cannot disagree) rather than retyped by hand:
+      docs/governance/protocols/SESSION_CONTRACT.md (Session contract, both
+      tools, every session), DISTRIBUTION_PR_INTEGRITY.md (Distribution PR
+      Integrity Protocol, DEC-20260422-A; DISTRIBUTION_PR_PREFLIGHT.md stays
+      the separate checklist it already was), CAPABILITY_ONBOARDING.md
+      (Capability Onboarding Protocol, DEC-20260320-B; its caution block
+      notes the "Adding New Capabilities (MANDATORY PIPELINE)" section of
+      CLAUDE.md is the how-to it governs and is not part of this mirror),
+      AUDIT_FOLLOWUP_TEST_COVERAGE.md (Audit-Follow-up Test Coverage
+      Protocol, DEC-20260504-A), BULK_OPERATION_DEPLOY.md (Bulk-Operation
+      Deploy Protocol, DEC-20260504-B), and SHARED_CHECKOUT_RULE.md
+      (Shared-Checkout Rule, concurrency safety; its caution block notes the
+      following "Worktree node_modules Hazard" section is separate and not
+      part of this mirror). npm run protocols:check passes on every mirror.
+      Two planted-failure proofs were run
+      directly against the real repository and restored: one character
+      changed inside a new file's verbatim block, and one character changed
+      in a scratch, uncommitted edit of the corresponding CLAUDE.md section,
+      each confirmed to fail protocols:check naming the file and line before
+      being restored with git checkout, before this batch's commit. The
+      README template in scripts/project-context-lib.mjs was updated to list
+      every mirror and regenerated into
+      docs/governance/protocols/README.md; docs/project/PROTOCOL-ROUTER.md
+      stays the inert M1 skeleton this batch does not touch. CLAUDE.md,
+      AGENTS.md, DISTRIBUTION_PR_PREFLIGHT.md, and REVIEW_TEMPLATE.md are
+      unchanged; CLAUDE.md remains the sole authority for every mirrored
+      protocol until the founder-gated M4 cutover. All seven mandatory
+      protocols now have inactive, checked mirrors. Next is batch 7 (the
+      protocol coverage manifest and a populated router,
+      docs/project/PROTOCOL-ROUTER.md).
+
+      The vendor strand is now complete (batches 1
+      through 5): batch 5 (PR #639) added the two vendors STATIC_FACTS.vendors
+      named with no register entry - BODACC (new vendor; two live executors
+      call bodacc-datadila.opendatasoft.com directly) and Liberty Data
+      (registered as an alias of the existing einsearch vendor, since
+      us-ein-match.ts names Liberty Data Solutions as the company
+      operating einsearch.com, not a second vendor) - plus four more aliases
+      the new cross-check needed on already-registered vendors (serper,
+      anthropic, coinbase-cdp, gleif); added checkStaticFactsCrossCheck to
+      scripts/vendors-lib.mjs (STATIC_VENDOR_UNREGISTERED,
+      STATIC_VENDOR_STATE_MISMATCH, STATIC_FACTS_UNREADABLE), the check that
+      would have caught the gap, proven by planting in both the fixture
+      suite and the real register; added vendorCategoryView (a pure join,
+      no schema change - platform-facts.ts keeps owning the category
+      mapping) and scripts/generate-vendor-view.mjs / npm run vendors:view,
+      writing the generated, inactive docs/project/VENDORS.md agent-context
+      view, with VENDOR_VIEW_STALE staleness checking in npm run
+      vendors:check; recorded the customer-facing-view decision (unchanged:
+      STATIC_FACTS.vendors stays the customer-facing surface, the register
+      stays internal) and drafted the vendor-switch skill's retargeted step
+      5 as inactive prose in the design document, not an edit to the live
+      skill. Full outcome: docs/strategy/2026-09-10-m3-vendor-state-model.md,
+      "Batch 5: outcome". Batch 2 of the remaining-scope inventory's
+      proposed sequence (archive/sessions/2026-09-11-m3-remaining-scope-inventory.md,
+      "Proposed batch sequence," item 2) is recorded above; the note below,
+      from the same session, is what shaped its design: the daily digest runs as the
+      Railway strale-digest-cron service from the API Docker image, and the
+      Dockerfile copies only apps/api, packages/sdk-typescript,
+      packages/mcp-server and manifests, so docs/decisions/records,
+      handoff/ and archive/ do not exist at runtime. A repo-native reader
+      wired into gatherDigestData() would read nothing and its shadow log
+      would be silently hollow. Architect decision: in M3 the repo-native
+      digest readers are pure functions over a repository checkout, tested
+      in CI and shadow-run by a scheduled GitHub Actions job that has the
+      checkout (like weekly-drift.yml), comparing with the Notion readers
+      where a token is available; nothing is wired into the Railway digest
+      and the Dockerfile is unchanged; the same applies to batch 3's
+      shadow reader. How the production digest gets
+      repository data after cutover (image contents, a GitHub read at
+      runtime, or moving the digest to GitHub Actions) is an M4 design
+      question to settle before cutover. Batch 3 (the distribution-surfaces
+      registry and the social-media-post tracking decision) is recorded
+      above. After that: an inactive session-end-only Notion-write draft
+      (batch 4), scheduled-workflow reachability tests (batch 5 of that
+      sequence), and protocol full-body extraction followed by the
+      coverage manifest (batches 6-7, each with its own concrete check).
+      Every batch stays shadow or inactive.
+
+      M3 batch 6b merged (PR #651). M3 batch 7 is this PR:
+      docs/project/protocol-coverage.yaml, with a row for every mirrored
+      protocol/rule plus production authority, whose full text lives in
+      docs/company/CHARTER.md rather than CLAUDE.md, and
+      docs/project/protocol-coverage.schema.json, plus further mirrors
+      under docs/governance/protocols/ generated with
+      extractClaudeSectionText, never retyped:
+      TEST_INFRASTRUCTURE_COST_PRINCIPLES.md, WIRE_SHAPE_TRUST_ENDPOINTS.md,
+      and WORKTREE_NODE_MODULES_HAZARD.md. Each manifest row carries a
+      trigger, its full-body path, the CLAUDE.md (or CHARTER.md) heading it
+      is sourced from, its governing decision or the reason it has none, a
+      decision-record path or a note saying the decision is recorded only
+      in CLAUDE.md, and the enforced_by code/tests that check it (an empty
+      enforced_by carries a note that the protocol is enforced by review
+      alone). docs/project/PROTOCOL-ROUTER.md moved out of the M1 skeleton
+      set into M2_GENERATED_DOCUMENTS (project-context-lib.mjs) and is now
+      generated from the manifest by
+      protocolRouterMarkdown/protocolRouterGeneratedFiles in the new
+      scripts/protocol-coverage-lib.mjs, wired into generatedFiles() the
+      same way decisionGeneratedFiles() already is, so npm run
+      context:generate writes it and npm run context:check catches drift;
+      it stays candidate/authority_active: false and well under the plan's
+      word target. scripts/check-protocol-coverage.mjs (npm run
+      protocols:coverage, blocking) and scripts/protocol-coverage.test.mjs
+      (npm run protocols:coverage:test), wired into ci.yml next to
+      protocols:check/test, cover: schema validity, duplicate ids, a
+      missing full_body/decision_record/enforced_by path, a mirror file
+      with no manifest row, a protocol-shaped or already-mirrored CLAUDE.md
+      heading with no manifest row, and the router going stale -- one
+      planted-failure fixture each, plus a clean fixture and a real-repo
+      test. A decision id CLAUDE.md names inside a covered section (or
+      apps/api/src code cites next to the word "protocol") with no manifest
+      row is a report-only warning today, per the plan's M3-versus-M4 split;
+      the library header states it becomes blocking at the M4 cutover.
+      Planted-failure proofs were also run directly against the real
+      repository and restored: an added mirror file with no manifest row
+      confirmed MIRROR_UNCOVERED, an enforced_by path pointed at a missing
+      file confirmed ENFORCED_BY_MISSING, and a hand-edited router confirmed
+      ROUTER_STALE, each restored with git checkout before this batch's
+      commit. CLAUDE.md and docs/company/CHARTER.md are unchanged. With this
+      batch every M3 change item named in the migration plan (docs/strategy/
+      2026-08-31-repo-native-operating-model-migration.md section M3) has
+      landed in shadow or inactive form (PR #658). The M3 milestone review,
+      an independent read-only review at 9b668922, is archived at
+      archive/sessions/2026-09-11-m3-milestone-review.md with the verdict M3
+      EXIT MET WITH CONDITIONS: four exit criteria met, protocol coverage
+      partly met. Its three conditions, all to settle before any M4
+      cutover work: (1) the digest's action-required and
+      unreviewed-decisions meaning, founder-decision or reading list, which
+      is the founder's call because it changes what he reads each morning;
+      (2) whether the Session Start mode declaration and the
+      review-before-close step become protocol-coverage rows, a technical
+      call; (3) how the production Railway digest reads repository data
+      after cutover, a technical call. Condition 1 is settled (2026-09-11,
+      docs/company/DECISION-QUEUE.md DQ-32): after cutover the digest's action
+      required list shows only founder decisions from DECISION-QUEUE.md's
+      your_call entries, and recent session activity gets its own section.
+      Condition 2 is settled (2026-09-11): the Session Start mode
+      declaration and the review-before-close step stay outside the
+      protocol-coverage manifest, recorded in its excluded_sections reasons
+      (nothing enforces review-before-close; the review before merge keeps
+      unreviewed code out of main; the M4 entrypoint rewrite restates both
+      steps).
+      Condition 3 is settled (2026-09-11): after cutover the production
+      digest reads repository data from files copied into the API image,
+      which carry main's files with no new secret and no network
+      dependency. Evidence for freshness is one observation, not a
+      guarantee: GET /health returned ed29d691, the tip of main right after
+      that merge. The M4 cutover PR adds the Dockerfile COPY lines for the
+      files the readers use (docs/company/DECISION-QUEUE.md,
+      handoff/_general/from-code/, docs/operations/distribution-registry.yaml,
+      config/vendors.yaml), a check that the built image actually contains
+      them (per DEC-20260504-C, deploy mechanism verified, not assumed), and
+      the digest prints the image commit so a stale deploy is visible.
+      Rejected: a GitHub read at runtime (a token and a network dependency)
+      and moving the digest to GitHub Actions (production database
+      credentials in GitHub). All three M3 conditions are settled. Done
+      2026-09-11; work continues in T7, M4 cutover preparation.
     resume_file: archive/sessions/2026-09-11-m3-milestone-review.md
     exit:
       - repo-native replacements testable without changing existing authority
