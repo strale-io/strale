@@ -162,7 +162,8 @@ protocols:
     decision_record_note: "Recorded only in CLAUDE.md."
     enforced_by: []
     enforced_by_note: >-
-      Enforced by review and instruction alone (review round 1 finding 1).
+      Enforced by review and instruction alone (this batch's review-round
+      enforcement-overclaim finding).
       scripts/guard-worktree-isolation.mjs, previously listed here, only
       names this hazard inside the text of a refusal message it prints for
       an unrelated check (--require-isolated / --require-clean); it does
