@@ -53,7 +53,7 @@ function makeFixture() {
 /** A small but real dependency-manifest.ts, structurally identical to the
  * real file's shape (a PROVIDERS array of object literals with the same
  * property names), so extractProviders exercises the real TS-compiler path. */
-function dependencyManifestText({ retiredNoCapabilities = true } = {}) {
+function dependencyManifestText({ retiredNoCapabilities = true, acmeCapabilities = ["acme-cap"] } = {}) {
   return `export const PROVIDERS = [
   {
     name: "acme",
@@ -62,7 +62,7 @@ function dependencyManifestText({ retiredNoCapabilities = true } = {}) {
     baseUrl: "https://acme.test",
     authType: "none",
     healthProbe: { path: "/", method: "GET", healthyStatuses: [200], timeoutMs: 1000 },
-    capabilities: ["acme-cap"],
+    capabilities: ${JSON.stringify(acmeCapabilities)},
     tier: "paid",
   },
   {
@@ -353,6 +353,21 @@ test("a held vendor whose every capability is in DEACTIVATED is clean", (t) => {
   t.after(() => cleanup(dir));
   const r = checkAllVendors(dir, { skipHistory: true });
   assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("a held vendor whose provider lists no capability is clean", (t) => {
+  const held = vendor({ lifecycle: [{ state: "held", date: "2026-01-01", decision: "unknown", reason: "x" }] });
+  const dir = makeDir(baseFiles([held, oldVendor()], { acmeCapabilities: [] }));
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("PROVIDER_STATE_MISMATCH: an active vendor whose provider lists no capability", (t) => {
+  const dir = makeDir(baseFiles([vendor(), oldVendor()], { acmeCapabilities: [] }));
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.ok(r.findings.some((f) => f.code === "PROVIDER_STATE_MISMATCH" && /lists no capability/.test(f.detail)), JSON.stringify(r.findings));
 });
 
 test("DEACTIVATED_UNREADABLE: an unrecognised DEACTIVATED entry shape fails, never skips", (t) => {

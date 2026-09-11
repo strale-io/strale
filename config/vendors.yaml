@@ -498,6 +498,10 @@ vendors:
         date: 2026-09-10
         decision: unknown
         reason: "Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, kept for its health probe; every capability it lists is in apps/api/src/capabilities/auto-register.ts DEACTIVATED, and the shared client refuses calls unless ETHERSCAN_COMMERCIAL_PLAN is true, per the vendor-terms audits (docs/security/2026-09-06-vendor-terms-audit.md, docs/security/2026-09-10-vendor-terms-audit-batch-2.md): Etherscan's API content is for personal, non-commercial use and Strale holds only a free key."
+      - state: held
+        date: 2026-09-11
+        decision: unknown
+        reason: "No capability uses Etherscan any more: the wallet and gas capabilities moved to Alchemy and contract-verify-check to Sourcify. Its PROVIDERS entry lists no capability; only web3-assurance evaluators import the client, which refuses every call unless ETHERSCAN_COMMERCIAL_PLAN is true. handoff/_general/from-code/2026-09-11-free-source-rebuilds.md"
     reevaluation_triggers: []
     verification:
       terms:
@@ -754,6 +758,32 @@ vendors:
         verified_by: "vendor-terms audit, read against the live terms pages"
         evidence: docs/security/2026-09-10-vendor-terms-audit-batch-2.md
         outcome: permitted
+    authorization:
+      status: unknown
+  - id: sourcify
+    name: Sourcify
+    aliases:
+      - Sourcify
+    lifecycle:
+      - state: active
+        date: 2026-09-11
+        decision: unknown
+        reason: "contract-verify-check rebuilt onto Sourcify's public API, replacing Etherscan's free API, whose terms forbid commercial use. No key."
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-11
+        verified_by: "vendor-terms review before the rebuild, read against Sourcify's docs and repository"
+        evidence: handoff/_general/from-code/2026-09-11-free-source-rebuilds.md
+        outcome: conditional
+        note: "Sourcify publishes no terms of use and names no licence for its dataset; the software is MIT and the project describes itself as Open-data and publishes the full dataset for download. Strale returns only factual verification metadata, never contract source. Revisit if Sourcify publishes terms."
     authorization:
       status: unknown
   - id: jina-reader
@@ -1150,6 +1180,10 @@ vendors:
         date: 2026-09-10
         decision: unknown
         reason: "Initial population from config/env-manifest.yaml provider field. Its only capability, job-board-search, is in apps/api/src/capabilities/auto-register.ts DEACTIVATED since the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md): Adzuna permits publishing listings with branding, and other commercial use only as a 14-day trial."
+      - state: held
+        date: 2026-09-11
+        decision: unknown
+        reason: "job-board-search no longer uses Adzuna: it was rebuilt on JobTech (CC0) alone and is back in service. The Adzuna code path and its env rows are retired. handoff/_general/from-code/2026-09-11-free-source-rebuilds.md"
     reevaluation_triggers: []
     verification:
       terms:

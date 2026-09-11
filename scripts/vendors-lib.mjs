@@ -615,14 +615,20 @@ export function checkProvidersCrossCheck(root, register) {
     // A provider kept in PROVIDERS (for example for its health probe) whose
     // every capability is in DEACTIVATED is held, not active; and held is
     // accepted only then, so the state stays tied to what the code runs.
+    // A provider that lists no capability and no fallback capability serves
+    // nothing either, and is held for the same reason (etherscan since
+    // 2026-09-11: its capabilities moved to licensed sources, and only a
+    // licence-gated client that refuses every call remains).
+    const listsNothing = (p.capabilities?.length ?? 0) === 0 && (p.fallbackCapabilities?.length ?? 0) === 0;
     const allDeactivated = (p.capabilities?.length ?? 0) > 0 && p.capabilities.every((c) => deactivated.has(c));
+    const servesNothing = listsNothing || allDeactivated;
     if (!p.retired) {
-      const expectSet = allDeactivated ? HELD_STATES : isFallbackOnly ? new Set(["fallback"]) : ACTIVE_STATES;
+      const expectSet = servesNothing ? HELD_STATES : isFallbackOnly ? new Set(["fallback"]) : ACTIVE_STATES;
       if (!expectSet.has(currentState)) {
         findings.push({
           code: "PROVIDER_STATE_MISMATCH",
           file: REGISTER_PATH,
-          detail: `${vendorId} is a non-retired PROVIDERS entry ("${p.name}")${allDeactivated ? " whose every capability is in DEACTIVATED" : ""} but its current lifecycle state is "${currentState}", expected one of [${[...expectSet].join(", ")}]`,
+          detail: `${vendorId} is a non-retired PROVIDERS entry ("${p.name}")${allDeactivated ? " whose every capability is in DEACTIVATED" : listsNothing ? " that lists no capability" : ""} but its current lifecycle state is "${currentState}", expected one of [${[...expectSet].join(", ")}]`,
         });
       }
     } else if (!RETIRED_STATES.has(currentState)) {

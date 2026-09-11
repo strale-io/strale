@@ -857,6 +857,7 @@
         "archive/sessions/handoff-from-code/2026-04-16-frontend-redesign-session1.md",
         "archive/superseded/manifests-drafts/mexican-company-data.yaml",
         "config/env-manifest.schema.json",
+        "config/vendors.yaml",
         "context7.json",
         "design/PROVENANCE.md",
         "design/README.md",
