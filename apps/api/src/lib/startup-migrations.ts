@@ -5235,9 +5235,14 @@ export async function runMigration0112_promoteFreeApiEight(
 // corrected browserless-suite-migration.ts planning logic (these three
 // types can never capture a baseline, so 'fixture' has nothing to replay
 // and would fall through to a live call on every dispatch anyway). Canary
-// mode gets its own unconditional 24h floor via `minRetestIntervalHours`
-// (jobs/test-scheduler.ts) and never re-enters the fixture-recapture
-// machinery, so this cause cannot recur for these rows.
+// mode gets a 24h floor via `minRetestIntervalHours` (jobs/test-scheduler.ts)
+// on the automatic scheduler's eligibility query, and never re-enters the
+// fixture-recapture machinery, so this cause cannot recur for these rows on
+// scheduled dispatch. That floor is not unconditional: a direct
+// `POST /v1/internal/tests/run` admin call (routes/internal-tests.ts) still
+// reaches the executor with no floor in the way, same as for any other
+// suite — bounding this population's cost on the normal schedule is what
+// this block does, not making a manual re-run cost-free.
 //
 // Workload this resumes (Bulk-Operation Deploy Protocol, DEC-20260504-B):
 // 32 suites move from "permanently refused, zero calls" back to "canary,

@@ -938,9 +938,15 @@ async function runSingleTest(
   // suites on the 12 target capabilities are planned to `test_mode =
   // 'canary'`, not `'fixture'` — canary mode never reaches this fixture-only
   // branch at all (see the `suite.testMode === "fixture"` guard below) and
-  // gets its own unconditional 24h floor via
-  // `jobs/test-scheduler.ts`'s `minRetestIntervalHours`, regardless of
-  // `cost_class`. A genuinely failing recapture (upstream broke, executor
+  // gets its own 24h floor via `jobs/test-scheduler.ts`'s
+  // `minRetestIntervalHours`, regardless of `cost_class` — but that floor
+  // only bounds the automatic scheduler's eligibility query. It is not a
+  // property of `test_mode = 'canary'` itself: a direct
+  // `POST /v1/internal/tests/run` with the admin secret
+  // (`routes/internal-tests.ts`) calls `runTests()` straight through, same
+  // as any other suite, with no floor in the way.
+  //
+  // A genuinely failing recapture (upstream broke, executor
   // missing, a real semantic regression) is unaffected by any of this —
   // `!passed` still catches it and the cap below still quarantines it after
   // `MAX_FIXTURE_RECAPTURE_FAILURES` consecutive failures. Awaited (not
@@ -949,6 +955,20 @@ async function runSingleTest(
   if (suite.testMode === "fixture" && !passed) {
     await recordFixtureRecaptureFailure(suite).catch((err) =>
       logError("fixture-recapture-failure-tracking-failed", err, {
+        capability_slug: suite.capabilitySlug,
+      }),
+    );
+  } else if (suite.testMode === "fixture" && passed && !capResult?.output) {
+    // General rule: fixture mode requires a capturable baseline; a
+    // refusal-only outcome can never have one. See
+    // `convertRefusalOnlyFixtureToCanary`'s doc comment for the full
+    // account (this is the runtime fix for the 2026-09-11
+    // wrongly-quarantined-refusal-suite incident, generalized past the 12
+    // hardcoded capabilities `browserless-suite-migration.ts` covers).
+    // Awaited, same as the failure-tracking branch above: this must land
+    // before the next dispatch can re-read `testMode` as still 'fixture'.
+    await convertRefusalOnlyFixtureToCanary(suite).catch((err) =>
+      logError("fixture-refusal-canary-conversion-failed", err, {
         capability_slug: suite.capabilitySlug,
       }),
     );
@@ -1598,6 +1618,74 @@ export async function recordFixtureRecaptureFailure(
       })
       .where(eq(testSuites.id, suite.id));
   }
+}
+
+/**
+ * General rule (2026-09-12, closing the wrongly-quarantined-refusal-suite
+ * defect class at its root instead of at its symptom): fixture mode requires
+ * a capturable baseline; a refusal-only outcome can never have one. Any
+ * `test_mode = 'fixture'` suite that passes without producing output
+ * (`capResult?.output` falsy) is structurally incapable of ever calling
+ * `captureBaseline` — that function only ever writes a baseline when
+ * `passed && capResult?.output`. Left on `test_mode = 'fixture'`, such a
+ * suite falls through to a live executor call on every scheduled dispatch
+ * forever: `recordFixtureRecaptureFailure`'s counter is now correctly gated
+ * on `!passed` (see that call site's comment), so a suite that always
+ * passes never increments it and never quarantines — the counter no longer
+ * being wrong here means there is no cap at all, not a safe one.
+ *
+ * A production sweep (2026-09-12, read-only, cited in the handoff) found
+ * this shape on suites outside the 12 capabilities
+ * `browserless-suite-migration.ts` hardcodes for its one-time
+ * `REFUSAL_ONLY_TYPES` conversion — that planner is a targeted, manually
+ * applied backfill for a known incident population, not a mechanism that
+ * runs for every capability going forward. Rather than extend its hardcoded
+ * slug list (the shape of bug this whole incident already came from), this
+ * function makes the same conversion a runtime consequence for ANY
+ * capability, so the class stays closed as new suites of this shape appear.
+ * The migration planner's `REFUSAL_ONLY_TYPES` handling is intentionally
+ * left as-is rather than deferring to this function: it plans a suite's
+ * `test_mode` from static suite metadata (test_type) before any qualifying
+ * execution has necessarily happened, while this function only ever acts
+ * after an actual passing run confirms there was truly no output to
+ * capture — the two run at different times against different evidence and
+ * would not simplify into one call site. They converge on the same target
+ * (`test_mode = 'canary'`) by design, cross-referenced here and in that
+ * file's `REFUSAL_ONLY_TYPES` comment so they don't silently drift apart.
+ *
+ * Idempotent by construction, no separate "already converted" flag needed:
+ * once this runs, `suite.testMode` is `'canary'`, not `'fixture'`, so the
+ * call site's `suite.testMode === "fixture"` guard never re-fires for this
+ * suite again on a later pass. Appends one `autoRemediationLog` entry
+ * recording why, matching the audit-trail shape `auto-remediation.ts` and
+ * `self-heal.ts` already use for automatic suite changes.
+ */
+export async function convertRefusalOnlyFixtureToCanary(
+  suite: typeof testSuites.$inferSelect,
+): Promise<void> {
+  const db = getDb();
+  const existingLog = (suite.autoRemediationLog ?? []) as Array<Record<string, unknown>>;
+  await db
+    .update(testSuites)
+    .set({
+      testMode: "canary",
+      autoRemediationLog: [
+        ...existingLog,
+        {
+          timestamp: new Date().toISOString(),
+          rule: "fixture_refusal_only_no_baseline_possible",
+          applied: true,
+          description:
+            "test_mode 'fixture' -> 'canary': suite passed with no capturable output " +
+            "(refusal-type expected-pass path never returns output, so no baseline can " +
+            "ever exist). Scheduled dispatch is now bounded by minRetestIntervalHours " +
+            "instead of firing on every tick uncapped; a direct admin-triggered run is " +
+            "not bounded by that floor.",
+        },
+      ],
+      updatedAt: new Date(),
+    })
+    .where(eq(testSuites.id, suite.id));
 }
 
 /**

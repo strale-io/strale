@@ -86,10 +86,13 @@ capped).
    `edge_case`/`known_bad` (structurally incapable of capturing a baseline)
    are now planned to `test_mode = 'canary'`, not `'fixture'` (new action
    `convert_to_canary_refusal`). Canary mode never reaches the
-   fixture-recapture machinery and gets an unconditional 24h floor via
-   `minRetestIntervalHours`, so fixing the counter alone doesn't reopen
+   fixture-recapture machinery and gets a 24h floor via
+   `minRetestIntervalHours` on the automatic scheduler's eligibility query
+   (corrected 2026-09-12, see the addendum below; the floor does not bound
+   a direct admin-triggered run), so fixing the counter alone doesn't reopen
    unbounded Browserless calls for the six URL-based capabilities whose
-   `edge_case`/`known_bad` sentinel reaches Browserless before rejecting.
+   `edge_case`/`known_bad` sentinel reaches Browserless before rejecting on
+   the normal schedule.
 3. `apps/api/src/lib/startup-migrations.ts` block
    `0113_releaseWronglyQuarantinedRefusalSuites` (ledger id `M056`) releases
    the 32 wrongly-quarantined rows: predicate `test_type IN ('negative',
@@ -146,8 +149,117 @@ either hand-correct their `input` to match the current manifest
 `company_code: "304151376"`; `swiss-company-data`: `uid:
 "CHE-101.602.521"`) and reset `test_status`, or build the resync mechanism.
 
+## Addendum 2026-09-12: PR #669 review findings closed
+
+A fresh read-only Claude agent reviewed PR #669 (this branch) and found three
+things. All three are fixed on this same branch, same commit as this
+addendum.
+
+### 1. Two gate tests broken by adding block 0113
+
+`apps/api/src/lib/startup-migrations.test.ts` pinned the block list at 54
+names and the max block number at 112. Block 0113 (this branch) made both
+assertions stale. Fixed by updating the pinned list to include
+`runMigration0113_releaseWronglyQuarantinedRefusalSuites` (56 entries total;
+the pre-branch count was already 55, not 54, so the stale "54" in the test's
+own description predates this branch) and the max-number assertion to 113.
+`npx vitest run src/lib/startup-migrations*.test.ts` in `apps/api`: 146/146
+green.
+
+### 2. The counter fix closed the incident, not the defect class
+
+Closed at runtime in `test-runner.ts`'s `runSingleTest`, not by extending
+`browserless-suite-migration.ts`'s hardcoded `TARGET_SLUGS`. New function
+`convertRefusalOnlyFixtureToCanary` (`apps/api/src/lib/test-runner.ts:1623`)
+fires from a new `else if` branch alongside the existing
+`recordFixtureRecaptureFailure` call (`apps/api/src/lib/test-runner.ts:955`):
+when a `test_mode = 'fixture'` suite passes with no capturable output
+(`capResult?.output` falsy), it flips `test_mode` to `'canary'` and appends
+one `autoRemediationLog` entry recording why. Idempotent by construction:
+once `test_mode` is `'canary'`, the `testMode === "fixture"` guard never
+re-fires for that suite, no separate flag needed.
+
+The general rule, stated in the function's own comment: fixture mode
+requires a capturable baseline; a refusal-only outcome can never have one.
+
+On the migration planner's `REFUSAL_ONLY_TYPES` handling: left as its own
+thing rather than deferring to the runtime rule. The planner converts suites
+from static metadata (test_type) as a one-time, manually-applied backfill for
+the known incident population; the runtime rule only acts after an actual
+passing execution confirms there was truly no output: different times,
+different evidence, not a natural single call site. Both converge on
+`test_mode = 'canary'`; cross-referenced in both files' comments so they
+don't silently drift apart.
+
+Tests added to `test-runner.recapture-refusal-pass.test.ts`: a passing
+refusal-type fixture suite converts to canary on its first qualifying pass
+and records why; a further 3 passing runs never re-convert or duplicate the
+log entry (never loops); a `known_answer` suite that passes WITH output still
+captures a baseline via `captureBaseline` and stays in fixture mode
+(`test_mode` and `autoRemediationLog` both untouched). The pre-existing
+genuinely-failing-recapture-still-quarantines test in the same file is
+unmodified and still green. Planted: commented out the new `else if` branch
+in `runSingleTest`, reran the suite; the two "moves to canary" tests failed
+(`test_mode` stayed `fixture`, `autoRemediationLog` stayed `null`); the
+"stays in fixture mode" test still passed (different code path). Restored the
+branch, all green again.
+
+Production count of the risky shape (read-only, root `.env` read-only role,
+query script kept outside the repo tree): 23 `test_suites` rows carry
+`test_mode = 'fixture'`, `test_type IN ('negative','edge_case','known_bad')`,
+`active = true`, `test_status <> 'quarantined'`: the shape that would have
+called its executor on every scheduled dispatch forever with no cap, absent
+this fix. 20 of the 23 are `scheduled_testing_eligible = true` (dispatchable
+today, not just latent). 19 of the 23 are outside
+`browserless-suite-migration.ts`'s 12 `TARGET_SLUGS` (`adverse-media-check`,
+`bank-bic-lookup`, `data-protection-authority-lookup`, `deduplicate`,
+`http-to-curl`, `iban-validate`, `isbn-validate`, `iso-country-lookup`,
+`json-repair`, `json-to-pydantic`, `json-to-typescript`, `json-to-zod`,
+`pep-check`, `risk-narrative-generate`, `sepa-xml-validate`,
+`skill-extract`, `swift-message-parse`, `swift-validate`,
+`vat-format-validate`), confirming the runtime rule was necessary, not just
+tidy: a hardcoded-list fix would have missed all 19. Three of those 19
+(`adverse-media-check`, `pep-check`, `risk-narrative-generate`) have no
+baseline at all, matching the earlier finding. Receipt:
+`archive/receipts/2026-09-11-sweep-recapture-risky-shape-prod-count.json`.
+
+### 3. Imprecise cost claim on `minRetestIntervalHours`
+
+The canary floor bounds the automatic scheduler's eligibility query only. A
+direct `POST /v1/internal/tests/run` admin call (`routes/internal-tests.ts`)
+calls `runTests()` straight through with no floor in the way, for a
+`canary`-mode suite exactly as for any other. Corrected everywhere this
+branch stated the claim as unconditional: `test-runner.ts` (the
+`browserless-suite-migration.ts` cross-reference comment near the
+recapture-tracking branch, and the new function's `autoRemediationLog`
+description string), `browserless-suite-migration.ts` (the header block
+comment and the `REFUSAL_ONLY_TYPES` doc comment), `startup-migrations.ts`
+(block 0113's comment), and this handoff (the corresponding paragraph
+above). Not changed: the admin route itself, flagged here as a separate
+gap, not fixed this session. A future session could add a
+`minRetestIntervalHours`-equivalent floor to the admin route, or accept that
+manual admin-triggered runs are intentionally unbounded (an operator already
+holding `ADMIN_SECRET` is a different trust boundary than the scheduler).
+
+### Gates (this addendum)
+
+- `apps/api`: `npx tsc --noEmit -p .` clean (after
+  `npm --workspace=packages/mcp-server run build`, the pre-existing worktree
+  artifact gap, see WORKTREES.md).
+- `apps/api`: `npx vitest run src/lib/test-runner*.test.ts
+  src/lib/browserless-suite-migration.test.ts src/lib/health-sweep.test.ts
+  src/lib/startup-migrations*.test.ts`, green. Receipt:
+  `archive/receipts/2026-09-11-test-run-recapture-refusal-lock-review-fix.json`.
+- Root: `npm run migrations:check` green (added no new `known_overlaps`;
+  block 0113 already covered). `npm run migrations:test` green (17/17).
+  `npm run env:check` green. `npm run context:check` green (ran
+  `context:generate` twice first). `npm run receipts:check` green (same 11
+  pre-existing warnings as before, unrelated to this branch).
+
 ## Next action
 
-None pending on this track — branch pushed, no PR opened per the task brief
-(explicit "Do not open a PR"). A follow-up session (or Petter) opens the PR
-when ready, or picks up the dependency_health input-drift follow-up above.
+None pending on this track: branch pushed, no PR opened per the task brief
+(explicit "Do not open a PR"; PR #669 already exists and carries this
+addendum's findings). A follow-up session (or Petter) merges when ready, or
+picks up either open item: the `dependency_health` input-drift follow-up
+above, or the admin-route floor gap named in finding 3.

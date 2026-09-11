@@ -56,8 +56,10 @@
  *      below and `test-runner.ts`'s fixture-recapture-tracking comment for
  *      the full account. These three types now convert to `test_mode =
  *      'canary'` instead (`convert_to_canary_refusal`) — canary mode never
- *      reaches the fixture-recapture machinery and gets its own
- *      unconditional 24h dispatch floor.
+ *      reaches the fixture-recapture machinery and gets its own 24h
+ *      dispatch floor, bounding the automatic scheduler's eligibility
+ *      query (not a manual admin-triggered run — see `REFUSAL_ONLY_TYPES`'s
+ *      doc comment for the precise scope).
  *
  *      HIGH-2a (Codex review): the `dependency_health` conversion itself
  *      must not force an unnecessary recapture. A suite whose existing baseline is already
@@ -163,9 +165,13 @@ const PIGGYBACK_TYPE = "piggyback";
  * The fix here: these three types are never planned to `fixture`. They get
  * `test_mode = 'canary'` instead, same as the chosen canary suite — canary
  * mode never reaches the fixture-recapture machinery at all (it's gated on
- * `testMode === 'fixture'` in test-runner.ts) and gets its own
- * unconditional 24h floor via `minRetestIntervalHours` in
- * `jobs/test-scheduler.ts`, regardless of `cost_class`. Multiple
+ * `testMode === 'fixture'` in test-runner.ts) and gets its own 24h floor
+ * via `minRetestIntervalHours` in `jobs/test-scheduler.ts`, regardless of
+ * `cost_class` — on the automatic scheduler's eligibility query only. A
+ * direct `POST /v1/internal/tests/run` admin call (routes/internal-tests.ts)
+ * still calls `runTests()` straight through with no floor in the way, same
+ * as for a `fixture`- or `live`-mode suite; canary mode bounds scheduled
+ * dispatch, not a manual re-run. Multiple
  * canary-mode suites per capability are fine here — `shouldRecordTestEvidence`
  * only feeds the circuit breaker from `known_answer`/`dependency_health`
  * passes, so having several independently-canary refusal suites doesn't
@@ -173,6 +179,22 @@ const PIGGYBACK_TYPE = "piggyback";
  * most one chosen canary" invariant (used for the zero-live-suites EDGE
  * guard) is untouched — these are a distinct action
  * (`convert_to_canary_refusal`), never counted as THE chosen canary.
+ *
+ * 2026-09-12 addendum: `test-runner.ts` now also carries a general runtime
+ * rule (`convertRefusalOnlyFixtureToCanary`) that converts ANY
+ * `test_mode = 'fixture'` suite to `'canary'` the first time it passes with
+ * no capturable output — not scoped to the 12 `TARGET_SLUGS` here or to
+ * these three test types by name, but to the actual observed shape (passed,
+ * no output) at execution time. This planner's `REFUSAL_ONLY_TYPES` handling
+ * is left as its own thing rather than deferring to that runtime rule: this
+ * function plans from static suite metadata (test_type) as a one-time,
+ * manually-applied backfill for the known 2026-08-18 incident population,
+ * while the runtime rule reacts only after an actual passing execution
+ * confirms there was truly no output — different times, different evidence,
+ * not a natural single call site. Both converge on `test_mode = 'canary'` by
+ * design; a production sweep after this addendum (2026-09-12, cited in the
+ * handoff) found suites with this shape outside `TARGET_SLUGS` too, which is
+ * exactly the case the runtime rule exists to close without a list edit.
  */
 const REFUSAL_ONLY_TYPES = new Set(["negative", "edge_case", "known_bad"]);
 

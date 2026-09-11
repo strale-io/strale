@@ -1,0 +1,22 @@
+{
+  "kind": "sweep",
+  "produced_by": {
+    "script": "read-only prod query, ad-hoc, outside repo tree per secrets rule",
+    "commit": "5d9a6fe825829657e27cfd509f733d5294bcf72e"
+  },
+  "at": "2026-09-11T22:44:40.499Z",
+  "inputs": "test_suites: test_mode=fixture AND test_type IN (negative,edge_case,known_bad) AND active=true AND test_status<>quarantined",
+  "summary": {
+    "total_risky": 23,
+    "risky_and_scheduled": 20,
+    "distinct_capabilities": 23,
+    "outside_target_slugs_count": 19
+  },
+  "topic": "recapture-risky-shape-prod-count",
+  "raw": {
+    "total_risky": 23,
+    "risky_and_scheduled": 20,
+    "distinct_capabilities": 23,
+    "outside_target_slugs_count": 19
+  }
+}

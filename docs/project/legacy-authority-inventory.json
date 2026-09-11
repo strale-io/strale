@@ -763,7 +763,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "bec56d9cb428aa1369d67ee3cb5bbc6824404709016cc61ef441e2e2bdf29583",
+      "sha256": "f8f8a7caf666ccff681d2445d2faf504bf2d90afbb45ba943d617c1c2298c8f0",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -800,6 +800,7 @@
         "apps/api/src/capabilities/belgian-company-data.ts",
         "apps/api/src/capabilities/providers/latvian-company-data-sdda.ts",
         "apps/api/src/capabilities/web-extract-resilience.test.ts",
+        "apps/api/src/lib/browserless-suite-migration.ts",
         "apps/api/src/lib/check-self-staleness.test.ts",
         "apps/api/src/lib/check-self-staleness.ts",
         "apps/api/src/lib/data-retention.ts",

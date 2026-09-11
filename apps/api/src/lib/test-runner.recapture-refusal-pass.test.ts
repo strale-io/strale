@@ -97,6 +97,7 @@ interface SuiteRow {
   externalCostCents: number;
   lastClassification: unknown;
   estimatedCostCents: number;
+  autoRemediationLog: unknown;
 }
 
 let suite: SuiteRow;
@@ -181,6 +182,7 @@ beforeEach(() => {
     externalCostCents: 0,
     lastClassification: null,
     estimatedCostCents: 0,
+    autoRemediationLog: null,
   };
 });
 
@@ -270,5 +272,97 @@ describe("a passing refusal-type fixture suite is never counted as a failed reca
     }
     expect(suite.testStatus).toBe("quarantined");
     expect(suite.quarantineReason).toMatch(/fixture_recapture_exhausted:/);
+  });
+});
+
+/**
+ * 2026-09-12: the general runtime rule (`convertRefusalOnlyFixtureToCanary`
+ * in test-runner.ts) that closes the defect class instead of just the
+ * counter symptom above. Fixture mode requires a capturable baseline; a
+ * refusal-only outcome can never have one, so leaving a passing
+ * refusal-type suite on `test_mode = 'fixture'` after the counter fix above
+ * means it would call its executor forever with zero cap (a passing run
+ * never increments `fixture_recapture_failures`). This suite moves out of
+ * fixture mode on its first qualifying pass.
+ *
+ * Planted (per DEC-20260504-A): commented out the
+ * `else if (suite.testMode === "fixture" && passed && !capResult?.output)`
+ * branch in test-runner.ts's runSingleTest, re-ran this describe block —
+ * both "moved to canary" tests failed (`suite.testMode` stayed `"fixture"`,
+ * `autoRemediationLog` stayed `null`), the "stays in fixture mode" test
+ * still passed (it exercises the unrelated `captureBaseline` path). Restored
+ * the branch — all three green again.
+ */
+describe("a passing refusal-type fixture suite moves to canary, exactly once (2026-09-12 runtime rule)", () => {
+  it("converts test_mode to canary on the first passing run with no output, and records why", async () => {
+    await runTests({
+      capabilitySlug: suite.capabilitySlug,
+      testType: suite.testType,
+      suiteId: suite.id,
+    });
+
+    expect(suite.testMode).toBe("canary");
+    const log = suite.autoRemediationLog as Array<Record<string, unknown>>;
+    expect(log).toHaveLength(1);
+    expect(log[0].rule).toBe("fixture_refusal_only_no_baseline_possible");
+    expect(log[0].applied).toBe(true);
+    // Never (wrongly) counted toward the recapture-failure cap either.
+    expect(suite.fixtureRecaptureFailures).toBe(0);
+    expect(suite.testStatus).toBe("normal");
+  });
+
+  it("never loops: a suite already converted to canary is not converted again on a later pass", async () => {
+    await runTests({
+      capabilitySlug: suite.capabilitySlug,
+      testType: suite.testType,
+      suiteId: suite.id,
+    });
+    expect(suite.testMode).toBe("canary");
+    const logAfterFirst = (suite.autoRemediationLog as Array<Record<string, unknown>>).length;
+    expect(logAfterFirst).toBe(1);
+
+    // Further scheduled dispatches still reach the executor (canary mode is
+    // a bounded live check, not a skip) but the conversion guard is gated on
+    // `testMode === "fixture"`, which is no longer true — no repeat log
+    // entry, no re-conversion.
+    for (let i = 0; i < 3; i++) {
+      await runTests({
+        capabilitySlug: suite.capabilitySlug,
+        testType: suite.testType,
+        suiteId: suite.id,
+      });
+    }
+    expect(suite.testMode).toBe("canary");
+    expect((suite.autoRemediationLog as Array<Record<string, unknown>>).length).toBe(1);
+  });
+});
+
+describe("a fixture-mode suite that passes WITH output still captures a baseline and stays in fixture mode", () => {
+  it("known_answer: a real output on a pass captures the baseline; test_mode is untouched", async () => {
+    suite.testType = "known_answer";
+    suite.testName = "known_answer";
+    mockExecutorImpl = () => {
+      executorCallCount++;
+      return Promise.resolve({
+        output: { company_name: "Test AB", org_number: "5591234567" },
+        provenance: { source: "test", fetched_at: new Date().toISOString() },
+      });
+    };
+
+    await runTests({
+      capabilitySlug: suite.capabilitySlug,
+      testType: suite.testType,
+      suiteId: suite.id,
+    });
+
+    expect(insertedResults[0].passed).toBe(true);
+    // captureBaseline fired (fire-and-forget, but the mock's update() applies
+    // synchronously) — baseline_output is now set.
+    expect(suite.baselineOutput).toEqual({ company_name: "Test AB", org_number: "5591234567" });
+    // The conversion branch above never fires when there IS output — the
+    // suite stays in fixture mode, exactly the shape captureBaseline exists
+    // to serve.
+    expect(suite.testMode).toBe("fixture");
+    expect(suite.autoRemediationLog).toBeNull();
   });
 });
