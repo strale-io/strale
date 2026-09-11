@@ -360,7 +360,13 @@ reading the full step list): `programs:check`/`test` (442-443),
   `process.exit(findings.length === 0 ? 0 : 1)`) only reflects `findings`,
   never `warnings`, and the manifest's own header
   comment (quoted in `docs/programs/cto-readiness/tracks.yaml:817-819`) states
-  it "becomes blocking at the M4 cutover."
+  it "becomes blocking at the M4 cutover." It is not clean today:
+  `npm run protocols:coverage` warns that `DEC-20260910-A` is named in the
+  body of the covered "Review routing" heading while the `review-routing`
+  row cites only `DEC-20260903-A` as its decision, and the manifest allows
+  one decision per row. That violation must be resolved before the warning
+  is promoted (added to the section 7 batch that promotes it; independent
+  review of PR #664).
 - Every shadow comparison in section 1 (rows 1, 2, 4) is, by construction,
   report-only: `printShadowComparison()` "never changes the script's exit
   code" (`check-vendor-roster-drift.ts`, per the M3 vendor-state model
@@ -578,7 +584,15 @@ sequence below starts from the settled record.
    `CLAUDE.md`/`AGENTS.md` legitimately reference `docs/project/`;
    `docs/project/protocol-coverage.yaml`'s `DECISION_ID_UNCOVERED` warning
    (`scripts/protocol-coverage-lib.mjs:357-370`) promoted from `warnings` to
-   `findings`. Tests: a planted-failure fixture proving the anti-regression
+   `findings`, but only after its existing violation is resolved in the
+   same batch, earlier commit: `DEC-20260910-A` is named in the "Review
+   routing" body and no row cites it (section 6). The fix is to let a row
+   cite more than one decision (a `decisions` list alongside or replacing
+   `decision`, with the schema, library and tests updated) and add
+   `DEC-20260910-A` to the `review-routing` row. The general rule for this
+   batch: before promoting any report-only warning or making any checker
+   blocking, run it on the integration branch and resolve every current
+   warning, so the promotion lands green. Tests: a planted-failure fixture proving the anti-regression
    check catches a reintroduced `NOTION_API_KEY` string outside the
    allowlist; `npm run context:test` updated for the new exit behavior;
    `npm run protocols:coverage:test` updated for the newly blocking finding.
