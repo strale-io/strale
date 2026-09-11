@@ -375,11 +375,15 @@ excluded_sections:
     reason: >-
       Prescribes declaring session intent and choosing Quick or Full mode,
       but names no governing decision and is not enforced by any
-      repository check; full criteria live in .claude/PROTOCOL.md. Decided
-      2026-09-11 (M3 milestone review condition 2): it stays outside the
-      manifest; the M4 rewrite of CLAUDE.md and AGENTS.md as peer
-      entrypoints restates session-start rules, and that rewrite is where
-      they are reconsidered.
+      repository check. .claude/PROTOCOL.md, which this heading used to
+      point at for "full criteria", was archived at M4 batch 1
+      (archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md): its Mode
+      Selection Criteria section restated the same Quick/Full definitions
+      and escalation triggers already stated in full above, so nothing was
+      lost. Decided 2026-09-11 (M3 milestone review condition 2): it stays
+      outside the manifest; the M4 rewrite of CLAUDE.md and AGENTS.md as
+      peer entrypoints restates session-start rules, and that rewrite is
+      where they are reconsidered.
   - heading: "Repo-native migration continuation — pre-cutover"
     reason: >-
       States explicitly that it is a navigation pointer to the migration

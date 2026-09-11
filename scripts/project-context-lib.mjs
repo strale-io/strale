@@ -169,12 +169,18 @@ export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
 export const INVENTORY_TARGETS = Object.freeze([
   { path: "AGENTS.md", owner_area: "root-agent-entrypoint" },
   { path: "CLAUDE.md", owner_area: "root-agent-entrypoint" },
-  { path: ".claude/PROTOCOL.md", owner_area: "claude-workflow" },
-  { path: ".claude/RUNBOOK.md", owner_area: "claude-workflow" },
-  { path: ".claude/WORKFLOW.md", owner_area: "claude-workflow" },
-  { path: ".claude/BUILD.md", owner_area: "claude-workflow" },
-  { path: ".claude/NOTION.md", owner_area: "claude-workflow" },
-  { path: ".claude/DISPATCH.yaml", owner_area: "claude-workflow" },
+  // M4 batch 1 (2026-09-11) archived these six starter-kit files to
+  // archive/sessions/claude-starter-kit/ after extracting their one unique
+  // live rule; see archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md.
+  // Paths updated in place (not removed) so this inventory and the
+  // generated docs/project/legacy-authority-inventory.json keep resolving
+  // to real files rather than reading as a silent disappearance.
+  { path: "archive/sessions/claude-starter-kit/PROTOCOL.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/RUNBOOK.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/WORKFLOW.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/BUILD.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/NOTION.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/DISPATCH.yaml", owner_area: "claude-workflow" },
   { path: ".claude/commands", owner_area: "claude-commands" },
   { path: ".agents/skills", owner_area: "shared-agent-skills" },
   { path: ".codex/hooks.json", owner_area: "codex-workflow" },

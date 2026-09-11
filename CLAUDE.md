@@ -6,7 +6,6 @@
    - **Quick:** Bug fix, config change, single small component (<2 hours, no design decisions)
    - **Full:** New feature, design exploration, multi-component work, anything requiring decisions
 3. Escalation triggers: second feature touched, design decision emerges, >2hr estimate, contradiction detected.
-See .claude/PROTOCOL.md for full criteria and protocol definitions.
 
 ### Review routing
 
@@ -238,6 +237,7 @@ Both wired into CI after `docs:test` / `archive:index:test`.
 - Repo: strale (local)
 - Main branch: main
 - Feature branch pattern: type/kebab-description
+- Commit message format: Conventional Commits (`type(scope): description`)
 
 ### Project Spec
 The original MVP spec files have been removed from this repo (archived to Notion).

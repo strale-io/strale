@@ -15,8 +15,7 @@ section of CLAUDE.md for the history.)
 1. Declare session intent (one sentence).
 2. Determine mode — **Quick** (bug fix, config change, <2h, no design
    decisions) vs **Full** (new feature, design exploration, multi-component,
-   anything requiring decisions). Full criteria and escalation triggers:
-   `.claude/PROTOCOL.md`.
+   anything requiring decisions).
 3. Escalation triggers: second feature touched, design decision emerges,
    >2hr estimate, contradiction detected.
 
