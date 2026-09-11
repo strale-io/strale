@@ -2,11 +2,22 @@
 // scripts/scheduled-reachability-lib.mjs, scripts/check-scheduled-reachability.mjs,
 // config/scheduled-mechanisms.yaml). Every failure mode is planted in its
 // own throwaway fixture and must fail there; a clean fixture covering the
-// four required shapes (a `cd apps/api && npx tsx scripts/...` step, a
-// multi-line `run: |` block, a step reading a secret via `env`, and a
-// workflow with no schedule trigger) must pass with zero findings; the
-// real, committed register must also pass against the real workflows.
-// Nothing here changes a workflow's behaviour.
+// required shapes must pass with zero findings; the real, committed
+// register must also pass against the real workflows. Nothing here changes
+// a workflow's behaviour.
+//
+// Review round 1 (this PR) added: working-directory resolution from a
+// step's own `working-directory`, a job's `defaults.run.working-directory`,
+// or a workflow's, before any `cd` in the command (and a `cd` chain, e.g.
+// `cd a && cd b`, resolving under the joined path); RUN_SCRIPT_UNRESOLVED
+// for a known-runner script argument that does not resolve to an existing
+// repository file, instead of the old silent skip; detection of other
+// runners (bash, sh, python3, a direct ./x.sh) for the completeness rule,
+// while a command that invokes nothing in the repository (npx tsc -b in
+// the sibling strale-frontend checkout, gh, git) stays out by the same
+// general rule; and a secrets map (environment variable name -> secret
+// name) instead of a bare list, so MECHANISM_SECRET_MISMATCH catches a
+// renamed variable reading an unchanged secret.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync, cpSync } from "node:fs";
@@ -15,7 +26,8 @@ import { dirname, join } from "node:path";
 import {
   checkAllScheduledReachability,
   resolveStepInvocations,
-  stepSecrets,
+  resolveWorkingDirectory,
+  stepEnvSecrets,
   hasScheduleTrigger,
   matchStep,
   repoRootFrom,
@@ -47,13 +59,25 @@ function findingCodes(result) {
   return result.findings.map((f) => f.code);
 }
 
-// ── unit helpers ─────────────────────────────────────────────────────────
+// ── unit: resolveStepInvocations ────────────────────────────────────────
 
 test("resolveStepInvocations: resolves a cd apps/api && npx tsx line", () => {
   const step = { run: "cd apps/api && npx tsx scripts/check-thing.ts" };
   const invocations = resolveStepInvocations(step);
   assert.equal(invocations.length, 1);
-  assert.deepEqual(invocations[0], { unparseable: false, tool: "npx tsx", scriptPath: "apps/api/scripts/check-thing.ts", rawLine: step.run });
+  const inv = invocations[0];
+  assert.equal(inv.unparseable, false);
+  assert.equal(inv.kind, "known");
+  assert.equal(inv.tool, "npx tsx");
+  assert.equal(inv.scriptPath, "apps/api/scripts/check-thing.ts");
+  assert.equal(inv.absolute, false);
+});
+
+test("resolveStepInvocations: a cd a && cd b chain resolves under a/b (review finding 1)", () => {
+  const step = { run: "cd a && cd b && npx tsx scripts/x.mjs" };
+  const invocations = resolveStepInvocations(step);
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0].scriptPath, "a/b/scripts/x.mjs");
 });
 
 test("resolveStepInvocations: a multi-line run block, cd persists across lines in the same shell", () => {
@@ -70,10 +94,25 @@ test("resolveStepInvocations: a bare node script at repo root, no cd", () => {
   const invocations = resolveStepInvocations(step);
   assert.equal(invocations.length, 1);
   assert.equal(invocations[0].scriptPath, "scripts/plain.mjs");
+  assert.equal(invocations[0].kind, "known");
+});
+
+test("resolveStepInvocations: an initial working directory (from resolveWorkingDirectory) applies with no cd at all", () => {
+  const step = { run: "npx tsx scripts/y.ts" };
+  const invocations = resolveStepInvocations(step, "apps/api");
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0].scriptPath, "apps/api/scripts/y.ts");
 });
 
 test("resolveStepInvocations: a shell variable in the cd target is unparseable, never silently skipped", () => {
   const step = { run: 'cd "$SOME_DIR" && npx tsx scripts/x.ts' };
+  const invocations = resolveStepInvocations(step);
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0].unparseable, true);
+});
+
+test("resolveStepInvocations: cd to an absolute path is unparseable, never a guess (review finding 1)", () => {
+  const step = { run: "cd /opt/whatever && npx tsx scripts/x.ts" };
   const invocations = resolveStepInvocations(step);
   assert.equal(invocations.length, 1);
   assert.equal(invocations[0].unparseable, true);
@@ -91,14 +130,90 @@ test("resolveStepInvocations: node -e / node --version are flags, not a script p
   assert.deepEqual(resolveStepInvocations(step), []);
 });
 
-test("stepSecrets: reads the secret name, not the env-var name it's mapped to", () => {
-  const step = { env: { NOTION_API_KEY: "${{ secrets.NOTION_TOKEN }}" } };
-  assert.deepEqual(stepSecrets(step), ["NOTION_TOKEN"]);
+test("resolveStepInvocations: an absolute script path under a known runner is flagged, not silently resolved (review finding 2)", () => {
+  const step = { run: "node /abs/path/x.mjs" };
+  const invocations = resolveStepInvocations(step);
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0].unparseable, false);
+  assert.equal(invocations[0].absolute, true);
+  assert.equal(invocations[0].scriptPath, null);
 });
 
-test("stepSecrets: a step with no env reads no secrets", () => {
-  assert.deepEqual(stepSecrets({ run: "node scripts/x.mjs" }), []);
+test("resolveStepInvocations: a bash script step is detected as an 'other' runner invocation (review finding 3)", () => {
+  const step = { run: "bash scripts/x.sh" };
+  const invocations = resolveStepInvocations(step);
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0].kind, "other");
+  assert.equal(invocations[0].tool, "bash");
+  assert.equal(invocations[0].scriptPath, "scripts/x.sh");
 });
+
+test("resolveStepInvocations: a direct ./x.sh invocation is detected as an 'other' runner invocation (review finding 3)", () => {
+  const step = { run: "./scripts/x.sh" };
+  const invocations = resolveStepInvocations(step);
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0].kind, "other");
+  assert.equal(invocations[0].tool, "direct");
+  assert.equal(invocations[0].scriptPath, "scripts/x.sh");
+});
+
+test("resolveStepInvocations: npx tsc -b invokes nothing in the repository, so it is not detected at all (review finding 3)", () => {
+  const step = { run: "npm ci --ignore-scripts && npx tsc -b --force" };
+  assert.deepEqual(resolveStepInvocations(step), []);
+});
+
+test("resolveStepInvocations: gh and git commands invoke nothing in the repository", () => {
+  const step = { run: 'gh issue create --title "x"\ngit log --oneline' };
+  assert.deepEqual(resolveStepInvocations(step), []);
+});
+
+// ── unit: resolveWorkingDirectory (review finding 1) ────────────────────
+
+test("resolveWorkingDirectory: step working-directory wins over job and workflow defaults", () => {
+  const workflow = { defaults: { run: { "working-directory": "workflow-dir" } } };
+  const job = { defaults: { run: { "working-directory": "job-dir" } } };
+  const step = { "working-directory": "step-dir" };
+  assert.deepEqual(resolveWorkingDirectory(workflow, job, step), { ok: true, cwd: "step-dir" });
+});
+
+test("resolveWorkingDirectory: job defaults.run.working-directory applies when the step has none", () => {
+  const workflow = {};
+  const job = { defaults: { run: { "working-directory": "apps/api" } } };
+  const step = {};
+  assert.deepEqual(resolveWorkingDirectory(workflow, job, step), { ok: true, cwd: "apps/api" });
+});
+
+test("resolveWorkingDirectory: workflow defaults.run.working-directory applies when neither step nor job has one", () => {
+  const workflow = { defaults: { run: { "working-directory": "apps/api" } } };
+  assert.deepEqual(resolveWorkingDirectory(workflow, {}, {}), { ok: true, cwd: "apps/api" });
+});
+
+test("resolveWorkingDirectory: repository root when nothing declares a working-directory", () => {
+  assert.deepEqual(resolveWorkingDirectory({}, {}, {}), { ok: true, cwd: "" });
+});
+
+test("resolveWorkingDirectory: an absolute or variable working-directory is not ok, never guessed at", () => {
+  assert.equal(resolveWorkingDirectory({}, {}, { "working-directory": "/abs" }).ok, false);
+  assert.equal(resolveWorkingDirectory({}, {}, { "working-directory": "${{ env.X }}" }).ok, false);
+});
+
+// ── unit: stepEnvSecrets (review finding 4) ─────────────────────────────
+
+test("stepEnvSecrets: maps the environment variable name to the secret name it reads", () => {
+  assert.deepEqual(stepEnvSecrets(undefined, { NOTION_API_KEY: "${{ secrets.NOTION_TOKEN }}" }), { NOTION_API_KEY: "NOTION_TOKEN" });
+});
+
+test("stepEnvSecrets: reads the job's env, and the step's env wins on a name collision", () => {
+  const jobEnv = { DATABASE_URL: "${{ secrets.DATABASE_URL }}", OTHER: "${{ secrets.OTHER_SECRET }}" };
+  const stepEnv = { DATABASE_URL: "${{ secrets.OVERRIDE_SECRET }}" };
+  assert.deepEqual(stepEnvSecrets(jobEnv, stepEnv), { DATABASE_URL: "OVERRIDE_SECRET", OTHER: "OTHER_SECRET" });
+});
+
+test("stepEnvSecrets: a step with no env reads no secrets", () => {
+  assert.deepEqual(stepEnvSecrets(undefined, undefined), {});
+});
+
+// ── unit: unchanged helpers ──────────────────────────────────────────────
 
 test("hasScheduleTrigger: false for a push-only workflow, true for a schedule with a cron entry", () => {
   assert.equal(hasScheduleTrigger({ on: { push: {} } }), false);
@@ -117,12 +232,13 @@ test("matchStep: matches by id, by name, and by command substring; matches nothi
   assert.equal(matchStep(steps, { match: "id", value: "does-not-exist" }), null);
 });
 
-// ── clean fixture: all four required shapes, zero findings ────────────────
+// ── clean fixture: all required shapes, zero findings ──────────────────
 
 function writeCleanFixture(dir) {
   writeFiles(dir, {
     "apps/api/scripts/check-thing.ts": "// fixture script\n",
     "scripts/plain.mjs": "// fixture script\n",
+    "scripts/x.sh": "#!/bin/sh\n# fixture script\n",
     "scripts/never-declared.mjs": "// lives only on an unscheduled workflow, so it needs no entry\n",
     ".github/workflows/scheduled.yml": [
       "name: Scheduled Fixture",
@@ -143,6 +259,26 @@ function writeCleanFixture(dir) {
       "          echo done",
       "      - name: Plain step",
       "        run: node scripts/plain.mjs",
+      "      - id: bash-step",
+      "        run: bash scripts/x.sh",
+      "      - id: frontend-typecheck-lookalike",
+      "        run: |",
+      "          cd strale-frontend",
+      "          npm ci --ignore-scripts && npx tsc -b --force",
+      "  job-default-sweep:",
+      "    runs-on: ubuntu-latest",
+      "    defaults:",
+      "      run:",
+      "        working-directory: from-job-default",
+      "    steps:",
+      "      - id: job-default-step",
+      "        run: npx tsx scripts/job-default.mjs",
+      "  step-default-sweep:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      "      - id: step-default-step",
+      "        working-directory: from-step-default",
+      "        run: npx tsx scripts/step-default.mjs",
       "",
     ].join("\n"),
     ".github/workflows/unscheduled.yml": [
@@ -167,7 +303,8 @@ function writeCleanFixture(dir) {
       "      match: id",
       "      value: manifest-step",
       "    runs: apps/api/scripts/check-thing.ts",
-      "    secrets: [DATABASE_URL]",
+      "    secrets:",
+      "      DATABASE_URL: DATABASE_URL",
       "    purpose: fixture",
       "  - id: fixture-plain-step",
       "    workflow: .github/workflows/scheduled.yml",
@@ -176,7 +313,34 @@ function writeCleanFixture(dir) {
       "      match: name",
       "      value: Plain step",
       "    runs: scripts/plain.mjs",
-      "    secrets: []",
+      "    secrets: {}",
+      "    purpose: fixture",
+      "  - id: fixture-job-default-step",
+      "    workflow: .github/workflows/scheduled.yml",
+      "    trigger: schedule",
+      "    step:",
+      "      match: id",
+      "      value: job-default-step",
+      "    runs: from-job-default/scripts/job-default.mjs",
+      "    secrets: {}",
+      "    purpose: fixture",
+      "  - id: fixture-step-default-step",
+      "    workflow: .github/workflows/scheduled.yml",
+      "    trigger: schedule",
+      "    step:",
+      "      match: id",
+      "      value: step-default-step",
+      "    runs: from-step-default/scripts/step-default.mjs",
+      "    secrets: {}",
+      "    purpose: fixture",
+      "  - id: fixture-bash-step",
+      "    workflow: .github/workflows/scheduled.yml",
+      "    trigger: schedule",
+      "    step:",
+      "      match: id",
+      "      value: bash-step",
+      "    runs: scripts/x.sh",
+      "    secrets: {}",
       "    purpose: fixture",
       "  - id: fixture-unverifiable",
       "    verifiable: false",
@@ -188,13 +352,20 @@ function writeCleanFixture(dir) {
   });
 }
 
-test("clean fixture: cd-prefixed step, multi-line run block, a secret-reading step, and an unscheduled workflow all pass with zero findings", () => {
+test("clean fixture: cd chains, a job default, a step default, a bash step, an npx-tsc-b lookalike, and an unscheduled workflow all pass with zero findings", () => {
   const dir = makeFixture();
   try {
+    // "from-step-default/scripts/step-default.mjs" and
+    // "from-job-default/scripts/job-default.mjs" need real files on disk
+    // for MECHANISM_SCRIPT_MISSING / RUN_SCRIPT_UNRESOLVED not to fire.
+    writeFiles(dir, {
+      "from-job-default/scripts/job-default.mjs": "// fixture script\n",
+      "from-step-default/scripts/step-default.mjs": "// fixture script\n",
+    });
     writeCleanFixture(dir);
     const result = checkAllScheduledReachability(dir);
     assert.deepEqual(result.findings, []);
-    assert.equal(result.mechanismCount, 3);
+    assert.equal(result.mechanismCount, 6);
   } finally {
     cleanup(dir);
   }
@@ -216,7 +387,7 @@ test("MECHANISM_WORKFLOW_MISSING: entry names a workflow file that does not exis
         "      match: id",
         "      value: whatever",
         "    runs: scripts/ghost.mjs",
-        "    secrets: []",
+        "    secrets: {}",
         "    purpose: fixture",
         "",
       ].join("\n"),
@@ -255,7 +426,7 @@ test("MECHANISM_NOT_SCHEDULED: the entry's workflow has no schedule trigger", ()
         "      match: id",
         "      value: foo",
         "    runs: scripts/foo.mjs",
-        "    secrets: []",
+        "    secrets: {}",
         "    purpose: fixture",
         "",
       ].join("\n"),
@@ -296,7 +467,7 @@ test("MECHANISM_STEP_MISSING: no step of the workflow invokes the declared runs 
         "      match: id",
         "      value: unrelated-step",
         "    runs: scripts/foo.mjs",
-        "    secrets: []",
+        "    secrets: {}",
         "    purpose: fixture",
         "",
       ].join("\n"),
@@ -337,20 +508,23 @@ test("MECHANISM_SCRIPT_MISSING: the declared runs script does not exist in the r
         "      match: id",
         "      value: ghost-step",
         "    runs: scripts/ghost.mjs",
-        "    secrets: []",
+        "    secrets: {}",
         "    purpose: fixture",
         "",
       ].join("\n"),
       // deliberately no scripts/ghost.mjs on disk
     });
     const result = checkAllScheduledReachability(dir);
-    assert.deepEqual(findingCodes(result), ["MECHANISM_SCRIPT_MISSING"]);
+    // The step also invokes a known runner against a nonexistent script,
+    // so the general sweep reports RUN_SCRIPT_UNRESOLVED as well as the
+    // per-entry MECHANISM_SCRIPT_MISSING -- both true, different concerns.
+    assert.deepEqual(new Set(findingCodes(result)), new Set(["MECHANISM_SCRIPT_MISSING", "RUN_SCRIPT_UNRESOLVED"]));
   } finally {
     cleanup(dir);
   }
 });
 
-test("MECHANISM_SECRET_MISMATCH: the step's actual env secrets differ from the declared list", () => {
+test("MECHANISM_SECRET_MISMATCH: the step's actual env secrets differ from the declared map", () => {
   const dir = makeFixture();
   try {
     writeFiles(dir, {
@@ -380,7 +554,53 @@ test("MECHANISM_SECRET_MISMATCH: the step's actual env secrets differ from the d
         "      match: id",
         "      value: secret-step",
         "    runs: scripts/needs-secret.mjs",
-        "    secrets: [OTHER_SECRET]",
+        "    secrets:",
+        "      OTHER_VAR: OTHER_SECRET",
+        "    purpose: fixture",
+        "",
+      ].join("\n"),
+    });
+    const result = checkAllScheduledReachability(dir);
+    assert.deepEqual(findingCodes(result), ["MECHANISM_SECRET_MISMATCH"]);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MECHANISM_SECRET_MISMATCH: renaming the environment variable while keeping the same secret still fails (review finding 4)", () => {
+  const dir = makeFixture();
+  try {
+    writeFiles(dir, {
+      "scripts/needs-secret.mjs": "// fixture\n",
+      ".github/workflows/scheduled.yml": [
+        "name: Scheduled",
+        "on:",
+        "  schedule:",
+        '    - cron: "0 6 * * *"',
+        "jobs:",
+        "  sweep:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - id: secret-step",
+        "        env:",
+        // renamed from NOTION_API_KEY to NOTION_KEY -- the secret behind
+        // it (NOTION_TOKEN) is unchanged.
+        "          NOTION_KEY: ${{ secrets.NOTION_TOKEN }}",
+        "        run: node scripts/needs-secret.mjs",
+        "",
+      ].join("\n"),
+      [REGISTER_PATH]: [
+        "schema_version: 1",
+        "mechanisms:",
+        "  - id: fixture-renamed-var",
+        "    workflow: .github/workflows/scheduled.yml",
+        "    trigger: schedule",
+        "    step:",
+        "      match: id",
+        "      value: secret-step",
+        "    runs: scripts/needs-secret.mjs",
+        "    secrets:",
+        "      NOTION_API_KEY: NOTION_TOKEN",
         "    purpose: fixture",
         "",
       ].join("\n"),
@@ -414,6 +634,114 @@ test("SCHEDULED_STEP_UNDECLARED: a scheduled workflow's script-invoking step has
     });
     const result = checkAllScheduledReachability(dir);
     assert.deepEqual(findingCodes(result), ["SCHEDULED_STEP_UNDECLARED"]);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("SCHEDULED_STEP_UNDECLARED: a bash script step on a scheduled workflow needs an entry too (review finding 3)", () => {
+  const dir = makeFixture();
+  try {
+    writeFiles(dir, {
+      "scripts/x.sh": "#!/bin/sh\n",
+      ".github/workflows/scheduled.yml": [
+        "name: Scheduled",
+        "on:",
+        "  schedule:",
+        '    - cron: "0 6 * * *"',
+        "jobs:",
+        "  sweep:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - id: bash-step",
+        "        run: bash scripts/x.sh",
+        "",
+      ].join("\n"),
+      [REGISTER_PATH]: ["schema_version: 1", "mechanisms: []", ""].join("\n"),
+    });
+    const result = checkAllScheduledReachability(dir);
+    assert.deepEqual(findingCodes(result), ["SCHEDULED_STEP_UNDECLARED"]);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("npx tsc -b in a scheduled workflow is correctly ignored -- no entry required (review finding 3)", () => {
+  const dir = makeFixture();
+  try {
+    writeFiles(dir, {
+      ".github/workflows/scheduled.yml": [
+        "name: Scheduled",
+        "on:",
+        "  schedule:",
+        '    - cron: "0 6 * * *"',
+        "jobs:",
+        "  sweep:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - id: typecheck-lookalike",
+        "        run: |",
+        "          cd strale-frontend",
+        "          npm ci --ignore-scripts && npx tsc -b --force",
+        "",
+      ].join("\n"),
+      [REGISTER_PATH]: ["schema_version: 1", "mechanisms: []", ""].join("\n"),
+    });
+    const result = checkAllScheduledReachability(dir);
+    assert.deepEqual(result.findings, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("RUN_SCRIPT_UNRESOLVED: a known runner's script argument does not resolve to an existing repository file (review finding 2)", () => {
+  const dir = makeFixture();
+  try {
+    writeFiles(dir, {
+      ".github/workflows/scheduled.yml": [
+        "name: Scheduled",
+        "on:",
+        "  schedule:",
+        '    - cron: "0 6 * * *"',
+        "jobs:",
+        "  sweep:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - id: missing-step",
+        "        run: npx tsx scripts/does-not-exist.ts",
+        "",
+      ].join("\n"),
+      [REGISTER_PATH]: ["schema_version: 1", "mechanisms: []", ""].join("\n"),
+      // deliberately no scripts/does-not-exist.ts on disk
+    });
+    const result = checkAllScheduledReachability(dir);
+    assert.deepEqual(findingCodes(result), ["RUN_SCRIPT_UNRESOLVED"]);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("RUN_SCRIPT_UNRESOLVED: an absolute script path under a known runner (review finding 2)", () => {
+  const dir = makeFixture();
+  try {
+    writeFiles(dir, {
+      ".github/workflows/scheduled.yml": [
+        "name: Scheduled",
+        "on:",
+        "  schedule:",
+        '    - cron: "0 6 * * *"',
+        "jobs:",
+        "  sweep:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - id: absolute-step",
+        "        run: node /opt/somewhere/x.mjs",
+        "",
+      ].join("\n"),
+      [REGISTER_PATH]: ["schema_version: 1", "mechanisms: []", ""].join("\n"),
+    });
+    const result = checkAllScheduledReachability(dir);
+    assert.deepEqual(findingCodes(result), ["RUN_SCRIPT_UNRESOLVED"]);
   } finally {
     cleanup(dir);
   }
@@ -460,10 +788,78 @@ test("RUN_UNPARSEABLE: a scheduled step's cd target is a shell variable, reporte
   }
 });
 
+test("RUN_UNPARSEABLE: a step working-directory that is not a plain relative path (review finding 1)", () => {
+  const dir = makeFixture();
+  try {
+    writeFiles(dir, {
+      ".github/workflows/scheduled.yml": [
+        "name: Scheduled",
+        "on:",
+        "  schedule:",
+        '    - cron: "0 6 * * *"',
+        "jobs:",
+        "  sweep:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - id: bad-wd",
+        "        working-directory: /absolute/path",
+        "        run: node scripts/x.mjs",
+        "",
+      ].join("\n"),
+      [REGISTER_PATH]: ["schema_version: 1", "mechanisms: []", ""].join("\n"),
+    });
+    const result = checkAllScheduledReachability(dir);
+    assert.deepEqual(findingCodes(result), ["RUN_UNPARSEABLE"]);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test("SCHEMA_INVALID gates the rest: an invalid register returns only schema findings", () => {
   const dir = makeFixture();
   try {
     writeFiles(dir, { [REGISTER_PATH]: ["schema_version: 2", "mechanisms: []", ""].join("\n") });
+    const result = checkAllScheduledReachability(dir);
+    assert.ok(findingCodes(result).every((c) => c === "SCHEMA_INVALID"));
+    assert.ok(result.findings.length > 0);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("SCHEMA_INVALID: a bare list of secret names is no longer a valid shape (review finding 4)", () => {
+  const dir = makeFixture();
+  try {
+    writeFiles(dir, {
+      "scripts/foo.mjs": "// fixture\n",
+      ".github/workflows/scheduled.yml": [
+        "name: Scheduled",
+        "on:",
+        "  schedule:",
+        '    - cron: "0 6 * * *"',
+        "jobs:",
+        "  sweep:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - id: a",
+        "        run: node scripts/foo.mjs",
+        "",
+      ].join("\n"),
+      [REGISTER_PATH]: [
+        "schema_version: 1",
+        "mechanisms:",
+        "  - id: fixture-old-shape",
+        "    workflow: .github/workflows/scheduled.yml",
+        "    trigger: schedule",
+        "    step:",
+        "      match: id",
+        "      value: a",
+        "    runs: scripts/foo.mjs",
+        "    secrets: [DATABASE_URL]",
+        "    purpose: fixture",
+        "",
+      ].join("\n"),
+    });
     const result = checkAllScheduledReachability(dir);
     assert.ok(findingCodes(result).every((c) => c === "SCHEMA_INVALID"));
     assert.ok(result.findings.length > 0);

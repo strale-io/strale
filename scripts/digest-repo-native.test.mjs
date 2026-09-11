@@ -251,6 +251,14 @@ test("comparePriorities: counts, and titles present on only one side, matched ca
 // secret all resolve correctly (scripts/scheduled-reachability.test.mjs has
 // the planted-failure coverage). This test only needs to confirm the entry
 // exists in the register, since the generic check now proves the wiring.
+//
+// Review round 1 (this PR) found the original MECHANISM_SECRET_MISMATCH
+// compared bare secret-name lists, which could not catch a step reading the
+// same secret into a renamed environment variable -- exactly the shape this
+// entry has (NOTION_TOKEN read into the digest code's own NOTION_API_KEY
+// variable name). `secrets` is now a map of environment variable name to
+// secret name and the check compares both, so this entry's own wiring is
+// what proves the fix restores that coverage.
 test("config/scheduled-mechanisms.yaml declares the m3-digest-shadow-comparison entry", () => {
   const registerPath = join(realRoot, "config/scheduled-mechanisms.yaml");
   const register = parseYaml(readFileSync(registerPath, "utf8"));

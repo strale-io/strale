@@ -42,9 +42,9 @@
           "description": "Repository path of the script this step invokes, resolved from the step's working directory (e.g. a `cd apps/api && npx tsx scripts/x.ts` step resolves to apps/api/scripts/x.ts)."
         },
         "secrets": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "description": "Secret names (not env-var names) the step's own `env:` block reads, e.g. [\"DATABASE_URL\"]. Empty array if the step reads no secret."
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "description": "Map of environment-variable name to secret name, read from the step's `env` and the job's `env` (step wins on a name collision), e.g. { \"NOTION_API_KEY\": \"NOTION_TOKEN\" }. Empty object if the step reads no secret. A map, not a list, so renaming the variable while keeping the secret is a MECHANISM_SECRET_MISMATCH -- the check compares both the variable name and the secret name."
         },
         "purpose": { "type": "string", "minLength": 1 }
       }

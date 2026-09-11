@@ -8,10 +8,18 @@
 # and proves, for every entry here, that its workflow exists, carries a
 # schedule trigger, has a step matching `step` whose resolved command
 # invokes `runs`, that `runs` exists on disk, and that the step's `env`
-# reads exactly the secrets named. The reverse direction runs too: every
-# step in a scheduled workflow that invokes a repository script must have
-# an entry here (SCHEDULED_STEP_UNDECLARED), so a new scheduled step
-# cannot land undeclared.
+# reads exactly the secrets named. `secrets` is a map of environment
+# variable name to secret name (e.g. NOTION_API_KEY: NOTION_TOKEN), read
+# from the step's `env` and the job's `env` -- not a bare list of secret
+# names, so renaming the variable while keeping the secret is a
+# MECHANISM_SECRET_MISMATCH (review round 1 finding). The reverse direction
+# runs too: every step in a scheduled workflow that invokes a repository
+# script -- via a known runner (node, npx tsx) or another one (bash, sh,
+# python3, a direct ./x.sh) -- must have an entry here
+# (SCHEDULED_STEP_UNDECLARED), so a new scheduled step cannot land
+# undeclared. A resolved script path that does not exist under a known
+# runner is RUN_SCRIPT_UNRESOLVED, naming the step and the path it tried,
+# rather than silently excluded.
 #
 # This register changes no workflow's behaviour. It is read-only evidence
 # that reachability which used to be assumed (DEC-20260504-C names exactly
@@ -36,7 +44,8 @@ mechanisms:
       match: id
       value: manifest-drift
     runs: apps/api/scripts/sweep-manifest-drift.ts
-    secrets: [DATABASE_URL]
+    secrets:
+      DATABASE_URL: DATABASE_URL
     purpose: >
       Sweeps manifests/*.yaml against the live capabilities/solutions
       tables for drift between what a manifest declares and what the
@@ -49,7 +58,7 @@ mechanisms:
       match: id
       value: facts-drift
     runs: apps/api/scripts/check-platform-facts-drift.ts
-    secrets: []
+    secrets: {}
     purpose: >
       Catches hardcoded capability counts, vendor names, and other facts
       that have drifted from apps/api/src/lib/platform-facts.ts across the
@@ -63,7 +72,7 @@ mechanisms:
       match: id
       value: fetch-timeout
     runs: apps/api/scripts/check-fetch-timeout-coverage.mjs
-    secrets: []
+    secrets: {}
     purpose: >
       Confirms every external fetch() call in a capability executor carries
       an AbortSignal.timeout(), per the Adding New Capabilities pipeline
@@ -76,7 +85,8 @@ mechanisms:
       match: id
       value: vendor-roster
     runs: apps/api/scripts/check-vendor-roster-drift.ts
-    secrets: [NOTION_TOKEN]
+    secrets:
+      NOTION_TOKEN: NOTION_TOKEN
     purpose: >
       Flags vendor rows in the Notion Vendor Roster whose "Last evaluated"
       date is older than a Decisions DB entry in the window that mentions
@@ -92,7 +102,7 @@ mechanisms:
       match: id
       value: audit-record-shape
     runs: apps/api/scripts/check-shape-contracts.mjs
-    secrets: []
+    secrets: {}
     purpose: >
       Registry-driven wire-shape contract check (CONTRACTS array) --
       currently AuditRecord -- between apps/api/src/routes/audit.ts and
@@ -107,7 +117,8 @@ mechanisms:
       match: id
       value: toast-readability
     runs: apps/api/scripts/check-audit-trail-readability.mjs
-    secrets: [DATABASE_URL]
+    secrets:
+      DATABASE_URL: DATABASE_URL
     purpose: >
       Full-detoast readability pass over compliance-critical JSONB columns
       (transactions.audit_trail), added after a 2026-08-12 lost-TOAST-chunk
@@ -120,7 +131,8 @@ mechanisms:
       match: id
       value: output-schema
     runs: apps/api/scripts/check-output-schema.ts
-    secrets: [DATABASE_URL]
+    secrets:
+      DATABASE_URL: DATABASE_URL
     purpose: >
       Scans capabilities.output_schema for char-indexed corruption
       ({"0":"{","1":"\"",...}), the signature of a JS string getting
@@ -133,7 +145,8 @@ mechanisms:
       match: name
       value: Run the repo-native digest shadow comparison
     runs: scripts/digest-shadow.mjs
-    secrets: [NOTION_TOKEN]
+    secrets:
+      NOTION_API_KEY: NOTION_TOKEN
     purpose: >
       Report-only shadow run of the repo-native digest priority readers
       (T6 M3 batch 2) against the live Notion digest data. Never fails the
