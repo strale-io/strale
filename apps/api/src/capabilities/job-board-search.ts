@@ -106,13 +106,24 @@ export function franceTravailLocation(location: string | undefined): Record<stri
 }
 
 async function searchFranceTravail(query: string, location: string | undefined, remoteOnly: boolean) {
-  const params = new URLSearchParams({ motsCles: query, range: `0-${LIMIT - 1}`, ...franceTravailLocation(location) });
-  if (remoteOnly) params.set("modeTravail", "TELETRAVAIL");
-  // unguarded-fetch-ok: fixed France Travail API host; user input only in encoded query params
-  const res = await fetch(`${FT_SEARCH_URL}?${params.toString()}`, {
-    headers: { Accept: "application/json", Authorization: `Bearer ${await franceTravailToken()}` },
-    signal: AbortSignal.timeout(10000),
-  });
+  // No documented remote-work filter in the search API; refuse rather than
+  // return office jobs to a caller who asked for remote ones.
+  if (remoteOnly) throw new Error("'remote_only' is not supported for France.");
+  // origineOffre=1: offers published by France Travail itself, which its CGU
+  // covers; offers relayed from partner job sites are left out.
+  const params = new URLSearchParams({ motsCles: query, range: `0-${LIMIT - 1}`, origineOffre: "1", ...franceTravailLocation(location) });
+  const search = async () =>
+    // unguarded-fetch-ok: fixed France Travail API host; user input only in encoded query params
+    fetch(`${FT_SEARCH_URL}?${params.toString()}`, {
+      headers: { Accept: "application/json", Authorization: `Bearer ${await franceTravailToken()}` },
+      signal: AbortSignal.timeout(10000),
+    });
+  let res = await search();
+  if (res.status === 401) {
+    // A revoked or rotated token would otherwise fail every call until expiry.
+    ftToken = null;
+    res = await search();
+  }
   if (res.status === 204) return { jobs: [], total: 0 };
   if (res.status !== 200 && res.status !== 206) throw new Error(`France Travail API returned HTTP ${res.status}`);
   const data = await readJsonWithLimit<{ resultats?: any[] }>(res);
@@ -204,7 +215,7 @@ registerCapability("job-board-search", async (input: CapabilityInput) => {
   const remoteOnly = input.remote_only === true || input.remote_only === "true";
   const countryCode = String(input.country_code ?? "se").trim().toLowerCase();
 
-  const country = COUNTRIES[countryCode];
+  const country = Object.hasOwn(COUNTRIES, countryCode) ? COUNTRIES[countryCode] : undefined;
   if (!country) {
     const list = Object.entries(COUNTRIES).map(([cc, c]) => `"${cc}" (${c.name})`).join(", ");
     throw new Error(`'country_code' must be one of ${list}; "${countryCode}" is not covered.`);

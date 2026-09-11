@@ -100,7 +100,7 @@ output_schema:
       type: string
     native_symbol:
       type: string
-data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
+data_source: Alchemy JSON-RPC and transfer index on Ethereum, Base, Arbitrum One, OP Mainnet and Polygon PoS
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -175,7 +175,7 @@ test_fixtures:
           value: "array"
 output_field_reliability:
   address: common
-  chain_id: common
+  chain_id: guaranteed
   sent_count: common
   transactions: common
   received_count: common
@@ -185,7 +185,7 @@ output_field_reliability:
 limitations:
   - title: null
     text: >-
-      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
+      Output reflects Alchemy's JSON-RPC and transfer index for the requested chain at query time. Dependent on upstream API availability; may degrade
       if the provider rate-limits or is temporarily unavailable.
     category: availability
     severity: info
@@ -198,7 +198,7 @@ limitations:
     workaround: null
   - title: "No gas or failure status"
     text: >-
-      Transactions come from a transfer index without receipts, so gas_used and is_error are always null, and contract calls that moved no ETH are not listed.
+      Transactions come from a transfer index without receipts, so gas_used and is_error are always null, and contract calls that moved none of the chain's native coin are not listed.
     category: coverage
     severity: info
     workaround: null

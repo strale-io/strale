@@ -44,13 +44,19 @@ export const CHAINS: Record<string, Chain> = {
 /** Chains with Alchemy's transfer index and block timestamps (documented). */
 export const TRANSFER_CHAINS = ["1", "8453", "42161", "10", "137"] as const;
 
-/** Resolve a caller's chain against the chains a capability serves, or refuse naming them. */
-export function resolveChain(input: Record<string, unknown>, served: readonly string[], ...keys: string[]): Chain {
+/** The chain a caller asked for (first non-empty key; Ethereum when none), or undefined if unknown. */
+export function findChain(input: Record<string, unknown>, ...keys: string[]): { raw: unknown; chain: Chain | undefined } {
   let raw: unknown;
   for (const k of keys) if (input[k] !== undefined && input[k] !== null && input[k] !== "") { raw = input[k]; break; }
   const wanted = raw === undefined ? "1" : String(raw).trim().toLowerCase();
   const byId = /^0x[0-9a-f]+$/.test(wanted) ? String(Number.parseInt(wanted, 16)) : wanted;
-  const chain = CHAINS[byId] ?? Object.values(CHAINS).find((c) => c.aliases.includes(wanted));
+  const chain = (Object.hasOwn(CHAINS, byId) ? CHAINS[byId] : undefined) ?? Object.values(CHAINS).find((c) => c.aliases.includes(wanted));
+  return { raw, chain };
+}
+
+/** Resolve a caller's chain against the chains a capability serves, or refuse naming them. */
+export function resolveChain(input: Record<string, unknown>, served: readonly string[], ...keys: string[]): Chain {
+  const { raw, chain } = findChain(input, ...keys);
   if (chain && served.includes(chain.id)) return chain;
   const list = served.map((id) => `${id} (${CHAINS[id].name})`).join(", ");
   throw new Error(`'chain_id' must be one of ${list}; '${String(raw)}' is not supported by this capability.`);

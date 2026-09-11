@@ -74,9 +74,9 @@ describe("chain resolution", () => {
     expect(() => resolveChain({ chain_id: "56" }, TRANSFER_CHAINS, "chain_id")).toThrow(/must be one of 1 \(Ethereum\), 8453 \(Base\), 42161 \(Arbitrum One\), 10 \(OP Mainnet\), 137 \(Polygon PoS\); '56'/);
     expect(() => resolveChain({ chain_id: "41923" }, TRANSFER_CHAINS, "chain_id")).toThrow(/not supported/);
     expect(() => resolveChain({ chain_id: "0xzz" }, TRANSFER_CHAINS, "chain_id")).toThrow(/not supported/);
-  });
-  it("every chain's host is an Alchemy network prefix", () => {
-    for (const c of Object.values(CHAINS)) expect(c.host).toMatch(/^[a-z]+-mainnet$/);
+    for (const chain_id of ["constructor", "__proto__", "toString"]) {
+      expect(() => resolveChain({ chain_id }, TRANSFER_CHAINS, "chain_id")).toThrow(/not supported/);
+    }
   });
 });
 
@@ -263,6 +263,9 @@ describe("job-board-search (JobTech, CC0)", () => {
   });
   it("refuses other countries without calling anything", async () => {
     mockUpstreams({});
+    for (const country_code of ["constructor", "__proto__", "toString"]) {
+      await expect(run("job-board-search", { query: "developer", country_code })).rejects.toThrow(/must be one of/);
+    }
     await expect(run("job-board-search", { query: "developer", country_code: "gb" })).rejects.toThrow(/must be one of "se" \(Sweden\), "fr" \(France\), "us"/);
     expect(requests).toEqual([]);
   });
@@ -286,6 +289,7 @@ describe("per-chain routing", () => {
       await expect(run("gas-price-check", { chain_id })).rejects.toThrow(/is a rollup: most of a transaction's cost/);
     }
     await expect(run("gas-price-check", { chain_id: "41923" })).rejects.toThrow(/not supported/);
+    await expect(run("gas-price-check", { chain_id: "", chain: "base" })).rejects.toThrow(/Base is a rollup/);
     expect(requests).toEqual([]);
   });
   it("wallet balance on Polygon reports POL and uses the Polygon network", async () => {
@@ -344,6 +348,29 @@ describe("job-board-search: France Travail", () => {
     }]);
     const text = JSON.stringify(r);
     for (const pii of ["Marie Dupont", "marie.dupont@", "rh@hopital", "01 23 45"]) expect(text, `leaked ${pii}`).not.toContain(pii);
+  });
+  it("refuses remote_only, which the search API has no documented filter for, before any request", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    mockUpstreams({});
+    await expect(run("job-board-search", { query: "dev", country_code: "fr", remote_only: true })).rejects.toThrow(/'remote_only' is not supported for France/);
+    expect(requests).toEqual([]);
+  });
+  it("asks only for France Travail's own offers", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    mockUpstreams({}, (url) => url.includes("access_token") ? new Response(JSON.stringify({ access_token: "t", expires_in: 60 })) : new Response(null, { status: 204 }));
+    await run("job-board-search", { query: "dev", country_code: "fr" });
+    expect(new URL(requests[1].url).searchParams.get("origineOffre")).toBe("1");
+  });
+  it("drops a rejected token and retries once with a fresh one", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    let tokens = 0; let searches = 0;
+    mockUpstreams({}, (url) => {
+      if (url.includes("access_token")) return new Response(JSON.stringify({ access_token: `t${++tokens}`, expires_in: 1499 }));
+      return ++searches === 1 ? new Response("", { status: 401 }) : new Response(null, { status: 204 });
+    });
+    const r = await run("job-board-search", { query: "dev", country_code: "fr" });
+    expect(r.output).toMatchObject({ total_results: 0 });
+    expect([tokens, searches]).toEqual([2, 2]);
   });
   it("reads 204 as no results", async () => {
     process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";

@@ -43,10 +43,38 @@ credentials aren't set refuses, and the refusal names the country.
   and returns an `attribution` string for every country.
 - Contact names, emails and phone numbers are never returned. Tests plant them
   in the upstream data and assert that they are absent from the output.
-- Vendor register: `france-travail` (redistribution verified, conditional) and
-  `usajobs` (unknown), both `candidate`.
+- Vendor register: `france-travail` and `usajobs`, both `candidate` with
+  redistribution `unknown`. France's CGU clause is quoted in its lifecycle
+  reason. It moves to verified only once the reuse licence accepted at
+  registration has been read.
+- France asks only for France Travail's own offers (`origineOffre=1`); offers
+  relayed from partner job sites may carry those sites' terms. France refuses
+  `remote_only`, because the search API has no documented remote filter. A
+  rejected token (401) is dropped and the call retried once.
+- To confirm on activation: that `origineOffre=1` is accepted (a 400 would
+  show in the first known answer), and whether the licence requires specific
+  attribution wording.
 - The manifest `geography` stays `nordic` until a second country is actually
   live.
+
+## Review
+
+An independent same-provider review in a separate context gave "pass with
+fixes" at 292a03dc. Every finding was fixed at the next commit:
+- country and chain lookups now check own keys only (`constructor`/`__proto__`
+  crashed);
+- the manifests' data source and availability text no longer say "Ethereum
+  mainnet";
+- France's unverified remote filter is now a refusal, and a rejected token
+  triggers a refresh and one retry;
+- France's redistribution is back to unknown;
+- the gas rollup check uses the shared resolver;
+- `chain_id` is `guaranteed`;
+- a test that could never fail was removed.
+
+Mutation testing planted 12 mutants against the new code, and the tests
+killed all 12. The one survivor from the first pass (a hardcoded ETH symbol on
+transactions) was killed by adding a Polygon test.
 
 ## Petter's steps (only he can do these)
 

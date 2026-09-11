@@ -111,7 +111,7 @@ output_schema:
       type: number
     native_symbol:
       type: string
-data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
+data_source: Alchemy JSON-RPC and transfer index on Ethereum, Base, Arbitrum One, OP Mainnet and Polygon PoS
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -174,7 +174,7 @@ test_fixtures:
           reliability: common
 output_field_reliability:
   address: common
-  chain_id: common
+  chain_id: guaranteed
   recent_tokens: common
   native_balance_eth: common
   native_balance_wei: common
@@ -183,7 +183,7 @@ output_field_reliability:
 limitations:
   - title: null
     text: >-
-      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
+      Output reflects Alchemy's JSON-RPC and transfer index for the requested chain at query time. Dependent on upstream API availability; may degrade
       if the provider rate-limits or is temporarily unavailable.
     category: availability
     severity: info

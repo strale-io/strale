@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { alchemyRpc, CHAINS, hexToBigInt, resolveChain } from "./lib/alchemy-client.js";
+import { alchemyRpc, findChain, hexToBigInt, resolveChain } from "./lib/alchemy-client.js";
 
 // Fee tiers computed from eth_feeHistory: the next block's base fee plus the
 // median priority fee paid at the 10th / 50th / 90th percentile over the last
@@ -16,9 +16,8 @@ export const GAS_CHAINS = ["1", "137", "56"] as const;
 const ROLLUPS = ["8453", "42161", "10"];
 
 function requestedRollup(input: Record<string, unknown>) {
-  const raw = String(input.chain_id ?? input.chain ?? input.network ?? "").trim().toLowerCase();
-  const id = /^0x[0-9a-f]+$/.test(raw) ? String(Number.parseInt(raw, 16)) : raw;
-  return ROLLUPS.map((r) => CHAINS[r]).find((c) => c.id === id || c.aliases.includes(raw));
+  const { chain } = findChain(input, "chain_id", "chain", "network");
+  return chain && ROLLUPS.includes(chain.id) ? chain : undefined;
 }
 
 interface FeeHistory {

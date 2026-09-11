@@ -1244,7 +1244,7 @@ vendors:
       - state: candidate
         date: 2026-09-11
         decision: unknown
-        reason: "job-board-search country fr is built and refuses until the founder registers a francetravail.io application with the Offres d'emploi v2 API and adds its credentials on Railway. handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md"
+        reason: "job-board-search country fr is built and refuses until the founder registers a francetravail.io application with the Offres d'emploi v2 API and adds its credentials on Railway. Its CGU (read 2026-09-11) says offers go by API to partners who join the offer-reuse licence, contact data excepted, and 'pourront être réutilisées pour tout usage et notamment être rediffusées sur des sites tiers'. Redistribution stays unknown until the reuse licence itself is read at registration. handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md"
     reevaluation_triggers: []
     verification:
       terms:
@@ -1254,12 +1254,7 @@ vendors:
       licensing:
         status: unknown
       redistribution:
-        status: verified
-        verified_at: 2026-09-11
-        verified_by: "read 2026-09-11 against France Travail's conditions generales d'utilisation, francetravail.fr/informations/informations-legales-et-conditio/conditions-generales-dutilisatio.html"
-        evidence: handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md
-        outcome: conditional
-        note: "Offers are available through the API to partners who accept the job-offer reuse licence, contact data excepted, and may then be reused for any purpose including republication on third-party sites. The reuse licence itself is accepted at registration and was not read here."
+        status: unknown
     authorization:
       status: unknown
   - id: usajobs

@@ -45,7 +45,7 @@ output_schema:
       type: string
     blocks_sampled:
       type: number
-data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
+data_source: Alchemy JSON-RPC (eth_feeHistory) on Ethereum, Polygon PoS and BNB Smart Chain
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -84,7 +84,7 @@ test_fixtures:
           operator: not_null
           reliability: common
 output_field_reliability:
-  chain_id: common
+  chain_id: guaranteed
   base_fee_gwei: common
   fast_gas_gwei: common
   safe_gas_gwei: common
@@ -94,7 +94,7 @@ output_field_reliability:
 limitations:
   - title: null
     text: >-
-      Output reflects Ethereum fee history (eth_feeHistory via Alchemy) at query time. Dependent on upstream API availability; may degrade
+      Output reflects the requested chain's fee history (eth_feeHistory via Alchemy) at query time. Dependent on upstream API availability; may degrade
       if the provider rate-limits or is temporarily unavailable.
     category: availability
     severity: info

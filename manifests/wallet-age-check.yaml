@@ -48,7 +48,7 @@ output_schema:
       type: string
     first_tx_hash:
       type: string
-data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
+data_source: Alchemy JSON-RPC and transfer index on Ethereum, Base, Arbitrum One, OP Mainnet and Polygon PoS
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -111,14 +111,14 @@ test_fixtures:
 output_field_reliability:
   address: common
   age_days: common
-  chain_id: common
+  chain_id: guaranteed
   has_activity: common
   first_tx_date: common
   first_tx_hash: common
 limitations:
   - title: null
     text: >-
-      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
+      Output reflects Alchemy's JSON-RPC and transfer index for the requested chain at query time. Dependent on upstream API availability; may degrade
       if the provider rate-limits or is temporarily unavailable.
     category: availability
     severity: info
