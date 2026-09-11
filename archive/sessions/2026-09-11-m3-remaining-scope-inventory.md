@@ -166,11 +166,17 @@ repo-native analogue in `handoff/_general/from-code/*.md` and
 `archive/sessions/*.md` (session logs and reports), but neither carries the
 structured `Type`/`Action Required`/`Confidence` fields the Notion Journal DB
 does (confirmed: `INTERESTING_PROPS`, `fetch-shiplog.ts:24`, has no repo-file
-equivalent). Social-media-post activity has no repo-native equivalent at all
-- Strale's social posting is Notion-only today (no `docs/company/social/*.md`
-or similar found: 0 hits for `git ls-files | grep -i social`, excluding
-`SOCIAL_DB_ID`/social-post code references already counted above). GitHub
-commit activity is already repo-native (direct `api.github.com` calls, no
+equivalent). Social-media-post **tracking** has no repo-native equivalent at
+all - Strale's social-post activity tracking is Notion-only today. `git
+ls-files | grep -i social` as literally run returns 8 files, not 0
+(`apps/api/src/capabilities/social-post-generate.ts`/`social-profile-check.ts`
+and their manifests, plus design-asset exports named `social-*`), but none of
+the 8 is a status registry of the platform's *own* posting activity - the
+first two are Strale capability products a customer calls (unrelated to
+whether Strale itself has posted), and the rest are brand-kit image exports.
+No `docs/company/social/*.md` or similar tracking file exists (0 hits for that
+narrower pattern). GitHub commit activity is already repo-native (direct
+`api.github.com` calls, no
 Notion involved).
 
 **What remains:** a Journal-entry-shape replacement reading
@@ -195,6 +201,67 @@ a separately headed section that never changes the script's exit code. A
 strand under change 1; what remains for the vendor strand is batch 5 (section
 6 below).
 
+### 1f. Notion sweep scope - what section 1a's search missed
+
+Section 1a's sweep searched `api.notion.com`, `NOTION_TOKEN`, `NOTION_API_KEY`,
+and case-insensitive `notion` inside `.claude/` only. It never ran a
+whole-repository search for the `notion.so`/`notion.com` URL hosts or for bare
+32-hex Notion page ids outside `.claude/`. Rerun in this batch (counts, per the
+appendix, S29-S31):
+
+- `rg -l "notion\.so"`, whole repo: 60 files (including this report's own self-match).
+- `rg -l "notion\.com"`, whole repo: 323 files.
+- Bare 32-hex hex strings outside `.claude/` (`rg -oP '[0-9a-f]{32}' --glob '!.claude/**' -l`): 638 files - but this pattern is not Notion-specific at all (it also matches Ethereum addresses, package-lock hashes, and other unrelated 32-hex strings throughout `apps/api/src/web3-assurance/*`, `design/*`, and elsewhere), so the raw count is not a usable Notion-dependency signal on its own.
+
+**Classification of what these searches surface, beyond what section 1a
+already covered:** almost all of the `notion.so`/`notion.com` hits are the
+already-understood decision-record citation trail - `docs/decisions/records/*.md`
+files that carry a `--notion-<32hex>` qualifier in their own filename or a
+citation URL in their body (the git-qualified/Notion-qualified record
+mechanism DEC-20260904-B already documents), plus `archive/sessions/*.md` and
+`handoff/_general/from-code/*.md` prose citing a Notion page for historical
+context. These are expected, already-tracked citations, not a new gap.
+
+The genuinely new-to-this-report surface is a small set of **inert citation
+fields and comments that no code reads:**
+
+- `apps/api/coverage-matrix/*.yaml` `_source_notion_page_id` (47 of 47
+  capability rows carry this field, plus one definition in `schema.json`;
+  confirmed: `rg -l "_source_notion_page_id"` -> 49 files) and
+  `vendor_roster_url` (8 of 47 rows carry a live `https://www.notion.so/...`
+  value, the rest `null`, plus one definition in `schema.json`; already
+  named as H4 in the vendor-state inventory, `archive/sessions/2026-09-10-m3-vendor-state-inventory.md:121`).
+- Notion page-id citation comments in three source files named by this
+  review: `apps/api/src/lib/trust-grade.ts:3` (`// Spec: Notion page
+  31e67c87-...`), `apps/api/src/lib/platform-facts.ts:132` (a `https://www.notion.so/...`
+  URL in a comment), `apps/api/src/capabilities/guarded-executor.ts:30`
+  (same pattern). A fourth file the same grep sweep touches,
+  `apps/api/src/capabilities/skill-extract.ts:104`, is a false positive - its
+  one "Notion" hit is the literal string `"Notion"` inside a list of
+  third-party tool names a capability detects mentions of, unrelated to the
+  platform's own Notion dependency.
+
+**Confirmed by search that no code reads these fields:**
+`rg -n "_source_notion_page_id|vendor_roster_url" apps/api/src apps/api/scripts scripts`
+returns 0 matches - both fields are written once (by whatever produced the
+coverage-matrix rows) and never read back by any script or route. The three
+source-comment citations are, by construction, not executable at all (they
+are `//`/`*` comments); none of the three files makes a `notion.com`/`NOTION_API_KEY`/`NOTION_TOKEN`
+call (confirmed by grep on each file).
+
+**What M4 should do with them (this report's classification, not a decision):**
+keep, not remove or rewrite. All of these are read-only-by-a-person citation
+trails pointing at the Notion page that originated a fact, the same shape the
+vendor-roster inventory's H4 already found acceptable to leave in place
+("link only, not a live dependency"). Removing them at M4 activation would
+delete historical provenance for no functional gain, since no code path
+depends on them; rewriting them (e.g. to a repo-native equivalent) has no
+target to rewrite to, since the fact they cite was defined in Notion at a
+point before the repo-native migration existed. If M4 eventually retires
+Notion entirely, these become dead links rather than a functional break, and
+can be swept in an ordinary docs-hygiene pass rather than urgently, once the
+underlying Notion pages are no longer reachable to verify against.
+
 ## 2. Flows to prepare but not activate
 
 Per `.claude/skills/` and `.claude/commands/` directory listings
@@ -212,14 +279,21 @@ hooks in `.claude/settings.json`.
 
 **Codex mirror.** `.agents/skills/go` and `.agents/skills/vendor-switch` are
 the Codex-facing copies (confirmed present by directory listing); a third,
-`.agents/skills/source-command-end-session/SKILL.md`, mirrors
-`.claude/commands/end-session.md` for Codex and carries the identical Notion
-Journal-entry write step (diffed against the Claude version: same steps,
-Codex-flavored path names only - `AGENTS.md` instead of `CLAUDE.md`,
-`.codex/**` instead of `.claude/**`). Any inactive repo-native draft for
-session end must be written once and referenced from both mirrors, not
-duplicated, to avoid the exact drift class `AGENTS.md`'s own maintenance rule
-in `CLAUDE.md`'s Report Filing Convention section warns about.
+`.agents/skills/source-command-end-session/SKILL.md` (118 lines, the Codex
+skill wrapper carries its own frontmatter and preamble on top of the same
+112-line body - see S25), mirrors `.claude/commands/end-session.md`
+for Codex and carries the same Notion Journal-entry write step, but not
+identically: diffed against the Claude version (S25), the mirror is not
+path-naming-only. Two fields carry session-identity content, not a path
+swap - `Actor` is written as `claude-code` in the Claude version and `Codex`
+in the mirror, and the in-progress to-do ownership filter checks
+`Claude code` versus `Codex` - alongside the expected `AGENTS.md`/`.codex/**`
+path-naming swaps. Any inactive repo-native draft for session end must
+preserve this per-tool Actor/owner distinction (the two tools should keep
+writing their own identity, not collapse to one), be written once, and be
+referenced from both mirrors rather than duplicated, to avoid the exact drift
+class `AGENTS.md`'s own maintenance rule in `CLAUDE.md`'s Report Filing
+Convention section warns about.
 
 **How M2 candidates mark inactive, and whether a skill/command can carry the
 same marking.** Every file under `docs/project/` (`DECISIONS.md`, `PRODUCT.md`,
@@ -331,15 +405,27 @@ governing decision, and code/test references." Today:
 **Every mandatory protocol currently in `CLAUDE.md`, and whether the (absent)
 manifest represents it:**
 
+Every range below starts at the protocol's own `###` heading line in `CLAUDE.md`
+and ends at the last content line before the next `###` heading (the blank
+separator line is excluded from both ends), so no two ranges overlap. Verified
+by reading `CLAUDE.md` directly in this batch (heading lines confirmed by
+`grep -n "^### "`, boundaries confirmed by reading each transition):
+
 | Protocol | `CLAUDE.md` location | Full body exists under `docs/governance/protocols/`? | Represented in a coverage manifest? |
 |---|---|---|---|
-| Capability Onboarding Protocol (DEC-20260320-B) | lines 370-583 ("Adding New Capabilities" + the protocol section) | No | No |
+| Session contract (both tools, every session) | lines 175-211 | No | No |
 | Distribution PR Integrity Protocol (DEC-20260422-A) | lines 507-553 | Partial - only the pre-flight checklist (`DISTRIBUTION_PR_PREFLIGHT.md`), not the full protocol text | No |
+| Capability Onboarding Protocol (DEC-20260320-B) | lines 555-582 (the "Capability Onboarding Protocol" heading itself; the earlier "Adding New Capabilities (MANDATORY PIPELINE)" section at lines 370-479 is the how-to workflow this protocol governs, not the protocol text itself, and is a separate range) | No | No |
 | Audit-Follow-up Test Coverage Protocol (DEC-20260504-A) | lines 584-609 | No | No |
 | Bulk-Operation Deploy Protocol (DEC-20260504-B) | lines 611-637 | No | No |
-| Deploy Mechanism Verification Protocol (DEC-20260504-C) | lines 639-665 | No | No |
-| Shared-Checkout Rule (concurrency safety) | lines 691-732 | No | No |
-| Session contract (both tools, every session) | lines 175-212 | No | No |
+| Deploy Mechanism Verification Protocol (DEC-20260504-C) | lines 639-664 | No | No |
+| Shared-Checkout Rule (concurrency safety) | lines 691-734 | No | No |
+
+(A prior version of this table cited the Capability Onboarding Protocol as
+lines 370-583, which double-counted the "Adding New Capabilities" section and
+the entire Distribution PR Integrity Protocol range beneath it. Corrected in
+review round 1 - batch 6 extracts text from these exact ranges, so they must
+not overlap.)
 
 **What remains:** essentially the entire item. No full-body extraction has
 happened for six of the seven mandatory protocols/rules named above, no
@@ -433,44 +519,76 @@ mergeable and small.
    one of the two category/primary-view options (section 6, item 2); draft
    the agent-context and customer-facing views; draft the vendor-switch
    skill's retargeted step 5 as inactive prose (not an edit to the live
-   step). Files: `config/vendors.yaml`, a new view script/data file (name TBD
-   by the batch), `docs/strategy/2026-09-10-m3-vendor-state-model.md`
+   step) - this batch owns that draft exclusively (see batch 4, which no
+   longer duplicates it). Files: `config/vendors.yaml`, a new view
+   script/data file (name TBD by the batch), `docs/strategy/2026-09-10-m3-vendor-state-model.md`
    (append, not rewrite, the batch-5 outcome). Checks: extend
    `scripts/vendors.test.mjs` with planted-failure coverage for the two new
    vendors and whichever view function is added. Moves: M3 exit criterion 1
    (vendor-roster strand's remaining piece) and partially exit criterion 5's
    "M3 (prepare)" framing for vendor-switch specifically.
 
-2. **Daily-digest Decisions/Journal repo-native draft (item 1b/1d, session-end
-   half):** design and land, inactive, a repo-native reader for "unreviewed
-   decisions" (needs a review-state convention decided first - a new front
-   matter field on decision records, or a small separate register; this
-   report does not choose) and for Journal-entry-shaped digest content read
-   from `handoff/`/`archive/sessions/`. Runs inside `gatherDigestData()`
-   alongside the Notion readers via `Promise.allSettled`, logged via
-   `logWarn`, changing no rendered email content (shadow mode, per section
-   3). Files: a new `apps/api/src/lib/daily-digest/fetch-repo-native.ts` (or
-   similar), `apps/api/src/lib/daily-digest/index.ts` (additive wiring only).
-   Checks: unit tests on the new reader; a planted-disagreement test proving
-   the shadow log fires without changing `DigestData`. Moves: M3 exit
-   criterion 1 (partial) and criterion 3 (shadow-mode read path).
+2. **Daily-digest Decisions/Journal/Action-Required repo-native draft (item
+   1b, plus 1d's Journal-entry-shaped content):** design and land, inactive,
+   three repo-native readers - (a) "unreviewed decisions" (needs a
+   review-state convention decided first - a new front matter field on
+   decision records, or a small separate register; this report does not
+   choose), (b) the Journal "Action Required" digest reader that replaces
+   `fetchActionRequired` (section 1b): this has no repo-native analogue at
+   all today (the closest, `docs/company/DAILY-RUN.md`'s "needs your
+   decision" section, is prose in one file, not a per-item queryable flag),
+   so this batch's first task for (b) is the same kind of register-shape
+   decision as (a) - a small `action-required`-flagged register keyed to the
+   files it's raised on, decided once and reused, not two separate ad hoc
+   conventions - and (c) Journal-entry-shaped digest content read from
+   `handoff/`/`archive/sessions/` (item 1d's non-social half). Runs inside
+   `gatherDigestData()` alongside the Notion readers via `Promise.allSettled`,
+   logged via `logWarn`, changing no rendered email content (shadow mode, per
+   section 3). Files: a new `apps/api/src/lib/daily-digest/fetch-repo-native.ts`
+   (or similar), `apps/api/src/lib/daily-digest/index.ts` (additive wiring
+   only). Checks: unit tests on all three new readers; a planted-disagreement
+   test proving the shadow log fires without changing `DigestData`. Moves: M3
+   exit criterion 1 (partial) and criterion 3 (shadow-mode read path).
 
-3. **Distribution-surfaces registry (item 1c):** the largest genuine gap in
-   item 1 - no repo-native source exists at all. Design first (a
+3. **Distribution-surfaces registry (item 1c), plus item 1d's
+   social-media-post tracking decision:** the largest genuine gap in item 1 -
+   no repo-native distribution-surfaces source exists at all. Design first (a
    `docs/operations/distribution-registry.yaml` or similar, one row per
    distribution attempt with status/date/evidence, following the
    `config/vendors.yaml`/`config/env-manifest.yaml` "values are data"
    pattern), populate it from the Distribution PR Integrity Protocol's
    existing session-end reporting requirement (handoff files already carry
    this prose; this batch structures it), then wire a shadow reader the same
-   way as batch 2. Moves: M3 exit criterion 1.
+   way as batch 2. This batch also **decides** (architect's call, not a
+   founder escalation) item 1d's social-media-post tracking question: search
+   the digest's own scope for whatever still reads or writes
+   `SOCIAL_DB_ID`/social-post extraction (`fetch-shiplog.ts`'s
+   `extractSocialPosts`, plus any consumer of its output), and on that
+   evidence either give it a repo-native register alongside the distribution
+   registry or drop it from the digest - decided inside this batch, on the
+   evidence found here, not escalated. Checks: a structural validator (the
+   `apps/api/scripts/validate-coverage-matrix.mjs` pattern) that every row in
+   the new registry resolves its required fields, wired into a new npm script
+   and a CI step (report-only, matching this milestone's non-blocking
+   discipline); a planted-invalid-row test proving the validator actually
+   fails. Moves: M3 exit criterion 1.
 
-4. **Session-end / vendor-switch inactive drafts (item 2):** decide the
-   candidate-location question this report flagged (append an inactive
-   section to the live skill/command file vs. a separate
+4. **Session-end inactive draft (item 2's write side, session-end only):**
+   decide the candidate-location question this report flagged (append an
+   inactive section to the live skill/command file vs. a separate
    `docs/project/skills-candidates/` file), then draft the repo-native
-   Journal-entry write for `/end-session` and the retargeted vendor-switch
-   step 5, in both the `.claude/` and `.agents/` mirrors, inactive. Moves: M3
+   Journal-entry write for `/end-session` in both the `.claude/` and
+   `.agents/` mirrors, inactive, preserving each mirror's own Actor/owner
+   identity (section 2's `claude-code`/`Claude code` vs. `Codex` distinction -
+   the repo-native draft must carry the same per-tool field, not collapse it).
+   The vendor-switch skill's retargeted step 5 is **not** drafted here - that
+   is batch 1's task exclusively (section 6, item 5), avoiding the duplicate
+   claim a prior version of this sequence made. Checks: a mirror-consistency
+   test (the same shape as S24/S25's `go`/`vendor-switch`/`end-session` diffs)
+   asserting the inactive draft section is present and equivalent in both
+   mirrors modulo the expected `CLAUDE.md`/`AGENTS.md` and
+   `claude-code`/`Codex`-style path/identity swaps, and that the live
+   executable steps are byte-unchanged from before this batch. Moves: M3
    exit criterion 1 (write side) and exit criterion 5's "old entrypoints
    remain in force" (by construction, since nothing here is activated).
 
@@ -487,16 +605,23 @@ mergeable and small.
    deployment mechanisms verified, not assumed").
 
 6. **Protocol full-body extraction, one protocol per batch:** for each of the
-   six protocols/rules in section 5's table that has no full-body file,
-   extract its complete text (unabridged - the plan requires "preserve all
-   mandatory protocol full text") to `docs/governance/protocols/<NAME>.md`,
-   leaving `CLAUDE.md`'s copy in place until M4 (both must say the same
-   thing; this is extraction, not supersession). Suggested order by
-   incident-recency and money/compliance weight: Deploy Mechanism
-   Verification -> Audit-Follow-up Test Coverage -> Bulk-Operation Deploy ->
-   Capability Onboarding -> Shared-Checkout Rule -> Session contract. Each
-   batch is independently small and mergeable. Moves: M3 exit criterion 4
-   (partial, one protocol per batch).
+   six protocols/rules in section 5's corrected table that has no full-body
+   file, extract its complete text (unabridged - the plan requires "preserve
+   all mandatory protocol full text") from its exact `CLAUDE.md` line range
+   to `docs/governance/protocols/<NAME>.md`, leaving `CLAUDE.md`'s copy in
+   place until M4 (both must say the same thing; this is extraction, not
+   supersession). Suggested order by incident-recency and money/compliance
+   weight: Deploy Mechanism Verification -> Audit-Follow-up Test Coverage ->
+   Bulk-Operation Deploy -> Capability Onboarding -> Shared-Checkout Rule ->
+   Session contract. Each batch is independently small and mergeable. Checks:
+   a new script (e.g. `scripts/check-protocol-extraction.mjs`) that reads the
+   named `CLAUDE.md` line range for each extracted protocol and asserts the
+   extracted body under `docs/governance/protocols/<NAME>.md` is byte-identical
+   to it, the same mirror-check discipline the repository already applies
+   elsewhere (the `go`/`vendor-switch` skill mirrors, S24; `CLAUDE.md`/`AGENTS.md`
+   drift) - wired report-only in CI as each protocol lands, so a hand-edited
+   drift between the two copies is caught before it can happen twice. Moves:
+   M3 exit criterion 4 (partial, one protocol per batch).
 
 7. **Coverage manifest and populated router:** only after step 6 has
    produced full-body files for a majority of the protocols, build the actual
@@ -504,9 +629,10 @@ mergeable and small.
    protocol ID -> trigger text -> full-body path -> governing decision ->
    code/test references, and populate `docs/project/PROTOCOL-ROUTER.md`
    beyond its M1 skeleton, still `status: candidate`/`authority_active:
-   false`. Add a checker (structural: every row resolves, matching the
-   pattern of `env:check`/`vendors:check`) in report-only mode. Moves: M3
-   exit criterion 4 (completed).
+   false`. Checks: a checker (structural: every row resolves, matching the
+   pattern of `env:check`/`vendors:check`) in report-only mode, plus a
+   planted-broken-row test proving it fails when a row's path or reference
+   doesn't resolve. Moves: M3 exit criterion 4 (completed).
 
 **M3 vs. M4 boundary, explicit for every batch above:** all seven batches
 prepare and compare; none activates a new entrypoint, none removes a Notion
@@ -526,6 +652,14 @@ eventually land):**
   the Session contract's ordinary engineering authority under DEC-20260815-A),
   but flagged because it is the first new field on every future decision
   record and worth a deliberate choice rather than an incidental one.
+- **The Action-Required register shape** (batch 2) is the same kind of
+  engineering choice, not founder-gated, flagged for the same reason - it is
+  the first repo-native analogue for a Notion Journal field that has none
+  today.
+- **The social-media-post tracking decision** (batch 3) is explicitly the
+  architect's call inside that batch, made on the evidence the batch itself
+  gathers (whether anything still reads or writes the social-post tracking),
+  not a founder escalation and not deferred to a later batch.
 - **The category/primary-view design choice for the vendor register**
   (section 6, item 2) is likewise an engineering choice under existing
   delegated authority, not a founder decision - flagged only because this
@@ -556,37 +690,43 @@ configuration), it is marked as such rather than assumed.
 Every search below was run at this branch's head (`origin/main` at
 `8d91c1974d569adda7fb714ac94eeae368f83644`, the same commit that landed T6
 batch 4b, PR #637 - confirmed by `git merge-base --is-ancestor` against
-`origin/main` before starting this batch).
+`origin/main` before starting this batch). Review round 1's rerun searches
+(S15, S18, S20, S24, S25, S29-S31, and the counts fixed throughout this
+report) were verified against the same `origin/main` commit, which had not
+moved between the two batches - no code changed, so no result is stale.
 
 | # | Command (pattern / scope) | Result |
 |---|---|---|
-| S1 | ripgrep `api\.notion\.com`, whole repo, `files_with_matches` | 4 files: `docs/strategy/2026-08-31-repo-native-operating-model-migration.md`, `apps/api/src/lib/daily-digest/fetch-shiplog.ts`, `apps/api/src/lib/daily-digest/fetch-notion.ts`, `apps/api/scripts/check-vendor-roster-drift.ts` |
-| S2 | ripgrep `NOTION_TOKEN`, whole repo, `files_with_matches` | 19 files (listed in section 1a) |
-| S3 | ripgrep `NOTION_API_KEY`, whole repo, `files_with_matches` | 12 files (listed in section 1a) |
+| S1 | ripgrep `api\.notion\.com`, whole repo, `files_with_matches` | 5 files: the 4 originally listed (`docs/strategy/2026-08-31-repo-native-operating-model-migration.md`, `apps/api/src/lib/daily-digest/fetch-shiplog.ts`, `apps/api/src/lib/daily-digest/fetch-notion.ts`, `apps/api/scripts/check-vendor-roster-drift.ts`) plus this report file itself, which now names the term in its own section 1a prose - a self-match, not a new dependency |
+| S2 | ripgrep `NOTION_TOKEN`, whole repo, `files_with_matches` | 17 files without `--hidden` (ripgrep skips dotfile-named paths like `.env.example` by default); with `--hidden` (excluding `node_modules/`, `.git/`): 20 files - the 19 originally listed (which required `--hidden` to reach both `.env.example` files, not stated in the original command) plus this report file's own self-match |
+| S3 | ripgrep `NOTION_API_KEY`, whole repo, `files_with_matches` | 11 files without `--hidden`; with `--hidden`: 13 files - the 12 originally listed (same `--hidden` requirement for the two `.env.example` files) plus this report file's own self-match |
 | S4 | `grep -n "daily-digest" .github/workflows/*.yml` | 0 matches - confirms the digest is not invoked by any GitHub Actions workflow |
 | S5 | `grep -n "daily-digest\|digest" apps/api/package.json` | 2 matches: `digest` and `digest:preview` npm scripts (`tsx src/jobs/daily-digest.ts` / `digest-preview.ts`) |
 | S6 | `grep -n -i "digest" apps/api/railway-config.md` | confirms the `strale-digest-cron` service block, lines 165-199, including the `NOTION_TOKEN` credential-name line (188) this report flags as inconsistent with the code's actual `NOTION_API_KEY` dependency |
-| S7 | `grep -rln "gatherDigestData\|daily-digest" .` (whole repo, all extensions) | 59 files (mostly handoff/archive prose referencing past digest work; runtime files are `apps/api/src/lib/daily-digest/*.ts`, `apps/api/src/jobs/daily-digest.ts`, `apps/api/src/jobs/digest-preview.ts`) |
-| S8 | `grep -n "notion" -i .claude/*.md .claude/*.yaml` | 8 files: `.claude/skills/vendor-switch/SKILL.md`, `.claude/commands/end-session.md`, `.claude/WORKFLOW.md` (4), `.claude/PROTOCOL.md` (71), `.claude/RUNBOOK.md` (13), `.claude/NOTION.md`, `.claude/BUILD.md` (6), `.claude/DISPATCH.yaml` (33) |
+| S7 | ripgrep `gatherDigestData\|daily-digest`, whole repo, `files_with_matches` | 61 files - the 59 originally listed (mostly handoff/archive prose referencing past digest work; runtime files are `apps/api/src/lib/daily-digest/*.ts`, `apps/api/src/jobs/daily-digest.ts`, `apps/api/src/jobs/digest-preview.ts`) plus this report file's own self-match and its own growth across review round 1 |
+| S8 | `grep -n "notion" -i .claude/*.md .claude/*.yaml` | as literally written this is a non-recursive glob and finds only the 6 top-level files (`.claude/WORKFLOW.md` (4), `.claude/PROTOCOL.md` (71), `.claude/RUNBOOK.md` (13), `.claude/NOTION.md`, `.claude/BUILD.md` (6), `.claude/DISPATCH.yaml` (33)), missing the two subdirectory files the original row's own prose lists. Corrected command `rg -il "notion" .claude/` (recursive): 8 files - the 6 above plus `.claude/skills/vendor-switch/SKILL.md` and `.claude/commands/end-session.md`, matching section 1a's row 4 and this report's own section 2 |
 | S9 | `grep -in "notion" .claude/hooks/handoff-session-start.mjs .claude/hooks/handoff-stop.mjs` | 0 matches in either file - confirms session start/end **hooks** (not the `/end-session` command) are Notion-free |
 | S10 | `grep -in "notion" .claude/skills/go/SKILL.md` | 0 matches - confirms `/go` is Notion-free |
 | S11 | ripgrep `weekly-drift`, glob `*.test.ts` | 0 files |
 | S12 | ripgrep `weekly-drift`, glob `*.test.mjs` | 0 files |
 | S13 | `grep -rln "\.github/workflows" scripts/*.mjs apps/api/scripts/*.mjs apps/api/scripts/*.ts` excl. `*test*` | 4 files: `check-no-bare-catch.mjs`, `check-no-external-column-access.mjs`, `check-no-new-console.mjs`, `npm-release-resolve.mjs` - none asserts a workflow step invokes a named script |
-| S14 | ripgrep `coverage manifest\|coverage_manifest\|PROTOCOL-ROUTER`, whole repo, `files_with_matches` | 15 files (docs/strategy plan prose, `docs/project/STRUCTURE.md`, `docs/programs/cto-readiness/{tracks.yaml,PROGRAM.md}`, `scripts/project-context-lib.mjs`, `docs/project/m2-closure-register.yaml`, `docs/decisions/records/DEC-20260511-D.md`, five `archive/sessions/*` files, two `handoff/*` files) - no data file named `protocol-coverage.*` or similar exists |
-| S15 | ripgrep `agent-context\|agent_context`, whole repo | 0 matches for a file or variable by this name |
+| S14 | ripgrep `coverage manifest\|coverage_manifest\|PROTOCOL-ROUTER`, whole repo, `files_with_matches` | 16 files - the 15 originally listed (docs/strategy plan prose, `docs/project/STRUCTURE.md`, `docs/programs/cto-readiness/{tracks.yaml,PROGRAM.md}`, `scripts/project-context-lib.mjs`, `docs/project/m2-closure-register.yaml`, `docs/decisions/records/DEC-20260511-D.md`, five `archive/sessions/*` files, two `handoff/*` files) plus this report file's own self-match - no data file named `protocol-coverage.*` or similar exists |
+| S15 | ripgrep `agent-context\|agent_context`, whole repo, `files_with_matches` | 3 files: `docs/programs/cto-readiness/tracks.yaml`, `docs/strategy/2026-09-10-m3-vendor-state-model.md`, and this report file itself (`archive/sessions/2026-09-11-m3-remaining-scope-inventory.md`), all prose referencing the not-yet-built view by name, never a file path or a `const`/`type`/export named `agent-context`/`agent_context` - confirms section 6 item 3's narrower claim ("0 hits ... as a file/variable name") while correcting this row's earlier bare "0 matches", which contradicted that same prose |
 | S16 | `ls docs/governance/protocols/` | 3 files: `DISTRIBUTION_PR_PREFLIGHT.md`, `README.md`, `REVIEW_TEMPLATE.md` |
 | S17 | `cat docs/project/PROTOCOL-ROUTER.md` (read whole, 20 lines) | confirms M1-skeleton status, no active routes |
-| S18 | `grep -n "^### .*Protocol\|MANDATORY\|^### Shared-Checkout\|^### Session contract" CLAUDE.md` | 10 matches identifying the 7 mandatory protocols/rules in section 5's table |
+| S18 | `grep -n "^### .*Protocol\|MANDATORY\|^### Shared-Checkout\|^### Session contract" CLAUDE.md` | 13 matches as literally written - the `MANDATORY` alternative also hits the in-body **MANDATORY** sentence of 4 protocols and the unrelated `### Adding New Capabilities (MANDATORY PIPELINE)` heading, none of which is one of the 7 distinct protocol/rule headings. Command corrected to `grep -n "^### .*Protocol\|^### Shared-Checkout\|^### Session contract" CLAUDE.md` (headings only): 7 matches, identifying the 7 mandatory protocols/rules in section 5's corrected table |
 | S19 | `grep -n "^  - id:" config/vendors.yaml \| wc -l` | 83 vendor entries |
-| S20 | `grep -n "liberty\|bodacc" -i config/vendors.yaml` | 0 matches (only the header comment's own prose mentions unrelated terms) - confirms Liberty Data and BODACC are absent from the register |
+| S20 | `grep -n -i "liberty\|bodacc" config/vendors.yaml` | 1 match: line 60, the header comment's own prose listing capability slugs it does *not* cover (`fr-bodacc-lookup`, among others) - not a vendor `id:` entry. Rerun of "liberty" alone: 0 matches. Rerun of "bodacc" alone: 1 match (the same header-comment line). `grep -n "^  - id:" config/vendors.yaml \| grep -i "liberty\|bodacc"`: 0 matches - confirms Liberty Data and BODACC are absent from the register as vendor entries, which is the finding this row supports; the earlier "0 matches" bare claim was wrong about the combined-pattern count |
 | S21 | `grep -n "category\|primary" config/vendors.schema.json config/vendors.yaml` | 0 matches - confirms no category/primary-vendor field exists in the schema or the populated register |
 | S22 | `ls docs/operations/` | 3 files: `hmac-rotation.md`, `operator-actions.yaml`, `x402-facilitator-switch.md` - no distribution registry |
-| S23 | `grep -rn "^[^/]+\.(json\|yaml\|yml)$" ...` / `git ls-files \| grep -i social` (excl. already-counted `SOCIAL_DB_ID` code references) | 0 hits for a repo-native social-post file |
-| S24 | `diff .claude/skills/go/SKILL.md .agents/skills/go/SKILL.md` | 2 line differences, both `CLAUDE.md`/`.claude/**` -> `AGENTS.md`/`.codex/**` path-naming swaps, no behavioral difference |
-| S25 | `diff .claude/commands/end-session.md .agents/skills/source-command-end-session/SKILL.md` | frontmatter-shape and path-naming differences only (Codex skill wrapper vs. Claude Code command); both retain the identical Notion Journal-entry write step |
+| S23 | `git ls-files \| grep -i social` | 8 files as literally run, not 0: `apps/api/src/capabilities/social-post-generate.ts` and `social-profile-check.ts` (customer-facing capability products, unrelated to Strale's own posting activity), their two manifests, and four design-kit image/HTML exports named `social-*`. None is a status registry of Strale's own social-post activity, which is the claim this row supports. Narrower rerun `git ls-files | grep -i "company/social\|social.*track"`: 0 hits - confirms no repo-native tracking file exists under that name |
+| S24 | `diff .claude/skills/go/SKILL.md .agents/skills/go/SKILL.md` | 4 line differences (4 one-line hunks), all `CLAUDE.md`/`.claude/**` -> `AGENTS.md`/`.codex/**` path-naming swaps, no behavioral difference - corrects this row's earlier "2 line differences" undercount |
+| S25 | `diff .claude/commands/end-session.md .agents/skills/source-command-end-session/SKILL.md` | frontmatter-shape and path-naming differences, plus two content differences that are not path-naming: line 39/45 `Actor: claude-code` (Claude) vs. `Actor: Codex` (Codex mirror), and line 54/60 the in-progress ownership filter `Claude code` vs. `Codex`. Both mirrors otherwise retain the identical Notion Journal-entry write step and DB ids - corrects section 2 and this row's earlier "path-naming only" characterization |
 | S26 | `grep -n "NOTION_API_KEY\|NOTION_TOKEN" -B2 -A6 config/env-manifest.yaml` | confirms both rows exist, and that the manifest's own `purpose` prose for `NOTION_API_KEY` already names the two-credential-name confusion this report's section 1a flags against `railway-config.md` |
 | S27 | `grep -n "STATIC_FACTS" apps/api/src/lib/platform-facts.ts \| head -5` then read lines 40-70 | confirms the 14-category `STATIC_FACTS.vendors` map used for the section 6 cross-check |
+| S29 | ripgrep `notion\.so`, whole repo, `files_with_matches` | 60 files, including this report file's own self-match (section 1f) |
+| S30 | ripgrep `notion\.com`, whole repo, `files_with_matches` | 323 files (section 1f); the great majority are `docs/decisions/records/*.md`, `archive/sessions/*.md`, and `handoff/_general/from-code/*.md` citing the Notion page a decision or session originated from - the already-tracked citation trail, not a new gap |
+| S31 | `rg -oP '[0-9a-f]{32}' --glob '!.claude/**' -l`, whole repo | 638 files - not Notion-specific (matches Ethereum addresses, lockfile hashes, and other unrelated 32-hex strings); superseded for this report's purpose by the targeted field/comment searches in section 1f (`_source_notion_page_id`, `vendor_roster_url`, and the three named source-comment citations) |
 
 Known files opened and read in full or in the cited section for this batch:
 `apps/api/src/lib/daily-digest/fetch-notion.ts` (184 lines, whole),
@@ -596,7 +736,7 @@ Known files opened and read in full or in the cited section for this batch:
 `apps/api/railway-config.md` (lines 160-199),
 `.claude/settings.json` (whole),
 `.claude/hooks/handoff-session-start.mjs` (28 lines, whole),
-`.claude/commands/end-session.md` (113 lines, whole),
+`.claude/commands/end-session.md` (112 lines, whole),
 `docs/project/PROTOCOL-ROUTER.md` (20 lines, whole),
 `docs/strategy/2026-08-31-repo-native-operating-model-migration.md` (lines
 28-68, 440-522, 550-554, 640-693, 786-1027, 1064-1068 - the continuation
