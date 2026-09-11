@@ -46,10 +46,11 @@ two of these capabilities also have tests locked after their saved test data
 failed to refresh three times, a lock only a person may clear by design
 (`apps/api/src/lib/health-sweep.ts`). Correction, same day: an earlier
 version of this entry said the outage caused those locks. It did not: the
-locked tests were locked on 2026-08-18 to 2026-08-21, before the outage,
-and the same lock covers negative, edge-case and known-bad tests of
-capabilities that never use the browser. It is a test-runner fault, being
-fixed separately as technical work, so nothing is asked of Petter. The
+locked tests were locked on 2026-08-18 to 2026-08-21, before the outage
+began on 2026-08-26, and the same lock covers negative, edge-case,
+known-bad and dependency-health tests across capabilities with and without
+a browser dependency. It is a test-runner fault, being fixed separately as
+technical work, so nothing is asked of Petter. The
 account key that replaced the token on 25 August was overwritten; production
 does not use it.
 *Original text:*
