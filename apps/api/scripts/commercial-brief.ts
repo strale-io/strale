@@ -23,6 +23,7 @@ config({ path: resolve(REPO, ".env") });
 
 const {
   discreteWeeks, growth, payerFacts, concentration, quietPayers, activatingSlugs, interpret,
+  trailingQuietWindow,
   startOfIsoWeek,
 } = await import("../src/lib/metrics/commercial.js");
 const { windowOf } = await import("../src/lib/metrics/metrics.js");
@@ -82,7 +83,12 @@ async function main() {
     ? null
     : await concentration(priorFull, priorFactsM.value.payers, priorFactsM.value.unattributedCents);
 
-  const quietM = await quietPayers(lastFull);
+  // As of now, not as of the last completed week: asked of a week that ended
+  // days ago, "has this buyer stopped?" is days stale, and on 2026-09-11 it
+  // read the card customer as 9 days quiet at 13.5. The completed-week list is
+  // still printed below it, labelled, for comparison.
+  const quietM = await quietPayers(trailingQuietWindow(now));
+  const quietWeekM = await quietPayers(lastFull);
   // The lookback is clamped to the payer-identity instrument rather than the
   // metric refused, so the narrowing travels with the claim rather than sitting
   // beside it: `interpret()` writes the sentence a founder reads and the JSON is
@@ -171,7 +177,7 @@ async function main() {
       : slugs.map((s) => `  ${s.slug}  ${s.payers} payer(s)`).join("\n"));
   }
 
-  console.log("\nPreviously paying, now quiet");
+  console.log("\nPreviously paying, now quiet (nothing bought in the last 7 days)");
   if (quiet === null) {
     console.log(`  unavailable — ${quietM.status === "unavailable" ? quietM.reason.kind : ""}`);
   } else if (quiet.length === 0) {
@@ -183,6 +189,11 @@ async function main() {
   // metric refused, so the narrowing has to be visible wherever the list is —
   // an unqualified "2 have gone quiet" reads as a complete answer and is a floor.
   if (quietM.status === "observed" && quietM.caveat) console.log(`  (${quietM.caveat})`);
+  if (quietWeekM.status === "observed") {
+    const first = quietWeekM.value.payers[0];
+    console.log(`  for comparison, as of the end of the last completed week: ${quietWeekM.value.payers.length} quiet` +
+      (first ? `, the largest ${eur(first.cents)} at ${first.daysQuiet}d` : ""));
+  }
 
   console.log("\n─── THE READING (this is what the brief carries) ───\n");
   for (const c of conclusions) {
