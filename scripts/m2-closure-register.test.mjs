@@ -1467,6 +1467,23 @@ const closingReviewFixture = (overrides = {}) => {
   const expectedCollisionsResolved = (context.collisions.collisions ?? []).filter((c) => c.resolution_status === "resolved").length;
   const expectedResolutionReports = [...context.tracked].filter((f) => /^archive\/sessions\/.*-decision-collision-resolution-.*\.md$/.test(f)).length;
 
+  // The register side and the default candidateSetAtCommit mock below must
+  // use the same override precedence. Without this, a test that pins
+  // formalRecords (to isolate itself from the live records directory, see
+  // stableRecords() further down) leaves the *other* side of the comparison
+  // reading the live count, so the two sides silently diverge the moment the
+  // repository gains a real decision record. Pinning both to the same
+  // overrides keeps the fixture's default "clean" state clean regardless of
+  // how many records exist on disk; a test that deliberately wants the two
+  // sides to differ overrides candidateSetAtCommit itself (see
+  // "CLOSING_REVIEW_COUNTS_MISMATCH: candidate_set must equal what the lib
+  // computes now", which mutates candidate_set after fixture construction,
+  // and "COMMIT_UNVERIFIABLE when the candidate set cannot be read", which
+  // overrides candidateSetAtCommit directly).
+  const pinnedFormalRecords = overrides.formalRecords ?? expectedFormalRecords;
+  const pinnedCollisionsResolved = overrides.collisionsResolved ?? expectedCollisionsResolved;
+  const pinnedResolutionReports = overrides.resolutionReports ?? expectedResolutionReports;
+
   r.closing_review = {
     route: overrides.route ?? "fresh-read-only-claude-agent",
     commit,
@@ -1474,9 +1491,9 @@ const closingReviewFixture = (overrides = {}) => {
     reviewed_at: "2026-09-05",
     evidence: evidenceRel,
     candidate_set: {
-      formal_records: overrides.formalRecords ?? expectedFormalRecords,
-      collisions_resolved: overrides.collisionsResolved ?? expectedCollisionsResolved,
-      resolution_reports: overrides.resolutionReports ?? expectedResolutionReports,
+      formal_records: pinnedFormalRecords,
+      collisions_resolved: pinnedCollisionsResolved,
+      resolution_reports: pinnedResolutionReports,
     },
   };
   if (overrides.mutateRegister) overrides.mutateRegister(r, g9);
@@ -1511,7 +1528,7 @@ const closingReviewFixture = (overrides = {}) => {
     // commit's own tree held exactly this many". Tests that need to exercise
     // the reviewed-commit read itself pass a real override.
     candidateSetAtCommit: overrides.candidateSetAtCommit === undefined
-      ? () => ({ formalRecords: expectedFormalRecords, collisionsResolved: expectedCollisionsResolved, resolutionReports: expectedResolutionReports })
+      ? () => ({ formalRecords: pinnedFormalRecords, collisionsResolved: pinnedCollisionsResolved, resolutionReports: pinnedResolutionReports })
       : overrides.candidateSetAtCommit,
     codexBacklog: backlog,
     ...overrides.contextOverrides,
