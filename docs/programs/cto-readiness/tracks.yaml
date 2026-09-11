@@ -545,7 +545,7 @@ tracks:
       named with no register entry - BODACC (new vendor; two live executors
       call bodacc-datadila.opendatasoft.com directly) and Liberty Data
       (registered as an alias of the existing einsearch vendor, since
-      dependency-manifest.ts names Liberty Data Solutions as the company
+      us-ein-match.ts names Liberty Data Solutions as the company
       operating einsearch.com, not a second vendor) - plus four more aliases
       the new cross-check needed on already-registered vendors (serper,
       anthropic, coinbase-cdp, gleif); added checkStaticFactsCrossCheck to

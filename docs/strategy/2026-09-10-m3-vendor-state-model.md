@@ -401,7 +401,7 @@ a new vendor: `apps/api/src/capabilities/fr-bodacc-lookup.ts` and
 `bodacc-datadila.opendatasoft.com` directly, neither slug is in
 `apps/api/src/capabilities/auto-register.ts` `DEACTIVATED`, so its state is
 `active`. Liberty Data (`STATIC_FACTS.vendors.us_ein`) is **not** a second
-vendor: `apps/api/src/lib/dependency-manifest.ts:7` names the company
+vendor: `apps/api/src/capabilities/us-ein-match.ts:7` names the company
 operating `einsearch.com` as "Liberty Data Solutions", so "Liberty Data" is
 the same vendor as the register's existing `einsearch` entry under a
 different display string, and is registered as an alias of `einsearch`

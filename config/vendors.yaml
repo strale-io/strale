@@ -71,7 +71,7 @@
 # This is the check that would have caught the two vendors STATIC_FACTS
 # named with no register entry: BODACC (fr_litigation), added below as its
 # own vendor, and Liberty Data (us_ein), which is not a separate vendor from
-# the existing einsearch entry - apps/api/src/lib/dependency-manifest.ts:7
+# the existing einsearch entry - apps/api/src/capabilities/us-ein-match.ts:7
 # names the company operating einsearch.com as "Liberty Data Solutions", so
 # "Liberty Data" is registered as an alias of einsearch, not a second
 # identity for the same vendor. Four more STATIC_FACTS.vendors values named
