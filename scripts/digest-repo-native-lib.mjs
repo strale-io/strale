@@ -50,6 +50,13 @@
  * "Intent: ..." first line are the repo-native equivalent of a Journal
  * entry's date and title. recentHandoffActivity() below reads that.
  *
+ * What is not comparable: the digest shows only the last 24 hours of Journal
+ * entries (fetch-shiplog.ts, isLast24h), while digest-shadow.mjs lists 14
+ * days of handoff files (the window is a parameter of
+ * recentHandoffActivity, so an M4 reader can match the digest's 24 hours).
+ * Handoff files carry no `type` field. comparePriorities() therefore covers only the two priority
+ * lists; the handoff activity is printed for inspection, never compared.
+ *
  * ── Design note on parseDecisionQueue's grammar ──
  *
  * The real DECISION-QUEUE.md contains one line that starts with `**DQ-`

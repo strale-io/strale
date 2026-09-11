@@ -104,12 +104,13 @@ async function main() {
   await runNotionComparison(repoPriorities);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    // This CLI is report only and must always exit 0. Anything unexpected
-    // that escapes the per-section try blocks above still prints and the
-    // process still exits cleanly.
-    console.log(`digest-shadow: unexpected error, reported and ignored: ${err instanceof Error ? err.message : String(err)}`);
-    process.exit(0);
-  });
+// This CLI is report only and must always exit 0. It sets the exit code and
+// lets Node exit on its own rather than calling process.exit(), which can cut
+// off buffered stdout (on Windows it has crashed in libuv after printing).
+// Anything unexpected that escapes the per-section try blocks above still
+// prints and the process still exits 0.
+process.exitCode = 0;
+main().catch((err) => {
+  console.log(`digest-shadow: unexpected error, reported and ignored: ${err instanceof Error ? err.message : String(err)}`);
+  process.exitCode = 0;
+});

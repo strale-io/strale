@@ -249,8 +249,19 @@ test("m3-digest-shadow.yml has a schedule trigger, runs scripts/digest-shadow.mj
   assert.ok(workflow.on && Object.prototype.hasOwnProperty.call(workflow.on, "schedule"), "expected a schedule trigger");
   assert.ok(Array.isArray(workflow.on.schedule) && workflow.on.schedule.length > 0, "expected at least one cron entry");
   assert.ok(Object.prototype.hasOwnProperty.call(workflow.on, "workflow_dispatch"), "expected workflow_dispatch too");
-  assert.match(text, /scripts\/digest-shadow\.mjs/, "expected the workflow to run scripts/digest-shadow.mjs");
-  assert.match(text, /NOTION_API_KEY:\s*\$\{\{\s*secrets\.NOTION_TOKEN\s*\}\}/, "expected NOTION_API_KEY sourced from secrets.NOTION_TOKEN");
+  // Assert on the parsed steps, never on the raw text: the file's own header
+  // comment names scripts/digest-shadow.mjs, so a text match would pass even
+  // if no step ran it.
+  const steps = Object.values(workflow.jobs ?? {}).flatMap((job) => job.steps ?? []);
+  const shadowSteps = steps.filter(
+    (step) => typeof step.run === "string" && /(^|\s)(npx tsx|node) scripts\/digest-shadow\.mjs(\s|$)/.test(step.run),
+  );
+  assert.equal(shadowSteps.length, 1, "expected exactly one step whose run command invokes scripts/digest-shadow.mjs");
+  assert.equal(
+    shadowSteps[0].env?.NOTION_API_KEY,
+    "${{ secrets.NOTION_TOKEN }}",
+    "expected that step to take NOTION_API_KEY from secrets.NOTION_TOKEN",
+  );
 });
 
 // ── Real-repo test ───────────────────────────────────────────────────────────
