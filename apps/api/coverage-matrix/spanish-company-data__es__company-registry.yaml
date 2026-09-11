@@ -18,12 +18,14 @@ products:
   - Counterparty Assurance
 vendor_roster_url: https://www.notion.so/35667c87082c81d0a9b2fd6cd572ce33
 provider_tos_notes: >-
-  Openapi ToS blocks embed-and-bill on standard terms — see IT row for full audit. ES bundled with
-  IT for the Openapi commercial conversation. Fallback: Creditsafe aggregator scope. Current
-  Browserless path stays until sanctioned path lands.
+  Not yet reviewed. openmercantil.es is covered by neither vendor-terms audit
+  (docs/security/2026-09-06-vendor-terms-audit.md,
+  docs/security/2026-09-10-vendor-terms-audit-batch-2.md), so whether its terms permit Strale to
+  resell what it returns is unknown.
 doctrine_reference: >-
-  Openapi addendum (countersignature pending); ES direct integration via Registradores queued as
-  v1.1 quality upgrade
+  DEC-20260428-A Tier 2 (vendor aggregation of an official gazette). The Tier 2 conditions
+  (documented redistribution rights, indemnification, per-fact primary-source provenance) are not
+  yet verified for openmercantil.es; the executor records BORME provenance per call.
 notes: >-
   CORRECTED 2026-09-11 (stale-provider fix): the row previously named "Openapi.com", which
   apps/api/src/capabilities/spanish-company-data.ts's header comment records as replaced 2026-08-12
@@ -34,8 +36,8 @@ notes: >-
   "https://www.boe.es/diario_borme/"). Free tier: 200 req/day, no auth key required. Officers
   ("cargos") are included, unlike the retired Openapi ES-Advanced path. Verified 2026-09-11 by
   reading the executor source; not a live call, so evidence_grade is untested, not live-verified.
-  Pre-2026-09-11 Openapi-era per_call_price_eur, tier_1/2/3_coverage, provider_tos_notes and
-  doctrine_reference values below are retained from the prior Openapi ES-Advanced path and are
-  stale pending a follow-up field refresh outside this correction's scope; v3 + v2 probes
+  provider_tos_notes and doctrine_reference were rewritten for openmercantil.es on 2026-09-11.
+  per_call_price_eur, tier_1/2/3_coverage and vendor_roster_url are still the Openapi
+  ES-Advanced values and are stale until a live verification refreshes them; v3 + v2 probes
   2026-05-15 text superseded.
 _source_notion_page_id: 34867c87-082c-8178-8061-eda241b42b63
