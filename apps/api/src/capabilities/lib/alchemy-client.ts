@@ -10,7 +10,9 @@
  * caller here returns its own answer (a balance, fee tiers, a wallet's age),
  * never Alchemy access.
  *
- * Chains (2026-09-11): one key serves every Alchemy network by default. Each
+ * Chains (2026-09-11): one key serves every network enabled on its Alchemy
+ * app; a chain not enabled there answers HTTP 403 (seen in production the day
+ * these chains shipped, when only Ethereum mainnet was enabled). Each
  * capability declares which of the chains below it serves, and only chains
  * whose needed methods Alchemy documents are listed: the transfer index and
  * its block timestamps ("withMetadata") are documented for Ethereum, Base,

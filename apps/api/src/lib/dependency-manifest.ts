@@ -666,7 +666,9 @@ export const PROVIDERS: DependencyProvider[] = [
     // the ENS executors (see src/lib/eth-rpc-endpoints.ts).
     name: "alchemy-eth",
     displayName: "Alchemy Ethereum RPC",
-    // One key serves every network; the probe checks the Ethereum host only.
+    // One key serves the networks enabled on its Alchemy app (each must be
+    // enabled there, or that chain answers 403); the probe checks the
+    // Ethereum host only.
     description: "Authenticated JSON-RPC and transfer index on Ethereum, Base, Arbitrum, Optimism, Polygon and BNB Chain: ENS, gas fees, wallet balance, transactions and age. Free tier.",
     baseUrl: "https://eth-mainnet.g.alchemy.com",
     authType: "none",
