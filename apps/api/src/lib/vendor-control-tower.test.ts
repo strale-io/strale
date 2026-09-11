@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assessVendorBalance,
+  browserlessServesFromCloud,
   parseBrowserlessUsage,
   parseOpenRegisterCredits,
 } from "./vendor-control-tower.js";
@@ -61,5 +62,26 @@ describe("Vendor Control Tower balance classification", () => {
       remaining_credits: "unknown",
       paid: false,
     })).toThrow(/remaining_credits/);
+  });
+});
+
+describe("which Browserless endpoint the account API describes", () => {
+  it("treats only browserless.io hosts as the hosted product", () => {
+    expect(browserlessServesFromCloud("https://production-sfo.browserless.io")).toBe(true);
+    expect(browserlessServesFromCloud("https://chrome.browserless.io/")).toBe(true);
+    expect(browserlessServesFromCloud("https://browserless.io")).toBe(true);
+  });
+
+  it("does not let the cloud account vouch for the self-hosted container", () => {
+    // Production's value (railway-config.md): the pinned v1 container.
+    expect(browserlessServesFromCloud("http://chromium.railway.internal:8080")).toBe(false);
+    expect(browserlessServesFromCloud("http://localhost:3000")).toBe(false);
+  });
+
+  it("refuses lookalike, malformed and missing values", () => {
+    expect(browserlessServesFromCloud("https://notbrowserless.io")).toBe(false);
+    expect(browserlessServesFromCloud("https://browserless.io.example.com")).toBe(false);
+    expect(browserlessServesFromCloud("not a url")).toBe(false);
+    expect(browserlessServesFromCloud("")).toBe(false);
   });
 });
