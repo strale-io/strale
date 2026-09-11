@@ -18,11 +18,14 @@
 // CLOSING_REVIEW_EVIDENCE_MISSING / CLOSING_REVIEW_EVIDENCE_NOT_VERDICT
 // (the evidence must be a tracked file under archive/sessions/, not a URL,
 // and its own last non-empty line outside any fenced block must read
-// exactly "VERDICT: PASS" for that exact commit), CLOSING_REVIEW_STALE (a
-// decision surface changed or is dirty in the working tree, or the register
-// changed beyond what the review's own gap requires, since the reviewed
-// commit), CLOSING_REVIEW_COUNTS_MISMATCH (candidate_set vs what
-// the lib computes now), and CLOSING_REVIEW_MUTATED (merge-base immutability
+// exactly "VERDICT: PASS" for that exact commit), CLOSING_REVIEW_STALE (the
+// collision registry or a collision-resolution report changed or is dirty in
+// the working tree, or the register changed beyond what the review's own gap
+// requires, since the reviewed commit -- a change under
+// docs/decisions/records/ alone no longer counts, see
+// CLOSING_REVIEW_STALE_PATHSPECS), CLOSING_REVIEW_COUNTS_MISMATCH
+// (candidate_set vs what the lib computes from the reviewed commit's own
+// tree, not from HEAD), and CLOSING_REVIEW_MUTATED (merge-base immutability
 // once recorded). It records no review and closes nothing by itself.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -45,9 +48,36 @@ const CODEX_BACKLOG_PATH = "docs/programs/codex-review-backlog.yaml";
 // commit, or a fenced example, does not count as this commit's verdict.
 const CLOSING_REVIEW_EVIDENCE_PREFIX = "archive/sessions/";
 // Paths whose change after the reviewed commit invalidates a closing review:
-// anything that could move a Decision's disposition without a new review.
+// anything that could move a Decision's disposition without a new review and
+// without another mechanism already policing that specific change.
+//
+// docs/decisions/records/ is deliberately absent from this list. M4 makes
+// this repository the decision authority, so a new formal record and an
+// active-to-superseded status transition on an existing one are expected,
+// routine traffic from here on (the Contradiction Protocol in CLAUDE.md's
+// Workflow Invariants requires exactly that on every supersession), not a
+// fact this closing review needs to re-verify. Per-record integrity for that
+// traffic is already policed on every run, independent of whether a closing
+// review is even present, by validateActiveDecisionImmutability
+// (scripts/decision-records-lib.mjs), which diffs every record against the
+// merge base with origin/main and refuses a protected-body edit or an
+// illegal status regression while still permitting a new file and a legal
+// transition. Treating a records-directory change as staleness here would
+// only re-block what that check already allows.
+//
+// The collision registry and its resolution reports stay listed. A new,
+// still-unresolved collision arriving after the review, or a changed
+// resolution of one that already existed at the reviewed commit, can move
+// what the review's own candidate_set.collisions_resolved and
+// resolution_reports counts described without leaving anything the ongoing
+// per-record and per-collision immutability checks would catch:
+// validateDecisionCollisionImmutability protects only an already-resolved
+// collision's own recorded fields against later change, not the arrival of a
+// new, still-open one, and neither check re-examines what a past closing
+// review certified about the collision set as a whole. So a change here
+// still invalidates the review; see the CLOSING_REVIEW_STALE test pinning
+// this in scripts/m2-closure-register.test.mjs.
 const CLOSING_REVIEW_STALE_PATHSPECS = [
-  "docs/decisions/records/",
   "docs/decisions/id-collisions.yaml",
   "archive/sessions/*-decision-collision-resolution-*.md",
 ];
@@ -275,6 +305,15 @@ export function gapReportCitations(root) {
   return byFile;
 }
 
+/** Parse one formal record's front matter into { record_key, id, evidence[], pageIds[] }. */
+function parseRecordSummary(file, content) {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const meta = match ? YAML.parse(match[1]) : {};
+  const evidence = meta.evidence ?? [];
+  const pageIds = [...new Set([...evidence.join("\n").replace(/-/g, "").matchAll(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g)].map((m) => m[0]))];
+  return { file, record_key: meta.record_key, id: meta.id, evidence, pageIds, decided_at: meta.decided_at ? String(meta.decided_at).slice(0, 10) : null };
+}
+
 /** Front matter of every formal record: { record_key, id, evidence[], pageIds[] }. */
 export function readFormalRecordSummaries(root) {
   const dir = resolve(root, RECORDS_DIR);
@@ -282,14 +321,7 @@ export function readFormalRecordSummaries(root) {
   return readdirSync(dir)
     .filter((f) => f.endsWith(".md"))
     .sort()
-    .map((f) => {
-      const content = readFileSync(resolve(dir, f), "utf8");
-      const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-      const meta = match ? YAML.parse(match[1]) : {};
-      const evidence = meta.evidence ?? [];
-      const pageIds = [...new Set([...evidence.join("\n").replace(/-/g, "").matchAll(/(?<![0-9a-f])[0-9a-f]{32}(?![0-9a-f])/g)].map((m) => m[0]))];
-      return { file: `${RECORDS_DIR}/${f}`, record_key: meta.record_key, id: meta.id, evidence, pageIds, decided_at: meta.decided_at ? String(meta.decided_at).slice(0, 10) : null };
-    });
+    .map((f) => parseRecordSummary(`${RECORDS_DIR}/${f}`, readFileSync(resolve(dir, f), "utf8")));
 }
 
 /**
@@ -339,6 +371,56 @@ export function workingTreeDirtyPaths(root, pathspecs) {
 export function readRegisterAtCommit(root, sha, relativePath = REGISTER_PATH) {
   const content = gitQuiet(root, ["show", `${sha}:${relativePath}`]);
   return content === null ? null : YAML.parse(content);
+}
+
+/** Files a commit's own tree held under a path. Null when the commit cannot be read. */
+function treeFilesAtCommit(root, sha, pathspec) {
+  const out = gitQuiet(root, ["ls-tree", "-r", "--name-only", sha, "--", pathspec]);
+  return out === null ? null : out.split(/\r?\n/).filter(Boolean);
+}
+
+/** A YAML file's content as a commit's own tree held it. Null when unreadable. */
+function readYamlAtCommit(root, sha, relativePath) {
+  const content = gitQuiet(root, ["show", `${sha}:${relativePath}`]);
+  return content === null ? null : YAML.parse(content);
+}
+
+/**
+ * Formal-record summaries as the reviewed commit's own tree held them, not
+ * the working tree or HEAD. Null when the commit, the records directory
+ * listing, or any listed file cannot be read.
+ */
+export function readFormalRecordSummariesAtCommit(root, sha) {
+  const files = treeFilesAtCommit(root, sha, RECORDS_DIR);
+  if (files === null) return null;
+  const summaries = [];
+  for (const f of files.filter((f) => f.endsWith(".md")).sort()) {
+    const content = gitQuiet(root, ["show", `${sha}:${f}`]);
+    if (content === null) return null;
+    summaries.push(parseRecordSummary(f, content));
+  }
+  return summaries;
+}
+
+/**
+ * The closing-review candidate-set counts as the reviewed commit's own tree
+ * held them: how many formal records, resolved collisions, and
+ * collision-resolution reports existed at that commit. Read from the commit,
+ * never from HEAD, so a change the review does not need to re-verify (a new
+ * record, a status transition) cannot make a passed review's recorded counts
+ * mismatch. Null when any of the three cannot be read (git unreachable, or
+ * the commit predates a path this checks).
+ */
+export function candidateSetAtCommit(root, sha) {
+  const records = readFormalRecordSummariesAtCommit(root, sha);
+  const collisions = readYamlAtCommit(root, sha, COLLISIONS_PATH);
+  const resolutionReportFiles = treeFilesAtCommit(root, sha, "archive/sessions");
+  if (records === null || collisions === null || resolutionReportFiles === null) return null;
+  return {
+    formalRecords: records.length,
+    collisionsResolved: (collisions.collisions ?? []).filter((c) => c.resolution_status === "resolved").length,
+    resolutionReports: resolutionReportFiles.filter((f) => RESOLUTION_REPORT_PATTERN.test(f)).length,
+  };
 }
 
 /** Deep equality that ignores key order (two different points in time can
@@ -449,6 +531,7 @@ export function buildContext(root, { baseRef = "origin/main" } = {}) {
     changedPathsBetween: (fromRef, toRef, pathspecs) => changedPathsBetween(root, fromRef, toRef, pathspecs),
     workingTreeDirty: (pathspecs) => workingTreeDirtyPaths(root, pathspecs),
     registerAtCommit: (sha) => readRegisterAtCommit(root, sha),
+    candidateSetAtCommit: (sha) => candidateSetAtCommit(root, sha),
   };
 }
 
@@ -996,18 +1079,25 @@ export function validateClosureRegister(register, context, { schema, relativePat
       }
     }
 
-    // Candidate-set counts must equal what the lib computes right now.
-    const expectedFormalRecords = context.records.length;
-    const expectedCollisionsResolved = (context.collisions?.collisions ?? []).filter((c) => c.resolution_status === "resolved").length;
-    const expectedResolutionReports = context.tracked ? [...context.tracked].filter((f) => RESOLUTION_REPORT_PATTERN.test(f)).length : null;
-    if (closingReview.candidate_set.formal_records !== expectedFormalRecords) {
-      crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `formal_records: register says ${closingReview.candidate_set.formal_records}, lib computes ${expectedFormalRecords}`);
-    }
-    if (closingReview.candidate_set.collisions_resolved !== expectedCollisionsResolved) {
-      crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `collisions_resolved: register says ${closingReview.candidate_set.collisions_resolved}, lib computes ${expectedCollisionsResolved}`);
-    }
-    if (expectedResolutionReports !== null && closingReview.candidate_set.resolution_reports !== expectedResolutionReports) {
-      crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `resolution_reports: register says ${closingReview.candidate_set.resolution_reports}, lib computes ${expectedResolutionReports}`);
+    // Candidate-set counts must equal what existed in the reviewed commit's
+    // own tree, not what exists at HEAD now: a new record or a
+    // collision-resolution report added after the review is expected once
+    // this repository is the decision authority (see
+    // CLOSING_REVIEW_STALE_PATHSPECS above) and must not retroactively
+    // mismatch a passed review's recorded counts.
+    const candidateSet = context.candidateSetAtCommit ? context.candidateSetAtCommit(closingReview.commit) : null;
+    if (candidateSet === null) {
+      crFinding("COMMIT_UNVERIFIABLE", `could not read the candidate set at ${closingReview.commit}`);
+    } else {
+      if (closingReview.candidate_set.formal_records !== candidateSet.formalRecords) {
+        crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `formal_records: register says ${closingReview.candidate_set.formal_records}, lib computes ${candidateSet.formalRecords} at ${closingReview.commit}`);
+      }
+      if (closingReview.candidate_set.collisions_resolved !== candidateSet.collisionsResolved) {
+        crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `collisions_resolved: register says ${closingReview.candidate_set.collisions_resolved}, lib computes ${candidateSet.collisionsResolved} at ${closingReview.commit}`);
+      }
+      if (closingReview.candidate_set.resolution_reports !== candidateSet.resolutionReports) {
+        crFinding("CLOSING_REVIEW_COUNTS_MISMATCH", `resolution_reports: register says ${closingReview.candidate_set.resolution_reports}, lib computes ${candidateSet.resolutionReports} at ${closingReview.commit}`);
+      }
     }
 
     findings.push(...crFindings);

@@ -9,6 +9,7 @@ import {
   DECISION_DISPOSITIONS,
   INVENTORY_DISPOSITIONS,
   buildContext,
+  candidateSetAtCommit,
   canonicalDigest,
   checkClosureRegister,
   compareRowsToExport,
@@ -1487,6 +1488,15 @@ const closingReviewFixture = (overrides = {}) => {
     changedPathsBetween: overrides.changedPathsBetween === undefined ? () => [] : overrides.changedPathsBetween,
     workingTreeDirty: overrides.workingTreeDirty === undefined ? () => [] : overrides.workingTreeDirty,
     registerAtCommit: overrides.registerAtCommit === undefined ? () => r : overrides.registerAtCommit,
+    // Mirrors the pre-fix "compute from HEAD" behaviour by default (the real
+    // commit-based reader cannot see this synthetic fixture, which has no
+    // git repository behind it): the counts already baked into
+    // closing_review.candidate_set above, as a stand-in for "the reviewed
+    // commit's own tree held exactly this many". Tests that need to exercise
+    // the reviewed-commit read itself pass a real override.
+    candidateSetAtCommit: overrides.candidateSetAtCommit === undefined
+      ? () => ({ formalRecords: expectedFormalRecords, collisionsResolved: expectedCollisionsResolved, resolutionReports: expectedResolutionReports })
+      : overrides.candidateSetAtCommit,
     codexBacklog: backlog,
     ...overrides.contextOverrides,
   };
@@ -1707,6 +1717,144 @@ test("CLOSING_REVIEW_COUNTS_MISMATCH: candidate_set must equal what the lib comp
     r.closing_review.candidate_set.resolution_reports += 1;
     has(r, "CLOSING_REVIEW_COUNTS_MISMATCH", ctx);
   });
+});
+
+test("CLOSING_REVIEW_COUNTS_MISMATCH: COMMIT_UNVERIFIABLE when the candidate set cannot be read at the reviewed commit", () => {
+  withClosingReviewFixture({ candidateSetAtCommit: () => null }, ({ r, ctx }) => {
+    hasDetail(r, "COMMIT_UNVERIFIABLE", "could not read the candidate set at", ctx);
+  });
+});
+
+test("candidateSetAtCommit reads the reviewed commit's own tree, not HEAD: a record added afterward does not move it", () => {
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-candidate-set-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    writeFileSync(join(dir, "docs/decisions/records/DEC-20260911-A.md"), "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    assert.deepEqual(candidateSetAtCommit(dir, head), { formalRecords: 1, collisionsResolved: 0, resolutionReports: 0 });
+
+    // Plant: a second record lands after the reviewed commit, uncommitted (a
+    // batch's working tree before it commits). The reviewed commit's own
+    // tree is unchanged, so what it reads back must be unchanged too.
+    writeFileSync(join(dir, "docs/decisions/records/DEC-20260911-B.md"), "---\nid: DEC-20260911-B\nstatus: active\n---\n\nBody.\n");
+    assert.deepEqual(candidateSetAtCommit(dir, head), { formalRecords: 1, collisionsResolved: 0, resolutionReports: 0 });
+
+    assert.equal(candidateSetAtCommit(dir, "0".repeat(40)), null, "an unreadable commit reads as null, not zero counts");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSING_REVIEW_STALE: a new decision record after the reviewed commit does not invalidate the review", () => {
+  // Real git, not a mock: proves CLOSING_REVIEW_STALE_PATHSPECS itself no
+  // longer scans docs/decisions/records/, the way the pre-existing blind-spot
+  // test below proves the working-tree half of this same mechanism.
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-new-record-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: a brand-new record lands after the reviewed commit, uncommitted.
+    writeFileSync(join(dir, "docs/decisions/records/DEC-20260911-A.md"), "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+
+    withClosingReviewFixture(
+      { commit: head, isAncestor: () => true, changedPathsBetween: () => [], workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps) },
+      ({ r, ctx }) => {
+        const c = codes(r, ctx);
+        assert.ok(!c.includes("CLOSING_REVIEW_STALE"), c.join(","));
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSING_REVIEW_STALE: an active-to-superseded status transition after the reviewed commit does not invalidate the review", () => {
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-transition-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    const recordPath = join(dir, "docs/decisions/records/DEC-20260911-A.md");
+    writeFileSync(recordPath, "---\nid: DEC-20260911-A\nstatus: active\n---\n\nBody.\n");
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: the record transitions active -> superseded after the reviewed
+    // commit, uncommitted -- the routine supersession the Contradiction
+    // Protocol requires. Per-record integrity for this transition (and a
+    // refusal of a protected-body edit disguised as one) is
+    // validateActiveBodyChange's job, pinned separately at
+    // scripts/decision-records.test.mjs:812 (allowed transition) and
+    // scripts/decision-records.test.mjs:884 (status regression refused).
+    writeFileSync(recordPath, "---\nid: DEC-20260911-A\nstatus: superseded\n---\n\nBody.\n");
+
+    withClosingReviewFixture(
+      { commit: head, isAncestor: () => true, changedPathsBetween: () => [], workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps) },
+      ({ r, ctx }) => {
+        const c = codes(r, ctx);
+        assert.ok(!c.includes("CLOSING_REVIEW_STALE"), c.join(","));
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("CLOSING_REVIEW_STALE: a new collision-resolution report after the reviewed commit still invalidates the review", () => {
+  // The narrowest rescope keeps the collision registry and its resolution
+  // reports in CLOSING_REVIEW_STALE_PATHSPECS (see that constant's comment):
+  // a brand-new, still-unresolved collision or report is not something the
+  // per-record and per-collision immutability checks would ever flag, so
+  // without this the closing review's own collisions_resolved /
+  // resolution_reports counts could go stale silently.
+  const dir = mkdtempSync(join(tmpdir(), "m2-closing-review-resolution-report-"));
+  try {
+    const run = (...args) => execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "t@example.org");
+    run("config", "user.name", "t");
+    mkdirSync(join(dir, "archive/sessions"), { recursive: true });
+    mkdirSync(join(dir, "docs/decisions/records"), { recursive: true });
+    writeFileSync(join(dir, "docs/decisions/id-collisions.yaml"), "collisions: []\n");
+    run("add", "-A");
+    run("commit", "-q", "-m", "base");
+    const head = run("rev-parse", "HEAD").trim();
+
+    // Plant: a collision-resolution report lands after the reviewed commit.
+    writeFileSync(
+      join(dir, "archive/sessions/2026-09-11-decision-collision-resolution-test.md"),
+      "Resolved.\n",
+    );
+
+    withClosingReviewFixture(
+      { commit: head, isAncestor: () => true, changedPathsBetween: () => [], workingTreeDirty: (ps) => workingTreeDirtyPaths(dir, ps) },
+      ({ r, ctx }) => {
+        hasDetail(r, "CLOSING_REVIEW_STALE", "decision-collision-resolution", ctx);
+      },
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("CLOSING_REVIEW_MUTATED: once recorded on the base, closing_review's identity fields and its presence are immutable", () => {
