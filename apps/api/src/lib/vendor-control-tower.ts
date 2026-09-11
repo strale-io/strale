@@ -193,12 +193,45 @@ export async function fetchBrowserlessBalance(
   return parseBrowserlessUsage(body as BrowserlessUsageResponse);
 }
 
+/**
+ * Whether BROWSERLESS_URL is the hosted browserless.io product.
+ *
+ * The account-usage API above describes only that product. Production serves
+ * from a self-hosted container (DEC-7) that checks BROWSERLESS_API_KEY against
+ * its own TOKEN and has no allowance at all, so against it the account API
+ * validates a credential the container never sees. On 2026-08-25 that check
+ * rejected the container's token, the key was replaced with the cloud one to
+ * satisfy it, and every direct Browserless call then got HTTP 403 for 16 days
+ * while this monitor reported the cloud account healthy.
+ */
+export function browserlessServesFromCloud(url = process.env.BROWSERLESS_URL): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "browserless.io" || host.endsWith(".browserless.io");
+  } catch {
+    return false;
+  }
+}
+
+const BROWSERLESS_SELF_HOSTED_REASON =
+  "Self-hosted Browserless endpoint; the browserless.io account allowance does not apply. " +
+  "Credential health comes from live calls, which block on HTTP 401/403 until the key changes.";
+
 const BALANCE_ADAPTERS: ReadonlyArray<{
   providerName: string;
   fetchBalance: (fetchImpl?: FetchLike) => Promise<VendorBalance>;
+  /** False when the balance API does not describe what production calls. */
+  applies?: () => boolean;
+  notApplicableReason?: string;
 }> = [
   { providerName: "openregister", fetchBalance: fetchOpenRegisterBalance },
-  { providerName: "browserless", fetchBalance: fetchBrowserlessBalance },
+  {
+    providerName: "browserless",
+    fetchBalance: fetchBrowserlessBalance,
+    applies: () => browserlessServesFromCloud(),
+    notApplicableReason: BROWSERLESS_SELF_HOSTED_REASON,
+  },
 ];
 
 interface RecoveryAdapter {
@@ -240,6 +273,9 @@ const RECOVERY_ADAPTERS: ReadonlyArray<RecoveryAdapter> = [
 const CREDENTIAL_REARM_PROVIDERS: ReadonlyArray<{ providerName: string; envVar: string }> = [
   { providerName: "serper", envVar: "SERPER_API_KEY" },
   { providerName: "dilisense", envVar: "DILISENSE_API_KEY" },
+  // Self-hosted, so no balance API can clear a rejected key (see
+  // browserlessServesFromCloud); only a changed key re-arms it.
+  { providerName: "browserless", envVar: "BROWSERLESS_API_KEY" },
 ];
 
 function credentialFingerprint(envVar: string): string | null {
@@ -871,7 +907,9 @@ export async function recordVendorHttpFailure(
            status_reason = ${statusReason},
            remaining_units = CASE WHEN ${status} = 'exhausted' THEN 0 ELSE remaining_units END,
            metadata = CASE
-             WHEN ${blockedFingerprint} IS NOT NULL THEN jsonb_set(
+             -- The cast is load-bearing: alone in IS NOT NULL the parameter
+             -- has no type context and Postgres refuses the statement.
+             WHEN ${blockedFingerprint}::text IS NOT NULL THEN jsonb_set(
                COALESCE(metadata, '{}'::jsonb) - 'recovery_probe',
                '{blocked_credential_fingerprint}',
                to_jsonb(${blockedFingerprint}::text)
@@ -1120,9 +1158,45 @@ export async function recordVendorUsage(
   }
 }
 
+/**
+ * Record that a balance API does not describe the endpoint production calls.
+ * Clears the allowance figures so no report reads another product's units as
+ * ours, keeps a blocking status and its reason, never restores anything, and
+ * refreshes last_checked_at so the morning report does not call it stale.
+ */
+export async function recordBalanceNotApplicable(
+  providerName: string,
+  reason: string,
+): Promise<void> {
+  await getDb().execute(sql`
+    UPDATE vendor_accounts
+       SET status_reason = CASE
+             WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN status_reason
+             ELSE ${reason}::text
+           END,
+           included_units = NULL,
+           used_units = NULL,
+           remaining_units = NULL,
+           overage_units = NULL,
+           reset_at = NULL,
+           consecutive_check_failures = 0,
+           last_checked_at = now(),
+           updated_at = now()
+     WHERE provider_name = ${providerName}
+  `);
+  statusCache.delete(providerName);
+}
+
 export async function runVendorControlTower(): Promise<void> {
   const failed: string[] = [];
   for (const adapter of BALANCE_ADAPTERS) {
+    if (adapter.applies && !adapter.applies()) {
+      await recordBalanceNotApplicable(
+        adapter.providerName,
+        adapter.notApplicableReason ?? "Balance API does not describe the configured endpoint",
+      );
+      continue;
+    }
     const result = await syncBalanceVendor(adapter.providerName, adapter.fetchBalance);
     if (result === null) failed.push(adapter.providerName);
   }

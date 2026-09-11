@@ -19,6 +19,7 @@ import {
   registeredRecoveryAdapterNames,
   resetVendorStatusCacheForTests,
   restoreVendorSuspensions,
+  runVendorControlTower,
   runVendorRecoveryProbe,
   suspendRequiredCapabilities,
 } from "./vendor-control-tower.js";
@@ -420,4 +421,55 @@ describe("vendor suspension serving-state integrity", () => {
     expect(seen[0]).not.toContain("WHERE provider_name = $1 AND monitor_mode");
   });
 
+
+  describe('Browserless balance applicability', () => {
+    const saved = {
+      url: process.env.BROWSERLESS_URL,
+      key: process.env.BROWSERLESS_API_KEY,
+      openregister: process.env.OPENREGISTER_API_KEY,
+    };
+    function restoreEnv() {
+      for (const [name, value] of [
+        ['BROWSERLESS_URL', saved.url],
+        ['BROWSERLESS_API_KEY', saved.key],
+        ['OPENREGISTER_API_KEY', saved.openregister],
+      ] as const) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+
+    async function runTowerWith(browserlessUrl: string) {
+      process.env.BROWSERLESS_URL = browserlessUrl;
+      process.env.BROWSERLESS_API_KEY = 'token-under-test';
+      delete process.env.OPENREGISTER_API_KEY;
+      const network = vi.fn(async () => new Response('unavailable', { status: 503 }));
+      vi.stubGlobal('fetch', network);
+      mock.execute.mockImplementation(async (query: unknown) => {
+        seen.push(rendered(query));
+        return [];
+      });
+      try {
+        // OpenRegister has no key here, so the run reports a failure; this
+        // test is about what it asked Browserless, not whether it passed.
+        await runVendorControlTower().catch(() => undefined);
+      } finally {
+        vi.unstubAllGlobals();
+        restoreEnv();
+      }
+      return network.mock.calls.map((call) => String((call as unknown[])[0]));
+    }
+
+    it('does not ask the browserless.io account about a self-hosted endpoint', async () => {
+      const requested = await runTowerWith('http://chromium.railway.internal:8080');
+      expect(requested.some((url) => url.includes('api.browserless.io'))).toBe(false);
+      expect(seen.some((source) => source.includes('remaining_units = NULL'))).toBe(true);
+    });
+
+    it('still reads the account when production serves from browserless.io', async () => {
+      const requested = await runTowerWith('https://production-sfo.browserless.io');
+      expect(requested.some((url) => url.startsWith('https://api.browserless.io/v1/account/usage'))).toBe(true);
+      expect(seen.some((source) => source.includes('remaining_units = NULL'))).toBe(false);
+    });
+  });
 });
