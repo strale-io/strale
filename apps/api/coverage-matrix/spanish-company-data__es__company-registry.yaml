@@ -1,11 +1,11 @@
 capability_slug: spanish-company-data
 country: ES
 evidence_type: Company registry
-provider: Openapi.com
+provider: openmercantil.es
 status: Committed
-sourcing_pattern: Vendor (Tier 3 aggregator)
+sourcing_pattern: Vendor (Tier 2)
 per_call_price_eur: 0.06
-evidence_grade: live-verified
+evidence_grade: untested
 tier_1_coverage: 6/7 (no legal_form)
 tier_2_coverage: >-
   4/5 (vatCode + source-as-of + source-name + authoritative-flag=false; no directors via
@@ -13,23 +13,31 @@ tier_2_coverage: >-
 tier_3_coverage: >-
   2/6 (NACE via naceClassification + last_filing_date via balanceSheets[].balanceSheetDate; no
   share_capital field at ES-Advanced tier per Phase 2b empirical)
-last_verified: "2026-05-15"
+last_verified: "2026-09-11"
 products:
   - Counterparty Assurance
 vendor_roster_url: https://www.notion.so/35667c87082c81d0a9b2fd6cd572ce33
 provider_tos_notes: >-
-  Openapi ToS blocks embed-and-bill on standard terms — see IT row for full audit. ES bundled with
-  IT for the Openapi commercial conversation. Fallback: Creditsafe aggregator scope. Current
-  Browserless path stays until sanctioned path lands.
+  Not yet reviewed. openmercantil.es is covered by neither vendor-terms audit
+  (docs/security/2026-09-06-vendor-terms-audit.md,
+  docs/security/2026-09-10-vendor-terms-audit-batch-2.md), so whether its terms permit Strale to
+  resell what it returns is unknown.
 doctrine_reference: >-
-  Openapi addendum (countersignature pending); ES direct integration via Registradores queued as
-  v1.1 quality upgrade
+  DEC-20260428-A Tier 2 (vendor aggregation of an official gazette). The Tier 2 conditions
+  (documented redistribution rights, indemnification, per-fact primary-source provenance) are not
+  yet verified for openmercantil.es; the executor records BORME provenance per call.
 notes: >-
-  v3 + v2 probes 2026-05-15: Telefónica + Iberdrola both 200 via ES-start AND ES-advanced. NIF
-  letter+digits accepted. ES-advanced (€0.05 + 22% IT VAT = €0.061/call) adds NACE/NAICS/SIC +
-  4-year balance sheets (employees, netWorth, operatingRevenue, equity, totalAssets) over WW-Top.
-  Within Strale price band. NO directors/officers/shareholders — IT-only product. CORRECTED
-  2026-05-16 post Phase 2b empirical probe: balanceSheets[] has NO shareCapital field
-  (IT-Advanced-only); T3 reflects NACE + last_filing_date only. Direct Registradores integration
-  (authoritative source + directors + share capital) queued for v1.1.
+  CORRECTED 2026-09-11 (stale-provider fix): the row previously named "Openapi.com", which
+  apps/api/src/capabilities/spanish-company-data.ts's header comment records as replaced 2026-08-12
+  by openmercantil.es. The executor now calls openmercantil.es (OM_API =
+  "https://openmercantil.es/api/v1"), a Tier-2 vendor aggregation of the official BORME gazette
+  published by the Agencia Estatal Boletín Oficial del Estado at www.boe.es (DEC-20260428-A Tier 2;
+  provenance.upstream_vendor = "OpenMercantil.es", primary_source_reference =
+  "https://www.boe.es/diario_borme/"). Free tier: 200 req/day, no auth key required. Officers
+  ("cargos") are included, unlike the retired Openapi ES-Advanced path. Verified 2026-09-11 by
+  reading the executor source; not a live call, so evidence_grade is untested, not live-verified.
+  provider_tos_notes and doctrine_reference were rewritten for openmercantil.es on 2026-09-11.
+  per_call_price_eur, tier_1/2/3_coverage and vendor_roster_url are still the Openapi
+  ES-Advanced values and are stale until a live verification refreshes them; v3 + v2 probes
+  2026-05-15 text superseded.
 _source_notion_page_id: 34867c87-082c-8178-8061-eda241b42b63

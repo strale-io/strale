@@ -2,12 +2,12 @@
 
 > Auto-generated. Do not edit by hand. Regenerate via `npm run coverage-matrix:summary`.
 
-Total rows: 47
+Total rows: 46
 
 ## By status
 
 - Live: 30
-- Committed: 17
+- Committed: 16
 
 ## By evidence type
 
@@ -17,14 +17,13 @@ Total rows: 47
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | adverse-media-check | Global | Adverse media | Other | Live | €0.1 | — | 2026-04-28 |
 
-### Beneficial ownership (5)
+### Beneficial ownership (4)
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| beneficial-ownership-lookup | DK | Beneficial ownership | OpenOwnership | Committed | €0 | — | 2026-04-28 |
 | gleif-l2-children-lookup | Global | Beneficial ownership | GLEIF | Committed | €0 | — | 2026-04-28 |
 | gleif-l2-ubo-lookup | Global | Beneficial ownership | GLEIF | Committed | €0 | — | 2026-04-28 |
-| beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Live | €0 | — | 2026-05-18 |
+| beneficial-ownership-lookup | UK | Beneficial ownership | Companies House | Live | €0 | untested | 2026-09-11 |
 | uk-company-data | UK | Beneficial ownership | PSC register | Live | — | — | 2026-04-20 |
 
 ### Company registry (32)
@@ -40,7 +39,7 @@ Total rows: 47
 | german-company-data | DE | Company registry | OpenRegister | Live | €0.05 | live-verified | 2026-05-15 |
 | danish-company-data | DK | Company registry | cvrapi.dk | Live | €0.05 | live-verified | 2026-05-15 |
 | estonian-company-data | EE | Company registry | Ariregister | Live | €0.05 | live-verified | 2026-05-18 |
-| spanish-company-data | ES | Company registry | Openapi.com | Committed | €0.06 | live-verified | 2026-05-15 |
+| spanish-company-data | ES | Company registry | openmercantil.es | Committed | €0.06 | untested | 2026-09-11 |
 | finnish-company-data | FI | Company registry | PRH | Live | €0.05 | live-verified | 2026-05-15 |
 | french-company-data | FR | Company registry | INSEE | Live | €0.05 | live-verified | 2026-05-15 |
 | greek-company-data | GR | Company registry | GEMI | Live | €0 | live-verified | 2026-05-15 |
@@ -147,11 +146,10 @@ Total rows: 47
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | german-company-data | DE | Company registry | OpenRegister | Live | €0.05 | live-verified | 2026-05-15 |
 
-### DK (2)
+### DK (1)
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| beneficial-ownership-lookup | DK | Beneficial ownership | OpenOwnership | Committed | €0 | — | 2026-04-28 |
 | danish-company-data | DK | Company registry | cvrapi.dk | Live | €0.05 | live-verified | 2026-05-15 |
 
 ### EE (1)
@@ -164,7 +162,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| spanish-company-data | ES | Company registry | Openapi.com | Committed | €0.06 | live-verified | 2026-05-15 |
+| spanish-company-data | ES | Company registry | openmercantil.es | Committed | €0.06 | untested | 2026-09-11 |
 
 ### EU-wide (1)
 
@@ -309,7 +307,7 @@ Total rows: 47
 
 | capability_slug | country | evidence_type | provider | status | per_call_price_eur | evidence_grade | last_verified |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| beneficial-ownership-lookup | UK | Beneficial ownership | OpenOwnership | Live | €0 | — | 2026-05-18 |
+| beneficial-ownership-lookup | UK | Beneficial ownership | Companies House | Live | €0 | untested | 2026-09-11 |
 | insolvency-check | UK | Litigation / bankruptcy | Companies House | Live | €0 | — | 2026-04-28 |
 | uk-company-data | UK | Beneficial ownership | PSC register | Live | — | — | 2026-04-20 |
 | uk-company-data | UK | Company registry | Companies House | Live | €0.05 | live-verified | 2026-05-15 |

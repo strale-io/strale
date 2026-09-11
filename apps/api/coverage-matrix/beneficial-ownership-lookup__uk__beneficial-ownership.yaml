@@ -1,19 +1,28 @@
 capability_slug: beneficial-ownership-lookup
 country: UK
 evidence_type: Beneficial ownership
-provider: OpenOwnership
+provider: Companies House
 status: Live
 sourcing_pattern: Direct API
 per_call_price_eur: 0
-evidence_grade: null
+evidence_grade: untested
 tier_1_coverage: null
 tier_2_coverage: null
 tier_3_coverage: null
-last_verified: "2026-05-18"
+last_verified: "2026-09-11"
 products:
   - Counterparty Assurance
 vendor_roster_url: null
 provider_tos_notes: null
 doctrine_reference: DEC-20260428-A Tier 2
-notes: BODS-format bulk download + UK Companies House PSC API for live access. Combined as UK UBO source.
+notes: >-
+  CORRECTED 2026-09-11 (stale-provider fix): the row previously named "OpenOwnership", but
+  apps/api/src/capabilities/beneficial-ownership-lookup.ts calls only the UK Companies House API
+  (CH_API = "https://api.company-information.service.gov.uk"): company search, company profile,
+  and persons-with-significant-control (PSC), never OpenOwnership. Non-GB/UK jurisdictions get
+  a `supported_jurisdiction: false` refusal, never an OpenOwnership fallback.
+  apps/api/src/lib/platform-facts.ts STALE_VENDORS records OpenOwnership BODS as evaluated
+  2026-04-02 (apps/api/docs/ubo-resolve-uk-bods-evaluation.md, Recommendation: DEFER) and deferred
+  with no Strale integration. Verified 2026-09-11 by reading the executor source; not a live call,
+  so evidence_grade is untested, not live-verified.
 _source_notion_page_id: 35067c87-082c-819c-a054-ddf0a37df21b
