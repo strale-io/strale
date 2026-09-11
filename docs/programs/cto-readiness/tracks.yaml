@@ -523,22 +523,38 @@ tracks:
       warning, one per non-retired dependency-manifest.ts provider the
       startup-migrations.ts boot-time vendor_capability_dependencies sync
       never reaches). No production write, no runtime behaviour change, no
-      change of authority. Batch 4 is now done (4a in PR #636; 4b in this
-      PR): scripts/vendors-lib.mjs's compareRosterWithRegister compares the
-      Notion Vendor Roster's Vendor/Status rows against config/vendors.yaml
-      by the Status-to-lifecycle-state mapping the design named, and
-      check-vendor-roster-drift.ts prints the disagreements in a
-      separately-headed shadow section after its existing Decisions-DB
-      drift check, never changing the script's exit code in --check or
-      --strict. A --roster-fixture flag exercises the comparison against a
-      JSON fixture without NOTION_TOKEN or a Decisions DB call. Next is
-      batch 5, per the design document's batch plan: generate the
-      agent-context and customer-facing views and prepare, without
-      activating, the vendor-switch skill's cutover. The derivations and
-      the drift-check retarget remain M4 cutover steps. All M3 work is
-      shadow mode: candidate project documents stay inactive and
-      Notion-backed workflows stay authoritative until the founder-gated M4
-      cutover.
+      change of authority. Batch 4 is now done (4a in PR #636; 4b in
+      PR #637): scripts/vendors-lib.mjs's compareRosterWithRegister compares
+      the Notion Vendor Roster's Vendor/Status rows against
+      config/vendors.yaml by the Status-to-lifecycle-state mapping the
+      design named, and check-vendor-roster-drift.ts prints the
+      disagreements in a separately-headed shadow section after its
+      existing Decisions-DB drift check, never changing the script's exit
+      code in --check or --strict. A --roster-fixture flag exercises the
+      comparison against a JSON fixture without NOTION_TOKEN or a Decisions
+      DB call. All M3 work is shadow mode: candidate project documents stay
+      inactive and Notion-backed workflows stay authoritative until the
+      founder-gated M4 cutover. The remaining-scope inventory for
+      everything M3 needs beyond the vendor strand is at
+      archive/sessions/2026-09-11-m3-remaining-scope-inventory.md (review
+      round 1: corrected protocol-location table, appendix counts, mirror
+      characterization, added a Notion-reference sweep beyond .claude/, and
+      closed batch-sequence gaps - see the report's "Review round 1"
+      section, PR #638). Next bounded task is the first batch it proposes:
+      continue the vendor strand's own batch 5 (add the two
+      STATIC_FACTS.vendors entries the register is missing - Liberty Data,
+      BODACC - pick and implement the category/primary-vendor view design,
+      draft the agent-context and customer-facing views, and draft the
+      vendor-switch skill's retargeted step 5 as inactive prose - this batch
+      owns that draft exclusively). The inventory's proposed sequence after
+      that: a repo-native shadow reader for daily-digest Decisions/Journal/
+      Action-Required content (batch 2), a distribution-surfaces registry
+      plus the social-media-post tracking decision (batch 3), an inactive
+      session-end-only Notion-write draft (batch 4, vendor-switch's step
+      stays in batch 1), scheduled-workflow reachability tests (batch 5),
+      and protocol full-body extraction followed by the coverage manifest
+      (batches 6-7, each with its own concrete check). Every batch stays
+      shadow or inactive.
     resume_file: docs/strategy/2026-09-10-m3-vendor-state-model.md
     exit:
       - repo-native replacements testable without changing existing authority
