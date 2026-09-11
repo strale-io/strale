@@ -7,16 +7,12 @@
 slug: wallet-transactions-lookup
 name: Wallet Transactions Lookup
 description: >-
-  Get recent transactions for any wallet address. Returns up to 50 transactions with hash, value, timestamp, and gas
-  details. Supports Ethereum and other EVM chains via Etherscan V2.
+  Get recent ETH transfers to and from an Ethereum mainnet wallet: up to 50 with hash, value, counterparty, timestamp
+  and direction.
 category: web3
 cost_class: free_quota
 quota_window: daily
 quota_cap: 100000
-known_rate_limit:
-  value: 100000
-  unit: per_day
-  source_url: https://docs.etherscan.io/etherscan-v2/rate-limits
 price_cents: 2
 is_free_tier: false
 input_schema:
@@ -100,7 +96,9 @@ output_schema:
       type: number
     total_returned:
       type: number
-data_source: Etherscan (Account Transactions API)
+    note:
+      type: string
+data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -128,11 +126,24 @@ output_field_reliability:
   transactions: common
   received_count: common
   total_returned: common
+  note: guaranteed
 limitations:
   - title: null
     text: >-
-      Output reflects Etherscan (Account Transactions API) at query time. Dependent on upstream API availability; may
-      degrade if the provider rate-limits or is temporarily unavailable.
+      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
+      if the provider rate-limits or is temporarily unavailable.
     category: availability
+    severity: info
+    workaround: null
+  - title: "Ethereum mainnet only"
+    text: >-
+      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+    category: coverage
+    severity: info
+    workaround: null
+  - title: "No gas or failure status"
+    text: >-
+      Transactions come from a transfer index without receipts, so gas_used and is_error are always null, and contract calls that moved no ETH are not listed.
+    category: coverage
     severity: info
     workaround: null

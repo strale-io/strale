@@ -7,16 +7,11 @@
 slug: wallet-balance-lookup
 name: Wallet Balance Lookup
 description: >-
-  Get the native token balance for any wallet address and a list of recently interacted ERC-20 tokens. Supports Ethereum
-  and other EVM chains via Etherscan V2.
+  Get the ETH balance of an Ethereum mainnet wallet and the ERC-20 tokens it has most recently sent or received.
 category: web3
 cost_class: free_quota
 quota_window: daily
 quota_cap: 100000
-known_rate_limit:
-  value: 100000
-  unit: per_day
-  source_url: https://docs.etherscan.io/etherscan-v2/rate-limits
 price_cents: 2
 is_free_tier: false
 input_schema:
@@ -113,7 +108,7 @@ output_schema:
       type: string
     token_transfer_count:
       type: number
-data_source: Etherscan (Account Balance + Token API)
+data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -140,8 +135,14 @@ output_field_reliability:
 limitations:
   - title: null
     text: >-
-      Output reflects Etherscan (Account Balance + Token API) at query time. Dependent on upstream API availability; may
-      degrade if the provider rate-limits or is temporarily unavailable.
+      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
+      if the provider rate-limits or is temporarily unavailable.
     category: availability
+    severity: info
+    workaround: null
+  - title: "Ethereum mainnet only"
+    text: >-
+      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+    category: coverage
     severity: info
     workaround: null

@@ -476,10 +476,12 @@ export const PROVIDERS: DependencyProvider[] = [
       timeoutMs: 5000,
       skipAuth: true,
     },
-    capabilities: [
-      "wallet-age-check", "contract-verify-check", "gas-price-check",
-      "wallet-balance-lookup", "wallet-transactions-lookup",
-    ],
+    // No capability uses Etherscan since 2026-09-11: its free API forbids
+    // commercial use (vendor-terms audit). The wallet and gas capabilities moved
+    // to alchemy-eth and contract-verify-check to sourcify. Only web3-assurance
+    // evaluators still import the client, which refuses every call unless
+    // ETHERSCAN_COMMERCIAL_PLAN is set.
+    capabilities: [],
     tier: "free",
   },
   {
@@ -678,7 +680,27 @@ export const PROVIDERS: DependencyProvider[] = [
       timeoutMs: 5000,
       skipAuth: true,
     },
-    capabilities: ["ens-resolve", "ens-reverse-lookup"],
+    capabilities: [
+      "ens-resolve", "ens-reverse-lookup",
+      "gas-price-check", "wallet-balance-lookup", "wallet-transactions-lookup", "wallet-age-check",
+    ],
+    tier: "free",
+  },
+  {
+    // Sourcify — open-source, open-data contract verification repository.
+    // Used by contract-verify-check since 2026-09-11 (replaced Etherscan).
+    name: "sourcify",
+    displayName: "Sourcify",
+    description: "Smart-contract source verification repository (open data). No key.",
+    baseUrl: "https://sourcify.dev",
+    authType: "none",
+    healthProbe: {
+      path: "/server/health",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 5000,
+    },
+    capabilities: ["contract-verify-check"],
     tier: "free",
   },
 

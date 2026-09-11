@@ -1,70 +1,61 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { etherscanFetch } from "./lib/etherscan-client.js";
+import { assetTransfers, hexToNumber, requireAddress, requireMainnet, type AssetTransfer } from "./lib/alchemy-client.js";
 
-registerCapability("wallet-transactions-lookup", async (input: CapabilityInput) => {
-  const address = (
-    (input.address as string) ??
-    (input.wallet as string) ??
-    (input.wallet_address as string) ??
-    ""
-  ).trim();
-  if (!address) throw new Error("'address' is required. Provide a wallet address (0x...).");
-  if (address.length < 10) throw new Error("'address' must be a valid wallet address.");
+// Rebuilt 2026-09-11 onto Alchemy's transfer index after Etherscan's free API
+// was found to forbid commercial use. The index lists top-level ETH transfers
+// without receipts, so gas_used and is_error are no longer known (null).
+const NOTE = "Top-level ETH transfers to and from the address (Ethereum mainnet). Gas used and failure status are not available from this source and are null.";
 
-  const chainId = ((input.chain_id as string) ?? (input.chain as string) ?? "1").trim();
-  const rawLimit = typeof input.limit === "number" ? input.limit : 20;
-  const limit = Math.min(Math.max(Math.floor(rawLimit), 1), 50);
-
-  const data = await etherscanFetch({
-    chainid: chainId,
-    module: "account",
-    action: "txlist",
-    address,
-    startblock: "0",
-    endblock: "99999999",
-    page: "1",
-    offset: String(limit),
-    sort: "desc",
-  });
-
-  const now = new Date().toISOString();
-  const txList = Array.isArray(data.result) ? data.result : [];
-  const addrLower = address.toLowerCase();
-
-  let sentCount = 0;
-  let receivedCount = 0;
-
-  const transactions = txList.map((tx: any) => {
-    const from = (tx.from ?? "").toLowerCase();
-    const isSent = from === addrLower;
-    if (isSent) sentCount++; else receivedCount++;
-
-    const valueWei = tx.value ?? "0";
-    const valueEth = parseFloat(valueWei) / 1e18;
-    const timestamp = parseInt(String(tx.timeStamp), 10);
-
+/** Pure: newest-first merge of both directions, capped. Exported for tests. */
+export function mergeTransactions(address: string, incoming: AssetTransfer[], outgoing: AssetTransfer[], limit: number) {
+  const self = address.toLowerCase();
+  const seen = new Set<string>();
+  const merged = [...incoming, ...outgoing]
+    .filter((t) => (seen.has(t.hash + t.from + t.to) ? false : (seen.add(t.hash + t.from + t.to), true)))
+    .sort((a, b) => (hexToNumber(b.blockNum) ?? 0) - (hexToNumber(a.blockNum) ?? 0))
+    .slice(0, limit);
+  let sent = 0;
+  let received = 0;
+  const transactions = merged.map((t) => {
+    const isSent = (t.from ?? "").toLowerCase() === self;
+    if (isSent) sent++; else received++;
     return {
-      hash: tx.hash,
-      from: tx.from,
-      to: tx.to,
-      value_eth: Math.round(valueEth * 1e6) / 1e6,
-      timestamp: isNaN(timestamp) ? null : new Date(timestamp * 1000).toISOString(),
-      block_number: tx.blockNumber ? parseInt(tx.blockNumber, 10) : null,
-      gas_used: tx.gasUsed ? parseInt(tx.gasUsed, 10) : null,
-      is_error: tx.isError === "1",
+      hash: t.hash,
+      from: t.from,
+      to: t.to,
+      value_eth: typeof t.value === "number" ? Math.round(t.value * 1e6) / 1e6 : 0,
+      timestamp: t.metadata?.blockTimestamp ?? null,
+      block_number: hexToNumber(t.blockNum),
+      gas_used: null,
+      is_error: null,
       direction: isSent ? "sent" : "received",
     };
   });
+  return { transactions, sent_count: sent, received_count: received };
+}
+
+registerCapability("wallet-transactions-lookup", async (input: CapabilityInput) => {
+  const address = requireAddress(input.address ?? input.wallet ?? input.wallet_address, "address");
+  const chainId = requireMainnet(input, "chain_id", "chain");
+  const rawLimit = typeof input.limit === "number" ? input.limit : 20;
+  const limit = Math.min(Math.max(Math.floor(rawLimit), 1), 50);
+
+  const [incoming, outgoing] = await Promise.all([
+    assetTransfers({ address, direction: "to", category: ["external"], order: "desc", maxCount: limit }),
+    assetTransfers({ address, direction: "from", category: ["external"], order: "desc", maxCount: limit }),
+  ]);
+  const { transactions, sent_count, received_count } = mergeTransactions(address, incoming, outgoing, limit);
 
   return {
     output: {
       address,
       chain_id: chainId,
       total_returned: transactions.length,
-      sent_count: sentCount,
-      received_count: receivedCount,
+      sent_count,
+      received_count,
       transactions,
+      note: NOTE,
     },
-    provenance: { source: "etherscan.io", fetched_at: now },
+    provenance: { source: "ethereum-mainnet (via Alchemy)", fetched_at: new Date().toISOString() },
   };
 });

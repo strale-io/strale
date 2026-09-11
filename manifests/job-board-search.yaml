@@ -3,12 +3,10 @@
 
 slug: job-board-search
 name: Job Board Search
-description: Search job listings on Arbetsformedlingen (Swedish) and Adzuna (multi-country). Returns title, company, salary, URL.
+description: Search Swedish job listings from Arbetsförmedlingen's open job-ad data (JobTech, CC0). Returns title, company, location, salary, URL.
 category: data-extraction
-cost_class: free_quota
-quota_window: monthly
-quota_cap: 1000
-quota_reset_dom: 1
+cost_class: free_unlimited
+quota_window: none
 price_cents: 20
 is_free_tier: false
 input_schema:
@@ -108,7 +106,7 @@ output_schema:
       type: number
     sources_queried:
       type: array
-data_source: Arbetsförmedlingen API (Swedish Employment Agency) + Adzuna API
+data_source: Arbetsförmedlingen JobTech JobSearch API (open data, CC0)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -119,7 +117,7 @@ geography: nordic
 test_fixtures:
   known_answer:
     input:
-      query: SELECT * FROM users WHERE active = true LIMIT 10
+      query: sjuksköterska
     expected_fields:
       - field: jobs
         operator: not_null
@@ -138,7 +136,7 @@ test_fixtures:
       - field: total_results
         operator: gt
         reliability: guaranteed
-        value: -1
+        value: 0
       - field: sources_queried
         operator: not_null
         reliability: guaranteed
@@ -153,10 +151,11 @@ output_field_reliability:
   total_results: guaranteed
   sources_queried: guaranteed
 limitations:
-  - title: Uses Arbetsförmedlingen and Adzuna APIs — coverage varies by country and company career pages may be missed
+  - title: Swedish listings only — ads posted to Arbetsförmedlingen; company career pages may be missed
     text: >-
-      Uses Arbetsförmedlingen (Sweden) and optional Adzuna API — coverage varies by country and may miss company career
-      pages
+      Covers job ads published through Arbetsförmedlingen (Sweden) and refuses any country_code other than "se". Contact
+      persons named in ads are never returned. Until 2026-09-11 it could also query Adzuna, whose terms do not permit
+      resale; that path was removed.
     category: coverage
     severity: info
     workaround: For comprehensive results, supplement with google-search scoped to the target company's careers page

@@ -1,7 +1,14 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 
-// Job board search — combines Arbetsförmedlingen (Swedish PES) and Adzuna (multi-country)
-// Both free APIs; Adzuna requires ADZUNA_APP_ID + ADZUNA_APP_KEY env vars (skipped if missing)
+// Job board search — Swedish listings from Arbetsförmedlingen's JobTech JobSearch
+// API, published as open data under CC0 with no key or registration.
+//
+// Until 2026-09-11 it also queried Adzuna for other countries. Adzuna's terms
+// allow only publishing its listings (with its branding), salary estimates and
+// personal research, so that path was removed in the vendor-terms audit
+// (docs/security/2026-09-10-vendor-terms-audit-batch-2.md). Ads can carry
+// contact persons' names, emails and phone numbers; only the non-personal
+// fields below are ever returned.
 
 interface JobResult {
   title: string;
@@ -56,60 +63,6 @@ async function searchArbetsformedlingen(
   return { jobs, total };
 }
 
-async function searchAdzuna(
-  query: string,
-  countryCode: string,
-  location?: string,
-): Promise<{ jobs: JobResult[]; total: number }> {
-  const appId = process.env.ADZUNA_APP_ID;
-  const appKey = process.env.ADZUNA_APP_KEY;
-  if (!appId || !appKey) {
-    return { jobs: [], total: 0 };
-  }
-
-  // Adzuna uses 2-letter country code in path (lowercase)
-  const cc = countryCode.toLowerCase();
-  const params = new URLSearchParams({
-    app_id: appId,
-    app_key: appKey,
-    what: query,
-    results_per_page: "10",
-  });
-  if (location) params.set("where", location);
-
-  const url = `https://api.adzuna.com/v1/api/jobs/${cc}/search/1?${params.toString()}`;
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(10000),
-  });
-
-  if (!response.ok) {
-    // Non-fatal: skip Adzuna if API call fails
-    return { jobs: [], total: 0 };
-  }
-
-  const data = (await response.json()) as any;
-  const results: any[] = data.results ?? [];
-  const total: number = data.count ?? results.length;
-
-  const jobs: JobResult[] = results.map((r: any) => ({
-    title: r.title ?? "",
-    company: r.company?.display_name ?? "",
-    location: r.location?.display_name ?? "",
-    salary_range:
-      r.salary_min != null && r.salary_max != null
-        ? `${r.salary_min}–${r.salary_max}`
-        : r.salary_is_predicted === "1"
-          ? `~${r.salary_min ?? r.salary_max} (estimated)`
-          : null,
-    url: r.redirect_url ?? null,
-    posted_date: r.created ?? null,
-    source: "adzuna.com",
-  }));
-
-  return { jobs, total };
-}
-
 registerCapability("job-board-search", async (input: CapabilityInput) => {
   const query =
     (input.query as string) ??
@@ -124,50 +77,25 @@ registerCapability("job-board-search", async (input: CapabilityInput) => {
 
   const location = (input.location as string) ?? undefined;
   const remoteOnly = input.remote_only === true || input.remote_only === "true";
-  const countryCode = ((input.country_code as string) ?? "se").toLowerCase();
-
-  const sourcesQueried: string[] = [];
-  let allJobs: JobResult[] = [];
-  let totalResults = 0;
-
-  // Query Arbetsförmedlingen (always available, no key needed)
-  try {
-    const af = await searchArbetsformedlingen(query.trim(), location, remoteOnly);
-    allJobs = allJobs.concat(af.jobs);
-    totalResults += af.total;
-    sourcesQueried.push("arbetsformedlingen.se");
-  } catch {
-    // Non-fatal — continue with other sources
+  const countryCode = String(input.country_code ?? "se").trim().toLowerCase();
+  if (countryCode !== "se") {
+    throw new Error(`'country_code' must be "se": this capability covers Swedish job listings only; "${countryCode}" is not covered.`);
   }
 
-  // Query Adzuna (requires env vars)
-  try {
-    const az = await searchAdzuna(query.trim(), countryCode, location);
-    if (az.jobs.length > 0) {
-      allJobs = allJobs.concat(az.jobs);
-      totalResults += az.total;
-      sourcesQueried.push("adzuna.com");
-    }
-  } catch {
-    // Non-fatal
-  }
-
-  if (allJobs.length === 0 && sourcesQueried.length === 0) {
-    throw new Error(
-      `No job search results found for "${query.trim()}". Both Arbetsförmedlingen and Adzuna returned no results.`,
-    );
-  }
+  // One source now, so its error is the answer — no fallback to hide it behind.
+  const af = await searchArbetsformedlingen(query.trim(), location, remoteOnly);
 
   return {
     output: {
       query: query.trim(),
       location: location ?? null,
-      jobs: allJobs,
-      total_results: totalResults,
-      sources_queried: sourcesQueried,
+      jobs: af.jobs,
+      total_results: af.total,
+      sources_queried: ["arbetsformedlingen.se"],
     },
     provenance: {
-      source: sourcesQueried.join(", ") || "job-board-search",
+      source: "arbetsformedlingen.se (JobTech JobSearch, CC0)",
+      source_url: "https://data.jobtechdev.se/dataservice/jobsearch/",
       fetched_at: new Date().toISOString(),
     },
   };
