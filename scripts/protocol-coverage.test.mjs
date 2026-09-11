@@ -94,26 +94,42 @@ function manifestRow(overrides = {}) {
   };
 }
 
-function manifestYaml(rows) {
+const VERIFIED_AT = "2026-09-11";
+
+/** The two headings claudeMdFixture() adds besides the row's own heading:
+ * the grouping "## Workflow Protocol" and the unrelated "### The Next
+ * Section". Every clean fixture excludes both, since review round 1 makes
+ * every level-2/3 CLAUDE.md heading either a row or an excluded_sections
+ * entry -- there is no third state. */
+function defaultExcludedSections() {
+  return [
+    { heading: "Workflow Protocol", reason: "Section header grouping fixture subsections; not itself a protocol." },
+    { heading: "The Next Section", reason: "Unrelated fixture section, not a protocol." },
+  ];
+}
+
+function manifestYaml(rows, excludedSections = defaultExcludedSections()) {
   return stringifyYaml({
     schema_version: 1,
     authority_active: false,
+    verified_at: VERIFIED_AT,
     protocols: rows,
+    excluded_sections: excludedSections,
   });
 }
 
 /** Writes a complete, otherwise-clean fixture repo: CLAUDE.md, the schema,
  * a manifest, a mirror file, and (unless `router` is given) a router
  * generated to match. Returns the fixture root. */
-function cleanFixture({ rows = [manifestRow()], router } = {}) {
+function cleanFixture({ rows = [manifestRow()], excludedSections = defaultExcludedSections(), router } = {}) {
   const dir = makeFixture();
   writeFiles(dir, {
     "CLAUDE.md": claudeMdFixture(),
     [SCHEMA_PATH]: REAL_SCHEMA,
-    [MANIFEST_PATH]: manifestYaml(rows),
+    [MANIFEST_PATH]: manifestYaml(rows, excludedSections),
     "docs/governance/protocols/EXAMPLE_PROTOCOL.md": mirrorFile(),
   });
-  const manifest = { schema_version: 1, authority_active: false, protocols: rows };
+  const manifest = { schema_version: 1, authority_active: false, verified_at: VERIFIED_AT, protocols: rows };
   writeFiles(dir, { [ROUTER_PATH]: router ?? protocolRouterMarkdown(manifest) });
   return dir;
 }
@@ -220,17 +236,74 @@ test("MIRROR_UNCOVERED: a mirror file with no manifest row", () => {
   }
 });
 
-test("HEADING_UNCOVERED: a CLAUDE.md '... Protocol' heading with no row", () => {
+test("HEADING_UNCLASSIFIED: a level-3 heading with no row and no excluded_sections entry", () => {
   const dir = cleanFixture();
   writeFiles(dir, {
-    "CLAUDE.md": claudeMdFixture() + "\n### Another Uncovered Protocol (DEC-OTHER)\n\nBody text.\n",
+    "CLAUDE.md": claudeMdFixture() + "\n### Another Unclassified Section\n\nBody text.\n",
   });
   try {
     const result = checkAllProtocolCoverage(dir);
     assert.ok(
       result.findings.some(
-        (f) => f.code === "HEADING_UNCOVERED" && f.detail.includes("Another Uncovered Protocol (DEC-OTHER)"),
+        (f) => f.code === "HEADING_UNCLASSIFIED" && f.detail.includes("Another Unclassified Section"),
       ),
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("HEADING_UNCLASSIFIED: a level-2 heading with no row and no excluded_sections entry", () => {
+  const dir = cleanFixture();
+  writeFiles(dir, {
+    "CLAUDE.md": claudeMdFixture() + "\n## Another Unclassified Top-Level Section\n\nBody text.\n",
+  });
+  try {
+    const result = checkAllProtocolCoverage(dir);
+    assert.ok(
+      result.findings.some(
+        (f) => f.code === "HEADING_UNCLASSIFIED" && f.detail.includes("Another Unclassified Top-Level Section"),
+      ),
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("EXCLUSION_STALE: an excluded_sections entry names a heading no longer in CLAUDE.md", () => {
+  const dir = cleanFixture({
+    excludedSections: [...defaultExcludedSections(), { heading: "Long Gone Section", reason: "Fixture reason." }],
+  });
+  try {
+    const result = checkAllProtocolCoverage(dir);
+    assert.ok(
+      result.findings.some((f) => f.code === "EXCLUSION_STALE" && f.detail.includes("Long Gone Section")),
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("EXCLUSION_STALE: removing an excluded_sections entry's heading from CLAUDE.md is caught", () => {
+  const dir = cleanFixture();
+  writeFiles(dir, {
+    // "The Next Section" is still listed in excluded_sections (the default),
+    // but no longer appears in CLAUDE.md.
+    "CLAUDE.md": [
+      "## Workflow Protocol",
+      "",
+      "Unrelated top-level section that groups subsections; not itself a row.",
+      "",
+      `### ${MIRROR_HEADING}`,
+      "",
+      ...MIRROR_BODY,
+      "",
+    ].join("\n"),
+  });
+  try {
+    const result = checkAllProtocolCoverage(dir);
+    assert.ok(
+      result.findings.some((f) => f.code === "EXCLUSION_STALE" && f.detail.includes("The Next Section")),
     );
   } finally {
     cleanup(dir);
@@ -281,11 +354,20 @@ test("DECISION_ID_UNCOVERED: a decision id named inside a covered section is a w
   }
 });
 
-test("real repository: docs/project/protocol-coverage.yaml and the generated router pass with no findings and no warnings", () => {
+test("real repository: docs/project/protocol-coverage.yaml and the generated router pass with no findings", () => {
   const result = checkAllProtocolCoverage(realRoot);
   assert.deepEqual(result.findings, []);
-  assert.deepEqual(result.warnings, []);
-  assert.equal(result.protocolCount, 11);
+  // The "Review routing" section names both DEC-20260903-A (this row's
+  // decision, which created npm run codex:check) and DEC-20260910-A (the
+  // amendment that waived the register), so one of the two is always
+  // report-only DECISION_ID_UNCOVERED -- see the row's decision_record_note
+  // in docs/project/protocol-coverage.yaml. Not a finding; becomes blocking
+  // guard scope only at the M4 cutover per this file's header.
+  assert.deepEqual(
+    result.warnings.map((w) => w.code),
+    ["DECISION_ID_UNCOVERED"],
+  );
+  assert.ok(result.warnings[0].detail.includes("DEC-20260910-A"));
 });
 
 test("real repository: two generations of the router are byte-identical (deterministic)", () => {

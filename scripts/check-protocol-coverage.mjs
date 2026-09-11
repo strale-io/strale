@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-// CLI: validates docs/project/protocol-coverage.yaml (T6 M3 batch 7) against
-// its schema, proves every full_body / decision_record / enforced_by path
-// exists, proves every mirror file under docs/governance/protocols/ and
-// every protocol-shaped or already-mirrored CLAUDE.md heading has a row, and
-// proves docs/project/PROTOCOL-ROUTER.md (generated from this manifest) is
-// up to date. Exit 1 on any finding. Warnings (DECISION_ID_UNCOVERED) are
-// report-only today and become blocking at the M4 cutover -- see
-// scripts/protocol-coverage-lib.mjs's header. Never edits CLAUDE.md, a
-// mirror file, the manifest, or the router.
+// CLI: validates docs/project/protocol-coverage.yaml (T6 M3 batch 7; review
+// round 1) against its schema, proves every full_body / decision_record /
+// enforced_by path exists, proves every mirror file under
+// docs/governance/protocols/ has a row, proves every level-2/3 CLAUDE.md
+// heading is either covered by a row or listed in excluded_sections with a
+// reason, and proves docs/project/PROTOCOL-ROUTER.md (generated from this
+// manifest) is up to date. Exit 1 on any finding. Warnings
+// (DECISION_ID_UNCOVERED) are report-only today and become blocking at the
+// M4 cutover -- see scripts/protocol-coverage-lib.mjs's header. Never edits
+// CLAUDE.md, a mirror file, the manifest, or the router.
 //
 // Usage: node scripts/check-protocol-coverage.mjs [--json]
 import { checkAllProtocolCoverage, repoRootFrom, MANIFEST_PATH } from "./protocol-coverage-lib.mjs";

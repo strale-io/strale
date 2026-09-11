@@ -1,8 +1,10 @@
 /**
- * Protocol coverage manifest check (T6 M3 batch 7).
+ * Protocol coverage manifest check (T6 M3 batch 7; review round 1 replaces
+ * the heading-coverage rule with excluded_sections/HEADING_UNCLASSIFIED and
+ * reads verified_at from the manifest).
  *
  * docs/project/protocol-coverage.yaml maps every mandatory protocol/rule
- * currently governing this repository -- the ten CLAUDE.md protocols/rules
+ * currently governing this repository -- the CLAUDE.md protocols/rules
  * mirrored under docs/governance/protocols/ (batches 6a, 6b, 7) plus
  * production authority (full text in docs/company/CHARTER.md) -- to its
  * trigger, full-body path, governing decision, decision record, and
@@ -10,8 +12,14 @@
  * schema, proves every referenced path exists, and proves nothing that
  * ought to be in the manifest was left out: every mirror file under
  * docs/governance/protocols/ that carries the BEGIN/END VERBATIM markers
- * has a row (MIRROR_UNCOVERED), and every CLAUDE.md heading that names a
- * "... Protocol" or was already mirrored has a row (HEADING_UNCOVERED). It
+ * has a row (MIRROR_UNCOVERED), and every level-2 or level-3 CLAUDE.md
+ * heading is either covered by a row or listed in the manifest's
+ * excluded_sections with a reason (HEADING_UNCLASSIFIED when it is
+ * neither; EXCLUSION_STALE when an excluded_sections entry names a heading
+ * no longer in CLAUDE.md). Review round 1 replaced the previous
+ * "heading contains the word Protocol" heuristic, which silently left
+ * code-enforced sections like "Review routing" (npm run codex:check) and
+ * "Drift-prevention surfaces" (check-platform-facts-drift.ts) uncovered. It
  * also proves docs/project/PROTOCOL-ROUTER.md -- generated from this
  * manifest by protocolRouterMarkdown/protocolRouterGeneratedFiles below --
  * is up to date (ROUTER_STALE).
@@ -19,10 +27,10 @@
  * A single check runs as a warning rather than a blocking finding today, per the
  * migration plan (docs/strategy/2026-08-31-repo-native-operating-model-
  * migration.md, M3 exit criteria): DECISION_ID_UNCOVERED, a decision id
- * CLAUDE.md names inside a protocol's own section, or that apps/api/src
- * code cites next to the word "protocol", with no manifest row citing it.
- * This warning becomes a blocking finding at the M4 cutover, when the full
- * guard in item 16 of the plan's blocking-checks list goes live.
+ * CLAUDE.md names inside a covered protocol's own section, or that
+ * apps/api/src code cites next to the word "protocol", with no manifest row
+ * citing it. This warning becomes a blocking finding at the M4 cutover, when
+ * the full guard in item 16 of the plan's blocking-checks list goes live.
  *
  * authority_active in the manifest stays false throughout: this check
  * proves internal consistency of an inactive coverage record. It never
@@ -36,7 +44,6 @@ import { parse as parseYaml } from "yaml";
 import {
   CLAUDE_MD_PATH,
   listCandidateProtocolFiles,
-  splitFrontmatter,
 } from "./protocol-extraction-lib.mjs";
 
 export function repoRootFrom(importMetaUrl) {
@@ -102,44 +109,27 @@ function claudeHeadings(root) {
   return headings;
 }
 
+/** Every level-2 ("## ...") or level-3 ("### ...") CLAUDE.md heading text.
+ * These are the two heading levels the manifest's classification rule
+ * covers: every one of them must be either a row (covered) or an
+ * excluded_sections entry (excluded) -- HEADING_UNCLASSIFIED/EXCLUSION_STALE
+ * below prove there is no third state. A level-4+ heading (the dated
+ * decision-log subsections, the pipeline's flag/template subsections) is
+ * out of scope by rule, not by name: it sits inside an already-classified
+ * level-2/3 section. */
+function classifiableHeadings(root) {
+  const set = new Set();
+  for (const { level, text } of claudeHeadings(root)) {
+    if (level === 2 || level === 3) set.add(text);
+  }
+  return set;
+}
+
 /** The CLAUDE.md heading text a manifest row claims to mirror, or null for
  * a row sourced elsewhere (e.g. production authority's CHARTER.md heading). */
 function rowClaudeHeading(row) {
   if (!row.source || !row.source.startsWith(SOURCE_HEADING_PREFIX)) return null;
   return row.source.slice(SOURCE_HEADING_PREFIX.length).trim();
-}
-
-/** source_heading of every mirror file under docs/governance/protocols/ that
- * carries a verbatim marker, keyed by relative file path. */
-function mirrorSourceHeadings(root) {
-  const map = new Map(); // relPath -> source_heading (or null if unreadable)
-  for (const rel of listCandidateProtocolFiles(root)) {
-    const content = readNormalized(root, rel);
-    const { frontmatter } = splitFrontmatter(content);
-    map.set(rel, frontmatter && typeof frontmatter.source_heading === "string" ? frontmatter.source_heading : null);
-  }
-  return map;
-}
-
-/** Every CLAUDE.md heading that names a protocol this manifest ought to
- * cover: a heading containing the word "Protocol" (the five DEC-numbered
- * protocols), plus every mirror file's own source_heading (covers the
- * non-"Protocol"-named rules: Session contract, Shared-Checkout Rule,
- * Worktree node_modules Hazard, Test Infrastructure Cost Principles,
- * Wire-shape rule). */
-function expectedHeadings(root) {
-  const set = new Set();
-  for (const { level, text } of claudeHeadings(root)) {
-    // Level 3 ("### ...") only: every mandatory protocol section in
-    // CLAUDE.md is a "###" heading. A shallower heading like the top-level
-    // "## Workflow Protocol" that merely groups unrelated subsections is
-    // not itself a protocol and would otherwise false-positive here.
-    if (level === 3 && /\bProtocol\b/.test(text)) set.add(text);
-  }
-  for (const heading of mirrorSourceHeadings(root).values()) {
-    if (heading) set.add(heading);
-  }
-  return set;
 }
 
 // ── router generation ────────────────────────────────────────────────────
@@ -158,7 +148,7 @@ const ROUTER_CANDIDATE_BANNER =
 const ROUTER_EXTRA_CAUTION =
   "Every full protocol body linked below is itself an inactive mirror " +
   "(`authority_active: false`); `CLAUDE.md` remains the sole authority for " +
-  "the ten mirrored rows and `docs/company/CHARTER.md` for production " +
+  "the mirrored rows and `docs/company/CHARTER.md` for production " +
   "authority. This router is not mandatory startup context until the " +
   "founder-gated M4 cutover activates it.";
 
@@ -181,7 +171,7 @@ complete: false
 phase: M2
 m1_template: false
 authority_active: false
-verified_at: 2026-09-11
+verified_at: ${manifest.verified_at}
 generated: true
 ---
 
@@ -220,15 +210,15 @@ export function protocolRouterGeneratedFiles(root) {
 
 const CLAUDE_DECISION_RE = /\bDEC-\d{8}(?:-[A-Za-z0-9]+)*\b/g;
 
-/** Decision ids CLAUDE.md names inside one of the ten protocol sections
- * (the section owned by a heading in expectedHeadings), plus decision ids
- * apps/api/src code cites on a line that also contains the word
- * "protocol" (case-insensitive). Used only for the DECISION_ID_UNCOVERED
- * warning; never for a blocking finding. */
-function decisionIdsNamedByProtocolSections(root) {
+/** Decision ids CLAUDE.md names inside one of the covered protocol sections
+ * (the section owned by a heading a manifest row claims, per
+ * `coveredHeadings`), plus decision ids apps/api/src code cites on a line
+ * that also contains the word "protocol" (case-insensitive). Used only for
+ * the DECISION_ID_UNCOVERED warning; never for a blocking finding. */
+function decisionIdsNamedByProtocolSections(root, coveredHeadings) {
   const text = readNormalized(root, CLAUDE_MD_PATH);
   const lines = text.split("\n");
-  const headings = expectedHeadings(root);
+  const headings = coveredHeadings;
   const ids = new Set();
   let inSection = false;
   let sectionLevel = 0;
@@ -329,11 +319,29 @@ export function checkAllProtocolCoverage(root) {
     }
   }
 
-  // Every protocol-shaped or already-mirrored CLAUDE.md heading must have a row.
+  // Every level-2 or level-3 CLAUDE.md heading is either covered by a row
+  // or listed in excluded_sections -- there is no third state.
   const coveredHeadings = new Set(rows.map(rowClaudeHeading).filter(Boolean));
-  for (const heading of expectedHeadings(root)) {
-    if (!coveredHeadings.has(heading)) {
-      findings.push({ code: "HEADING_UNCOVERED", file: CLAUDE_MD_PATH, detail: `heading "${heading}" has no ${MANIFEST_PATH} row` });
+  const excludedSections = manifest.excluded_sections ?? [];
+  const excludedHeadings = new Set(excludedSections.map((entry) => entry.heading));
+  const actualHeadings = classifiableHeadings(root);
+
+  for (const heading of actualHeadings) {
+    if (!coveredHeadings.has(heading) && !excludedHeadings.has(heading)) {
+      findings.push({
+        code: "HEADING_UNCLASSIFIED",
+        file: CLAUDE_MD_PATH,
+        detail: `heading "${heading}" has no ${MANIFEST_PATH} row and is not in excluded_sections`,
+      });
+    }
+  }
+  for (const entry of excludedSections) {
+    if (!actualHeadings.has(entry.heading)) {
+      findings.push({
+        code: "EXCLUSION_STALE",
+        file: MANIFEST_PATH,
+        detail: `excluded_sections heading "${entry.heading}" is no longer a level-2/3 heading in CLAUDE.md`,
+      });
     }
   }
 
@@ -350,7 +358,7 @@ export function checkAllProtocolCoverage(root) {
   // cited next to "protocol" in apps/api/src code, with no manifest row.
   // Becomes a blocking finding at the M4 cutover (see this file's header).
   const coveredDecisions = new Set(rows.map((row) => row.decision).filter((d) => d !== "none"));
-  const namedInClaude = decisionIdsNamedByProtocolSections(root);
+  const namedInClaude = decisionIdsNamedByProtocolSections(root, coveredHeadings);
   const namedInCode = decisionIdsCitedNextToProtocolInCode(root);
   for (const id of new Set([...namedInClaude, ...namedInCode])) {
     if (!coveredDecisions.has(id)) {

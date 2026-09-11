@@ -2,23 +2,50 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://strale.dev/schemas/protocol-coverage.schema.json",
   "title": "Protocol coverage manifest",
-  "description": "T6 M3 batch 7. Maps every mandatory protocol/rule currently governing this repository to its trigger, full-body path under docs/governance/protocols/ (or, for production authority, the governing CHARTER.md section), governing decision, decision record, and enforcing code/tests. authority_active stays false and the router generated from this file stays inactive until the founder-gated M4 cutover. Checked by scripts/protocol-coverage-lib.mjs (npm run protocols:coverage). No row here changes any protocol's substance -- CLAUDE.md remains the sole authority for the ten mirrored rows; docs/company/CHARTER.md remains the authority for production authority.",
+  "description": "T6 M3 batch 7 (review round 1 adds excluded_sections and verified_at). Maps every mandatory protocol/rule currently governing this repository to its trigger, full-body path under docs/governance/protocols/ (or, for production authority, the governing CHARTER.md section), governing decision, decision record, and enforcing code/tests. Every level-2 and level-3 CLAUDE.md heading is either a row here or an excluded_sections entry naming its reason. authority_active stays false and the router generated from this file stays inactive until the founder-gated M4 cutover. Checked by scripts/protocol-coverage-lib.mjs (npm run protocols:coverage). No row here changes any protocol's substance -- CLAUDE.md remains the sole authority for the mirrored rows; docs/company/CHARTER.md remains the authority for production authority.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "authority_active", "protocols"],
+  "required": ["schema_version", "authority_active", "verified_at", "protocols", "excluded_sections"],
   "properties": {
     "schema_version": { "const": 1 },
     "authority_active": {
       "const": false,
       "description": "This manifest and the router generated from it carry no authority until the founder-gated M4 cutover."
     },
+    "verified_at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "The date every row and every excluded_sections entry was last verified against CLAUDE.md and the other source files. The router generator reads this value rather than a hardcoded literal."
+    },
     "protocols": {
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/protocolRow" }
+    },
+    "excluded_sections": {
+      "type": "array",
+      "description": "Every level-2 or level-3 CLAUDE.md heading that is not a protocol row: a section header grouping other subsections, project or reference description, or a rule this repository cannot check (for example Notion conduct). Each entry names the exact heading text and the reason it is excluded. Checked by scripts/protocol-coverage-lib.mjs for HEADING_UNCLASSIFIED (a level-2/3 heading neither covered by a row nor listed here) and EXCLUSION_STALE (a listed heading no longer in CLAUDE.md).",
+      "items": { "$ref": "#/$defs/excludedSection" }
     }
   },
   "$defs": {
+    "excludedSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["heading", "reason"],
+      "properties": {
+        "heading": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The exact CLAUDE.md heading text (without the leading '#' markers), matched verbatim against a level-2 or level-3 heading."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One sentence: why this heading is not a protocol row."
+        }
+      }
+    },
     "protocolRow": {
       "type": "object",
       "additionalProperties": false,
