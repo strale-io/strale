@@ -70,7 +70,7 @@ iban-to-bank). Card customer last bought 2026-08-28T19:16Z — **13.5 days silen
 Two registered accounts bought this week (`user:v1:703c…` on 09-09/10/11 for
 €0.12; `user:v1:fa6a…` €0.02) — recorded, not interpreted.
 
-*Instrument gap, still open from 09-06:* the pack's quiet list reports the card
+*Instrument gap from 09-06 — closed later in this run (D2):* the pack's quiet list reports the card
 customer as "9d ago" because `quietPayers(lastFull)` asks as of the end of the
 last completed week. Real silence is 13.5 days. Not fixed today (the day went to
 the outage); the proposed shape in the 09-06 record stands.
@@ -337,11 +337,59 @@ the first hourly tick after deploy the row keeps the old `healthy`.
 - `vendor_accounts.display_name` still says "Browserless Cloud".
 - `cz-unreliable-vat-payer`'s correctness invariant counting `fetch failed`.
 
+## Shipped and verified
+
+**PR strale-io/strale#647** merged as `b65656e4` with the head pinned
+(`--match-head-commit 99978192`), after `main` moved under it (#644) and was
+merged in and re-gated. `git diff 99978192 origin/main` after the merge: empty,
+so the squash carried exactly the reviewed tip. Branch deleted, both halves.
+
+**Deploy, verified by effect (DEC-20260504-C):**
+- `GET /health` → `b65656e4fa20`, about 80 s after the merge.
+- The mechanism is the hourly `vendor-control-tower` job
+  (`src/jobs/migrated-jobs.ts:52`). Its first post-deploy run, 08:19:41Z,
+  finished `last_outcome = ok`.
+- Browserless's `vendor_accounts` row then read: status `unknown`, the
+  self-hosted "no render has succeeded in 24 hours" reason, all allowance
+  figures null, `balance_not_applicable_since = 2026-09-11T08:19:41Z`. The
+  07:19Z `last_success_at` was the cloud balance read and was correctly **not**
+  counted, which is the case the marker exists for.
+- `npm run vendor:status` now prints `WARNING browserless: Self-hosted
+  Browserless endpoint: no render has succeeded…`. The same report said
+  "healthy; 998/1000" at 06:20Z.
+- OpenRegister was unchanged: healthy, 498/500. Nothing was suspended.
+- The repaired breaker for Serper, Dilisense, OpenRegister and eSortcode
+  cannot be observed until one of them refuses a call. On the last 75 days of
+  evidence, that is rare.
+
+## D2. The quiet-payer read, as of now
+
+This is 09-06's next-action item 2, done in the time spent waiting for the
+monitor run. `commercial-brief.ts` asked "who has gone quiet" of the last
+completed week, so silence was measured to that week's end.
+
+- `trailingQuietWindow(now)` and `daysQuietAt` were added to
+  `lib/metrics/commercial.ts`. The pack's conclusion and its primary list now
+  use `[now − 7d, now]`, and the completed-week count is printed beside them for
+  comparison.
+- Run read-only against production: the card customer reads **13 days** (it was
+  9). The list is 4 buyers under the trailing window and 5 under the completed
+  week: the €0.30 buyer bought again in the last seven days.
+- Tests: two new cases. One is pinned to the production numbers (9 vs 13), and
+  it asserts what the old wiring got wrong; 45/45 pass. The script itself is
+  outside `tsconfig` and vitest, a standing gap (LESSONS F5). It was therefore
+  verified by running it, not by a test.
+- Independent review (a fresh read-only agent): **PASS**, no blocker, no
+  should-fix. The one nit: the second test is nearly tautological, since the
+  window width is fixed by construction. Kept as a direction guard.
+
 ## Next action
 
-1. **After merge + deploy:** confirm `GET /health` = merge commit, then read the
-   browserless `vendor_accounts` row for the self-hosted reason and null units.
-2. **DQ-31** the moment the Railway sign-in exists: restore the token, redeploy,
-   render one screenshot and one PDF, record it.
-3. The quiet-payer trailing read (09-06 item 2), still open.
-4. Structured refusal candidates for registry name paths (09-06 item 3).
+1. **DQ-31** the moment the Railway sign-in exists: restore the container's
+   token into the API's key, redeploy, render one screenshot and one PDF, and
+   confirm the Browserless row turns `healthy` with the "a render succeeded"
+   reason within the hour. Record it in DQ-31.
+2. Structured refusal candidates for registry name paths (09-06 item 3).
+3. The `humanizeBrowserlessStatus` misattribution lead (see Leads).
+4. Tomorrow's run: Browserless should read `unknown` (WARNING) until DQ-31;
+   anything else means the credential changed or a render got through.
