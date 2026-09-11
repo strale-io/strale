@@ -185,26 +185,31 @@ describeMaybe("vendor control tower against a real database", () => {
     expect(await servingState(slug)).toEqual({ visible: false, x402_enabled: false });
   });
 
-  // Browserless is self-hosted in production, so its account API cannot say
-  // whether the container accepts our key. A refused key must therefore hold
-  // until the key itself changes, and then restore without anyone's hand.
-  it("holds a refused Browserless key until the key changes, then restores", async () => {
+  // Serper and Dilisense publish no balance API, so a refused key holds until
+  // the key itself changes, then restores without anyone's hand. The
+  // fingerprint write shared the untyped-parameter defect above, so this path
+  // had never completed against a real database either.
+  it("holds a refused Serper key until the key changes, then restores", async () => {
     const suffix = randomUUID().slice(0, 8);
-    const slug = `test-browserless-cap-${suffix}`;
+    const slug = `test-serper-cap-${suffix}`;
     createdSlugs.add(slug);
-    const savedKey = process.env.BROWSERLESS_API_KEY;
+    const savedKey = process.env.SERPER_API_KEY;
     const before = await db.execute(sql`
-      SELECT status, status_reason, last_error, metadata
-        FROM vendor_accounts WHERE provider_name = 'browserless'
+      SELECT status, status_reason, last_error, metadata, remaining_units
+        FROM vendor_accounts WHERE provider_name = 'serper'
     `) as unknown as Array<{
       status: string; status_reason: string | null; last_error: string | null;
-      metadata: Record<string, unknown> | null;
+      metadata: Record<string, unknown> | null; remaining_units: number | null;
     }>;
+    // A positive local allowance, so re-arming lands on healthy rather than on
+    // the separate exhausted-counter rule.
     await db.execute(sql`
       INSERT INTO vendor_accounts (
-        provider_name, display_name, billing_model, monitor_mode, status, usage_unit
-      ) VALUES ('browserless', 'Browserless', 'free_allowance', 'api_balance', 'healthy', 'unit')
-      ON CONFLICT (provider_name) DO UPDATE SET status = 'healthy', metadata = '{}'::jsonb
+        provider_name, display_name, billing_model, monitor_mode, status,
+        remaining_units, usage_unit
+      ) VALUES ('serper', 'Serper', 'prepaid', 'internal_counter', 'healthy', 1000, 'query')
+      ON CONFLICT (provider_name) DO UPDATE
+        SET status = 'healthy', metadata = '{}'::jsonb, remaining_units = 1000
     `);
     await db.execute(sql`
       INSERT INTO capabilities (
@@ -218,31 +223,29 @@ describeMaybe("vendor control tower against a real database", () => {
     await db.execute(sql`
       INSERT INTO vendor_capability_dependencies (
         provider_name, capability_slug, dependency_kind, units_per_execution
-      ) VALUES ('browserless', ${slug}, 'required', 1)
+      ) VALUES ('serper', ${slug}, 'required', 1)
     `);
 
     try {
-      process.env.BROWSERLESS_API_KEY = "cloud-key-the-container-never-sees";
-      await recordVendorHttpFailure("browserless", 403);
-      const blocked = await accountRow("browserless");
+      process.env.SERPER_API_KEY = "revoked-key";
+      await recordVendorHttpFailure("serper", 403);
+      const blocked = await accountRow("serper");
       expect(blocked?.status).toBe("auth_error");
       expect(blocked?.metadata?.blocked_credential_fingerprint).toMatch(/^[0-9a-f]{64}$/);
       expect(await servingState(slug)).toEqual({ visible: false, x402_enabled: false });
 
-      // The account API is not consulted for a self-hosted endpoint, and
-      // neither its bookkeeping nor an unchanged key may clear the block.
-      await recordBalanceNotApplicable("browserless", "self-hosted");
-      expect(await rearmVendorAfterCredentialChange("browserless", "BROWSERLESS_API_KEY")).toBe(false);
-      expect((await accountRow("browserless"))?.status).toBe("auth_error");
+      // An unchanged key must not clear the block.
+      expect(await rearmVendorAfterCredentialChange("serper", "SERPER_API_KEY")).toBe(false);
+      expect((await accountRow("serper"))?.status).toBe("auth_error");
       expect(await servingState(slug)).toEqual({ visible: false, x402_enabled: false });
 
-      process.env.BROWSERLESS_API_KEY = "the-container-token";
-      expect(await rearmVendorAfterCredentialChange("browserless", "BROWSERLESS_API_KEY")).toBe(true);
-      expect((await accountRow("browserless"))?.status).toBe("healthy");
+      process.env.SERPER_API_KEY = "rotated-key";
+      expect(await rearmVendorAfterCredentialChange("serper", "SERPER_API_KEY")).toBe(true);
+      expect((await accountRow("serper"))?.status).toBe("healthy");
       expect(await servingState(slug)).toEqual({ visible: true, x402_enabled: true });
     } finally {
-      if (savedKey === undefined) delete process.env.BROWSERLESS_API_KEY;
-      else process.env.BROWSERLESS_API_KEY = savedKey;
+      if (savedKey === undefined) delete process.env.SERPER_API_KEY;
+      else process.env.SERPER_API_KEY = savedKey;
       const prior = before[0];
       if (prior) {
         await db.execute(sql`
@@ -250,11 +253,12 @@ describeMaybe("vendor control tower against a real database", () => {
              SET status = ${prior.status},
                  status_reason = ${prior.status_reason}::text,
                  last_error = ${prior.last_error}::text,
-                 metadata = ${JSON.stringify(prior.metadata ?? {})}::jsonb
-           WHERE provider_name = 'browserless'
+                 metadata = ${JSON.stringify(prior.metadata ?? {})}::jsonb,
+                 remaining_units = ${prior.remaining_units}::int
+           WHERE provider_name = 'serper'
         `);
       } else {
-        await db.execute(sql`DELETE FROM vendor_accounts WHERE provider_name = 'browserless'`);
+        await db.execute(sql`DELETE FROM vendor_accounts WHERE provider_name = 'serper'`);
       }
     }
   });

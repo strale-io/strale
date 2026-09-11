@@ -216,7 +216,7 @@ export function browserlessServesFromCloud(url = process.env.BROWSERLESS_URL): b
 
 const BROWSERLESS_SELF_HOSTED_REASON =
   "Self-hosted Browserless endpoint; the browserless.io account allowance does not apply. " +
-  "Credential health comes from live calls, which block on HTTP 401/403 until the key changes.";
+  "No zero-cost check of the container's token exists yet, so a refused key shows only as failed calls.";
 
 const BALANCE_ADAPTERS: ReadonlyArray<{
   providerName: string;
@@ -273,9 +273,6 @@ const RECOVERY_ADAPTERS: ReadonlyArray<RecoveryAdapter> = [
 const CREDENTIAL_REARM_PROVIDERS: ReadonlyArray<{ providerName: string; envVar: string }> = [
   { providerName: "serper", envVar: "SERPER_API_KEY" },
   { providerName: "dilisense", envVar: "DILISENSE_API_KEY" },
-  // Self-hosted, so no balance API can clear a rejected key (see
-  // browserlessServesFromCloud); only a changed key re-arms it.
-  { providerName: "browserless", envVar: "BROWSERLESS_API_KEY" },
 ];
 
 function credentialFingerprint(envVar: string): string | null {
