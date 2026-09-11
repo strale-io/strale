@@ -242,26 +242,22 @@ test("comparePriorities: counts, and titles present on only one side, matched ca
 
 // ── Reachability test (M3 change item 4) ────────────────────────────────────
 
-test("m3-digest-shadow.yml has a schedule trigger, runs scripts/digest-shadow.mjs, and passes NOTION_API_KEY from a secret", () => {
-  const path = join(realRoot, ".github/workflows/m3-digest-shadow.yml");
-  const text = readFileSync(path, "utf8");
-  const workflow = parseYaml(text);
-  assert.ok(workflow.on && Object.prototype.hasOwnProperty.call(workflow.on, "schedule"), "expected a schedule trigger");
-  assert.ok(Array.isArray(workflow.on.schedule) && workflow.on.schedule.length > 0, "expected at least one cron entry");
-  assert.ok(Object.prototype.hasOwnProperty.call(workflow.on, "workflow_dispatch"), "expected workflow_dispatch too");
-  // Assert on the parsed steps, never on the raw text: the file's own header
-  // comment names scripts/digest-shadow.mjs, so a text match would pass even
-  // if no step ran it.
-  const steps = Object.values(workflow.jobs ?? {}).flatMap((job) => job.steps ?? []);
-  const shadowSteps = steps.filter(
-    (step) => typeof step.run === "string" && /(^|\s)(npx tsx|node) scripts\/digest-shadow\.mjs(\s|$)/.test(step.run),
-  );
-  assert.equal(shadowSteps.length, 1, "expected exactly one step whose run command invokes scripts/digest-shadow.mjs");
-  assert.equal(
-    shadowSteps[0].env?.NOTION_API_KEY,
-    "${{ secrets.NOTION_TOKEN }}",
-    "expected that step to take NOTION_API_KEY from secrets.NOTION_TOKEN",
-  );
+// T6 M3 batch 5 replaced the bespoke workflow-parsing assertion that used to
+// live here with the generic scheduled-mechanism reachability check
+// (config/scheduled-mechanisms.yaml, scripts/scheduled-reachability-lib.mjs,
+// npm run scheduled:check). That check already parses every
+// .github/workflows/*.yml with the `yaml` package and proves the
+// m3-digest-shadow-comparison entry's workflow, schedule, step, script and
+// secret all resolve correctly (scripts/scheduled-reachability.test.mjs has
+// the planted-failure coverage). This test only needs to confirm the entry
+// exists in the register, since the generic check now proves the wiring.
+test("config/scheduled-mechanisms.yaml declares the m3-digest-shadow-comparison entry", () => {
+  const registerPath = join(realRoot, "config/scheduled-mechanisms.yaml");
+  const register = parseYaml(readFileSync(registerPath, "utf8"));
+  const entry = (register.mechanisms ?? []).find((m) => m.id === "m3-digest-shadow-comparison");
+  assert.ok(entry, "expected an entry named m3-digest-shadow-comparison in config/scheduled-mechanisms.yaml");
+  assert.equal(entry.workflow, ".github/workflows/m3-digest-shadow.yml");
+  assert.equal(entry.runs, "scripts/digest-shadow.mjs");
 });
 
 // ── Real-repo test ───────────────────────────────────────────────────────────
