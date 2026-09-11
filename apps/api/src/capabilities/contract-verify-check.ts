@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { requireAddress } from "./lib/alchemy-client.js";
-import { readJsonWithLimit } from "../lib/resource-limits.js";
+import { readErrorTextTruncated, readJsonWithLimit } from "../lib/resource-limits.js";
 
 // Source-code verification status from Sourcify (sourcify.dev), the
 // open-source, open-data verification repository that originated at the
@@ -18,6 +18,17 @@ interface SourcifyContract {
     compilerSettings?: { optimizer?: { enabled?: boolean }; evmVersion?: string | null };
   };
   proxyResolution?: { isProxy?: boolean; implementations?: { address?: string }[] } | null;
+}
+
+/** Pure: ": <Sourcify's message>" from an error body, or "." when it has none. Exported for tests. */
+export function sourcifyRefusal(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { message?: unknown };
+    if (typeof parsed?.message === "string" && parsed.message.trim()) return `: ${parsed.message.trim().slice(0, 160)}`;
+  } catch {
+    // Not JSON (an HTML error page, an empty body): no detail to pass on.
+  }
+  return ".";
 }
 
 /** Pure: Strale's output from a Sourcify v2 contract record. Exported for tests. */
@@ -64,9 +75,7 @@ registerCapability("contract-verify-check", async (input: CapabilityInput) => {
     record = null;
   } else if (!res.ok) {
     // Sourcify explains refusals (e.g. {"customCode":"unsupported_chain","message":"Chain … not found"}); pass it on.
-    const body = await readJsonWithLimit<{ message?: unknown }>(res).catch(() => null);
-    const detail = typeof body?.message === "string" ? `: ${body.message.slice(0, 160)}` : ".";
-    throw new Error(`Sourcify returned HTTP ${res.status}${detail}`);
+    throw new Error(`Sourcify returned HTTP ${res.status}${sourcifyRefusal(await readErrorTextTruncated(res))}`);
   } else {
     record = await readJsonWithLimit<SourcifyContract>(res);
   }

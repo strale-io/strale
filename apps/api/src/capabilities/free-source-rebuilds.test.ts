@@ -11,7 +11,7 @@ import { getDirectExecutor } from "./index.js";
 import { feeTiers } from "./gas-price-check.js";
 import { mergeTransactions } from "./wallet-transactions-lookup.js";
 import { earliest } from "./wallet-age-check.js";
-import { fromSourcify } from "./contract-verify-check.js";
+import { fromSourcify, sourcifyRefusal } from "./contract-verify-check.js";
 import { recentTokens } from "./wallet-balance-lookup.js";
 import type { AssetTransfer } from "./lib/alchemy-client.js";
 
@@ -199,6 +199,15 @@ describe("contract-verify-check (Sourcify)", () => {
     mockUpstreams({}, () => new Response(JSON.stringify({ customCode: "unsupported_chain", message: "Chain 999999999999 not found" }), { status: 400 }));
     await expect(run("contract-verify-check", { contract_address: USDC, chain_id: "999999999999" }))
       .rejects.toThrow("Sourcify returned HTTP 400: Chain 999999999999 not found");
+  });
+
+  it("reads an error body that is not JSON without crashing", async () => {
+    expect(sourcifyRefusal("<html>502 Bad Gateway</html>")).toBe(".");
+    expect(sourcifyRefusal("")).toBe(".");
+    expect(sourcifyRefusal('{"message":"  "}')).toBe(".");
+    expect(sourcifyRefusal(JSON.stringify({ message: "x".repeat(500) }))).toBe(`: ${"x".repeat(160)}`);
+    mockUpstreams({}, () => new Response("<html>502 Bad Gateway</html>", { status: 502 }));
+    await expect(run("contract-verify-check", { contract_address: USDC })).rejects.toThrow(/^Sourcify returned HTTP 502\.$/);
   });
 
   it("refuses a non-numeric chain id before any request", async () => {

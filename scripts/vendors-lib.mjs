@@ -619,6 +619,11 @@ export function checkProvidersCrossCheck(root, register) {
     // nothing either, and is held for the same reason (etherscan since
     // 2026-09-11: its capabilities moved to licensed sources, and only a
     // licence-gated client that refuses every call remains).
+    // Blind spot, shared with the allDeactivated branch: this reads only what
+    // PROVIDERS declares. Code that imports a vendor client directly, outside
+    // any capability (web3-assurance's evaluators do, for etherscan), is
+    // invisible here; apps/api/src/lib/vendor-terms.test.ts is what holds such
+    // imports to a licence gate.
     const listsNothing = (p.capabilities?.length ?? 0) === 0 && (p.fallbackCapabilities?.length ?? 0) === 0;
     const allDeactivated = (p.capabilities?.length ?? 0) > 0 && p.capabilities.every((c) => deactivated.has(c));
     const servesNothing = listsNothing || allDeactivated;
