@@ -148,6 +148,15 @@ test("resolveStepInvocations: a bash script step is detected as an 'other' runne
   assert.equal(invocations[0].scriptPath, "scripts/x.sh");
 });
 
+test("resolveStepInvocations: a python3 script step is detected as an 'other' runner invocation (review round 2)", () => {
+  const step = { run: "python3 scripts/x.py" };
+  const invocations = resolveStepInvocations(step);
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations[0].kind, "other");
+  assert.equal(invocations[0].tool, "python3");
+  assert.equal(invocations[0].scriptPath, "scripts/x.py");
+});
+
 test("resolveStepInvocations: a direct ./x.sh invocation is detected as an 'other' runner invocation (review finding 3)", () => {
   const step = { run: "./scripts/x.sh" };
   const invocations = resolveStepInvocations(step);
