@@ -763,7 +763,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "42f0b5e056c503afb220e8dff320aa05b141ee860b12ea35f80e29c38f871796",
+      "sha256": "7de8e1bd7f6a9f00e16341b08af8ca2e80d4eeb0c013a8ae355f19545f1e6937",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -800,12 +800,14 @@
         "apps/api/src/capabilities/belgian-company-data.ts",
         "apps/api/src/capabilities/providers/latvian-company-data-sdda.ts",
         "apps/api/src/capabilities/web-extract-resilience.test.ts",
+        "apps/api/src/lib/browserless-suite-migration.ts",
         "apps/api/src/lib/check-self-staleness.test.ts",
         "apps/api/src/lib/check-self-staleness.ts",
         "apps/api/src/lib/data-retention.ts",
         "apps/api/src/lib/handoff-preservation.test.ts",
         "apps/api/src/lib/handoff-preservation.ts",
         "apps/api/src/lib/startup-migrations.ledger.json",
+        "apps/api/src/lib/test-runner.ts",
         "apps/api/test/guard-production-write-access.test.ts",
         "archive/README.md",
         "archive/receipts/2026-09-02-test-run-receipts-lib-t15.json",

@@ -1,0 +1,1116 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "cf51c85c9c5733b3e2c8be2a81d4c622a7739f04"
+  },
+  "at": "2026-09-11T22:11:18.591Z",
+  "inputs": {
+    "source": "C:\\Users\\pette\\AppData\\Local\\Temp\\claude\\C--Users-pette-Projects-strale\\4f68dcca-de52-4ade-b2b2-8341f736268e\\scratchpad\\vitest-recapture-refusal-lock.json"
+  },
+  "summary": {
+    "ok": true,
+    "numTotalTests": 82,
+    "numPassedTests": 82,
+    "numFailedTests": 0,
+    "file_count": 8
+  },
+  "topic": "recapture-refusal-lock",
+  "raw": {
+    "numTotalTestSuites": 27,
+    "numPassedTestSuites": 27,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 82,
+    "numPassedTests": 82,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1789164627460,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "hasFreshBaseline"
+            ],
+            "fullName": "hasFreshBaseline is false when there is no baseline at all",
+            "status": "passed",
+            "title": "is false when there is no baseline at all",
+            "duration": 1.564300000000003,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "hasFreshBaseline"
+            ],
+            "fullName": "hasFreshBaseline is false when the baseline is undateable",
+            "status": "passed",
+            "title": "is false when the baseline is undateable",
+            "duration": 0.15170000000000528,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "hasFreshBaseline"
+            ],
+            "fullName": "hasFreshBaseline is false when the suite was edited after the baseline was captured",
+            "status": "passed",
+            "title": "is false when the suite was edited after the baseline was captured",
+            "duration": 0.12659999999999627,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "hasFreshBaseline"
+            ],
+            "fullName": "hasFreshBaseline is true when the baseline is present, dateable, and not edited since",
+            "status": "passed",
+            "title": "is true when the baseline is present, dateable, and not edited since",
+            "duration": 0.16140000000001464,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration picks known_answer as the canary, converts dependency_health to fixture, and routes the three refusal-only types to canary (not fixture)",
+            "status": "passed",
+            "title": "picks known_answer as the canary, converts dependency_health to fixture, and routes the three refusal-only types to canary (not fixture)",
+            "duration": 0.7450999999999794,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration never touches schema_check",
+            "status": "passed",
+            "title": "never touches schema_check",
+            "duration": 0.2236000000000331,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration never touches piggyback",
+            "status": "passed",
+            "title": "never touches piggyback",
+            "duration": 0.31119999999998527,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration never touches an inactive suite",
+            "status": "passed",
+            "title": "never touches an inactive suite",
+            "duration": 0.20609999999999218,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration falls back to dependency_health as the canary when known_answer is absent",
+            "status": "passed",
+            "title": "falls back to dependency_health as the canary when known_answer is absent",
+            "duration": 0.30419999999998026,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration is idempotent — a second pass over already-migrated suites reports unchanged, not repeat conversions",
+            "status": "passed",
+            "title": "is idempotent — a second pass over already-migrated suites reports unchanged, not repeat conversions",
+            "duration": 0.5704000000000065,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration treats a null test_mode as 'live' (schema default) and still converts it",
+            "status": "passed",
+            "title": "treats a null test_mode as 'live' (schema default) and still converts it",
+            "duration": 0.28600000000000136,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration"
+            ],
+            "fullName": "planCapabilityMigration picks exactly one canary even with duplicate known_answer suites (defensive — no observed duplicates in the 12, but scheduler code elsewhere handles per-suite duplicates)",
+            "status": "passed",
+            "title": "picks exactly one canary even with duplicate known_answer suites (defensive — no observed duplicates in the 12, but scheduler code elsewhere handles per-suite duplicates)",
+            "duration": 0.13709999999997535,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture)"
+            ],
+            "fullName": "planCapabilityMigration HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture) does NOT bump updated_at when converting a suite whose baseline is already fresh",
+            "status": "passed",
+            "title": "does NOT bump updated_at when converting a suite whose baseline is already fresh",
+            "duration": 0.1330000000000382,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture)"
+            ],
+            "fullName": "planCapabilityMigration HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture) DOES bump updated_at when the baseline is missing",
+            "status": "passed",
+            "title": "DOES bump updated_at when the baseline is missing",
+            "duration": 0.19129999999995562,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture)"
+            ],
+            "fullName": "planCapabilityMigration HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture) DOES bump updated_at when the baseline is already edit-stale",
+            "status": "passed",
+            "title": "DOES bump updated_at when the baseline is already edit-stale",
+            "duration": 0.11770000000001346,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture)"
+            ],
+            "fullName": "planCapabilityMigration HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture) refusal-only types always get bumpUpdatedAt: true — canary mode doesn't read baseline_output at all, so this is harmless either way",
+            "status": "passed",
+            "title": "refusal-only types always get bumpUpdatedAt: true — canary mode doesn't read baseline_output at all, so this is harmless either way",
+            "duration": 0.227800000000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "MEDIUM (round 2) — observedBaselineCapturedAt carries through for the apply-step race guard"
+            ],
+            "fullName": "planCapabilityMigration MEDIUM (round 2) — observedBaselineCapturedAt carries through for the apply-step race guard carries the suite's actual baseline_captured_at on a convert_to_fixture plan needing a bump",
+            "status": "passed",
+            "title": "carries the suite's actual baseline_captured_at on a convert_to_fixture plan needing a bump",
+            "duration": 0.5754000000000019,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "MEDIUM (round 2) — observedBaselineCapturedAt carries through for the apply-step race guard"
+            ],
+            "fullName": "planCapabilityMigration MEDIUM (round 2) — observedBaselineCapturedAt carries through for the apply-step race guard still carries observedBaselineCapturedAt even when bumpUpdatedAt is false (harmless, just unused by the apply step)",
+            "status": "passed",
+            "title": "still carries observedBaselineCapturedAt even when bumpUpdatedAt is false (harmless, just unused by the apply step)",
+            "duration": 0.15789999999998372,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "EDGE — no live candidate leaves the capability with zero live suites"
+            ],
+            "fullName": "planCapabilityMigration EDGE — no live candidate leaves the capability with zero live suites refuses the whole capability when neither known_answer nor dependency_health is active",
+            "status": "passed",
+            "title": "refuses the whole capability when neither known_answer nor dependency_health is active",
+            "duration": 0.495900000000006,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "EDGE — no live candidate leaves the capability with zero live suites"
+            ],
+            "fullName": "planCapabilityMigration EDGE — no live candidate leaves the capability with zero live suites refuses even when known_answer/dependency_health rows exist but are inactive",
+            "status": "passed",
+            "title": "refuses even when known_answer/dependency_health rows exist but are inactive",
+            "duration": 0.12250000000000227,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "EDGE — no live candidate leaves the capability with zero live suites"
+            ],
+            "fullName": "planCapabilityMigration EDGE — no live candidate leaves the capability with zero live suites does NOT refuse a capability whose only suites are schema_check/piggyback (nothing to convert anyway)",
+            "status": "passed",
+            "title": "does NOT refuse a capability whose only suites are schema_check/piggyback (nothing to convert anyway)",
+            "duration": 0.2155999999999949,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planCapabilityMigration",
+              "EDGE — no live candidate leaves the capability with zero live suites"
+            ],
+            "fullName": "planCapabilityMigration EDGE — no live candidate leaves the capability with zero live suites none of the 12 target capabilities hit this in practice (documents the guard is currently inert, not currently firing)",
+            "status": "passed",
+            "title": "none of the 12 target capabilities hit this in practice (documents the guard is currently inert, not currently firing)",
+            "duration": 0.08080000000001064,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planMigration (multi-capability)"
+            ],
+            "fullName": "planMigration (multi-capability) groups suites by capabilitySlug and plans each independently",
+            "status": "passed",
+            "title": "groups suites by capabilitySlug and plans each independently",
+            "duration": 0.2850999999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planMigration (multi-capability)"
+            ],
+            "fullName": "planMigration (multi-capability) never lets one capability's plan leak a canary pick into another capability's suites",
+            "status": "passed",
+            "title": "never lets one capability's plan leak a canary pick into another capability's suites",
+            "duration": 0.15460000000001628,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "planMigration (multi-capability)"
+            ],
+            "fullName": "planMigration (multi-capability) a refused capability doesn't affect a sibling capability's normal conversion",
+            "status": "passed",
+            "title": "a refused capability doesn't affect a sibling capability's normal conversion",
+            "duration": 0.17070000000001073,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "TARGET_SLUGS"
+            ],
+            "fullName": "TARGET_SLUGS is exactly the 12 capabilities named in the 2026-08-18 finding",
+            "status": "passed",
+            "title": "is exactly the 12 capabilities named in the 2026-08-18 finding",
+            "duration": 0.7198999999999955,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164627950,
+        "endTime": 1789164627958.72,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/browserless-suite-migration.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3)"
+            ],
+            "fullName": "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3) never calls checkQuarantineRecovery (no test_results select) for an exhausted-recapture-quarantined suite",
+            "status": "passed",
+            "title": "never calls checkQuarantineRecovery (no test_results select) for an exhausted-recapture-quarantined suite",
+            "duration": 4.837600000000066,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3)"
+            ],
+            "fullName": "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3) never writes an UPDATE (release) for an exhausted-recapture-quarantined suite",
+            "status": "passed",
+            "title": "never writes an UPDATE (release) for an exhausted-recapture-quarantined suite",
+            "duration": 0.4618000000000393,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3)"
+            ],
+            "fullName": "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3) still evaluates and can release a suite quarantined for an UNRELATED reason — this fix doesn't disable recovery generally",
+            "status": "passed",
+            "title": "still evaluates and can release a suite quarantined for an UNRELATED reason — this fix doesn't disable recovery generally",
+            "duration": 0.5930999999998221,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3)"
+            ],
+            "fullName": "runWeeklyHealthSweep — exhausted-recapture quarantine exclusion (Codex round 3) mixed batch: skips the exhausted-recapture suite, still evaluates the other one",
+            "status": "passed",
+            "title": "mixed batch: skips the exhausted-recapture suite, still evaluates the other one",
+            "duration": 0.4157000000000153,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164628891,
+        "endTime": 1789164628897.593,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/health-sweep.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed)"
+            ],
+            "fullName": "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed) a fresh fixture (refreshed today) is NOT stale — replays without a live call",
+            "status": "passed",
+            "title": "a fresh fixture (refreshed today) is NOT stale — replays without a live call",
+            "duration": 1.717200000000048,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed)"
+            ],
+            "fullName": "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed) a 31-day-old fixture IS stale by age — triggers a live recapture",
+            "status": "passed",
+            "title": "a 31-day-old fixture IS stale by age — triggers a live recapture",
+            "duration": 0.22420000000010987,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed)"
+            ],
+            "fullName": "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed) exactly 30 days old is still fresh; 30 days + 1ms is stale — the boundary is strict",
+            "status": "passed",
+            "title": "exactly 30 days old is still fresh; 30 days + 1ms is stale — the boundary is strict",
+            "duration": 0.21289999999999054,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed)"
+            ],
+            "fullName": "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed) a null fixture_last_refreshed (never captured under this check) is treated as maximally stale by age",
+            "status": "passed",
+            "title": "a null fixture_last_refreshed (never captured under this check) is treated as maximally stale by age",
+            "duration": 0.1637999999998101,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed)"
+            ],
+            "fullName": "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed) omitting fixture_last_refreshed entirely opts out of the age axis — pre-existing callers unaffected",
+            "status": "passed",
+            "title": "omitting fixture_last_refreshed entirely opts out of the age axis — pre-existing callers unaffected",
+            "duration": 0.20649999999977808,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed)"
+            ],
+            "fullName": "HIGH-1: fixture max-age staleness (30-day floor via fixture_last_refreshed) edit-invalidation still takes priority over a fresh age — both axes are OR'd",
+            "status": "passed",
+            "title": "edit-invalidation still takes priority over a fresh age — both axes are OR'd",
+            "duration": 0.14989999999988868,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: captureBaseline resets the age clock on a successful recapture"
+            ],
+            "fullName": "HIGH-1: captureBaseline resets the age clock on a successful recapture sets fixture_last_refreshed on capture — 'successful recapture resets the clock'",
+            "status": "passed",
+            "title": "sets fixture_last_refreshed on capture — 'successful recapture resets the clock'",
+            "duration": 0.5815000000000055,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: captureBaseline resets the age clock on a successful recapture"
+            ],
+            "fullName": "HIGH-1: captureBaseline resets the age clock on a successful recapture resets fixture_recapture_failures to 0 on a successful capture — 'success before cap resets the counter'",
+            "status": "passed",
+            "title": "resets fixture_recapture_failures to 0 on a successful capture — 'success before cap resets the counter'",
+            "duration": 0.16460000000006403,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-1: captureBaseline resets the age clock on a successful recapture"
+            ],
+            "fullName": "HIGH-1: captureBaseline resets the age clock on a successful recapture does NOT re-capture (no DB write) when the existing baseline is already fresh",
+            "status": "passed",
+            "title": "does NOT re-capture (no DB write) when the existing baseline is already fresh",
+            "duration": 0.14840000000003783,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines"
+            ],
+            "fullName": "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines increments the counter on a single failure without quarantining below the cap",
+            "status": "passed",
+            "title": "increments the counter on a single failure without quarantining below the cap",
+            "duration": 0.3106999999999971,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines"
+            ],
+            "fullName": "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines quarantines exactly at MAX_FIXTURE_RECAPTURE_FAILURES consecutive failures, with a reason",
+            "status": "passed",
+            "title": "quarantines exactly at MAX_FIXTURE_RECAPTURE_FAILURES consecutive failures, with a reason",
+            "duration": 0.35429999999996653,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines"
+            ],
+            "fullName": "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines does not quarantine at one below the cap",
+            "status": "passed",
+            "title": "does not quarantine at one below the cap",
+            "duration": 0.14699999999993452,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines"
+            ],
+            "fullName": "HIGH-2b: recordFixtureRecaptureFailure caps consecutive failures and quarantines continues to (re-)quarantine past the cap rather than throwing or going silent — bounded by the scheduler's weekly floor, not by freezing the counter",
+            "status": "passed",
+            "title": "continues to (re-)quarantine past the cap rather than throwing or going silent — bounded by the scheduler's weekly floor, not by freezing the counter",
+            "duration": 0.8172000000001844,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164628913,
+        "endTime": 1789164628917.8171,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/test-runner.fixture-lifecycle.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix)"
+            ],
+            "fullName": "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix) does not raise fixture_recapture_failures on a single passing negative-test run",
+            "status": "passed",
+            "title": "does not raise fixture_recapture_failures on a single passing negative-test run",
+            "duration": 21.777799999999843,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix)"
+            ],
+            "fullName": "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix) does not quarantine after MAX_FIXTURE_RECAPTURE_FAILURES consecutive passing runs",
+            "status": "passed",
+            "title": "does not quarantine after MAX_FIXTURE_RECAPTURE_FAILURES consecutive passing runs",
+            "duration": 2.568899999999985,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix)"
+            ],
+            "fullName": "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix) known_bad: a thrown rejection also passes and does not count toward the cap",
+            "status": "passed",
+            "title": "known_bad: a thrown rejection also passes and does not count toward the cap",
+            "duration": 1.302599999999984,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix)"
+            ],
+            "fullName": "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix) edge_case: a thrown rejection also passes and does not count toward the cap",
+            "status": "passed",
+            "title": "edge_case: a thrown rejection also passes and does not count toward the cap",
+            "duration": 1.175899999999956,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix)"
+            ],
+            "fullName": "a passing refusal-type fixture suite is never counted as a failed recapture (2026-09-11 fix) a genuinely FAILING known_answer recapture on the same fixture-mode plumbing still raises the counter and still quarantines at the cap (unchanged behavior)",
+            "status": "passed",
+            "title": "a genuinely FAILING known_answer recapture on the same fixture-mode plumbing still raises the counter and still quarantines at the cap (unchanged behavior)",
+            "duration": 7.000800000000027,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164628692,
+        "endTime": 1789164628726.0007,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/test-runner.recapture-refusal-pass.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction)"
+            ],
+            "fullName": "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction) bounds total live executor calls to at most cap×2 across 4 sequential runs, and ZERO once quarantined — with withRetry's real retry path active",
+            "status": "passed",
+            "title": "bounds total live executor calls to at most cap×2 across 4 sequential runs, and ZERO once quarantined — with withRetry's real retry path active",
+            "duration": 26.124199999999973,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction)"
+            ],
+            "fullName": "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction) the refusal after quarantine still writes a test_results row (visible, not silent)",
+            "status": "passed",
+            "title": "the refusal after quarantine still writes a test_results row (visible, not silent)",
+            "duration": 7.683399999999892,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction)"
+            ],
+            "fullName": "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction) every attempted recapture writes exactly one test_results row per runTests() call, none of which is a false pass",
+            "status": "passed",
+            "title": "every attempted recapture writes exactly one test_results row per runTests() call, none of which is a false pass",
+            "duration": 4.344499999999925,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction)"
+            ],
+            "fullName": "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction) round-2 gap fix still holds: a MISSING executor also counts toward the cap, not just a throwing one",
+            "status": "passed",
+            "title": "round-2 gap fix still holds: a MISSING executor also counts toward the cap, not just a throwing one",
+            "duration": 1.2497999999998228,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction)"
+            ],
+            "fullName": "unbounded-recapture is now BOUNDED (Codex review, round 2 fix + round 3 correction) a canary-mode (non-fixture) suite is never gated by this mechanism, even while failing repeatedly",
+            "status": "passed",
+            "title": "a canary-mode (non-fixture) suite is never gated by this mechanism, even while failing repeatedly",
+            "duration": 3.05379999999991,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164628692,
+        "endTime": 1789164628734.0537,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/test-runner.recapture-termination.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isBaselineStale"
+            ],
+            "fullName": "isBaselineStale flags the production case: baseline captured before the input changed",
+            "status": "passed",
+            "title": "flags the production case: baseline captured before the input changed",
+            "duration": 1.595199999999977,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBaselineStale"
+            ],
+            "fullName": "isBaselineStale does not flag a baseline captured at or after the last edit",
+            "status": "passed",
+            "title": "does not flag a baseline captured at or after the last edit",
+            "duration": 0.23649999999997817,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBaselineStale"
+            ],
+            "fullName": "isBaselineStale treats a one-millisecond gap as stale — the predicate is strict",
+            "status": "passed",
+            "title": "treats a one-millisecond gap as stale — the predicate is strict",
+            "duration": 0.12860000000000582,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBaselineStale"
+            ],
+            "fullName": "isBaselineStale is not stale when there is no baseline at all",
+            "status": "passed",
+            "title": "is not stale when there is no baseline at all",
+            "duration": 0.15069999999991524,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBaselineStale"
+            ],
+            "fullName": "isBaselineStale treats an undateable baseline as stale rather than trusting it",
+            "status": "passed",
+            "title": "treats an undateable baseline as stale rather than trusting it",
+            "duration": 0.09960000000000946,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isBaselineStale"
+            ],
+            "fullName": "isBaselineStale keeps a baseline whose suite has no recorded edit time",
+            "status": "passed",
+            "title": "keeps a baseline whose suite has no recorded edit time",
+            "duration": 0.10380000000009204,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the fixture-mode branch conditions"
+            ],
+            "fullName": "the fixture-mode branch conditions replays a current baseline — fixture mode still costs nothing",
+            "status": "passed",
+            "title": "replays a current baseline — fixture mode still costs nothing",
+            "duration": 0.1514999999999418,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the fixture-mode branch conditions"
+            ],
+            "fullName": "the fixture-mode branch conditions re-executes a stale baseline when the capability is free to run",
+            "status": "passed",
+            "title": "re-executes a stale baseline when the capability is free to run",
+            "duration": 0.11609999999996035,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the fixture-mode branch conditions"
+            ],
+            "fullName": "the fixture-mode branch conditions does not spend money to refresh — it reports the instrument instead",
+            "status": "passed",
+            "title": "does not spend money to refresh — it reports the instrument instead",
+            "duration": 0.11880000000019209,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "the fixture-mode branch conditions"
+            ],
+            "fullName": "the fixture-mode branch conditions leaves live-mode suites alone entirely",
+            "status": "passed",
+            "title": "leaves live-mode suites alone entirely",
+            "duration": 0.17990000000008877,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164628901,
+        "endTime": 1789164628904.18,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/test-runner.stale-baseline.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "runTests — per-suite budget re-check (HIGH-1, 2026-08-17 review)"
+            ],
+            "fullName": "runTests — per-suite budget re-check (HIGH-1, 2026-08-17 review) 4 duplicate suites, budget for 2 → exactly 2 test_results rows, 2 silent skips, 0 BudgetExhausted rows",
+            "status": "passed",
+            "title": "4 duplicate suites, budget for 2 → exactly 2 test_results rows, 2 silent skips, 0 BudgetExhausted rows",
+            "duration": 420.38110000000006,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — per-suite budget re-check (HIGH-1, 2026-08-17 review)"
+            ],
+            "fullName": "runTests — per-suite budget re-check (HIGH-1, 2026-08-17 review) budget available for all 4 → all 4 run, isBudgetExhausted still consulted per suite",
+            "status": "passed",
+            "title": "budget available for all 4 → all 4 run, isBudgetExhausted still consulted per suite",
+            "duration": 634.0501000000002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) passing suiteId narrows the built WHERE condition to that suite's id",
+            "status": "passed",
+            "title": "passing suiteId narrows the built WHERE condition to that suite's id",
+            "duration": 1.422900000000027,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) suiteId scopes execution to exactly that one suite, even with 3 due siblings sharing (slug, testType)",
+            "status": "passed",
+            "title": "suiteId scopes execution to exactly that one suite, even with 3 due siblings sharing (slug, testType)",
+            "duration": 0.7420999999999367,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) omitting suiteId preserves the pre-fix (capabilitySlug, testType) behavior — every matching suite runs",
+            "status": "passed",
+            "title": "omitting suiteId preserves the pre-fix (capabilitySlug, testType) behavior — every matching suite runs",
+            "duration": 637.1844000000001,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) the danish-4-duplicate scenario becomes LINEAR: 4 overdue suites, one runTests() call each (as the fixed scheduler now does) → exactly 4 executions total, not 16",
+            "status": "passed",
+            "title": "the danish-4-duplicate scenario becomes LINEAR: 4 overdue suites, one runTests() call each (as the fixed scheduler now does) → exactly 4 executions total, not 16",
+            "duration": 2.295900000000074,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) suiteId: null (present but falsy) throws instead of silently widening scope",
+            "status": "passed",
+            "title": "suiteId: null (present but falsy) throws instead of silently widening scope",
+            "duration": 4.413900000000012,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) suiteId: empty string (present but falsy) throws instead of silently widening scope",
+            "status": "passed",
+            "title": "suiteId: empty string (present but falsy) throws instead of silently widening scope",
+            "duration": 0.5041000000001077,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) suiteId: unknown-but-valid-shaped id (no such suite) runs ZERO suites — never falls back to every row",
+            "status": "passed",
+            "title": "suiteId: unknown-but-valid-shaped id (no such suite) runs ZERO suites — never falls back to every row",
+            "duration": 0.5196999999998297,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review)"
+            ],
+            "fullName": "runTests — suiteId scoping (HIGH-1, Codex 2026-08-18 review) suiteId: id exists but belongs to a different capabilitySlug — zero rows, no cross-scope leak",
+            "status": "passed",
+            "title": "suiteId: id exists but belongs to a different capabilitySlug — zero rows, no cross-scope leak",
+            "duration": 0.3672999999998865,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "shouldRecordTestEvidence — Phase 3 Fix A"
+            ],
+            "fullName": "shouldRecordTestEvidence — Phase 3 Fix A returns true for known_answer that genuinely passed with no execution error",
+            "status": "passed",
+            "title": "returns true for known_answer that genuinely passed with no execution error",
+            "duration": 0.14570000000003347,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "shouldRecordTestEvidence — Phase 3 Fix A"
+            ],
+            "fullName": "shouldRecordTestEvidence — Phase 3 Fix A returns false for edge_case even when validateResult marked passed=true",
+            "status": "passed",
+            "title": "returns false for edge_case even when validateResult marked passed=true",
+            "duration": 0.11019999999962238,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "shouldRecordTestEvidence — Phase 3 Fix A"
+            ],
+            "fullName": "shouldRecordTestEvidence — Phase 3 Fix A returns false for known_answer when execution threw — defensive guard against future validateResult quirks",
+            "status": "passed",
+            "title": "returns false for known_answer when execution threw — defensive guard against future validateResult quirks",
+            "duration": 0.07029999999986103,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "shouldRecordTestEvidence — Phase 3 Fix A"
+            ],
+            "fullName": "shouldRecordTestEvidence — Phase 3 Fix A returns false for known_answer that did not pass",
+            "status": "passed",
+            "title": "returns false for known_answer that did not pass",
+            "duration": 0.08440000000018699,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "shouldRecordTestEvidence — Phase 3 Fix A"
+            ],
+            "fullName": "shouldRecordTestEvidence — Phase 3 Fix A returns false for non-known_answer test types regardless of pass state",
+            "status": "passed",
+            "title": "returns false for non-known_answer test types regardless of pass state",
+            "duration": 0.27899999999999636,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164628807,
+        "endTime": 1789164630511.279,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/test-runner.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports)"
+            ],
+            "fullName": "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports) Browserless down → suite skipped silently: no test_results row, no result entry, executor never called",
+            "status": "passed",
+            "title": "Browserless down → suite skipped silently: no test_results row, no result entry, executor never called",
+            "duration": 10.743900000000167,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports)"
+            ],
+            "fullName": "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports) Browserless up → suite executes normally and records a result",
+            "status": "passed",
+            "title": "Browserless up → suite executes normally and records a result",
+            "duration": 7.895100000000184,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports)"
+            ],
+            "fullName": "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports) findUnhealthyUpstream throwing → fails open: suite still runs, doesn't abort the batch",
+            "status": "passed",
+            "title": "findUnhealthyUpstream throwing → fails open: suite still runs, doesn't abort the batch",
+            "duration": 1.3759000000000015,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports)"
+            ],
+            "fullName": "runTests — findUnhealthyUpstream skip gate (supersedes chromium-health.ts's dead imports) a capability with no mapped upstream is never skipped by this gate",
+            "status": "passed",
+            "title": "a capability with no mapped upstream is never skipped by this gate",
+            "duration": 0.9943000000000666,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789164628806,
+        "endTime": 1789164628826.9944,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-a30df8c8562cd9175/apps/api/src/lib/test-runner.upstream-skip.test.ts"
+      }
+    ]
+  }
+}
