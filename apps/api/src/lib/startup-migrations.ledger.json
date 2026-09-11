@@ -701,6 +701,28 @@
         "test_suites.validation_rules"
       ],
       "sha256": "1a8925635c37972fe4fb2a215e00c07112d421c7c72c63c578a1a2f5e31a15a4"
+    },
+    {
+      "id": "M056",
+      "function": "runMigration0113_releaseWronglyQuarantinedRefusalSuites",
+      "title": "release the 32 wrongly-quarantined refusal-type suites",
+      "added": "2026-09-12",
+      "columns_written": [
+        "health_monitor_events.action_taken",
+        "health_monitor_events.capability_slug",
+        "health_monitor_events.details",
+        "health_monitor_events.event_type",
+        "health_monitor_events.human_override",
+        "health_monitor_events.tier",
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected",
+        "test_suites.fixture_recapture_failures",
+        "test_suites.quarantine_reason",
+        "test_suites.test_mode",
+        "test_suites.test_status",
+        "test_suites.updated_at"
+      ],
+      "sha256": "158ff257e7fe33d72992c15138359cba001954ac997ab0b0661bfa30a498352e"
     }
   ],
   "known_overlaps": [
@@ -986,6 +1008,22 @@
         "M055"
       ],
       "note": "Verified disjoint three independent ways, 2026-09-05. (1) Row sets: M040 (block 0111) writes lifecycle_state only through vendor_capability_suspensions WHERE provider_name = openregister; M055 (block 0112) writes only the eight PR #518 free-public-API slugs, whose upstreams are OpenAlex, arXiv, NCBI, Algolia HN, SEC EDGAR, NIST NVD and USGS. Checked against production: 0 rows in vendor_capability_suspensions and 0 in vendor_capability_dependencies touch any of the eight. (2) Interlock: M055 requires deactivation_reason IS NULL, and M040 sets deactivation_reason to its suspension marker whenever it suspends, so M055 can never reverse a vendor suspension even if the sets did meet. (3) Ledger guard: M055 fires exactly once ever (startup_migration_ledger), so it cannot ping-pong with anything across boots, which is the 2026-08-21 incident shape this check exists for. M040 runs before M055 within a boot, so ordering does not hide a conflict either."
+    },
+    {
+      "column": "test_suites.test_mode",
+      "blocks": [
+        "M040",
+        "M056"
+      ],
+      "note": "M040 (vendor control tower) writes test_mode as part of vendor-dependency suspension/restoration, scoped by vendor_capability_dependencies/vendor_capability_suspensions joins for capabilities tied to a specific vendor account. M056 (0113, 2026-09-12) writes test_mode only for the 32 test_suites rows matching an exact wrong-lock signature: test_type IN (negative, edge_case, known_bad) AND quarantine_reason LIKE the fixture_recapture_exhausted: marker AND capability_slug IN the 12 browserless-suite-migration.ts target capabilities. Disjoint by construction: M056 never touches a row unless it carries that specific quarantine_reason, which M040 never writes or reads."
+    },
+    {
+      "column": "test_suites.fixture_recapture_failures",
+      "blocks": [
+        "M053",
+        "M056"
+      ],
+      "note": "M053 (0093) only adds the column with ALTER TABLE ... ADD COLUMN IF NOT EXISTS DEFAULT 0 — mechanical extraction counts a DDL default as \"written\" the same as a data UPDATE, but it never touches an existing row's value. M056 (0113, 2026-09-12) resets the counter to 0 only for the 32 rows matching the exact wrong-lock signature (see the test_mode overlap note above). Disjoint by construction."
     }
   ]
 }

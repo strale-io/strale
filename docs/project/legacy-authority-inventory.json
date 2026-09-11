@@ -763,7 +763,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "42f0b5e056c503afb220e8dff320aa05b141ee860b12ea35f80e29c38f871796",
+      "sha256": "bec56d9cb428aa1369d67ee3cb5bbc6824404709016cc61ef441e2e2bdf29583",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -806,6 +806,7 @@
         "apps/api/src/lib/handoff-preservation.test.ts",
         "apps/api/src/lib/handoff-preservation.ts",
         "apps/api/src/lib/startup-migrations.ledger.json",
+        "apps/api/src/lib/test-runner.ts",
         "apps/api/test/guard-production-write-access.test.ts",
         "archive/README.md",
         "archive/receipts/2026-09-02-test-run-receipts-lib-t15.json",
