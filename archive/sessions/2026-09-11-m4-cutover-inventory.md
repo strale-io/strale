@@ -650,10 +650,18 @@ sequence below starts from the settled record.
 
 **Sequencing note:** batch 1 must precede batches 2 and 3, since both rewrite
 the `CLAUDE.md`/`AGENTS.md` pointer to `.claude/PROTOCOL.md` that batch 1
-either retargets or removes. Batches 4-7 can be reordered or parallelized
-somewhat (for instance, batch 6's vendor-roster retarget does not depend on
-batch 5's digest wiring), but batch 8 must be last, per the plan's own
-no-dual-write and atomic-cutover rules.
+either retargets or removes. Batches 4, 5 and 6 can be reordered or
+parallelized (for instance, batch 6's vendor-roster retarget does not
+depend on batch 5's digest wiring). Batch 7 must follow batches 1 to 6:
+its new Notion anti-regression check fails on every Notion credential,
+API host and Notion tool reference those batches remove (the digest
+readers in batch 5, the vendor-roster script in batch 6, the end-session
+and vendor-switch instructions in batch 4, the entrypoint and `.claude/`
+Notion sections in batches 1 to 3), as section 6 already warns. Before
+batch 7 merges, run the new check on the integration branch and confirm it
+is clean apart from its allowlist; the same applies to every checker batch
+7 makes blocking. Batch 8 must be last, per the plan's own no-dual-write
+and atomic-cutover rules (independent review of PR #664, round 2).
 
 ## 8. Founder-only items
 
