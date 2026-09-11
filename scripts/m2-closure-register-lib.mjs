@@ -85,6 +85,11 @@ export const TRACKS_OUTSIDE_M2_GATE = Object.freeze({
 export const EXPECTED_INVENTORY_DISPOSITIONS = Object.freeze({
   "AGENTS.md": "migrated",          // §7, §9: thin peer entrypoint
   "CLAUDE.md": "migrated",          // §6, §7, §9: thin peer entrypoint; protocols and decisions extracted
+  // The six keys below are the register's own paths (docs/project/
+  // m2-closure-register.yaml's legacy_inventory rows, which this repository's
+  // rules forbid editing) and are looked up by that original path, not by
+  // where the files now live on disk -- see INVENTORY_PATH_RENAMES below for
+  // how the comparison bridges the two after M4 batch 1 actually moved them.
   ".claude/PROTOCOL.md": "archive", // §9: extract unique live rules; archive obsolete starter-kit system
   ".claude/RUNBOOK.md": "archive",
   ".claude/WORKFLOW.md": "archive",
@@ -99,6 +104,31 @@ export const EXPECTED_INVENTORY_DISPOSITIONS = Object.freeze({
   "docs/remediation": "migrated",   // §5, §9: docs/programs/remediation; CURRENT-STATE replaced
   "handoff": "archive",             // §9: existing handoffs promote remaining truth, then archive
 });
+
+/**
+ * Paths the register (docs/project/m2-closure-register.yaml, which this
+ * repository's rules forbid editing) still names by their pre-move location,
+ * mapped to where the file actually lives now. Executing a batch's disposition
+ * (here: M4 batch 1, 2026-09-11, moving the six .claude/ starter-kit files to
+ * archive/sessions/claude-starter-kit/ per
+ * archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md) necessarily moves
+ * the file before the immutable register's own row can be updated to match.
+ * checkClosureRegister resolves each register row through this map before
+ * comparing it against the live M1 inventory, so a legitimate, explained move
+ * does not register as INVENTORY_ENTRY_MISSING/_UNKNOWN. Add an entry here in
+ * the same commit that moves a path the register still names by its old
+ * location; remove the entry only when the register itself is next revised to
+ * use the new path (a change to the register, not to this file).
+ */
+export const INVENTORY_PATH_RENAMES = Object.freeze({
+  ".claude/PROTOCOL.md": "archive/sessions/claude-starter-kit/PROTOCOL.md",
+  ".claude/RUNBOOK.md": "archive/sessions/claude-starter-kit/RUNBOOK.md",
+  ".claude/WORKFLOW.md": "archive/sessions/claude-starter-kit/WORKFLOW.md",
+  ".claude/BUILD.md": "archive/sessions/claude-starter-kit/BUILD.md",
+  ".claude/NOTION.md": "archive/sessions/claude-starter-kit/NOTION.md",
+  ".claude/DISPATCH.yaml": "archive/sessions/claude-starter-kit/DISPATCH.yaml",
+});
+
 // Where identities may already be public. The register itself is excluded so
 // it cannot make an identity "public" by listing it.
 const PUBLIC_SCOPES = ["docs", "archive", "AGENTS.md", "CLAUDE.md", "README.md"];
@@ -529,10 +559,16 @@ export function validateClosureRegister(register, context, { schema, relativePat
   }
 
   // ---- Legacy inventory: exact set equality with the M1 bare inventory.
+  // invByPath is keyed by each row's CURRENT path (post-INVENTORY_PATH_RENAMES),
+  // since the M1 inventory (context.inventoryEntries) reflects where files
+  // actually live on disk today, not the register's original path for a row
+  // whose disposition has since been executed. e.path (the register's own,
+  // unrenamed path) is kept on the row for the disposition lookup below.
   const invByPath = new Map();
   for (const e of register.legacy_inventory) {
-    if (invByPath.has(e.path)) finding("INVENTORY_DUPLICATE", e.path);
-    invByPath.set(e.path, e);
+    const currentPath = INVENTORY_PATH_RENAMES[e.path] ?? e.path;
+    if (invByPath.has(currentPath)) finding("INVENTORY_DUPLICATE", currentPath);
+    invByPath.set(currentPath, e);
     checkEvidence(`inventory ${e.path}`, e.evidence);
   }
   const expectedInv = new Map(context.inventoryEntries.map((e) => [e.path, e]));
@@ -541,10 +577,10 @@ export function validateClosureRegister(register, context, { schema, relativePat
     else if (invByPath.get(path).owner_area !== e.owner_area) finding("INVENTORY_OWNER_AREA_MISMATCH", path);
   }
   for (const path of invByPath.keys()) if (!expectedInv.has(path)) finding("INVENTORY_ENTRY_UNKNOWN", path);
-  for (const [path, e] of invByPath) {
-    const expected = EXPECTED_INVENTORY_DISPOSITIONS[path];
-    if (expected === undefined) finding("INVENTORY_DISPOSITION_UNMAPPED", `${path} has no expected disposition in the migration-map table`);
-    else if (e.disposition !== expected) finding("INVENTORY_DISPOSITION_MISMATCH", `${path}: ${e.disposition} but the migration map derives ${expected}`);
+  for (const [, e] of invByPath) {
+    const expected = EXPECTED_INVENTORY_DISPOSITIONS[e.path];
+    if (expected === undefined) finding("INVENTORY_DISPOSITION_UNMAPPED", `${e.path} has no expected disposition in the migration-map table`);
+    else if (e.disposition !== expected) finding("INVENTORY_DISPOSITION_MISMATCH", `${e.path}: ${e.disposition} but the migration map derives ${expected}`);
   }
   if (register.sources.legacy_inventory.entry_count !== context.inventoryEntries.length) {
     finding("SOURCE_COUNT_DRIFT", `legacy_inventory.entry_count ${register.sources.legacy_inventory.entry_count} vs ${context.inventoryEntries.length}`);
@@ -1121,7 +1157,13 @@ export function validateClosureRegister(register, context, { schema, relativePat
     finding("BASE_REGISTER_UNAVAILABLE", `${base?.ref ?? "origin/main"} is not readable; removal checks did not run`);
   } else if (base.register && Array.isArray(base.register.decision_rows)) {
     for (const row of base.register.decision_rows) if (!rowsByPage.has(row.page_id)) finding("DECISION_ROW_REMOVED", row.page_id);
-    for (const e of base.register.legacy_inventory ?? []) if (!invByPath.has(e.path)) finding("INVENTORY_ENTRY_REMOVED", e.path);
+    // Compared against the register's own (unrenamed) row paths, not the
+    // rename-resolved invByPath above: this checks whether the register file
+    // itself dropped a row versus the base commit, which is a different
+    // question from whether the M1 inventory still finds that row's file on
+    // disk. INVENTORY_PATH_RENAMES bridges the latter, not this one.
+    const currentRegisterPaths = new Set(register.legacy_inventory.map((e) => e.path));
+    for (const e of base.register.legacy_inventory ?? []) if (!currentRegisterPaths.has(e.path)) finding("INVENTORY_ENTRY_REMOVED", e.path);
     for (const p of base.register.plan_statements ?? []) {
       if (!register.plan_statements.some((q) => q.location === p.location)) finding("PLAN_STATEMENT_REMOVED", p.location);
     }

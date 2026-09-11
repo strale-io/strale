@@ -15,8 +15,7 @@ section of CLAUDE.md for the history.)
 1. Declare session intent (one sentence).
 2. Determine mode — **Quick** (bug fix, config change, <2h, no design
    decisions) vs **Full** (new feature, design exploration, multi-component,
-   anything requiring decisions). Full criteria and escalation triggers:
-   `.claude/PROTOCOL.md`.
+   anything requiring decisions).
 3. Escalation triggers: second feature touched, design decision emerges,
    >2hr estimate, contradiction detected.
 
@@ -384,6 +383,13 @@ verify + handoff-file + Journal-entry flow.
 - Global decisions → ALWAYS get confirmation.
 - Supersessions → ALWAYS use the Contradiction Protocol (including a
   CLAUDE.md/AGENTS.md update).
+  When a new decision contradicts an active one: (1) quote both, side by
+  side; (2) say exactly what conflicts; (3) Petter approves the
+  supersession; (4) record it: the new decision with its rationale, and
+  the old one marked superseded with a link to the new one; (5) update
+  the Active Decisions list in CLAUDE.md in the same change. A decision
+  is never silently superseded. (Moved here in M4 batch 1 from the
+  archived starter-kit protocol.)
 
 ### Degraded mode
 
