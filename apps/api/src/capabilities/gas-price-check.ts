@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { alchemyRpc, hexToBigInt, requireMainnet } from "./lib/alchemy-client.js";
+import { alchemyRpc, findChain, hexToBigInt, resolveChain } from "./lib/alchemy-client.js";
 
 // Fee tiers computed from eth_feeHistory: the next block's base fee plus the
 // median priority fee paid at the 10th / 50th / 90th percentile over the last
@@ -7,6 +7,18 @@ import { alchemyRpc, hexToBigInt, requireMainnet } from "./lib/alchemy-client.js
 // forbids commercial use; the tiers are Strale's own computation.
 const BLOCKS = 20;
 const PERCENTILES = [10, 50, 90];
+
+// Ethereum, Polygon and BNB Chain price execution gas only. On rollups the
+// larger part of a transaction's cost is the fee for posting its data to
+// Ethereum, which eth_feeHistory does not contain; quoting these tiers there
+// would understate the cost, so rollups are refused with that reason.
+export const GAS_CHAINS = ["1", "137", "56"] as const;
+const ROLLUPS = ["8453", "42161", "10"];
+
+function requestedRollup(input: Record<string, unknown>) {
+  const { chain } = findChain(input, "chain_id", "chain", "network");
+  return chain && ROLLUPS.includes(chain.id) ? chain : undefined;
+}
 
 interface FeeHistory {
   baseFeePerGas: string[];
@@ -39,10 +51,14 @@ export function feeTiers(h: FeeHistory) {
 }
 
 registerCapability("gas-price-check", async (input: CapabilityInput) => {
-  const chainId = requireMainnet(input, "chain_id", "chain", "network");
-  const history = await alchemyRpc<FeeHistory>("eth_feeHistory", [`0x${BLOCKS.toString(16)}`, "latest", PERCENTILES]);
+  const rollup = requestedRollup(input);
+  if (rollup) {
+    throw new Error(`${rollup.name} is a rollup: most of a transaction's cost there is the fee for posting its data to Ethereum, which these fee tiers cannot include. Supported: 1 (Ethereum), 137 (Polygon PoS), 56 (BNB Smart Chain).`);
+  }
+  const chain = resolveChain(input, GAS_CHAINS, "chain_id", "chain", "network");
+  const history = await alchemyRpc<FeeHistory>(chain, "eth_feeHistory", [`0x${BLOCKS.toString(16)}`, "latest", PERCENTILES]);
   return {
-    output: { chain_id: chainId, ...feeTiers(history), blocks_sampled: BLOCKS },
-    provenance: { source: "ethereum-mainnet (eth_feeHistory via Alchemy)", fetched_at: new Date().toISOString() },
+    output: { chain_id: chain.id, ...feeTiers(history), blocks_sampled: BLOCKS },
+    provenance: { source: `${chain.host} (eth_feeHistory via Alchemy)`, fetched_at: new Date().toISOString() },
   };
 });

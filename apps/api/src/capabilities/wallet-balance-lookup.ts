@@ -1,6 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import {
-  alchemyRpc, assetTransfers, hexToBigInt, hexToNumber, requireAddress, requireMainnet, weiToEth,
+  alchemyRpc, assetTransfers, hexToBigInt, hexToNumber, requireAddress, resolveChain, TRANSFER_CHAINS, weiToEth,
   type AssetTransfer,
 } from "./lib/alchemy-client.js";
 
@@ -23,12 +23,12 @@ export function recentTokens(transfers: AssetTransfer[]): { address: string; sym
 
 registerCapability("wallet-balance-lookup", async (input: CapabilityInput) => {
   const address = requireAddress(input.address ?? input.wallet ?? input.wallet_address, "address");
-  const chainId = requireMainnet(input, "chain_id", "chain");
+  const chain = resolveChain(input, TRANSFER_CHAINS, "chain_id", "chain");
 
   const [balanceHex, incoming, outgoing] = await Promise.all([
-    alchemyRpc<string>("eth_getBalance", [address, "latest"]),
-    assetTransfers({ address, direction: "to", category: ["erc20"], order: "desc", maxCount: RECENT }),
-    assetTransfers({ address, direction: "from", category: ["erc20"], order: "desc", maxCount: RECENT }),
+    alchemyRpc<string>(chain, "eth_getBalance", [address, "latest"]),
+    assetTransfers({ chain, address, direction: "to", category: ["erc20"], order: "desc", maxCount: RECENT }),
+    assetTransfers({ chain, address, direction: "from", category: ["erc20"], order: "desc", maxCount: RECENT }),
   ]);
   const balanceWei = hexToBigInt(balanceHex) ?? 0n;
   const transfers = [...incoming, ...outgoing];
@@ -36,13 +36,14 @@ registerCapability("wallet-balance-lookup", async (input: CapabilityInput) => {
 
   // Token names are not in the transfer index; one metadata call per token.
   const names = await Promise.allSettled(
-    tokens.map((t) => alchemyRpc<{ name?: string | null }>("alchemy_getTokenMetadata", [t.address])),
+    tokens.map((t) => alchemyRpc<{ name?: string | null }>(chain, "alchemy_getTokenMetadata", [t.address])),
   );
 
   return {
     output: {
       address,
-      chain_id: chainId,
+      chain_id: chain.id,
+      native_symbol: chain.nativeSymbol,
       native_balance_wei: balanceWei.toString(),
       native_balance_eth: weiToEth(balanceWei),
       recent_tokens: tokens.map((t, i) => {
@@ -53,6 +54,6 @@ registerCapability("wallet-balance-lookup", async (input: CapabilityInput) => {
       token_transfer_count: Math.min(transfers.length, RECENT),
       note: "recent_tokens is derived from the last 100 token transfers, not actual balances.",
     },
-    provenance: { source: "ethereum-mainnet (via Alchemy)", fetched_at: new Date().toISOString() },
+    provenance: { source: `${chain.host} (via Alchemy)`, fetched_at: new Date().toISOString() },
   };
 });

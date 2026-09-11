@@ -51,6 +51,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | einsearch | EINsearch | active | 2026-09-10 | unknown | unknown |
 | esortcode | eSortCode | active | 2026-09-10 | unknown | unknown |
 | etherscan | Etherscan | held | 2026-09-11 | unknown | prohibited (verified 2026-09-10) |
+| france-travail | France Travail | candidate | 2026-09-11 | unknown | unknown |
 | gemi | GEMI | active | 2026-09-10 | unknown | unknown |
 | github | GitHub | active | 2026-09-10 | unknown | conditional (verified 2026-09-10) |
 | gleif | GLEIF | active | 2026-09-10 | unknown | unknown |
@@ -99,6 +100,7 @@ Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle sta
 | supabase-beacon | Supabase (Beacon project) | active | 2026-09-10 | unknown | unknown |
 | surepay | SurePay | rejected | 2026-09-11 | unknown | unknown |
 | tenderly | Tenderly | active | 2026-09-10 | unknown | unknown |
+| usajobs | USAJOBS | candidate | 2026-09-11 | unknown | unknown |
 | usgs-earthquake | USGS Earthquake | active | 2026-09-10 | unknown | unknown |
 | uspto | USPTO | unknown | 2026-09-10 | unknown | unknown |
 | uznemumu-registrs | Uzņēmumu reģistrs | active | 2026-09-10 | unknown | unknown |

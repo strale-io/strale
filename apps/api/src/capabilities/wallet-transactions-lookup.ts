@@ -1,10 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { assetTransfers, hexToNumber, requireAddress, requireMainnet, type AssetTransfer } from "./lib/alchemy-client.js";
+import { assetTransfers, hexToNumber, requireAddress, resolveChain, TRANSFER_CHAINS, type AssetTransfer } from "./lib/alchemy-client.js";
 
 // Rebuilt 2026-09-11 onto Alchemy's transfer index after Etherscan's free API
 // was found to forbid commercial use. The index lists top-level ETH transfers
 // without receipts, so gas_used and is_error are no longer known (null).
-const NOTE = "Top-level ETH transfers to and from the address (Ethereum mainnet). Gas used and failure status are not available from this source and are null.";
+const NOTE = "Top-level transfers of the chain's native coin to and from the address; value_eth is in native_symbol. Gas used and failure status are not available from this source and are null.";
 
 /** Pure: newest-first merge of both directions, capped. Exported for tests. */
 export function mergeTransactions(address: string, incoming: AssetTransfer[], outgoing: AssetTransfer[], limit: number) {
@@ -36,26 +36,27 @@ export function mergeTransactions(address: string, incoming: AssetTransfer[], ou
 
 registerCapability("wallet-transactions-lookup", async (input: CapabilityInput) => {
   const address = requireAddress(input.address ?? input.wallet ?? input.wallet_address, "address");
-  const chainId = requireMainnet(input, "chain_id", "chain");
+  const chain = resolveChain(input, TRANSFER_CHAINS, "chain_id", "chain");
   const rawLimit = typeof input.limit === "number" ? input.limit : 20;
   const limit = Math.min(Math.max(Math.floor(rawLimit), 1), 50);
 
   const [incoming, outgoing] = await Promise.all([
-    assetTransfers({ address, direction: "to", category: ["external"], order: "desc", maxCount: limit }),
-    assetTransfers({ address, direction: "from", category: ["external"], order: "desc", maxCount: limit }),
+    assetTransfers({ chain, address, direction: "to", category: ["external"], order: "desc", maxCount: limit }),
+    assetTransfers({ chain, address, direction: "from", category: ["external"], order: "desc", maxCount: limit }),
   ]);
   const { transactions, sent_count, received_count } = mergeTransactions(address, incoming, outgoing, limit);
 
   return {
     output: {
       address,
-      chain_id: chainId,
+      chain_id: chain.id,
+      native_symbol: chain.nativeSymbol,
       total_returned: transactions.length,
       sent_count,
       received_count,
       transactions,
       note: NOTE,
     },
-    provenance: { source: "ethereum-mainnet (via Alchemy)", fetched_at: new Date().toISOString() },
+    provenance: { source: `${chain.host} (via Alchemy)`, fetched_at: new Date().toISOString() },
   };
 });

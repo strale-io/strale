@@ -10,24 +10,62 @@
  * caller here returns its own answer (a balance, fee tiers, a wallet's age),
  * never Alchemy access.
  *
- * Ethereum mainnet only. The production key's enabled networks are not
- * verifiable from here, and customers asked for mainnet in all but a handful
- * of calls; callers refuse any other chain rather than guess.
+ * Chains (2026-09-11): one key serves every Alchemy network by default. Each
+ * capability declares which of the chains below it serves, and only chains
+ * whose needed methods Alchemy documents are listed: the transfer index and
+ * its block timestamps ("withMetadata") are documented for Ethereum, Base,
+ * Polygon, Arbitrum and Optimism only. Each served chain also has its own
+ * known_answer suite, so production proves every chain separately.
  */
-import { getEthRpcEndpoints, NO_LICENSED_ETH_RPC } from "../../lib/eth-rpc-endpoints.js";
+import { NO_LICENSED_ETH_RPC } from "../../lib/eth-rpc-endpoints.js";
 import { readJsonWithLimit } from "../../lib/resource-limits.js";
 
-export const SUPPORTED_CHAIN_ID = "1";
+export interface Chain {
+  /** Decimal chain id, as returned in outputs. */
+  id: string;
+  name: string;
+  /** Alchemy network prefix: https://<host>.g.alchemy.com/v2/<key>. */
+  host: string;
+  /** The chain's native coin, which native balances and transfer values are in. */
+  nativeSymbol: string;
+  /** Names callers use for it, besides the id. */
+  aliases: string[];
+}
 
-/** The chain a caller asked for, or a refusal naming the one it can serve. */
-export function requireMainnet(input: Record<string, unknown>, ...keys: string[]): string {
+export const CHAINS: Record<string, Chain> = {
+  "1": { id: "1", name: "Ethereum", host: "eth-mainnet", nativeSymbol: "ETH", aliases: ["ethereum", "eth", "mainnet"] },
+  "8453": { id: "8453", name: "Base", host: "base-mainnet", nativeSymbol: "ETH", aliases: ["base"] },
+  "42161": { id: "42161", name: "Arbitrum One", host: "arb-mainnet", nativeSymbol: "ETH", aliases: ["arbitrum", "arb", "arbitrum-one"] },
+  "10": { id: "10", name: "OP Mainnet", host: "opt-mainnet", nativeSymbol: "ETH", aliases: ["optimism", "op", "op-mainnet"] },
+  "137": { id: "137", name: "Polygon PoS", host: "polygon-mainnet", nativeSymbol: "POL", aliases: ["polygon", "matic", "pol"] },
+  "56": { id: "56", name: "BNB Smart Chain", host: "bnb-mainnet", nativeSymbol: "BNB", aliases: ["bnb", "bsc", "binance"] },
+};
+
+/** Chains with Alchemy's transfer index and block timestamps (documented). */
+export const TRANSFER_CHAINS = ["1", "8453", "42161", "10", "137"] as const;
+
+/** The chain a caller asked for (first non-empty key; Ethereum when none), or undefined if unknown. */
+export function findChain(input: Record<string, unknown>, ...keys: string[]): { raw: unknown; chain: Chain | undefined } {
   let raw: unknown;
   for (const k of keys) if (input[k] !== undefined && input[k] !== null && input[k] !== "") { raw = input[k]; break; }
-  const chainId = raw === undefined ? SUPPORTED_CHAIN_ID : String(raw).trim().toLowerCase();
-  if (chainId === SUPPORTED_CHAIN_ID || chainId === "0x1" || chainId === "ethereum" || chainId === "mainnet" || chainId === "eth") {
-    return SUPPORTED_CHAIN_ID;
-  }
-  throw new Error(`'chain_id' must be 1 (Ethereum mainnet); '${String(raw)}' is not supported by this capability.`);
+  const wanted = raw === undefined ? "1" : String(raw).trim().toLowerCase();
+  const byId = /^0x[0-9a-f]+$/.test(wanted) ? String(Number.parseInt(wanted, 16)) : wanted;
+  const chain = (Object.hasOwn(CHAINS, byId) ? CHAINS[byId] : undefined) ?? Object.values(CHAINS).find((c) => c.aliases.includes(wanted));
+  return { raw, chain };
+}
+
+/** Resolve a caller's chain against the chains a capability serves, or refuse naming them. */
+export function resolveChain(input: Record<string, unknown>, served: readonly string[], ...keys: string[]): Chain {
+  const { raw, chain } = findChain(input, ...keys);
+  if (chain && served.includes(chain.id)) return chain;
+  const list = served.map((id) => `${id} (${CHAINS[id].name})`).join(", ");
+  throw new Error(`'chain_id' must be one of ${list}; '${String(raw)}' is not supported by this capability.`);
+}
+
+function alchemyUrl(chain: Chain): string {
+  const key = process.env.ALCHEMY_API_KEY;
+  if (!key) throw new Error(NO_LICENSED_ETH_RPC);
+  return `https://${chain.host}.g.alchemy.com/v2/${key}`;
 }
 
 /** A 0x-prefixed 20-byte address, or a refusal. */
@@ -40,21 +78,20 @@ export function requireAddress(raw: unknown, field: string): string {
   return address;
 }
 
-export async function alchemyRpc<T>(method: string, params: unknown[]): Promise<T> {
-  const [endpoint] = getEthRpcEndpoints();
-  if (!endpoint) throw new Error(NO_LICENSED_ETH_RPC);
-  // unguarded-fetch-ok: fixed Alchemy host from eth-rpc-endpoints; user input travels only in the JSON-RPC body
+export async function alchemyRpc<T>(chain: Chain, method: string, params: unknown[]): Promise<T> {
+  const endpoint = alchemyUrl(chain);
+  // unguarded-fetch-ok: host comes from the fixed CHAINS registry; user input travels only in the JSON-RPC body
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json", "User-Agent": "Strale/1.0" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
     signal: AbortSignal.timeout(10000),
   });
-  if (res.status === 429) throw new Error("Ethereum RPC is rate-limiting requests right now. Retry shortly.");
-  if (!res.ok) throw new Error(`Ethereum RPC returned HTTP ${res.status}.`);
+  if (res.status === 429) throw new Error(`${chain.name} RPC is rate-limiting requests right now. Retry shortly.`);
+  if (!res.ok) throw new Error(`${chain.name} RPC returned HTTP ${res.status}.`);
   const body = await readJsonWithLimit<{ result?: T; error?: { message?: string } }>(res);
-  if (body.error) throw new Error(`Ethereum RPC error: ${body.error.message ?? "unknown"}`);
-  if (body.result === undefined) throw new Error("Ethereum RPC returned no result.");
+  if (body.error) throw new Error(`${chain.name} RPC error: ${body.error.message ?? "unknown"}`);
+  if (body.result === undefined) throw new Error(`${chain.name} RPC returned no result.`);
   return body.result;
 }
 
@@ -75,6 +112,7 @@ export interface AssetTransfer {
  * fromAddress or toAddress per request, so a wallet's full view is two calls.
  */
 export async function assetTransfers(opts: {
+  chain: Chain;
   address: string;
   direction: "from" | "to";
   category: string[];
@@ -91,7 +129,7 @@ export async function assetTransfers(opts: {
     excludeZeroValue: false,
   };
   params[opts.direction === "from" ? "fromAddress" : "toAddress"] = opts.address;
-  const result = await alchemyRpc<{ transfers?: AssetTransfer[] }>("alchemy_getAssetTransfers", [params]);
+  const result = await alchemyRpc<{ transfers?: AssetTransfer[] }>(opts.chain, "alchemy_getAssetTransfers", [params]);
   return Array.isArray(result.transfers) ? result.transfers : [];
 }
 

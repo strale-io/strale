@@ -547,6 +547,24 @@
     - none
   example_value: "300000"
   cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
+- name: FRANCE_TRAVAIL_CLIENT_SECRET
+  purpose: "France Travail partner-API client secret, paired with FRANCE_TRAVAIL_CLIENT_ID."
+  provider: France Travail
+  holder: petter
+  cost_class: free
+  required_in: []
+  set_in:
+    - none
+  cost_note: "Free. Not set until the founder registers the account and adds it on Railway; until then job-board-search refuses this country."
+- name: FRANCE_TRAVAIL_CLIENT_ID
+  purpose: "France Travail partner-API client id (francetravail.io application with the Offres d'emploi v2 API) for job-board-search country fr."
+  provider: France Travail
+  holder: petter
+  cost_class: free
+  required_in: []
+  set_in:
+    - none
+  cost_note: "Free. Not set until the founder registers the account and adds it on Railway; until then job-board-search refuses this country."
 - name: FRONTEND_URL
   purpose: Canonical frontend origin — used for CORS allow-list and building redirect/link URLs (Stripe checkout return, dispute links).
   provider: internal
@@ -1231,6 +1249,24 @@
     - .env
     - workflow
   example_value: "20"
+- name: USAJOBS_USER_AGENT
+  purpose: "The email address the USAJOBS API key was registered to; USAJOBS requires it as the User-Agent header."
+  provider: USAJOBS
+  holder: petter
+  cost_class: free
+  required_in: []
+  set_in:
+    - none
+  cost_note: "Free. Not set until the founder registers the account and adds it on Railway; until then job-board-search refuses this country."
+- name: USAJOBS_API_KEY
+  purpose: "USAJOBS Search API key (developer.usajobs.gov) for job-board-search country us."
+  provider: USAJOBS
+  holder: petter
+  cost_class: free
+  required_in: []
+  set_in:
+    - none
+  cost_note: "Free. Not set until the founder registers the account and adds it on Railway; until then job-board-search refuses this country."
 - name: USPTO_ODP_API_KEY
   purpose: USPTO Open Data Portal key. No code has ever read it — no capability was built on it. Kept on purpose (DQ-30, founder's call 2026-09-03) against a future US intellectual-property capability.
   provider: USPTO
