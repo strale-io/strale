@@ -114,8 +114,16 @@ surfaces:
     kind: registry-listing
     target: docker/mcp-registry
     status: open
-    status_date: 2026-04-27
+    status_date: 2026-09-11
     evidence: https://github.com/docker/mcp-registry/pull/2202
+    notes: >-
+      Re-checked 2026-09-11 with `gh pr view
+      https://github.com/docker/mcp-registry/pull/2202 --json
+      state,createdAt,mergedAt`: state OPEN, created 2026-04-01, not
+      merged. archive/sessions/audit-output/parallel-audits-2026-08-12/distribution-playbook.md
+      (section 2.5, as of 2026-08-12) records Strale as not listed in the
+      Docker MCP Catalog, a weak negative, consistent with the submission
+      still awaiting merge. Previously: open, as of 2026-04-27, per the same PR.
 
   # -- docs/company/DIRECTORY-MAP.md as a named population source (review
   #    round 1): the crawler-hit table and the Coinbase x402 Bazaar finding
