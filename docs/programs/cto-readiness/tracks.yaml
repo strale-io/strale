@@ -905,10 +905,11 @@ tracks:
       (starter-kit rules archived, the Contradiction Protocol steps and
       the commit convention kept in the entrypoints) merged into it as
       PR #665 at 849fc796 after an independent review. The inventory's
-      batch 7 gained an amendment: freeze the M2 closing review so a
-      post-cutover decision record does not fail CI. Batch 2, the
-      CLAUDE.md rewrite, runs next against m4/cutover; merge main into
-      m4/cutover first.
+      plan gained batch 1b, before the CLAUDE.md rewrite: freeze the M2
+      closing review so a new decision record does not fail CI, then
+      write formal records for the decisions still in force that
+      CLAUDE.md summarizes without one. Batch 1b runs next against
+      m4/cutover; merge main into m4/cutover first.
     resume_file: archive/sessions/2026-09-11-m4-cutover-inventory.md
     exit:
       - both tools load the same project truth and pass entrypoint parity

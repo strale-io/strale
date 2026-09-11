@@ -466,8 +466,42 @@ sequence below starts from the settled record.
    being archived without a keep decision, silently dropping a safety rule
    this report did not itself audit line-by-line.
 
+1b. **Freeze the M2 closing review, then record every decision still in
+   force that has no formal record.** Added 2026-09-11 after batch 1 and
+   the independent review of PR #666. Batch 2 turns `CLAUDE.md`'s Active
+   Decisions section into pointers, and blocking check 4 of the plan's
+   section 8 bars decision summaries from the entrypoints, but many
+   decisions that section lists have no record under
+   `docs/decisions/records/` (among them DEC-20260902-A, DEC-20260903-A,
+   DEC-20260904-C, DEC-20260905-A, DEC-20260910-A, several March 2026
+   decisions, and the MVP decisions DEC-1 to DEC-23); recompute the list
+   by matching every `DEC-` id in that section against the records
+   directory. Writing a record today fails CI through the M2 closing
+   review, so this batch first rescopes `CLOSING_REVIEW_STALE` and
+   `CLOSING_REVIEW_COUNTS_MISMATCH` as described in batch 7's amendment
+   (integrity after that rests on `validateProtectedDecisionChange`,
+   `scripts/decision-records-lib.mjs:1007-1049`, which compares with the
+   merge base on main, refuses protected-body edits, and permits a new
+   record and an `active` to `superseded` transition). Then, per id:
+   classify it from the preserved evidence (the M2 closure register's
+   row disposition, read only; the preserved Notion export under
+   `archive/`; later decisions that supersede or amend it) as in force,
+   superseded, or historical; write a formal record, in the existing
+   record schema and collision rules, only for a decision still in
+   force, carrying its substance faithfully from its source with the
+   source cited; and list the superseded and historical ones with their
+   evidence in the batch report, so batch 2 can drop their summaries
+   without losing a rule. A record states a decision the founder already
+   made; it never makes or changes one, and anything ambiguous is
+   reported, not decided. Tests: `npm run context:test` (including the
+   closure-register and decision-record suites), with planted proofs
+   that a new record and a status transition pass after the rescope and
+   that editing a protected body or the closure register still fails.
+
 2. **Rewrite `CLAUDE.md` as a peer entrypoint**, per section 3's table: drop
-   the three Notion-only headings, rewrite Project Spec / Active Decisions /
+   the three Notion-only headings, rewrite Project Spec / Active Decisions
+   (pointers to the records batch 1b wrote; summaries of superseded or
+   historical decisions dropped per batch 1b's report) /
    Session Start / Session Checklists / Workflow Invariants / Degraded Mode,
    update its `.claude/PROTOCOL.md` pointer per batch 1's outcome, and add
    the file's pointer to `docs/project/START-HERE.md`/`PROTOCOL-ROUTER.md`.
@@ -654,9 +688,10 @@ sequence below starts from the settled record.
    explicitly (as section 1's table 11 already enumerates them) rather than
    by a broad pattern exclusion.
 
-   Amendment (2026-09-11, architect, after batch 1): batch 7 must also
-   freeze the M2 closing review as history, or the first decision the
-   repository records after cutover fails CI. `CLOSING_REVIEW_STALE`
+   Amendment (2026-09-11, architect, after batch 1): the M2 closing review
+   must be frozen as history, or the first decision the repository
+   records fails CI; that work is batch 1b below, not batch 7, because
+   batch 1b writes decision records before batch 2. `CLOSING_REVIEW_STALE`
    (`scripts/m2-closure-register-lib.mjs:49-53` and `:941-960`) fires on
    any change under `docs/decisions/records/`,
    `docs/decisions/id-collisions.yaml` or a collision-resolution report
@@ -666,13 +701,13 @@ sequence below starts from the settled record.
    (now in the entrypoints' Workflow Invariants) records a new decision
    and marks the old one superseded, and M6 fixture 7 requires that
    adding a superseding record and transitioning the old status passes.
-   The batch rescopes both checks so they evaluate the decision surfaces
+   Batch 1b rescopes both checks so they evaluate the decision surfaces
    as they stood at the reviewed commit (the M2 exit stays proven by its
    archived review), and leaves post-cutover record integrity to the
    decision-record checks that already refuse an edit to a record's
    protected body. Tests: a new record and a status transition after the
    reviewed commit pass; editing the closure register itself still fails.
-   The same batch adds the six archived starter-kit file names
+   Batch 7 itself adds the six archived starter-kit file names
    (`archive/sessions/claude-starter-kit/`) to the repository-wide
    anti-regression scan, since batch 1's live-link test covers only the
    entrypoints, commands, skills and hooks (batch 1 review, PR #665).
@@ -723,7 +758,8 @@ sequence below starts from the settled record.
 
 **Sequencing note:** batch 1 must precede batches 2 and 3, since both rewrite
 the `CLAUDE.md`/`AGENTS.md` pointer to `.claude/PROTOCOL.md` that batch 1
-either retargets or removes. Batches 4, 5 and 6 can be reordered or
+either retargets or removes. Batch 1b must precede batch 2, since batch 2
+points at the decision records batch 1b writes. Batches 4, 5 and 6 can be reordered or
 parallelized (for instance, batch 6's vendor-roster retarget does not
 depend on batch 5's digest wiring). Batch 7 must follow batches 1 to 6:
 its new Notion anti-regression check fails on every Notion credential,
