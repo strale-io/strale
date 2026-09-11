@@ -7,8 +7,8 @@
 slug: gas-price-check
 name: Gas Price Check
 description: >-
-  Current Ethereum mainnet gas fees: safe, proposed and fast prices in Gwei plus the base fee, computed from the
-  priority fees actually paid over the last 20 blocks. Useful for deciding whether to send a transaction now or wait.
+  Current gas fees on Ethereum, Polygon or BNB Chain: safe, proposed and fast prices in Gwei plus the base fee,
+  computed from the priority fees actually paid over the last 20 blocks.
 category: web3
 cost_class: free_quota
 quota_window: daily
@@ -20,7 +20,7 @@ input_schema:
   properties:
     chain_id:
       type: string
-      description: "Chain ID. Only 1 (Ethereum mainnet) is supported. Default: 1"
+      description: "Chain ID: 1 (Ethereum), 137 (Polygon PoS) or 56 (BNB Smart Chain). Rollups are refused. Default: 1"
 output_schema:
   type: object
   example:
@@ -54,15 +54,35 @@ personal_data_categories: []
 geography: global
 test_fixtures:
   known_answer:
-    input:
-      chain_id: "1"
-    expected_fields:
-      - field: safe_gas_gwei
-        operator: not_null
-        reliability: common
-      - field: fast_gas_gwei
-        operator: not_null
-        reliability: common
+    - input:
+        chain_id: "1"
+      expected_fields:
+        - field: safe_gas_gwei
+          operator: not_null
+          reliability: common
+        - field: fast_gas_gwei
+          operator: not_null
+          reliability: common
+    - input:
+        chain_id: "137"
+      expected_fields:
+        - field: chain_id
+          operator: equals
+          reliability: guaranteed
+          value: "137"
+        - field: safe_gas_gwei
+          operator: not_null
+          reliability: common
+    - input:
+        chain_id: "56"
+      expected_fields:
+        - field: chain_id
+          operator: equals
+          reliability: guaranteed
+          value: "56"
+        - field: safe_gas_gwei
+          operator: not_null
+          reliability: common
 output_field_reliability:
   chain_id: common
   base_fee_gwei: common
@@ -79,9 +99,9 @@ limitations:
     category: availability
     severity: info
     workaround: null
-  - title: "Ethereum mainnet only"
+  - title: "Chains covered"
     text: >-
-      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+      Ethereum (1), Polygon PoS (137) and BNB Smart Chain (56). Rollups such as Base, Arbitrum and OP Mainnet are refused: most of a transaction's cost there is the fee for posting its data to Ethereum, which fee history does not contain, so these tiers would understate it.
     category: coverage
     severity: info
     workaround: null

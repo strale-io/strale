@@ -3,7 +3,7 @@
 
 slug: job-board-search
 name: Job Board Search
-description: Search Swedish job listings from Arbetsförmedlingen's open job-ad data (JobTech, CC0). Returns title, company, location, salary, URL.
+description: Search job listings from national public employment services — Sweden (Arbetsförmedlingen), France (France Travail), US federal jobs (USAJOBS). Returns title, company, location, salary, URL.
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -20,6 +20,9 @@ input_schema:
       type: string
     remote_only:
       type: boolean
+    country_code:
+      type: string
+      description: "se (Sweden, default), fr (France) or us (US federal jobs). For fr, location is a department number (75) or 5-digit INSEE commune code; for us, a place name such as \"Denver, Colorado\"."
 output_schema:
   type: object
   example:
@@ -106,7 +109,11 @@ output_schema:
       type: number
     sources_queried:
       type: array
-data_source: Arbetsförmedlingen JobTech JobSearch API (open data, CC0)
+    country_code:
+      type: string
+    attribution:
+      type: string
+data_source: Public employment services — Arbetsförmedlingen JobTech (SE, CC0), France Travail Offres d'emploi (FR), USAJOBS (US)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
@@ -150,12 +157,15 @@ output_field_reliability:
   jobs: guaranteed
   total_results: guaranteed
   sources_queried: guaranteed
+  country_code: guaranteed
+  attribution: guaranteed
 limitations:
-  - title: Swedish listings only — ads posted to Arbetsförmedlingen; company career pages may be missed
+  - title: Countries covered — Sweden, France, US federal jobs; each needs its own source
     text: >-
-      Covers job ads published through Arbetsförmedlingen (Sweden) and refuses any country_code other than "se". Contact
-      persons named in ads are never returned. Until 2026-09-11 it could also query Adzuna, whose terms do not permit
-      resale; that path was removed.
+      country_code "se" (default) reads Arbetsförmedlingen's JobTech data; "fr" reads France Travail and "us" reads
+      USAJOBS (US federal government jobs only, not the private market). France and the US need credentials; until
+      they are configured those countries are refused. Contact persons named in ads are never returned. Company
+      career pages and other job boards are not covered.
     category: coverage
     severity: info
     workaround: For comprehensive results, supplement with google-search scoped to the target company's careers page

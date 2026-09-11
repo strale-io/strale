@@ -7,8 +7,8 @@
 slug: wallet-transactions-lookup
 name: Wallet Transactions Lookup
 description: >-
-  Get recent ETH transfers to and from an Ethereum mainnet wallet: up to 50 with hash, value, counterparty, timestamp
-  and direction.
+  Get recent native-coin transfers to and from a wallet on Ethereum, Base, Arbitrum, Optimism or Polygon: up to 50
+  with hash, value, counterparty, timestamp and direction.
 category: web3
 cost_class: free_quota
 quota_window: daily
@@ -28,7 +28,7 @@ input_schema:
       description: Wallet address (0x...)
     chain_id:
       type: string
-      description: "Chain ID (1=Ethereum). Default: 1"
+      description: "Chain ID: 1 (Ethereum), 8453 (Base), 42161 (Arbitrum One), 10 (OP Mainnet) or 137 (Polygon PoS). Default: 1"
 output_schema:
   type: object
   example:
@@ -98,6 +98,8 @@ output_schema:
       type: number
     note:
       type: string
+    native_symbol:
+      type: string
 data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
 data_source_type: api
 transparency_tag: algorithmic
@@ -108,17 +110,69 @@ personal_data_categories:
 geography: global
 test_fixtures:
   known_answer:
-    input:
-      limit: 5
-      address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
-      chain_id: "1"
-    expected_fields:
-      - field: total_returned
-        operator: not_null
-        reliability: common
-      - field: transactions
-        operator: not_null
-        reliability: common
+    - input:
+        limit: 5
+        address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+        chain_id: "1"
+      expected_fields:
+        - field: total_returned
+          operator: not_null
+          reliability: common
+        - field: transactions
+          operator: not_null
+          reliability: common
+    - input:
+        limit: 5
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "8453"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "ETH"
+        - field: transactions
+          operator: type
+          reliability: common
+          value: "array"
+    - input:
+        limit: 5
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "42161"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "ETH"
+        - field: transactions
+          operator: type
+          reliability: common
+          value: "array"
+    - input:
+        limit: 5
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "10"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "ETH"
+        - field: transactions
+          operator: type
+          reliability: common
+          value: "array"
+    - input:
+        limit: 5
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "137"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "POL"
+        - field: transactions
+          operator: type
+          reliability: common
+          value: "array"
 output_field_reliability:
   address: common
   chain_id: common
@@ -127,6 +181,7 @@ output_field_reliability:
   received_count: common
   total_returned: common
   note: guaranteed
+  native_symbol: guaranteed
 limitations:
   - title: null
     text: >-
@@ -135,9 +190,9 @@ limitations:
     category: availability
     severity: info
     workaround: null
-  - title: "Ethereum mainnet only"
+  - title: "Chains covered"
     text: >-
-      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+      Ethereum (1), Base (8453), Arbitrum One (42161), OP Mainnet (10) and Polygon PoS (137), read through Alchemy; any other chain_id is refused. These are the chains for which Alchemy documents its transfer index and block timestamps. Values are in the chain's native coin, named in native_symbol (POL on Polygon).
     category: coverage
     severity: info
     workaround: null

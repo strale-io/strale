@@ -1236,6 +1236,53 @@ vendors:
         outcome: prohibited
     authorization:
       status: unknown
+  - id: france-travail
+    name: France Travail
+    aliases:
+      - France Travail
+    lifecycle:
+      - state: candidate
+        date: 2026-09-11
+        decision: unknown
+        reason: "job-board-search country fr is built and refuses until the founder registers a francetravail.io application with the Offres d'emploi v2 API and adds its credentials on Railway. handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md"
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: verified
+        verified_at: 2026-09-11
+        verified_by: "read 2026-09-11 against France Travail's conditions generales d'utilisation, francetravail.fr/informations/informations-legales-et-conditio/conditions-generales-dutilisatio.html"
+        evidence: handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md
+        outcome: conditional
+        note: "Offers are available through the API to partners who accept the job-offer reuse licence, contact data excepted, and may then be reused for any purpose including republication on third-party sites. The reuse licence itself is accepted at registration and was not read here."
+    authorization:
+      status: unknown
+  - id: usajobs
+    name: USAJOBS
+    aliases:
+      - USAJOBS
+    lifecycle:
+      - state: candidate
+        date: 2026-09-11
+        decision: unknown
+        reason: "job-board-search country us (federal jobs) is built and refuses until the founder registers a USAJOBS API key and adds it with its email on Railway. Reuse terms are as OPM's statement is quoted by FedScoop (fedscoop.com, 'OPM wants to crack down on federal job site spoofs'): reposting permitted if values are unaltered, USAJOBS is credited and applicants are sent to USAJOBS; raw bulk feeds are not. The primary text could not be read and is to be confirmed at registration. handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md"
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
   - id: australian-business-register
     name: Australian Business Register
     aliases:
