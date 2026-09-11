@@ -609,7 +609,7 @@ tracks:
       or the rendered digest changed; no Notion write, no production
       write, no change of authority.
 
-      M3 batch 4 is this PR: docs/project/candidates/end-session.md, an
+      M3 batch 4 is done (PR #643): docs/project/candidates/end-session.md, an
       inactive design draft for the repo-native replacement of the live
       /end-session command. For every live step it states unchanged or
       replaced, replacing the Journal-entry write with YAML front matter
@@ -638,8 +638,36 @@ tracks:
       the Dockerfile changed, no Notion write, no production write, no
       change of authority.
 
-      Next is batch 5 of the inventory's sequence (scheduled-workflow
-      reachability tests).
+      M3 batch 5 is this PR: config/scheduled-mechanisms.yaml (9 entries -
+      seven weekly-drift.yml steps, one m3-digest-shadow.yml step, plus the
+      Railway strale-digest-cron job recorded verifiable: false since its
+      cron schedule lives in Railway's own project configuration, not
+      this repository) and config/scheduled-mechanisms.schema.json.
+      scripts/scheduled-reachability-lib.mjs parses every
+      .github/workflows/*.yml with the yaml package (never a regex over
+      raw text) and checks the register in both directions:
+      MECHANISM_WORKFLOW_MISSING, MECHANISM_NOT_SCHEDULED,
+      MECHANISM_STEP_MISSING, MECHANISM_SCRIPT_MISSING,
+      MECHANISM_SECRET_MISMATCH, WORKFLOWS_UNREADABLE, RUN_UNPARSEABLE, and
+      the completeness rule SCHEDULED_STEP_UNDECLARED (every scheduled
+      step invoking a repository script must be declared). npm run
+      scheduled:check / scheduled:test, wired into ci.yml next to
+      candidates:test, blocking. scripts/digest-repo-native.test.mjs's
+      former bespoke workflow-parsing test was replaced with an assertion
+      that the register carries the m3-digest-shadow-comparison entry,
+      since the generic check now proves that wiring. Planted-failure
+      proof, one per finding code, in throwaway fixtures
+      (scripts/scheduled-reachability.test.mjs), plus a real-repository
+      proof that editing weekly-drift.yml's vendor-roster step to a
+      different script makes scheduled:check fail with
+      MECHANISM_STEP_MISSING and SCHEDULED_STEP_UNDECLARED, restored with
+      git checkout before this batch's commit. No workflow's steps,
+      triggers, schedules or secrets changed; the only workflow file this
+      PR edits is ci.yml, adding the two new blocking steps.
+
+      Next is batch 6 of the inventory's sequence (protocol full-body
+      extraction, one protocol per batch, each checked byte-identical
+      against CLAUDE.md).
 
       The vendor strand is now complete (batches 1
       through 5): batch 5 (PR #639) added the two vendors STATIC_FACTS.vendors
