@@ -18,6 +18,7 @@ import {
   recordVendorHttpFailure,
   restoreVendorSuspensions,
   suspendRequiredCapabilities,
+  syncBalanceVendor,
 } from "./vendor-control-tower.js";
 
 const DATABASE_URL_TEST = useTestDatabase();
@@ -326,8 +327,11 @@ describeMaybe("vendor control tower against a real database", () => {
     for (const provider of [recent, balanceStamped, silent, blocked]) {
       await recordBalanceNotApplicable(provider, reasons);
     }
-    // A second pass must not start counting the pre-mode stamp.
+    // A second pass must not start counting the pre-mode stamp, and must not
+    // refresh the marker — a marker moved every hour would stop counting a
+    // real render within the hour it landed.
     await recordBalanceNotApplicable(balanceStamped, reasons);
+    await recordBalanceNotApplicable(recent, reasons);
 
     const rows = await db.execute(sql`
       SELECT provider_name, status, status_reason, remaining_units, included_units, reset_at,
@@ -351,5 +355,33 @@ describeMaybe("vendor control tower against a real database", () => {
     expect(byName.get(blocked)).toMatchObject({
       status: "auth_error", status_reason: "earlier reason", remaining_units: null, fresh: true,
     });
+  });
+
+  // If production moves back to the hosted product, a real balance reading
+  // ends not-applicable mode; left behind, the marker would let a later
+  // self-hosted period count the balance check's own stamp as a render.
+  it("clears the not-applicable marker when a balance reading applies again", async () => {
+    const provider = `test-vendor-${randomUUID().slice(0, 8)}-cloud`;
+    createdProviders.add(provider);
+    await db.execute(sql`
+      INSERT INTO vendor_accounts (
+        provider_name, display_name, billing_model, monitor_mode, status, usage_unit, metadata
+      ) VALUES (
+        ${provider}, ${provider}, 'free_allowance', 'api_balance', 'unknown', 'unit',
+        jsonb_build_object('balance_not_applicable_since', now() - INTERVAL '1 day', 'kept', true)
+      )
+    `);
+
+    await syncBalanceVendor(provider, async () => ({
+      providerName: provider, planName: "free", includedUnits: 1000, usedUnits: 10,
+      remainingUnits: 990, overageUnits: 0, usageUnit: "unit", resetAt: null, canUseOverage: false,
+    }));
+
+    const rows = await db.execute(sql`
+      SELECT status, metadata FROM vendor_accounts WHERE provider_name = ${provider}
+    `) as unknown as Array<{ status: string; metadata: Record<string, unknown> }>;
+    expect(rows[0]?.status).toBe("healthy");
+    expect(rows[0]?.metadata).not.toHaveProperty("balance_not_applicable_since");
+    expect(rows[0]?.metadata).toHaveProperty("kept", true);
   });
 });
