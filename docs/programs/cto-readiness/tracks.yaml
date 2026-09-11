@@ -609,8 +609,37 @@ tracks:
       or the rendered digest changed; no Notion write, no production
       write, no change of authority.
 
-      Next is batch 4 of the inventory's sequence (the inactive
-      session-end draft).
+      M3 batch 4 is this PR: docs/project/candidates/end-session.md, an
+      inactive design draft for the repo-native replacement of the live
+      /end-session command. For every live step it states unchanged or
+      replaced, replacing the Journal-entry write with YAML front matter
+      (title/type/source/actor/action_required) on the same handoff file
+      the live command already writes, the To-do DB query with a read of
+      the active track's next_action in tracks.yaml, and the Decisions DB
+      check with docs/company/DECISION-QUEUE.md plus
+      docs/decisions/records/. Preserves the per-tool identity split
+      (claude-code/Claude code versus Codex, CLAUDE.md/.claude/ versus
+      AGENTS.md/.codex/) in one table so a future generator can produce
+      both mirrors from one text. Does not resolve the Action Required
+      reading-list-versus-founder-decision question batch 2 found open;
+      that stays for M4. scripts/candidates.test.mjs (npm run
+      candidates:test, wired into CI next to digest:shadow:test) asserts
+      the draft carries inactive front matter and its M4 caution block,
+      names both tools' identities, and that neither live end-session
+      file (.claude/commands/, .agents/skills/source-command-end-session/)
+      references the candidates directory; both planted failures (a
+      pointer added to the live Claude command, authority_active: false
+      removed from the draft) were confirmed to fail and restored before
+      this batch's own commit. The handoff front-matter shape was verified
+      accepted by handoff:check and receipts:check against an uncommitted
+      sample file, deleted before this batch's commit, not against a
+      fixture. Shadow/inactive throughout: the live .claude/ and .agents/
+      end-session files are byte-unchanged, nothing under apps/api/src or
+      the Dockerfile changed, no Notion write, no production write, no
+      change of authority.
+
+      Next is batch 5 of the inventory's sequence (scheduled-workflow
+      reachability tests).
 
       The vendor strand is now complete (batches 1
       through 5): batch 5 (PR #639) added the two vendors STATIC_FACTS.vendors

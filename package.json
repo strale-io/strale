@@ -37,6 +37,7 @@
     "vendors:view": "node scripts/generate-vendor-view.mjs",
     "digest:shadow": "npx tsx scripts/digest-shadow.mjs",
     "digest:shadow:test": "node --test scripts/digest-repo-native.test.mjs",
+    "candidates:test": "node --test scripts/candidates.test.mjs",
     "distribution:check": "node scripts/check-distribution.mjs",
     "distribution:test": "node --test scripts/distribution.test.mjs",
     "models:check": "node apps/api/scripts/check-model-literals.mjs",
