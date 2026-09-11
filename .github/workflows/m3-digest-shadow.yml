@@ -1,0 +1,48 @@
+name: M3 digest shadow comparison
+
+# Report-only shadow run of the repo-native digest priority readers (T6 M3
+# batch 2, scripts/digest-repo-native-lib.mjs, scripts/digest-shadow.mjs).
+# The production daily digest runs as the Railway strale-digest-cron
+# service, built from the API Docker image, which does not carry
+# docs/company/DECISION-QUEUE.md, handoff/ or archive/ at runtime -- so
+# this comparison runs here instead, where a full repository checkout
+# exists. See docs/programs/cto-readiness/tracks.yaml (T6) and
+# archive/sessions/2026-09-11-m3-remaining-scope-inventory.md, section 1b.
+#
+# This never fails the build, never writes anywhere (no Notion write, no
+# production write, no issue creation), and never changes what the
+# rendered digest email contains. Notion remains the authority until the
+# founder-gated M4 cutover.
+
+on:
+  schedule:
+    # Daily, shortly after the digest's own 05:30 UTC run.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  shadow:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # NOTION_API_KEY is the digest code's own variable name
+      # (apps/api/src/lib/daily-digest/fetch-notion.ts,
+      # config/env-manifest.yaml), mapped here from the same repository
+      # secret weekly-drift.yml already uses for Notion access
+      # (secrets.NOTION_TOKEN) -- one Notion integration token, two
+      # variable names in code, see config/env-manifest.yaml's own note on
+      # the pair. Without a NOTION_API_KEY, scripts/digest-shadow.mjs
+      # prints the repo-native half only and still exits 0.
+      - name: Run the repo-native digest shadow comparison
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_TOKEN }}
+        run: npx tsx scripts/digest-shadow.mjs

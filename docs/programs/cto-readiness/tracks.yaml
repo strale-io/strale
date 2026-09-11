@@ -540,7 +540,35 @@ tracks:
       round 1: corrected protocol-location table, appendix counts, mirror
       characterization, added a Notion-reference sweep beyond .claude/, and
       closed batch-sequence gaps - see the report's "Review round 1"
-      section, PR #638). The vendor strand is now complete (batches 1
+      section, PR #638). Batch 2 of the proposed sequence is done (PR #641): repo-native
+      digest priority readers, shadow-run in GitHub Actions. Added
+      scripts/digest-repo-native-lib.mjs (parseDecisionQueue, repoNativePriorities,
+      recentHandoffActivity, comparePriorities), mapping
+      docs/company/DECISION-QUEUE.md `decided` entries to the digest's
+      "unreviewed decisions" and `your_call` entries to "action required"
+      (the mapping and its CHARTER.md quotes are recorded in that library's
+      own header comment), plus a Journal-shaped reader over
+      handoff/_general/from-code/*.md. scripts/digest-shadow.mjs prints
+      both and, only when NOTION_API_KEY is set, loads the live Notion
+      getPriorities() (fetch-notion.ts) and compares; always exits 0
+      (report only). The scheduled workflow
+      .github/workflows/m3-digest-shadow.yml runs it daily plus
+      workflow_dispatch, with NOTION_API_KEY mapped from the same
+      secrets.NOTION_TOKEN weekly-drift.yml already uses for Notion. This
+      runs in GitHub Actions rather than the Railway digest because the
+      digest's own Docker image does not carry
+      docs/company/DECISION-QUEUE.md or handoff/ at runtime (see this
+      track's prior note on the Dockerfile copy list, unchanged by this
+      batch). scripts/digest-repo-native.test.mjs covers every entry shape
+      DECISION-QUEUE.md actually uses, the unparseable-line and
+      unknown-status throws, the 14-day split, the handoff window, the
+      comparison, a reachability test on the workflow file, and a
+      real-repo parse of the live DECISION-QUEUE.md; wired into CI next to
+      vendors:test. Shadow mode throughout: nothing under apps/api/src,
+      the Dockerfile, or the rendered digest email changed. Next is batch 3
+      of the same sequence (the distribution-surfaces registry and the
+      social-media-post tracking decision), whose shadow reader follows
+      the same pattern. The vendor strand is now complete (batches 1
       through 5): batch 5 (PR #639) added the two vendors STATIC_FACTS.vendors
       named with no register entry - BODACC (new vendor; two live executors
       call bodacc-datadila.opendatasoft.com directly) and Liberty Data
@@ -562,10 +590,10 @@ tracks:
       stays internal) and drafted the vendor-switch skill's retargeted step
       5 as inactive prose in the design document, not an edit to the live
       skill. Full outcome: docs/strategy/2026-09-10-m3-vendor-state-model.md,
-      "Batch 5: outcome". Next bounded task is batch 2 of the remaining-scope
-      inventory (archive/sessions/2026-09-11-m3-remaining-scope-inventory.md,
-      "Proposed batch sequence," item 2), with one correction found on
-      2026-09-11 after that report merged: the daily digest runs as the
+      "Batch 5: outcome". Batch 2 of the remaining-scope inventory's
+      proposed sequence (archive/sessions/2026-09-11-m3-remaining-scope-inventory.md,
+      "Proposed batch sequence," item 2) is recorded above; the note below,
+      from the same session, is what shaped its design: the daily digest runs as the
       Railway strale-digest-cron service from the API Docker image, and the
       Dockerfile copies only apps/api, packages/sdk-typescript,
       packages/mcp-server and manifests, so docs/decisions/records,
