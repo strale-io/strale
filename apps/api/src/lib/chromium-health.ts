@@ -108,9 +108,12 @@ export async function probeChromiumHealth(): Promise<boolean> {
   try {
     // A real /content render every 30 minutes consumed ~1,440 units/month by
     // itself. The root request is zero-unit; 401/403/404 still prove the edge
-    // is reachable, while browserlessFetch refuses before the network when the
-    // control tower has blocked the account. Customer renders remain the
-    // authoritative end-to-end signal and record their actual failures.
+    // is reachable — and nothing more: this probe cannot tell whether the
+    // container accepts our key. Against the self-hosted container nothing
+    // classifies a refused render either (Browserless relays the target's
+    // status, see browserlessFetch), so the only credential evidence is a
+    // successful render stamping last_success_at, which the control tower
+    // reads as healthy-within-24h or unknown (recordBalanceNotApplicable).
     const res = await vendorReachabilityFetch("browserless", url, {
       method: "GET",
       signal: AbortSignal.timeout(15000),

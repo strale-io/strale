@@ -70,8 +70,11 @@ export function vendorReachabilityFetch(
  * between 2026-07-14 and 2026-08-13. Reading them as an account failure would
  * withdraw every Browserless capability on one customer's bot-protected URL,
  * so they are never classified here. The container's own refusal (HTTP 403,
- * body "Unauthorized") needs a zero-cost authenticated check that does not
- * render a page; see BROWSERLESS_SELF_HOSTED_REASON in vendor-control-tower.
+ * body "Unauthorized" — the executors quote the body after the status, and
+ * all 52 refusals from 2026-08-26 read exactly that) would need a zero-cost
+ * authenticated check that renders no page. Until one exists, credential
+ * evidence is a successful render's last_success_at, which the control tower
+ * reads in recordBalanceNotApplicable.
  */
 export function browserlessFetch(
   url: string | URL,

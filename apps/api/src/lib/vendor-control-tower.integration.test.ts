@@ -107,13 +107,15 @@ describeMaybe("vendor control tower against a real database", () => {
     });
   });
 
-  // 2026-09-11: this write failed on every call in production with "could not
-  // determine data type of parameter $4" — the fingerprint appears alone in an
-  // IS NOT NULL test, which gives Postgres no type to infer. The caller catches
-  // and logs, so every live 401/402/403 from a metered vendor went unrecorded:
-  // Browserless refused 52 of 52 direct calls from 2026-08-26 and no
-  // capability was withdrawn. The mocked unit test renders the SQL and never
-  // reaches a server, which is why it could not see this.
+  // 2026-09-11: this write is refused by Postgres 16 with "could not determine
+  // data type of parameter $4" — the fingerprint appeared alone in an IS NOT
+  // NULL test, which gives the server no type to infer. The caller catches and
+  // logs, so a live 401/402/403 from a metered vendor was never recorded. In
+  // production, 52 Browserless refusals reached this write from 2026-08-26 and
+  // none changed the account or withdrew anything. (Browserless is now kept
+  // out of this path on purpose; see browserlessFetch.) The mocked unit test
+  // renders the SQL and never reaches a server, which is why it could not see
+  // this.
   async function seedProviderWithRequiredCapability(provider: string, slug: string) {
     createdProviders.add(provider);
     createdSlugs.add(slug);
@@ -263,36 +265,73 @@ describeMaybe("vendor control tower against a real database", () => {
     }
   });
 
-  it("records a not-applicable balance check without touching a blocking status", async () => {
+  // Calls in flight when a block lands still report back. None of them may
+  // lift it: a 429 is not blocking, and swapping exhausted for auth_error would
+  // hand recovery to a canary that cannot see a top-up.
+  it("keeps the first blocking status against later, weaker evidence", async () => {
     const suffix = randomUUID().slice(0, 8);
-    const healthy = `test-vendor-${suffix}-ok`;
+    const authBlocked = `test-vendor-${suffix}-auth`;
+    const exhausted = `test-vendor-${suffix}-exhausted`;
+    await seedProviderWithRequiredCapability(authBlocked, `test-vendor-cap-${suffix}-a`);
+    await seedProviderWithRequiredCapability(exhausted, `test-vendor-cap-${suffix}-e`);
+
+    await recordVendorHttpFailure(authBlocked, 403);
+    await recordVendorHttpFailure(authBlocked, 429);
+    expect(await accountRow(authBlocked)).toMatchObject({
+      status: "auth_error",
+      status_reason: "Authenticated API returned HTTP 403",
+      last_error: "HTTP 429",
+    });
+
+    await recordVendorHttpFailure(exhausted, 402);
+    await recordVendorHttpFailure(exhausted, 401);
+    expect(await accountRow(exhausted)).toMatchObject({ status: "exhausted", last_error: "HTTP 401" });
+    expect(await servingState(`test-vendor-cap-${suffix}-e`)).toEqual({ visible: false, x402_enabled: false });
+  });
+
+  it("reads a not-applicable balance check from live evidence and never lifts a block", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const recent = `test-vendor-${suffix}-recent`;
+    const silent = `test-vendor-${suffix}-silent`;
     const blocked = `test-vendor-${suffix}-blocked`;
-    createdProviders.add(healthy);
-    createdProviders.add(blocked);
-    for (const [provider, status] of [[healthy, "healthy"], [blocked, "auth_error"]] as const) {
+    const reasons = { confirmed: "a call succeeded recently", unconfirmed: "nothing has succeeded" };
+    for (const [provider, status, lastSuccess] of [
+      [recent, "healthy", "1 hour"],
+      [silent, "healthy", "3 days"],
+      [blocked, "auth_error", "1 hour"],
+    ] as const) {
+      createdProviders.add(provider);
       await db.execute(sql`
         INSERT INTO vendor_accounts (
           provider_name, display_name, billing_model, monitor_mode, status, status_reason,
-          included_units, used_units, remaining_units, usage_unit, reset_at, last_checked_at
+          included_units, used_units, remaining_units, usage_unit, reset_at,
+          last_checked_at, last_success_at
         ) VALUES (
           ${provider}, ${provider}, 'free_allowance', 'api_balance', ${status}, 'earlier reason',
-          1000, 2, 998, 'unit', now() + INTERVAL '10 days', now() - INTERVAL '2 days'
+          1000, 2, 998, 'unit', now() + INTERVAL '10 days',
+          now() - INTERVAL '2 days', now() - ${lastSuccess}::interval
         )
       `);
     }
 
-    await recordBalanceNotApplicable(healthy, "self-hosted endpoint");
-    await recordBalanceNotApplicable(blocked, "self-hosted endpoint");
+    for (const provider of [recent, silent, blocked]) {
+      await recordBalanceNotApplicable(provider, reasons);
+    }
 
     const rows = await db.execute(sql`
       SELECT provider_name, status, status_reason, remaining_units, included_units, reset_at,
              last_checked_at > now() - INTERVAL '1 minute' AS fresh
-        FROM vendor_accounts WHERE provider_name IN (${healthy}, ${blocked})
+        FROM vendor_accounts WHERE provider_name IN (${recent}, ${silent}, ${blocked})
     `) as unknown as Array<Record<string, unknown>>;
     const byName = new Map(rows.map((row) => [row.provider_name, row]));
-    expect(byName.get(healthy)).toMatchObject({
-      status: "healthy", status_reason: "self-hosted endpoint",
+    expect(byName.get(recent)).toMatchObject({
+      status: "healthy", status_reason: "a call succeeded recently",
       remaining_units: null, included_units: null, reset_at: null, fresh: true,
+    });
+    // A carried-forward "healthy" with no evidence behind it is how Browserless
+    // read healthy for sixteen days; it must surface as unknown instead.
+    expect(byName.get(silent)).toMatchObject({
+      status: "unknown", status_reason: "nothing has succeeded", fresh: true,
     });
     expect(byName.get(blocked)).toMatchObject({
       status: "auth_error", status_reason: "earlier reason", remaining_units: null, fresh: true,
