@@ -1,0 +1,101 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "bd2af18a88472ee2a7c6f5a898587e1e463e4186"
+  },
+  "at": "2026-09-11T06:53:24.519Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/73ad86d8-dfd4-46aa-a2a5-3ca84e02026c/scratchpad/mut-vendor-breaker.json"
+  },
+  "summary": {
+    "ok": true,
+    "database": "throwaway postgres:16 container on localhost:55432/strale_test, schema from drizzle-kit push plus all 55 startup-migration blocks, as the CI integration-db lane does",
+    "tests_passed": 40,
+    "tests_total": 40,
+    "planted_failures": 7,
+    "planted_caught": 7,
+    "typecheck": "tsc --noEmit clean after building packages/mcp-server",
+    "neighbouring_suites": "vendor, metered, web-provider, screenshot-url, html-to-pdf, chromium-health, vendor-morning-status: 143 passed, 5 skipped",
+    "independent_review": "fresh read-only same-provider agent: PASS, 0 blockers; its 3 should-fix items and nits 1-5 addressed in this change, nit 6 judged safe by the reviewer"
+  },
+  "topic": "vendor-breaker-mutations",
+  "raw": {
+    "ok": true,
+    "test_files": [
+      "apps/api/src/lib/vendor-control-tower.integration.test.ts",
+      "apps/api/src/lib/vendor-control-tower-state.test.ts",
+      "apps/api/src/lib/vendor-control-tower.test.ts",
+      "apps/api/src/lib/metered-vendor-fetch.test.ts",
+      "apps/api/src/lib/dependency-manifest-probes.test.ts"
+    ],
+    "database": "throwaway postgres:16 container on localhost:55432/strale_test, schema from drizzle-kit push plus all 55 startup-migration blocks, as the CI integration-db lane does",
+    "tests_passed": 40,
+    "tests_total": 40,
+    "planted_failures": 7,
+    "planted_caught": 7,
+    "plants": [
+      {
+        "plant": "remove the ::text cast on the blocked-credential fingerprint in recordVendorHttpFailure (the production code as it stood)",
+        "result": "caught",
+        "failed": [
+          "records a live credential rejection and withdraws the required capability",
+          "records a live exhaustion (HTTP 402) the same way",
+          "holds a refused Serper key until the key changes, then restores"
+        ],
+        "server_error": "PostgresError: could not determine data type of parameter $4"
+      },
+      {
+        "plant": "browserlessFetch classifies HTTP failures again (drop the false argument)",
+        "result": "caught",
+        "failed": [
+          "never reads a Browserless 403 as our account failing, since it relays the target's status"
+        ]
+      },
+      {
+        "plant": "remove the Browserless balance adapter's applies() guard",
+        "result": "caught",
+        "failed": [
+          "does not ask the browserless.io account about a self-hosted endpoint"
+        ]
+      },
+      {
+        "plant": "recordBalanceNotApplicable keeps remaining_units instead of clearing it",
+        "result": "caught",
+        "failed": [
+          "does not ask the browserless.io account about a self-hosted endpoint",
+          "reads a not-applicable balance check from live evidence and never lifts a block"
+        ]
+      },
+      {
+        "plant": "recordVendorHttpFailure lets later evidence overwrite a blocking status (a 429 after a 403; a 401 after a 402)",
+        "result": "caught",
+        "failed": [
+          "keeps the first blocking status against later, weaker evidence"
+        ]
+      },
+      {
+        "plant": "recordBalanceNotApplicable carries the previous status forward instead of reading last_success_at",
+        "result": "caught",
+        "failed": [
+          "reads a not-applicable balance check from live evidence and never lifts a block"
+        ]
+      },
+      {
+        "plant": "sec-api-io probe without 200 in healthyStatuses",
+        "result": "caught",
+        "failed": [
+          "accepts sec-api.io's unauthenticated 200 on its root"
+        ]
+      },
+      {
+        "plant": "an earlier draft that put browserless on the credential re-arm list, with its cycle test",
+        "result": "withdrawn before commit",
+        "reason": "production recorded 42 target-site 403s relayed by Browserless with a valid token (2026-07-14..2026-08-13), so a per-call 403 is not evidence about our key; the cycle test was converted to Serper"
+      }
+    ],
+    "typecheck": "tsc --noEmit clean after building packages/mcp-server",
+    "neighbouring_suites": "vendor, metered, web-provider, screenshot-url, html-to-pdf, chromium-health, vendor-morning-status: 143 passed, 5 skipped",
+    "independent_review": "fresh read-only same-provider agent: PASS, 0 blockers; its 3 should-fix items and nits 1-5 addressed in this change, nit 6 judged safe by the reviewer"
+  }
+}

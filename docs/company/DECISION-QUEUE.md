@@ -14,6 +14,31 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-31** · `your_call` · owner Petter · raised 2026-09-11T08:00Z · no deadline — **screenshots and PDFs are broken until the browser service gets its key back; I need the Railway sign-in to do it**
+*Status:* `AUTHORIZATION_UNAVAILABLE`. Nothing here is a judgement; what should
+happen is settled and the only thing missing is access.
+*Settled:* since 2026-08-26 every direct call to our self-hosted browser service
+has been refused — 52 of 52, of which 28 were paying customers (20 screenshots,
+4 page extractions, 4 company enrichments; none charged). The cause is one
+setting: on 2026-08-25 the key the service checks was replaced with a
+browserless.io account key, because a new monitor tested the key against that
+account, which production does not use. The fix is to put the service's own key
+back into the API's `BROWSERLESS_API_KEY`, copied from the browser service's
+`TOKEN` on Railway, and redeploy. The monitor change that stops this recurring
+merges first, so restoring the key cannot re-trigger the 25 August suspension.
+Evidence: `archive/receipts/2026-09-11-audit-browserless-credential-outage.json`.
+*Why it is not mine:* the change is inside my authority, but the Railway
+command-line session on this machine is signed out, and signing in is yours — I
+do not authenticate as the company.
+*What I need:* the Railway sign-in renewed on this machine (`railway login`).
+I then make the one-variable change, confirm a screenshot and a PDF render, and
+record it here. Nothing else is asked of you.
+*If nothing happens:* every capability that calls the browser directly keeps
+failing. Observed failing: screenshots, PDF rendering, page extraction and
+company enrichment, at about two paying attempts a day between them. Landing-page
+review and Estonian company data take the same path with the same key and had no
+calls in the window to observe.
+
 **DQ-30** · `answered` · owner Petter · raised 2026-09-02T22:15Z · answered 2026-09-03 — **keep all five dormant vendor keys; buy nothing, cancel nothing**
 *Answered:* Petter, in chat: leave Cobalt, EINsearch and sec-api in place, he
 will activate them later; and keep the OpenSanctions and USPTO accounts rather
@@ -203,6 +228,19 @@ dying unanswered. At current volumes that is worth well under a euro a quarter.
 The reason to act is the pattern, not the loss.
 *How you'd reverse it:* nothing to reverse — this is a request for a route, not
 a change already made.
+
+> **UPDATE, added 2026-09-11 — the route this entry asks for now exists; the
+> ask narrows.** Left as written above, per the annotate-never-rewrite rule. On
+> 2026-09-06 (PR #613) the shared `DATABASE_URL` became a genuinely read-only
+> role and the write credential was parked as a commented line, to be enabled
+> only for an authorised operator write — so "set the restricted write password"
+> is superseded. Re-measured read-only this morning: neither setting has been
+> applied (`page-speed-test` still reads 8000 ms, `company-news` still has
+> none), and both are now **off the paid rail**, which lowers the exposure
+> further. What is needed is no longer a credential but a yes: approval for an
+> attended session to apply the two statements through the parked credential.
+> The unattended morning run is not permitted to write at all, and this stays in
+> your column until you move it.
 
 **DQ-21** · `answered` · owner Petter · raised 2026-08-27 · answered 2026-08-28 — **we do not contact the card-paying customer**
 *Answered:* Petter, in chat: "we will not reach out to the buyer." Clear and

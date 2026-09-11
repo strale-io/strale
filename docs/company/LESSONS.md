@@ -450,7 +450,7 @@ to verify were broken?* For F7 incident 8: *which consumers read this setting,
 and did the strictest one accept it?* Same question. A reader who agrees with
 the paragraph above and does not ask one of these has changed nothing.
 
-**Count: 9 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, and incident 9 is the same checkout still being the cause.** Integration
+**Count: 10 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, incident 9 is the same checkout still being the cause, and incident 10 (2026-09-11) is a mock-rendered SQL test that could not fail on the defect it guarded.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -599,6 +599,30 @@ finding in three, and the genuine one was real work that would have been lost.
 The failure mode this family tracks is a check nobody believes; a 1-in-3 signal
 on a destructive-loss warning is close to that line.
 
+**Incident 10, 2026-09-11 — a protective write that could never execute,
+guarded by a test that could not see why.** `recordVendorHttpFailure` is how a
+live 401/402/403 from a metered vendor marks the account blocked and withdraws
+the capabilities that need it. It bound the credential fingerprint alone in
+`WHEN $4 IS NOT NULL`, where Postgres has no type to infer, so the server refused
+the statement — "could not determine data type of parameter $4" — for every
+provider, reproduced on Postgres 16 for a Browserless 403, an OpenRegister 402
+and a Serper 401. `meteredVendorFetch` catches and logs by design, so each
+customer call carried on and the breaker never once tripped from the day it
+shipped (2026-08-25). Its unit test mocks the database and renders the SQL
+through `PgDialect`; a rendered string cannot fail on bind typing, so it passed.
+The handoff that built the tower wrote this exact lesson — rendered-query mocks
+"did not expose either defect" — and applied it to the suspension audit writes,
+one function away, and not here.
+
+Repaired with three real-Postgres tests that fail on the unrepaired statement
+(`archive/receipts/2026-09-11-test-run-vendor-breaker-mutations.json`). Input for
+the investigation's step 2, stated as rough because it was counted by pattern
+rather than read: 15 test files verify SQL by rendering it through a mock, 41
+non-test modules issue raw `UPDATE`/`INSERT`, and 27 integration test files
+exist. Which of those writes only a mock has ever seen is the population still
+owed. The shape to carry into step 3: **a mocked render verifies the text of a
+statement, never that a server will run it.**
+
 **Steps 3–7 owed.** The hypothesis to falsify: *a gate that asserted a non-empty
 input set, or a minimum expected count, would have caught incidents 1, 4 and 5.*
 The repair direction is a shared helper every gate routes its input through,
@@ -698,7 +722,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 9. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms — see below.** A capability recorded as switched off that served errors for two
+**Count: 10. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 on 2026-09-11 is incident 8's arm again — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -943,6 +967,51 @@ earlier. Nothing was lost — everything was on the remote and the removal went
 through `git worktree remove`, which is why this is a near-miss and not an F12
 incident — but the reasoning that produced it was the reasoning the rule
 forbids.
+
+#### Incident 10 — 2026-09-11 — a credential "fixed" against the reader that does not use it
+
+On 2026-08-25 the vendor control tower's new Browserless monitor rejected the
+production key. The session compared lengths without printing either value,
+found a 19-character value on Railway against a 49-character browserless.io key
+in the local `.env`, judged the Railway value stale and replaced it; the tower
+then read 959/1000 units and restored seven capabilities. Both readings were
+accurate and the conclusion was not. Production serves Browserless from a
+self-hosted container (pinned v1, DEC-7) that checks the key against its own
+token, and the 19-character value was that token. The monitor was reading an
+account production never calls.
+
+From the next deploy — first refusal 2026-08-26T13:50Z — every direct
+Browserless call returned HTTP 403 "Unauthorized": 52 of 52, among them 28 paid
+attempts by customers (20 screenshots, 4 page extractions, 4 company
+enrichments), none charged. For sixteen days the morning report said
+"Browserless Cloud: healthy; 998/1000 units", and the cloud account's own
+counter moved by 2 units in that time — the second source that production never
+called it. Evidence: `archive/receipts/2026-09-11-audit-browserless-credential-outage.json`.
+
+**This is incident 8's arm exactly**, and it came first: one setting, several
+readers, verified through the reader that happened to accept it. Incident 8's
+question — *which consumers read this setting, and did the strictest one accept
+it?* — was written into this file on 2026-09-03, nine days after the key was
+replaced, and nobody turned it on the credentials already "repaired" the same
+way. A lesson that is only applied forwards leaves every earlier instance in
+place.
+Repaired as far as code can reach: the account check now runs only when
+`BROWSERLESS_URL` is a browserless.io host, so the cloud account can no longer
+vouch for or against the container's key. Restoring the right key needs a
+Railway sign-in this machine no longer has (DECISION-QUEUE DQ-31). Not repaired:
+nothing checks the container's token at zero cost. An authenticated v1 endpoint
+that renders no page is the direction, and it has to be observed from inside
+Railway before it is trusted — the v1/v2 split has burned two changes already.
+
+*How it stayed hidden, which is the part worth keeping.* Three controls each
+looked at something adjacent to the fault. The reachability probe accepts
+401/403 by design. The account check measured the wrong account. The per-call
+credential breaker, which would have tripped on the first live refusal, could
+not write at all (F5 incident 10). The harness's own alarm did fire — "correctness
+0%" on `screenshot-url` and `html-to-pdf`, about six times a day each — and the
+morning health sweep read the latest 25 events, where a steady low-rate alarm
+never ranked. DAILY-RUN.md step B now groups alarms by capability over the whole
+window since the previous run.
 
 ### F8 · Duplicated authority
 
