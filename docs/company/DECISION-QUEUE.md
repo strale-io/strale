@@ -42,10 +42,14 @@ production correctness tests for `screenshot-url` and `html-to-pdf` then
 passed, each a real render through the browser service. Screenshots, PDF
 rendering, page extraction, company enrichment, Estonian company data and
 landing-page review were still listed for customers throughout. Left over:
-the other test suites of the browser capabilities were locked during the
-outage after their saved test data failed to refresh three times, a lock
-that only a person may clear by design (`apps/api/src/lib/health-sweep.ts`);
-clearing it is a production database write and is asked separately. The
+two of these capabilities also have tests locked after their saved test data
+failed to refresh three times, a lock only a person may clear by design
+(`apps/api/src/lib/health-sweep.ts`). Correction, same day: an earlier
+version of this entry said the outage caused those locks. It did not: the
+locked tests were locked on 2026-08-18 to 2026-08-21, before the outage,
+and the same lock covers negative, edge-case and known-bad tests of
+capabilities that never use the browser. It is a test-runner fault, being
+fixed separately as technical work, so nothing is asked of Petter. The
 account key that replaced the token on 25 August was overwritten; production
 does not use it.
 *Original text:*
