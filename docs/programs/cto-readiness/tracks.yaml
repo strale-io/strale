@@ -540,21 +540,40 @@ tracks:
       round 1: corrected protocol-location table, appendix counts, mirror
       characterization, added a Notion-reference sweep beyond .claude/, and
       closed batch-sequence gaps - see the report's "Review round 1"
-      section, PR #638). Next bounded task is the first batch it proposes:
-      continue the vendor strand's own batch 5 (add the two
-      STATIC_FACTS.vendors entries the register is missing - Liberty Data,
-      BODACC - pick and implement the category/primary-vendor view design,
-      draft the agent-context and customer-facing views, and draft the
-      vendor-switch skill's retargeted step 5 as inactive prose - this batch
-      owns that draft exclusively). The inventory's proposed sequence after
-      that: a repo-native shadow reader for daily-digest Decisions/Journal/
-      Action-Required content (batch 2), a distribution-surfaces registry
+      section, PR #638). The vendor strand is now complete (batches 1
+      through 5): batch 5 (PR #639) added the two vendors STATIC_FACTS.vendors
+      named with no register entry - BODACC (new vendor; two live executors
+      call bodacc-datadila.opendatasoft.com directly) and Liberty Data
+      (registered as an alias of the existing einsearch vendor, since
+      dependency-manifest.ts names Liberty Data Solutions as the company
+      operating einsearch.com, not a second vendor) - plus four more aliases
+      the new cross-check needed on already-registered vendors (serper,
+      anthropic, coinbase-cdp, gleif); added checkStaticFactsCrossCheck to
+      scripts/vendors-lib.mjs (STATIC_VENDOR_UNREGISTERED,
+      STATIC_VENDOR_STATE_MISMATCH, STATIC_FACTS_UNREADABLE), the check that
+      would have caught the gap, proven by planting in both the fixture
+      suite and the real register; added vendorCategoryView (a pure join,
+      no schema change - platform-facts.ts keeps owning the category
+      mapping) and scripts/generate-vendor-view.mjs / npm run vendors:view,
+      writing the generated, inactive docs/project/VENDORS.md agent-context
+      view, with VENDOR_VIEW_STALE staleness checking in npm run
+      vendors:check; recorded the customer-facing-view decision (unchanged:
+      STATIC_FACTS.vendors stays the customer-facing surface, the register
+      stays internal) and drafted the vendor-switch skill's retargeted step
+      5 as inactive prose in the design document, not an edit to the live
+      skill. Full outcome: docs/strategy/2026-09-10-m3-vendor-state-model.md,
+      "Batch 5: outcome". Next bounded task is batch 2 of the remaining-scope
+      inventory's proposed sequence: a repo-native shadow reader for
+      daily-digest Decisions/Journal/Action-Required content, run inside
+      gatherDigestData() alongside the Notion readers via Promise.allSettled,
+      logged via logWarn, changing no rendered email content - see
+      archive/sessions/2026-09-11-m3-remaining-scope-inventory.md, "Proposed
+      batch sequence," item 2. After that: a distribution-surfaces registry
       plus the social-media-post tracking decision (batch 3), an inactive
-      session-end-only Notion-write draft (batch 4, vendor-switch's step
-      stays in batch 1), scheduled-workflow reachability tests (batch 5),
-      and protocol full-body extraction followed by the coverage manifest
-      (batches 6-7, each with its own concrete check). Every batch stays
-      shadow or inactive.
+      session-end-only Notion-write draft (batch 4), scheduled-workflow
+      reachability tests (batch 5 of that sequence), and protocol full-body
+      extraction followed by the coverage manifest (batches 6-7, each with
+      its own concrete check). Every batch stays shadow or inactive.
     resume_file: docs/strategy/2026-09-10-m3-vendor-state-model.md
     exit:
       - repo-native replacements testable without changing existing authority

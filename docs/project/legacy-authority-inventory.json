@@ -473,6 +473,7 @@
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "docs/company/LESSONS.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "handoff/_general/from-code/2026-08-19-checkin-morning.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
@@ -608,7 +609,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "26724982e4b16b7ef83880b387a99cdad21cf4b1f23ca4168100a09b833ff44e",
+      "sha256": "224721a7d500d265d5c2de6d91f28002ba4ae493fcf366c59ae4000f83acfefb",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
