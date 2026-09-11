@@ -226,8 +226,10 @@ The genuinely new-to-this-report surface is a small set of **inert citation
 fields and comments that no code reads:**
 
 - `apps/api/coverage-matrix/*.yaml` `_source_notion_page_id` (47 of 47
-  capability rows carry this field, plus one definition in `schema.json`;
-  confirmed: `rg -l "_source_notion_page_id"` -> 49 files) and
+  capability rows carry this field, plus one definition in `schema.json` and
+  its documentation in `apps/api/coverage-matrix/README.md`; confirmed:
+  `rg -l "_source_notion_page_id"` -> 50 files at this branch, the fiftieth
+  being this report's own mention) and
   `vendor_roster_url` (8 of 47 rows carry a live `https://www.notion.so/...`
   value, the rest `null`, plus one definition in `schema.json`; already
   named as H4 in the vendor-state inventory, `archive/sessions/2026-09-10-m3-vendor-state-inventory.md:121`).
