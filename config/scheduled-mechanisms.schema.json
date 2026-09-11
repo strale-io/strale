@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://strale.dev/schemas/scheduled-mechanisms.schema.json",
+  "title": "Scheduled mechanism reachability register",
+  "description": "T6 M3 batch 5. One entry per scheduled mechanism that runs a repository script (a GitHub Actions workflow step with an `on.schedule` trigger), plus non-repository scheduled mechanisms recorded as verifiable: false. Checked against .github/workflows/*.yml by scripts/check-scheduled-reachability.mjs (npm run scheduled:check). No entry here changes what any workflow does.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mechanisms"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "mechanisms": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/mechanism" }
+    }
+  },
+  "$defs": {
+    "mechanism": {
+      "oneOf": [
+        { "$ref": "#/$defs/verifiableMechanism" },
+        { "$ref": "#/$defs/unverifiableMechanism" }
+      ]
+    },
+    "verifiableMechanism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "workflow", "trigger", "step", "runs", "secrets", "purpose"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "workflow": {
+          "type": "string",
+          "pattern": "^\\.github/workflows/[^/]+\\.ya?ml$",
+          "description": "Path under .github/workflows/ to the workflow file this mechanism lives in."
+        },
+        "trigger": {
+          "const": "schedule",
+          "description": "The only trigger kind this register tracks. A mechanism whose workflow has no cron schedule fails MECHANISM_NOT_SCHEDULED."
+        },
+        "step": { "$ref": "#/$defs/stepMatch" },
+        "runs": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repository path of the script this step invokes, resolved from the step's working directory (e.g. a `cd apps/api && npx tsx scripts/x.ts` step resolves to apps/api/scripts/x.ts)."
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "description": "Map of environment-variable name to secret name, read from the step's `env` and the job's `env` (step wins on a name collision), e.g. { \"NOTION_API_KEY\": \"NOTION_TOKEN\" }. Empty object if the step reads no secret. A map, not a list, so renaming the variable while keeping the secret is a MECHANISM_SECRET_MISMATCH -- the check compares both the variable name and the secret name."
+        },
+        "purpose": { "type": "string", "minLength": 1 }
+      }
+    },
+    "unverifiableMechanism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "verifiable", "reason", "evidence", "purpose"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "verifiable": {
+          "const": false,
+          "description": "This mechanism's schedule cannot be mechanically verified from this repository (e.g. a Railway cron service configured outside Git)."
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Repository paths documenting the mechanism by hand, since no workflow file proves it."
+        },
+        "purpose": { "type": "string", "minLength": 1 }
+      }
+    },
+    "stepMatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["match", "value"],
+      "properties": {
+        "match": {
+          "enum": ["id", "name", "command"],
+          "description": "How to locate the step within the workflow: by its `id:`, by its `name:`, or (when a step has neither) by a substring of its `run:` command."
+        },
+        "value": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

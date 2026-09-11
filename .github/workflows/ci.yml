@@ -498,6 +498,19 @@ jobs:
       # either tool; the check only proves the draft stays inert and
       # findable.
       - run: npm run candidates:test
+      # Scheduled mechanism reachability (T6 M3 batch 5,
+      # config/scheduled-mechanisms.yaml): parses every
+      # .github/workflows/*.yml with the yaml package and proves, for every
+      # declared entry, that its workflow exists, carries a schedule
+      # trigger, has a step matching the declared selector whose resolved
+      # command invokes the declared script, that the script exists, and
+      # that the step's env reads exactly the declared secrets -- plus the
+      # reverse completeness rule (every scheduled step that invokes a
+      # repository script must be declared). Changes no workflow's
+      # behaviour; DEC-20260504-C names exactly this "assumed, not
+      # verified" failure class.
+      - run: npm run scheduled:check
+      - run: npm run scheduled:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
       # Voyage/GPT model id lives in one place with a pinned_at date and a
       # decision reference: fails on a model-id literal anywhere else in
