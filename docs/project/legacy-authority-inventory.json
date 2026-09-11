@@ -602,6 +602,7 @@
         "AGENTS.md",
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
+        "apps/api/scripts/check-vendor-roster-drift.ts",
         "apps/api/src/lib/attribution.ts",
         "apps/api/src/lib/vendor-terms.ts",
         "archive/receipts/2026-09-05-audit-quiet-material-system.json",

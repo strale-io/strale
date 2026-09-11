@@ -1,0 +1,11 @@
+[
+  { "vendor": "Browserless.io", "status": "Active", "url": "https://app.notion.com/p/demo-browserless" },
+  { "vendor": "anthropic", "status": "Active", "url": "https://app.notion.com/p/demo-anthropic" },
+  { "vendor": "GoPlus", "status": "Deferred", "url": "https://app.notion.com/p/demo-goplus" },
+  { "vendor": "OpenSanctions self-host", "status": "Self-built", "url": "https://app.notion.com/p/demo-opensanctions-selfhost" },
+  { "vendor": "SurePay", "status": "Rejected", "url": "https://app.notion.com/p/demo-surepay" },
+  { "vendor": "Ghost Vendor Nobody Registered", "status": "Active", "url": "https://app.notion.com/p/demo-ghost" },
+  { "vendor": "Serper", "status": "Some New Status Nobody Mapped", "url": "https://app.notion.com/p/demo-serper" },
+  { "vendor": "Dilisense", "status": "Rejected", "url": "https://app.notion.com/p/demo-dilisense" },
+  { "vendor": "movitz", "status": "", "url": "https://app.notion.com/p/demo-movitz" }
+]

@@ -921,3 +921,136 @@ export function checkAllVendors(root, options = {}) {
 
   return { findings, warnings, vendorCount: register.vendors?.length ?? 0 };
 }
+
+// ── shadow comparison with the Notion Vendor Roster (T6 batch 4b) ──────────
+
+/**
+ * Maps a Notion Vendor Roster Status select value to the register lifecycle
+ * states it is consistent with. Two shapes:
+ *  - { allowed: [...] }: the vendor's current register state must be one of
+ *    these; any other current state is ROSTER_STATE_DISAGREES.
+ *  - { forbidden: [...] }: the vendor's current register state must not be
+ *    one of these; every other current state is left alone. Self-built
+ *    names a self-built capability, not a vendor relationship, so it only
+ *    disagrees with rejected, deprecated or candidate - active, held,
+ *    fallback, retired, evaluating and unknown are all consistent with it.
+ * A roster Status value that is not a key here, or empty, is
+ * ROSTER_STATUS_UNMAPPED, never a guess. Kept as one exported constant per
+ * the design document so the mapping is visible and independently testable.
+ */
+export const ROSTER_STATUS_STATE_MAP = {
+  Active: { allowed: ["active"] },
+  Backup: { allowed: ["fallback", "active"] },
+  Rejected: { allowed: ["rejected"] },
+  Deferred: { allowed: ["held"] },
+  "Pending eval": { allowed: ["candidate", "evaluating"] },
+  "Pending sign-up": { allowed: ["candidate", "evaluating"] },
+  "Evaluation-only": { allowed: ["evaluating", "candidate"] },
+  "Self-built": { forbidden: ["rejected", "deprecated", "candidate"] },
+};
+
+/** Same shape as buildResolutionIndex, but case-insensitive and trimmed - the
+ * Notion Vendor Roster's vendor-name spelling is not guaranteed to match the
+ * register's casing exactly, and the design calls for "case-insensitive,
+ * trimmed, exact" matching for this comparison only. */
+function buildNormalizedResolutionIndex(vendors) {
+  const owners = new Map();
+  const record = (str, vendorId) => {
+    if (typeof str !== "string") return;
+    const norm = str.trim().toLowerCase();
+    if (norm.length === 0) return;
+    if (!owners.has(norm)) owners.set(norm, new Set());
+    owners.get(norm).add(vendorId);
+  };
+  for (const v of vendors) {
+    record(v.id, v.id);
+    record(v.name, v.id);
+    for (const a of v.aliases ?? []) record(a, v.id);
+  }
+  return owners;
+}
+
+function resolveNormalizedOne(owners, str) {
+  if (typeof str !== "string") return null;
+  const norm = str.trim().toLowerCase();
+  const set = owners.get(norm);
+  if (!set || set.size !== 1) return null;
+  return [...set][0];
+}
+
+/**
+ * Compares the Notion Vendor Roster against the parsed config/vendors.yaml
+ * register. Pure and read-only: it never mutates either input, never reads
+ * or writes Notion itself, and never changes the register's
+ * authority_active flag. Report only, per
+ * docs/strategy/2026-09-10-m3-vendor-state-model.md, "Batch 4 rescoped": the
+ * Notion Vendor Roster stays the authority until the founder-gated M4
+ * cutover.
+ *
+ * @param {Array<{vendor: string, status: string|null, url?: string}>} rosterRows
+ * @param {object} register - the parsed config/vendors.yaml document
+ * @returns {Array<{kind: string, vendor: string, detail: string}>}
+ */
+export function compareRosterWithRegister(rosterRows, register) {
+  const findings = [];
+  const vendors = register?.vendors ?? [];
+  const owners = buildNormalizedResolutionIndex(vendors);
+  const byId = new Map(vendors.map((v) => [v.id, v]));
+  const matchedVendorIds = new Set();
+
+  for (const row of rosterRows ?? []) {
+    const vendorName = typeof row?.vendor === "string" ? row.vendor.trim() : "";
+    if (vendorName.length === 0) continue; // nothing to resolve against
+
+    const vendorId = resolveNormalizedOne(owners, vendorName);
+    if (!vendorId) {
+      findings.push({
+        kind: "ROSTER_VENDOR_UNREGISTERED",
+        vendor: vendorName,
+        detail: `roster vendor "${vendorName}" does not resolve to exactly one register vendor by id, name, or alias (case-insensitive, trimmed, exact)`,
+      });
+      continue;
+    }
+    matchedVendorIds.add(vendorId);
+
+    const status = typeof row.status === "string" ? row.status.trim() : "";
+    const mapping = status.length > 0 ? ROSTER_STATUS_STATE_MAP[status] : undefined;
+    if (!mapping) {
+      findings.push({
+        kind: "ROSTER_STATUS_UNMAPPED",
+        vendor: vendorName,
+        detail:
+          status.length > 0
+            ? `roster status "${status}" for "${vendorName}" is not in the known Status mapping`
+            : `roster status for "${vendorName}" is empty`,
+      });
+      continue;
+    }
+
+    const vendor = byId.get(vendorId);
+    const lifecycle = vendor.lifecycle ?? [];
+    const currentState = lifecycle[lifecycle.length - 1]?.state;
+    const disagrees = mapping.allowed ? !mapping.allowed.includes(currentState) : mapping.forbidden.includes(currentState);
+    if (disagrees) {
+      findings.push({
+        kind: "ROSTER_STATE_DISAGREES",
+        vendor: vendorName,
+        detail: `roster status "${status}" for "${vendorName}" (register id ${vendorId}) disagrees with its current register lifecycle state "${currentState}"`,
+      });
+    }
+  }
+
+  for (const v of vendors) {
+    const lifecycle = v.lifecycle ?? [];
+    const currentState = lifecycle[lifecycle.length - 1]?.state;
+    if (currentState === "unknown") continue; // no evidence yet either way
+    if (matchedVendorIds.has(v.id)) continue;
+    findings.push({
+      kind: "REGISTER_VENDOR_NOT_ON_ROSTER",
+      vendor: v.id,
+      detail: `register vendor ${v.id} ("${v.name}") is currently "${currentState}" but has no matching row on the roster; many are legitimate (infrastructure vendors the roster never listed)`,
+    });
+  }
+
+  return findings;
+}

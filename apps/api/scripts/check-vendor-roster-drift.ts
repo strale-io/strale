@@ -16,12 +16,31 @@
  * Decision touched the vendor more recently than the Roster row was
  * last updated — likely drift.
  *
+ * Additionally (T6 batch 4b, shadow mode), when the Vendor Roster is read
+ * it is also compared against the repo-owned shadow register
+ * `config/vendors.yaml` (scripts/vendors-lib.mjs's compareRosterWithRegister)
+ * and printed in a separate, clearly-labelled section. This comparison is
+ * report only: it never changes this script's exit code, in --check or
+ * --strict, and it never writes to Notion, the register, the database, or
+ * production. The Notion Vendor Roster remains the authority until the
+ * founder-gated M4 cutover (see docs/strategy/2026-09-10-m3-vendor-state-model.md,
+ * "Batch 4 rescoped"). If config/vendors.yaml cannot be loaded or parsed,
+ * that is printed as a line in the section and the script carries on.
+ *
  * Run modes
  * ─────────
  *
- *   --check        Read-only audit. Print findings, exit 0.
- *   --strict       Same as --check but exit 1 on any drift (CI / cron).
- *   --doc          Print the manual procedure (no API call needed).
+ *   --check                    Read-only audit. Print findings, exit 0.
+ *   --strict                   Same as --check but exit 1 on any drift (CI / cron).
+ *   --doc                      Print the manual procedure (no API call needed).
+ *   --roster-fixture <path>    Skip the Notion fetch for the roster only and
+ *                              run just the shadow register comparison
+ *                              against the JSON array at <path> (each
+ *                              element `{ vendor, status, url? }`). Needs no
+ *                              NOTION_TOKEN and makes no Decisions DB call;
+ *                              exits 0. For exercising the comparison
+ *                              locally or in a PR body without live Notion
+ *                              access.
  *
  * Notion API access
  * ─────────────────
@@ -33,6 +52,7 @@
  *
  * Without NOTION_TOKEN the script falls back to --doc mode and prints
  * the manual procedure so the check can still be performed by hand.
+ * --roster-fixture works without NOTION_TOKEN (see above).
  *
  * Wire into existing weekly cron alongside check-platform-facts-drift.
  *
@@ -46,14 +66,32 @@
  * with the integration ID embedded, making it look like a permissions error.
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+// scripts/vendors-lib.mjs (and typescript, yaml, ajv behind it) is loaded
+// lazily inside printShadowComparison, never at the top: a failure to load it
+// must degrade only the shadow section, never the existing Notion drift check
+// or the dependency-free --doc fallback.
+const VENDORS_LIB_SPECIFIER = "../../../scripts/vendors-lib.mjs";
+
 const VENDOR_ROSTER_DS = "af5a164bdea948379835210ae69b4283";
 const DECISIONS_DS = "ea57671f-7167-44e4-a254-c0a1de79e7f9";
 const ACTIVE_VENDOR_STACK_PAGE = "https://app.notion.com/p/35367c87082c812e88d1dc6bdbfbd4f5";
+
+// This file is apps/api/scripts/check-vendor-roster-drift.ts; the repository
+// root is three levels up (scripts -> api -> apps -> root). Resolved from
+// the script's own location, never from process.cwd(), because
+// weekly-drift.yml job runs this with
+// `cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts`, so cwd is
+// apps/api, not the repository root.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 const args = process.argv.slice(2);
 const wantDoc = args.includes("--doc");
 const wantStrict = args.includes("--strict");
 const days = Number(args.find((a) => a.startsWith("--days="))?.split("=")[1] ?? 30);
+const rosterFixturePath = args.find((a) => a.startsWith("--roster-fixture="))?.split("=")[1];
 
 interface NotionPage {
   url: string;
@@ -155,6 +193,69 @@ function getProp(props: Record<string, unknown> | undefined, name: string): unkn
   return null;
 }
 
+interface RosterRow {
+  vendor: string;
+  status: string | null;
+  url?: string;
+}
+
+/**
+ * Prints the shadow comparison between the Notion Vendor Roster and
+ * config/vendors.yaml (T6 batch 4b). Never throws, never changes any exit
+ * code the caller computes - this section is report only. Loading
+ * vendors-lib.mjs, loading the register and comparing all happen inside one
+ * try, so any failure becomes a line in this section. The header makes clear
+ * the Notion Vendor Roster, not this register, remains the authority until
+ * the founder-gated M4 cutover.
+ */
+async function printShadowComparison(rosterRows: RosterRow[]): Promise<void> {
+  console.log(`\n─── Shadow comparison with config/vendors.yaml (report only; the Notion Vendor Roster remains the authority until the M4 cutover) ───\n`);
+  try {
+    const lib = (await import(VENDORS_LIB_SPECIFIER)) as {
+      loadRegister: (root: string) => unknown;
+      compareRosterWithRegister: (
+        rows: RosterRow[],
+        register: unknown,
+      ) => Array<{ kind: string; vendor: string; detail: string }>;
+    };
+    const register = lib.loadRegister(REPO_ROOT);
+    const disagreements = lib.compareRosterWithRegister(rosterRows, register);
+    if (disagreements.length === 0) {
+      console.log(`  no disagreements (${rosterRows.length} roster row(s) compared against config/vendors.yaml).`);
+      return;
+    }
+    console.log(`  ${disagreements.length} disagreement(s) (${rosterRows.length} roster row(s) compared):\n`);
+    for (const d of disagreements) {
+      console.log(`  - [${d.kind}] ${d.vendor}: ${d.detail}`);
+    }
+  } catch (err) {
+    console.log(`  shadow comparison unavailable: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+/**
+ * --roster-fixture mode: reads a JSON array of { vendor, status, url? } rows
+ * from the given path, skips the Notion fetch for the roster entirely (no
+ * NOTION_TOKEN needed, no Decisions DB call), and runs just the shadow
+ * comparison against the real config/vendors.yaml. Exits 0 unconditionally -
+ * this mode is for exercising the comparison, never for CI gating.
+ */
+async function runRosterFixtureMode(fixturePath: string): Promise<number> {
+  const absolutePath = resolve(process.cwd(), fixturePath);
+  let rosterRows: RosterRow[];
+  try {
+    const raw = JSON.parse(readFileSync(absolutePath, "utf8"));
+    if (!Array.isArray(raw)) throw new Error("fixture file must contain a JSON array");
+    rosterRows = raw;
+  } catch (err) {
+    console.error(`Error reading --roster-fixture ${fixturePath}: ${err instanceof Error ? err.message : String(err)}`);
+    return 2;
+  }
+  console.log(`--roster-fixture mode: ${rosterRows.length} row(s) read from ${fixturePath}, no Notion call made.`);
+  await printShadowComparison(rosterRows);
+  return 0;
+}
+
 async function runCheck(): Promise<number> {
   const token = process.env.NOTION_TOKEN;
   if (!token) {
@@ -185,6 +286,14 @@ async function runCheck(): Promise<number> {
     const name = (getProp(row.properties, "Vendor") as string | null)?.toLowerCase().trim();
     if (name) vendorByName.set(name, row);
   }
+
+  // Shadow comparison rows (T6 batch 4b): every roster row's Vendor title
+  // and Status select, independent of the Decisions-DB drift logic below.
+  const rosterRows = (roster.results ?? []).map((row) => ({
+    vendor: (getProp(row.properties, "Vendor") as string | null) ?? "",
+    status: getProp(row.properties, "Status") as string | null,
+    url: row.url,
+  }));
 
   const findings: Array<{
     vendor: unknown;
@@ -218,26 +327,36 @@ async function runCheck(): Promise<number> {
     }
   }
 
+  let exitCode: number;
   if (findings.length === 0) {
     console.log(`✓ No drift detected. ${roster.results?.length ?? 0} vendor rows checked against ${decisions.results?.length ?? 0} Decisions in the last ${days} days.`);
-    return 0;
+    exitCode = 0;
+  } else {
+    console.log(`⚠ ${findings.length} potential drift case(s) found:\n`);
+    for (const f of findings) {
+      console.log(`  - ${f.vendor}: row Last evaluated ${f.rowLastEval} < decision date ${f.decDate}`);
+      console.log(`    Decision: ${f.decision}`);
+      console.log(`    Row: ${f.rowUrl}`);
+      console.log(`    Decision: ${f.decUrl}`);
+      console.log("");
+    }
+    console.log(`Recommended action: open each row, verify Status / Reason / Primary DEC reflect the Decision; update Last evaluated to today.`);
+    exitCode = wantStrict ? 1 : 0;
   }
 
-  console.log(`⚠ ${findings.length} potential drift case(s) found:\n`);
-  for (const f of findings) {
-    console.log(`  - ${f.vendor}: row Last evaluated ${f.rowLastEval} < decision date ${f.decDate}`);
-    console.log(`    Decision: ${f.decision}`);
-    console.log(`    Row: ${f.rowUrl}`);
-    console.log(`    Decision: ${f.decUrl}`);
-    console.log("");
-  }
-  console.log(`Recommended action: open each row, verify Status / Reason / Primary DEC reflect the Decision; update Last evaluated to today.`);
-  return wantStrict ? 1 : 0;
+  // Shadow comparison (T6 batch 4b): printed after the existing drift
+  // report, in every case above. Report only - never allowed to change
+  // exitCode, computed and fixed above this point.
+  await printShadowComparison(rosterRows);
+
+  return exitCode;
 }
 
 if (wantDoc) {
   printManualProcedure();
   process.exit(0);
+} else if (rosterFixturePath) {
+  runRosterFixtureMode(rosterFixturePath).then((code) => process.exit(code));
 } else {
   runCheck().then(
     (code) => process.exit(code),
