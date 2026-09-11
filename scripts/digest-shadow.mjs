@@ -3,11 +3,13 @@
  * Shadow comparison, report only; Notion remains the authority until the
  * M4 cutover.
  *
- * Prints the repo-native digest priorities (docs/company/DECISION-QUEUE.md)
- * and the repo-native handoff activity
- * (handoff/_general/from-code/*.md), and, only when NOTION_API_KEY is set,
- * also loads the live Notion getPriorities() result
- * (apps/api/src/lib/daily-digest/fetch-notion.ts) and prints a comparison.
+ * Prints the repo-native digest priorities (docs/company/DECISION-QUEUE.md),
+ * the repo-native handoff activity (handoff/_general/from-code/*.md), and
+ * the repo-native distribution surfaces
+ * (docs/operations/distribution-registry.yaml), and, only when
+ * NOTION_API_KEY is set, also loads the live Notion getPriorities() and
+ * getDistributionSurfaces() results (apps/api/src/lib/daily-digest/fetch-notion.ts)
+ * and prints a comparison for both.
  *
  * This changes nothing: no Notion write, no production write, no exit code
  * other than 0. It is meant to be run daily by
@@ -26,6 +28,7 @@
  * prints one line and the rest of the report still prints.
  */
 import { repoRootFrom, repoNativePriorities, recentHandoffActivity, comparePriorities } from "./digest-repo-native-lib.mjs";
+import { repoNativeDistributionSurfaces, compareDistributionSurfaces } from "./distribution-lib.mjs";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 
@@ -73,7 +76,15 @@ function printComparisonSection(title, comparison) {
   }
 }
 
-async function runNotionComparison(repoPriorities) {
+function printDistributionSurfaces(surfaces) {
+  console.log("\n-- Repo-native distribution surfaces (docs/operations/distribution-registry.yaml) --\n");
+  console.log(`surfaces: ${surfaces.length}`);
+  for (const s of surfaces) {
+    console.log(`  - [${s.status}] ${s.name}`);
+  }
+}
+
+async function runNotionComparison(repoPriorities, repoSurfaces) {
   console.log("\n-- Comparison against the live Notion digest priorities --\n");
   try {
     const notionModule = await import(pathToFileURL(FETCH_NOTION_PATH).href);
@@ -81,6 +92,10 @@ async function runNotionComparison(repoPriorities) {
     const comparison = comparePriorities(repoPriorities, notionPriorities);
     printComparisonSection("unreviewed decisions", comparison.unreviewedDecisions);
     printComparisonSection("action required", comparison.actionRequired);
+
+    const notionSurfaces = await notionModule.getDistributionSurfaces();
+    const surfaceComparison = compareDistributionSurfaces(repoSurfaces, notionSurfaces);
+    printComparisonSection("distribution surfaces", surfaceComparison);
   } catch (err) {
     console.log(`  Notion comparison unavailable: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -96,12 +111,15 @@ async function main() {
   const handoffActivity = recentHandoffActivity(REPO_ROOT, { now, days: 14 });
   printHandoffActivity(handoffActivity);
 
+  const repoSurfaces = repoNativeDistributionSurfaces(REPO_ROOT);
+  printDistributionSurfaces(repoSurfaces);
+
   if (!process.env.NOTION_API_KEY) {
     console.log("\nNOTION_API_KEY not set: skipping the Notion comparison half.");
     return;
   }
 
-  await runNotionComparison(repoPriorities);
+  await runNotionComparison(repoPriorities, repoSurfaces);
 }
 
 // This CLI is report only and must always exit 0. It sets the exit code and

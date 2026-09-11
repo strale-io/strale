@@ -1,0 +1,529 @@
+# Distribution surfaces register (M3 batch 3, T6).
+#
+# SHADOW REGISTER. authority_active is always false. The Notion Distribution
+# Registry (Notion page 32e67c87-082c-81de-861f-dcc53576304c) stays the
+# authority for distribution status until the founder-gated M4 cutover. This
+# file exists so a repo-native reader can be shadow-compared against it in
+# the meantime (scripts/distribution-lib.mjs, scripts/digest-shadow.mjs).
+#
+# Populated from verifiable evidence only, never from memory: the four root
+# discovery manifests (context7.json, glama.json, server.json,
+# smithery.yaml), every published package under packages/ (name and
+# registry from its own manifest, confirmed live by npm view / a PyPI JSON
+# fetch), pull requests on repositories outside strale-io authored by
+# petterlindstrom79 (gh search prs), one handoff-named surface search
+# missed, and docs/company/DIRECTORY-MAP.md, a fifth named source: it
+# already backed the Glama and Smithery rows above, and review round 1
+# corrected an earlier inconsistency (it was being read as evidence for
+# some rows and refused as an unnamed source for others) by treating it as
+# a source for every surface it documents evidence for, not only the two
+# it happened to be cited on first (see
+# docs/operations/distribution-registry.md for the full source log with
+# hit counts). status_date is the date the cited evidence shows,
+# not the date this row was written. See
+# docs/operations/distribution-registry.md for the design, the searches
+# run, and the social-media-post tracking decision.
+schema_version: 1
+authority_active: false
+surfaces:
+  # -- Root discovery manifests (one row each, per the design) --
+  - id: context7-listing
+    surface: Context7 documentation index
+    kind: registry-listing
+    target: context7.com/strale-io/strale
+    status: unknown
+    status_date: 2026-09-04
+    evidence: context7.json
+    notes: >-
+      context7.json exists at repo root, which is Context7's required
+      discovery convention, and is kept current (last touched 2026-09-04).
+      No in-repo evidence confirms the listing is actually live on
+      context7.com; DEC-20260330-B's own claim of "60+ surfaces, 17 open
+      PRs" was not independently re-verified for this row.
+
+  - id: glama-listing
+    surface: Glama MCP directory
+    kind: registry-listing
+    target: glama.ai/mcp/servers/strale-io/strale
+    status: listed
+    status_date: 2026-08-16
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records glama.ai/mcp/servers/@strale-io/strale
+      returning 200 ("live, confirmed by page load") plus 43 crawler hits in
+      the trailing 30 days as of that date. README.md also carries a live
+      status badge from this listing.
+
+  - id: mcp-registry-io-github
+    surface: Official MCP registry (io.github.strale-io/strale)
+    kind: registry-listing
+    target: registry.modelcontextprotocol.io
+    status: unknown
+    status_date: 2026-09-04
+    evidence: handoff/_general/from-code/2026-09-04-m2-batch-10-distribution-rails.md
+    notes: >-
+      DEC-20260313-F recorded initial publication at v0.1.1. server.json
+      (root) now states version 0.2.3, while packages/mcp-server/package.json
+      states 0.2.8 -- five patch versions ahead. This version drift, found
+      by the cited handoff, means the repository cannot confirm the live
+      registry entry actually matches the current manifest.
+
+  - id: smithery-listing
+    surface: Smithery MCP directory
+    kind: registry-listing
+    target: smithery.ai/server/strale-mcp
+    status: unknown
+    status_date: 2026-08-16
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      smithery-probe crawled 110 times in the trailing 30 days as of this
+      date, but the expected listing URL (smithery.ai/server/strale-mcp)
+      returns 404. The listing may exist under a different slug, or be
+      unpublished while still crawled; the real URL was not found in the
+      repository.
+
+  - id: docker-mcp-registry-pr
+    surface: Docker MCP registry submission
+    kind: registry-listing
+    target: docker/mcp-registry
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/docker/mcp-registry/pull/2202
+
+  # -- docs/company/DIRECTORY-MAP.md as a named population source (review
+  #    round 1): the crawler-hit table and the Coinbase x402 Bazaar finding
+  #    it records. Every row here cites that document as evidence; the
+  #    document itself stays the analysis, not copied into these rows. --
+  - id: coinbase-x402-bazaar-listing
+    surface: Coinbase x402 Bazaar
+    kind: registry-listing
+    target: Coinbase x402 Bazaar
+    status: listed
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 95 of our resources listed,
+      verified against a complete walk of all 14,946 index entries, as of
+      2026-08-15. Listing there is earned by settlement -- the index
+      contains exactly the resources that settled an x402 payment in the
+      trailing 30 days -- so this status reflects revenue, not a
+      submission, and the document records nothing to submit or fix.
+
+  - id: glimind-listing
+    surface: Glimind
+    kind: registry-listing
+    target: glimind.com
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 552 crawler hits in the
+      trailing 30 days from glimind-probe and SentinelOracle (glimind.com)
+      as of 2026-08-15, the most active venue in the table. The document
+      does not probe a specific listing URL for this venue the way it does
+      for Glama, so the repository cannot confirm a live, addressable
+      listing beyond the crawler traffic.
+
+  - id: szerverbank-listing
+    surface: Szerverbank
+    kind: registry-listing
+    target: Szerverbank
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 413 crawler hits in the
+      trailing 30 days from Szerverbank-Public-Agent-Observer as of
+      2026-08-15. No listing URL is probed for this venue in the document,
+      so crawler traffic is the only in-repository evidence.
+
+  - id: mcpbeat-listing
+    surface: MCPBeat
+    kind: registry-listing
+    target: mcpbeat.com
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 232 crawler hits in the
+      trailing 30 days from the mcpbeat crawler (mcpbeat.com) as of
+      2026-08-15. No listing URL is probed for this venue in the document,
+      so crawler traffic is the only in-repository evidence.
+
+  - id: yellowmcp-listing
+    surface: YellowMCP
+    kind: registry-listing
+    target: YellowMCP
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 146 crawler hits in the
+      trailing 30 days from yellowmcp-health as of 2026-08-15. No listing
+      URL is probed for this venue in the document, so crawler traffic is
+      the only in-repository evidence.
+
+  - id: agent-tools-cloud-listing
+    surface: agent-tools.cloud
+    kind: registry-listing
+    target: agent-tools.cloud
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 114 crawler hits in the
+      trailing 30 days from the agent-tools.cloud crawler as of
+      2026-08-15. No listing URL is probed for this venue in the document,
+      so crawler traffic is the only in-repository evidence.
+
+  - id: x402-observatory-listing
+    surface: x402 Observatory
+    kind: registry-listing
+    target: x402 Observatory
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 67 crawler hits in the
+      trailing 30 days from the x402-observatory crawler as of 2026-08-15.
+      No listing URL is probed for this venue in the document, so crawler
+      traffic is the only in-repository evidence. Distinct from x402scan,
+      which the same document separately records as having no public API
+      found at the URL tried, presence unconfirmed.
+
+  - id: aisec-registry-listing
+    surface: AISec Registry
+    kind: registry-listing
+    target: AISec Registry
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 63 crawler hits in the
+      trailing 30 days from aisec-registry-probe as of 2026-08-15. No
+      listing URL is probed for this venue in the document, so crawler
+      traffic is the only in-repository evidence.
+
+  - id: waggle-listing
+    surface: Waggle
+    kind: registry-listing
+    target: waggle.zone
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records 60 crawler hits in the
+      trailing 30 days from the Waggle crawler (waggle.zone) as of
+      2026-08-15. No listing URL is probed for this venue in the document,
+      so crawler traffic is the only in-repository evidence.
+
+  - id: 402index-verification
+    surface: 402 Index domain verification
+    kind: registry-listing
+    target: 402 Index
+    status: submitted
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md records /.well-known/402index-verify.txt
+      served (confirmed live in apps/api/src/app.ts), with the venue's own
+      status recorded as "domain verified" as of 2026-08-15. That proves a
+      completed verification step, not a confirmed live listing page --
+      the document does not probe one for this venue -- so "submitted" is
+      the closest honest status rather than "listed".
+
+  # -- Directory/awesome-list PRs (gh search prs, author petterlindstrom79, outside strale-io) --
+  - id: awesome-mcp-servers-punkpeye-pr
+    surface: punkpeye/awesome-mcp-servers README entry
+    kind: directory
+    target: punkpeye/awesome-mcp-servers
+    status: open
+    status_date: 2026-08-13
+    evidence: https://github.com/punkpeye/awesome-mcp-servers/pull/3696
+
+  - id: awesome-x402-xpaysh-pr
+    surface: xpaysh/awesome-x402 listing update
+    kind: directory
+    target: xpaysh/awesome-x402
+    status: open
+    status_date: 2026-08-13
+    evidence: https://github.com/xpaysh/awesome-x402/pull/1192
+
+  - id: awesome-agent-skills-heilcheng-pr
+    surface: heilcheng/awesome-agent-skills community skills entry
+    kind: directory
+    target: heilcheng/awesome-agent-skills
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/heilcheng/awesome-agent-skills/pull/163
+
+  - id: awesome-mcp-servers-habitoai-pr
+    surface: habitoai/awesome-mcp-servers entry
+    kind: directory
+    target: habitoai/awesome-mcp-servers
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/habitoai/awesome-mcp-servers/pull/28
+
+  - id: awesome-mcp-servers-everworks-pr
+    surface: ever-works/awesome-mcp-servers business and commerce entry
+    kind: directory
+    target: ever-works/awesome-mcp-servers
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/ever-works/awesome-mcp-servers/pull/51
+
+  - id: awesome-devin-detailobsessed-pr
+    surface: detailobsessed/awesome-devin agent-capability rule
+    kind: directory
+    target: detailobsessed/awesome-devin
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/detailobsessed/awesome-devin/pull/283
+
+  - id: awesome-cursor-rules-mdc-sanjeed5-pr
+    surface: sanjeed5/awesome-cursor-rules-mdc rule entry
+    kind: directory
+    target: sanjeed5/awesome-cursor-rules-mdc
+    status: open
+    status_date: 2026-04-01
+    evidence: https://github.com/sanjeed5/awesome-cursor-rules-mdc/pull/32
+
+  # -- Framework-integration PRs --
+  - id: langflow-component-pr
+    surface: Langflow Strale component bundle
+    kind: framework-pr
+    target: langflow-ai/langflow
+    status: open
+    status_date: 2026-07-01
+    evidence: https://github.com/langflow-ai/langflow/pull/12678
+
+  - id: flowise-tool-node-pr
+    surface: Flowise Strale tool node
+    kind: framework-pr
+    target: FlowiseAI/Flowise
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/FlowiseAI/Flowise/pull/6209
+
+  - id: crewai-examples-kyb-pr
+    surface: crewAI-examples KYB compliance crew
+    kind: framework-pr
+    target: crewAIInc/crewAI-examples
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/crewAIInc/crewAI-examples/pull/358
+    notes: >-
+      GitHub reports the PR itself still open, but crewAIInc/crewAI-examples
+      is an archived, read-only repository (confirmed by a read-only
+      gh api repos/crewAIInc/crewAI-examples check), so it can never be
+      merged or closed through the normal flow. Named as dead in
+      handoff/_general/from-code/2026-04-27-x402scan-indexing-and-pr-cleanup.md.
+
+  - id: agno-cookbook-pr
+    surface: agno compliance-agent cookbook entry
+    kind: framework-pr
+    target: agno-agi/agno
+    status: open
+    status_date: 2026-06-06
+    evidence: https://github.com/agno-agi/agno/pull/7203
+
+  - id: agentcore-samples-pr
+    surface: AWS agentcore-samples Strale integration example
+    kind: framework-pr
+    target: awslabs/agentcore-samples
+    status: open
+    status_date: 2026-04-27
+    evidence: https://github.com/awslabs/agentcore-samples/pull/1232
+
+  - id: pydantic-ai-toolsets-pr
+    surface: pydantic-ai third-party toolsets docs entry
+    kind: framework-pr
+    target: pydantic/pydantic-ai
+    status: rejected
+    status_date: 2026-04-21
+    evidence: https://github.com/pydantic/pydantic-ai/pull/4866
+    notes: >-
+      Closed, not merged. Per CLAUDE.md's Distribution PR Integrity
+      Protocol background: the maintainer closed this PR after finding the
+      published pydantic-ai-strale package contained zero pydantic-ai-
+      specific code, which is also the incident that protocol exists to
+      prevent recurring.
+
+  # -- Surfaces named by a distribution-focused handoff, missed by the other
+  #    three sources (petterlindstrom79's PR search did not surface these,
+  #    likely because they are now closed and outside its relevance-sorted
+  #    result window) --
+  - id: awesome-cursorrules-patrickjs-pr
+    surface: PatrickJS/awesome-cursorrules entry
+    kind: directory
+    target: PatrickJS/awesome-cursorrules
+    status: closed
+    status_date: 2026-05-11
+    evidence: https://github.com/PatrickJS/awesome-cursorrules/pull/212
+    notes: >-
+      Closed, not merged. Named in
+      handoff/_general/from-code/2026-04-27-x402scan-indexing-and-pr-cleanup.md,
+      not found by this batch's own gh search prs sweep.
+
+  - id: mcp-context-forge-ibm-pr
+    surface: IBM mcp-context-forge catalog entry
+    kind: directory
+    target: IBM/mcp-context-forge
+    status: closed
+    status_date: 2026-08-31
+    evidence: https://github.com/IBM/mcp-context-forge/pull/3974
+    notes: >-
+      Closed, not merged. Named in
+      handoff/_general/from-code/2026-04-27-x402scan-indexing-and-pr-cleanup.md,
+      not found by this batch's own gh search prs sweep.
+
+  - id: mcp-gateway-registry-agentic-community-pr
+    surface: agentic-community/mcp-gateway-registry entry
+    kind: directory
+    target: agentic-community/mcp-gateway-registry
+    status: closed
+    status_date: 2026-05-14
+    evidence: https://github.com/agentic-community/mcp-gateway-registry/pull/723
+    notes: >-
+      Closed, not merged. Named in
+      handoff/_general/from-code/2026-04-27-x402scan-indexing-and-pr-cleanup.md,
+      not found by this batch's own gh search prs sweep.
+
+  - id: x402scan-registration
+    surface: x402scan paid-route registration
+    kind: registry-listing
+    target: x402scan.com
+    status: listed
+    status_date: 2026-04-27
+    evidence: handoff/_general/from-code/2026-04-27-x402scan-indexing-and-pr-cleanup.md
+    notes: >-
+      Not a pull request: registration happens automatically once Strale's
+      x402 discovery routes are spec-compliant. The cited handoff records
+      358/358 paid endpoints registered with zero failures, verified via
+      x402scan's own registerFromOrigin endpoint and its public listings.
+      No root manifest or package covers this surface, so it is populated
+      from the handoff alone, per the design's fourth source.
+
+  # -- Published packages under packages/ (name/registry from each manifest,
+  #    confirmed live by npm view / a PyPI JSON fetch on 2026-09-11) --
+  - id: pkg-sdk-typescript
+    surface: "@strale SDK (TypeScript): straleio"
+    kind: package
+    target: npm
+    status: published
+    status_date: 2026-09-11
+    evidence: https://www.npmjs.com/package/straleio
+
+  - id: pkg-sdk-python
+    surface: "Strale SDK (Python): straleio"
+    kind: package
+    target: PyPI
+    status: published
+    status_date: 2026-09-11
+    evidence: https://pypi.org/project/straleio/
+
+  - id: pkg-mcp-server
+    surface: strale-mcp
+    kind: package
+    target: npm
+    status: published
+    status_date: 2026-09-11
+    evidence: https://www.npmjs.com/package/strale-mcp
+
+  - id: pkg-semantic-kernel-strale
+    surface: strale-semantic-kernel
+    kind: package
+    target: npm
+    status: published
+    status_date: 2026-09-11
+    evidence: https://www.npmjs.com/package/strale-semantic-kernel
+
+  - id: pkg-langchain-ts
+    surface: straleio-langchain
+    kind: package
+    target: npm
+    status: published
+    status_date: 2026-09-11
+    evidence: https://www.npmjs.com/package/straleio-langchain
+
+  - id: pkg-langchain-strale
+    surface: langchain-strale
+    kind: package
+    target: PyPI
+    status: published
+    status_date: 2026-09-11
+    evidence: https://pypi.org/project/langchain-strale/
+
+  - id: pkg-crewai-strale
+    surface: crewai-strale
+    kind: package
+    target: PyPI
+    status: published
+    status_date: 2026-09-11
+    evidence: https://pypi.org/project/crewai-strale/
+
+  - id: pkg-composio-strale
+    surface: composio-strale
+    kind: package
+    target: PyPI
+    status: published
+    status_date: 2026-09-11
+    evidence: https://pypi.org/project/composio-strale/
+
+  - id: pkg-google-adk-strale
+    surface: google-adk-strale
+    kind: package
+    target: PyPI
+    status: published
+    status_date: 2026-09-11
+    evidence: https://pypi.org/project/google-adk-strale/
+
+  - id: pkg-openai-agents-strale
+    surface: openai-agents-strale
+    kind: package
+    target: PyPI
+    status: published
+    status_date: 2026-09-11
+    evidence: https://pypi.org/project/openai-agents-strale/
+
+  - id: pkg-pydantic-ai-strale
+    surface: pydantic-ai-strale
+    kind: package
+    target: PyPI
+    status: published
+    status_date: 2026-09-11
+    evidence: https://pypi.org/project/pydantic-ai-strale/
+
+  - id: pkg-strale-capabilities
+    surface: strale-capabilities
+    kind: package
+    target: npm
+    status: published
+    status_date: 2026-09-11
+    evidence: https://www.npmjs.com/package/strale-capabilities
+
+  - id: zeroclick-listing
+    surface: ZeroClick
+    kind: registry-listing
+    target: ZeroClick
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md (section "Other x402 registries", as of
+      2026-08-15) records ZeroClick as reachable with no mention of Strale
+      and no known submission path. Not listed as far as the repository can
+      show; recorded so the surface is tracked rather than forgotten.
+
+  - id: agent402-tools-listing
+    surface: agent402.tools
+    kind: registry-listing
+    target: agent402.tools
+    status: unknown
+    status_date: 2026-08-15
+    evidence: docs/company/DIRECTORY-MAP.md
+    notes: >-
+      docs/company/DIRECTORY-MAP.md (section "Other x402 registries", as of
+      2026-08-15) records that agent402.tools did not resolve. No evidence of
+      a listing or of the site operating.
