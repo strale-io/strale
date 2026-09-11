@@ -69,7 +69,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compareRosterWithRegister, loadRegister } from "../../../scripts/vendors-lib.mjs";
+// scripts/vendors-lib.mjs (and typescript, yaml, ajv behind it) is loaded
+// lazily inside printShadowComparison, never at the top: a failure to load it
+// must degrade only the shadow section, never the existing Notion drift check
+// or the dependency-free --doc fallback.
+const VENDORS_LIB_SPECIFIER = "../../../scripts/vendors-lib.mjs";
 
 const VENDOR_ROSTER_DS = "af5a164bdea948379835210ae69b4283";
 const DECISIONS_DS = "ea57671f-7167-44e4-a254-c0a1de79e7f9";
@@ -196,40 +200,36 @@ interface RosterRow {
 }
 
 /**
- * Loads and parses config/vendors.yaml from the repository root. Returns the
- * parsed document, or an error message when the file cannot be read or
- * parsed - never throws, so a broken register never fails this script.
- */
-function loadRegisterSafely(): { register: unknown; error: string | null } {
-  try {
-    return { register: loadRegister(REPO_ROOT), error: null };
-  } catch (err) {
-    return { register: null, error: err instanceof Error ? err.message : String(err) };
-  }
-}
-
-/**
  * Prints the shadow comparison between the Notion Vendor Roster and
  * config/vendors.yaml (T6 batch 4b). Never throws, never changes any exit
- * code the caller computes - this section is report only. The header makes
- * clear the Notion Vendor Roster, not this register, remains the authority
- * until the founder-gated M4 cutover.
+ * code the caller computes - this section is report only. Loading
+ * vendors-lib.mjs, loading the register and comparing all happen inside one
+ * try, so any failure becomes a line in this section. The header makes clear
+ * the Notion Vendor Roster, not this register, remains the authority until
+ * the founder-gated M4 cutover.
  */
-function printShadowComparison(rosterRows: RosterRow[]): void {
+async function printShadowComparison(rosterRows: RosterRow[]): Promise<void> {
   console.log(`\n─── Shadow comparison with config/vendors.yaml (report only; the Notion Vendor Roster remains the authority until the M4 cutover) ───\n`);
-  const { register, error } = loadRegisterSafely();
-  if (error) {
-    console.log(`  config/vendors.yaml could not be loaded: ${error}`);
-    return;
-  }
-  const disagreements = compareRosterWithRegister(rosterRows, register as Parameters<typeof compareRosterWithRegister>[1]);
-  if (disagreements.length === 0) {
-    console.log(`  no disagreements (${rosterRows.length} roster row(s) compared against config/vendors.yaml).`);
-    return;
-  }
-  console.log(`  ${disagreements.length} disagreement(s) (${rosterRows.length} roster row(s) compared):\n`);
-  for (const d of disagreements) {
-    console.log(`  - [${d.kind}] ${d.vendor}: ${d.detail}`);
+  try {
+    const lib = (await import(VENDORS_LIB_SPECIFIER)) as {
+      loadRegister: (root: string) => unknown;
+      compareRosterWithRegister: (
+        rows: RosterRow[],
+        register: unknown,
+      ) => Array<{ kind: string; vendor: string; detail: string }>;
+    };
+    const register = lib.loadRegister(REPO_ROOT);
+    const disagreements = lib.compareRosterWithRegister(rosterRows, register);
+    if (disagreements.length === 0) {
+      console.log(`  no disagreements (${rosterRows.length} roster row(s) compared against config/vendors.yaml).`);
+      return;
+    }
+    console.log(`  ${disagreements.length} disagreement(s) (${rosterRows.length} roster row(s) compared):\n`);
+    for (const d of disagreements) {
+      console.log(`  - [${d.kind}] ${d.vendor}: ${d.detail}`);
+    }
+  } catch (err) {
+    console.log(`  shadow comparison unavailable: ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -240,7 +240,7 @@ function printShadowComparison(rosterRows: RosterRow[]): void {
  * comparison against the real config/vendors.yaml. Exits 0 unconditionally -
  * this mode is for exercising the comparison, never for CI gating.
  */
-function runRosterFixtureMode(fixturePath: string): number {
+async function runRosterFixtureMode(fixturePath: string): Promise<number> {
   const absolutePath = resolve(process.cwd(), fixturePath);
   let rosterRows: RosterRow[];
   try {
@@ -252,7 +252,7 @@ function runRosterFixtureMode(fixturePath: string): number {
     return 2;
   }
   console.log(`--roster-fixture mode: ${rosterRows.length} row(s) read from ${fixturePath}, no Notion call made.`);
-  printShadowComparison(rosterRows);
+  await printShadowComparison(rosterRows);
   return 0;
 }
 
@@ -347,7 +347,7 @@ async function runCheck(): Promise<number> {
   // Shadow comparison (T6 batch 4b): printed after the existing drift
   // report, in every case above. Report only - never allowed to change
   // exitCode, computed and fixed above this point.
-  printShadowComparison(rosterRows);
+  await printShadowComparison(rosterRows);
 
   return exitCode;
 }
@@ -356,7 +356,7 @@ if (wantDoc) {
   printManualProcedure();
   process.exit(0);
 } else if (rosterFixturePath) {
-  process.exit(runRosterFixtureMode(rosterFixturePath));
+  runRosterFixtureMode(rosterFixturePath).then((code) => process.exit(code));
 } else {
   runCheck().then(
     (code) => process.exit(code),
