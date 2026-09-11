@@ -300,6 +300,11 @@ describe("per-chain routing", () => {
     expect(r.output).toMatchObject({ chain_id: "42161", native_symbol: "ETH" });
     expect(new Set(requests.map((x) => new URL(x.url).host))).toEqual(new Set(["arb-mainnet.g.alchemy.com"]));
   });
+  it("wallet transactions on Polygon name POL as the coin", async () => {
+    mockUpstreams({ alchemy_getAssetTransfers: () => ({ transfers: [tx({ hash: "0xpol" })] }) });
+    const r = await run("wallet-transactions-lookup", { address: W, chain_id: "137" });
+    expect(r.output).toMatchObject({ chain_id: "137", native_symbol: "POL" });
+  });
   it("wallet age refuses BNB Chain, whose transfer index Alchemy does not document", async () => {
     mockUpstreams({});
     await expect(run("wallet-age-check", { address: W, chain_id: "56" })).rejects.toThrow(/not supported/);
