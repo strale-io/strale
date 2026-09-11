@@ -825,10 +825,21 @@ tracks:
       commit. CLAUDE.md and docs/company/CHARTER.md are unchanged. With this
       batch every M3 change item named in the migration plan (docs/strategy/
       2026-08-31-repo-native-operating-model-migration.md section M3) has
-      landed in shadow or inactive form. Next is the M3 milestone review --
-      an independent review of the M3 exit criteria against the plan -- and
-      then founder-gated M4 cutover preparation.
-    resume_file: archive/sessions/2026-09-11-m3-remaining-scope-inventory.md
+      landed in shadow or inactive form (PR #658). The M3 milestone review,
+      an independent read-only review at 9b668922, is archived at
+      archive/sessions/2026-09-11-m3-milestone-review.md with the verdict M3
+      EXIT MET WITH CONDITIONS: four exit criteria met, protocol coverage
+      partly met. Its three conditions, all to settle before any M4
+      cutover work: (1) the digest's action-required and
+      unreviewed-decisions meaning, founder-decision or reading list, which
+      is the founder's call because it changes what he reads each morning;
+      (2) whether the Session Start mode declaration and the
+      review-before-close step become protocol-coverage rows, a technical
+      call; (3) how the production Railway digest reads repository data
+      after cutover, a technical call. Next: settle conditions 2 and 3 as
+      small reviewed batches, put condition 1 to the founder, and only then
+      move to T7 (M4 cutover preparation), which the founder gates.
+    resume_file: archive/sessions/2026-09-11-m3-milestone-review.md
     exit:
       - repo-native replacements testable without changing existing authority
       - no path writes to both repo-native truth and Notion
