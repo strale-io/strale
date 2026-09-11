@@ -836,9 +836,28 @@ tracks:
       (2) whether the Session Start mode declaration and the
       review-before-close step become protocol-coverage rows, a technical
       call; (3) how the production Railway digest reads repository data
-      after cutover, a technical call. Next: settle conditions 2 and 3 as
-      small reviewed batches, put condition 1 to the founder, and only then
-      move to T7 (M4 cutover preparation), which the founder gates.
+      after cutover, a technical call. Condition 1 is settled (2026-09-11,
+      docs/company/DECISION-QUEUE.md DQ-32): after cutover the digest's action
+      required list shows only founder decisions from DECISION-QUEUE.md's
+      your_call entries, and recent session activity gets its own section.
+      Condition 2 is settled (2026-09-11): the Session Start mode
+      declaration and the review-before-close step stay outside the
+      protocol-coverage manifest, recorded in its excluded_sections reasons
+      (review-before-close is covered in substance by the review-routing and
+      session-contract rows; the M4 entrypoint rewrite restates both).
+      Condition 3 is settled (2026-09-11): after cutover the production
+      digest reads repository data from files copied into the API image,
+      because Railway deploys every merge to main (GET /health returned the
+      just-merged commit ed29d691), so the image carries main's current
+      files with no new secret and no network dependency; the M4 cutover PR
+      adds the Dockerfile COPY lines for the files the readers use
+      (docs/company/DECISION-QUEUE.md, handoff/_general/from-code/,
+      docs/operations/distribution-registry.yaml, config/vendors.yaml) and
+      the digest prints the image commit so a stale deploy is visible.
+      Rejected: a GitHub read at runtime (a token and a network dependency)
+      and moving the digest to GitHub Actions (production database
+      credentials in GitHub). All three M3 conditions are settled. Next:
+      T7, M4 cutover preparation, which the founder gates.
     resume_file: archive/sessions/2026-09-11-m3-milestone-review.md
     exit:
       - repo-native replacements testable without changing existing authority

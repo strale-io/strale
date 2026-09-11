@@ -375,7 +375,11 @@ excluded_sections:
     reason: >-
       Prescribes declaring session intent and choosing Quick or Full mode,
       but names no governing decision and is not enforced by any
-      repository check; full criteria live in .claude/PROTOCOL.md.
+      repository check; full criteria live in .claude/PROTOCOL.md. Decided
+      2026-09-11 (M3 milestone review condition 2): it stays outside the
+      manifest; the M4 rewrite of CLAUDE.md and AGENTS.md as peer
+      entrypoints restates session-start rules, and that rewrite is where
+      they are reconsidered.
   - heading: "Repo-native migration continuation — pre-cutover"
     reason: >-
       States explicitly that it is a navigation pointer to the migration
@@ -411,9 +415,13 @@ excluded_sections:
       Journal entry) while Notion is the authority. One step is its own:
       run /go before /end-session and never end a session over unreviewed
       code. No repository check enforces that step and it names no
-      decision, so under this manifest's test the section is excluded;
-      the M4 cutover, which retires the Notion steps, should decide
-      whether the review-before-close step becomes a protocol row.
+      decision, so under this manifest's test the section is excluded.
+      Decided 2026-09-11 (M3 milestone review condition 2): the
+      review-before-close step stays outside the manifest, because its
+      substance is already covered by two enforced rows, review-routing
+      (every PR gets an independent review before merge) and
+      session-contract (the handoff gate before a session ends); the M4
+      entrypoint rewrite, which retires the Notion steps, restates it.
   - heading: "Full Session Checklist"
     reason: >-
       The Quick Session Checklist expanded for full sessions, including the

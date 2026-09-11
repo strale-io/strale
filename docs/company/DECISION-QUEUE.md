@@ -14,6 +14,22 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
+*Answered:* Petter, in chat, accepting the recommendation: the repo-native
+daily digest's "action required" list shows only decisions that need him,
+read from this file's `your_call` entries. Recent session activity, which the
+Notion Journal's "Action Required" flag had come to mark as a reading list, gets
+its own "what happened" section instead of sharing a list with things to act on.
+*Why it was his:* it changes what he reads each morning, not how the code works.
+*Settled from:* the M3 milestone review's first condition
+(`archive/sessions/2026-09-11-m3-milestone-review.md`), after the first live
+shadow comparison (GitHub Actions run 34561747548) showed the two sources mean
+different things: Notion flagged mostly session logs, this file flags founder
+decisions.
+*Effect now:* none. Today's digest still reads Notion and is unchanged. The
+meaning applies when the repo-native digest replaces it at the M4 cutover, and
+the cutover work builds the "what happened" section from the handoff files.
+
 **DQ-31** · `your_call` · owner Petter · raised 2026-09-11T06:30Z · no deadline — **screenshots and PDFs are broken until the browser service gets its key back; I need the Railway sign-in to do it**
 *Status:* `AUTHORIZATION_UNAVAILABLE`. Nothing here is a judgement; what should
 happen is settled and the only thing missing is access.
