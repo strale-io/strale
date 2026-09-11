@@ -292,41 +292,56 @@ describeMaybe("vendor control tower against a real database", () => {
   it("reads a not-applicable balance check from live evidence and never lifts a block", async () => {
     const suffix = randomUUID().slice(0, 8);
     const recent = `test-vendor-${suffix}-recent`;
+    const balanceStamped = `test-vendor-${suffix}-balance`;
     const silent = `test-vendor-${suffix}-silent`;
     const blocked = `test-vendor-${suffix}-blocked`;
     const reasons = { confirmed: "a call succeeded recently", unconfirmed: "nothing has succeeded" };
-    for (const [provider, status, lastSuccess] of [
-      [recent, "healthy", "1 hour"],
-      [silent, "healthy", "3 days"],
-      [blocked, "auth_error", "1 hour"],
+    // `since` is when the account entered not-applicable mode (null: this is
+    // the first pass). Only a success after it is evidence about the endpoint.
+    for (const [provider, status, lastSuccess, since] of [
+      [recent, "healthy", "1 hour", "2 hours"],
+      // Production's case on the day this shipped: the last success stamp was
+      // the balance check's own cloud reading, one hour old.
+      [balanceStamped, "healthy", "1 hour", null],
+      [silent, "healthy", "3 days", "4 days"],
+      [blocked, "auth_error", "1 hour", null],
     ] as const) {
       createdProviders.add(provider);
       await db.execute(sql`
         INSERT INTO vendor_accounts (
           provider_name, display_name, billing_model, monitor_mode, status, status_reason,
           included_units, used_units, remaining_units, usage_unit, reset_at,
-          last_checked_at, last_success_at
+          last_checked_at, last_success_at, metadata
         ) VALUES (
           ${provider}, ${provider}, 'free_allowance', 'api_balance', ${status}, 'earlier reason',
           1000, 2, 998, 'unit', now() + INTERVAL '10 days',
-          now() - INTERVAL '2 days', now() - ${lastSuccess}::interval
+          now() - INTERVAL '2 days', now() - ${lastSuccess}::interval,
+          CASE WHEN ${since}::text IS NULL THEN '{}'::jsonb
+               ELSE jsonb_build_object('balance_not_applicable_since', now() - ${since}::interval)
+          END
         )
       `);
     }
 
-    for (const provider of [recent, silent, blocked]) {
+    for (const provider of [recent, balanceStamped, silent, blocked]) {
       await recordBalanceNotApplicable(provider, reasons);
     }
+    // A second pass must not start counting the pre-mode stamp.
+    await recordBalanceNotApplicable(balanceStamped, reasons);
 
     const rows = await db.execute(sql`
       SELECT provider_name, status, status_reason, remaining_units, included_units, reset_at,
              last_checked_at > now() - INTERVAL '1 minute' AS fresh
-        FROM vendor_accounts WHERE provider_name IN (${recent}, ${silent}, ${blocked})
+        FROM vendor_accounts
+       WHERE provider_name IN (${recent}, ${balanceStamped}, ${silent}, ${blocked})
     `) as unknown as Array<Record<string, unknown>>;
     const byName = new Map(rows.map((row) => [row.provider_name, row]));
     expect(byName.get(recent)).toMatchObject({
       status: "healthy", status_reason: "a call succeeded recently",
       remaining_units: null, included_units: null, reset_at: null, fresh: true,
+    });
+    expect(byName.get(balanceStamped)).toMatchObject({
+      status: "unknown", status_reason: "nothing has succeeded", fresh: true,
     });
     // A carried-forward "healthy" with no evidence behind it is how Browserless
     // read healthy for sixteen days; it must surface as unknown instead.

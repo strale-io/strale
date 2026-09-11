@@ -413,6 +413,7 @@ async function writeAssessment(assessment: VendorBalanceAssessment): Promise<voi
            last_success_at = now(),
            consecutive_check_failures = 0,
            last_error = NULL,
+           metadata = COALESCE(metadata, '{}'::jsonb) - 'balance_not_applicable_since',
            updated_at = now()
      WHERE provider_name = ${assessment.providerName}
   `);
@@ -1200,18 +1201,34 @@ export async function recordBalanceNotApplicable(
   providerName: string,
   reasons: NotApplicableReasons,
 ): Promise<void> {
+  // Only a success stamped after the account entered this mode counts: the
+  // balance check itself stamped last_success_at while it still ran, and that
+  // reading says nothing about the endpoint production calls. The first pass
+  // records the moment (metadata.balance_not_applicable_since) and, having no
+  // qualifying success, reads unknown.
   await getDb().execute(sql`
     UPDATE vendor_accounts
        SET status = CASE
              WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN status
-             WHEN last_success_at > now() - INTERVAL '24 hours' THEN 'healthy'
+             WHEN last_success_at > now() - INTERVAL '24 hours'
+                  AND last_success_at > COALESCE(
+                    (metadata->>'balance_not_applicable_since')::timestamptz, now())
+               THEN 'healthy'
              ELSE 'unknown'
            END,
            status_reason = CASE
              WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN status_reason
-             WHEN last_success_at > now() - INTERVAL '24 hours' THEN ${reasons.confirmed}::text
+             WHEN last_success_at > now() - INTERVAL '24 hours'
+                  AND last_success_at > COALESCE(
+                    (metadata->>'balance_not_applicable_since')::timestamptz, now())
+               THEN ${reasons.confirmed}::text
              ELSE ${reasons.unconfirmed}::text
            END,
+           metadata = jsonb_set(
+             COALESCE(metadata, '{}'::jsonb),
+             '{balance_not_applicable_since}',
+             COALESCE(metadata->'balance_not_applicable_since', to_jsonb(now()))
+           ),
            included_units = NULL,
            used_units = NULL,
            remaining_units = NULL,
