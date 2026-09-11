@@ -497,6 +497,25 @@ function narrowedCaveat(
  * consumer were both emitted unqualified. Putting it in the value makes it
  * impossible to render the list without having been handed the qualifier.
  */
+/** Whole days between a payer's last purchase and the end of the window asked about. */
+export function daysQuietAt(windowTo: Date, lastSeen: string): number {
+  return Math.floor((windowTo.getTime() - new Date(lastSeen).getTime()) / 86_400_000);
+}
+
+/**
+ * The window that answers "who has gone quiet" as of now: the last `days` days
+ * up to `now`, so every payer it reports has been silent at least that long.
+ *
+ * Asked of the last completed week instead, the question is up to seven days
+ * stale, and stale in the direction that hides the event being watched: on
+ * 2026-09-11 the card customer, silent since 2026-08-28T19:16Z, read "9d ago"
+ * from the week ending 2026-09-07 while the real silence was 13½ days. The
+ * completed-week read stays beside it for comparison, labelled as such.
+ */
+export function trailingQuietWindow(now: Date, days = 7): Window {
+  return { from: new Date(now.getTime() - days * 86_400_000), to: now, label: `the last ${days} days` };
+}
+
 export interface QuietRead {
   payers: QuietPayer[];
   /** Null when the full requested lookback was covered. */
@@ -542,7 +561,7 @@ export async function quietPayers(
       key: x.actor_key!,
       cents: Number(x.cents),
       lastSeen: x.last_seen,
-      daysQuiet: Math.floor((w.to.getTime() - new Date(x.last_seen).getTime()) / 86_400_000),
+      daysQuiet: daysQuietAt(w.to, x.last_seen),
     }))
     .sort((a, b) => b.cents - a.cents);
   return {
