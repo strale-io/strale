@@ -63,11 +63,24 @@ export function vendorReachabilityFetch(
   return meteredVendorFetch(providerName, url, init, 0, fetchImpl, false);
 }
 
+/**
+ * Browserless relays the target page's HTTP status, so a 401/403 here is as
+ * likely to be the caller's site refusing a browser as Browserless refusing
+ * our token: with a valid token, production recorded 42 such target 403s
+ * between 2026-07-14 and 2026-08-13. Reading them as an account failure would
+ * withdraw every Browserless capability on one customer's bot-protected URL,
+ * so they are never classified here. The container's own refusal (HTTP 403,
+ * body "Unauthorized" — the executors quote the body after the status, and
+ * all 52 refusals from 2026-08-26 read exactly that) would need a zero-cost
+ * authenticated check that renders no page. Until one exists, credential
+ * evidence is a successful render's last_success_at, which the control tower
+ * reads in recordBalanceNotApplicable.
+ */
 export function browserlessFetch(
   url: string | URL,
   init: RequestInit,
   units = 1,
   fetchImpl: (url: string | URL, init?: RequestInit) => Promise<Response> = fetch,
 ): Promise<Response> {
-  return meteredVendorFetch("browserless", url, init, units, fetchImpl);
+  return meteredVendorFetch("browserless", url, init, units, fetchImpl, false);
 }

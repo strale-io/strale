@@ -193,12 +193,59 @@ export async function fetchBrowserlessBalance(
   return parseBrowserlessUsage(body as BrowserlessUsageResponse);
 }
 
+/**
+ * Whether BROWSERLESS_URL is the hosted browserless.io product.
+ *
+ * The account-usage API above describes only that product. Production serves
+ * from a self-hosted container (railway-config.md, pinned browserless/chrome
+ * v1 — DEC-7 chose the managed product; production no longer matches it) that
+ * checks BROWSERLESS_API_KEY against
+ * its own TOKEN and has no allowance at all, so against it the account API
+ * validates a credential the container never sees. On 2026-08-25 that check
+ * rejected the container's token, the key was replaced with the cloud one to
+ * satisfy it, and every direct Browserless call then got HTTP 403 for 16 days
+ * while this monitor reported the cloud account healthy.
+ */
+export function browserlessServesFromCloud(url = process.env.BROWSERLESS_URL): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "browserless.io" || host.endsWith(".browserless.io");
+  } catch {
+    return false;
+  }
+}
+
+/** What a not-applicable balance check can still say: whether a live call
+ * has recently proved the credential works. */
+interface NotApplicableReasons {
+  confirmed: string;
+  unconfirmed: string;
+}
+
+const BROWSERLESS_SELF_HOSTED: NotApplicableReasons = {
+  confirmed:
+    "Self-hosted Browserless endpoint: a render succeeded in the last 24 hours, so the container " +
+    "accepts our key. The browserless.io account allowance does not apply.",
+  unconfirmed:
+    "Self-hosted Browserless endpoint: no render has succeeded in 24 hours, so nothing shows the " +
+    "container still accepts our key. If renders were attempted, it is refusing them.",
+};
+
 const BALANCE_ADAPTERS: ReadonlyArray<{
   providerName: string;
   fetchBalance: (fetchImpl?: FetchLike) => Promise<VendorBalance>;
+  /** False when the balance API does not describe what production calls. */
+  applies?: () => boolean;
+  notApplicable?: NotApplicableReasons;
 }> = [
   { providerName: "openregister", fetchBalance: fetchOpenRegisterBalance },
-  { providerName: "browserless", fetchBalance: fetchBrowserlessBalance },
+  {
+    providerName: "browserless",
+    fetchBalance: fetchBrowserlessBalance,
+    applies: () => browserlessServesFromCloud(),
+    notApplicable: BROWSERLESS_SELF_HOSTED,
+  },
 ];
 
 interface RecoveryAdapter {
@@ -366,6 +413,7 @@ async function writeAssessment(assessment: VendorBalanceAssessment): Promise<voi
            last_success_at = now(),
            consecutive_check_failures = 0,
            last_error = NULL,
+           metadata = COALESCE(metadata, '{}'::jsonb) - 'balance_not_applicable_since',
            updated_at = now()
      WHERE provider_name = ${assessment.providerName}
   `);
@@ -865,13 +913,31 @@ export async function recordVendorHttpFailure(
     ? credentialFingerprint(rearmProvider.envVar) ?? "missing"
     : null;
 
-  await getDb().execute(sql`
+  // A blocking status already on the row wins over this evidence. Calls that
+  // were in flight when the block landed still report back, and letting them
+  // overwrite it would un-block the vendor on a late 429 (not blocking) or
+  // swap exhausted for auth_error, which the recovery canary may clear
+  // without any top-up evidence.
+  const result = await getDb().execute(sql`
     UPDATE vendor_accounts
-       SET status = ${status},
-           status_reason = ${statusReason},
-           remaining_units = CASE WHEN ${status} = 'exhausted' THEN 0 ELSE remaining_units END,
+       SET status = CASE
+             WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN status
+             ELSE ${status}::text
+           END,
+           status_reason = CASE
+             WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN status_reason
+             ELSE ${statusReason}::text
+           END,
+           remaining_units = CASE
+             WHEN status NOT IN ('exhausted', 'auth_error', 'disabled')
+                  AND ${status}::text = 'exhausted' THEN 0
+             ELSE remaining_units
+           END,
            metadata = CASE
-             WHEN ${blockedFingerprint} IS NOT NULL THEN jsonb_set(
+             WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN metadata
+             -- The cast is load-bearing: alone in IS NOT NULL the parameter
+             -- has no type context and Postgres refuses the statement.
+             WHEN ${blockedFingerprint}::text IS NOT NULL THEN jsonb_set(
                COALESCE(metadata, '{}'::jsonb) - 'recovery_probe',
                '{blocked_credential_fingerprint}',
                to_jsonb(${blockedFingerprint}::text)
@@ -882,13 +948,12 @@ export async function recordVendorHttpFailure(
            last_error = ${`HTTP ${httpStatus}`},
            updated_at = now()
      WHERE provider_name = ${providerName}
+     RETURNING status, reset_at
   `);
   statusCache.delete(providerName);
-  if (SUSPENDABLE.has(status)) {
-    const resetRows = rowsOf<{ reset_at: string | null }>(await getDb().execute(sql`
-      SELECT reset_at FROM vendor_accounts WHERE provider_name = ${providerName}
-    `));
-    await suspendRequiredCapabilities(providerName, status, resetRows[0]?.reset_at ?? null);
+  const row = rowsOf<{ status: VendorStatus; reset_at: string | null }>(result)[0];
+  if (row && SUSPENDABLE.has(row.status)) {
+    await suspendRequiredCapabilities(providerName, row.status, row.reset_at ?? null);
   }
 }
 
@@ -1120,9 +1185,70 @@ export async function recordVendorUsage(
   }
 }
 
+/**
+ * Record that a balance API does not describe the endpoint production calls.
+ *
+ * With no balance to read, the only credential evidence left is live traffic:
+ * a successful metered call stamps last_success_at. So the account reads
+ * `healthy` only if one landed in the last 24 hours and `unknown` otherwise —
+ * which the morning report raises as a warning — rather than carrying forward a
+ * `healthy` that nothing now measures. A blocking status and its reason are
+ * kept, nothing is restored, the allowance figures are cleared so no report
+ * reads another product's units as ours, and last_checked_at is refreshed so
+ * the reading is not reported stale.
+ */
+export async function recordBalanceNotApplicable(
+  providerName: string,
+  reasons: NotApplicableReasons,
+): Promise<void> {
+  // Only a success stamped after the account entered this mode counts: the
+  // balance check itself stamped last_success_at while it still ran, and that
+  // reading says nothing about the endpoint production calls. The first pass
+  // records the moment (metadata.balance_not_applicable_since) and, having no
+  // qualifying success, reads unknown.
+  await getDb().execute(sql`
+    UPDATE vendor_accounts
+       SET status = CASE
+             WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN status
+             WHEN last_success_at > now() - INTERVAL '24 hours'
+                  AND last_success_at > COALESCE(
+                    (metadata->>'balance_not_applicable_since')::timestamptz, now())
+               THEN 'healthy'
+             ELSE 'unknown'
+           END,
+           status_reason = CASE
+             WHEN status IN ('exhausted', 'auth_error', 'disabled') THEN status_reason
+             WHEN last_success_at > now() - INTERVAL '24 hours'
+                  AND last_success_at > COALESCE(
+                    (metadata->>'balance_not_applicable_since')::timestamptz, now())
+               THEN ${reasons.confirmed}::text
+             ELSE ${reasons.unconfirmed}::text
+           END,
+           metadata = jsonb_set(
+             COALESCE(metadata, '{}'::jsonb),
+             '{balance_not_applicable_since}',
+             COALESCE(metadata->'balance_not_applicable_since', to_jsonb(now()))
+           ),
+           included_units = NULL,
+           used_units = NULL,
+           remaining_units = NULL,
+           overage_units = NULL,
+           reset_at = NULL,
+           consecutive_check_failures = 0,
+           last_checked_at = now(),
+           updated_at = now()
+     WHERE provider_name = ${providerName}
+  `);
+  statusCache.delete(providerName);
+}
+
 export async function runVendorControlTower(): Promise<void> {
   const failed: string[] = [];
   for (const adapter of BALANCE_ADAPTERS) {
+    if (adapter.applies && !adapter.applies() && adapter.notApplicable) {
+      await recordBalanceNotApplicable(adapter.providerName, adapter.notApplicable);
+      continue;
+    }
     const result = await syncBalanceVendor(adapter.providerName, adapter.fetchBalance);
     if (result === null) failed.push(adapter.providerName);
   }
