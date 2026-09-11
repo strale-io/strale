@@ -384,3 +384,157 @@ design:
    contradiction of the design (the design is recorded as stated: invert the
    function), but it is worth naming precisely because the function's
    current behaviour is the mirror image of the target, not merely absent.
+
+## Batch 5: outcome
+
+Batch 5 (T6, this batch) closed the vendor strand: the two missing vendors
+named in section 6, the public-vendor-list cross-check that would have
+caught them, the category and customer-facing view decisions, the
+agent-context view, and the vendor-switch cutover draft. Shadow mode
+throughout - no runtime code under `apps/api/src` changed, `config/vendors.yaml`'s
+`authority_active` stays `false`, `docs/project/VENDORS.md` is front-matter
+marked `status: candidate` / `authority_active: false`.
+
+**The two missing vendors.** BODACC (`STATIC_FACTS.vendors.fr_litigation`) is
+a new vendor: `apps/api/src/capabilities/fr-bodacc-lookup.ts` and
+`apps/api/src/capabilities/french-insolvency-check.ts` both call
+`bodacc-datadila.opendatasoft.com` directly, neither slug is in
+`apps/api/src/capabilities/auto-register.ts` `DEACTIVATED`, so its state is
+`active`. Liberty Data (`STATIC_FACTS.vendors.us_ein`) is **not** a second
+vendor: `apps/api/src/capabilities/us-ein-match.ts:7` names the company
+operating `einsearch.com` as "Liberty Data Solutions", so "Liberty Data" is
+the same vendor as the register's existing `einsearch` entry under a
+different display string, and is registered as an alias of `einsearch`
+rather than a duplicate identity, consistent with point 2's "nothing gets a
+second copy." Verifying every value in `STATIC_FACTS.vendors` (not only the
+two the inventory named) surfaced four more display strings on already-registered
+vendors that needed an alias to resolve: "Serper.dev (Google)" (`serper`),
+"Anthropic Claude" (`anthropic`), "Coinbase x402 facilitator (USDC on Base)"
+(`coinbase-cdp`), and "GLEIF L2" (`gleif`). All six additions were proven
+against the real repository (`node scripts/check-vendors.mjs`), which
+reports `ok` with these additions in place.
+
+### Item 2: the public vendor-list cross-check
+
+`scripts/vendors-lib.mjs` gained `extractStaticFactsVendors(root)`, parsing
+`apps/api/src/lib/platform-facts.ts` with the TypeScript compiler API (never
+a regex) to read every `STATIC_FACTS.vendors` category/value pair, and
+`checkStaticFactsCrossCheck(root, register)`, wired into `checkAllVendors`.
+Three findings: `STATIC_VENDOR_UNREGISTERED` (a value resolves to no vendor
+by id, name, or alias), `STATIC_VENDOR_STATE_MISMATCH` (it resolves to a
+vendor whose current state is not `active` or `fallback`), and
+`STATIC_FACTS_UNREADABLE` (the map itself cannot be parsed - an unrecognised
+shape fails loudly rather than silently reporting zero categories, matching
+`extractStaleVendors`'s discipline). `STATIC_FACTS.vendors` values were also
+added as a surface for the dead-alias rule (rule 7), so the new aliases
+above are not reported as dead. This is the check that would have caught
+the two vendors STATIC_FACTS named with no register entry at all; it was
+proven by planting (see "Records" in the batch-5 PR body) both in the test
+fixtures and directly against the real register (temporarily removing the
+`einsearch` vendor's `Liberty Data` alias and confirming
+`STATIC_VENDOR_UNREGISTERED` fires, then restoring it).
+
+### Item 3: category view by join, no schema change
+
+`vendorCategoryView(root)` in `scripts/vendors-lib.mjs` is a pure function
+that reads `STATIC_FACTS.vendors` (via `extractStaticFactsVendors`) and joins
+each category's display string against the register, returning one row per
+category: the category key, the display string, the resolved vendor id
+(or `null` if unresolved), its current lifecycle state, and its
+redistribution-verification summary. The register gains no `category` or
+`role` field of its own - option (b) from the remaining-scope inventory
+(section 6, item 2), chosen over adding a schema field (option a) because it
+needs no schema change, matches point 2's "nothing gets a second copy," and
+the mapping stays live (re-read on every call) rather than a second,
+potentially stale copy. `platform-facts.ts` keeps owning the category-to-vendor
+mapping; this function only reads and joins it.
+
+### Item 4: customer-facing view - unchanged, by decision
+
+`STATIC_FACTS.vendors`, served customer-facing via `GET /v1/platform/facts`,
+stays the customer-facing vendor surface. The register
+(`config/vendors.yaml`) stays internal and is not read by any customer-facing
+route; it has no HTTP route at all. Reason: the register is not authoritative
+until the M4 cutover (`authority_active: false`), and a second customer-facing
+artifact derived from a non-authoritative source would itself be a "second
+copy" the design's point 2 exists to prevent, plus a new drift-prevention
+surface to maintain before it is even the source of truth. No new
+customer-facing artifact was built this batch.
+
+### Item 5: the agent-context view
+
+`docs/project/VENDORS.md`, generated by `scripts/generate-vendor-view.mjs`
+(`npm run vendors:view`), written to the same location as the M2 candidate
+documents rather than under `docs/operations/`. This was checked against the
+project-context tooling before choosing it: `scripts/project-context-lib.mjs`'s
+`M2_CANDIDATE_DOCUMENTS`, `M2_GENERATED_DOCUMENTS`, and `SKELETON_DOCUMENTS`
+are each a fixed, enumerated map of specific file paths, and
+`scripts/check-project-context.mjs`'s `runChecks` only ever validates files at
+those exact enumerated paths - nothing walks `docs/project/` looking for
+files outside those maps, and nothing rejects an unlisted file placed there.
+A new file at `docs/project/VENDORS.md` is therefore invisible to
+`context:check` and `context:generate` (neither reads nor writes it), so it
+does not need to join `M2_CANDIDATE_DOCUMENTS` (whose schema requires a
+`phase` of `M1` or `M2` only, which this M3-phase document does not carry)
+to coexist safely there. The file follows the same front-matter shape as the
+M2 candidates read for this batch (`docs/project/STATE.md`,
+`docs/project/DECISIONS.md`): `doc_type`, `authority_scope: none`,
+`status: candidate`, `complete: false`, `authority_active: false`, plus
+`phase: M3` (not `M2`, since that field is not schema-checked for this file)
+and `generated: true` (matching `DECISIONS.md`'s own generated-index
+convention). A `[!CAUTION]` block states it is generated, non-authoritative,
+and names the regenerate command. The file carries two tables: every
+register vendor (id, name, current state, state date, decision,
+redistribution outcome) and the category join from `vendorCategoryView`.
+
+**Staleness.** `checkVendorViewFresh(root)` in `scripts/vendors-lib.mjs`
+regenerates the view in memory with `renderVendorView(root)` and compares it
+byte-for-byte against the committed file, reporting `VENDOR_VIEW_STALE` on
+any difference or on a missing file. It is wired into `npm run vendors:check`
+(`scripts/check-vendors.mjs`) rather than into `checkAllVendors` itself, so
+the dozens of existing fixture-based tests in `scripts/vendors.test.mjs`
+(which build throwaway directories with no `docs/project/VENDORS.md` at all)
+are unaffected; `checkVendorViewFresh` has its own dedicated fixture tests
+plus a real-repo test asserting the committed file matches the generator's
+current output. `renderVendorView` is deterministic: stable sort order (by
+vendor id, by category key) and no timestamp other than each vendor's own
+recorded lifecycle dates, so two calls against the same repository state are
+byte-identical - proven by a dedicated test.
+
+### Item 6: vendor-switch step 5 at M4 (draft, inactive)
+
+The live skill (`.claude/skills/vendor-switch/SKILL.md`, mirrored at
+`.agents/skills/vendor-switch/SKILL.md`) is unedited by this batch. The
+replacement text for its "Step 5 - Log the decision" section, to be copied
+into both mirrors by the M4 cutover PR and not before, is:
+
+> ## Step 5 - Log the decision
+>
+> Vendor switches always need a decision record under
+> `docs/decisions/records/` (`DEC-YYYYMMDD-<suffix>.md`), created through the
+> repository's decision process. The record must:
+>
+> - Reference the previous decision record being superseded (Contradiction
+>   Protocol)
+> - Cite the trigger (e.g. cost change, vendor outage, licensing change,
+>   regulatory finding)
+> - Document the engineering checklist this skill enforces
+>
+> The vendor's state change is then a new lifecycle entry appended to its
+> entry in `config/vendors.yaml`, citing the new record's key in the
+> `decision` field. History is append-only: the prior lifecycle entries are
+> never edited, only a new one appended after them. `npm run vendors:check`
+> must pass (schema-valid, every cross-reference resolves, the decision key
+> resolves to a file under `docs/decisions/records/`, and the append-only
+> history rule holds against the base branch).
+>
+> Drafting the decision record is Petter's call (governance authority).
+> Surface a draft in the PR description; do not create the record on his
+> behalf.
+
+Until the M4 cutover, the live skill keeps its Notion step (Decisions DB
+`ea57671f-7167-44e4-a254-c0a1de79e7f9`) exactly as it is today. The cutover
+PR copies the text above into both `.claude/skills/vendor-switch/SKILL.md`
+and `.agents/skills/vendor-switch/SKILL.md` in place of the current Notion
+step, verbatim in both (matching the existing mirror-identity discipline the
+remaining-scope inventory's section 2 documents for `go`/`vendor-switch`).

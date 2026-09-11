@@ -11,19 +11,24 @@ import { stringify } from "yaml";
 import {
   checkAllVendors,
   checkLifecycleOrdering,
+  checkVendorViewFresh,
   compareRosterWithRegister,
   extractProviders,
   extractCoverageMatrixProviders,
   extractEnvManifestProviders,
   extractStaleVendors,
+  extractStaticFactsVendors,
   extractVendorAccountsSeed,
   loadRegister,
+  renderVendorView,
   repoRootFrom,
   ROSTER_STATUS_STATE_MAP,
   SCHEMA_PATH,
   REGISTER_PATH,
   PLATFORM_FACTS_PATH,
   STARTUP_MIGRATIONS_PATH,
+  VENDOR_VIEW_PATH,
+  vendorCategoryView,
 } from "./vendors-lib.mjs";
 
 const realRoot = repoRootFrom(import.meta.url);
@@ -134,9 +139,22 @@ function autoRegisterText(extraSlugs = []) {
 }
 
 /** A small but real platform-facts.ts, structurally identical to the real
- * file's STALE_VENDORS declaration (an `as const` array of string literals). */
-function platformFactsText(names = ["Old Vendor"]) {
-  return `export const STALE_VENDORS = [
+ * file's STALE_VENDORS declaration (an `as const` array of string literals)
+ * and STATIC_FACTS.vendors declaration (an `as const` object literal of
+ * category -> display-string pairs). `staticFactsVendors` defaults to `{}`
+ * (no categories) so the vast majority of fixtures, which do not exercise
+ * the STATIC_FACTS cross-check, get zero findings from it. */
+function platformFactsText(names = ["Old Vendor"], staticFactsVendors = {}) {
+  const vendorLines = Object.entries(staticFactsVendors)
+    .map(([k, v]) => `    ${k}: ${JSON.stringify(v)},`)
+    .join("\n");
+  return `export const STATIC_FACTS = {
+  vendors: {
+${vendorLines}
+  } as const,
+};
+
+export const STALE_VENDORS = [
 ${names.map((n) => `  ${JSON.stringify(n)},`).join("\n")}
 ] as const;
 `;
@@ -165,13 +183,13 @@ ${tuples}
 `;
 }
 
-function baseFiles(vendors = [vendor(), oldVendor()], depManifestOpts = {}, deactivated = [], staleNames = ["Old Vendor"], seededProviders = ["acme"]) {
+function baseFiles(vendors = [vendor(), oldVendor()], depManifestOpts = {}, deactivated = [], staleNames = ["Old Vendor"], seededProviders = ["acme"], staticFactsVendors = {}) {
   return {
     [REGISTER_PATH]: stringify(register(vendors)),
     [SCHEMA_PATH]: realSchema,
     "apps/api/src/lib/dependency-manifest.ts": dependencyManifestText(depManifestOpts),
     "apps/api/src/capabilities/auto-register.ts": autoRegisterText(deactivated),
-    [PLATFORM_FACTS_PATH]: platformFactsText(staleNames),
+    [PLATFORM_FACTS_PATH]: platformFactsText(staleNames, staticFactsVendors),
     [STARTUP_MIGRATIONS_PATH]: startupMigrationsText(seededProviders),
     "apps/api/coverage-matrix/acme-cap__us__company-registry.yaml": "capability_slug: acme-cap\ncountry: US\nprovider: Acme\nstatus: Live\n",
     "apps/api/coverage-matrix/other-row__us__other.yaml": "capability_slug: other-cap\ncountry: US\nprovider: Other\nstatus: Live\n",
@@ -406,6 +424,122 @@ test("extractProviders reads name/retired/capabilities via the TS compiler API, 
       ["old-vendor", true, []],
     ],
   );
+});
+
+// ── rule 5d: STATIC_FACTS.vendors resolve + state (T6 batch 5) ────────────
+
+test("a clean fixture's default (empty) STATIC_FACTS.vendors has no findings", (t) => {
+  const dir = makeDir(baseFiles());
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("a STATIC_FACTS.vendors category resolving to an active vendor has no findings", (t) => {
+  const files = baseFiles(undefined, undefined, undefined, undefined, undefined, { example_category: "Acme" });
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  const r = checkAllVendors(dir, { skipHistory: true });
+  assert.deepEqual(r.findings, [], JSON.stringify(r.findings, null, 2));
+});
+
+test("STATIC_VENDOR_UNREGISTERED: a STATIC_FACTS.vendors value with no matching vendor", (t) => {
+  const files = baseFiles(undefined, undefined, undefined, undefined, undefined, { example_category: "Nobody Registered This" });
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STATIC_VENDOR_UNREGISTERED"));
+});
+
+test("STATIC_VENDOR_STATE_MISMATCH: a STATIC_FACTS.vendors value resolving to a non-active vendor", (t) => {
+  const files = baseFiles(undefined, undefined, undefined, undefined, undefined, { example_category: "Old Vendor" }); // "Old Vendor" is retired in the default fixture
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STATIC_VENDOR_STATE_MISMATCH"));
+});
+
+test("STATIC_FACTS_UNREADABLE: platform-facts.ts with no STATIC_FACTS declaration fails, never silently reports zero", (t) => {
+  const files = baseFiles();
+  files[PLATFORM_FACTS_PATH] = 'export const STALE_VENDORS = ["Old Vendor"] as const;\n';
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STATIC_FACTS_UNREADABLE"));
+});
+
+test("STATIC_FACTS_UNREADABLE: a STATIC_FACTS object with no vendors property fails", (t) => {
+  const files = baseFiles();
+  files[PLATFORM_FACTS_PATH] = 'export const STATIC_FACTS = { retention_days_default: 30 };\nexport const STALE_VENDORS = ["Old Vendor"] as const;\n';
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STATIC_FACTS_UNREADABLE"));
+});
+
+test("STATIC_FACTS_UNREADABLE: a non-string STATIC_FACTS.vendors value fails, never skips it", (t) => {
+  const files = baseFiles();
+  files[PLATFORM_FACTS_PATH] =
+    "export const STATIC_FACTS = {\n  vendors: {\n    example_category: 1 + 1,\n  } as const,\n};\nexport const STALE_VENDORS = [\"Old Vendor\"] as const;\n";
+  const dir = makeDir(files);
+  t.after(() => cleanup(dir));
+  assert.ok(codes(checkAllVendors(dir, { skipHistory: true })).includes("STATIC_FACTS_UNREADABLE"));
+});
+
+test("extractStaticFactsVendors reads STATIC_FACTS.vendors via the TS compiler API", (t) => {
+  const dir = makeDir(baseFiles(undefined, undefined, undefined, undefined, undefined, { primary: "Acme", secondary: "Old Vendor" }));
+  t.after(() => cleanup(dir));
+  assert.deepEqual(extractStaticFactsVendors(dir), [
+    { category: "primary", value: "Acme" },
+    { category: "secondary", value: "Old Vendor" },
+  ]);
+});
+
+// ── category view (T6 batch 5) ─────────────────────────────────────────────
+
+test("vendorCategoryView returns every category with its resolved vendor on a fixture", (t) => {
+  const dir = makeDir(baseFiles(undefined, undefined, undefined, undefined, undefined, { primary: "Acme", secondary: "Old Vendor" }));
+  t.after(() => cleanup(dir));
+  const view = vendorCategoryView(dir);
+  assert.deepEqual(
+    view.map((c) => [c.category, c.display, c.vendor_id, c.current_state]),
+    [
+      ["primary", "Acme", "acme", "active"],
+      ["secondary", "Old Vendor", "old-vendor", "retired"],
+    ],
+  );
+  assert.ok(view.every((c) => typeof c.redistribution === "string"));
+});
+
+test("vendorCategoryView reports an unregistered category with a null vendor id and state", (t) => {
+  const dir = makeDir(baseFiles(undefined, undefined, undefined, undefined, undefined, { ghost_category: "Nobody Registered This" }));
+  t.after(() => cleanup(dir));
+  const view = vendorCategoryView(dir);
+  assert.deepEqual(view, [{ category: "ghost_category", display: "Nobody Registered This", vendor_id: null, current_state: null, redistribution: null }]);
+});
+
+// ── agent-context view generator (T6 batch 5) ──────────────────────────────
+
+test("renderVendorView is deterministic: two calls on the same fixture produce identical output", (t) => {
+  const dir = makeDir(baseFiles(undefined, undefined, undefined, undefined, undefined, { primary: "Acme", secondary: "Old Vendor" }));
+  t.after(() => cleanup(dir));
+  const first = renderVendorView(dir);
+  const second = renderVendorView(dir);
+  assert.equal(first, second);
+  assert.ok(first.includes("| acme | Acme |"));
+  assert.ok(first.includes("| primary | Acme | acme |"));
+});
+
+test("VENDOR_VIEW_STALE: missing, matching, and hand-edited docs/project/VENDORS.md", (t) => {
+  const dir = makeDir(baseFiles(undefined, undefined, undefined, undefined, undefined, { primary: "Acme" }));
+  t.after(() => cleanup(dir));
+
+  assert.ok(checkVendorViewFresh(dir).some((f) => f.code === "VENDOR_VIEW_STALE"));
+
+  const expected = renderVendorView(dir);
+  const viewPath = join(dir, VENDOR_VIEW_PATH);
+  mkdirSync(dirname(viewPath), { recursive: true });
+  writeFileSync(viewPath, expected, "utf8");
+  assert.deepEqual(checkVendorViewFresh(dir), []);
+
+  writeFileSync(viewPath, `${expected}\nEDITED BY HAND\n`, "utf8");
+  assert.ok(checkVendorViewFresh(dir).some((f) => f.code === "VENDOR_VIEW_STALE"));
 });
 
 // ── rule 6: coverage-matrix + env-manifest resolution ─────────────────────
@@ -801,4 +935,8 @@ test("real repo: the vendor register passes its own history check against itself
   const doc = loadRegister(realRoot);
   const r = checkAllVendors(realRoot, { baseRegister: doc });
   assert.deepEqual(r.findings, []);
+});
+
+test("real repo: the committed agent-context view matches what the generator would write (VENDOR_VIEW_STALE)", () => {
+  assert.deepEqual(checkVendorViewFresh(realRoot), []);
 });

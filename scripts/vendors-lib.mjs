@@ -35,6 +35,7 @@ export const ENV_MANIFEST_PATH = "config/env-manifest.yaml";
 export const DECISIONS_DIR = "docs/decisions/records";
 export const PLATFORM_FACTS_PATH = "apps/api/src/lib/platform-facts.ts";
 export const STARTUP_MIGRATIONS_PATH = "apps/api/src/lib/startup-migrations.ts";
+export const VENDOR_VIEW_PATH = "docs/project/VENDORS.md";
 
 const RETIRED_STATES = new Set(["retired", "deprecated"]);
 const ACTIVE_STATES = new Set(["active", "fallback"]);
@@ -199,6 +200,75 @@ export function extractStaleVendors(root) {
     names.push(el.text);
   }
   return names;
+}
+
+function propKeyText(nameNode) {
+  if (ts.isIdentifier(nameNode)) return nameNode.text;
+  if (ts.isStringLiteralLike(nameNode)) return nameNode.text;
+  return null;
+}
+
+/**
+ * Parses apps/api/src/lib/platform-facts.ts with the TypeScript compiler API
+ * and returns every {category, value} pair in `STATIC_FACTS.vendors` (an
+ * `as const` object literal, if present, is unwrapped). Any property whose
+ * key is neither a plain identifier nor a string literal, or whose value is
+ * not a plain string literal, is a finding, never silently skipped: a
+ * computed or templated entry would make a public vendor name invisible to
+ * the cross-check this function feeds (T6 batch 5).
+ */
+export function extractStaticFactsVendors(root) {
+  const filePath = resolve(root, PLATFORM_FACTS_PATH);
+  const text = readFileSync(filePath, "utf8");
+  const sf = ts.createSourceFile(filePath, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+
+  let staticFactsObj = null;
+  function findStaticFacts(node) {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "STATIC_FACTS" &&
+      node.initializer
+    ) {
+      const init = unwrapObjectLiteral(node.initializer);
+      if (ts.isObjectLiteralExpression(init)) staticFactsObj = init;
+    }
+    ts.forEachChild(node, findStaticFacts);
+  }
+  findStaticFacts(sf);
+  if (!staticFactsObj) {
+    throw new Error(`could not find a STATIC_FACTS object literal in ${PLATFORM_FACTS_PATH}`);
+  }
+
+  let vendorsObj = null;
+  for (const prop of staticFactsObj.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue;
+    if (propKeyText(prop.name) !== "vendors") continue;
+    const init = unwrapObjectLiteral(prop.initializer);
+    if (ts.isObjectLiteralExpression(init)) vendorsObj = init;
+  }
+  if (!vendorsObj) {
+    throw new Error(`could not find a STATIC_FACTS.vendors object literal in ${PLATFORM_FACTS_PATH}`);
+  }
+
+  const entries = [];
+  for (const prop of vendorsObj.properties) {
+    if (!ts.isPropertyAssignment(prop)) {
+      const { line } = sf.getLineAndCharacterOfPosition(prop.getStart(sf));
+      throw new Error(`unrecognised STATIC_FACTS.vendors property shape at ${PLATFORM_FACTS_PATH}:${line + 1}`);
+    }
+    const key = propKeyText(prop.name);
+    if (key === null) {
+      const { line } = sf.getLineAndCharacterOfPosition(prop.getStart(sf));
+      throw new Error(`unrecognised STATIC_FACTS.vendors property key shape at ${PLATFORM_FACTS_PATH}:${line + 1}`);
+    }
+    if (!ts.isStringLiteralLike(prop.initializer)) {
+      const { line } = sf.getLineAndCharacterOfPosition(prop.getStart(sf));
+      throw new Error(`unrecognised STATIC_FACTS.vendors value shape for "${key}" at ${PLATFORM_FACTS_PATH}:${line + 1}`);
+    }
+    entries.push({ category: key, value: prop.initializer.text });
+  }
+  return entries;
 }
 
 /**
@@ -634,6 +704,57 @@ export function checkStaleVendorsCrossCheck(root, register) {
   return { findings, warnings };
 }
 
+// ── rule 5d: STATIC_FACTS.vendors resolve + state (T6 batch 5) ───────────
+
+/**
+ * Every apps/api/src/lib/platform-facts.ts STATIC_FACTS.vendors value (the
+ * customer-facing per-category vendor name) must resolve to exactly one
+ * register vendor (STATIC_VENDOR_UNREGISTERED otherwise), and that vendor's
+ * current lifecycle state must be active or fallback
+ * (STATIC_VENDOR_STATE_MISMATCH otherwise) - a category the platform
+ * publishes as its current vendor has no business resolving to a vendor
+ * this register calls held, rejected, retired, or anything else that is not
+ * in current use. This is the check that would have caught Liberty Data and
+ * BODACC having no register entry at all.
+ */
+export function checkStaticFactsCrossCheck(root, register) {
+  const findings = [];
+  const vendors = register.vendors ?? [];
+  const owners = buildResolutionIndex(vendors);
+  const byId = new Map(vendors.map((v) => [v.id, v]));
+
+  let entries;
+  try {
+    entries = extractStaticFactsVendors(root);
+  } catch (error) {
+    findings.push({ code: "STATIC_FACTS_UNREADABLE", file: PLATFORM_FACTS_PATH, detail: String(error) });
+    return findings;
+  }
+
+  for (const { category, value } of entries) {
+    const vendorId = resolveOne(owners, value);
+    if (!vendorId) {
+      findings.push({
+        code: "STATIC_VENDOR_UNREGISTERED",
+        file: PLATFORM_FACTS_PATH,
+        detail: `STATIC_FACTS.vendors.${category} = "${value}" has no matching vendor id, name, or alias in ${REGISTER_PATH}`,
+      });
+      continue;
+    }
+    const vendor = byId.get(vendorId);
+    const lifecycle = vendor.lifecycle ?? [];
+    const currentState = lifecycle[lifecycle.length - 1]?.state;
+    if (!ACTIVE_STATES.has(currentState)) {
+      findings.push({
+        code: "STATIC_VENDOR_STATE_MISMATCH",
+        file: REGISTER_PATH,
+        detail: `STATIC_FACTS.vendors.${category} = "${value}" resolves to vendor ${vendorId}, whose current lifecycle state is "${currentState}", expected one of [active, fallback]`,
+      });
+    }
+  }
+  return findings;
+}
+
 // ── rule 5c: providers the boot-time dependency sync skips (T6 batch 4a, item 2) ─
 
 /**
@@ -752,6 +873,11 @@ export function checkDeadAliasesAndSentinels(root, register) {
     for (const name of extractStaleVendors(root)) surfaceStrings.add(name);
   } catch {
     /* STALE_VENDORS_UNREADABLE already reported by the STALE_VENDORS cross-check */
+  }
+  try {
+    for (const { value } of extractStaticFactsVendors(root)) surfaceStrings.add(value);
+  } catch {
+    /* STATIC_FACTS_UNREADABLE already reported by the STATIC_FACTS cross-check */
   }
 
   for (const v of vendors) {
@@ -911,6 +1037,7 @@ export function checkAllVendors(root, options = {}) {
   const syncResult = checkDependencySyncSkipped(root);
   findings.push(...syncResult.findings);
   warnings.push(...syncResult.warnings);
+  findings.push(...checkStaticFactsCrossCheck(root, register));
   findings.push(...checkCoverageMatrixCrossCheck(root, register));
   findings.push(...checkEnvManifestCrossCheck(root, register));
   findings.push(...checkDeadAliasesAndSentinels(root, register));
@@ -920,6 +1047,176 @@ export function checkAllVendors(root, options = {}) {
   warnings.push(...history.warnings);
 
   return { findings, warnings, vendorCount: register.vendors?.length ?? 0 };
+}
+
+// ── category view by join, no schema change (T6 batch 5) ────────────────
+
+function currentLifecycleEntry(vendor) {
+  const lifecycle = vendor?.lifecycle ?? [];
+  return lifecycle[lifecycle.length - 1] ?? null;
+}
+
+/**
+ * A short, human-readable summary of a vendor's verification.redistribution
+ * field: the verified outcome when verified, otherwise the bare status
+ * (unknown or attestation-required). Shared by vendorCategoryView and
+ * renderVendorView so the two never drift on how they describe the same
+ * field.
+ */
+function redistributionSummary(vendor) {
+  const r = vendor?.verification?.redistribution;
+  if (!r || !r.status) return "unknown";
+  if (r.status === "verified") return `${r.outcome} (verified ${r.verified_at ?? "unknown date"})`;
+  return r.status;
+}
+
+/**
+ * Joins config/vendors.yaml against apps/api/src/lib/platform-facts.ts
+ * STATIC_FACTS.vendors, one row per category. The register gains no
+ * category field of its own (design document point 4 in
+ * docs/strategy/2026-09-10-m3-vendor-state-model.md, "Batch 5"): the
+ * category-to-vendor mapping stays owned by platform-facts.ts, and this
+ * function only reads and joins it, live, every call - nothing is stored
+ * twice. Pure and read-only.
+ *
+ * @param {string} root
+ * @returns {Array<{category: string, display: string, vendor_id: string|null, current_state: string|null, redistribution: string|null}>}
+ */
+export function vendorCategoryView(root) {
+  const { register, valid, findings } = checkSchema(root);
+  if (!valid) {
+    throw new Error(`${REGISTER_PATH} is not schema-valid, cannot build the category view: ${findings.map((f) => f.detail).join("; ")}`);
+  }
+  const vendors = register.vendors ?? [];
+  const owners = buildResolutionIndex(vendors);
+  const byId = new Map(vendors.map((v) => [v.id, v]));
+  const entries = extractStaticFactsVendors(root);
+
+  return entries.map(({ category, value }) => {
+    const vendorId = resolveOne(owners, value);
+    const vendor = vendorId ? byId.get(vendorId) : null;
+    const current = currentLifecycleEntry(vendor);
+    return {
+      category,
+      display: value,
+      vendor_id: vendorId,
+      current_state: current?.state ?? null,
+      redistribution: vendor ? redistributionSummary(vendor) : null,
+    };
+  });
+}
+
+// ── agent-context view generator (T6 batch 5) ────────────────────────────
+
+function mdEscape(value) {
+  return String(value ?? "").replace(/\|/g, "\\|");
+}
+
+/**
+ * Renders the agent-context Markdown view of config/vendors.yaml: every
+ * vendor's current state, plus the category join from vendorCategoryView.
+ * Pure and deterministic - stable ordering (sorted by id / category), no
+ * timestamp other than each vendor's own recorded lifecycle dates - so two
+ * calls against the same repository state produce byte-identical output.
+ * Written to disk by scripts/generate-vendor-view.mjs (`npm run
+ * vendors:view`); freshness checked by checkVendorViewFresh below
+ * (VENDOR_VIEW_STALE).
+ *
+ * @param {string} root
+ * @returns {string}
+ */
+export function renderVendorView(root) {
+  const { register, valid, findings } = checkSchema(root);
+  if (!valid) {
+    throw new Error(`${REGISTER_PATH} is not schema-valid, cannot generate ${VENDOR_VIEW_PATH}: ${findings.map((f) => f.detail).join("; ")}`);
+  }
+  const vendors = [...(register.vendors ?? [])].sort((a, b) => a.id.localeCompare(b.id));
+  const categories = [...vendorCategoryView(root)].sort((a, b) => a.category.localeCompare(b.category));
+
+  const lines = [];
+  lines.push("---");
+  lines.push("doc_type: vendor-register-view");
+  lines.push("authority_scope: none");
+  lines.push("status: candidate");
+  lines.push("complete: false");
+  lines.push("phase: M3");
+  lines.push("authority_active: false");
+  lines.push("generated: true");
+  lines.push("---");
+  lines.push("");
+  lines.push("# Vendor Register (Agent View)");
+  lines.push("");
+  lines.push("> [!CAUTION]");
+  lines.push("> **GENERATED FROM `config/vendors.yaml` - DO NOT EDIT BY HAND.**");
+  lines.push(
+    "> Written by `node scripts/generate-vendor-view.mjs` (`npm run vendors:view`) and checked for staleness by `npm run vendors:check` (finding `VENDOR_VIEW_STALE`). It is a candidate agent-context view, not active project authority: the Notion Vendor Roster remains the authority until the founder-gated M4 cutover. See `docs/strategy/2026-09-10-m3-vendor-state-model.md`. Edit `config/vendors.yaml` and regenerate this file instead of editing it directly.",
+  );
+  lines.push("");
+  lines.push("## Vendors");
+  lines.push("");
+  lines.push("Every vendor in `config/vendors.yaml`, one row per vendor, current lifecycle state only (full history is in the register itself).");
+  lines.push("");
+  lines.push("| id | name | current state | state date | decision | redistribution |");
+  lines.push("|---|---|---|---|---|---|");
+  for (const v of vendors) {
+    const current = currentLifecycleEntry(v);
+    lines.push(
+      `| ${mdEscape(v.id)} | ${mdEscape(v.name)} | ${mdEscape(current?.state ?? "unknown")} | ${mdEscape(current?.date ?? "unknown")} | ${mdEscape(current?.decision ?? "unknown")} | ${mdEscape(redistributionSummary(v))} |`,
+    );
+  }
+  lines.push("");
+  lines.push("## Categories (from `STATIC_FACTS.vendors`)");
+  lines.push("");
+  lines.push("The customer-facing per-category vendor map `apps/api/src/lib/platform-facts.ts` `STATIC_FACTS.vendors` owns, joined against the register above (see `vendorCategoryView` in `scripts/vendors-lib.mjs`). This table is a read-only join; the category-to-vendor mapping is not stored a second time here.");
+  lines.push("");
+  lines.push("| category | display name | vendor id | current state | redistribution |");
+  lines.push("|---|---|---|---|---|");
+  for (const c of categories) {
+    lines.push(
+      `| ${mdEscape(c.category)} | ${mdEscape(c.display)} | ${mdEscape(c.vendor_id ?? "unregistered")} | ${mdEscape(c.current_state ?? "unknown")} | ${mdEscape(c.redistribution ?? "unknown")} |`,
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
+/**
+ * VENDOR_VIEW_STALE: the committed docs/project/VENDORS.md differs from what
+ * renderVendorView(root) would write right now. Generate in memory and
+ * compare - never trust that a prior `npm run vendors:view` run is still
+ * current.
+ */
+export function checkVendorViewFresh(root) {
+  const findings = [];
+  const absolute = resolve(root, VENDOR_VIEW_PATH);
+  if (!existsSync(absolute)) {
+    findings.push({
+      code: "VENDOR_VIEW_STALE",
+      file: VENDOR_VIEW_PATH,
+      detail: `${VENDOR_VIEW_PATH} does not exist; run npm run vendors:view and commit it`,
+    });
+    return findings;
+  }
+  const committed = readFileSync(absolute, "utf8");
+  let expected;
+  try {
+    expected = renderVendorView(root);
+  } catch (error) {
+    findings.push({
+      code: "VENDOR_VIEW_STALE",
+      file: VENDOR_VIEW_PATH,
+      detail: `could not regenerate ${VENDOR_VIEW_PATH} to compare against the committed copy: ${String(error)}`,
+    });
+    return findings;
+  }
+  if (committed !== expected) {
+    findings.push({
+      code: "VENDOR_VIEW_STALE",
+      file: VENDOR_VIEW_PATH,
+      detail: `${VENDOR_VIEW_PATH} differs from what npm run vendors:view would write now; regenerate and commit it`,
+    });
+  }
+  return findings;
 }
 
 // ── shadow comparison with the Notion Vendor Roster (T6 batch 4b) ──────────
