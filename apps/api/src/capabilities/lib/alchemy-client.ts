@@ -24,7 +24,7 @@ export function requireMainnet(input: Record<string, unknown>, ...keys: string[]
   let raw: unknown;
   for (const k of keys) if (input[k] !== undefined && input[k] !== null && input[k] !== "") { raw = input[k]; break; }
   const chainId = raw === undefined ? SUPPORTED_CHAIN_ID : String(raw).trim().toLowerCase();
-  if (chainId === SUPPORTED_CHAIN_ID || chainId === "ethereum" || chainId === "mainnet" || chainId === "eth") {
+  if (chainId === SUPPORTED_CHAIN_ID || chainId === "0x1" || chainId === "ethereum" || chainId === "mainnet" || chainId === "eth") {
     return SUPPORTED_CHAIN_ID;
   }
   throw new Error(`'chain_id' must be 1 (Ethereum mainnet); '${String(raw)}' is not supported by this capability.`);

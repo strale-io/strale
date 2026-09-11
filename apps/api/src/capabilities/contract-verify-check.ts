@@ -63,7 +63,10 @@ registerCapability("contract-verify-check", async (input: CapabilityInput) => {
   if (res.status === 404) {
     record = null;
   } else if (!res.ok) {
-    throw new Error(`Sourcify returned HTTP ${res.status}.`);
+    // Sourcify explains refusals (e.g. {"customCode":"unsupported_chain","message":"Chain … not found"}); pass it on.
+    const body = await readJsonWithLimit<{ message?: unknown }>(res).catch(() => null);
+    const detail = typeof body?.message === "string" ? `: ${body.message.slice(0, 160)}` : ".";
+    throw new Error(`Sourcify returned HTTP ${res.status}${detail}`);
   } else {
     record = await readJsonWithLimit<SourcifyContract>(res);
   }

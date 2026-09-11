@@ -73,6 +73,12 @@ describe("gas-price-check (Alchemy eth_feeHistory)", () => {
     expect(requests[0].params?.[2]).toEqual([10, 50, 90]);
     await expect(run("gas-price-check", { chain_id: "8453" })).rejects.toThrow(/must be 1 \(Ethereum mainnet\)/);
   });
+  it("accepts every spelling of mainnet a caller might send", async () => {
+    mockUpstreams({ eth_feeHistory: () => ({ baseFeePerGas: ["0x1", "0x1"], gasUsedRatio: [0.5], reward: [["0x1", "0x1", "0x1"]] }) });
+    for (const chain_id of [1, "1", "0x1", "ethereum", "Mainnet", "eth"]) {
+      expect((await run("gas-price-check", { chain_id })).output.chain_id, String(chain_id)).toBe("1");
+    }
+  });
   it("names the missing licence instead of calling anything when no key is set", async () => {
     delete process.env.ALCHEMY_API_KEY;
     mockUpstreams({});
@@ -189,6 +195,12 @@ describe("contract-verify-check (Sourcify)", () => {
     expect(r.output.is_verified).toBe(true);
     expect(r.provenance.source).toBe("sourcify.dev");
   });
+  it("passes Sourcify's own explanation through when it refuses", async () => {
+    mockUpstreams({}, () => new Response(JSON.stringify({ customCode: "unsupported_chain", message: "Chain 999999999999 not found" }), { status: 400 }));
+    await expect(run("contract-verify-check", { contract_address: USDC, chain_id: "999999999999" }))
+      .rejects.toThrow("Sourcify returned HTTP 400: Chain 999999999999 not found");
+  });
+
   it("refuses a non-numeric chain id before any request", async () => {
     mockUpstreams({});
     await expect(run("contract-verify-check", { contract_address: USDC, chain_id: "../x" })).rejects.toThrow(/numeric EVM chain id/);

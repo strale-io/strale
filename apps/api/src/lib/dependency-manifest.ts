@@ -663,7 +663,7 @@ export const PROVIDERS: DependencyProvider[] = [
     // the ENS executors (see src/lib/eth-rpc-endpoints.ts).
     name: "alchemy-eth",
     displayName: "Alchemy Ethereum RPC",
-    description: "Authenticated Ethereum JSON-RPC for ENS resolution. 100k compute units/day free tier.",
+    description: "Authenticated Ethereum mainnet JSON-RPC and transfer index: ENS, gas fees, wallet balance, transactions and age. Free tier.",
     baseUrl: "https://eth-mainnet.g.alchemy.com",
     authType: "none",
     envVar: "ALCHEMY_API_KEY",
