@@ -34,11 +34,33 @@
  *      prod 2026-08-18), but the guard exists so a future suite
  *      deactivation can't silently create the blind spot.
  *
- *   2. The other Browserless-touching suite types on that capability
- *      (`dependency_health`|`edge_case`|`known_bad`|`negative`, whichever
- *      isn't the chosen canary) convert to `test_mode = 'fixture'`.
+ *   2. `dependency_health` (whichever isn't the chosen canary) converts to
+ *      `test_mode = 'fixture'` — it expects real output on a pass, so it
+ *      can capture a baseline and replay it for zero cost.
  *
- *      HIGH-2a (Codex review): the conversion itself must not force an
+ *      CORRECTION (2026-09-11, wrongly-quarantined-refusal-suite incident):
+ *      `edge_case`/`known_bad`/`negative` do NOT convert to fixture, even
+ *      though the original 2026-08-18 design put them there. Those three
+ *      test types verify that a capability correctly REFUSES bad input —
+ *      `validateResult` (test-runner.ts) passes them with `capResult ===
+ *      null`, so there is never any output to capture on their expected-pass
+ *      path. Fixture mode had nothing to replay for them; every dispatch
+ *      fell through to a real executor call regardless of prior passes, and
+ *      the recapture-failure counter (meant to bound genuinely FAILING
+ *      recapture attempts) was counting every one of those correct, passing
+ *      refusals as a failure — three consecutive passes quarantined the
+ *      suite exactly as fast as three genuine failures would have, and
+ *      permanently (no baseline ever existed to self-heal into a replay).
+ *      32 suites across all 12 target capabilities hit this within days of
+ *      the 2026-08-18 migration. See `REFUSAL_ONLY_TYPES`'s doc comment
+ *      below and `test-runner.ts`'s fixture-recapture-tracking comment for
+ *      the full account. These three types now convert to `test_mode =
+ *      'canary'` instead (`convert_to_canary_refusal`) — canary mode never
+ *      reaches the fixture-recapture machinery and gets its own
+ *      unconditional 24h dispatch floor.
+ *
+ *      HIGH-2a (Codex review): the `dependency_health` conversion itself
+ *      must not force an unnecessary recapture. A suite whose existing baseline is already
  *      unnecessary recapture. A suite whose existing baseline is already
  *      fresh (present, dateable, and not edited since capture — the same
  *      edit-invalidation check `checkBaselineStaleness` in test-runner.ts
@@ -114,6 +136,46 @@ const NEVER_TOUCHED_TYPES = new Set(["schema_check", "regression"]);
 /** Piggyback suites are scheduler-exempt (Principle C) — never touched. */
 const PIGGYBACK_TYPE = "piggyback";
 
+/**
+ * `negative`/`edge_case`/`known_bad` test types verify that a capability
+ * correctly REFUSES bad input. `validateResult` (test-runner.ts) marks that
+ * refusal `passed: true` with `capResult === null` — there is never any
+ * output on their expected-pass path, by design (that's what makes a
+ * refusal a refusal). `captureBaseline` only ever writes a baseline when
+ * `passed && capResult?.output` is true, so these suites can NEVER capture
+ * a baseline — `test_mode = 'fixture'` has nothing to replay for them and
+ * every scheduled dispatch falls straight through to a real executor call
+ * regardless of how many times it has already passed.
+ *
+ * 2026-09-11 incident (see `test-runner.ts`'s fixture-recapture-tracking
+ * comment for the full account): converting these three types to `fixture`
+ * alongside `dependency_health` was the original mistake. Every one of
+ * these suites' correct, passing refusals used to be counted as a FAILED
+ * recapture attempt by the old `!(passed && capResult?.output)` condition,
+ * quarantining 32 suites across 12 capabilities within days, permanently
+ * (no baseline ever existed for them to self-heal into a fixture replay).
+ * That counting bug is now fixed independently in `test-runner.ts`, but
+ * fixing the counter alone would leave these suites calling the executor
+ * — and, for the capabilities whose input validation runs after the first
+ * Browserless call, calling Browserless — on every scheduled dispatch,
+ * forever: exactly the unbounded cost this migration exists to close.
+ *
+ * The fix here: these three types are never planned to `fixture`. They get
+ * `test_mode = 'canary'` instead, same as the chosen canary suite — canary
+ * mode never reaches the fixture-recapture machinery at all (it's gated on
+ * `testMode === 'fixture'` in test-runner.ts) and gets its own
+ * unconditional 24h floor via `minRetestIntervalHours` in
+ * `jobs/test-scheduler.ts`, regardless of `cost_class`. Multiple
+ * canary-mode suites per capability are fine here — `shouldRecordTestEvidence`
+ * only feeds the circuit breaker from `known_answer`/`dependency_health`
+ * passes, so having several independently-canary refusal suites doesn't
+ * create extra evidence-feed ambiguity, and `CANARY_TYPE_PREFERENCE`'s "at
+ * most one chosen canary" invariant (used for the zero-live-suites EDGE
+ * guard) is untouched — these are a distinct action
+ * (`convert_to_canary_refusal`), never counted as THE chosen canary.
+ */
+const REFUSAL_ONLY_TYPES = new Set(["negative", "edge_case", "known_bad"]);
+
 /** Preference order for the one suite kept genuinely live per capability. */
 const CANARY_TYPE_PREFERENCE = ["known_answer", "dependency_health"] as const;
 
@@ -131,6 +193,7 @@ export interface SuiteRow {
 
 export type SuiteAction =
   | "convert_to_canary"
+  | "convert_to_canary_refusal"
   | "convert_to_fixture"
   | "unchanged"
   | "not_targeted"
@@ -315,6 +378,41 @@ export function planCapabilityMigration(suites: SuiteRow[]): SuitePlan[] {
           targetMode: "canary",
           action: "convert_to_canary",
           reason: `chosen as the one kept-live suite (${suite.testType}) — will drop from hourly to a 24h floor via minRetestIntervalHours`,
+          bumpUpdatedAt: true,
+          observedBaselineCapturedAt: suite.baselineCapturedAt,
+        });
+      }
+      continue;
+    }
+
+    // negative/edge_case/known_bad can never capture a baseline (see
+    // REFUSAL_ONLY_TYPES's doc comment above) — plan them to canary, not
+    // fixture, regardless of what happened to be captured for them before.
+    if (REFUSAL_ONLY_TYPES.has(suite.testType)) {
+      if (currentMode === "canary") {
+        plans.push({
+          id: suite.id,
+          capabilitySlug: suite.capabilitySlug,
+          testType: suite.testType,
+          currentMode: suite.testMode,
+          targetMode: "canary",
+          action: "unchanged",
+          reason: "already canary — refusal-only test type, never eligible for fixture replay",
+          bumpUpdatedAt: true,
+          observedBaselineCapturedAt: suite.baselineCapturedAt,
+        });
+      } else {
+        plans.push({
+          id: suite.id,
+          capabilitySlug: suite.capabilitySlug,
+          testType: suite.testType,
+          currentMode: suite.testMode,
+          targetMode: "canary",
+          action: "convert_to_canary_refusal",
+          reason:
+            `${suite.testType} verifies a refusal — validateResult passes it with no capturable output, ` +
+            "so fixture mode has nothing to replay and would either falsely count the pass as a failed " +
+            "recapture or run live forever uncapped; canary mode gets a bounded 24h floor instead",
           bumpUpdatedAt: true,
           observedBaselineCapturedAt: suite.baselineCapturedAt,
         });

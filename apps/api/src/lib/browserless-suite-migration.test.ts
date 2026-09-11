@@ -80,17 +80,24 @@ describe("hasFreshBaseline", () => {
 });
 
 describe("planCapabilityMigration", () => {
-  it("picks known_answer as the canary and converts the other 4 executor-touching suites to fixture", () => {
+  it("picks known_answer as the canary, converts dependency_health to fixture, and routes the three refusal-only types to canary (not fixture)", () => {
     const plans = planCapabilityMigration(fullSuiteSet("screenshot-url"));
 
     const canary = plans.find((p) => p.testType === "known_answer")!;
     expect(canary.action).toBe("convert_to_canary");
     expect(canary.targetMode).toBe("canary");
 
-    for (const t of ["dependency_health", "edge_case", "known_bad", "negative"]) {
+    const depHealth = plans.find((p) => p.testType === "dependency_health")!;
+    expect(depHealth.action).toBe("convert_to_fixture");
+    expect(depHealth.targetMode).toBe("fixture");
+
+    // These three verify a refusal — they can never capture a baseline, so
+    // they must never be planned to fixture (2026-09-11 wrongly-quarantined
+    // refusal-suite incident).
+    for (const t of ["edge_case", "known_bad", "negative"]) {
       const p = plans.find((p) => p.testType === t)!;
-      expect(p.action).toBe("convert_to_fixture");
-      expect(p.targetMode).toBe("fixture");
+      expect(p.action).toBe("convert_to_canary_refusal");
+      expect(p.targetMode).toBe("canary");
     }
   });
 
@@ -124,28 +131,34 @@ describe("planCapabilityMigration", () => {
     const plans = planCapabilityMigration(suites);
     const canary = plans.find((p) => p.testType === "dependency_health")!;
     expect(canary.action).toBe("convert_to_canary");
-    // The other executor-touching types still convert to fixture.
+    // The refusal-only types still route to canary (not fixture), same as
+    // when known_answer is the chosen canary.
     for (const t of ["edge_case", "known_bad", "negative"]) {
       const p = plans.find((p) => p.testType === t)!;
-      expect(p.action).toBe("convert_to_fixture");
+      expect(p.action).toBe("convert_to_canary_refusal");
     }
   });
 
   it("is idempotent — a second pass over already-migrated suites reports unchanged, not repeat conversions", () => {
     const suites = fullSuiteSet("screenshot-url");
-    // Simulate: known_answer already 'canary', the rest already 'fixture'.
+    // Simulate: known_answer and the three refusal-only types already
+    // 'canary', dependency_health already 'fixture'.
+    const canaryModeTypes = new Set(["known_answer", "edge_case", "known_bad", "negative"]);
     const migrated = suites.map((s) =>
-      s.testType === "known_answer"
+      canaryModeTypes.has(s.testType)
         ? { ...s, testMode: "canary" }
         : s.testType === "piggyback" || s.testType === "schema_check"
           ? s
           : { ...s, testMode: "fixture" },
     );
     const plans = planCapabilityMigration(migrated);
-    for (const t of ["dependency_health", "edge_case", "known_bad", "negative"]) {
+    const depHealth = plans.find((p) => p.testType === "dependency_health")!;
+    expect(depHealth.action).toBe("unchanged");
+    expect(depHealth.targetMode).toBe("fixture");
+    for (const t of ["edge_case", "known_bad", "negative"]) {
       const p = plans.find((p) => p.testType === t)!;
       expect(p.action).toBe("unchanged");
-      expect(p.targetMode).toBe("fixture");
+      expect(p.targetMode).toBe("canary");
     }
     const canary = plans.find((p) => p.testType === "known_answer")!;
     expect(canary.action).toBe("unchanged");
@@ -156,7 +169,8 @@ describe("planCapabilityMigration", () => {
     const suites = fullSuiteSet("screenshot-url", null);
     const plans = planCapabilityMigration(suites);
     const p = plans.find((p) => p.testType === "edge_case")!;
-    expect(p.action).toBe("convert_to_fixture");
+    expect(p.action).toBe("convert_to_canary_refusal");
+    expect(p.targetMode).toBe("canary");
   });
 
   it("picks exactly one canary even with duplicate known_answer suites (defensive — no observed duplicates in the 12, but scheduler code elsewhere handles per-suite duplicates)", () => {
@@ -169,35 +183,43 @@ describe("planCapabilityMigration", () => {
     expect(canaries.length).toBe(1);
   });
 
-  describe("HIGH-2a — bumpUpdatedAt only when the baseline actually needs one", () => {
+  describe("HIGH-2a — bumpUpdatedAt only when the baseline actually needs one (dependency_health — the only refusal-free type that still goes to fixture)", () => {
     it("does NOT bump updated_at when converting a suite whose baseline is already fresh", () => {
       const suites = fullSuiteSet("screenshot-url"); // fullSuiteSet's default baselines are fresh
       const plans = planCapabilityMigration(suites);
-      for (const t of ["dependency_health", "edge_case", "known_bad", "negative"]) {
-        const p = plans.find((p) => p.testType === t)!;
-        expect(p.action).toBe("convert_to_fixture");
-        expect(p.bumpUpdatedAt).toBe(false);
-      }
+      const p = plans.find((p) => p.testType === "dependency_health")!;
+      expect(p.action).toBe("convert_to_fixture");
+      expect(p.bumpUpdatedAt).toBe(false);
     });
 
     it("DOES bump updated_at when the baseline is missing", () => {
       const suites = fullSuiteSet("screenshot-url").map((s) =>
-        s.testType === "edge_case" ? { ...s, hasBaseline: false, baselineCapturedAt: null } : s,
+        s.testType === "dependency_health" ? { ...s, hasBaseline: false, baselineCapturedAt: null } : s,
       );
       const plans = planCapabilityMigration(suites);
-      const p = plans.find((p) => p.testType === "edge_case")!;
+      const p = plans.find((p) => p.testType === "dependency_health")!;
       expect(p.action).toBe("convert_to_fixture");
       expect(p.bumpUpdatedAt).toBe(true);
     });
 
     it("DOES bump updated_at when the baseline is already edit-stale", () => {
       const suites = fullSuiteSet("screenshot-url").map((s) =>
-        s.testType === "known_bad" ? { ...s, baselineCapturedAt: OLD, updatedAt: NOW } : s,
+        s.testType === "dependency_health" ? { ...s, baselineCapturedAt: OLD, updatedAt: NOW } : s,
       );
       const plans = planCapabilityMigration(suites);
-      const p = plans.find((p) => p.testType === "known_bad")!;
+      const p = plans.find((p) => p.testType === "dependency_health")!;
       expect(p.action).toBe("convert_to_fixture");
       expect(p.bumpUpdatedAt).toBe(true);
+    });
+
+    it("refusal-only types always get bumpUpdatedAt: true — canary mode doesn't read baseline_output at all, so this is harmless either way", () => {
+      const suites = fullSuiteSet("screenshot-url"); // fresh baselines
+      const plans = planCapabilityMigration(suites);
+      for (const t of ["edge_case", "known_bad", "negative"]) {
+        const p = plans.find((p) => p.testType === t)!;
+        expect(p.action).toBe("convert_to_canary_refusal");
+        expect(p.bumpUpdatedAt).toBe(true);
+      }
     });
   });
 
@@ -205,21 +227,21 @@ describe("planCapabilityMigration", () => {
     it("carries the suite's actual baseline_captured_at on a convert_to_fixture plan needing a bump", () => {
       const captured = new Date("2026-07-01T00:00:00.000Z");
       const suites = fullSuiteSet("screenshot-url").map((s) =>
-        s.testType === "edge_case"
+        s.testType === "dependency_health"
           ? { ...s, hasBaseline: false, baselineCapturedAt: null } // missing -> bumpUpdatedAt true
           : s,
       );
       const plans = planCapabilityMigration(suites);
-      const p = plans.find((p) => p.testType === "edge_case")!;
+      const p = plans.find((p) => p.testType === "dependency_health")!;
       expect(p.bumpUpdatedAt).toBe(true);
       expect(p.observedBaselineCapturedAt).toBeNull();
 
       // A second scenario with a real (non-null) but stale captured-at.
       const suites2 = fullSuiteSet("screenshot-url").map((s) =>
-        s.testType === "known_bad" ? { ...s, baselineCapturedAt: captured, updatedAt: NOW } : s,
+        s.testType === "dependency_health" ? { ...s, baselineCapturedAt: captured, updatedAt: NOW } : s,
       );
       const plans2 = planCapabilityMigration(suites2);
-      const p2 = plans2.find((p) => p.testType === "known_bad")!;
+      const p2 = plans2.find((p) => p.testType === "dependency_health")!;
       expect(p2.bumpUpdatedAt).toBe(true);
       expect(p2.observedBaselineCapturedAt).toEqual(captured);
     });

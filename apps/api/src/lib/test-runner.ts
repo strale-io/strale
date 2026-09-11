@@ -895,18 +895,58 @@ async function runSingleTest(
     );
   }
 
-  // Fixture recapture failure tracking (Codex review 2026-08-18 — HIGH-2b).
+  // Fixture recapture failure tracking (Codex review 2026-08-18 — HIGH-2b;
+  // corrected 2026-09-11 — see the wrongly-quarantined-refusal-suite
+  // incident below).
   // A test_mode='fixture' suite only ever reaches this "real execution"
   // branch because its baseline was missing or stale (see the two guards
-  // above) — so every arrival here is an attempted recapture. A passing
-  // attempt is handled above: captureBaseline resets the counter to 0 on
-  // success. A failing attempt must be bounded — without this, a fixture
-  // suite whose upstream permanently broke would attempt a live call on
-  // every dispatch tick forever (doubled by the executor's own retry),
-  // burning exactly the Browserless budget this migration exists to
-  // reclaim. Awaited (not fire-and-forget): the cap's correctness depends
-  // on the counter actually landing before the next dispatch can race it.
-  if (suite.testMode === "fixture" && !(passed && capResult?.output)) {
+  // above) — so every arrival here is an attempted recapture. Only a
+  // genuinely FAILING attempt is a "recapture failure" — gated on `!passed`,
+  // never on whether the attempt happened to produce capturable output.
+  //
+  // 2026-09-11 incident: the original condition was
+  // `!(passed && capResult?.output)`, which counted ANY pass without output
+  // as a failure. That's correct for `known_answer`/`schema_check` (a
+  // passing run there always has output — `validateResult` never returns
+  // `passed: true` with a null `capResult` for those types), but wrong for
+  // `negative`/`edge_case`/`known_bad`: those test types' whole point is to
+  // verify the capability correctly REFUSES bad input, and `validateResult`
+  // marks that refusal `passed: true` with `capResult === null` (the
+  // capability threw, exactly as it should). The old condition treated
+  // every one of those correct refusals as a failed recapture attempt, so
+  // three consecutive PASSING scheduled runs quarantined the suite exactly
+  // as fast as three genuine failures would have — and because
+  // `captureBaseline` (above) never fires without output, there was also
+  // never a baseline to fall back to, so the quarantine was permanent
+  // (`test_status` never self-heals for this cause — see
+  // `recordFixtureRecaptureFailure`'s doc comment). Verified against
+  // production: all 32 non-`dependency_health` rows quarantined under this
+  // marker had exactly `MAX_FIXTURE_RECAPTURE_FAILURES` consecutive
+  // `passed: true` / no-output test_results rows immediately before the
+  // quarantine, never a `passed: false` one. See
+  // `docs/programs/../handoff/_general/from-code/2026-09-11-recapture-refusal-lock.md`
+  // for the full per-row evidence.
+  //
+  // This alone does not bound Browserless cost for a refusal-type suite
+  // whose validation happens to run AFTER an external call (some of the 12
+  // browserless-suite-migration.ts capabilities' `edge_case`/`known_bad`
+  // fixtures reach `fetchRenderedHtml`/`browserlessFetch` before the
+  // capability decides the input is bad) — with the counter no longer
+  // capping them, they would call the executor, and therefore Browserless,
+  // on every scheduled dispatch forever. That half of the fix lives in
+  // `browserless-suite-migration.ts`: `negative`/`edge_case`/`known_bad`
+  // suites on the 12 target capabilities are planned to `test_mode =
+  // 'canary'`, not `'fixture'` — canary mode never reaches this fixture-only
+  // branch at all (see the `suite.testMode === "fixture"` guard below) and
+  // gets its own unconditional 24h floor via
+  // `jobs/test-scheduler.ts`'s `minRetestIntervalHours`, regardless of
+  // `cost_class`. A genuinely failing recapture (upstream broke, executor
+  // missing, a real semantic regression) is unaffected by any of this —
+  // `!passed` still catches it and the cap below still quarantines it after
+  // `MAX_FIXTURE_RECAPTURE_FAILURES` consecutive failures. Awaited (not
+  // fire-and-forget): the cap's correctness depends on the counter actually
+  // landing before the next dispatch can race it.
+  if (suite.testMode === "fixture" && !passed) {
     await recordFixtureRecaptureFailure(suite).catch((err) =>
       logError("fixture-recapture-failure-tracking-failed", err, {
         capability_slug: suite.capabilitySlug,
