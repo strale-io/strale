@@ -523,13 +523,22 @@ tracks:
       warning, one per non-retired dependency-manifest.ts provider the
       startup-migrations.ts boot-time vendor_capability_dependencies sync
       never reaches). No production write, no runtime behaviour change, no
-      change of authority. Next is batch 4b, the third item of the design
-      document's "Batch 4 rescoped" section: add a Notion-roster-versus-register
-      comparison to check-vendor-roster-drift.ts while Notion stays the
-      authority. The derivations and the drift-check retarget remain M4
-      cutover steps. All M3 work is shadow mode: candidate project documents
-      stay inactive and Notion-backed workflows stay authoritative until the
-      founder-gated M4 cutover.
+      change of authority. Batch 4 is now done (4a in PR #636; 4b in this
+      PR): scripts/vendors-lib.mjs's compareRosterWithRegister compares the
+      Notion Vendor Roster's Vendor/Status rows against config/vendors.yaml
+      by the Status-to-lifecycle-state mapping the design named, and
+      check-vendor-roster-drift.ts prints the disagreements in a
+      separately-headed shadow section after its existing Decisions-DB
+      drift check, never changing the script's exit code in --check or
+      --strict. A --roster-fixture flag exercises the comparison against a
+      JSON fixture without NOTION_TOKEN or a Decisions DB call. Next is
+      batch 5, per the design document's batch plan: generate the
+      agent-context and customer-facing views and prepare, without
+      activating, the vendor-switch skill's cutover. The derivations and
+      the drift-check retarget remain M4 cutover steps. All M3 work is
+      shadow mode: candidate project documents stay inactive and
+      Notion-backed workflows stay authoritative until the founder-gated M4
+      cutover.
     resume_file: docs/strategy/2026-09-10-m3-vendor-state-model.md
     exit:
       - repo-native replacements testable without changing existing authority
