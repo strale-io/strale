@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest";
 import {
   growth, interpret, startOfIsoWeek, elapsedDaysInIsoWeek, activatingSlugs,
-  resolveQuietLookback,
+  resolveQuietLookback, trailingQuietWindow, daysQuietAt,
   type DiscreteWeek, type Concentration, type PayerFacts,
 } from "./commercial.js";
 
@@ -570,5 +570,29 @@ describe("the quiet-payer sentence carries its own narrowing", () => {
     const attrition = cs.find((c) => c.topic === "attrition");
     expect(attrition!.text).not.toMatch(/floor|lifetime/);
     expect(attrition!.text).toContain("gone quiet");
+  });
+});
+
+describe("'who has gone quiet' is asked as of now, not as of last week's end", () => {
+  // Production, 2026-09-11: the card customer last bought 2026-08-28T19:16Z.
+  const now = new Date("2026-09-11T06:30:00Z");
+  const lastSeen = "2026-08-28T19:16:00Z";
+
+  it("reports the silence to today, where the completed-week read was days behind", () => {
+    const weekEnd = startOfIsoWeek(now);
+    expect(daysQuietAt(weekEnd, lastSeen)).toBe(9);
+    const trailing = trailingQuietWindow(now);
+    expect(trailing.to).toEqual(now);
+    expect(daysQuietAt(trailing.to, lastSeen)).toBe(13);
+  });
+
+  it("only ever reports a buyer silent for at least the window, whatever the weekday", () => {
+    // Monday just after midnight is the worst case for a week-end read: it
+    // would call a buyer quiet after one day.
+    for (const at of ["2026-09-07T00:30:00Z", "2026-09-09T12:00:00Z", "2026-09-13T23:59:00Z"]) {
+      const w = trailingQuietWindow(new Date(at));
+      const justBeforeWindow = new Date(w.from.getTime() - 1000).toISOString();
+      expect(daysQuietAt(w.to, justBeforeWindow)).toBeGreaterThanOrEqual(7);
+    }
   });
 });
