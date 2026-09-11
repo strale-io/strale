@@ -59,11 +59,12 @@ destructive actions.
   Linear issue sync, Bootstrap Mode, Standing Delegations, and the AI
   Adherence audit-script scaffolding, none of which exist or ran here beyond
   the one 2026-02-25 bootstrap), several rows `covered` (the Session Start
-  mode criteria, the conflict duty, the global-decision and
-  decision-supersession confirmation rules, and the main-branch-push
-  confirmation rule all already appear in current `CLAUDE.md`, several of
-  them superseded by stronger repo-native enforcement), and one `keep`: the
-  Git commit message convention (`type(scope): description`).
+  mode criteria, the conflict duty, the global-decision confirmation
+  rule, and the main-branch-push confirmation rule all already appear in
+  current `CLAUDE.md`, several of them superseded by stronger repo-native
+  enforcement), and two `keep`: the Git commit message convention
+  (`type(scope): description`) and, added in architect review, the
+  Contradiction Protocol steps.
 - `.claude/WORKFLOW.md`, mostly `obsolete-other` (an entire UI
   design-critique execution framework, plan mode gates, subagent strategy,
   critique loops, visual verification, release review, built around
@@ -116,7 +117,7 @@ edit): the Git commit message convention
 | Document Types 1-5: Journal, Decisions, Product Strategy, Feature Registry, Deferred (Notion database schemas and lifecycle rules) (lines 270-524) | `docs/decisions/records/*.md` + `docs/programs/` for the decision/program-tracking substance | `obsolete-notion` | Full Notion database field specs and lifecycle rules (append-only Journal, superseded-not-edited Decisions, Linear-derived Feature Registry status) for databases this repo does not operate; the repo's actual decision and program registers (`docs/decisions/records/`, `docs/programs/`) are structurally different, git-native mechanisms already covered by their own protocol-coverage rows. |
 | Handoff System: folder structure, `from-chat`/`from-code` contents, file rules (lines 526-561) | `docs/governance/protocols/SESSION_CONTRACT.md` (session-contract row, `docs/project/protocol-coverage.yaml:26-44`) | `covered` | The live Session contract protocol already governs `handoff/_general/from-code/` writing and the handoff-gate check; the two-actor `from-chat`/`from-code` split and 90-day archive-after-ship rule are the parts that do not survive (no Claude Chat actor, no per-feature handoff folders in current practice), but the core "write a handoff file" obligation is covered. |
 | Design Brief Template (UI surface-type intake form) (lines 562-591) | None | `obsolete-other` | References `DESIGN_ROUTER.yaml`, which does not exist in this repository; no evidence this template was ever used. |
-| Contradiction Protocol: quote both, get confirmation, create audit trail, update CLAUDE.md (lines 597-617) | `CLAUDE.md` heading "Workflow Invariants (Non-Negotiable)": conflict duty and "Supersessions → ALWAYS use Contradiction Protocol (including CLAUDE.md update)" | `covered` | The substance (never silently supersede, update CLAUDE.md immediately) is already live CLAUDE.md text; the Notion-specific mechanics (marking a Decision `superseded`, Notion relation fields) are not, and are obsolete-notion within this same row's scope. |
+| Contradiction Protocol: quote both, get confirmation, create audit trail, update CLAUDE.md (lines 597-617) | `CLAUDE.md` heading "Workflow Invariants (Non-Negotiable)": conflict duty and "Supersessions → ALWAYS use Contradiction Protocol (including CLAUDE.md update)" | `keep` | Architect review: CLAUDE.md and AGENTS.md name the Contradiction Protocol but define only its trigger, so archiving this file would leave a live rule pointing at an archived definition. Its five steps move, tool-neutral and without the Notion mechanics, into both files' Workflow Invariants, next to the bullet that names it. |
 | "Why Don't We Have X?" Protocol: Glossary-first search across Notion databases plus handoff-file grep (lines 621-634) | None | `obsolete-notion` | Depends on the Notion Glossary/Decisions/Deferred/Journal databases this repo does not have; the underlying instinct ("search before concluding never considered") is generic practice, not a repo-specific rule needing a new home. |
 | Complete Supersession Rule: never edit, always supersede (Decisions, Product Strategy, Journal) (lines 638-655) | `CLAUDE.md` heading "Workflow Invariants (Non-Negotiable)" | `covered` | "NEVER edit Journal entries, Decision content, or Deferred content" and "Corrections → new Journal entry" are already stated there; the Linear split-description format in the same section is `obsolete-notion` (Linear never adopted). |
 | Change Log Rule for versioned documents (lines 657-679) | None | `obsolete-other` | No live document in this repo carries a "Version | Date | What Changed | Why" changelog table by this rule's convention; decision records use the git-native supersession mechanism instead. |
@@ -243,7 +244,11 @@ Source: `.claude/PROTOCOL.md:222` ("Git commits | `type(scope): description`
 | `feat(ui): add time tracking component`") and `.claude/BUILD.md:152,237`
 ("Commit with conventional commit message").
 
-No other `keep` rule was found across the six files (see Part A).
+The architect's review added a second `keep`: the Contradiction
+Protocol's five steps (the `.claude/PROTOCOL.md` row for lines 597-617),
+which moved into the Workflow Invariants of `CLAUDE.md` and `AGENTS.md`
+under the bullet that names the protocol. No other `keep` rule was found
+across the six files (see Part A).
 
 ### B2. Moved the six files
 

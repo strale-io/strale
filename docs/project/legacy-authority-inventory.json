@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "19c9ce9d4c755a43e1e6520af17bcbd10b5ef6e31619f0621791a82266743aaa",
+      "sha256": "6b0d9ecf057a4d4c88fcdd80d265bfcc85848117df15e3c6ba0d9dafe0b09ea8",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -114,7 +114,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "c4b375eddb77927e2a89fee5b83e92ced5c673f5bd451f9e449c4d76399ec4ee",
+      "sha256": "89b062f432e3747bf8012891f6a5ffc1dad834bf70600b507e9caac7bc6cebb1",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/commands/end-session.md",

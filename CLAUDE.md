@@ -748,7 +748,14 @@ Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESO
 - NEVER delete anything in Notion
 - Corrections → new Journal entry, type = course-correction
 - Global decisions → ALWAYS get confirmation
-- Supersessions → ALWAYS use Contradiction Protocol (including CLAUDE.md update)
+- Supersessions → ALWAYS use Contradiction Protocol (including CLAUDE.md update).
+  When a new decision contradicts an active one: (1) quote both, side by
+  side; (2) say exactly what conflicts; (3) Petter approves the
+  supersession; (4) record it: the new decision with its rationale, and
+  the old one marked superseded with a link to the new one; (5) update
+  the Active Decisions list in this file in the same change. A decision
+  is never silently superseded. (Moved here in M4 batch 1 from the
+  archived starter-kit protocol.)
 
 **Conflict duty:** If the human's request would contradict an active Decision, state the conflict before proceeding. Quote the specific Decision being violated and ask the human to confirm, supersede, or revise.
 
