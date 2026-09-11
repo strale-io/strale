@@ -7,7 +7,8 @@
 slug: wallet-balance-lookup
 name: Wallet Balance Lookup
 description: >-
-  Get the ETH balance of an Ethereum mainnet wallet and the ERC-20 tokens it has most recently sent or received.
+  Get a wallet's native balance and the ERC-20 tokens it most recently sent or received, on Ethereum, Base, Arbitrum,
+  Optimism or Polygon.
 category: web3
 cost_class: free_quota
 quota_window: daily
@@ -24,7 +25,7 @@ input_schema:
       description: Wallet address (0x...)
     chain_id:
       type: string
-      description: "Chain ID (1=Ethereum). Default: 1"
+      description: "Chain ID: 1 (Ethereum), 8453 (Base), 42161 (Arbitrum One), 10 (OP Mainnet) or 137 (Polygon PoS). Default: 1"
 output_schema:
   type: object
   example:
@@ -108,7 +109,9 @@ output_schema:
       type: string
     token_transfer_count:
       type: number
-data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
+    native_symbol:
+      type: string
+data_source: Alchemy JSON-RPC and transfer index on Ethereum, Base, Arbitrum One, OP Mainnet and Polygon PoS
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -118,31 +121,76 @@ personal_data_categories:
 geography: global
 test_fixtures:
   known_answer:
-    input:
-      address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
-      chain_id: "1"
-    expected_fields:
-      - field: native_balance_eth
-        operator: not_null
-        reliability: common
+    - input:
+        address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+        chain_id: "1"
+      expected_fields:
+        - field: native_balance_eth
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "8453"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "ETH"
+        - field: native_balance_eth
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "42161"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "ETH"
+        - field: native_balance_eth
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "10"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "ETH"
+        - field: native_balance_eth
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "137"
+      expected_fields:
+        - field: native_symbol
+          operator: equals
+          reliability: guaranteed
+          value: "POL"
+        - field: native_balance_eth
+          operator: not_null
+          reliability: common
 output_field_reliability:
   address: common
-  chain_id: common
+  chain_id: guaranteed
   recent_tokens: common
   native_balance_eth: common
   native_balance_wei: common
   token_transfer_count: common
+  native_symbol: guaranteed
 limitations:
   - title: null
     text: >-
-      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
+      Output reflects Alchemy's JSON-RPC and transfer index for the requested chain at query time. Dependent on upstream API availability; may degrade
       if the provider rate-limits or is temporarily unavailable.
     category: availability
     severity: info
     workaround: null
-  - title: "Ethereum mainnet only"
+  - title: "Chains covered"
     text: >-
-      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+      Ethereum (1), Base (8453), Arbitrum One (42161), OP Mainnet (10) and Polygon PoS (137), read through Alchemy; any other chain_id is refused. These are the chains for which Alchemy documents its transfer index and block timestamps. Values are in the chain's native coin, named in native_symbol (POL on Polygon).
     category: coverage
     severity: info
     workaround: null

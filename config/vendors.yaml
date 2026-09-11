@@ -1236,6 +1236,48 @@ vendors:
         outcome: prohibited
     authorization:
       status: unknown
+  - id: france-travail
+    name: France Travail
+    aliases:
+      - France Travail
+    lifecycle:
+      - state: candidate
+        date: 2026-09-11
+        decision: unknown
+        reason: "job-board-search country fr is built and refuses until the founder registers a francetravail.io application with the Offres d'emploi v2 API and adds its credentials on Railway. Its CGU (read 2026-09-11) says offers go by API to partners who join the offer-reuse licence, contact data excepted, and 'pourront être réutilisées pour tout usage et notamment être rediffusées sur des sites tiers'. Redistribution stays unknown until the reuse licence itself is read at registration. handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md"
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
+  - id: usajobs
+    name: USAJOBS
+    aliases:
+      - USAJOBS
+    lifecycle:
+      - state: candidate
+        date: 2026-09-11
+        decision: unknown
+        reason: "job-board-search country us (federal jobs) is built and refuses until the founder registers a USAJOBS API key and adds it with its email on Railway. Reuse terms are as OPM's statement is quoted by FedScoop (fedscoop.com, 'OPM wants to crack down on federal job site spoofs'): reposting permitted if values are unaltered, USAJOBS is credited and applicants are sent to USAJOBS; raw bulk feeds are not. The primary text could not be read and is to be confirmed at registration. handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md"
+    reevaluation_triggers: []
+    verification:
+      terms:
+        status: unknown
+      pricing:
+        status: unknown
+      licensing:
+        status: unknown
+      redistribution:
+        status: unknown
+    authorization:
+      status: unknown
   - id: australian-business-register
     name: Australian Business Register
     aliases:

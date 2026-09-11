@@ -7,8 +7,8 @@
 slug: wallet-age-check
 name: Wallet Age Check
 description: >-
-  Check when an Ethereum mainnet wallet was first active: the earliest ETH or token transfer to or from it, and its
-  age in days. A new wallet moving large amounts is a red flag.
+  Check when a wallet was first active on Ethereum, Base, Arbitrum, Optimism or Polygon: the earliest transfer to or
+  from it, and its age in days. A new wallet moving large amounts is a red flag.
 category: web3
 cost_class: free_quota
 quota_window: daily
@@ -25,7 +25,7 @@ input_schema:
       description: Wallet address (0x...)
     chain_id:
       type: string
-      description: "Chain ID. Only 1 (Ethereum mainnet) is supported. Default: 1"
+      description: "Chain ID: 1 (Ethereum), 8453 (Base), 42161 (Arbitrum One), 10 (OP Mainnet) or 137 (Polygon PoS). Default: 1"
 output_schema:
   type: object
   example:
@@ -48,7 +48,7 @@ output_schema:
       type: string
     first_tx_hash:
       type: string
-data_source: Ethereum mainnet via Alchemy (JSON-RPC and transfer index)
+data_source: Alchemy JSON-RPC and transfer index on Ethereum, Base, Arbitrum One, OP Mainnet and Polygon PoS
 data_source_type: api
 transparency_tag: algorithmic
 maintenance_class: free-stable-api
@@ -58,34 +58,74 @@ personal_data_categories:
 geography: global
 test_fixtures:
   known_answer:
-    input:
-      address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
-      chain_id: "1"
-    expected_fields:
-      - field: has_activity
-        operator: is_true
-        reliability: common
-      - field: first_tx_date
-        operator: not_null
-        reliability: common
+    - input:
+        address: "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
+        chain_id: "1"
+      expected_fields:
+        - field: has_activity
+          operator: is_true
+          reliability: common
+        - field: first_tx_date
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "8453"
+      expected_fields:
+        - field: has_activity
+          operator: is_true
+          reliability: common
+        - field: first_tx_date
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "42161"
+      expected_fields:
+        - field: has_activity
+          operator: is_true
+          reliability: common
+        - field: first_tx_date
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "10"
+      expected_fields:
+        - field: has_activity
+          operator: is_true
+          reliability: common
+        - field: first_tx_date
+          operator: not_null
+          reliability: common
+    - input:
+        address: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+        chain_id: "137"
+      expected_fields:
+        - field: has_activity
+          operator: is_true
+          reliability: common
+        - field: first_tx_date
+          operator: not_null
+          reliability: common
 output_field_reliability:
   address: common
   age_days: common
-  chain_id: common
+  chain_id: guaranteed
   has_activity: common
   first_tx_date: common
   first_tx_hash: common
 limitations:
   - title: null
     text: >-
-      Output reflects Ethereum mainnet via Alchemy (JSON-RPC and transfer index) at query time. Dependent on upstream API availability; may degrade
+      Output reflects Alchemy's JSON-RPC and transfer index for the requested chain at query time. Dependent on upstream API availability; may degrade
       if the provider rate-limits or is temporarily unavailable.
     category: availability
     severity: info
     workaround: null
-  - title: "Ethereum mainnet only"
+  - title: "Chains covered"
     text: >-
-      Since 2026-09-11 this capability reads Ethereum mainnet through Alchemy and refuses any other chain_id. Earlier versions accepted other EVM chains through Etherscan, whose free API does not permit commercial use.
+      Ethereum (1), Base (8453), Arbitrum One (42161), OP Mainnet (10) and Polygon PoS (137), read through Alchemy; any other chain_id is refused. These are the chains for which Alchemy documents its transfer index and block timestamps. Values are in the chain's native coin, named in native_symbol (POL on Polygon).
     category: coverage
     severity: info
     workaround: null

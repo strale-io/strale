@@ -13,7 +13,8 @@ import { mergeTransactions } from "./wallet-transactions-lookup.js";
 import { earliest } from "./wallet-age-check.js";
 import { fromSourcify, sourcifyRefusal } from "./contract-verify-check.js";
 import { recentTokens } from "./wallet-balance-lookup.js";
-import type { AssetTransfer } from "./lib/alchemy-client.js";
+import { franceTravailLocation, resetFranceTravailTokenForTests, usajobsSalary } from "./job-board-search.js";
+import { CHAINS, resolveChain, TRANSFER_CHAINS, type AssetTransfer } from "./lib/alchemy-client.js";
 
 const W = "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe";
 let requests: { url: string; method?: string; params?: unknown[] }[] = [];
@@ -27,7 +28,7 @@ const tx = (over: Partial<AssetTransfer>): AssetTransfer => ({
 function mockUpstreams(rpc: Record<string, (params: unknown[]) => unknown>, other: (url: string) => Response = () => new Response("nope", { status: 500 })) {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
-    if (url.startsWith("https://eth-mainnet.g.alchemy.com/v2/")) {
+    if (/^https:\/\/[a-z]+-mainnet\.g\.alchemy\.com\/v2\//.test(url)) {
       const body = JSON.parse(String(init?.body));
       requests.push({ url, method: body.method, params: body.params });
       const handler = rpc[body.method];
@@ -42,7 +43,11 @@ function mockUpstreams(rpc: Record<string, (params: unknown[]) => unknown>, othe
 const run = (slug: string, input: Record<string, unknown>) =>
   getDirectExecutor(slug)!(input) as Promise<{ output: Record<string, unknown>; provenance: Record<string, unknown> }>;
 
-const LICENSED = [/^https:\/\/eth-mainnet\.g\.alchemy\.com\/v2\//, /^https:\/\/sourcify\.dev\/server\/v2\//, /^https:\/\/jobsearch\.api\.jobtechdev\.se\//];
+const ALCHEMY_HOSTS = Object.values(CHAINS).map((c) => c.host).join("|");
+const LICENSED = [new RegExp(`^https://(${ALCHEMY_HOSTS})\\.g\\.alchemy\\.com/v2/`), /^https:\/\/sourcify\.dev\/server\/v2\//, /^https:\/\/jobsearch\.api\.jobtechdev\.se\//,
+  /^https:\/\/entreprise\.francetravail\.fr\/connexion\/oauth2\/access_token\?realm=%2Fpartenaire$/,
+  /^https:\/\/api\.francetravail\.io\/partenaire\/offresdemploi\/v2\/offres\/search\?/,
+  /^https:\/\/data\.usajobs\.gov\/api\/search\?/];
 
 beforeAll(async () => {
   for (const m of ["gas-price-check", "wallet-balance-lookup", "wallet-transactions-lookup", "wallet-age-check", "contract-verify-check", "job-board-search"]) {
@@ -54,6 +59,25 @@ afterEach(() => {
   for (const r of requests) expect(LICENSED.some((re) => re.test(r.url)), `unlicensed request: ${r.url}`).toBe(true);
   vi.restoreAllMocks();
   delete process.env.ALCHEMY_API_KEY;
+});
+
+describe("chain resolution", () => {
+  it("accepts ids, numbers, hex ids and names, and defaults to Ethereum", () => {
+    expect(resolveChain({}, TRANSFER_CHAINS, "chain_id").id).toBe("1");
+    expect(resolveChain({ chain_id: 8453 }, TRANSFER_CHAINS, "chain_id").id).toBe("8453");
+    expect(resolveChain({ chain_id: "0x2105" }, TRANSFER_CHAINS, "chain_id").id).toBe("8453");
+    expect(resolveChain({ chain: "Arbitrum" }, TRANSFER_CHAINS, "chain_id", "chain").id).toBe("42161");
+    expect(resolveChain({ chain_id: "matic" }, TRANSFER_CHAINS, "chain_id").id).toBe("137");
+    expect(resolveChain({ chain_id: "op" }, TRANSFER_CHAINS, "chain_id").id).toBe("10");
+  });
+  it("refuses a chain the capability does not serve, naming the ones it does", () => {
+    expect(() => resolveChain({ chain_id: "56" }, TRANSFER_CHAINS, "chain_id")).toThrow(/must be one of 1 \(Ethereum\), 8453 \(Base\), 42161 \(Arbitrum One\), 10 \(OP Mainnet\), 137 \(Polygon PoS\); '56'/);
+    expect(() => resolveChain({ chain_id: "41923" }, TRANSFER_CHAINS, "chain_id")).toThrow(/not supported/);
+    expect(() => resolveChain({ chain_id: "0xzz" }, TRANSFER_CHAINS, "chain_id")).toThrow(/not supported/);
+    for (const chain_id of ["constructor", "__proto__", "toString"]) {
+      expect(() => resolveChain({ chain_id }, TRANSFER_CHAINS, "chain_id")).toThrow(/not supported/);
+    }
+  });
 });
 
 describe("gas-price-check (Alchemy eth_feeHistory)", () => {
@@ -71,7 +95,7 @@ describe("gas-price-check (Alchemy eth_feeHistory)", () => {
     expect(r.output.chain_id).toBe("1");
     expect(r.output.blocks_sampled).toBe(20);
     expect(requests[0].params?.[2]).toEqual([10, 50, 90]);
-    await expect(run("gas-price-check", { chain_id: "8453" })).rejects.toThrow(/must be 1 \(Ethereum mainnet\)/);
+    await expect(run("gas-price-check", { chain_id: "8453" })).rejects.toThrow(/Base is a rollup/);
   });
   it("accepts every spelling of mainnet a caller might send", async () => {
     mockUpstreams({ eth_feeHistory: () => ({ baseFeePerGas: ["0x1", "0x1"], gasUsedRatio: [0.5], reward: [["0x1", "0x1", "0x1"]] }) });
@@ -239,11 +263,170 @@ describe("job-board-search (JobTech, CC0)", () => {
   });
   it("refuses other countries without calling anything", async () => {
     mockUpstreams({});
-    await expect(run("job-board-search", { query: "developer", country_code: "gb" })).rejects.toThrow(/Swedish job listings only/);
+    for (const country_code of ["constructor", "__proto__", "toString"]) {
+      await expect(run("job-board-search", { query: "developer", country_code })).rejects.toThrow(/must be one of/);
+    }
+    await expect(run("job-board-search", { query: "developer", country_code: "gb" })).rejects.toThrow(/must be one of "se" \(Sweden\), "fr" \(France\), "us"/);
     expect(requests).toEqual([]);
   });
   it("surfaces the upstream failure instead of hiding it", async () => {
     mockUpstreams({}, () => new Response("down", { status: 503 }));
     await expect(run("job-board-search", { query: "x" })).rejects.toThrow(/HTTP 503/);
+  });
+});
+
+describe("per-chain routing", () => {
+  const fee = () => ({ baseFeePerGas: ["0x3b9aca00", "0x3b9aca00"], gasUsedRatio: [0.5], reward: [["0x1", "0x2", "0x3"]] });
+  it("gas price on Polygon and BNB goes to their own networks", async () => {
+    mockUpstreams({ eth_feeHistory: fee });
+    expect((await run("gas-price-check", { chain_id: "137" })).output.chain_id).toBe("137");
+    expect((await run("gas-price-check", { chain: "bsc" })).output.chain_id).toBe("56");
+    expect(requests.map((r) => new URL(r.url).host)).toEqual(["polygon-mainnet.g.alchemy.com", "bnb-mainnet.g.alchemy.com"]);
+  });
+  it("gas price refuses every rollup, with the reason, before any request", async () => {
+    mockUpstreams({ eth_feeHistory: fee });
+    for (const chain_id of ["8453", "base", "0xa4b1", "optimism"]) {
+      await expect(run("gas-price-check", { chain_id })).rejects.toThrow(/is a rollup: most of a transaction's cost/);
+    }
+    await expect(run("gas-price-check", { chain_id: "41923" })).rejects.toThrow(/not supported/);
+    await expect(run("gas-price-check", { chain_id: "", chain: "base" })).rejects.toThrow(/Base is a rollup/);
+    expect(requests).toEqual([]);
+  });
+  it("wallet balance on Polygon reports POL and uses the Polygon network", async () => {
+    mockUpstreams({ eth_getBalance: () => "0xde0b6b3a7640000", alchemy_getAssetTransfers: () => ({ transfers: [] }) });
+    const r = await run("wallet-balance-lookup", { address: W, chain_id: "137" });
+    expect(r.output).toMatchObject({ chain_id: "137", native_symbol: "POL", native_balance_eth: 1 });
+    expect(new Set(requests.map((x) => new URL(x.url).host))).toEqual(new Set(["polygon-mainnet.g.alchemy.com"]));
+  });
+  it("wallet transactions on Arbitrum use the Arbitrum network and say which coin", async () => {
+    mockUpstreams({ alchemy_getAssetTransfers: () => ({ transfers: [tx({ hash: "0xarb" })] }) });
+    const r = await run("wallet-transactions-lookup", { address: W, chain: "arbitrum" });
+    expect(r.output).toMatchObject({ chain_id: "42161", native_symbol: "ETH" });
+    expect(new Set(requests.map((x) => new URL(x.url).host))).toEqual(new Set(["arb-mainnet.g.alchemy.com"]));
+  });
+  it("wallet transactions on Polygon name POL as the coin", async () => {
+    mockUpstreams({ alchemy_getAssetTransfers: () => ({ transfers: [tx({ hash: "0xpol" })] }) });
+    const r = await run("wallet-transactions-lookup", { address: W, chain_id: "137" });
+    expect(r.output).toMatchObject({ chain_id: "137", native_symbol: "POL" });
+  });
+  it("wallet age refuses BNB Chain, whose transfer index Alchemy does not document", async () => {
+    mockUpstreams({});
+    await expect(run("wallet-age-check", { address: W, chain_id: "56" })).rejects.toThrow(/not supported/);
+    expect(requests).toEqual([]);
+  });
+});
+
+describe("job-board-search: France Travail", () => {
+  const offer = {
+    id: "201ABCD", intitule: "Infirmier (H/F)", entreprise: { nom: "Hôpital Y" }, lieuTravail: { libelle: "75 - Paris 15e Arrondissement" },
+    salaire: { libelle: "Mensuel de 2500 Euros" }, dateCreation: "2026-09-10T08:00:00.000Z",
+    contact: { nom: "Marie Dupont", coordonnees1: "marie.dupont@hopital.fr", telephone: "01 23 45 67 89", courriel: "rh@hopital.fr" },
+  };
+  beforeEach(() => { resetFranceTravailTokenForTests(); });
+  afterEach(() => { delete process.env.FRANCE_TRAVAIL_CLIENT_ID; delete process.env.FRANCE_TRAVAIL_CLIENT_SECRET; });
+
+  it("is refused, without any request, until its credentials are configured", async () => {
+    mockUpstreams({});
+    await expect(run("job-board-search", { query: "infirmier", country_code: "fr" })).rejects.toThrow(/Job search for France is not available yet/);
+    expect(requests).toEqual([]);
+  });
+  it("searches with one cached token, maps offers, and never returns the contact", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    mockUpstreams({}, (url) => url.includes("access_token")
+      ? new Response(JSON.stringify({ access_token: "tok", expires_in: 1499 }))
+      : new Response(JSON.stringify({ resultats: [offer] }), { status: 206, headers: { "Content-Range": "offres 0-9/345" } }));
+    const r = await run("job-board-search", { query: "infirmier", country_code: "FR", location: "75" });
+    await run("job-board-search", { query: "infirmier", country_code: "fr" });
+    expect(requests.filter((q) => q.url.includes("access_token"))).toHaveLength(1);
+    const search = new URL(requests[1].url);
+    expect(search.searchParams.get("motsCles")).toBe("infirmier");
+    expect(search.searchParams.get("departement")).toBe("75");
+    expect(r.output).toMatchObject({ country_code: "fr", total_results: 345, sources_queried: ["francetravail.fr"] });
+    expect(r.output.jobs).toEqual([{
+      title: "Infirmier (H/F)", company: "Hôpital Y", location: "75 - Paris 15e Arrondissement", salary_range: "Mensuel de 2500 Euros",
+      url: "https://candidat.francetravail.fr/offres/recherche/detail/201ABCD", posted_date: "2026-09-10T08:00:00.000Z", source: "francetravail.fr",
+    }]);
+    const text = JSON.stringify(r);
+    for (const pii of ["Marie Dupont", "marie.dupont@", "rh@hopital", "01 23 45"]) expect(text, `leaked ${pii}`).not.toContain(pii);
+  });
+  it("refuses remote_only, which the search API has no documented filter for, before any request", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    mockUpstreams({});
+    await expect(run("job-board-search", { query: "dev", country_code: "fr", remote_only: true })).rejects.toThrow(/'remote_only' is not supported for France/);
+    expect(requests).toEqual([]);
+  });
+  it("asks only for France Travail's own offers", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    mockUpstreams({}, (url) => url.includes("access_token") ? new Response(JSON.stringify({ access_token: "t", expires_in: 60 })) : new Response(null, { status: 204 }));
+    await run("job-board-search", { query: "dev", country_code: "fr" });
+    expect(new URL(requests[1].url).searchParams.get("origineOffre")).toBe("1");
+  });
+  it("drops a rejected token and retries once with a fresh one", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    let tokens = 0; let searches = 0;
+    mockUpstreams({}, (url) => {
+      if (url.includes("access_token")) return new Response(JSON.stringify({ access_token: `t${++tokens}`, expires_in: 1499 }));
+      return ++searches === 1 ? new Response("", { status: 401 }) : new Response(null, { status: 204 });
+    });
+    const r = await run("job-board-search", { query: "dev", country_code: "fr" });
+    expect(r.output).toMatchObject({ total_results: 0 });
+    expect([tokens, searches]).toEqual([2, 2]);
+  });
+  it("reads 204 as no results", async () => {
+    process.env.FRANCE_TRAVAIL_CLIENT_ID = "id"; process.env.FRANCE_TRAVAIL_CLIENT_SECRET = "secret";
+    mockUpstreams({}, (url) => url.includes("access_token") ? new Response(JSON.stringify({ access_token: "t", expires_in: 60 })) : new Response(null, { status: 204 }));
+    const r = await run("job-board-search", { query: "zzz", country_code: "fr" });
+    expect(r.output).toMatchObject({ total_results: 0, jobs: [] });
+  });
+  it("takes a department or INSEE commune code, and refuses free text", () => {
+    expect(franceTravailLocation("75")).toEqual({ departement: "75" });
+    expect(franceTravailLocation("2a")).toEqual({ departement: "2A" });
+    expect(franceTravailLocation("974")).toEqual({ departement: "974" });
+    expect(franceTravailLocation("75115")).toEqual({ commune: "75115" });
+    expect(franceTravailLocation(undefined)).toEqual({});
+    expect(() => franceTravailLocation("Paris")).toThrow(/department number/);
+  });
+});
+
+describe("job-board-search: USAJOBS", () => {
+  const item = { MatchedObjectDescriptor: {
+    PositionTitle: "Nurse", OrganizationName: "Veterans Health Administration", PositionLocationDisplay: "Denver, Colorado",
+    PositionRemuneration: [{ MinimumRange: "80000", MaximumRange: "120000", RateIntervalCode: "PA", Description: "Per Year" }],
+    PositionURI: "https://www.usajobs.gov:443/job/812345600", PublicationStartDate: "2026-09-09T00:00:00.0000",
+    UserArea: { Details: { AgencyContactEmail: "hr.person@va.gov", AgencyContactPhone: "303-555-0100" } },
+  } };
+  afterEach(() => { delete process.env.USAJOBS_API_KEY; delete process.env.USAJOBS_USER_AGENT; });
+
+  it("is refused, without any request, until its key and registered email are configured", async () => {
+    process.env.USAJOBS_API_KEY = "k";
+    mockUpstreams({});
+    await expect(run("job-board-search", { query: "nurse", country_code: "us" })).rejects.toThrow(/Job search for United States \(federal jobs\) is not available yet/);
+    expect(requests).toEqual([]);
+  });
+  it("sends the key and registered email, keeps values unaltered, links to USAJOBS, credits it, and drops contacts", async () => {
+    process.env.USAJOBS_API_KEY = "k"; process.env.USAJOBS_USER_AGENT = "ops@strale.io";
+    let headers: Headers | undefined;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      requests.push({ url: String(input) });
+      headers = new Headers(init?.headers);
+      return new Response(JSON.stringify({ SearchResult: { SearchResultCountAll: 57, SearchResultItems: [item] } }));
+    });
+    const r = await run("job-board-search", { query: "nurse", country_code: "us", location: "Denver, Colorado" });
+    expect(headers?.get("Authorization-Key")).toBe("k");
+    expect(headers?.get("User-Agent")).toBe("ops@strale.io");
+    expect(new URL(requests[0].url).searchParams.get("LocationName")).toBe("Denver, Colorado");
+    expect(r.output.jobs).toEqual([{
+      title: "Nurse", company: "Veterans Health Administration", location: "Denver, Colorado", salary_range: "80000–120000 Per Year",
+      url: "https://www.usajobs.gov:443/job/812345600", posted_date: "2026-09-09T00:00:00.0000", source: "usajobs.gov",
+    }]);
+    expect(r.output).toMatchObject({ total_results: 57, country_code: "us" });
+    expect(String(r.output.attribution)).toMatch(/USAJOBS/);
+    const text = JSON.stringify(r);
+    for (const pii of ["hr.person@va.gov", "303-555"]) expect(text, `leaked ${pii}`).not.toContain(pii);
+  });
+  it("passes pay values through as published", () => {
+    expect(usajobsSalary({ MinimumRange: "15.5", MaximumRange: "20.25", Description: "Per Hour" })).toBe("15.5–20.25 Per Hour");
+    expect(usajobsSalary({ MinimumRange: "90000", RateIntervalCode: "PA" })).toBe("90000 PA");
+    expect(usajobsSalary(undefined)).toBeNull();
   });
 });

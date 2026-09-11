@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { assetTransfers, hexToNumber, requireAddress, requireMainnet, type AssetTransfer } from "./lib/alchemy-client.js";
+import { assetTransfers, hexToNumber, requireAddress, resolveChain, TRANSFER_CHAINS, type AssetTransfer } from "./lib/alchemy-client.js";
 
 // A wallet's first on-chain activity: the earliest transfer to or from it.
 // Rebuilt 2026-09-11 onto Alchemy's transfer index after Etherscan's free API
@@ -17,14 +17,15 @@ export function earliest(a: AssetTransfer | undefined, b: AssetTransfer | undefi
 
 registerCapability("wallet-age-check", async (input: CapabilityInput) => {
   const address = requireAddress(input.address ?? input.wallet ?? input.wallet_address, "address");
-  const chainId = requireMainnet(input, "chain_id", "chain");
+  const chain = resolveChain(input, TRANSFER_CHAINS, "chain_id", "chain");
+  const chainId = chain.id;
 
   const [firstIn, firstOut] = await Promise.all([
-    assetTransfers({ address, direction: "to", category: CATEGORIES, order: "asc", maxCount: 1 }),
-    assetTransfers({ address, direction: "from", category: CATEGORIES, order: "asc", maxCount: 1 }),
+    assetTransfers({ chain, address, direction: "to", category: CATEGORIES, order: "asc", maxCount: 1 }),
+    assetTransfers({ chain, address, direction: "from", category: CATEGORIES, order: "asc", maxCount: 1 }),
   ]);
   const first = earliest(firstIn[0], firstOut[0]);
-  const provenance = { source: "ethereum-mainnet (via Alchemy)", fetched_at: new Date().toISOString() };
+  const provenance = { source: `${chain.host} (via Alchemy)`, fetched_at: new Date().toISOString() };
 
   const ts = first?.metadata?.blockTimestamp ? Date.parse(first.metadata.blockTimestamp) : NaN;
   if (!first || Number.isNaN(ts)) {
