@@ -24,6 +24,19 @@ not a mapping exercise.
 Every row cites a URL or a repository path as `evidence`. No row was
 populated from memory.
 
+**The rule (added review round 1):** a repository document is a
+population source when it records evidence for a distribution surface's
+status. `docs/company/DIRECTORY-MAP.md` already backed the Glama and
+Smithery rows below before this rule was written down -- the original
+version of this document cited it as evidence there while separately
+refusing to add a Coinbase x402 Bazaar row on the ground that
+`DIRECTORY-MAP.md` was not one of the named sources. That was
+inconsistent: the document was already doing the job of a source for two
+rows. Review round 1 corrects it: `DIRECTORY-MAP.md` is now the fifth
+named source, every surface it documents with evidence gets a row, and
+the document itself stays the analysis behind the status -- cited as
+`evidence`, never copied into the row.
+
 1. **The four root discovery manifests.** Read in full: `context7.json`,
    `glama.json`, `server.json`, `smithery.yaml`. One `registry-listing` row
    each. Status came from what the repository can prove:
@@ -119,6 +132,45 @@ populated from memory.
      '.archived'` (`true`). Recorded as a note on that row rather than a
      new one, since the PR itself was already registered from source 3.
 
+5. **`docs/company/DIRECTORY-MAP.md`, the fifth named source (added
+   review round 1).** Read in full. It records two kinds of evidence: a
+   30-day crawler-hit table (ten venues) and a resolved finding on the
+   Coinbase x402 Bazaar. One `registry-listing` row per venue the table or
+   the finding names, evidence `docs/company/DIRECTORY-MAP.md` on every
+   row, status_date `2026-08-15` (the document's own compile date and the
+   date of its Coinbase Bazaar finding -- not today's date):
+   - **Coinbase x402 Bazaar**: `listed`. The document verifies 95 of our
+     resources listed against a complete walk of all 14,946 index
+     entries, and explains listing there is earned by settlement (the
+     index holds exactly the resources that settled an x402 payment in
+     the trailing 30 days), not by submission.
+   - **Glimind, Szerverbank, MCPBeat, YellowMCP, agent-tools.cloud,
+     x402 Observatory, AISec Registry, Waggle**: `unknown`, one row each.
+     The document records real crawler-hit counts for all eight (552,
+     413, 232, 146, 114, 67, 63, and 60 hits respectively in the trailing
+     30 days), but -- unlike Glama, which it separately confirms live by a
+     direct 200 page load -- it does not probe a specific listing URL for
+     any of these eight, so the repository can prove crawling, not a
+     confirmed live listing. `unknown` is the same standard the document
+     already applies to Smithery, whose 110 crawler hits did not save it
+     from `unknown` once its expected listing URL returned 404.
+   - **402 Index domain verification**: `submitted`. The document records
+     `/.well-known/402index-verify.txt` served (confirmed live in
+     `apps/api/src/app.ts`) with the venue's own status recorded as
+     "domain verified." That is evidence of a completed verification
+     step, not a probed live listing page, so `submitted` is the closest
+     honest value rather than `listed`.
+   - The document's other served verification files
+     (`/.well-known/glama.json`, `/.well-known/mcp.json`,
+     `/.well-known/agent.json`, `/.well-known/ai-catalog.json`,
+     `/.well-known/x402.json` + `/x402`) name generic protocol
+     conventions or indexer categories, not a single named venue the way
+     402 Index and Glama are named, so they do not get their own row --
+     `x402.json`/`/x402`'s named venue, x402scan, already has an evidenced
+     row (`x402scan-registration`, from source 4 above) and the document
+     itself records x402scan's presence as unconfirmed, not this file's
+     to resolve.
+
 ## What was considered and excluded
 
 - **`packages/skill/`** (a `SKILL.md` file distributed via the universal
@@ -129,22 +181,15 @@ populated from memory.
   `agentskills.io` or any other directory. Left out of this population
   rather than guessed; a future batch can add it once a submission exists
   to cite.
-- **Coinbase x402 Bazaar** (`docs/company/DIRECTORY-MAP.md`: "95 of our
-  resources are listed... verified against a complete walk of all 14,946
-  index entries") is real, evidenced distribution status, but that
-  document is a strategy/ops note, not a handoff under
-  `handoff/_general/from-code/`, so it falls outside this batch's four
-  named population sources. Not added, to keep the population rule
-  mechanical rather than "any document that happens to mention a
-  surface." A future batch can add it explicitly if the design is widened
-  to cover `docs/company/*` evidence generally.
 
 ## Population summary
 
-34 surfaces: 6 `registry-listing`, 10 `directory`, 6 `framework-pr`, 12
-`package`. By status: 12 `published`, 13 `open`, 3 `closed`, 3 `unknown`, 2
-`listed`, 1 `rejected`. `npm run distribution:check` confirms these counts
-against the committed file at every run.
+44 surfaces (34 from sources 1-4, plus 10 from `DIRECTORY-MAP.md`, source
+5, added review round 1): 16 `registry-listing`, 10 `directory`, 6
+`framework-pr`, 12 `package`. By status: 12 `published`, 13 `open`, 3
+`closed`, 11 `unknown`, 3 `listed`, 1 `rejected`, 1 `submitted`. `npm run
+distribution:check` confirms these counts against the committed file at
+every run.
 
 ## The check
 
@@ -207,10 +252,10 @@ skills and commands, and handoffs:
 - `rg -il "social" .claude/ .agents/`: 1 file, `.claude/NOTION.md`, a
   reference document naming the Social Media Posts DB -- not a writer.
 - `rg -il "social.*post|social media" handoff/_general/from-code/`: 5
-  files. Of the 3 within the last 60 days (`2026-08-11`, `2026-08-25` x2,
+  files. Of the 4 within the last 60 days (`2026-08-11`, `2026-08-25` x2,
   `2026-08-29`), none names an active social-post writer:
   `2026-08-11-manifest-pii-and-credential-rotation.md` names
-  `archive/growth-ops/upload-graphics.sh` (see below); the other two only
+  `archive/growth-ops/upload-graphics.sh` (see below); the other three only
   mention the unrelated `social-post-generate` capability.
 - The one near-miss: `archive/growth-ops/upload-graphics.sh`, committed
   2026-04-18, is a script that uploaded media to Typefully drafts (which
@@ -227,14 +272,24 @@ skills and commands, and handoffs:
   outside the 60-day window, and is a rendered example, not evidence of
   current activity.
 
-**Conclusion:** nothing in this repository writes to the Notion Social
-Media Posts DB, and the one script that ever did is dead, uninvoked, and
-untouched (other than a credential scrub) for well over 60 days. Per the
-design's rule, social-post tracking is recorded as dropped from the digest
-at the M4 cutover, and this registry carries no `social-post` rows. If
-Strale resumes posting through some future mechanism, that mechanism's own
-onboarding is the place to add a `social-post` kind to this registry, not
-a retroactive edit here.
+**What these searches can and cannot see (added review round 1):** every
+search above covers code, scripts, workflows, skills, commands, and
+handoffs in this repository. It cannot see a person adding rows to the
+Notion Social Media Posts DB by hand, or a Notion automation or
+integration that writes to it from outside this repository -- neither
+would leave a trace here for `rg` to find.
+
+**Conclusion:** no path in this repository writes the social-posts
+database, and none has in the last 60 days. Per the design's rule,
+social-post tracking is recorded as dropped from the digest at the M4
+cutover, and this registry carries no `social-post` rows, on that basis.
+If social posts matter to the founder's digest, the M4 cutover decision
+should confirm in Notion that nothing else writes that database before
+dropping it -- this batch's searches establish the repository is clean,
+not that Notion itself has no other writer. If Strale resumes posting
+through some future mechanism, that mechanism's own onboarding is the
+place to add a `social-post` kind to this registry, not a retroactive
+edit here.
 
 ## Boundaries this batch kept
 
