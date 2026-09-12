@@ -118,7 +118,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "a657e9545ed10e990854b5e5ddae82baff5072a2445b5b110e17c5c78bf65701",
+      "sha256": "c7fdcf4b156fe774e9e077b854cd5a68f7c6e63de66886c98c9870db34523fdf",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/commands/end-session.md",

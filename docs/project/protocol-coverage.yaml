@@ -367,6 +367,14 @@ protocols:
       - apps/api/scripts/check-platform-facts-drift.ts
 
 excluded_sections:
+  - heading: "Mandatory Protocols, and where each body lives"
+    reason: >-
+      The index of the protocols this manifest tracks, naming where each
+      body lives. It states no protocol of its own and names no decision;
+      what it lists is exactly this file's rows, and npm run
+      entrypoint:check reads it to confirm both entrypoints can reach every
+      protocol. Added in M4 batch 3 so a pointer counts only where the file
+      collects its pointers, rather than anywhere the words happen to meet.
   - heading: "Workflow Protocol"
     reason: >-
       Section header grouping the workflow-protocol subsections that

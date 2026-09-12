@@ -108,7 +108,7 @@ function cleanFixture({ rows = [manifestRow()], claudeExtra = "", agentsExtra = 
   const activeStub = "---\nstatus: active\nauthority_active: true\n---\n\nFixture stub.\n";
   const files = {
     "CLAUDE.md": `${BOOTSTRAP_LINE}### ${heading}\n\n${FIXTURE_BODY}\n\n${claudeExtra}`,
-    "AGENTS.md": `${BOOTSTRAP_LINE}Mandatory protocols: "${heading}" -- see CLAUDE.md.\n\n${agentsExtra}`,
+    "AGENTS.md": `${BOOTSTRAP_LINE}## Mandatory Protocols\n\n"${heading}" -- see CLAUDE.md.\n\n${agentsExtra}`,
     [SCHEMA_PATH]: REAL_SCHEMA,
     [MANIFEST_PATH]: manifestYaml(rows),
     // Both bootstrap tokens are also docs/project/ paths the batch-1d guard
@@ -179,7 +179,7 @@ test("PROTOCOL_UNREACHABLE: fires when AGENTS.md never names a CLAUDE.md-sourced
       broken.some((f) => f.code === "PROTOCOL_UNREACHABLE" && f.file === "AGENTS.md" && f.detail.includes("example-protocol")),
     );
 
-    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}See CLAUDE.md's "Example Protocol (DEC-TEST)" heading.\n` });
+    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}## Mandatory Protocols\n\nSee CLAUDE.md's "Example Protocol (DEC-TEST)" heading.\n` });
     const fixed = checkProtocolReachability(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
   } finally {
@@ -193,7 +193,7 @@ test("PROTOCOL_UNREACHABLE: a condensed rephrasing that drops the trailing quali
     // AGENTS.md names the core heading text without the "(DEC-TEST)" suffix
     // -- the brief's own example of legitimate condensation, not a gap --
     // and keeps "CLAUDE.md" as the locator, in the same sentence.
-    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}Read about Example Protocol in CLAUDE.md.\n` });
+    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}## Mandatory Protocols\n\nRead about Example Protocol in CLAUDE.md.\n` });
     const result = checkProtocolReachability(dir, readBoth(dir));
     assert.deepEqual(result, []);
   } finally {
@@ -237,11 +237,53 @@ test("PROTOCOL_UNREACHABLE: a CHARTER.md-sourced row is reachable via a name and
     assert.ok(namelessLocator.some((f) => f.file === "AGENTS.md" && f.detail.includes("production-authority")));
 
     writeFiles(dir, {
-      "CLAUDE.md": `${BOOTSTRAP_LINE}Production authority (DEC-TEST): full text in \`docs/company/CHARTER.md\`.\n`,
-      "AGENTS.md": `${BOOTSTRAP_LINE}Production authority (DEC-TEST): full text in \`docs/company/CHARTER.md\`.\n`,
+      "CLAUDE.md": `${BOOTSTRAP_LINE}## Mandatory Protocols\n\nProduction authority (DEC-TEST): full text in \`docs/company/CHARTER.md\`.\n`,
+      "AGENTS.md": `${BOOTSTRAP_LINE}## Mandatory Protocols\n\nProduction authority (DEC-TEST): full text in \`docs/company/CHARTER.md\`.\n`,
     });
     const fixed = checkProtocolReachability(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("PROTOCOL_UNREACHABLE: a coincidental mention outside the protocol index does not count -- round 4 finding 1", () => {
+  const dir = cleanFixture();
+  try {
+    // The row's name and the word CLAUDE.md meet in an ordinary sentence
+    // well away from the index, while the index itself says nothing about
+    // the row. The rule it names is genuinely unfindable from this file.
+    writeFiles(dir, {
+      "AGENTS.md":
+        `${BOOTSTRAP_LINE}## Mandatory Protocols\n\nNothing listed here yet.\n\n` +
+        "## Notes\n\nOur onboarding packet reads like an Example Protocol for new hires, " +
+        "and separately CLAUDE.md is the file Claude Code loads first.\n",
+    });
+    const result = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(
+      result.some((f) => f.code === "PROTOCOL_UNREACHABLE" && f.file === "AGENTS.md"),
+      JSON.stringify(result),
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("CLAUDE_SECTION_UNEXTRACTABLE: a duplicate heading is reported as itself, not as a missing protocol -- round 4 finding 2", () => {
+  const dir = cleanFixture();
+  try {
+    // The row's real section is untouched and still matches its mirror; an
+    // unrelated cross-reference elsewhere reuses the heading text. The
+    // finding must name that, rather than claiming the protocol is gone.
+    const claude = readFileSync(join(dir, "CLAUDE.md"), "utf8");
+    writeFiles(dir, {
+      "CLAUDE.md": `${claude}\n### Example Protocol (DEC-TEST)\n\nSee above; nothing new is added here.\n`,
+    });
+    const result = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(
+      result.some((f) => f.code === "CLAUDE_SECTION_UNEXTRACTABLE" && f.file === "CLAUDE.md"),
+      JSON.stringify(result),
+    );
   } finally {
     cleanup(dir);
   }
@@ -413,7 +455,7 @@ test("MUTABLE_FACT_FOUND (MONEY): allowlisted inside a named structural section,
     const result = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(
       result.filter((f) => f.file === "AGENTS.md"),
-      [{ code: "MUTABLE_FACT_FOUND", file: "AGENTS.md", detail: 'MONEY at line 12: "€50"' }],
+      [{ code: "MUTABLE_FACT_FOUND", file: "AGENTS.md", detail: 'MONEY at line 14: "€50"' }],
     );
   } finally {
     cleanup(dir);
@@ -868,7 +910,7 @@ test("LOCATOR_MISSING: a locator pointing at a file that does not exist is its o
     // pointer, worse than no pointer at all.
     rmSync(join(dir, manifestRow().full_body));
     writeFiles(dir, {
-      "AGENTS.md": `${BOOTSTRAP_LINE}Example Protocol (DEC-TEST): full text at \`${manifestRow().full_body}\`.\n`,
+      "AGENTS.md": `${BOOTSTRAP_LINE}## Mandatory Protocols\n\nExample Protocol (DEC-TEST): full text at \`${manifestRow().full_body}\`.\n`,
     });
     const result = checkProtocolReachability(dir, readBoth(dir));
     assert.ok(result.some((f) => f.code === "LOCATOR_MISSING" && f.file === "AGENTS.md" && f.detail.includes("example-protocol")));

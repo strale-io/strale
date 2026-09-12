@@ -615,12 +615,44 @@ function normalizeForMatch(text) {
  * `missingLocator` is true when a block named the row and offered a path
  * locator whose file does not exist, even if reachability is ultimately
  * satisfied some other way -- a dangling pointer is reported regardless. */
+/**
+ * The heading of the section a file collects its protocol pointers under.
+ * A pointer counts only inside it (round 4 finding 1): the previous rule
+ * accepted any block holding both a row's name and the word CLAUDE.md, so
+ * an ordinary sentence that happened to mention a short name like "Session
+ * contract" near the word CLAUDE.md satisfied the row while the rule it
+ * names was genuinely unfindable. A file may still satisfy a row by
+ * carrying the protocol's own text, which is checked separately.
+ */
+const PROTOCOL_INDEX_HEADING = /^#{1,6}\s*Mandatory Protocols\b/i;
+
+/** The lines of a file's protocol index section, or null when it has none.
+ * Null means pointers cannot be counted from that file at all: falling back
+ * to the whole file would restore the loophole this section exists to close,
+ * by letting an author delete the heading and scatter the pointers back into
+ * prose. A file with no index may still satisfy a row by carrying the
+ * protocol's own text, which is checked separately. */
+function protocolIndexContent(content) {
+  const lines = content.split("\n");
+  const start = lines.findIndex((line) => PROTOCOL_INDEX_HEADING.test(line));
+  if (start < 0) return null;
+  const level = (lines[start].match(/^#+/) ?? ["#"])[0].length;
+  const rest = lines.slice(start + 1);
+  const endOffset = rest.findIndex((line) => {
+    const match = line.match(/^(#+)\s/);
+    return match !== null && match[1].length <= level;
+  });
+  return (endOffset < 0 ? rest : rest.slice(0, endOffset)).join("\n");
+}
+
 function reachableByBlock(root, content, row, contents, mirroredForms, charterCache) {
   const names = nameTokens(row).map(normalizeForMatch).filter(Boolean);
   const locators = locatorTokens(row);
   if (names.length === 0 || locators.length === 0) return { reachable: false, missingLocator: false };
   let missingLocator = false;
-  for (const block of extractBlocks(content)) {
+  const index = protocolIndexContent(content);
+  if (index === null) return { reachable: false, missingLocator: false };
+  for (const block of extractBlocks(index)) {
     const normalized = normalizeForMatch(block);
     const hasName = names.some((t) => normalized.includes(t));
     if (!hasName) continue;
@@ -641,7 +673,20 @@ export function checkProtocolReachability(root, contents) {
   if (!valid) {
     return schemaFindings.map((f) => finding(f.code, f.file, f.detail));
   }
-  const mirroredForms = verifiedMirroredHeadingForms(root);
+  // A heading that cannot be extracted from CLAUDE.md (missing, or present
+  // more than once) is reported as itself, not left to surface later as an
+  // unreachable row whose protocol text is in fact untouched.
+  const extractionProblems = [];
+  const mirroredForms = verifiedMirroredHeadingForms(root, extractionProblems);
+  for (const problem of extractionProblems) {
+    findings.push(
+      finding(
+        "CLAUDE_SECTION_UNEXTRACTABLE",
+        "CLAUDE.md",
+        `heading "${problem.heading}" could not be read as one section: ${problem.detail}`,
+      ),
+    );
+  }
   const charterCache = new Map();
   for (const row of manifest.protocols) {
     for (const [file, content] of Object.entries(contents)) {
@@ -953,7 +998,7 @@ function normalizeLineForScan(line) {
  * Returns an empty set (scans everything) if the manifest fails schema
  * validation; checkProtocolReachability and checkMutableFacts each report
  * that failure on their own path. */
-function verifiedMirroredHeadingForms(root) {
+function verifiedMirroredHeadingForms(root, extractionProblems = []) {
   const forms = new Set();
   const { manifest, valid } = checkSchema(root);
   if (!valid) return forms;
@@ -964,9 +1009,14 @@ function verifiedMirroredHeadingForms(root) {
     let claudeSection;
     try {
       claudeSection = extractClaudeSectionText(root, heading);
-    } catch {
-      // Heading missing or duplicated in CLAUDE.md -- checkProtocolReachability
-      // already reports that shape; nothing to verify a mirror against here.
+    } catch (error) {
+      // The heading is missing from CLAUDE.md, or appears more than once.
+      // Round 4 finding 2: this used to drop the row from the verified set
+      // in silence, and the row then failed as unreachable, which reads as
+      // though the protocol text were gone when an unrelated duplicate
+      // heading elsewhere in the file was the real cause. Record it so the
+      // caller reports the actual problem.
+      extractionProblems.push({ heading, detail: error.message });
       continue;
     }
     const mirrorBody = readMirrorBody(root, row.full_body);
