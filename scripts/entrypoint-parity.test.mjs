@@ -269,6 +269,41 @@ test("PROTOCOL_UNREACHABLE: a coincidental mention outside the protocol index do
   }
 });
 
+test("DUPLICATE_PROTOCOL_INDEX: two index sections are reported, whichever one the reader would read -- round 5 finding 1", () => {
+  const dir = cleanFixture();
+  try {
+    // The case that wrongly blocked: an empty stub index first, the real one
+    // further down. The row is reachable in plain fact.
+    const stubFirst =
+      BOOTSTRAP_LINE +
+      "## Mandatory Protocols" + NL + NL + "(left over from a refactor)" + NL + NL +
+      "## Other stuff" + NL + NL + "Unrelated notes." + NL + NL +
+      "## Mandatory Protocols" + NL + NL + '"Example Protocol (DEC-TEST)" -- see CLAUDE.md.' + NL;
+    writeFiles(dir, { "AGENTS.md": stubFirst });
+    const blocked = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(
+      blocked.some((f) => f.code === "DUPLICATE_PROTOCOL_INDEX" && f.file === "AGENTS.md"),
+      JSON.stringify(blocked),
+    );
+
+    // The case that wrongly passed: a stale first index still lists the row,
+    // the real one has dropped it.
+    const staleFirst =
+      BOOTSTRAP_LINE +
+      "## Mandatory Protocols" + NL + NL + '"Example Protocol (DEC-TEST)" -- see CLAUDE.md. (stale)' + NL + NL +
+      "## Other stuff" + NL + NL + "Unrelated notes." + NL + NL +
+      "## Mandatory Protocols" + NL + NL + "Nothing listed here now." + NL;
+    writeFiles(dir, { "AGENTS.md": staleFirst });
+    const passed = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(
+      passed.some((f) => f.code === "DUPLICATE_PROTOCOL_INDEX" && f.file === "AGENTS.md"),
+      JSON.stringify(passed),
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test("CLAUDE_SECTION_UNEXTRACTABLE: a duplicate heading is reported as itself, not as a missing protocol -- round 4 finding 2", () => {
   const dir = cleanFixture();
   try {
@@ -384,6 +419,7 @@ test("PROTOCOL_UNREACHABLE: a locator inside a fenced block right after naming p
 
 // Built at runtime: a literal fence inside a template string would end it.
 const FENCE = String.fromCharCode(96).repeat(3);
+const NL = String.fromCharCode(10);
 
 test("UNTERMINATED_FENCE: an unclosed fence hides later facts, so it is itself reported", () => {
   const dir = cleanFixture();

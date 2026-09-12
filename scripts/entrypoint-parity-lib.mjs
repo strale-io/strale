@@ -632,6 +632,15 @@ const PROTOCOL_INDEX_HEADING = /^#{1,6}\s*Mandatory Protocols\b/i;
  * by letting an author delete the heading and scatter the pointers back into
  * prose. A file with no index may still satisfy a row by carrying the
  * protocol's own text, which is checked separately. */
+/** How many protocol index headings a file carries. More than one is
+ * reported rather than resolved: reading the first would fail a row the
+ * later, real index carries, and reading any one of them would pass a row
+ * that only a stale copy still lists. Round 5 finding 1, the same shape as
+ * the duplicate protocol heading round 4 fixed. */
+export function protocolIndexCount(content) {
+  return content.split("\n").filter((line) => PROTOCOL_INDEX_HEADING.test(line)).length;
+}
+
 function protocolIndexContent(content) {
   const lines = content.split("\n");
   const start = lines.findIndex((line) => PROTOCOL_INDEX_HEADING.test(line));
@@ -687,6 +696,22 @@ export function checkProtocolReachability(root, contents) {
       ),
     );
   }
+  // A file with two protocol index sections is reported before any row is
+  // judged: whichever one the reader of this file happens to read, the other
+  // can disagree with it, so neither a pass nor a failure per row would mean
+  // anything (round 5 finding 1).
+  for (const [file, content] of Object.entries(contents)) {
+    const indexes = protocolIndexCount(content);
+    if (indexes > 1) {
+      findings.push(
+        finding(
+          "DUPLICATE_PROTOCOL_INDEX",
+          file,
+          `${indexes} protocol index headings; keep one, so a pointer cannot be satisfied by a stale copy or failed by an empty one`,
+        ),
+      );
+    }
+  }
   const charterCache = new Map();
   for (const row of manifest.protocols) {
     for (const [file, content] of Object.entries(contents)) {
@@ -714,7 +739,9 @@ export function checkProtocolReachability(root, contents) {
           finding(
             "PROTOCOL_UNREACHABLE",
             file,
-            `row "${row.id}" (${row.name}) has no heading of its own in ${file}, and no single block (table row, list item, or paragraph) in ${file} both names it and gives a locator that resolves (its full body path, or the document that carries it)`,
+            protocolIndexCount(content) === 0
+              ? `row "${row.id}" (${row.name}) has no heading of its own in ${file}, and ${file} has no protocol index section (a heading matching "Mandatory Protocols"), so a pointer cannot count from anywhere in it: give the file an index, or carry the protocol's text`
+              : `row "${row.id}" (${row.name}) has no heading of its own in ${file}, and no single block (table row, list item, or paragraph) in that file's protocol index both names it and gives a locator that resolves (its full body path, or the document that carries it)`,
           ),
         );
       }
