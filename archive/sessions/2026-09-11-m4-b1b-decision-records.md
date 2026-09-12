@@ -165,15 +165,18 @@ and are not covered here.
 - **DEC-20260302-C**: has a record file already; not covered here.
 - **DEC-20260303-D** (search input uses query completions, not a result
   dropdown). Source: Notion page `31867c87082c8195a9dffe7132c1cc89`. Closure
-  register: not checked line-by-line for this row (out of this batch's
-  effort budget). Verdict: **unclear**. Why: the live sibling
-  `strale-frontend` checkout's `SearchHero.tsx` shows both a rotating
-  typeahead-completion input and a conditional dropdown of typeahead
-  results (`showDropdown && !suggestEnabled`); settling requires reading
-  whether the row's "not result dropdown" language meant search-result
-  listings specifically (which the AI recommendation card replaced) as
-  opposed to the typeahead completion list itself, which does render as a
-  dropdown in some states.
+  register: `id: DEC-20260303-D`, `disposition: intentionally_historical`,
+  per `DEC-20260904-A`'s pre-readiness feature-scoped predicate
+  (`docs/project/m2-closure-register.yaml:3215-3224`, evidence
+  `archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md`).
+  Verdict: **historical**, the same as its sibling DEC-20260303-E. Corrected
+  in architect review of PR #671: this row was first left unclear because
+  the register was not read for it, while the register had already closed
+  it as evidence-only. No record is written, and batch 2 may drop the
+  summary citing the register row. The open question the first pass raised,
+  whether the live `SearchHero.tsx` dropdown behaviour matches the row's
+  wording, is a question about the website's current design, not about this
+  decision's disposition, and belongs to the brand-website program.
 - **DEC-20260303-E** (POST /v1/suggest uses Voyage AI embeddings plus Claude
   Haiku re-ranking). Source: Notion page `31867c87082c81e09d58deb1fe3cb086`.
   Closure register: `id: DEC-20260303-E`, `disposition:
@@ -300,14 +303,17 @@ DEC-20260302-A specifically is superseded in favour of the record that
 already exists under its actual Notion-derived id, DEC-20260302-A-0001.
 DEC-20260303-G is superseded per CLAUDE.md's own text. Nine March-2026 ids
 from the two collective 305/306 ranges are historical, evidence-only
-bug-fix rows already so classified by the closure register. Two ids are
-unclear pending further evidence this batch did not chase down or that
-surfaced a conflict during the gate run: DEC-20260305-A (no source row
-found at all) and DEC-20260303-D (the search-input completion-versus-dropdown
-row, ambiguous against the live frontend). A third, DEC-20260303-E, started
-this batch as in-force but was reclassified unclear and its record withdrawn
-once `context:generate` showed its source row is already classified
-evidence-only in the closure register, contradicting an in-force verdict.
+bug-fix rows already so classified by the closure register. DEC-20260303-D
+joins them: the first pass left it unclear without reading the register,
+and the register had already closed it as evidence-only under the same
+rule (corrected in architect review of PR #671). DEC-20260303-E started
+this batch as in-force but was reclassified and its record withdrawn once
+`context:generate` showed its source row is likewise evidence-only in the
+closure register, contradicting an in-force verdict. It stays unclear
+rather than historical, because its substance is verified live in the code
+today, which is a conflict worth putting to the founder rather than
+burying; DEC-20260303-D carries no such conflict. One more id stays
+unclear: DEC-20260305-A, for which no source row was found at all.
 Five September-2026 ids (DEC-20260902-A, DEC-20260903-A, DEC-20260904-C,
 DEC-20260905-A, DEC-20260910-A) are in-force founder decisions recorded as
 new formal records in Part B.
