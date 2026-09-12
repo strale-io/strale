@@ -336,6 +336,25 @@ test("DUPLICATE_PROTOCOL_INDEX: an underline-style second index counts, a fenced
   }
 });
 
+test("a fenced example inside the index does not cut the section short -- round 6 review", () => {
+  const dir = cleanFixture();
+  try {
+    // An author illustrating the index's own format writes a fenced example
+    // inside the index, above the real entries. The section must not end at
+    // that example, or a row listed after it reads as unreachable.
+    writeFiles(dir, {
+      "AGENTS.md":
+        BOOTSTRAP_LINE + "## Mandatory Protocols" + NL + NL +
+        "Format example:" + NL + NL + FENCE + NL + "## Mandatory Protocols" + NL + FENCE + NL + NL +
+        '"Example Protocol (DEC-TEST)" -- see CLAUDE.md.' + NL,
+    });
+    const result = checkProtocolReachability(dir, readBoth(dir));
+    assert.deepEqual(result, [], JSON.stringify(result));
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test("CLAUDE_SECTION_UNEXTRACTABLE: a duplicate heading is reported as itself, not as a missing protocol -- round 4 finding 2", () => {
   const dir = cleanFixture();
   try {

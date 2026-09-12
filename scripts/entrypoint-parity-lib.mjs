@@ -675,9 +675,17 @@ function protocolIndexContent(content) {
   const start = first.index;
   const level = first.level;
   const rest = lines.slice(start + 1);
-  const endOffset = rest.findIndex((line) => {
+  // The section ends at the next heading of the same or a shallower level,
+  // ignoring anything inside a fence. Walking raw lines here was the same
+  // fault the start detection had: an illustrative fenced example inside the
+  // index, showing the index's own format, read as the next heading and cut
+  // the section short, so a row listed after it was reported unreachable
+  // although a reader plainly finds it (review of PR #676, round 6).
+  let endOffset = -1;
+  walkFenceAware(rest, (line, index, fenced) => {
+    if (fenced || endOffset >= 0) return;
     const match = line.match(/^(#+)\s/);
-    return match !== null && match[1].length <= level;
+    if (match !== null && match[1].length <= level) endOffset = index;
   });
   return (endOffset < 0 ? rest : rest.slice(0, endOffset)).join("\n");
 }
