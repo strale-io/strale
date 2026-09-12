@@ -21,6 +21,7 @@ import {
   SKELETON_DOCUMENTS,
   buildInventory,
   generatedFiles,
+  isCutoverUnderway,
   validateInventory,
   validateCandidateDocument,
   validateOperatorActions,
@@ -38,6 +39,23 @@ import {
   checkPrivateArchiveStatus,
   runChecks,
 } from "./check-project-context.mjs";
+
+function writeCutoverRegister(root, t7Status) {
+  mkdirSync(join(root, "docs/programs/cto-readiness"), { recursive: true });
+  const body = t7Status === null
+    ? "not: valid: yaml: [" // malformed
+    : [
+      "schema_version: 1",
+      "program: cto-readiness",
+      "program_status: active",
+      "updated: 2026-09-11",
+      "tracks:",
+      "  - id: T7",
+      `    status: ${t7Status}`,
+      "",
+    ].join("\n");
+  writeFileSync(join(root, "docs/programs/cto-readiness/tracks.yaml"), body, "utf8");
+}
 
 test("generated M1 skeleton satisfies its exact contract", () => {
   const [file, content] = Object.entries(SKELETON_DOCUMENTS)[0];
@@ -184,6 +202,41 @@ test("pre-cutover entrypoint guard covers every authored M2 candidate", () => {
   assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.").length, 1);
   assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/decisions/*.md.").length, 1);
   assert.deepEqual(checkPrecutoverEntrypoint("AGENTS.md", "No inactive context links."), []);
+});
+
+test("pre-cutover entrypoint guard is silenced once the cutover track says so", () => {
+  // With T7 not started (default, cutoverUnderway omitted) the finding still
+  // fires -- this is the planting control for "not started" behaviour.
+  assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.").length, 1);
+  assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.", false).length, 1);
+  // Once the cutover track is under way, the same content produces no finding.
+  assert.deepEqual(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.", true), []);
+  assert.deepEqual(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/decisions/*.md.", true), []);
+});
+
+test("isCutoverUnderway reads the M4 cutover track (T7) status from the program register", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-cutover-state-"));
+  try {
+    // Not started: queued, or any other pre-active status, is strict (false).
+    writeCutoverRegister(root, "queued");
+    assert.equal(isCutoverUnderway(root), false);
+
+    // Under way: active, founder_gated, and done all count.
+    for (const status of ["active", "founder_gated", "done"]) {
+      writeCutoverRegister(root, status);
+      assert.equal(isCutoverUnderway(root), true, `status ${status} should count as under way`);
+    }
+
+    // A missing register keeps the strict, pre-cutover behaviour.
+    rmSync(join(root, "docs/programs/cto-readiness/tracks.yaml"));
+    assert.equal(isCutoverUnderway(root), false);
+
+    // A malformed register keeps the strict, pre-cutover behaviour too.
+    writeCutoverRegister(root, null);
+    assert.equal(isCutoverUnderway(root), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 const operatorActionsFixture = `schema_version: 1

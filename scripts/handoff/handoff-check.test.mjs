@@ -527,6 +527,43 @@ test("pre-commit runs the project context check only when inventory targets are 
   } finally { r.cleanup(); }
 });
 
+test("pre-commit inventory gate ignores a finding unrelated to generated state", async () => {
+  const r = makeRepo();
+  try {
+    // CANDIDATE_WORD_BUDGET_EXCEEDED is about hand-authored M2 candidate
+    // prose, never written by npm run context:generate, so it must not fail
+    // a commit that stages an inventory target.
+    const unrelated = () => ({
+      status: 0,
+      stdout: JSON.stringify({
+        mode: "warning-only",
+        findings: [{ severity: "warning", code: "CANDIDATE_WORD_BUDGET_EXCEEDED", path: "docs/project/PRODUCT.md" }],
+      }),
+      stderr: "",
+    });
+    const ok = await r.check(r.batch, { mode: "pre-commit", env: {}, stagedFiles: ["handoff/_general/from-code/x.md"], inventoryTargets: ["CLAUDE.md", "handoff"], inventoryCheck: unrelated });
+    assert.equal(ok.ok, true, JSON.stringify(ok));
+
+    // A regeneration-relevant finding alongside it still fails, and the
+    // reported detail names only the relevant finding.
+    const mixed = () => ({
+      status: 0,
+      stdout: JSON.stringify({
+        mode: "warning-only",
+        findings: [
+          { severity: "warning", code: "CANDIDATE_WORD_BUDGET_EXCEEDED", path: "docs/project/PRODUCT.md" },
+          { severity: "warning", code: "GENERATED_FILE_DRIFT", path: "docs/project/DECISIONS.md" },
+        ],
+      }),
+      stderr: "",
+    });
+    const hit = await r.check(r.batch, { mode: "pre-commit", env: {}, stagedFiles: ["handoff/_general/from-code/x.md"], inventoryTargets: ["CLAUDE.md", "handoff"], inventoryCheck: mixed });
+    assert.deepEqual(codes(hit), ["inventory"]);
+    assert.match(finding(hit, "inventory").message, /GENERATED_FILE_DRIFT docs\/project\/DECISIONS\.md/);
+    assert.doesNotMatch(finding(hit, "inventory").message, /CANDIDATE_WORD_BUDGET_EXCEEDED/);
+  } finally { r.cleanup(); }
+});
+
 test("baseline records the extra worktree and merged branch that already exist", async () => {
   const r = makeRepo();
   try {
