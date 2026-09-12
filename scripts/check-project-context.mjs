@@ -80,6 +80,36 @@ export function checkPrivateArchiveStatus(root) {
   }
 }
 
+// Findings that mean "the generated project context was not regenerated",
+// the drift the commit gate's `inventory` step exists to catch. Every code
+// below comes from a check whose expected value is written by
+// `npm run context:generate` (checkGeneratedFileState's byte comparison, the
+// SKELETON_DOCUMENTS contract validateSkeletonDocument enforces, and the
+// legacy-authority-inventory.json shape/hash validateInventory and the
+// INVENTORY_HASH_DRIFT comparison enforce), plus the one failure mode where
+// computing the expected content itself throws. Every other finding code in
+// this file is about hand-authored candidate or registry content
+// (M2_CANDIDATE_DOCUMENTS, docs/operations/operator-actions.yaml,
+// docs/decisions/records, docs/project/m2-closure-register.yaml, the
+// pre-cutover entrypoint guard, the private-archive status) that
+// `context:generate` never touches, so staging an inventory target must not
+// fail a commit over one of those.
+export const REGENERATION_FINDING_CODES = new Set([
+  "FOUNDATION_GENERATION_FAILED",
+  "GENERATED_FILE_MISSING",
+  "GENERATED_FILE_DRIFT",
+  "SKELETON_FILE_MISSING",
+  "SKELETON_FRONTMATTER_MISSING",
+  "SKELETON_MARKER_INVALID",
+  "SKELETON_BANNER_MISSING",
+  "SKELETON_SENTINEL_MISSING",
+  "SKELETON_TEMPLATE_DRIFT",
+  "INVENTORY_HASH_DRIFT",
+  "INVENTORY_INVALID_JSON",
+  "INVENTORY_MODE_INVALID",
+  "INVENTORY_FIELD_OUT_OF_SCOPE",
+]);
+
 export function checkPrecutoverEntrypoint(entrypoint, content) {
   return /docs[\\/](?:project|decisions)(?:[\\/]|\b)/.test(content)
     ? [finding("M1_ENTRYPOINT_ACTIVATED", entrypoint)]

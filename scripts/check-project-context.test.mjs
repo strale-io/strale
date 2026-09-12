@@ -39,6 +39,23 @@ import {
   runChecks,
 } from "./check-project-context.mjs";
 
+function writeCutoverRegister(root, t7Status) {
+  mkdirSync(join(root, "docs/programs/cto-readiness"), { recursive: true });
+  const body = t7Status === null
+    ? "not: valid: yaml: [" // malformed
+    : [
+      "schema_version: 1",
+      "program: cto-readiness",
+      "program_status: active",
+      "updated: 2026-09-11",
+      "tracks:",
+      "  - id: T7",
+      `    status: ${t7Status}`,
+      "",
+    ].join("\n");
+  writeFileSync(join(root, "docs/programs/cto-readiness/tracks.yaml"), body, "utf8");
+}
+
 test("generated M1 skeleton satisfies its exact contract", () => {
   const [file, content] = Object.entries(SKELETON_DOCUMENTS)[0];
   assert.deepEqual(validateSkeletonDocument(file, content, content), []);

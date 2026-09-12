@@ -53,6 +53,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { REGENERATION_FINDING_CODES } from "../check-project-context.mjs";
 
 /**
  * Line separator for `git status --porcelain` output. Review measured this
@@ -612,9 +613,15 @@ export async function runChecks(options = {}) {
         const run = check();
         let findings = null;
         try { findings = JSON.parse(run.stdout).findings ?? []; } catch { findings = null; }
-        if (run.status !== 0 || findings === null || findings.length) {
-          const detail = findings?.length
-            ? findings.map((f) => `${f.code} ${f.path ?? ""}`.trim()).join("; ")
+        // This gate exists to catch one thing: an inventory target staged
+        // without npm run context:generate. Only findings whose expected
+        // value that command writes count here (REGENERATION_FINDING_CODES);
+        // a finding about hand-authored candidate or registry content is not
+        // this gate's business and must not fail the commit over it.
+        const regenerationFindings = (findings ?? []).filter((f) => REGENERATION_FINDING_CODES.has(f.code));
+        if (run.status !== 0 || findings === null || regenerationFindings.length) {
+          const detail = regenerationFindings.length
+            ? regenerationFindings.map((f) => `${f.code} ${f.path ?? ""}`.trim()).join("; ")
             : `${run.stdout ?? ""}${run.stderr ?? ""}`.trim().split("\n").slice(-3).join(" ");
           fail("inventory", `inventory targets staged (${summarize(hits)}) but the project context check reports: ${detail}`,
             "npm run context:generate, then stage its output in the same commit (the CI context:test rule)");
