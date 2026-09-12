@@ -518,6 +518,16 @@ jobs:
       # stays false.
       - run: npm run protocols:coverage
       - run: npm run protocols:coverage:test
+      # Entrypoint parity (M4 batch 3, scripts/entrypoint-parity-lib.mjs):
+      # proves CLAUDE.md and AGENTS.md point at the same project map and
+      # protocol router, that every docs/project/protocol-coverage.yaml row
+      # is reachable from both, that neither carries a mutable project fact
+      # outside a narrow named allowlist, and that neither references a
+      # still-inactive document (reusing check-project-context.mjs's
+      # checkPrecutoverEntrypoint). The migration plan's blocking checks 3
+      # and 4; no such check existed before this batch.
+      - run: npm run entrypoint:check
+      - run: npm run entrypoint:test
       # Scheduled mechanism reachability (T6 M3 batch 5,
       # config/scheduled-mechanisms.yaml): parses every
       # .github/workflows/*.yml with the yaml package and proves, for every

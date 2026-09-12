@@ -42,6 +42,8 @@
     "protocols:test": "node --test scripts/protocol-extraction.test.mjs",
     "protocols:coverage": "node scripts/check-protocol-coverage.mjs",
     "protocols:coverage:test": "node --test scripts/protocol-coverage.test.mjs",
+    "entrypoint:check": "node scripts/check-entrypoint-parity.mjs",
+    "entrypoint:test": "node --test scripts/entrypoint-parity.test.mjs",
     "scheduled:check": "node scripts/check-scheduled-reachability.mjs",
     "scheduled:test": "node --test scripts/scheduled-reachability.test.mjs",
     "distribution:check": "node scripts/check-distribution.mjs",

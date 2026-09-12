@@ -1,0 +1,360 @@
+// Tests for the entrypoint parity check (M4 batch 3,
+// scripts/entrypoint-parity-lib.mjs, scripts/check-entrypoint-parity.mjs).
+// One planted-failure fixture per rule (break it, see the finding fire,
+// restore, see it clear), plus a real-repo test that CLAUDE.md and
+// AGENTS.md pass today with no findings.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { stringify as stringifyYaml } from "yaml";
+import {
+  checkEntrypointParity,
+  checkBootstrapPointers,
+  checkProtocolReachability,
+  checkMutableFacts,
+  checkInactiveDocumentReferences,
+  repoRootFrom,
+  BOOTSTRAP_TOKENS,
+} from "./entrypoint-parity-lib.mjs";
+import { SCHEMA_PATH, MANIFEST_PATH } from "./protocol-coverage-lib.mjs";
+
+const realRoot = repoRootFrom(import.meta.url);
+const REAL_SCHEMA = readFileSync(resolve(realRoot, SCHEMA_PATH), "utf8");
+
+function writeFiles(dir, files) {
+  for (const [rel, content] of Object.entries(files)) {
+    const absolute = join(dir, rel);
+    mkdirSync(dirname(absolute), { recursive: true });
+    writeFileSync(absolute, content, "utf8");
+  }
+}
+
+function cleanup(dir) {
+  rmSync(dir, { recursive: true, force: true });
+}
+
+function makeFixture() {
+  return mkdtempSync(join(tmpdir(), "entrypoint-parity-"));
+}
+
+const BOOTSTRAP_LINE = `Project map: \`${BOOTSTRAP_TOKENS[0]}\`. Protocol index: \`${BOOTSTRAP_TOKENS[1]}\`.\n\n`;
+
+function manifestRow(overrides = {}) {
+  return {
+    id: "example-protocol",
+    name: "Example Protocol (DEC-TEST)",
+    trigger: "A test fixture exercises this protocol.",
+    full_body: "docs/governance/protocols/EXAMPLE_PROTOCOL.md",
+    source: "CLAUDE.md heading: Example Protocol (DEC-TEST)",
+    decision: "none",
+    decision_reason: "Fixture row; not tied to a numbered decision id.",
+    decision_record: null,
+    decision_record_note: "Recorded only in the fixture.",
+    enforced_by: ["docs/governance/protocols/EXAMPLE_PROTOCOL.md"],
+    ...overrides,
+  };
+}
+
+function manifestYaml(rows) {
+  return stringifyYaml({
+    schema_version: 1,
+    authority_active: false,
+    verified_at: "2026-09-11",
+    protocols: rows,
+    excluded_sections: [],
+  });
+}
+
+/** A minimal, otherwise-clean fixture: both entrypoints carry the bootstrap
+ * pointer and the given manifest row's heading; the manifest and schema are
+ * written so checkSchema(root) succeeds. Callers mutate one file's content
+ * (or the manifest) to plant exactly the failure their test proves. */
+function cleanFixture({ rows = [manifestRow()], claudeExtra = "", agentsExtra = "" } = {}) {
+  const dir = makeFixture();
+  const heading = rows[0].source.replace("CLAUDE.md heading: ", "");
+  const activeStub = "---\nstatus: active\nauthority_active: true\n---\n\nFixture stub.\n";
+  writeFiles(dir, {
+    "CLAUDE.md": `${BOOTSTRAP_LINE}### ${heading}\n\nFixture protocol body.\n\n${claudeExtra}`,
+    "AGENTS.md": `${BOOTSTRAP_LINE}Mandatory protocols: "${heading}" -- see CLAUDE.md.\n\n${agentsExtra}`,
+    [SCHEMA_PATH]: REAL_SCHEMA,
+    [MANIFEST_PATH]: manifestYaml(rows),
+    // Both bootstrap tokens are also docs/project/ paths the batch-1d guard
+    // (rule d) scans for; give it an active stub so rule (a)'s fixture
+    // doesn't trip rule (d) as a side effect.
+    "docs/project/START-HERE.md": activeStub,
+    "docs/project/PROTOCOL-ROUTER.md": activeStub,
+  });
+  return dir;
+}
+
+function readBoth(dir) {
+  return {
+    "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8"),
+    "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8"),
+  };
+}
+
+// ── clean fixture: proves the harness itself is not the source of a finding ──
+
+test("clean fixture: no findings", () => {
+  const dir = cleanFixture();
+  try {
+    const result = checkEntrypointParity(dir);
+    assert.deepEqual(result.findings, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── rule (a): bootstrap/router pointer ──────────────────────────────────
+
+test("BOOTSTRAP_POINTER_MISSING: fires when AGENTS.md drops the router pointer, clears when restored", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, { "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace(BOOTSTRAP_LINE, "") });
+    const broken = checkBootstrapPointers(readBoth(dir));
+    assert.ok(broken.some((f) => f.code === "BOOTSTRAP_POINTER_MISSING" && f.file === "AGENTS.md"));
+
+    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}${readFileSync(join(dir, "AGENTS.md"), "utf8")}` });
+    const fixed = checkBootstrapPointers(readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── rule (b): protocol reachability ─────────────────────────────────────
+
+test("PROTOCOL_UNREACHABLE: fires when AGENTS.md never names a CLAUDE.md-sourced row, clears once it does", () => {
+  const dir = cleanFixture();
+  try {
+    // Remove the row's heading text from AGENTS.md entirely.
+    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}Nothing about the fixture protocol here.\n` });
+    const broken = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.code === "PROTOCOL_UNREACHABLE" && f.file === "AGENTS.md" && f.detail.includes("example-protocol")),
+    );
+
+    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}See CLAUDE.md's "Example Protocol (DEC-TEST)" heading.\n` });
+    const fixed = checkProtocolReachability(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("PROTOCOL_UNREACHABLE: a condensed rephrasing that drops the trailing qualifier still passes", () => {
+  const dir = cleanFixture();
+  try {
+    // AGENTS.md names the core heading text without the "(DEC-TEST)" suffix
+    // -- the brief's own example of legitimate condensation, not a gap.
+    writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}Read about Example Protocol in CLAUDE.md.\n` });
+    const result = checkProtocolReachability(dir, readBoth(dir));
+    assert.deepEqual(result, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("PROTOCOL_UNREACHABLE: a CHARTER.md-sourced row is reachable via a CHARTER.md mention, not the heading text", () => {
+  const dir = cleanFixture({
+    rows: [
+      manifestRow({
+        id: "production-authority",
+        name: "Production authority (DEC-TEST)",
+        full_body: "docs/company/CHARTER.md",
+        source: "docs/company/CHARTER.md heading: What authorized means",
+      }),
+    ],
+  });
+  try {
+    // CLAUDE.md fixture (from cleanFixture) never mentions CHARTER.md for
+    // this row's heading (its own body is a CLAUDE.md heading by default);
+    // rewrite both fixture files without the row's own heading text at all,
+    // to isolate the CHARTER.md-mention path.
+    writeFiles(dir, {
+      "CLAUDE.md": `${BOOTSTRAP_LINE}Nothing about production authority here.\n`,
+      "AGENTS.md": `${BOOTSTRAP_LINE}Nothing about production authority here either.\n`,
+    });
+    const broken = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(broken.some((f) => f.file === "CLAUDE.md" && f.detail.includes("production-authority")));
+    assert.ok(broken.some((f) => f.file === "AGENTS.md" && f.detail.includes("production-authority")));
+
+    writeFiles(dir, {
+      "CLAUDE.md": `${BOOTSTRAP_LINE}Full text: \`docs/company/CHARTER.md\`.\n`,
+      "AGENTS.md": `${BOOTSTRAP_LINE}Full text: \`docs/company/CHARTER.md\`.\n`,
+    });
+    const fixed = checkProtocolReachability(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── rule (c): mutable facts ──────────────────────────────────────────────
+
+test("MUTABLE_FACT_FOUND (MONEY): fires on a nonzero price, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nThis costs €50 per call.\n` });
+    const broken = checkMutableFacts(readBoth(dir));
+    assert.ok(broken.some((f) => f.code === "MUTABLE_FACT_FOUND" && f.detail.includes("MONEY")));
+
+    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8").replace("This costs €50 per call.\n", "")}` });
+    const fixed = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (MONEY): a zero-value amount is never flagged", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nFixture mode costs €0 externally.\n` });
+    const result = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(result, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (MONEY): allowlisted inside a named structural section, not elsewhere", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\n## Operating Charter (DEC-20260815-A) -- division of authority\n\nSpend inside €50/week.\n\n## Next Section\n\nA later section repeats €50/week outside the allowlisted heading.\n`,
+    });
+    const result = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(
+      result.filter((f) => f.file === "AGENTS.md"),
+      [{ code: "MUTABLE_FACT_FOUND", file: "AGENTS.md", detail: 'MONEY at line 12: "€50"' }],
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (MONEY): a fenced code block's literal is never flagged", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n\`\`\`yaml\nprice: "€50"\n\`\`\`\n`,
+    });
+    const result = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(result, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (COUNT): fires on a capability/solution count, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n300+ capabilities across 7 verticals.\n` });
+    const broken = checkMutableFacts(readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("COUNT")));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace("300+ capabilities across 7 verticals.\n", ""),
+    });
+    const fixed = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DATE): fires on a dated-status label, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nNew capabilities (March 2026).\n` });
+    const broken = checkMutableFacts(readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("DATE")));
+
+    writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}`.replace("New capabilities (March 2026).\n", "") });
+    const fixed = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DATE): fires on an 'as of <date>' staleness claim, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nStale as of 2026-08-17.\n` });
+    const broken = checkMutableFacts(readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("DATE")));
+
+    writeFiles(dir, { "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace("Stale as of 2026-08-17.\n", "") });
+    const fixed = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): fires on a decision id plus a multi-word summary, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nDEC-20260905-A — Benefit-first brand positioning and terminology.\n`,
+    });
+    const broken = checkMutableFacts(readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("DECISION_SUMMARY")));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "DEC-20260905-A — Benefit-first brand positioning and terminology.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a bare decision id with no dash-summary is never flagged", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nSee DEC-20260905-A for the full text.\n` });
+    const result = checkMutableFacts(readBoth(dir));
+    assert.deepEqual(result, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── rule (d): inactive-document reference (reused guard) ────────────────
+
+test("M1_ENTRYPOINT_ACTIVATED: fires when an entrypoint references a still-inactive docs/project document, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "docs/project/candidate.md": "---\nstatus: candidate\nauthority_active: false\n---\n\nA draft.\n",
+      "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nSee \`docs/project/candidate.md\`.\n`,
+    });
+    const broken = checkInactiveDocumentReferences(dir, readBoth(dir));
+    assert.ok(broken.some((f) => f.code === "M1_ENTRYPOINT_ACTIVATED" && f.file === "AGENTS.md"));
+
+    writeFiles(dir, {
+      "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace("\nSee `docs/project/candidate.md`.\n", ""),
+    });
+    const fixed = checkInactiveDocumentReferences(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── real repo ─────────────────────────────────────────────────────────────
+
+test("real repo: CLAUDE.md and AGENTS.md pass entrypoint parity today", () => {
+  const result = checkEntrypointParity(realRoot);
+  assert.deepEqual(result.findings, []);
+});

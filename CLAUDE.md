@@ -242,7 +242,7 @@ strale/
 
 ### Active Decisions
 
-Settled decisions are indexed by the generated `docs/project/DECISIONS.md`, which links to the underlying record file behind each entry. Founder decisions still pending are tracked in `docs/company/DECISION-QUEUE.md`. A new decision, or a supersession of an active one, follows the Contradiction Protocol in Workflow Invariants below, including a same-change update to whichever of these files it touches.
+Settled decisions are indexed by the generated `docs/project/DECISIONS.md`, which links to the underlying record file behind each entry. Founder decisions still pending are tracked in `docs/company/DECISION-QUEUE.md`. A new decision, or a supersession of an active one, follows the Contradiction Protocol in Workflow Invariants below, including a same-change update to whichever of these files it touches. Division of authority between Petter and the agent is defined in code and explained in full in `docs/company/CHARTER.md` (production authority, DEC-20260822-B); read it before assuming an ambiguous action is delegated.
 
 Two ids named in this section's prior text have no settled disposition and no record: `DEC-20260305-A` (no Notion row, closure-register row, or git-history text names a distinct decision under this id) and `DEC-20260303-E` (its substance is verified live in `apps/api/src/routes/suggest.ts`, but the closure register already classifies its source row evidence-only, a conflict this batch did not resolve). Both are `unclear` in `archive/sessions/2026-09-11-m4-b1b-decision-records.md`; treat neither as resolved, historical, or in force without reading that report first.
 

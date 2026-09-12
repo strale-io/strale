@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "6b0d9ecf057a4d4c88fcdd80d265bfcc85848117df15e3c6ba0d9dafe0b09ea8",
+      "sha256": "b39782da1c866e637af3bb81cd5b8bd2b7fe420d99611592dd8bb7bf11721087",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -107,6 +107,9 @@
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "scripts/candidates.test.mjs",
+        "scripts/check-entrypoint-parity.mjs",
+        "scripts/entrypoint-parity-lib.mjs",
+        "scripts/entrypoint-parity.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs",
         "scripts/protocol-coverage-lib.mjs"
@@ -115,7 +118,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "fa634818f2daa1467abd8b2efcecc54a21fd8dbe973557d1bda474bbbabbbe07",
+      "sha256": "a657e9545ed10e990854b5e5ddae82baff5072a2445b5b110e17c5c78bf65701",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/commands/end-session.md",
@@ -377,10 +380,13 @@
         "manifests/serp-analyze.yaml",
         "packages/mcp-server/src/tools.ts",
         "scripts/candidates.test.mjs",
+        "scripts/check-entrypoint-parity.mjs",
         "scripts/check-protocol-coverage.mjs",
         "scripts/check-protocol-extraction.mjs",
         "scripts/codex-backlog-lib.mjs",
         "scripts/codex-backlog.test.mjs",
+        "scripts/entrypoint-parity-lib.mjs",
+        "scripts/entrypoint-parity.test.mjs",
         "scripts/guard-tree-integrity.mjs",
         "scripts/guard-worktree-isolation.mjs",
         "scripts/handoff/handoff-check.test.mjs",
@@ -618,6 +624,8 @@
         "scripts/claims-lib.mjs",
         "scripts/digest-repo-native-lib.mjs",
         "scripts/digest-shadow.mjs",
+        "scripts/entrypoint-parity-lib.mjs",
+        "scripts/entrypoint-parity.test.mjs",
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.test.mjs",
@@ -632,7 +640,6 @@
       "owner_area": "strategy-evidence",
       "sha256": "f7862e554471c1fa22b96fb879dbd0169ad24b732465e795f8a3d68b4dcfb985",
       "detected_references": [
-        "AGENTS.md",
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/scripts/check-vendor-roster-drift.ts",
         "apps/api/src/lib/attribution.ts",
