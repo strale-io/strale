@@ -1,0 +1,85 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "c349ffacb575b62a2df82356b39c074e8e64dad1"
+  },
+  "at": "2026-09-12T06:56:28.322Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/receipt.json"
+  },
+  "summary": {
+    "suite": "apps/api/src/lib/fixture-drift.test.ts",
+    "command": "npx vitest run src/lib/fixture-drift.test.ts (cwd apps/api)",
+    "test_files_passed": 1,
+    "tests_passed": 16,
+    "tests_failed": 0
+  },
+  "topic": "fixture-drift-guard",
+  "raw": {
+    "suite": "apps/api/src/lib/fixture-drift.test.ts",
+    "command": "npx vitest run src/lib/fixture-drift.test.ts (cwd apps/api)",
+    "test_files_passed": 1,
+    "tests_passed": 16,
+    "tests_failed": 0,
+    "mutation_verification": [
+      {
+        "mutation": "remove the `suite.passed > 0` guard in findFixtureDrift",
+        "result": "1 failed — does NOT report a differing fixture that passes"
+      },
+      {
+        "mutation": "remove the `productionInput === manifestInput` guard",
+        "result": "2 failed — does NOT report a failing suite whose fixture matches its manifest; treats key order as meaningless"
+      },
+      {
+        "mutation": "make canonicalise shallow (JSON.stringify nested values)",
+        "result": "1 failed — sorts nested objects, not only the top level"
+      },
+      {
+        "mutation": "hardcode sampleFailure to null",
+        "result": "1 failed — carries the latest failure through to the finding"
+      },
+      {
+        "mutation": "drop the ?? null in canonicalise",
+        "result": "1 failed — renders undefined as null rather than returning undefined"
+      },
+      {
+        "mutation": "hardcode suiteId",
+        "result": "1 failed — carries the suite id so a finding names the row to fix"
+      }
+    ],
+    "production_observation": {
+      "command": "npm run fixtures:drift",
+      "measured_at": "2026-09-12T06:43Z",
+      "active_dependency_health_suites": 326,
+      "suites_differing_from_manifest": 81,
+      "differing_but_passing": 36,
+      "differing_with_no_run_in_window": 39,
+      "actionable": 6,
+      "partition_self_check": "36 + 39 + 6 = 81",
+      "actionable_slugs": [
+        "canadian-company-data",
+        "spanish-company-data",
+        "irish-company-data",
+        "swiss-company-data",
+        "lithuanian-company-data",
+        "german-company-data"
+      ],
+      "note": "Grouped by suite id. An earlier revision grouped by value columns, which merged risk-narrative-generate two active suites and reported 325 active / 80 differing; corrected before merge because a tracked receipt is immutable."
+    },
+    "independent_review": {
+      "scope": "PR #674, fresh read-only reviewer in a separate context",
+      "verdict": "PASS WITH FINDINGS",
+      "must_fix_accepted": 3,
+      "reproduced_independently": [
+        "live registry lookups for 2408951 and 1007",
+        "production suite row via read-only handle",
+        "0-passed aggregate",
+        "all six actionable slugs and values",
+        "the --backfill root cause",
+        "all three original mutations",
+        "read-only handle refuses UPDATE with SQLSTATE 25006"
+      ]
+    }
+  }
+}

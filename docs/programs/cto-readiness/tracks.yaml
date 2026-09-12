@@ -908,8 +908,25 @@ tracks:
       plan gained batch 1b, before the CLAUDE.md rewrite: freeze the M2
       closing review so a new decision record does not fail CI, then
       write formal records for the decisions still in force that
-      CLAUDE.md summarizes without one. Batch 1b runs next against
-      m4/cutover; merge main into m4/cutover first.
+      CLAUDE.md summarizes without one. Batches 1b (PR #670, #671) and
+      1c (PR #672) are merged into m4/cutover. Batch 1d (PR #673,
+      activating the six docs/project documents the entrypoints will
+      point at, so the guard narrows per document instead of being
+      silenced globally) is OPEN and NOT merged: the 2026-09-12 morning
+      run's independent review returned PASS WITH FINDINGS with three
+      must-fix items, posted as a comment on the PR — frontmatterIsActive
+      accepts a half-applied document and no test covers it; a new
+      comment claims the project-document JSON schema enforces the
+      state-mixing rule when nothing compiles that schema; and the
+      refuse-to-emit-a-dangling-link behaviour has no test. Fix those
+      three, then merge 1d and run batch 2. Two further findings need a
+      batch of their own before the cutover merge: README.md and
+      docs/README.md still describe docs/project/ as candidates, and the
+      M4 banner's two claims about m4/cutover and main both become false
+      at the merge — it is duplicated in three libs and three documents
+      and must be rewritten in one batch. Batch 7's scope also changes:
+      1d activated the targets rather than retiring the entrypoint
+      check, so there is no check to retire.
     resume_file: archive/sessions/2026-09-11-m4-cutover-inventory.md
     exit:
       - both tools load the same project truth and pass entrypoint parity

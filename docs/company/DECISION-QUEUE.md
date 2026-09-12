@@ -14,6 +14,40 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-33** · `your_call` · owner Petter · raised 2026-09-12T06:30Z · no deadline — **six company registries are being health-checked with a test input we already know is wrong, and correcting it is a database write I cannot make**
+Six of our company-registry services are judged every day by a check that uses
+a lookup value that does not work. The right values are already written down in
+this repository — in one case since 12 August — but nothing ever copied them
+across to the live system, and nothing compared the two until this morning.
+*What was measured (production, read-only, this morning, two independent ways):*
+the Canadian service has failed every check for a fortnight (173 of them at
+the time of measuring) because its
+check looks up a corporation number the Canadian registry says does not exist;
+I confirmed that directly against the registry, and confirmed the corrected
+number in our repository works. The same mismatch affects the German, Irish,
+Lithuanian, Spanish and Swiss services. Three of them have already been
+switched off from checking entirely after repeated failures, so those services
+now have no health signal at all.
+*Sized before escalating:* no customer has ever been charged for this and no
+customer-facing call fails because of it — these are our own checks. The cost
+is that six services' quality signals are false, and the machinery that takes a
+service off sale reads those signals.
+*Why it is here and not done:* applying the corrections means writing to the
+production database. The shared credential is read-only and the write
+credential is a parked line that only an authorised, attended session may use.
+Being right about the correction is not authority to make it.
+*What I did instead:* built the check that finds this class
+(`npm run fixtures:drift`), wired it into the morning sweep, and recorded the
+incident. It cannot run in CI — the drift lives in live data, not in the code.
+*If you do nothing:* the six stay mis-measured and the three quarantined ones
+stay unmonitored. Nothing breaks for a customer; the risk is that a genuinely
+broken registry hides among six that are only pretending to be broken.
+*Related:* this is the same ask as DQ-27 — an authorised attended session with
+the parked write credential — and it is the third time a settled correction has
+been recorded without reaching production, which DQ-27 predicted would make it
+a family. Logged as LESSONS.md F7 incident 11 / F1 row 8.
+*How you'd reverse it:* nothing to reverse; this is a request for a route.
+
 **DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
 *Answered:* Petter, in chat, accepting the recommendation: the repo-native
 daily digest's "action required" list shows only decisions that need him,

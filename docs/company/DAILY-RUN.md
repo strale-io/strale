@@ -100,6 +100,30 @@ remembering which vendor dashboard needs a manual check.
 > each account's reason and check it names what production actually calls.
 > LESSONS.md F7 incident 10.
 
+> **A capability can be judged on a test that can never pass.** Run
+> `cd apps/api && npm run fixtures:drift` (production read-only). It reports
+> only the conjunction that matters: a `dependency_health` fixture whose
+> production input differs from the manifest's `health_check_input` **and**
+> which has passed none of its runs in the window. Divergence on its own is
+> not the signal — on 2026-09-12, 81 of 326 active suites differed: 36
+> passing, 39 with no run in the window, **6** actionable. Reporting all 81
+> would be a wrong-denominator finding nobody would read twice. The six were
+> all company registries, and `canadian-company-data` had passed **none** of
+> its runs since 2026-08-12 (173 in the fourteen-day window when measured that
+> morning; the window rolls) on a corporation number the Canadian registry
+> says does not exist. The manifest was corrected that day and production never
+> was, because `onboard.ts --backfill` inserts missing test types and updates
+> only `known_answer` — so it never rewrites an existing suite's input
+> **from the manifest**. That qualifier matters: `lib/self-heal.ts` does
+> rewrite a suite's input at runtime, so "nothing writes it" would be false.
+> Three of the six had been quarantined by fixture-recapture exhaustion, which
+> means those capabilities have no working health signal at all. Do not read
+> the 36 passing divergences as "production holds the better fixture" — for
+> at least two it is the manifest that is better or fresher; they are excluded
+> because a passing suite is not the actionable signal, not because production
+> is known to be right. Applying a correction is a production write: report it,
+> do not reach for a path that happens to be open. LESSONS.md F1.
+
 Credential failures for Serper and Dilisense are re-armed automatically only
 after the configured API-key value changes; the tower stores a one-way key
 fingerprint, never the credential, and spends no synthetic vendor call. A
