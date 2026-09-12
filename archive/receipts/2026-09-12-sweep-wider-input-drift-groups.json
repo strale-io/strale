@@ -1,0 +1,425 @@
+{
+  "kind": "sweep",
+  "produced_by": {
+    "script": "apps/api/scripts/fixture-drift-groups.ts",
+    "commit": "6795e6f0c94d8058488a8d36832cc8fb0ca90d70"
+  },
+  "at": "2026-09-12T22:47:15.096Z",
+  "inputs": {
+    "test_type": "dependency_health",
+    "days": 30,
+    "source": "apps/api/scripts/fixture-drift-groups.ts against production, read-only"
+  },
+  "summary": {
+    "ok": false,
+    "findings_count": 31,
+    "active_suites_count": 326,
+    "manifests_count": 350,
+    "stale_identifier_count": 1,
+    "ambiguous_match_count": 2,
+    "policy_refusal_count": 27,
+    "quota_refusal_count": 1
+  },
+  "topic": "wider-input-drift-groups",
+  "raw": {
+    "test_type": "dependency_health",
+    "days": 30,
+    "active_suites_count": 326,
+    "manifests_count": 350,
+    "findings_count": 31,
+    "groups": {
+      "stale_identifier": {
+        "count": 1,
+        "items": [
+          {
+            "slug": "canadian-company-data",
+            "suiteId": "3f22ab0f-2bad-4dc6-a85d-ef0278d676c3",
+            "capabilityActive": true,
+            "runs": 366,
+            "productionInput": "{\"corporation_number\":\"2408951\"}",
+            "manifestInput": "{\"corporation_number\":\"1007\"}",
+            "sampleFailure": "Execution error: No Canadian federal corporation found for \"2408951\". Provide a federal corporation number (older corporations have fewer than 7 digits) or a 9-digit business number; provincially registered businesses are not in this registry.",
+            "cost_class": "free_unlimited",
+            "quota_cap": null,
+            "quota_window": "none"
+          }
+        ]
+      },
+      "ambiguous_match": {
+        "count": 2,
+        "items": [
+          {
+            "slug": "spanish-company-data",
+            "suiteId": "f7f09533-7ff9-4ef7-957d-46d4bbd903bc",
+            "capabilityActive": true,
+            "runs": 19,
+            "productionInput": "{\"company_name\":\"Telefonica\"}",
+            "manifestInput": "{\"nif\":\"A20072302\"}",
+            "sampleFailure": "Execution error: No confident Spanish registry match for \"Telefonica\" (closest: TELEFONICA MOVILES ESPAÑA SA, TELEFONICA DE ESPAÑA SA, TELEFONICA SOLUCIONES DE INFORMATICA Y COMUNICACIONES DE ESPAÑA SA). Provide the CIF/NIF (e.g. A28015865) for an exact lookup.",
+            "cost_class": "free_quota",
+            "quota_cap": 100,
+            "quota_window": "daily"
+          },
+          {
+            "slug": "german-company-data",
+            "suiteId": "69a00c0a-7eeb-4e9e-b6ad-e6314ac3a2be",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"company_name\":\"Google\"}",
+            "manifestInput": "{\"company_name\":\"SAP SE\"}",
+            "sampleFailure": "Execution error: No confident German registry match for \"Google\". OpenRegister's search is fuzzy and returned only unrelated entities (closest: Google Developer Student Club Mannheim e.V., Google Germany GmbH, Google Coach UG (haftungsbeschränkt)). Provide the OpenRegister company_id (e.g. \"DE-HRB-F",
+            "cost_class": "free_quota",
+            "quota_cap": 45,
+            "quota_window": "monthly"
+          }
+        ]
+      },
+      "policy_refusal": {
+        "count": 27,
+        "items": [
+          {
+            "slug": "error-explain",
+            "suiteId": "0bad3704-eb71-4887-b928-0a8a429fd749",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"context\":\"This is a test input for automated capability testing.\",\"error\":\"test_value\",\"language\":\"en\"}",
+            "manifestInput": "{\"context\":\"test\",\"error\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'error-explain' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "translate",
+            "suiteId": "0eaca00b-4dc8-4f36-83d6-04557f5d5450",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"source_language\":\"en\",\"target_language\":\"en\",\"text\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"target_language\":\"test\",\"text\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'translate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "container-track",
+            "suiteId": "125ae82e-fa9b-4a06-949c-d20b767bd7c8",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"container_number\":\"test_value\"}",
+            "manifestInput": "{\"container_number\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'container-track' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "sentiment-analyze",
+            "suiteId": "2229a9bf-a992-4a85-a334-413eb8e5bd02",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"text\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"text\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'sentiment-analyze' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "email-draft",
+            "suiteId": "374f7095-0ee4-4259-b184-2947bfe6f578",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"context\":\"This is a test input for automated capability testing.\",\"recipient_context\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"context\":\"test\",\"recipient_context\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'email-draft' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "address-parse",
+            "suiteId": "38c16aa2-50a9-49e7-8f61-73b3e018e481",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"address\":\"1600 Amphitheatre Parkway, Mountain View, CA\"}",
+            "manifestInput": "{\"address\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'address-parse' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "commit-message-generate",
+            "suiteId": "3a2730f9-501d-484e-bd9f-2d9f6af60a60",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"diff\":\"- const x = 1;\\n+ const x = 2;\\n  return x;\",\"style\":\"conventional\"}",
+            "manifestInput": "{\"diff\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'commit-message-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "github-actions-generate",
+            "suiteId": "633b40f6-2fec-43b8-8531-c483a2ce5530",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"framework\":\"express\",\"language\":\"en\"}",
+            "manifestInput": "{\"language\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'github-actions-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "pii-redact",
+            "suiteId": "69c7e10a-4694-46b1-9479-de207aaad669",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"text\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"text\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'pii-redact' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "norwegian-company-data",
+            "suiteId": "7878980c-aeda-428a-a3b2-ebb8b9b54307",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"org_number\":\"984851006\"}",
+            "manifestInput": "{\"org_number\":\"923609016\"}",
+            "sampleFailure": "Execution error: Capability 'norwegian-company-data' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "image-to-text",
+            "suiteId": "7aed33e0-e634-4ba4-b4e6-3b118a6af93a",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"image_url\":\"https://httpbin.org/image/jpeg\"}",
+            "manifestInput": "{\"image_url\":\"https://upload.wikimedia.org/wikipedia/commons/a/a9/Example.jpg\"}",
+            "sampleFailure": "Execution error: Capability 'image-to-text' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "regex-explain",
+            "suiteId": "93278d44-3b10-40dd-883d-60e5d1ab4b1b",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"regex\":\"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\\\.[a-zA-Z]{2,}$\"}",
+            "manifestInput": "{\"regex\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'regex-explain' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "webhook-test-payload",
+            "suiteId": "a97083c0-b64a-4038-874a-cd5a49df0724",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"event_type\":\"test_value\",\"service\":\"test_value\"}",
+            "manifestInput": "{\"event_type\":\"test\",\"service\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'webhook-test-payload' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "openapi-generate",
+            "suiteId": "aa5ccdc6-ce43-4ded-a31e-da3b7b61dd03",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"description\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"description\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'openapi-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "agent-trace-analyze",
+            "suiteId": "ac3285d2-72e5-4355-89af-2aca969ae9ba",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"trace\":\"test_value\"}",
+            "manifestInput": "{\"trace\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'agent-trace-analyze' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "dockerfile-generate",
+            "suiteId": "b7c4bf63-b01f-4f0c-9753-f78c122d0223",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"framework\":\"express\",\"language\":\"en\"}",
+            "manifestInput": "{\"language\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'dockerfile-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "meeting-notes-extract",
+            "suiteId": "ba6d3ecf-8bc9-4f7e-8924-a4708b00c33f",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"transcript\":\"test_value\"}",
+            "manifestInput": "{\"transcript\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'meeting-notes-extract' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "release-notes-generate",
+            "suiteId": "bacdc352-2169-4450-be4f-6b4e7ea2f515",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"commits\":\"test_value\"}",
+            "manifestInput": "{\"commits\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'release-notes-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "readme-generate",
+            "suiteId": "bee48e40-93b4-45b2-9b04-2972930e6c85",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"project_description\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"project_description\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'readme-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "estonian-company-data",
+            "suiteId": "c0879cc1-55bf-45e5-b885-ac38d791d6d1",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"company_name\":\"Bolt\"}",
+            "manifestInput": "{\"registry_code\":\"17449106\"}",
+            "sampleFailure": "Execution error: Capability 'estonian-company-data' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "us-company-data",
+            "suiteId": "c8410076-c7fc-4fe4-9206-7cd64e5a2a5f",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"company\":\"AAPL\"}",
+            "manifestInput": "{\"company\":\"320193\"}",
+            "sampleFailure": "Execution error: Capability 'us-company-data' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "pr-description-generate",
+            "suiteId": "d4f064f0-51d9-44f0-b738-f6e357e5a22c",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"diff\":\"- const x = 1;\\n+ const x = 2;\\n  return x;\",\"title\":\"Test Document Title\"}",
+            "manifestInput": "{\"diff\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'pr-description-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "prompt-optimize",
+            "suiteId": "da8e359c-2346-4709-b167-a710d30890ca",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"current_prompt\":\"test_value\",\"task_description\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"current_prompt\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'prompt-optimize' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "sql-generate",
+            "suiteId": "ed50b343-e475-434b-9a86-bd17ec91bd04",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"dialect\":\"postgres\",\"natural_language_query\":\"en\",\"table_schema\":\"users(id INT, name TEXT, email TEXT, active BOOL, created_at TIMESTAMP)\"}",
+            "manifestInput": "{\"natural_language_query\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'sql-generate' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "hs-code-lookup",
+            "suiteId": "fbfb69b5-271c-40e0-8c58-b8757390f717",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"product\":\"test_value\"}",
+            "manifestInput": "{\"product\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'hs-code-lookup' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "structured-scrape",
+            "suiteId": "fc0d58ae-82c8-482a-863f-0d116ef4fb12",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"schema\":{\"properties\":{\"title\":{\"type\":\"string\"}},\"type\":\"object\"},\"url\":\"https://example.com\"}",
+            "manifestInput": "{\"schema\":{\"key\":\"value\"},\"url\":\"https://example.com\"}",
+            "sampleFailure": "Execution error: Capability 'structured-scrape' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          },
+          {
+            "slug": "prompt-compress",
+            "suiteId": "fe7dfbf4-40d4-4e69-816f-59a93bf33b71",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"prompt_text\":\"This is a test input for automated capability testing.\"}",
+            "manifestInput": "{\"prompt_text\":\"test\"}",
+            "sampleFailure": "Execution error: Capability 'prompt-compress' (cost_class=paid_prepaid) refuses invocation from context kind 'internal_test'. ALLOW_MATRIX governs this; bypass would burn vendor credits outside customer-initiated paths.",
+            "cost_class": "paid_prepaid",
+            "quota_cap": null,
+            "quota_window": "none"
+          }
+        ]
+      },
+      "quota_refusal": {
+        "count": 1,
+        "items": [
+          {
+            "slug": "danish-company-data",
+            "suiteId": "883a62df-8ce1-492e-886a-086914153a98",
+            "capabilityActive": true,
+            "runs": 1,
+            "productionInput": "{\"cvr_number\":\"47458714\"}",
+            "manifestInput": "{\"cvr_number\":\"24256790\"}",
+            "sampleFailure": "Execution error: Capability 'danish-company-data' has exhausted its daily test budget (free_quota, quota_cap=20). Customer traffic is unaffected; Strale's own test/CI usage must wait for the next window.",
+            "cost_class": "free_quota",
+            "quota_cap": 20,
+            "quota_window": "daily"
+          }
+        ]
+      }
+    }
+  }
+}

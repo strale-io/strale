@@ -25,6 +25,11 @@ import {
   classifyTransactionFailure,
   type TransactionFailureClass,
 } from "../lib/transaction-failure-taxonomy.js";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { load as loadYaml } from "js-yaml";
+import { findFixtureDrift, type ManifestFixture, type SuiteRow } from "../lib/fixture-drift.js";
+import { classifyDriftCause } from "../lib/drift-cause.js";
 
 const CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const STARTUP_DELAY_MS = 60_000; // 60 seconds
@@ -161,6 +166,14 @@ export async function runInvariantChecks(): Promise<void> {
     checked += r13.checked;
   } catch (err) {
     jobLog.error({ label: "invariant-check-13-failed", check: "lying-breakers", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-13-failed");
+  }
+
+  try {
+    const r14 = await checkFixtureInputDrift();
+    alerts += r14.alerts;
+    checked += r14.checked;
+  } catch (err) {
+    jobLog.error({ label: "invariant-check-14-failed", check: "fixture-input-drift", err: err instanceof Error ? { message: err.message, stack: err.stack } : err }, "invariant-check-14-failed");
   }
 
   // Log provider outage summary if any capabilities were skipped
@@ -1288,4 +1301,154 @@ export async function checkPartialQuarantineState(
   });
 
   return { alerts: 1, checked: 1 };
+}
+
+// ─── CHECK 14: dependency_health fixture-input drift (Tier 2, ALERT ONLY) ───
+//
+// The detector half of the deliberate manual/automatic split for the wider
+// fixture-input-drift population (see
+// `handoff/_general/from-code/2026-09-12-wider-input-drift-sweep.md`):
+// resyncing a stored `dependency_health` input is still a human decision,
+// run through `scripts/onboard.ts --backfill --discover`/`--fix` (the
+// mechanism PR #677 added, `src/lib/test-input-drift.ts`), not this check.
+// What this check adds is that the drift no longer needs a person to run
+// `scripts/fixture-drift-groups.ts` by hand to notice: it runs on the same
+// 2-hour cadence as every other invariant check, so a newly-drifted
+// capability surfaces here on its own, the way `canadian-company-data`'s
+// 2408951/1007 divergence did not for a month (it fired
+// `regression_detected` on every scheduled run, but nothing distinguished
+// "the fixture is stale relative to an already-corrected manifest" from an
+// ordinary upstream failure until this check existed).
+//
+// Read-only: one query against `test_suites`/`test_results`, the manifest
+// files already shipped in the image (same `readdirSync` pattern
+// `auto-register.ts`'s `resolveManifestsDir` uses, so this works from both
+// `src/` and `dist/`), no vendor calls, no write to `test_suites`. Reuses
+// `findFixtureDrift` (the same actionable-set conjunction fixture-drift.ts
+// uses: differs from manifest AND never passes in the window) and
+// `classifyDriftCause`, so this alert and a human re-running
+// `fixture-drift-groups.ts` always agree.
+//
+// Why this is alert-only, not auto-heal, even though `dependency_health`'s
+// input has no supported concept of an intentional divergence (see
+// `test-input-drift.ts`'s doc comment): a capability can enter the
+// actionable set with its manifest NOT yet corrected: the manifest could
+// be just as stale as the stored row, or drift for a reason this check
+// cannot tell apart (`stale_identifier` and `ambiguous_match` need a human
+// to verify a corrected identifier still resolves live; that verification
+// step is exactly what the Capability Onboarding Protocol reserves for a
+// person, and CLAUDE.md's cost principles mean an automatic write must
+// never risk depending on an unverified value). Auto-writing the manifest's
+// current value into every actionable row, unconditionally, would silently
+// convert "stale DB, corrected manifest" into "stale DB, ALSO-stale
+// manifest" for a slug where nobody has yet re-verified the identifier,
+// which is worse than alerting and leaving it.
+export async function checkFixtureInputDrift(): Promise<{ alerts: number; checked: number }> {
+  const db = getDb();
+  const days = 30;
+  const testType = "dependency_health";
+
+  const rows = (await db.execute(sql`
+    SELECT ts.id AS suite_id,
+           ts.capability_slug,
+           ts.test_type,
+           ts.input,
+           c.is_active,
+           COUNT(tr.id)::int                              AS runs,
+           COUNT(tr.id) FILTER (WHERE tr.passed)::int     AS passed,
+           LEFT((array_agg(tr.failure_reason ORDER BY tr.executed_at DESC)
+                 FILTER (WHERE tr.failure_reason IS NOT NULL))[1], 300) AS sample_failure
+      FROM test_suites ts
+      JOIN capabilities c ON c.slug = ts.capability_slug
+      LEFT JOIN test_results tr
+        ON tr.test_suite_id = ts.id
+       AND tr.executed_at >= now() - (${days}::text || ' days')::interval
+     WHERE ts.test_type = ${testType}
+       AND ts.active = true
+     GROUP BY ts.id, ts.capability_slug, ts.test_type, ts.input, c.is_active
+  `)) as unknown as Array<{
+    suite_id: string;
+    capability_slug: string;
+    test_type: string;
+    input: unknown;
+    is_active: boolean;
+    runs: number;
+    passed: number;
+    sample_failure: string | null;
+  }>;
+
+  const suites: SuiteRow[] = rows.map((r) => ({
+    suiteId: String(r.suite_id),
+    capabilitySlug: r.capability_slug,
+    testType: r.test_type,
+    input: typeof r.input === "string" ? JSON.parse(r.input) : r.input,
+    runs: Number(r.runs),
+    passed: Number(r.passed),
+    sampleFailure: r.sample_failure,
+    capabilityActive: r.is_active === true,
+  }));
+
+  const manifestsDir = resolve(import.meta.dirname, "..", "..", "..", "..", "manifests");
+  const fixtures: ManifestFixture[] = [];
+  if (existsSync(manifestsDir)) {
+    for (const file of readdirSync(manifestsDir).filter((f) => f.endsWith(".yaml"))) {
+      try {
+        const parsed = loadYaml(readFileSync(resolve(manifestsDir, file), "utf8")) as
+          | { slug?: string; test_fixtures?: { health_check_input?: unknown } }
+          | null;
+        if (parsed?.slug) {
+          fixtures.push({ slug: parsed.slug, healthCheckInput: parsed.test_fixtures?.health_check_input });
+        }
+      } catch {
+        // Unreadable manifest: skipped, same as fixture-drift.ts. A parse
+        // error here must never read as "no drift" for the whole sweep, but
+        // it also must never crash a 2-hourly platform-wide check over one
+        // capability's YAML: logged via the outer try/catch in
+        // runInvariantChecks, and the rest of the manifests still compare.
+      }
+    }
+  }
+
+  const findings = findFixtureDrift(suites, fixtures, { testType });
+  if (findings.length === 0) return { alerts: 0, checked: suites.length };
+
+  const byCause: Record<string, string[]> = {};
+  for (const f of findings) {
+    const cause = classifyDriftCause(f.sampleFailure);
+    (byCause[cause] ??= []).push(f.slug);
+  }
+
+  await logHealthEvent({
+    eventType: "invariant_alert",
+    tier: 2,
+    actionTaken: `${findings.length} dependency_health suite(s) hold a stored input that differs from ` +
+      `their manifest's health_check_input and never pass in the trailing ${days} days`,
+    details: {
+      check: "fixture_input_drift",
+      count: findings.length,
+      by_cause: byCause,
+      slugs: findings.map((f) => f.slug),
+    },
+  });
+
+  // 24h cooldown: this population changes slowly (onboard.ts --backfill is a
+  // manual, occasional act), so an alert every 2 hours for the same standing
+  // population would be noise. alertOnce's suppression means "the alert was
+  // sent" and "the condition holds" are separate facts, same rationale as
+  // checkPartialQuarantineState above; the health-monitor event above is
+  // written on every run regardless of the cooldown.
+  await alertOnce("invariant-fixture-input-drift", 24 * 60 * 60 * 1000, {
+    subject: `${findings.length} dependency_health suite(s) drifted from their manifest fixture`,
+    body:
+      `${findings.map((f) => f.slug).join(", ")}: each suite's stored input differs from its ` +
+      `manifest's health_check_input and has not passed in the trailing ${days} days.\n\n` +
+      `By cause: ${Object.entries(byCause).map(([cause, slugs]) => `${cause} (${slugs.length}): ${slugs.join(", ")}`).join("; ")}.\n\n` +
+      `stale_identifier and ambiguous_match are candidates for ` +
+      `\`onboard.ts --backfill --discover\` after verifying the manifest's corrected value still ` +
+      `resolves live. policy_refusal and quota_refusal cannot be fixed by any stored input, see ` +
+      `\`scripts/fixture-drift-groups.ts\`'s doc comment.`,
+    severity: "warning",
+  });
+
+  return { alerts: 1, checked: suites.length };
 }

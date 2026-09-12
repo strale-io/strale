@@ -72,6 +72,7 @@ import {
   runMigration0112_promoteFreeApiEight,
   runMigration0101_capabilityInvocations,
   runMigration0114_releaseCorrectedDependencyHealthFixtures,
+  runMigration0115_resyncCanadianCompanyDataDependencyHealth,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1428,6 +1429,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0112_promoteFreeApiEight",
       "runMigration0113_releaseWronglyQuarantinedRefusalSuites",
       "runMigration0114_releaseCorrectedDependencyHealthFixtures",
+      "runMigration0115_resyncCanadianCompanyDataDependencyHealth",
     ]);
   });
 });
@@ -2311,7 +2313,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(114);
+    expect(Math.max(...numbers)).toBe(115);
   });
 });
 
@@ -2627,6 +2629,66 @@ describe("startup-migrations: block 0114 (release corrected dependency_health fi
   it("never fires twice, idempotent on a second boot", async () => {
     const stub = makeStub({ queue: [{}, [{ block: "0114_releaseCorrectedDependencyHealthFixtures" }]] });
     const result = await runMigration0114_releaseCorrectedDependencyHealthFixtures(stub);
+    expect(result.rows_affected).toBe(0);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
+    expect(joined).not.toMatch(/update test_suites/);
+    expect(joined).not.toMatch(/insert into health_monitor_events/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+});
+
+describe("startup-migrations: block 0115 (resync canadian-company-data dependency_health)", () => {
+  const releasedRow = () =>
+    [{ id: "3f22ab0f-2bad-4dc6-a85d-ef0278d676c3", capability_slug: "canadian-company-data", test_type: "dependency_health" }] as unknown[];
+
+  it("rewrites the stale corporation number to the manifest's corrected value and writes one event", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    const result = await runMigration0115_resyncCanadianCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(1);
+    expect(result.outcome).toContain("resynced 1");
+
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q));
+    expect(update).toBeDefined();
+    // The corrected value, verified live against the Corporations Canada
+    // API before this block was written (see the block's own doc comment).
+    expect(update!).toContain("1007");
+    expect(update!.toLowerCase()).toContain("test_mode = 'live'");
+    // The stale literal in the predicate, not just the corrected one in SET.
+    expect(update!).toContain("2408951");
+
+    const events = stub.renderedSql.filter((q) => /insert into health_monitor_events/i.test(q));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain("auto_fix");
+  });
+
+  // Exact predicate: matches on capability_slug, test_type, AND the exact
+  // stale input literal, so it cannot touch a different capability, a
+  // different test_type on this capability, or this capability's row once
+  // it no longer holds the stale value.
+  it("scopes the UPDATE to canadian-company-data, dependency_health, and the exact stale input", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    await runMigration0115_resyncCanadianCompanyDataDependencyHealth(stub);
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q))!;
+    const whereClause = update.slice(update.toLowerCase().indexOf("where"));
+    expect(whereClause).toContain("test_type = 'dependency_health'");
+    expect(whereClause).toContain("capability_slug = 'canadian-company-data'");
+    expect(whereClause).toContain("2408951");
+    // An unrelated capability is never named in the predicate.
+    expect(whereClause).not.toContain("spanish-company-data");
+    expect(whereClause).not.toContain("german-company-data");
+  });
+
+  it("does not claim a resync when no matching stale input remains", async () => {
+    const stub = makeStub({ queue: [{}, [], [], {}] });
+    const result = await runMigration0115_resyncCanadianCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no matching stale/);
+  });
+
+  it("never fires twice, idempotent on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0115_resyncCanadianCompanyDataDependencyHealth" }]] });
+    const result = await runMigration0115_resyncCanadianCompanyDataDependencyHealth(stub);
     expect(result.rows_affected).toBe(0);
     const joined = stub.renderedSql.join(" | ").toLowerCase();
     expect(joined).not.toMatch(/update test_suites/);
