@@ -1315,15 +1315,15 @@ async function backfill(
   }
 
   // Fixture-input-drift resync (2026-09-12 follow-up to the recapture-refusal
-  // fix — see handoff/_general/from-code/2026-09-11-recapture-refusal-lock.md).
+  // fix, see handoff/_general/from-code/2026-09-11-recapture-refusal-lock.md).
   //
   // dependency_health's input is ALWAYS derived from the manifest
-  // (healthInput ?? knownAnswerEntries[0]?.input ?? {} — see
+  // (healthInput ?? knownAnswerEntries[0]?.input ?? {}, see
   // buildTestSuites above and src/lib/test-input-drift.ts's doc comment for
   // why there is no supported concept of a permanently-diverged stored
   // input for this test type). Gated the same way as the known_answer
   // resync above (--discover or --fix) so this never fires on a plain
-  // `--backfill` run that only adds missing tests or limitations — an
+  // `--backfill` run that only adds missing tests or limitations: an
   // operator has to explicitly ask this session to reconsider fixtures
   // before a dependency_health row is touched.
   if (hasKnownAnswerUpdate) {
@@ -1360,7 +1360,7 @@ async function backfill(
           `  ✓ Resynced dependency_health input to match manifest health_check_input ` +
             `(was ${JSON.stringify(drift.storedInput)}, now ${JSON.stringify(drift.derivedInput)})`,
         );
-        console.log(`    (baseline cleared — next test run will recapture)`);
+        console.log(`    (baseline cleared, next test run will recapture)`);
       }
     }
   }

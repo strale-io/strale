@@ -5345,14 +5345,14 @@ export async function runMigration0113_releaseWronglyQuarantinedRefusalSuites(
 }
 
 // Block 0114 (2026-09-12): release the 3 `dependency_health` suites for
-// irish-company-data, lithuanian-company-data, and swiss-company-data —
+// irish-company-data, lithuanian-company-data, and swiss-company-data:
 // the genuine-failure population 0113's own follow-up section named and
 // left quarantined on purpose (see
 // handoff/_general/from-code/2026-09-11-recapture-refusal-lock.md, "Follow-up
 // (not fixed this session)"). Each row's stored `input` held an entity
 // identifier that no longer resolves against its live registry, while the
 // manifest's `test_fixtures.health_check_input` had already been corrected
-// to one that does — verified live against each registry directly before
+// to one that does, verified live against each registry directly before
 // this block was written, not inferred:
 //
 //   irish-company-data:      cro_number "461onal" -> "513174"
@@ -5375,20 +5375,20 @@ export async function runMigration0113_releaseWronglyQuarantinedRefusalSuites(
 //
 // `input` is rewritten to the manifest's corrected value directly (not left
 // for a later backfill run) since this block already carries the verified
-// live-resolving value in its own predicate literals — the same values
+// live-resolving value in its own predicate literals, the same values
 // scripts/onboard.ts --backfill --discover would write via
 // checkDependencyHealthDrift (src/lib/test-input-drift.ts) if run today, so
 // this block and that general-purpose mechanism converge on the same input.
 // `test_mode` is set to 'live' (not 'canary'): these are exactly-once,
 // verified-working corrections, not the structurally-incapable-of-a-baseline
-// refusal types 0113 handles — the next scheduled run captures a fresh
+// refusal types 0113 handles, so the next scheduled run captures a fresh
 // baseline normally.
 //
 // Workload this resumes (Bulk-Operation Deploy Protocol, DEC-20260504-B): 3
 // suites move from "permanently refused, zero calls" back to normal
 // scheduling. All three registries are `cost_class: free_unlimited`
 // (manifests/irish-company-data.yaml, manifests/lithuanian-company-data.yaml,
-// manifests/swiss-company-data.yaml) — this does not reach a paid upstream.
+// manifests/swiss-company-data.yaml), so this does not reach a paid upstream.
 // No backlog to drain (refusing, not queued) and no self-throttle needed:
 // three suites resuming their existing schedule tier is not a bulk-operation
 // resumption event in the sense DEC-20260504-B targets (that protocol is

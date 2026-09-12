@@ -8,7 +8,7 @@
  * (ignoring `health_check_input` and the known_answer fallback), 3 of 4
  * `checkDependencyHealthDrift` tests below failed and the "unrelated
  * capability untouched" test still passed on its own (it does not depend on
- * the derivation at all, by construction — see its own comment). Restoring
+ * the derivation at all, by construction, see its own comment). Restoring
  * the real derivation made all 4 pass again.
  */
 import { describe, expect, it } from "vitest";
@@ -60,10 +60,10 @@ describe("checkDependencyHealthDrift", () => {
 
   // "an unrelated suite is untouched": the check for one capability's stored
   // input never reads or reasons about any other capability's manifest or
-  // row — it is a pure function of exactly the three arguments passed in.
+  // row. It is a pure function of exactly the three arguments passed in.
   // Two capabilities with the SAME (irrelevant) stored input diverge only
   // because their own manifests differ, never because of each other.
-  it("is scoped to the single capability passed in — an unrelated capability's drift result never changes", () => {
+  it("is scoped to the single capability passed in, an unrelated capability's drift result never changes", () => {
     const swissManifest = manifestWith({ health_check_input: { uid: "CHE-101.602.521" } });
     const irishManifest = manifestWith({ health_check_input: { cro_number: "513174" } });
 
@@ -73,7 +73,7 @@ describe("checkDependencyHealthDrift", () => {
     expect(swissResult.drifted).toBe(false);
 
     // Drifting the swiss manifest must not perturb the already-computed
-    // irish result — each call is independent, no shared or cached state.
+    // irish result: each call is independent, no shared or cached state.
     const swissManifestCorrected = manifestWith({ health_check_input: { uid: "CHE-999.999.999" } });
     checkDependencyHealthDrift("swiss-company-data", { uid: "CHE-101.602.521" }, swissManifestCorrected);
 

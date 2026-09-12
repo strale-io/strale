@@ -2566,7 +2566,7 @@ describe("startup-migrations — block 0112 (list the eight free-public-API capa
   });
 });
 
-describe("startup-migrations — block 0114 (release corrected dependency_health fixtures)", () => {
+describe("startup-migrations: block 0114 (release corrected dependency_health fixtures)", () => {
   // The three rows this block targets, as the UPDATE ... RETURNING would hand
   // back in production. Order matches the WHERE clause's IN list.
   const releasedRows = () =>
@@ -2585,7 +2585,7 @@ describe("startup-migrations — block 0114 (release corrected dependency_health
     const update = stub.renderedSql.find((q) => /update test_suites/i.test(q));
     expect(update).toBeDefined();
     // The corrected values, verified live against each registry before this
-    // block was written — see the block's own doc comment.
+    // block was written, see the block's own doc comment.
     expect(update!).toContain("513174");
     expect(update!).toContain("304151376");
     expect(update!).toContain("CHE-101.602.521");
@@ -2624,7 +2624,7 @@ describe("startup-migrations — block 0114 (release corrected dependency_health
     expect(result.outcome).toMatch(/no matching quarantined/);
   });
 
-  it("never fires twice — idempotent on a second boot", async () => {
+  it("never fires twice, idempotent on a second boot", async () => {
     const stub = makeStub({ queue: [{}, [{ block: "0114_releaseCorrectedDependencyHealthFixtures" }]] });
     const result = await runMigration0114_releaseCorrectedDependencyHealthFixtures(stub);
     expect(result.rows_affected).toBe(0);
