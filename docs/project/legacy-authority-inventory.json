@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "da1dd2c8f82d2dcbf1b78ddcc3530b9edffb4e532e4317ee75f72ca06d8db70f",
+      "sha256": "b7eeae718ae6bc64400fd061845030d31639cae0d9e923355344c2fc07358cf1",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

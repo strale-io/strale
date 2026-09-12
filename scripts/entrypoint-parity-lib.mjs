@@ -84,6 +84,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { checkSchema, repoRootFrom } from "./protocol-coverage-lib.mjs";
 import { checkPrecutoverEntrypoint } from "./check-project-context.mjs";
+import { extractClaudeSectionText, readMirrorBody } from "./protocol-extraction-lib.mjs";
 
 export { repoRootFrom } from "./protocol-coverage-lib.mjs";
 
@@ -147,9 +148,23 @@ function headCase(text) {
   return normalizeDashes(text).toLowerCase().trim();
 }
 
+// A line starting a fenced code block, tracked the same way scanMutableFacts
+// already tracks it below -- a "#"-prefixed line inside a fence (a YAML
+// comment, a Markdown example) is not an authored heading of the file, and
+// must never satisfy hasOwnFullText on its own (finding 1, M4 batch 3 round
+// 2: pasting a protocol's heading into an example block made the row
+// reachable with no real content behind it).
+const FENCE_RE = /^\s*```/;
+
 function headingsIn(content) {
   const out = [];
+  let inFence = false;
   for (const line of content.split("\n")) {
+    if (FENCE_RE.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
     const m = HEADING_RE.exec(line);
     if (m) out.push({ level: m[1].length, text: m[2].trim() });
   }
@@ -251,15 +266,33 @@ function locatorTokens(row) {
  * wrapped continuation lines), or a paragraph delimited by blank lines, are
  * each their own block. This is "the same place" a name and a locator must
  * both appear in for rule (b) -- never the whole file, and for a table,
- * never the header row on behalf of a data row two lines below it. */
+ * never the header row on behalf of a data row two lines below it.
+ *
+ * A fence is excluded twice over (finding 2, M4 batch 3 round 2): the fence
+ * delimiter and everything inside it are dropped from every block entirely
+ * (fenced content, e.g. a manifest template's example path, is never a
+ * locator a reader follows from prose), AND a fence boundary always flushes
+ * whatever block came before it, so a sentence naming a protocol immediately
+ * followed by a fenced snippet can never absorb a path inside that fence
+ * into its own block, and prose that resumes after the fence starts a new
+ * block rather than continuing the one before it. Both halves are needed:
+ * dropping the content alone would still let a name-bearing paragraph and a
+ * locator-bearing paragraph merge across the fence if neither flushed first. */
 function extractBlocks(content) {
   const blocks = [];
   let current = [];
+  let inFence = false;
   const flush = () => {
     if (current.length) blocks.push(current.join("\n"));
     current = [];
   };
   for (const line of content.split("\n")) {
+    if (FENCE_RE.test(line)) {
+      flush();
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
     if (/^\s*$/.test(line)) {
       flush();
       continue;
@@ -382,12 +415,41 @@ const COUNT_NOUN_STOPWORDS = new Set([
   // count).
   "ids",
   "declarations",
+  // "a program starts with those two files" (Program register) names a
+  // fixed pair -- PROGRAM.md and tracks.yaml -- not a count that grows.
+  "files",
+  // "an unledgered block, or two blocks writing the same column" (Evidence
+  // receipts) is the fixed pair from the 2026-08-21 incident this section
+  // cites as its case study, not a catalog count.
+  "blocks",
+  // "where each one lives" (Research and ideas' own heading) is idiomatic:
+  // "one" is a pronoun and "lives" is the verb "to live", not a plural
+  // noun -- the same shape "is"/"was"/"are" above already guard against.
+  "lives",
 ]);
-const DATED_PARENTHETICAL_RE =
-  /\((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\)/g;
-const AS_OF_ISO_DATE_RE = /\bas of \d{4}-\d{2}(?:-\d{2})?\b/gi;
-const AS_OF_MONTH_YEAR_RE =
-  /\bas of (?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}\b/gi;
+const MONTH_NAMES_RE =
+  "(?:January|February|March|April|May|June|July|August|September|October|November|December)";
+// A single date value, in the three shapes this repository's drift-prone
+// prose actually uses: ISO ("2026-09-11", "2026-09"), "Month YYYY", and a
+// fiscal quarter ("Q3 2026"). Shared by every dated-status pattern below so
+// adding a new staleness phrase never means writing a fourth copy of the
+// same three date shapes.
+const DATE_VALUE_RE = `(?:\\d{4}-\\d{2}(?:-\\d{2})?|${MONTH_NAMES_RE}\\s+\\d{4}|Q[1-4]\\s+\\d{4})`;
+const DATED_PARENTHETICAL_RE = new RegExp(`\\(${MONTH_NAMES_RE}\\s+\\d{4}\\)`, "g");
+// "as of <date>" in any of the three date shapes, including the quarter form
+// ("Status as of Q3 2026") finding 4 named explicitly -- a superset of the
+// prior ISO-only and Month-YYYY-only patterns, so a plain "as of" prefix is
+// enough once the date value it precedes is recognised in any shape.
+const AS_OF_RE = new RegExp(`\\bas of ${DATE_VALUE_RE}\\b`, "gi");
+// The two other ordinary ways a dated status is written in this repo's
+// prose, beyond "as of <date>" (finding 4): "Last verified: <date>" and
+// "Updated <date>" (with or without "on"). Both are staleness claims about
+// the current state of a section, exactly the shape rule (c) exists to
+// catch -- neither was recognised before this fix, which is why a table-
+// cell count could hide but so could a plain "Last verified: 2026-08-01"
+// line with no table involved.
+const LAST_VERIFIED_RE = new RegExp(`\\bLast verified:?\\s+${DATE_VALUE_RE}\\b`, "gi");
+const UPDATED_STATUS_RE = new RegExp(`\\bUpdated\\s+(?:on\\s+)?${DATE_VALUE_RE}\\b`, "gi");
 const DEC_ID_RE = /\bDEC-\d{8}(?:-[A-Za-z0-9]+)*\b/g;
 // A decision id counts as followed by a summary when the text right after
 // it starts with a separator (colon, semicolon, or any dash) and then at
@@ -411,10 +473,13 @@ function findMoney(line) {
   return hits;
 }
 
-function findCounts(line) {
+/** Every count-pattern hit in one string of text (a raw line, or two table
+ * cells joined together -- see findCounts below), applying the same noun
+ * checks either way. */
+function countHitsIn(text) {
   const hits = [];
-  for (const m of line.matchAll(NAMED_COUNT_RE)) hits.push({ category: "COUNT", snippet: m[0] });
-  for (const m of line.matchAll(GENERIC_COUNT_RE)) {
+  for (const m of text.matchAll(NAMED_COUNT_RE)) hits.push({ category: "COUNT", snippet: m[0] });
+  for (const m of text.matchAll(GENERIC_COUNT_RE)) {
     const noun = m[1].toLowerCase();
     if (!noun.endsWith("s")) continue;
     if (COUNT_NOUN_STOPWORDS.has(noun)) continue;
@@ -423,11 +488,41 @@ function findCounts(line) {
   return hits;
 }
 
+/** A count split across two table cells (finding 4: "| Verticals | seven |"
+ * evades both count patterns, because the count and its noun are adjacent
+ * words in neither cell). Both regexes require the count directly before
+ * the noun with only whitespace between them, so neither a raw line nor a
+ * single cell ever matches this shape. For each pair of adjacent cells,
+ * join them in both orders ("cell[i] cell[i+1]" and "cell[i+1] cell[i]")
+ * and run the same count patterns on the joined text -- this catches the
+ * count-then-noun shape regardless of which cell the reader put the count
+ * in, without loosening the per-line patterns to ignore the "|" separator
+ * generally, which would risk matching across unrelated cells in a wide
+ * table row. */
+function tableCellCountHits(line) {
+  if (!/\|/.test(line)) return [];
+  const cells = line
+    .split("|")
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
+  const hits = [];
+  for (let i = 0; i < cells.length - 1; i++) {
+    hits.push(...countHitsIn(`${cells[i]} ${cells[i + 1]}`));
+    hits.push(...countHitsIn(`${cells[i + 1]} ${cells[i]}`));
+  }
+  return hits;
+}
+
+function findCounts(line) {
+  return [...countHitsIn(line), ...tableCellCountHits(line)];
+}
+
 function findDates(line) {
   const hits = [];
   for (const m of line.matchAll(DATED_PARENTHETICAL_RE)) hits.push({ category: "DATE", snippet: m[0] });
-  for (const m of line.matchAll(AS_OF_ISO_DATE_RE)) hits.push({ category: "DATE", snippet: m[0] });
-  for (const m of line.matchAll(AS_OF_MONTH_YEAR_RE)) hits.push({ category: "DATE", snippet: m[0] });
+  for (const m of line.matchAll(AS_OF_RE)) hits.push({ category: "DATE", snippet: m[0] });
+  for (const m of line.matchAll(LAST_VERIFIED_RE)) hits.push({ category: "DATE", snippet: m[0] });
+  for (const m of line.matchAll(UPDATED_STATUS_RE)) hits.push({ category: "DATE", snippet: m[0] });
   return hits;
 }
 
@@ -443,18 +538,54 @@ function findDecisionSummaries(line) {
 }
 
 /** The normalized heading forms of every docs/project/protocol-coverage.yaml
- * row's CLAUDE.md heading -- a mirrored protocol section, in either file,
- * whose body legitimately restates historical figures and is out of scope
- * for the mutable-fact scan (see this file's header comment). Returns an
- * empty set (scans everything) if the manifest fails schema validation;
- * checkProtocolReachability reports that failure on its own path. */
-function mirroredProtocolHeadingForms(root) {
+ * row whose CLAUDE.md section is *verified* -- not merely named -- to be the
+ * mirrored protocol body: CLAUDE.md's own section for the row's heading,
+ * re-extracted fresh with the identical algorithm protocols:check uses
+ * (extractClaudeSectionText), compares line-for-line equal to the row's
+ * full_body mirror under docs/governance/protocols/ (readMirrorBody, the
+ * same BEGIN/END slice protocols:check compares CLAUDE.md against). A
+ * heading match alone is never enough (finding 3, M4 batch 3 round 2:
+ * copying a protocol heading over a fabricated paragraph used to hide every
+ * fact under it) -- a section whose heading matches a row but whose body
+ * does not match the mirror is scanned like any other prose, because it
+ * fails the equality check and its form is never added here.
+ *
+ * This only ever runs against CLAUDE.md's own text, never AGENTS.md's,
+ * which is why checkMutableFacts below applies the returned set to CLAUDE.md
+ * alone. AGENTS.md is a condensed derivative by design (its own opening line
+ * says so): even the handful of rows it restates at length reflow the
+ * heading to one level shallower and substitute the em-dash CLAUDE.md uses
+ * for a plain hyphen (a repo-wide style rule for hand-written prose, see
+ * normalizeDashes above), so no AGENTS.md section can ever be byte-identical
+ * to a mirror extracted verbatim from CLAUDE.md. Trying to verify AGENTS.md
+ * sections against the mirror the same way would not recognise even its
+ * most faithful restatements as mirrors, so nothing is lost by not trying;
+ * it also means every AGENTS.md heading is scanned like ordinary prose
+ * without exception, which is the safer default for the one file this
+ * manifest holds no verbatim body for.
+ *
+ * Returns an empty set (scans everything) if the manifest fails schema
+ * validation; checkProtocolReachability reports that failure on its own
+ * path. */
+function verifiedMirroredHeadingForms(root) {
   const forms = new Set();
   const { manifest, valid } = checkSchema(root);
   if (!valid) return forms;
   for (const row of manifest.protocols) {
     const heading = rowClaudeHeading(row);
     if (!heading) continue;
+    if (!row.full_body) continue;
+    let claudeSection;
+    try {
+      claudeSection = extractClaudeSectionText(root, heading);
+    } catch {
+      // Heading missing or duplicated in CLAUDE.md -- checkProtocolReachability
+      // already reports that shape; nothing to verify a mirror against here.
+      continue;
+    }
+    const mirrorBody = readMirrorBody(root, row.full_body);
+    if (mirrorBody === null) continue;
+    if (claudeSection.split("\n").join("\n") !== mirrorBody.join("\n")) continue;
     for (const form of headingForms(heading)) forms.add(form);
   }
   return forms;
@@ -510,9 +641,13 @@ export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()
 
 export function checkMutableFacts(root, contents) {
   const findings = [];
-  const mirrored = mirroredProtocolHeadingForms(root);
+  const mirrored = verifiedMirroredHeadingForms(root);
   for (const [file, content] of Object.entries(contents)) {
-    for (const hit of scanMutableFacts(file, content, mirrored)) {
+    // The verified-mirror set is computed from CLAUDE.md and only ever
+    // applies to CLAUDE.md -- see verifiedMirroredHeadingForms's own comment
+    // for why AGENTS.md is excluded by design, not by oversight.
+    const mirroredForFile = file === "CLAUDE.md" ? mirrored : new Set();
+    for (const hit of scanMutableFacts(file, content, mirroredForFile)) {
       findings.push(
         finding(
           "MUTABLE_FACT_FOUND",

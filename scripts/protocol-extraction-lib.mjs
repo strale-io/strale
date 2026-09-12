@@ -60,7 +60,12 @@ export function splitFrontmatter(content) {
   return { frontmatter, body: match[2] };
 }
 
-function findMarkerOccurrences(bodyLines, marker) {
+/** Exported so entrypoint-parity-lib.mjs can locate a mirror file's
+ * BEGIN/END-delimited body without re-implementing marker search (finding 3,
+ * M4 batch 3 round 2: the mutable-fact scan verifies a heading against its
+ * mirror the way protocols:check does, rather than trusting the heading
+ * alone). */
+export function findMarkerOccurrences(bodyLines, marker) {
   const occurrences = [];
   bodyLines.forEach((line, idx) => {
     if (line.trim() === marker) occurrences.push(idx);
@@ -104,12 +109,34 @@ function extractSection(claudeLines, occurrence) {
   return claudeLines.slice(startIdx, endIdx + 1);
 }
 
-function trimTrailingBlank(lines) {
+/** Exported for the same reuse reason as findMarkerOccurrences above. */
+export function trimTrailingBlank(lines) {
   const out = [...lines];
   while (out.length > 0 && out[out.length - 1].trim() === "") {
     out.pop();
   }
   return out;
+}
+
+/** The exact lines between a mirror file's BEGIN/END verbatim markers,
+ * trailing-blank-trimmed -- the same slice checkProtocolFile compares
+ * CLAUDE.md's extracted section against. Returns null (never throws) when
+ * the file is missing, has no front matter, or does not carry exactly one
+ * marker pair, so a caller can treat "not a verifiable mirror" as a plain
+ * false rather than a crash. Reused by entrypoint-parity-lib.mjs's mutable-
+ * fact scan so a heading match is never trusted without checking the body
+ * it is supposed to carry actually matches the mirror. */
+export function readMirrorBody(root, relPath) {
+  const absolute = join(root, relPath);
+  if (!existsSync(absolute)) return null;
+  const content = readTextNormalized(absolute);
+  const { frontmatter, body } = splitFrontmatter(content);
+  if (!frontmatter) return null;
+  const bodyLines = body.split("\n");
+  const begins = findMarkerOccurrences(bodyLines, BEGIN_MARKER);
+  const ends = findMarkerOccurrences(bodyLines, END_MARKER);
+  if (begins.length !== 1 || ends.length !== 1) return null;
+  return trimTrailingBlank(bodyLines.slice(begins[0] + 1, ends[0]));
 }
 
 /** Every docs/governance/protocols/*.md file that carries at least one of

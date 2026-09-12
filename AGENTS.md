@@ -320,16 +320,37 @@ band; and anything a regulator would read as a claim about the product.
 Everything else is the agent's; on a genuinely borderline item, it takes
 the reversible version and says so.
 
-The act-first duties added 2026-08-22 (DEC-20260822-A) narrow this further
-in one direction only: demonstrably inaccurate public copy gets corrected
-down to what is true without asking, but never strengthened into a new
-claim (that stays founder-gated), and anything a regulator would read as a
-claim about the product stays Petter's in both directions, including
-withdrawing one. The hard boundary added the same day stands regardless of
-how obvious an item looks: an item sitting in the decision queue as
-`approval_required` stays there until Petter moves it, not because it was
-reclassified as routine, and a missing production write credential is a
-stop, not an obstacle to route around.
+The act-first duties added 2026-08-22 (DEC-20260822-A) are not permissions --
+they are obligations. Not acting on one of them, and reporting it instead, is
+the failure, not the caution. Two of the five go further than "may" and
+AGENTS.md must say so as plainly as the charter does: **an obvious,
+reversible, evidence-backed code error gets fixed, not reported** -- where
+the defect is demonstrated (a reproduction, a measurement, a failing case),
+the repair is reversible, and the change is inside the acts-alone list, it
+ships the same session with a discriminating test; and **a false monitoring
+or instrumentation signal gets the instrument repaired** -- an alert that
+fires on something correct is a defect in the alert, and it outranks the
+thing it was pointing at (LESSONS.md F1, the largest single failure family).
+A third duty narrows in one direction only: demonstrably inaccurate public
+copy gets corrected down to what is true without asking, but never
+strengthened into a new claim (that stays founder-gated), and anything a
+regulator would read as a claim about the product stays Petter's in both
+directions, including withdrawing one.
+
+The hard boundary added the same day stands regardless of how obvious an
+item looks, against every one of the above: an item sitting in the decision
+queue as `approval_required` stays there until Petter moves it, not because
+it was reclassified as routine; a missing production write credential is a
+stop, not an obstacle to route around; and **reversibility does not confer
+authority** -- silence is never approval however reversible the action, which
+restates the point because "it's easily undone" is exactly the argument that
+will present itself in the moment an act-first duty and a gate seem to point
+the same way. This is the counterweight to the reversible-version guidance
+two paragraphs up: that guidance is for an item already inside the agent's
+own authority: being right about an action, or able to undo it, is never
+authority to take it when the item sits behind a gate. When act-first and
+the gate pull in opposite directions, the gate wins, every time, and the
+session reports that it stopped.
 
 The charter's founder-gated list is broader still -- vendor/license commitments,
 deactivating revenue earners, DEC-20260428-B-grade builds, new external
