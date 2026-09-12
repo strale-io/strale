@@ -723,6 +723,31 @@
         "test_suites.updated_at"
       ],
       "sha256": "158ff257e7fe33d72992c15138359cba001954ac997ab0b0661bfa30a498352e"
+    },
+    {
+      "id": "M057",
+      "function": "runMigration0114_releaseCorrectedDependencyHealthFixtures",
+      "title": "release the 3 dependency_health suites quarantined on a stale fixture input",
+      "added": "2026-09-12",
+      "columns_written": [
+        "health_monitor_events.action_taken",
+        "health_monitor_events.capability_slug",
+        "health_monitor_events.details",
+        "health_monitor_events.event_type",
+        "health_monitor_events.human_override",
+        "health_monitor_events.tier",
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected",
+        "test_suites.baseline_captured_at",
+        "test_suites.baseline_output",
+        "test_suites.fixture_recapture_failures",
+        "test_suites.input",
+        "test_suites.quarantine_reason",
+        "test_suites.test_mode",
+        "test_suites.test_status",
+        "test_suites.updated_at"
+      ],
+      "sha256": "af9f0be711fe67d9a50c5abd220dae0532127c2d0f339b20a6cf01b7641c19c1"
     }
   ],
   "known_overlaps": [
@@ -980,17 +1005,19 @@
       "column": "test_suites.baseline_captured_at",
       "blocks": [
         "M040",
-        "M054"
+        "M054",
+        "M057"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M057 (0114, 2026-09-12) clears the baseline only for the exact three test_suites rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = dependency_health AND the fixture_recapture_exhausted quarantine marker), disjoint from M040/M054 by that same predicate."
     },
     {
       "column": "test_suites.baseline_output",
       "blocks": [
         "M040",
-        "M054"
+        "M054",
+        "M057"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M057 (0114, 2026-09-12) clears the baseline only for the exact three test_suites rows named in its own predicate — see the M057 note on baseline_captured_at above."
     },
     {
       "column": "test_suites.validation_rules",
@@ -1013,17 +1040,35 @@
       "column": "test_suites.test_mode",
       "blocks": [
         "M040",
-        "M056"
+        "M056",
+        "M057"
       ],
-      "note": "M040 (vendor control tower) writes test_mode as part of vendor-dependency suspension/restoration, scoped by vendor_capability_dependencies/vendor_capability_suspensions joins for capabilities tied to a specific vendor account. M056 (0113, 2026-09-12) writes test_mode only for the 32 test_suites rows matching an exact wrong-lock signature: test_type IN (negative, edge_case, known_bad) AND quarantine_reason LIKE the fixture_recapture_exhausted: marker AND capability_slug IN the 12 browserless-suite-migration.ts target capabilities. Disjoint by construction: M056 never touches a row unless it carries that specific quarantine_reason, which M040 never writes or reads."
+      "note": "M040 (vendor control tower) writes test_mode as part of vendor-dependency suspension/restoration, scoped by vendor_capability_dependencies/vendor_capability_suspensions joins for capabilities tied to a specific vendor account. M056 (0113, 2026-09-12) writes test_mode only for the 32 test_suites rows matching an exact wrong-lock signature: test_type IN (negative, edge_case, known_bad) AND quarantine_reason LIKE the fixture_recapture_exhausted: marker AND capability_slug IN the 12 browserless-suite-migration.ts target capabilities. Disjoint by construction: M056 never touches a row unless it carries that specific quarantine_reason, which M040 never writes or reads. M057 (0114, 2026-09-12) writes test_mode = 'live' only for the 3 dependency_health rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = 'dependency_health' AND the same fixture_recapture_exhausted marker); test_type disjoint from M056's IN list (dependency_health is not negative/edge_case/known_bad), and capability_slug disjoint from M040's vendor-suspension joins by the same check already run for M056."
     },
     {
       "column": "test_suites.fixture_recapture_failures",
       "blocks": [
         "M053",
-        "M056"
+        "M056",
+        "M057"
       ],
-      "note": "M053 (0093) only adds the column with ALTER TABLE ... ADD COLUMN IF NOT EXISTS DEFAULT 0 — mechanical extraction counts a DDL default as \"written\" the same as a data UPDATE, but it never touches an existing row's value. M056 (0113, 2026-09-12) resets the counter to 0 only for the 32 rows matching the exact wrong-lock signature (see the test_mode overlap note above). Disjoint by construction."
+      "note": "M053 (0093) only adds the column with ALTER TABLE ... ADD COLUMN IF NOT EXISTS DEFAULT 0 — mechanical extraction counts a DDL default as \"written\" the same as a data UPDATE, but it never touches an existing row's value. M056 (0113, 2026-09-12) resets the counter to 0 only for the 32 rows matching the exact wrong-lock signature (see the test_mode overlap note above). M057 (0114, 2026-09-12) resets the counter to 0 only for its own 3 named rows, disjoint from M056 by test_type (dependency_health vs negative/edge_case/known_bad), so no row is ever a candidate for both blocks' predicates."
+    },
+    {
+      "column": "test_suites.quarantine_reason",
+      "blocks": [
+        "M056",
+        "M057"
+      ],
+      "note": "M056 (0113, 2026-09-12) clears quarantine_reason only for the 32 rows matching test_type IN (negative, edge_case, known_bad) AND the fixture_recapture_exhausted marker AND capability_slug IN its 12 target capabilities. M057 (0114, 2026-09-12) clears it only for the 3 rows matching test_type = 'dependency_health' AND the same marker AND capability_slug IN (irish-company-data, lithuanian-company-data, swiss-company-data). Disjoint by construction: no row can satisfy both test_type predicates at once (dependency_health is not in M056's IN list), so the two blocks never contend for the same row."
+    },
+    {
+      "column": "test_suites.test_status",
+      "blocks": [
+        "M056",
+        "M057"
+      ],
+      "note": "Same predicate pair as test_suites.quarantine_reason immediately above: M056 resets test_status to 'normal' only for its 32 negative/edge_case/known_bad rows, M057 only for its 3 dependency_health rows. Disjoint by the same test_type argument."
     }
   ]
 }

@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-304 files (277 with a recorded intent, 27 without).
+305 files (278 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-12 | [`handoff/_general/from-code/2026-09-12-test-input-manifest-drift.md`](_general/from-code/2026-09-12-test-input-manifest-drift.md) | confirm and fix the fixture-input-drift gap flagged as follow-up in |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-checkin-morning.md`](_general/from-code/2026-09-12-checkin-morning.md) | run the 2026-09-12 morning operating session under DAILY-RUN.md — |
 | 2026-09-11 | [`handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md`](_general/from-code/2026-09-11-t6-vendor-strand-complete.md) | continue T6 (M3 repo-native workflows) as architect and reviewer, delegating implementation to Sonnet workers; this s... |
 | 2026-09-11 | [`handoff/_general/from-code/2026-09-11-recapture-refusal-lock.md`](_general/from-code/2026-09-11-recapture-refusal-lock.md) | fix the fixture-recapture-failure counter wrongly quarantining |

@@ -44,6 +44,7 @@ import {
 } from "../src/lib/onboarding-gates.js";
 import type { Manifest, ManifestExpectedField, ManifestLimitation, ManifestKnownAnswerFixture } from "../src/lib/capability-manifest-types.js";
 import { getKnownAnswerFixtures } from "../src/lib/capability-manifest-types.js";
+import { checkDependencyHealthDrift } from "../src/lib/test-input-drift.js";
 import { openOperatorDrizzle as readOnlyDbForValidation } from "../src/lib/operator-db.js";
 import { capabilities as capabilitiesTable } from "../src/db/schema.js";
 import { logWarn } from "../src/lib/log.js";
@@ -1311,6 +1312,57 @@ async function backfill(
       "  ⚠ Skipping known_answer row update — known_answer is array-form (multiple entry points). " +
         "Re-run with --dry-run to review, then hand-edit the specific DB row or re-onboard that entry point.",
     );
+  }
+
+  // Fixture-input-drift resync (2026-09-12 follow-up to the recapture-refusal
+  // fix, see handoff/_general/from-code/2026-09-11-recapture-refusal-lock.md).
+  //
+  // dependency_health's input is ALWAYS derived from the manifest
+  // (healthInput ?? knownAnswerEntries[0]?.input ?? {}, see
+  // buildTestSuites above and src/lib/test-input-drift.ts's doc comment for
+  // why there is no supported concept of a permanently-diverged stored
+  // input for this test type). Gated the same way as the known_answer
+  // resync above (--discover or --fix) so this never fires on a plain
+  // `--backfill` run that only adds missing tests or limitations: an
+  // operator has to explicitly ask this session to reconsider fixtures
+  // before a dependency_health row is touched.
+  if (hasKnownAnswerUpdate) {
+    const [existingDepHealth] = await db
+      .select({ input: testSuites.input })
+      .from(testSuites)
+      .where(
+        and(
+          eq(testSuites.capabilitySlug, manifest.slug),
+          eq(testSuites.testType, "dependency_health"),
+        ),
+      )
+      .limit(1);
+
+    if (existingDepHealth) {
+      const drift = checkDependencyHealthDrift(manifest.slug, existingDepHealth.input, manifest);
+      if (drift.drifted) {
+        await db
+          .update(testSuites)
+          .set({
+            input: drift.derivedInput as any,
+            baselineOutput: null,
+            baselineCapturedAt: null,
+            testMode: "live",
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(testSuites.capabilitySlug, manifest.slug),
+              eq(testSuites.testType, "dependency_health"),
+            ),
+          );
+        console.log(
+          `  ✓ Resynced dependency_health input to match manifest health_check_input ` +
+            `(was ${JSON.stringify(drift.storedInput)}, now ${JSON.stringify(drift.derivedInput)})`,
+        );
+        console.log(`    (baseline cleared, next test run will recapture)`);
+      }
+    }
   }
 
   // Cluster 2 Phase 3 C2: consolidate the backfill UPDATE fragments

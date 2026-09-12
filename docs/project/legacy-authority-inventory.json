@@ -764,7 +764,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "917a8a7a97ba0fcb1686d49cbfdf60cc71f4cc299d30028254fcd79d28839327",
+      "sha256": "5f542f8a34b7745142be4b0082ebd6189c4d33efe81fa873df8cdf03871334d5",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -795,6 +795,7 @@
         "apps/api/scripts/archive/deactivate-ecb.ts",
         "apps/api/scripts/check-audit-trail-readability.mjs",
         "apps/api/scripts/check-pii.mjs",
+        "apps/api/scripts/onboard.ts",
         "apps/api/scripts/pii-identifier-allowlist.txt",
         "apps/api/scripts/restore-swedish-known-answers.ts",
         "apps/api/scripts/session-close-check.ts",
@@ -808,6 +809,9 @@
         "apps/api/src/lib/handoff-preservation.test.ts",
         "apps/api/src/lib/handoff-preservation.ts",
         "apps/api/src/lib/startup-migrations.ledger.json",
+        "apps/api/src/lib/startup-migrations.ts",
+        "apps/api/src/lib/test-input-drift.test.ts",
+        "apps/api/src/lib/test-input-drift.ts",
         "apps/api/src/lib/test-runner.ts",
         "apps/api/test/guard-production-write-access.test.ts",
         "archive/README.md",
