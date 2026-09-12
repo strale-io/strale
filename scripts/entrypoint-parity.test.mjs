@@ -1209,6 +1209,182 @@ test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a decision id followed by an ordina
   }
 });
 
+// ── round 7 finding 1: the scan is paragraph-scoped, not line-scoped ─────
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a decision id and its summary split across an ordinary paragraph wrap still fires", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "This was decided under DEC-20260901-A:\nthe fee schedule moves to a new tier structure entirely.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.file === "CLAUDE.md" && f.detail.includes("DECISION_SUMMARY")),
+      JSON.stringify(broken),
+    );
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nThis was decided under DEC-20260901-A:\nthe fee schedule moves to a new tier structure entirely.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (COUNT): a bare count split across an ordinary paragraph wrap still fires", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "The platform currently lists 290\ncapabilities across every vertical.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.file === "CLAUDE.md" && f.detail.includes("COUNT")),
+      JSON.stringify(broken),
+    );
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nThe platform currently lists 290\ncapabilities across every vertical.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (MONEY): a price split across an ordinary paragraph wrap still fires", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "This capability was repriced and now\ncosts \u20ac50 per call under the new schedule.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.file === "CLAUDE.md" && f.detail.includes("MONEY")),
+      JSON.stringify(broken),
+    );
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nThis capability was repriced and now\ncosts \u20ac50 per call under the new schedule.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DATE): a staleness claim split across an ordinary paragraph wrap still fires", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "AGENTS.md":
+        `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nThis section was reviewed\n2026-08-01 by the founder.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.file === "AGENTS.md" && f.detail.includes("DATE")),
+      JSON.stringify(broken),
+    );
+
+    writeFiles(dir, {
+      "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace(
+        "\nThis section was reviewed\n2026-08-01 by the founder.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND: a finding on a wrapped paragraph reports the paragraph's start line, not the line the match half sits on", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nThe platform currently lists 290\ncapabilities across every vertical.\n`,
+    });
+    const lines = readFileSync(join(dir, "AGENTS.md"), "utf8").split("\n");
+    const paragraphStart = lines.findIndex((l) => l.includes("The platform currently lists 290")) + 1;
+    const result = checkMutableFacts(dir, readBoth(dir));
+    const hit = result.find((f) => f.file === "AGENTS.md" && f.detail.includes("COUNT"));
+    assert.ok(hit, JSON.stringify(result));
+    assert.ok(hit.detail.startsWith(`COUNT at line ${paragraphStart}:`), hit.detail);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND: a table row is never joined into a paragraph that follows it", () => {
+  const dir = cleanFixture();
+  try {
+    // "Verticals" and "seven" sit in a table row immediately followed by an
+    // ordinary paragraph naming an unrelated noun ("registries") and a
+    // count -- the table row must not absorb the paragraph after it (or vice
+    // versa) into one unit, which would misreport the paragraph's count as
+    // if it were part of the table row, or read the two together as one
+    // nonsense adjacency.
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "| Verticals | seven |\nTwelve registries are covered separately.\n",
+    });
+    const result = checkMutableFacts(dir, readBoth(dir));
+    const countHits = result.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("COUNT"));
+    assert.ok(countHits.some((f) => /seven/i.test(f.detail)), JSON.stringify(countHits));
+    assert.ok(countHits.some((f) => /twelve registries/i.test(f.detail)), JSON.stringify(countHits));
+    // Neither count's snippet swallows the other noun -- proof the two lines
+    // were scanned as separate units, not joined into one.
+    assert.ok(!countHits.some((f) => /seven.*registries/is.test(f.detail)), JSON.stringify(countHits));
+    assert.ok(!countHits.some((f) => /twelve.*verticals/is.test(f.detail)), JSON.stringify(countHits));
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND: a fence still flushes the paragraph before it, so a fact cannot join across the fence boundary", () => {
+  const dir = cleanFixture();
+  try {
+    // A sentence naming a count, immediately followed by a fenced example
+    // whose own content must never join into the paragraph before it, and
+    // prose resuming after the fence must not join into the paragraph
+    // before the fence either.
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "The registry lists\n```\nprice_cents: 5\n```\nnothing else on this line.\n",
+    });
+    const result = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(
+      result.filter((f) => f.file === "CLAUDE.md"),
+      [],
+      JSON.stringify(result),
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
 // ── real repo ─────────────────────────────────────────────────────────────
 
 test("real repo: CLAUDE.md and AGENTS.md pass entrypoint parity today", () => {

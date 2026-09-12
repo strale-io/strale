@@ -104,7 +104,20 @@
  *       structural allowlist (MUTABLE_FACT_ALLOWLIST below) covers the one
  *       section that is not a protocol mirror but still must keep a money
  *       figure: AGENTS.md's own restatement of the Operating Charter's
- *       authorization thresholds.
+ *       authorization thresholds. Round 7 finding 1: the scan used to hand
+ *       one raw line at a time to every pattern, so a fact whose two halves
+ *       landed on either side of an ordinary paragraph wrap was invisible
+ *       even though the same text unwrapped fired correctly -- the same
+ *       failure class the project had already recorded for a different
+ *       checker, a bare count split across a soft wrap. The scan now runs
+ *       over paragraph-joined units instead (extractFactScanUnits below): a
+ *       table row, a block quote line, or a list item with its wrapped
+ *       continuation lines is its own unit, and an ordinary paragraph's
+ *       lines are joined into one before any pattern runs, using the same
+ *       block shape rule (b)'s extractBlocks already established. No
+ *       pattern needed widening for this -- every one already matches
+ *       across the embedded newline a joined unit carries, because each
+ *       uses `\s`, which matches a newline the same as a space.
  *   (d) M1_ENTRYPOINT_ACTIVATED -- reused verbatim from
  *       scripts/check-project-context.mjs's checkPrecutoverEntrypoint
  *       rather than re-implemented, per this batch's brief.
@@ -1090,25 +1103,53 @@ function verifiedMirroredHeadingForms(root, extractionProblems = []) {
   return forms;
 }
 
-/** Scans one file's content for mutable-fact patterns, honoring the code-
- * fence skip (a manifest template's example literal, e.g. `price_cents: 5`,
- * is structural, not a live fact), this file's own allowlisted heading
- * sections (MUTABLE_FACT_ALLOWLIST), and every mirrored-protocol-body
- * heading (mirroredHeadingForms). Returns raw {category, line, snippet}
- * hits; the caller turns them into findings. */
-export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()) {
-  const allowlistedHeadings = new Set(
-    MUTABLE_FACT_ALLOWLIST.filter((entry) => entry.file === file).flatMap((entry) =>
-      [...headingForms(entry.heading)],
-    ),
-  );
-  const hits = [];
+/** Splits a file's non-fenced lines into the scan units the mutable-fact
+ * patterns run against, honoring the same block shape rule (b)'s
+ * extractBlocks uses: a table row, a block quote line, or a list item (with
+ * its wrapped continuation lines) is its own unit, and an ordinary
+ * paragraph -- lines with no marker of their own, delimited by blank lines
+ * -- is joined into a single unit so a fact whose two halves land on either
+ * side of an ordinary paragraph wrap is joined back into one string before
+ * any pattern runs (round 7 finding 1: the line-scoped scan handed one raw
+ * line at a time to every pattern, so a wrapped fact was invisible even
+ * though the same text unwrapped fired correctly). A table row is never
+ * joined into a neighbouring row or paragraph -- each `|`-prefixed line
+ * starts and ends its own unit -- because a table row is data, not prose,
+ * and joining rows would read as nonsense adjacency the patterns were never
+ * meant to match. A heading line is always its own single-line unit and is
+ * never joined to what follows or precedes it, the same boundary
+ * headingOccurrences and extractBlocks already treat it as; it also toggles
+ * `excluded` exactly the way the retired line-scoped scan did (a heading
+ * matching an allowlisted or mirrored form excludes its own body until the
+ * next heading at the same or a shallower level), including scanning the
+ * heading's own text under the *post-toggle* state, preserved unchanged so
+ * every existing exclusion test keeps behaving identically.
+ *
+ * Returns `{ text, startLine, excluded }` units, `startLine` 1-based and
+ * naming the unit's first line -- the location a finding reports for every
+ * hit inside it, whether the matched text begins on that line or a later
+ * one it was joined from. A paragraph's start is the useful, stable pointer:
+ * once a fact can span more than one line, "look at this paragraph" points
+ * a reader at something real, where "look at the line the match started on"
+ * would depend on which of several joined lines it happened to land on. */
+function extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms) {
+  const units = [];
   let excluded = false;
   let excludedLevel = 0;
-  const lines = content.split("\n");
+  let current = [];
+  let currentStart = null;
+  let currentExcluded = false;
+
+  const flush = () => {
+    if (current.length) units.push({ text: current.join("\n"), startLine: currentStart, excluded: currentExcluded });
+    current = [];
+    currentStart = null;
+  };
+
   walkFenceAware(lines, (line, i, fenced) => {
     const headingMatch = HEADING_RE.exec(line);
     if (headingMatch && !fenced) {
+      flush();
       const level = headingMatch[1].length;
       const forms = headingForms(headingMatch[2].trim());
       if (excluded && level <= excludedLevel) excluded = false;
@@ -1118,18 +1159,71 @@ export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()
         excluded = true;
         excludedLevel = level;
       }
+      units.push({ text: line, startLine: i + 1, excluded });
+      return;
     }
-    if (fenced || excluded) return;
-    const normalized = normalizeLineForScan(line);
+    if (fenced) {
+      flush();
+      return;
+    }
+    if (/^\s*$/.test(line)) {
+      flush();
+      return;
+    }
+    // A block quote is a paragraph boundary too (round 7 finding 1's own
+    // instruction): each quoted line starts a new unit, the same way a list
+    // item does, rather than joining into surrounding prose.
+    const isTableRow = /^\s*\|/.test(line);
+    const startsNewUnit = isTableRow || /^\s*(?:[-*]\s+|\d+\.\s+)/.test(line) || /^\s*>/.test(line);
+    if (startsNewUnit) flush();
+    if (current.length === 0) {
+      currentStart = i + 1;
+      currentExcluded = excluded;
+    }
+    current.push(line);
+    // A table row is always exactly one line -- unlike a list item, it never
+    // has a wrapped continuation, so it is flushed immediately rather than
+    // left open to absorb whatever ordinary prose line happens to follow it
+    // (which would misjoin a table row and the paragraph after it into one
+    // nonsense unit).
+    if (isTableRow) flush();
+  });
+  flush();
+  return units;
+}
+
+/** Scans one file's content for mutable-fact patterns, honoring the code-
+ * fence skip (a manifest template's example literal, e.g. `price_cents: 5`,
+ * is structural, not a live fact), this file's own allowlisted heading
+ * sections (MUTABLE_FACT_ALLOWLIST), and every mirrored-protocol-body
+ * heading (mirroredHeadingForms). Runs each pattern finder over a whole
+ * paragraph-joined unit (extractFactScanUnits above) rather than one raw
+ * line at a time, so a fact split across an ordinary paragraph wrap is not
+ * invisible to the scan (round 7 finding 1); every pattern already matches
+ * across the embedded newline a joined unit carries, because each one uses
+ * `\s`, which matches a newline the same as a space. Returns raw
+ * {category, line, snippet} hits, `line` naming the unit's start line; the
+ * caller turns them into findings. */
+export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()) {
+  const allowlistedHeadings = new Set(
+    MUTABLE_FACT_ALLOWLIST.filter((entry) => entry.file === file).flatMap((entry) =>
+      [...headingForms(entry.heading)],
+    ),
+  );
+  const hits = [];
+  const lines = content.split("\n");
+  for (const unit of extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms)) {
+    if (unit.excluded) continue;
+    const normalized = normalizeLineForScan(unit.text);
     for (const hit of [
       ...findMoney(normalized),
       ...findCounts(normalized),
       ...findDates(normalized),
       ...findDecisionSummaries(normalized),
     ]) {
-      hits.push({ ...hit, line: i + 1 });
+      hits.push({ ...hit, line: unit.startLine });
     }
-  });
+  }
   return hits;
 }
 
