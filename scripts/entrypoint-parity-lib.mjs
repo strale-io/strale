@@ -12,36 +12,88 @@
  *   (a) BOOTSTRAP_POINTER_MISSING -- both files must name the same project
  *       map (docs/project/START-HERE.md) and protocol router
  *       (docs/project/PROTOCOL-ROUTER.md).
- *   (b) PROTOCOL_UNREACHABLE -- every row in docs/project/protocol-
- *       coverage.yaml must be reachable from both files. Reachable means one
- *       of two mechanically distinct things, per this batch's review
- *       finding that a mention alone (no locator) had been enough:
+ *   (b) PROTOCOL_UNREACHABLE / LOCATOR_MISSING -- every row in docs/project/
+ *       protocol-coverage.yaml must be reachable from both files, and every
+ *       locator a file offers for a row must actually resolve. Round 3 of
+ *       review closed two more mechanical gaps (round 2's own header comment
+ *       below is preserved for the fixes it already made):
+ *         - "own text" now requires a *substantive* body under the matching
+ *           heading, not just the heading's presence (SUBSTANTIVE_WORD_FLOOR
+ *           below), and -- when the matching heading text only matches after
+ *           the trailing "(...)" qualifier is stripped -- the row's own
+ *           decision id (that stripped qualifier) must appear somewhere in
+ *           the heading or its body. Round 3 finding 1: a heading whose
+ *           words matched a row only after stripping, with a body about
+ *           something else entirely (a lunch menu, in the reviewer's own
+ *           case), satisfied "carries its own text" before this fix, because
+ *           only the heading text was ever checked. A word-count floor alone
+ *           does not catch this (a long lunch menu still has enough words);
+ *           the decision id check does, because a body actually about the
+ *           protocol has a reason to mention it and a lunch menu does not.
+ *         - a **locator** (the row's full_body path, or the literal word
+ *           "CLAUDE.md"/"CHARTER.md" naming the document that carries the
+ *           body) is no longer trusted as a bare string match. A path
+ *           locator must resolve to a real file (LOCATOR_MISSING if not --
+ *           round 3 finding 2's second case, and the reviewer's own "a
+ *           locator pointing at a file that does not exist"). A "CLAUDE.md"
+ *           or "CHARTER.md" word-locator must resolve to that document
+ *           *actually carrying the row* by the same own-text rule -- round 3
+ *           finding 2's first case, the reviewer's "the X protocol text was
+ *           removed from CLAUDE.md and is not documented anywhere else yet"
+ *           sentence, which satisfied the old rule because it contains the
+ *           literal string "CLAUDE.md" next to the row's name while saying,
+ *           in plain English, that CLAUDE.md does *not* carry it any more.
+ *       Round 2's rule, still in force: reachable means one of two
+ *       mechanically distinct things --
  *         - the file carries the protocol's own full text: it has an actual
  *           Markdown heading (any level) whose text matches the row's
  *           CLAUDE.md-sourced heading, exactly or with a trailing "(...)"
- *           qualifier stripped from both sides. This is what CLAUDE.md does
- *           for every mirrored row, and what AGENTS.md does for the rows it
- *           restates in full (Session contract, Review routing, Program
- *           register, Research and ideas, Design tokens, Cheap extras,
- *           Evidence receipts) rather than condensing.
- *         - otherwise, the file names the row AND gives a locator (the
- *           row's full_body path, or the literal word "CLAUDE.md"/
- *           "CHARTER.md" naming the document that carries the body) *in the
- *           same place*. "In the same place" is defined mechanically as:
- *           the same Markdown block, where a block is a table row, a list
- *           item (with its wrapped continuation lines), or a paragraph
- *           delimited by blank lines -- never the whole file. A bare mention
- *           of the protocol's name with the locator only in a different
- *           block (a table's header row, a different paragraph) does not
- *           count; this is exactly the shape of the review finding that
- *           replaced AGENTS.md's protocol table with a naming-only
- *           paragraph and still passed.
- *   (c) MUTABLE_FACT_FOUND -- neither file may carry a money amount
- *       (symbol or currency word), a capability/solution/vertical/country/
- *       any-other-countable-noun count (digits or spelled out in words), a
- *       dated "(Month YYYY)" label or "as of <date>" staleness claim (ISO or
- *       Month-YYYY), or a decision-id-plus-summary sentence (id followed by
- *       a separator or a verb, then a multi-word summary). The scan applies
+ *           qualifier stripped from both sides, now gated by the
+ *           substantive-body and decision-id checks above. If the row has a
+ *           CLAUDE.md mirror under docs/governance/protocols/ and the file
+ *           being checked is CLAUDE.md itself, the body must also match that
+ *           mirror exactly (verifiedMirroredHeadingForms below, reused
+ *           unchanged from round 2's mutable-fact mirror check) -- round 2
+ *           finding 3's fix, re-used rather than re-implemented, per this
+ *           round's brief. AGENTS.md is a condensed derivative by design and
+ *           is never held to mirror-exact equality (see
+ *           verifiedMirroredHeadingForms's own comment).
+ *         - otherwise, the file names the row AND gives a locator *in the
+ *           same place*, resolved as above. "In the same place" is defined
+ *           mechanically as: the same Markdown block, where a block is a
+ *           table row, a list item (with its wrapped continuation lines), or
+ *           a paragraph delimited by blank lines -- never the whole file. A
+ *           bare mention of the protocol's name with the locator only in a
+ *           different block does not count.
+ *   (c) MUTABLE_FACT_FOUND -- neither file may carry a money amount (symbol
+ *       or currency word, now including the Nordic and common currency
+ *       codes a writer here would actually use: SEK, NOK, DKK, GBP, CHF,
+ *       PLN, alongside EUR/USD/cents/euro/dollar), a capability/solution/
+ *       vertical/country/any-other-countable-noun count (digits or spelled
+ *       out in words; the five named domain nouns also match in noun-then-
+ *       count order, a curated list narrow enough not to misread ordinary
+ *       prose as a count -- an arbitrary plural noun only matches count-
+ *       then-noun, which is why the noun-then-count direction stays scoped
+ *       rather than generic), a
+ *       dated "(Month YYYY)" label or staleness claim ("as of", "Last
+ *       verified", "Updated", and now also "valid through", "refreshed",
+ *       "reviewed", "current through" -- round 3 finding 4), or a decision-
+ *       id-plus-summary sentence (id followed by a separator, or **any**
+ *       word that is not a common non-verb function word, then a multi-word
+ *       summary -- round 3 widens this from a fixed verb list). Round 3
+ *       findings 4-6 were three different ways the same figure or claim hid
+ *       from the scan: inside a Markdown link, inside bold/italic emphasis,
+ *       and split across table cells with only whitespace between them, plus
+ *       a decision summary that used a verb the old fixed list didn't
+ *       include. Rather than one more pattern per shape, every line is
+ *       normalized before matching (normalizeLineForScan below): link and
+ *       image syntax collapses to its visible text, emphasis markers are
+ *       stripped, and "|" table-cell separators become spaces, so adjacency
+ *       reads the way a reader actually sees the rendered line -- the count
+ *       patterns then also run in both count-then-noun and noun-then-count
+ *       order, which is what actually closes the split-table-cell gap (round
+ *       2's version joined adjacent cell pairs by hand for this one case;
+ *       round 3 folds it into the ordinary scan instead). The scan applies
  *       only to a file's own authored prose: it skips a fenced code block (a
  *       manifest template's example literal, not a live fact), a zero-value
  *       money literal (a fixed constant, never a price that drifts), and a
@@ -64,21 +116,40 @@
  * evidence for why the rule exists, not a claim about current state that
  * can go stale -- a blanket date ban would either flag all of them (false
  * positives with no fix but an ever-growing per-date allowlist) or need an
- * allowlist keyed to file/line that breaks on every edit. The two narrower,
- * mechanically testable date patterns above (parenthetical "(Month YYYY)"
- * section labels, and "as of <date>" staleness claims) are exactly the
- * drift-prone shapes M4 batch 2's own report found and removed
- * (archive/sessions/2026-09-11-m4-b2-claude-md.md, "Mutable facts moved");
- * a blanket scan is left out as untestable against this repository's real
- * content, per this batch's instruction to leave out a rule that cannot be
- * proved by planting.
+ * allowlist keyed to file/line that breaks on every edit. The narrower,
+ * mechanically testable date shapes above are exactly the drift-prone shapes
+ * this repository's own history has produced; a blanket scan is left out as
+ * untestable against this repository's real content, per the standing
+ * instruction to leave out a rule that cannot be proved by planting.
  *
- * A known limitation of the mirrored-section scope in (c): a section is
- * identified as a mirror by its heading text matching a manifest row, not
- * by comparing its body against CLAUDE.md's copy. A future edit that adds a
- * genuinely new, stale fact to one of these sections in AGENTS.md (rather
- * than keeping it a faithful copy) would not be caught by this scan; that
- * fidelity check is out of this batch's scope.
+ * A known limitation of the mirrored-section scope in (c), stated plainly
+ * rather than chased with a heuristic (round 3 finding 7): a fact added to a
+ * protocol's CLAUDE.md section **and** its mirror, in the same change, is
+ * invisible to this scan and to `protocols:check` alike -- both check that
+ * the two copies are equal to each other, never that either is true. The
+ * reviewer's framing was the historical-incident-dates case, but the gap is
+ * broader than dates: any fact introduced through the ordinary mirror-
+ * maintenance path (edit CLAUDE.md's section, regenerate or hand-edit the
+ * matching docs/governance/protocols/*.md body to match) passes both checks
+ * regardless of whether the fact is stale, current, or simply wrong, because
+ * neither check has an independent source of truth to compare against --
+ * only each other. What actually governs that path is the reviewed pull
+ * request that makes the edit, not a check; a cheap, exact way to narrow
+ * this would need an independent ground truth to diff the mirrored body
+ * against (the manifest carries no such field today, and inventing one that
+ * is itself hand-maintained would just move the same trust problem one file
+ * over) -- not attempted here, per the brief's instruction to say the cost
+ * rather than build a heuristic.
+ *
+ * A second, narrower known limitation of the mirrored-section scope in (c):
+ * a section is identified as a mirror by its heading text matching a
+ * manifest row *and* its body matching the mirror file, not by tracking
+ * which lines changed. A future edit that adds a genuinely new, stale fact
+ * to one of these sections in AGENTS.md (rather than keeping it a faithful
+ * copy) would not be caught by this scan, because AGENTS.md's own-text
+ * sections are never checked against the mirror in the first place (see
+ * verifiedMirroredHeadingForms's comment); that fidelity check is out of
+ * this batch's scope.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -93,6 +164,7 @@ export const BOOTSTRAP_TOKENS = [
   "docs/project/START-HERE.md",
   "docs/project/PROTOCOL-ROUTER.md",
 ];
+export const CHARTER_PATH = "docs/company/CHARTER.md";
 
 // Section headings, exact text, whose entire body (until the next heading
 // at the same or a shallower level) is allowed to carry a money literal or
@@ -144,31 +216,20 @@ function stripTrailingParenthetical(text) {
   return text.replace(/\s*\([^)]*\)\s*$/, "").trim();
 }
 
-function headCase(text) {
-  return normalizeDashes(text).toLowerCase().trim();
+/** The literal text of a trailing "(...)" qualifier, or null if there is
+ * none -- for a row name like "Example Protocol (DEC-TEST)" this is
+ * "DEC-TEST". Used to require a stripped-only heading match to also carry
+ * the row's own decision id somewhere nearby (round 3 finding 1: a heading
+ * that only shares its opening words, with an unrelated body, must not
+ * satisfy a row just because a word-count floor alone can't tell a real
+ * paragraph from a long one about something else). */
+function trailingParentheticalText(text) {
+  const m = /\(([^()]*)\)\s*$/.exec(text.trim());
+  return m ? m[1].trim() : null;
 }
 
-// A line starting a fenced code block, tracked the same way scanMutableFacts
-// already tracks it below -- a "#"-prefixed line inside a fence (a YAML
-// comment, a Markdown example) is not an authored heading of the file, and
-// must never satisfy hasOwnFullText on its own (finding 1, M4 batch 3 round
-// 2: pasting a protocol's heading into an example block made the row
-// reachable with no real content behind it).
-const FENCE_RE = /^\s*```/;
-
-function headingsIn(content) {
-  const out = [];
-  let inFence = false;
-  for (const line of content.split("\n")) {
-    if (FENCE_RE.test(line)) {
-      inFence = !inFence;
-      continue;
-    }
-    if (inFence) continue;
-    const m = HEADING_RE.exec(line);
-    if (m) out.push({ level: m[1].length, text: m[2].trim() });
-  }
-  return out;
+function headCase(text) {
+  return normalizeDashes(text).toLowerCase().trim();
 }
 
 /** Both the exact and trailing-parenthetical-stripped normalized forms of a
@@ -179,6 +240,175 @@ function headingForms(text) {
   const core = stripTrailingParenthetical(text);
   if (core) forms.add(headCase(core));
   return forms;
+}
+
+// ── fence tracking, shared by every rule that needs it ──────────────────
+
+// A fence marker: an optional blockquote prefix (any number of "> " or ">"
+// runs, since a fence can be nested inside a quoted aside), then a run of at
+// least three of the same fence character, backtick or tilde (round 3
+// finding 3: a `~~~` fence, or a fence opened with more than three markers,
+// or one inside a blockquote, evaded every fence-aware scan before this fix,
+// which reopened the heading-in-a-fence defeat rule (b) closed in round 2).
+// The character and the marker's run length are both captured so a close
+// can be required to use the same character and be at least as long as the
+// open (CommonMark's own closing rule, and the shape round 3 asked for).
+const FENCE_OPEN_RE = /^\s*(?:>\s*)*(`{3,}|~{3,})/;
+
+function fenceMarker(line) {
+  const m = FENCE_OPEN_RE.exec(line);
+  if (!m) return null;
+  const marker = m[1];
+  return { char: marker[0], length: marker.length };
+}
+
+/** Walks `lines`, calling `onLine(line, index, fenced)` for every line, where
+ * `fenced` is true for the fence delimiter lines themselves and every line
+ * between an open and its close. A close must use the same fence character
+ * as the open and be at least as long a run (never closed by a shorter or
+ * differently-charactered marker). Returns true when a fence is left open at
+ * the end of `lines` -- the single fence-tracking primitive every rule below
+ * shares (headings, blocks, the mutable-fact scan, and the unterminated-
+ * fence guard itself), so a fence-shape fix here closes all of them at once
+ * instead of needing four separate patches (round 3 finding 3's own
+ * instruction: "apply it in every place that tracks fences"). */
+function walkFenceAware(lines, onLine) {
+  let open = null;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const marker = fenceMarker(line);
+    if (open) {
+      const isClose = marker !== null && marker.char === open.char && marker.length >= open.length;
+      onLine(line, i, true);
+      if (isClose) open = null;
+      continue;
+    }
+    if (marker) {
+      open = marker;
+      onLine(line, i, true);
+      continue;
+    }
+    onLine(line, i, false);
+  }
+  return open !== null;
+}
+
+/** True when a file leaves a fence open at its end. Fence tracking is a
+ * toggle, so an unclosed fence makes every later line read as fenced and
+ * therefore skipped by the heading, block and fact scans alike. That is an
+ * evasion route, not a formatting slip: a fact or a missing pointer after an
+ * unclosed fence would be invisible to all three rules at once. Reported, so
+ * the check never quietly stops looking.
+ */
+export function hasUnterminatedFence(content) {
+  return walkFenceAware(content.split("\n"), () => {});
+}
+
+/** Every heading not inside a fence, with the (0-based) line index it starts
+ * at, in document order. Shared by hasOwnFullText/contentCarriesHeading
+ * (which need the index to find the heading's own body) and by
+ * scanMutableFacts's mirrored-section exclusion. */
+function headingOccurrences(content) {
+  const lines = content.split("\n");
+  const occurrences = [];
+  walkFenceAware(lines, (line, index, fenced) => {
+    if (fenced) return;
+    const m = HEADING_RE.exec(line);
+    if (m) occurrences.push({ index, level: m[1].length, text: m[2].trim() });
+  });
+  return { lines, occurrences };
+}
+
+function headingsIn(content) {
+  return headingOccurrences(content).occurrences.map(({ level, text }) => ({ level, text }));
+}
+
+/** The lines owned by heading occurrence `occIndex`: everything after its
+ * heading line up to (not including) the next occurrence at the same or a
+ * shallower level, or the end of the file. Fenced headings never appear in
+ * `occurrences` (see headingOccurrences), so a heading pasted inside an
+ * example block can never end a real section early. */
+function sectionBodyLines({ lines, occurrences }, occIndex) {
+  const occ = occurrences[occIndex];
+  let endIdx = lines.length;
+  for (let j = occIndex + 1; j < occurrences.length; j++) {
+    if (occurrences[j].level <= occ.level) {
+      endIdx = occurrences[j].index;
+      break;
+    }
+  }
+  return lines.slice(occ.index + 1, endIdx);
+}
+
+// The floor a heading's body must clear to count as "carries its own text"
+// rather than a stub. Chosen as a small, deliberately low bar: it exists
+// only to catch an effectively empty section (a heading with nothing, or
+// one throwaway word, under it) -- it is not meant to, and by itself cannot,
+// distinguish a real paragraph about the protocol from a long paragraph
+// about something else (the lunch-menu case); that distinction is the
+// decision-id-on-a-stripped-match rule below, which checks content, not
+// length. Six words is enough to rule out "TBD." or a single placeholder
+// sentence while never rejecting any genuine section in this repository.
+const SUBSTANTIVE_WORD_FLOOR = 6;
+
+function wordCount(text) {
+  return text.split(/\s+/).map((w) => w.trim()).filter(Boolean).length;
+}
+
+function isSubstantiveBody(bodyLines) {
+  return wordCount(bodyLines.join(" ")) >= SUBSTANTIVE_WORD_FLOOR;
+}
+
+/** True when `haystack` (a heading's text plus its body) contains `token`
+ * (a decision id or other short literal) as a case-insensitive, dash-
+ * normalized substring. */
+function containsToken(haystack, token) {
+  return headCase(haystack).includes(headCase(token));
+}
+
+/** Finds the first heading occurrence in `content` that carries
+ * `headingText`'s own full text: an actual Markdown heading (any level)
+ * matching exactly, or matching only after both sides' trailing "(...)"
+ * qualifier is stripped -- in which case `decisionToken` (the row's own
+ * trailing-parenthetical text, e.g. "DEC-20260320-B") must also appear in
+ * the heading or its body, so a heading that merely shares its opening words
+ * cannot satisfy a row on the strength of a long-but-unrelated body (round 3
+ * finding 1). Either way, the body under the heading must clear
+ * SUBSTANTIVE_WORD_FLOOR. Returns { matched: false } or
+ * { matched: true, heading, occIndex }. */
+function contentCarriesHeading(content, headingText, decisionToken) {
+  const parsed = headingOccurrences(content);
+  const exactForm = headCase(headingText);
+  const strippedHeading = stripTrailingParenthetical(headingText);
+  const strippedForm = strippedHeading ? headCase(strippedHeading) : null;
+  for (let i = 0; i < parsed.occurrences.length; i++) {
+    const occ = parsed.occurrences[i];
+    const actualExact = headCase(occ.text);
+    const actualStrippedText = stripTrailingParenthetical(occ.text);
+    const actualStrippedForm = actualStrippedText ? headCase(actualStrippedText) : null;
+
+    let kind = null;
+    if (actualExact === exactForm) {
+      kind = "exact";
+    } else if (
+      (strippedForm && (actualExact === strippedForm || actualStrippedForm === strippedForm)) ||
+      (actualStrippedForm && actualStrippedForm === exactForm)
+    ) {
+      kind = "stripped";
+    }
+    if (!kind) continue;
+
+    const body = sectionBodyLines(parsed, i);
+    if (!isSubstantiveBody(body)) continue;
+
+    if (kind === "stripped") {
+      if (!decisionToken) continue;
+      if (!containsToken(`${occ.text}\n${body.join("\n")}`, decisionToken)) continue;
+    }
+
+    return { matched: true, heading: occ.text, occIndex: i };
+  }
+  return { matched: false };
 }
 
 // ── (a) bootstrap/router pointer ────────────────────────────────────────
@@ -206,27 +436,69 @@ export function checkBootstrapPointers(contents) {
 const HEADING_SOURCE_PREFIX = "CLAUDE.md heading: ";
 const CHARTER_SOURCE_PREFIX = "docs/company/CHARTER.md heading:";
 
-/** The row's CLAUDE.md heading text, or null for a row sourced elsewhere. */
-function rowClaudeHeading(row) {
-  if (!row.source || !row.source.startsWith(HEADING_SOURCE_PREFIX)) return null;
-  return row.source.slice(HEADING_SOURCE_PREFIX.length).trim();
+/** { doc: "CLAUDE.md" | "CHARTER.md", heading } for a row sourced from
+ * either document, or null for a row sourced neither way (there is none
+ * today, but this stays defensive). */
+function rowHeadingSource(row) {
+  if (!row.source) return null;
+  if (row.source.startsWith(HEADING_SOURCE_PREFIX)) {
+    return { doc: "CLAUDE.md", heading: row.source.slice(HEADING_SOURCE_PREFIX.length).trim() };
+  }
+  if (row.source.startsWith(CHARTER_SOURCE_PREFIX)) {
+    return { doc: "CHARTER.md", heading: row.source.slice(CHARTER_SOURCE_PREFIX.length).trim() };
+  }
+  return null;
 }
 
-/** True when `content` carries the row's own full text: an actual Markdown
- * heading (any level) whose text matches the row's CLAUDE.md-sourced
- * heading, exactly or with both sides' trailing "(...)" qualifier stripped.
- * A CHARTER.md-sourced row (full_body is docs/company/CHARTER.md, not
- * either entrypoint) never satisfies this for CLAUDE.md or AGENTS.md --
- * both always reach it through a named locator instead (below). */
-function hasOwnFullText(content, row) {
+/** The row's CLAUDE.md heading text, or null for a row sourced elsewhere. */
+function rowClaudeHeading(row) {
+  const src = rowHeadingSource(row);
+  return src && src.doc === "CLAUDE.md" ? src.heading : null;
+}
+
+/** True when `content` (some document's own text) carries `row`'s full
+ * text under its own heading, gated on the substantive-body and decision-id
+ * rules above. `opts.file` and `opts.mirroredForms` (the output of
+ * verifiedMirroredHeadingForms) together enforce round 2's mirror-equality
+ * rule: when `content` is CLAUDE.md's own text and the row has a CLAUDE.md-
+ * sourced mirror, the matched heading's form must be one of the verified-
+ * mirror forms, i.e. its body must equal the mirror file byte for byte, not
+ * merely look like the right heading with a since-changed body underneath
+ * (round 2 finding 3). AGENTS.md is a condensed derivative by design and is
+ * never held to that equality (see verifiedMirroredHeadingForms's comment);
+ * a CHARTER.md-sourced row never satisfies this at all for CLAUDE.md or
+ * AGENTS.md -- it always reaches them through a named locator instead
+ * (checkLocatorToken below). */
+function hasOwnFullText(content, row, { file, mirroredForms } = {}) {
   const heading = rowClaudeHeading(row);
   if (!heading) return false;
-  const wanted = headingForms(heading);
-  for (const h of headingsIn(content)) {
-    const actual = headingForms(h.text);
-    for (const form of actual) if (wanted.has(form)) return true;
+  const decisionToken = trailingParentheticalText(row.name);
+  const result = contentCarriesHeading(content, heading, decisionToken);
+  if (!result.matched) return false;
+  if (file === "CLAUDE.md" && mirroredForms) {
+    const matchedForms = headingForms(result.heading);
+    if (![...matchedForms].some((f) => mirroredForms.has(f))) return false;
   }
-  return false;
+  return true;
+}
+
+/** True when CHARTER.md's own text (read fresh from `root`, cached in
+ * `charterCache`) carries a CHARTER.md-sourced row's own heading, by the
+ * same substantive-body / decision-id rule as hasOwnFullText -- but never
+ * held to mirror-equality, since docs/company/CHARTER.md is the row's own
+ * full_body, not a mirror of something else. */
+function charterCarriesRow(root, row, charterCache) {
+  const src = rowHeadingSource(row);
+  if (!src || src.doc !== "CHARTER.md") return false;
+  let content = charterCache.get(CHARTER_PATH);
+  if (content === undefined) {
+    const absolute = resolve(root, CHARTER_PATH);
+    content = existsSync(absolute) ? normalizeEol(readFileSync(absolute, "utf8")) : null;
+    charterCache.set(CHARTER_PATH, content);
+  }
+  if (content === null) return false;
+  const decisionToken = trailingParentheticalText(row.name);
+  return contentCarriesHeading(content, src.heading, decisionToken).matched;
 }
 
 /** Every substring whose presence names the row (its own name, or the
@@ -251,7 +523,8 @@ function nameTokens(row) {
  * (identical to the mirror path under docs/governance/protocols/ for every
  * row in this manifest), or the literal name of the document that carries
  * it (CLAUDE.md for a CLAUDE.md-sourced row, CHARTER.md for the charter
- * row). */
+ * row). Presence alone is no longer sufficient -- checkLocatorToken below
+ * resolves each one before it counts. */
 function locatorTokens(row) {
   const tokens = new Set([row.full_body]);
   if (row.source && row.source.startsWith(HEADING_SOURCE_PREFIX)) {
@@ -262,46 +535,73 @@ function locatorTokens(row) {
   return [...tokens].filter(Boolean);
 }
 
+/** Resolves one locator token found in a name-bearing block. A path token
+ * (the row's own full_body) resolves when that file exists in the
+ * repository -- round 3 finding 2's "a locator pointing at a file that does
+ * not exist" case; `missingFile: true` marks this specific failure so the
+ * caller can raise the distinct LOCATOR_MISSING finding rather than the
+ * generic PROTOCOL_UNREACHABLE, because a dangling pointer is worse than no
+ * pointer at all. A "CLAUDE.md"/"CHARTER.md" word token resolves only when
+ * that document actually carries the row by the own-text rule -- round 3
+ * finding 2's first case, a sentence that says in plain English that
+ * CLAUDE.md no longer carries the protocol, while still containing the bare
+ * word "CLAUDE.md". Any other token (there is none by construction --
+ * locatorTokens only ever emits the row's own full_body or its own source
+ * document's name) resolves to nothing. */
+function checkLocatorToken(root, token, row, contents, mirroredForms, charterCache) {
+  if (token === row.full_body) {
+    const exists = existsSync(resolve(root, token));
+    return { resolves: exists, missingFile: !exists };
+  }
+  if (token === "CLAUDE.md") {
+    return { resolves: hasOwnFullText(contents["CLAUDE.md"], row, { file: "CLAUDE.md", mirroredForms }), missingFile: false };
+  }
+  if (token === "CHARTER.md") {
+    return { resolves: charterCarriesRow(root, row, charterCache), missingFile: false };
+  }
+  return { resolves: false, missingFile: false };
+}
+
 /** Splits Markdown content into blocks: a table row, a list item (with its
  * wrapped continuation lines), or a paragraph delimited by blank lines, are
  * each their own block. This is "the same place" a name and a locator must
  * both appear in for rule (b) -- never the whole file, and for a table,
  * never the header row on behalf of a data row two lines below it.
  *
- * A fence is excluded twice over (finding 2, M4 batch 3 round 2): the fence
- * delimiter and everything inside it are dropped from every block entirely
- * (fenced content, e.g. a manifest template's example path, is never a
- * locator a reader follows from prose), AND a fence boundary always flushes
- * whatever block came before it, so a sentence naming a protocol immediately
- * followed by a fenced snippet can never absorb a path inside that fence
- * into its own block, and prose that resumes after the fence starts a new
- * block rather than continuing the one before it. Both halves are needed:
- * dropping the content alone would still let a name-bearing paragraph and a
- * locator-bearing paragraph merge across the fence if neither flushed first. */
+ * A fence is excluded twice over: the fence delimiter and everything inside
+ * it are dropped from every block entirely (fenced content, e.g. a manifest
+ * template's example path, is never a locator a reader follows from prose),
+ * AND a fence boundary always flushes whatever block came before it, so a
+ * sentence naming a protocol immediately followed by a fenced snippet can
+ * never absorb a path inside that fence into its own block, and prose that
+ * resumes after the fence starts a new block rather than continuing the one
+ * before it. Both halves are needed: dropping the content alone would still
+ * let a name-bearing paragraph and a locator-bearing paragraph merge across
+ * the fence if neither flushed first. Uses the same walkFenceAware primitive
+ * as every other fence-aware rule in this file (round 3 finding 3), so a
+ * `~~~` fence, a longer-than-three-marker fence, or a blockquoted fence is
+ * excluded here exactly as it is everywhere else. */
 function extractBlocks(content) {
   const blocks = [];
   let current = [];
-  let inFence = false;
   const flush = () => {
     if (current.length) blocks.push(current.join("\n"));
     current = [];
   };
-  for (const line of content.split("\n")) {
-    if (FENCE_RE.test(line)) {
+  walkFenceAware(content.split("\n"), (line, _index, fenced) => {
+    if (fenced) {
       flush();
-      inFence = !inFence;
-      continue;
+      return;
     }
-    if (inFence) continue;
     if (/^\s*$/.test(line)) {
       flush();
-      continue;
+      return;
     }
     const startsNewBlock =
       /^\s*\|/.test(line) || /^\s*(?:[-*]\s+|\d+\.\s+)/.test(line) || HEADING_RE.test(line);
     if (startsNewBlock) flush();
     current.push(line);
-  }
+  });
   flush();
   return blocks;
 }
@@ -311,18 +611,28 @@ function normalizeForMatch(text) {
 }
 
 /** True when some single block of `content` contains both a name token and
- * a locator token for `row`. */
-function reachableByBlock(content, row) {
+ * a *resolved* locator token for `row` (checkLocatorToken above).
+ * `missingLocator` is true when a block named the row and offered a path
+ * locator whose file does not exist, even if reachability is ultimately
+ * satisfied some other way -- a dangling pointer is reported regardless. */
+function reachableByBlock(root, content, row, contents, mirroredForms, charterCache) {
   const names = nameTokens(row).map(normalizeForMatch).filter(Boolean);
-  const locators = locatorTokens(row).map(normalizeForMatch).filter(Boolean);
-  if (names.length === 0 || locators.length === 0) return false;
+  const locators = locatorTokens(row);
+  if (names.length === 0 || locators.length === 0) return { reachable: false, missingLocator: false };
+  let missingLocator = false;
   for (const block of extractBlocks(content)) {
     const normalized = normalizeForMatch(block);
     const hasName = names.some((t) => normalized.includes(t));
     if (!hasName) continue;
-    if (locators.some((t) => normalized.includes(t))) return true;
+    for (const token of locators) {
+      const normalizedToken = normalizeForMatch(token);
+      if (!normalizedToken || !normalized.includes(normalizedToken)) continue;
+      const { resolves, missingFile } = checkLocatorToken(root, token, row, contents, mirroredForms, charterCache);
+      if (missingFile) missingLocator = true;
+      if (resolves) return { reachable: true, missingLocator };
+    }
   }
-  return false;
+  return { reachable: false, missingLocator };
 }
 
 export function checkProtocolReachability(root, contents) {
@@ -331,15 +641,35 @@ export function checkProtocolReachability(root, contents) {
   if (!valid) {
     return schemaFindings.map((f) => finding(f.code, f.file, f.detail));
   }
+  const mirroredForms = verifiedMirroredHeadingForms(root);
+  const charterCache = new Map();
   for (const row of manifest.protocols) {
     for (const [file, content] of Object.entries(contents)) {
-      const reachable = hasOwnFullText(content, row) || reachableByBlock(content, row);
-      if (!reachable) {
+      const own = hasOwnFullText(content, row, { file, mirroredForms });
+      const { reachable: byBlock, missingLocator } = reachableByBlock(
+        root,
+        content,
+        row,
+        contents,
+        mirroredForms,
+        charterCache,
+      );
+      if (missingLocator) {
+        findings.push(
+          finding(
+            "LOCATOR_MISSING",
+            file,
+            `row "${row.id}" (${row.name}) names a locator path that does not exist in the repository`,
+          ),
+        );
+      }
+      const reachable = own || byBlock;
+      if (!reachable && !missingLocator) {
         findings.push(
           finding(
             "PROTOCOL_UNREACHABLE",
             file,
-            `row "${row.id}" (${row.name}) has no heading of its own in ${file}, and no single block (table row, list item, or paragraph) in ${file} both names it and gives a locator (its full body path, or the document that carries it)`,
+            `row "${row.id}" (${row.name}) has no heading of its own in ${file}, and no single block (table row, list item, or paragraph) in ${file} both names it and gives a locator that resolves (its full body path, or the document that carries it)`,
           ),
         );
       }
@@ -351,24 +681,36 @@ export function checkProtocolReachability(root, contents) {
 // ── (c) mutable facts ───────────────────────────────────────────────────
 
 const MONEY_RE =
-  /(?<sym>[€$])\s?(?<symAmt>\d[\d.,]*)|(?<wordAmt>\d[\d.,]*)\s*(?:cents|EUR|USD|euros?|dollars?)\b/gi;
+  /(?<sym>[€$])\s?(?<symAmt>\d[\d.,]*)|(?<wordAmt>\d[\d.,]*)\s*(?:cents|EUR|USD|SEK|NOK|DKK|GBP|CHF|PLN|euros?|dollars?)\b/gi;
 
 // A number written in digits ("290", "300+") or spelled out in English
-// words ("seven", "two hundred and ninety"), immediately followed by a
-// countable noun -- either one of five domain nouns this repo has drifted
-// on before (kept for the singular "capability" form, which the generic
-// plural heuristic below would miss), or, more generally, any other word
-// that looks like a plural noun (ends in "s") and is not one of the common
-// non-noun words that also end in "s" (COUNT_NOUN_STOPWORDS).
+// words ("seven", "two hundred and ninety"), adjacent to a countable noun --
+// either one of five domain nouns this repo has drifted on before (kept for
+// the singular "capability" form, which the generic plural heuristic below
+// would miss), or, more generally, any other word that looks like a plural
+// noun (ends in "s") and is not one of the common non-noun words that also
+// end in "s" (COUNT_NOUN_STOPWORDS). Both a count-then-noun and a
+// noun-then-count order are recognised (round 3 finding 4's split-table-cell
+// case reads as either order once "|" becomes a plain space -- see
+// normalizeLineForScan below -- so the adjacency check itself must accept
+// both, rather than special-casing table cells the way round 2 did).
 const NUMBER_WORD =
   "(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)";
 const NUMBER_PHRASE = `${NUMBER_WORD}(?:[\\s-]+(?:and[\\s-]+)?${NUMBER_WORD})*`;
 const COUNT_QUANTITY = `(?:\\d+\\+?|${NUMBER_PHRASE})`;
-const NAMED_COUNT_RE = new RegExp(
-  `\\b${COUNT_QUANTITY}\\s+(?:capabilit(?:y|ies)|solutions?|verticals?|categories|countries)\\b`,
-  "gi",
-);
-const GENERIC_COUNT_RE = new RegExp(`\\b${COUNT_QUANTITY}\\s+([A-Za-z][A-Za-z-]*s)\\b`, "gi");
+const NAMED_COUNT_NOUNS = "(?:capabilit(?:y|ies)|solutions?|verticals?|categories|countries)";
+const NAMED_COUNT_FORWARD_RE = new RegExp(`\\b${COUNT_QUANTITY}\\s+${NAMED_COUNT_NOUNS}\\b`, "gi");
+// Backward order (noun before count -- "Verticals: seven" split across a
+// table cell, round 3 finding 4) is only applied to this fixed, curated noun
+// list, never to the generic "any plural-looking word" heuristic below: a
+// generic backward scan (a common word ending in "s" immediately followed by
+// a bare number word like "one") reads too many ordinary sentences as counts
+// -- "the check prints one fix per finding" is real CLAUDE.md prose, not a
+// count, and "prints" only looks like a countable noun in the generic
+// backward direction. The five named nouns are specific enough that this
+// false-positive shape doesn't occur among them.
+const NAMED_COUNT_BACKWARD_RE = new RegExp(`\\b${NAMED_COUNT_NOUNS}\\s+${COUNT_QUANTITY}\\b`, "gi");
+const GENERIC_COUNT_FORWARD_RE = new RegExp(`\\b${COUNT_QUANTITY}\\s+([A-Za-z][A-Za-z-]*s)\\b`, "gi");
 const COUNT_NOUN_STOPWORDS = new Set([
   "is",
   "was",
@@ -436,28 +778,67 @@ const MONTH_NAMES_RE =
 // same three date shapes.
 const DATE_VALUE_RE = `(?:\\d{4}-\\d{2}(?:-\\d{2})?|${MONTH_NAMES_RE}\\s+\\d{4}|Q[1-4]\\s+\\d{4})`;
 const DATED_PARENTHETICAL_RE = new RegExp(`\\(${MONTH_NAMES_RE}\\s+\\d{4}\\)`, "g");
-// "as of <date>" in any of the three date shapes, including the quarter form
-// ("Status as of Q3 2026") finding 4 named explicitly -- a superset of the
-// prior ISO-only and Month-YYYY-only patterns, so a plain "as of" prefix is
-// enough once the date value it precedes is recognised in any shape.
+// "as of <date>" in any of the three date shapes, including the quarter form.
 const AS_OF_RE = new RegExp(`\\bas of ${DATE_VALUE_RE}\\b`, "gi");
-// The two other ordinary ways a dated status is written in this repo's
-// prose, beyond "as of <date>" (finding 4): "Last verified: <date>" and
-// "Updated <date>" (with or without "on"). Both are staleness claims about
-// the current state of a section, exactly the shape rule (c) exists to
-// catch -- neither was recognised before this fix, which is why a table-
-// cell count could hide but so could a plain "Last verified: 2026-08-01"
-// line with no table involved.
+// The other ordinary ways a dated status is written in this repo's prose,
+// beyond "(Month YYYY)" and "as of <date>": "Last verified: <date>",
+// "Updated <date>", "valid through <date>", "refreshed <date>", "reviewed
+// <date>" and "current through <date>" (round 3 finding 4 adds the last
+// four). All six are staleness claims about the current state of a section,
+// exactly the shape rule (c) exists to catch.
 const LAST_VERIFIED_RE = new RegExp(`\\bLast verified:?\\s+${DATE_VALUE_RE}\\b`, "gi");
 const UPDATED_STATUS_RE = new RegExp(`\\bUpdated\\s+(?:on\\s+)?${DATE_VALUE_RE}\\b`, "gi");
+const VALID_THROUGH_RE = new RegExp(`\\bvalid through ${DATE_VALUE_RE}\\b`, "gi");
+const CURRENT_THROUGH_RE = new RegExp(`\\bcurrent through ${DATE_VALUE_RE}\\b`, "gi");
+const REFRESHED_RE = new RegExp(`\\brefreshed\\s+(?:on\\s+)?${DATE_VALUE_RE}\\b`, "gi");
+const REVIEWED_RE = new RegExp(`\\breviewed\\s+(?:on\\s+)?${DATE_VALUE_RE}\\b`, "gi");
 const DEC_ID_RE = /\bDEC-\d{8}(?:-[A-Za-z0-9]+)*\b/g;
-// A decision id counts as followed by a summary when the text right after
-// it starts with a separator (colon, semicolon, or any dash) and then at
-// least three more words, or starts with a verb ("is"/"was"/"reads"/...)
-// and then at least three more words. A bare id followed by ordinary
-// sentence continuation ("for the full text.") matches neither branch.
-const SUMMARY_AFTER_ID_RE =
-  /^\s*(?:[:;\-–—]+\s*(?:\S+\s+){2,}\S+|(?:is|was|are|were|means?|reads?|says?|states?|describes?)\s+(?:\S+\s+){2,}\S+)/i;
+// A decision id counts as followed by a summary when the text right after it
+// starts with a separator (colon, semicolon, or any dash) and then at least
+// three more words, or starts with **any** word that is not a common
+// non-verb function word ("and", "for", "which", ...) and then at least
+// three more words -- round 3 finding 6 widens this from a fixed verb list
+// ("is"/"was"/"reads"/...) to "any verb", implemented the same way the
+// count-noun scan already treats "any plural noun": permissive by default,
+// narrowed only by a curated stopword list of words that are clearly not the
+// start of a summary.
+const SUMMARY_SEPARATOR_RE = /^\s*[:;\-–—]+\s*(?:\S+\s+){2,}\S+/;
+const SUMMARY_FIRST_WORD_RE = /^\s*([A-Za-z]+)\s+(?:\S+\s+){2,}\S+/;
+const DECISION_SUMMARY_STOPWORDS = new Set([
+  "and",
+  "or",
+  "but",
+  "the",
+  "a",
+  "an",
+  "for",
+  "of",
+  "in",
+  "on",
+  "to",
+  "with",
+  "this",
+  "that",
+  "these",
+  "those",
+  "its",
+  "their",
+  "which",
+  "who",
+  "when",
+  "if",
+  "as",
+  "at",
+  "by",
+  "from",
+]);
+
+function summaryFollows(rest) {
+  if (SUMMARY_SEPARATOR_RE.test(rest)) return true;
+  const m = SUMMARY_FIRST_WORD_RE.exec(rest);
+  if (!m) return false;
+  return !DECISION_SUMMARY_STOPWORDS.has(m[1].toLowerCase());
+}
 
 function moneyValueIsZero(match) {
   const numeric = (match.groups.symAmt ?? match.groups.wordAmt ?? "").replace(/,/g, "");
@@ -473,56 +854,32 @@ function findMoney(line) {
   return hits;
 }
 
-/** Every count-pattern hit in one string of text (a raw line, or two table
- * cells joined together -- see findCounts below), applying the same noun
- * checks either way. */
-function countHitsIn(text) {
+function findCounts(line) {
   const hits = [];
-  for (const m of text.matchAll(NAMED_COUNT_RE)) hits.push({ category: "COUNT", snippet: m[0] });
-  for (const m of text.matchAll(GENERIC_COUNT_RE)) {
+  for (const m of line.matchAll(NAMED_COUNT_FORWARD_RE)) hits.push({ category: "COUNT", snippet: m[0] });
+  for (const m of line.matchAll(NAMED_COUNT_BACKWARD_RE)) hits.push({ category: "COUNT", snippet: m[0] });
+  for (const m of line.matchAll(GENERIC_COUNT_FORWARD_RE)) {
     const noun = m[1].toLowerCase();
-    if (!noun.endsWith("s")) continue;
-    if (COUNT_NOUN_STOPWORDS.has(noun)) continue;
+    if (!noun.endsWith("s") || COUNT_NOUN_STOPWORDS.has(noun)) continue;
     hits.push({ category: "COUNT", snippet: m[0] });
   }
   return hits;
 }
 
-/** A count split across two table cells (finding 4: "| Verticals | seven |"
- * evades both count patterns, because the count and its noun are adjacent
- * words in neither cell). Both regexes require the count directly before
- * the noun with only whitespace between them, so neither a raw line nor a
- * single cell ever matches this shape. For each pair of adjacent cells,
- * join them in both orders ("cell[i] cell[i+1]" and "cell[i+1] cell[i]")
- * and run the same count patterns on the joined text -- this catches the
- * count-then-noun shape regardless of which cell the reader put the count
- * in, without loosening the per-line patterns to ignore the "|" separator
- * generally, which would risk matching across unrelated cells in a wide
- * table row. */
-function tableCellCountHits(line) {
-  if (!/\|/.test(line)) return [];
-  const cells = line
-    .split("|")
-    .map((c) => c.trim())
-    .filter((c) => c.length > 0);
-  const hits = [];
-  for (let i = 0; i < cells.length - 1; i++) {
-    hits.push(...countHitsIn(`${cells[i]} ${cells[i + 1]}`));
-    hits.push(...countHitsIn(`${cells[i + 1]} ${cells[i]}`));
-  }
-  return hits;
-}
-
-function findCounts(line) {
-  return [...countHitsIn(line), ...tableCellCountHits(line)];
-}
-
 function findDates(line) {
   const hits = [];
-  for (const m of line.matchAll(DATED_PARENTHETICAL_RE)) hits.push({ category: "DATE", snippet: m[0] });
-  for (const m of line.matchAll(AS_OF_RE)) hits.push({ category: "DATE", snippet: m[0] });
-  for (const m of line.matchAll(LAST_VERIFIED_RE)) hits.push({ category: "DATE", snippet: m[0] });
-  for (const m of line.matchAll(UPDATED_STATUS_RE)) hits.push({ category: "DATE", snippet: m[0] });
+  for (const re of [
+    DATED_PARENTHETICAL_RE,
+    AS_OF_RE,
+    LAST_VERIFIED_RE,
+    UPDATED_STATUS_RE,
+    VALID_THROUGH_RE,
+    CURRENT_THROUGH_RE,
+    REFRESHED_RE,
+    REVIEWED_RE,
+  ]) {
+    for (const m of line.matchAll(re)) hits.push({ category: "DATE", snippet: m[0] });
+  }
   return hits;
 }
 
@@ -530,11 +887,38 @@ function findDecisionSummaries(line) {
   const hits = [];
   for (const match of line.matchAll(DEC_ID_RE)) {
     const rest = line.slice(match.index + match[0].length);
-    if (SUMMARY_AFTER_ID_RE.test(rest)) {
+    if (summaryFollows(rest)) {
       hits.push({ category: "DECISION_SUMMARY", snippet: line.trim() });
     }
   }
   return hits;
+}
+
+// Markdown syntax that hides adjacency from a reader's eye but not from a
+// reader's understanding: a figure inside a link's visible text, inside
+// bold/italic emphasis, or split across a table row's cells, all read to a
+// human as ordinary adjacent words (round 3 findings 4-6). Rather than one
+// more regex per shape, every line is normalized to what a reader actually
+// sees before any pattern runs: link/image markup collapses to its visible
+// text, emphasis markers disappear, and "|" cell separators become plain
+// spaces. Applied once, ahead of findMoney/findCounts/findDates/
+// findDecisionSummaries, so none of them need shape-specific handling.
+function normalizeLineForScan(line) {
+  let s = line;
+  // "![alt](url)" -> "alt" (image first, so its "!" never confuses the link
+  // pattern that follows).
+  s = s.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+  // "[text](url)" -> "text".
+  s = s.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+  // "**bold**" / "__bold__" -> "bold" (before the single-marker pass below,
+  // so a bold span's own asterisks are never mistaken for italics).
+  s = s.replace(/(\*\*|__)(.*?)\1/g, "$2");
+  // "*italic*" / "_italic_" -> "italic".
+  s = s.replace(/(\*|_)(.*?)\1/g, "$2");
+  // Table cell separators -> spaces, so "| Verticals | seven |" reads as
+  // "Verticals seven" the way a reader sees the rendered row.
+  s = s.replace(/\|/g, " ");
+  return s;
 }
 
 /** The normalized heading forms of every docs/project/protocol-coverage.yaml
@@ -544,11 +928,13 @@ function findDecisionSummaries(line) {
  * (extractClaudeSectionText), compares line-for-line equal to the row's
  * full_body mirror under docs/governance/protocols/ (readMirrorBody, the
  * same BEGIN/END slice protocols:check compares CLAUDE.md against). A
- * heading match alone is never enough (finding 3, M4 batch 3 round 2:
- * copying a protocol heading over a fabricated paragraph used to hide every
- * fact under it) -- a section whose heading matches a row but whose body
- * does not match the mirror is scanned like any other prose, because it
- * fails the equality check and its form is never added here.
+ * heading match alone is never enough -- a section whose heading matches a
+ * row but whose body does not match the mirror is scanned like any other
+ * prose, because it fails the equality check and its form is never added
+ * here. Reused unchanged by hasOwnFullText/checkLocatorToken for rule (b)'s
+ * own mirror-equality requirement (round 3 finding 2), the same way round
+ * 2's mutable-fact scan already reused it, rather than a second
+ * implementation.
  *
  * This only ever runs against CLAUDE.md's own text, never AGENTS.md's,
  * which is why checkMutableFacts below applies the returned set to CLAUDE.md
@@ -565,8 +951,8 @@ function findDecisionSummaries(line) {
  * manifest holds no verbatim body for.
  *
  * Returns an empty set (scans everything) if the manifest fails schema
- * validation; checkProtocolReachability reports that failure on its own
- * path. */
+ * validation; checkProtocolReachability and checkMutableFacts each report
+ * that failure on their own path. */
 function verifiedMirroredHeadingForms(root) {
   const forms = new Set();
   const { manifest, valid } = checkSchema(root);
@@ -604,18 +990,12 @@ export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()
     ),
   );
   const hits = [];
-  let inFence = false;
   let excluded = false;
   let excludedLevel = 0;
   const lines = content.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^\s*```/.test(line)) {
-      inFence = !inFence;
-      continue;
-    }
+  walkFenceAware(lines, (line, i, fenced) => {
     const headingMatch = HEADING_RE.exec(line);
-    if (headingMatch) {
+    if (headingMatch && !fenced) {
       const level = headingMatch[1].length;
       const forms = headingForms(headingMatch[2].trim());
       if (excluded && level <= excludedLevel) excluded = false;
@@ -626,31 +1006,18 @@ export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()
         excludedLevel = level;
       }
     }
-    if (inFence || excluded) continue;
+    if (fenced || excluded) return;
+    const normalized = normalizeLineForScan(line);
     for (const hit of [
-      ...findMoney(line),
-      ...findCounts(line),
-      ...findDates(line),
-      ...findDecisionSummaries(line),
+      ...findMoney(normalized),
+      ...findCounts(normalized),
+      ...findDates(normalized),
+      ...findDecisionSummaries(normalized),
     ]) {
       hits.push({ ...hit, line: i + 1 });
     }
-  }
+  });
   return hits;
-}
-
-/**
- * True when a file leaves a fence open at its end. Fence tracking is a
- * toggle, so an unclosed fence makes every later line read as fenced and
- * therefore skipped by the heading, block and fact scans alike. That is an
- * evasion route, not a formatting slip: a fact or a missing pointer after an
- * unclosed fence would be invisible to all three rules at once. Reported, so
- * the check never quietly stops looking.
- */
-export function hasUnterminatedFence(content) {
-  let open = false;
-  for (const line of content.split("\n")) if (/^\s*```/.test(line)) open = !open;
-  return open;
 }
 
 export function checkMutableFacts(root, contents) {
