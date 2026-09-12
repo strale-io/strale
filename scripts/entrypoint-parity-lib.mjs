@@ -639,6 +639,20 @@ export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()
   return hits;
 }
 
+/**
+ * True when a file leaves a fence open at its end. Fence tracking is a
+ * toggle, so an unclosed fence makes every later line read as fenced and
+ * therefore skipped by the heading, block and fact scans alike. That is an
+ * evasion route, not a formatting slip: a fact or a missing pointer after an
+ * unclosed fence would be invisible to all three rules at once. Reported, so
+ * the check never quietly stops looking.
+ */
+export function hasUnterminatedFence(content) {
+  let open = false;
+  for (const line of content.split("\n")) if (/^\s*```/.test(line)) open = !open;
+  return open;
+}
+
 export function checkMutableFacts(root, contents) {
   const findings = [];
   const mirrored = verifiedMirroredHeadingForms(root);
@@ -646,6 +660,15 @@ export function checkMutableFacts(root, contents) {
     // The verified-mirror set is computed from CLAUDE.md and only ever
     // applies to CLAUDE.md -- see verifiedMirroredHeadingForms's own comment
     // for why AGENTS.md is excluded by design, not by oversight.
+    if (hasUnterminatedFence(content)) {
+      findings.push(
+        finding(
+          "UNTERMINATED_FENCE",
+          file,
+          "a code fence is opened and never closed, so every later line reads as fenced and is skipped by the heading, block and fact scans",
+        ),
+      );
+    }
     const mirroredForFile = file === "CLAUDE.md" ? mirrored : new Set();
     for (const hit of scanMutableFacts(file, content, mirroredForFile)) {
       findings.push(

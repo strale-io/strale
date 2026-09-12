@@ -322,6 +322,37 @@ test("PROTOCOL_UNREACHABLE: a locator inside a fenced block right after naming p
 
 // ── rule (c): mutable facts ──────────────────────────────────────────────
 
+// Built at runtime: a literal fence inside a template string would end it.
+const FENCE = String.fromCharCode(96).repeat(3);
+
+test("UNTERMINATED_FENCE: an unclosed fence hides later facts, so it is itself reported", () => {
+  const dir = cleanFixture();
+  try {
+    // A fence opened and never closed makes every later line read as fenced,
+    // which would hide this price and this count from all three scans.
+    writeFiles(dir, {
+      "AGENTS.md":
+        readFileSync(join(dir, "AGENTS.md"), "utf8") +
+        "\n\n" + FENCE + "\nThe platform lists 290 capabilities and costs 0.75 EUR.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.code === "UNTERMINATED_FENCE" && f.file === "AGENTS.md"),
+      JSON.stringify(broken),
+    );
+
+    // Closing the fence restores ordinary behaviour: the hidden lines are
+    // genuinely inside a fence now, so nothing is reported.
+    writeFiles(dir, {
+      "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8") + FENCE + "\n",
+    });
+    const closed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(closed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test("MUTABLE_FACT_FOUND (MONEY): fires on a nonzero price, clears once removed", () => {
   const dir = cleanFixture();
   try {
