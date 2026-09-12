@@ -114,7 +114,7 @@ retrieval or ranking.
 
 ## Evidence basis
 
-This candidate was distilled from the
+This document was distilled from the
 [37-claim reconciliation](../../archive/sessions/2026-09-01-m2-product-state-reconciliation.md)
 and its [claim matrix](../../archive/sessions/2026-09-01-m2-product-state-claim-matrix.json).
 Durable strategy currently remains in [GOALS](../company/GOALS.md),

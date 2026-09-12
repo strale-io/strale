@@ -118,8 +118,8 @@ gaps. Do not reopen outreach to the transaction-inferred card buyer.
 
 ## 7. Reconcile and complete the website
 
-**Direction (founder, 2026-09-02; decision record DEC-20260902-A to be filed
-on the founder's confirmation of its text):** the website redesign is built
+**Direction (founder, 2026-09-02; decision record DEC-20260902-A, filed
+2026-09-02 on the founder's confirmation of its text):** the website redesign is built
 inside this repository as `apps/web`, making it a monorepo. Preserve
 the existing frontend material first (done in T11: tags, release
 `preserve-2026-09-02`, tracked candidates), then build the redesign here;
@@ -162,5 +162,5 @@ work.
 
 Ordering and qualifications come from the
 [2026-09-01 M2 reconciliation](../../archive/sessions/2026-09-01-m2-product-state-reconciliation.md)
-and its 37-claim matrix. Update this candidate when an outcome changes
+and its 37-claim matrix. Update this document when an outcome changes
 materially; do not turn it into a completed-work diary.

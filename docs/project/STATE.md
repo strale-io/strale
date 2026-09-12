@@ -29,7 +29,7 @@ reported `ok` at the verification time below; that narrow probe is not a claim
 that every backend behavior is healthy. Many remediation packages have formal
 acceptance records: WP10 was ACCEPTED 2026-09-03 (commit `fadc8052`, PR #493;
 `docs/remediation/CURRENT-STATE.md:13-31`), and WP13 remains open as a whole.
-Exact package records—not this summary—govern acceptance. The project
+Exact package records, not this summary, govern acceptance. The project
 is now balancing four outcomes: finish the repo-native operating model, close
 bounded production/governance residuals, improve discovery, and turn early buyer
 diversification into repeat habits.
@@ -43,9 +43,9 @@ this observation covered the backend and its public facts only.
 
 | Surface | Verified state |
 |---|---|
-| Backend reviewed main | `596e9c7f6dbe474f89d31e035bd47dd81673cb0b` |
-| Live backend `/health` | `ok`, commit `596e9c7f6dbe` |
-| Platform facts | observed `2026-08-31T23:31:38.346Z` |
+| Backend reviewed main | `e498d5741bdfc7d28fef95bbbd98bf9508835753` |
+| Live backend `/health` | `ok`, commit `e498d5741bdf` |
+| Platform facts | observed `2026-09-12T02:22:25.142Z` |
 | Frontend main | `4be8d251b05e0abf6e23a195913c188ae318056e` |
 | Frontend redesign preservation | `998964716c8601be67d4e71a508a803160434517` |
 
@@ -145,7 +145,7 @@ the marketing website design system.
 - **VERIFY-IP / WP12:** VERIFY-IP RESOLVED 2026-09-02 (high confidence,
   empirical probe): exactly one Railway proxy hop sits in front of
   `api.strale.io`, no CDN, and client-supplied X-Forwarded-For / X-Real-IP
-  values never reach the app because Railway's edge overwrites them — the
+  values never reach the app because Railway's edge overwrites them: the
   leftmost XFF entry the code already reads is the true client IP. WP12
   moved BLOCKED -> UNBLOCKED_NOT_YET_STARTED: CIDR/IPv6 gaps, raw-socket
   DNS-rebinding TOCTOU, and byte/pixel caps remain real, unbuilt,
