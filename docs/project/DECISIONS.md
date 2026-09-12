@@ -1,22 +1,22 @@
 ---
 doc_type: generated-decision-index
 authority_scope: none
-status: candidate
-complete: false
-phase: M2
+status: active
+complete: true
+phase: M4
 m1_template: false
-authority_active: false
+authority_active: true
 verified_at: 2026-09-10
 generated: true
 ---
 
-# Decision Index (Candidate)
+# Decision Index
 
-> [!CAUTION]
-> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**
-> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.
+> [!NOTE]
+> **ACTIVE PROJECT AUTHORITY (M4).**
+> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.
 
-**PARTIAL GENERATED VIEW — `complete: false`.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from `docs/decisions/records/DEC-*.md`.
+**Generated index.** Individual Decision records under `docs/decisions/records/` preserve their own `migration_status: candidate` / `authority_active: false` front matter; migrating each record is separate, later work. This index itself is the active repo-native decisions view. Generated from `docs/decisions/records/DEC-*.md` by `scripts/decision-records-lib.mjs` (`npm run context:generate`); do not hand-edit this file.
 
 The Decision column shows the historical display ID. Internal record keys are the unambiguous graph identities used for links and relationships; they differ from display IDs only when historical IDs collide.
 

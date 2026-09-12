@@ -1230,12 +1230,13 @@ test("a superseded record must have a formal incoming supersession", () => {
   );
 });
 
-test("generated index stays explicitly inactive", () => {
+test("generated index is active project authority as of M4 batch 1d", () => {
   const index = generateDecisionIndex([record({ id: "DEC-20260812-A" })]);
   assert.match(index, /authority_scope: none/);
-  assert.match(index, /authority_active: false/);
-  assert.match(index, /status: candidate/);
-  assert.match(index, /NOT ACTIVE PROJECT AUTHORITY/);
+  assert.match(index, /authority_active: true/);
+  assert.match(index, /status: active/);
+  assert.match(index, /phase: M4/);
+  assert.match(index, /ACTIVE PROJECT AUTHORITY/);
   assert.match(index, /\| Status \|/);
 });
 

@@ -1,11 +1,11 @@
 ---
 doc_type: project-state
 authority_scope: none
-status: candidate
-complete: false
-phase: M2
+status: active
+complete: true
+phase: M4
 m1_template: false
-authority_active: false
+authority_active: true
 verified_at: 2026-09-01
 backend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b
 production_observed_ref: 596e9c7f6dbe
@@ -18,9 +18,9 @@ state_evidence_ref: archive/sessions/2026-09-01-m2-canonical-state-production-sn
 
 # Current State
 
-> [!CAUTION]
-> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**
-> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.
+> [!NOTE]
+> **ACTIVE PROJECT AUTHORITY (M4).**
+> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.
 
 ## Executive state
 

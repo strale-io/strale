@@ -16,12 +16,15 @@ import {
   M2_CANDIDATE_BANNER,
   M2_CANDIDATE_DOCUMENTS,
   M2_CANDIDATE_WORD_LIMITS,
-  M2_GENERATED_DOCUMENTS,
+  M4_ACTIVE_BANNER,
+  M4_ACTIVE_DOCUMENTS,
+  M4_ACTIVE_GENERATED_DOCUMENTS,
   OPERATOR_ACTIONS_SCHEMA,
   SKELETON_DOCUMENTS,
   buildInventory,
   generatedFiles,
   validateInventory,
+  validateActiveDocument,
   validateCandidateDocument,
   validateOperatorActions,
   validateOperatorActionEvidence,
@@ -82,10 +85,7 @@ test("real content added to a skeleton is reported as template drift", () => {
 test("all authored M2 candidates are marked inactive and excluded from generation", () => {
   const generated = generatedFiles(process.cwd());
   for (const [file, docType] of Object.entries(M2_CANDIDATE_DOCUMENTS)) {
-    const stateVerification = docType === "project-state"
-      ? "backend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\nstate_evidence_ref: archive/sessions/state.json\n"
-      : "";
-    const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n${stateVerification}---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\nReconciled content.\n`;
+    const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\nReconciled content.\n`;
     assert.deepEqual(validateCandidateDocument(file, content, docType), []);
     assert.equal(Object.hasOwn(SKELETON_DOCUMENTS, file), false);
     assert.equal(Object.hasOwn(generated, file), false);
@@ -103,7 +103,7 @@ test("candidate missing its inactive banner is reported", () => {
 });
 
 test("candidate document word budgets are enforced", () => {
-  const file = "docs/project/PRODUCT.md";
+  const file = "docs/decisions/README.md";
   const docType = M2_CANDIDATE_DOCUMENTS[file];
   const overflow = "word ".repeat(M2_CANDIDATE_WORD_LIMITS[file] + 1);
   const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\n${overflow}\n`;
@@ -115,7 +115,7 @@ test("candidate document word budgets are enforced", () => {
 });
 
 test("a hand-authored candidate document over its word budget is still rejected (planted-failure control)", () => {
-  const file = "docs/project/ROADMAP.md";
+  const file = "docs/decisions/PENDING.md";
   const docType = M2_CANDIDATE_DOCUMENTS[file];
   const overflow = "word ".repeat(M2_CANDIDATE_WORD_LIMITS[file] + 1);
   const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\n${overflow}\n`;
@@ -126,26 +126,86 @@ test("a hand-authored candidate document over its word budget is still rejected 
   );
 });
 
-test("a generated index far over 1,500 words is never word-budget-checked", () => {
-  const file = "docs/project/DECISIONS.md";
-  const docType = M2_GENERATED_DOCUMENTS[file];
-  // No entry for this file exists in M2_CANDIDATE_WORD_LIMITS at all (it is a
-  // generated index that grows with the register by construction), so this
-  // overflow is many times the old 1_500 hand-authored-document budget.
-  const overflow = "word ".repeat(6_000);
-  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n\n${overflow}\n`;
-  assert.equal(Object.hasOwn(M2_CANDIDATE_WORD_LIMITS, file), false);
+test("all M4-activated documents (hand-authored and generated) satisfy their exact active contract", () => {
+  for (const [file, docType] of Object.entries(M4_ACTIVE_DOCUMENTS)) {
+    const stateVerification = docType === "project-state"
+      ? "backend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\nstate_evidence_ref: archive/sessions/state.json\n"
+      : "";
+    const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: active\ncomplete: true\nphase: M4\nm1_template: false\nauthority_active: true\nverified_at: 2026-09-01\n${stateVerification}---\n\n# Active\n\n${M4_ACTIVE_BANNER}\n\nActivated content.\n`;
+    assert.deepEqual(validateActiveDocument(file, content, docType), []);
+    assert.equal(Object.hasOwn(SKELETON_DOCUMENTS, file), false);
+  }
+  for (const [file, docType] of Object.entries(M4_ACTIVE_GENERATED_DOCUMENTS)) {
+    const generated = generatedFiles(process.cwd());
+    assert.ok(Object.hasOwn(generated, file), `${file} must be produced by context:generate`);
+    assert.deepEqual(validateActiveDocument(file, generated[file], docType), []);
+  }
+});
+
+test("active document with a candidate banner is a half-applied state and is rejected", () => {
+  const [file, docType] = Object.entries(M4_ACTIVE_DOCUMENTS)[0];
+  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: active\ncomplete: true\nphase: M4\nm1_template: false\nauthority_active: true\nverified_at: 2026-09-01\n---\n\n# Active\n\n${M2_CANDIDATE_BANNER}\n`;
   assert.ok(
-    !validateCandidateDocument(file, content, docType).some(
+    validateActiveDocument(file, content, docType).some(
+      (item) => item.code === "ACTIVE_CONTAINS_INACTIVE_BANNER",
+    ),
+  );
+});
+
+test("candidate document with an active-looking body is still rejected for its missing candidate banner (the reverse half-applied state)", () => {
+  const [file, docType] = Object.entries(M2_CANDIDATE_DOCUMENTS)[0];
+  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\n---\n\n# Candidate\n\n${M4_ACTIVE_BANNER}\n`;
+  assert.ok(
+    validateCandidateDocument(file, content, docType).some(
+      (item) => item.code === "CANDIDATE_BANNER_MISSING",
+    ),
+  );
+});
+
+test("active document word budgets are enforced", () => {
+  const file = "docs/project/PRODUCT.md";
+  const docType = M4_ACTIVE_DOCUMENTS[file];
+  const overflow = "word ".repeat(M2_CANDIDATE_WORD_LIMITS[file] + 1);
+  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: active\ncomplete: true\nphase: M4\nm1_template: false\nauthority_active: true\nverified_at: 2026-09-01\n---\n\n# Active\n\n${M4_ACTIVE_BANNER}\n\n${overflow}\n`;
+  assert.ok(
+    validateActiveDocument(file, content, docType).some(
       (item) => item.code === "CANDIDATE_WORD_BUDGET_EXCEEDED",
     ),
   );
 });
 
-test("state candidate requires exact repository and production verification refs", () => {
+test("a hand-authored active document over its word budget is still rejected (planted-failure control)", () => {
+  const file = "docs/project/ROADMAP.md";
+  const docType = M4_ACTIVE_DOCUMENTS[file];
+  const overflow = "word ".repeat(M2_CANDIDATE_WORD_LIMITS[file] + 1);
+  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: active\ncomplete: true\nphase: M4\nm1_template: false\nauthority_active: true\nverified_at: 2026-09-01\n---\n\n# Active\n\n${M4_ACTIVE_BANNER}\n\n${overflow}\n`;
+  assert.ok(
+    validateActiveDocument(file, content, docType).some(
+      (item) => item.code === "CANDIDATE_WORD_BUDGET_EXCEEDED",
+    ),
+  );
+});
+
+test("a generated index far over 1,500 words is never word-budget-checked", () => {
+  const file = "docs/project/DECISIONS.md";
+  const docType = M4_ACTIVE_GENERATED_DOCUMENTS[file];
+  // No entry for this file exists in M2_CANDIDATE_WORD_LIMITS at all (it is a
+  // generated index that grows with the register by construction), so this
+  // overflow is many times the old 1_500 hand-authored-document budget.
+  const overflow = "word ".repeat(6_000);
+  const content = `---\ndoc_type: ${docType}\nauthority_scope: none\nstatus: active\ncomplete: true\nphase: M4\nm1_template: false\nauthority_active: true\nverified_at: 2026-09-01\n---\n\n# Active\n\n${M4_ACTIVE_BANNER}\n\n${overflow}\n`;
+  assert.equal(Object.hasOwn(M2_CANDIDATE_WORD_LIMITS, file), false);
+  assert.ok(
+    !validateActiveDocument(file, content, docType).some(
+      (item) => item.code === "CANDIDATE_WORD_BUDGET_EXCEEDED",
+    ),
+  );
+});
+
+test("active state document requires exact repository and production verification refs", () => {
   const file = "docs/project/STATE.md";
-  const base = `---\ndoc_type: project-state\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: 2026-09-01\nbackend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\nstate_evidence_ref: archive/sessions/state.json\n---\n\n# Candidate\n\n${M2_CANDIDATE_BANNER}\n`;
-  assert.deepEqual(validateCandidateDocument(file, base, "project-state"), []);
+  const base = `---\ndoc_type: project-state\nauthority_scope: none\nstatus: active\ncomplete: true\nphase: M4\nm1_template: false\nauthority_active: true\nverified_at: 2026-09-01\nbackend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b\nproduction_observed_ref: 596e9c7f6dbe\nproduction_observed_at: 2026-08-31T23:31:38.346Z\nproduction_status: ok\nfrontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e\nfrontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517\nstate_evidence_ref: archive/sessions/state.json\n---\n\n# Active\n\n${M4_ACTIVE_BANNER}\n`;
+  assert.deepEqual(validateActiveDocument(file, base, "project-state"), []);
   for (const field of [
     "backend_reviewed_ref",
     "production_observed_ref",
@@ -157,7 +217,7 @@ test("state candidate requires exact repository and production verification refs
   ]) {
     const invalid = base.replace(new RegExp(`^${field}:.*\\n`, "m"), "");
     assert.ok(
-      validateCandidateDocument(file, invalid, "project-state").some(
+      validateActiveDocument(file, invalid, "project-state").some(
         (item) => item.code === "STATE_VERIFICATION_REF_INVALID" && item.detail === field,
       ),
     );
@@ -194,13 +254,92 @@ test("state candidate refs must match their dated evidence manifest", () => {
   }
 });
 
-test("pre-cutover entrypoint guard covers every authored M2 candidate", () => {
+test("pre-cutover entrypoint guard fires for every authored M2 candidate (still inactive)", () => {
   for (const file of Object.keys(M2_CANDIDATE_DOCUMENTS)) {
-    assert.equal(checkPrecutoverEntrypoint("AGENTS.md", `Read ${file}.`).length, 1);
+    assert.equal(
+      checkPrecutoverEntrypoint(process.cwd(), "AGENTS.md", `Read ${file}.`).length,
+      1,
+      file,
+    );
   }
-  assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.").length, 1);
-  assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/decisions/*.md.").length, 1);
-  assert.deepEqual(checkPrecutoverEntrypoint("AGENTS.md", "No inactive context links."), []);
+});
+
+test("pre-cutover entrypoint guard does not fire for an M4-activated document", () => {
+  for (const file of Object.keys(M4_ACTIVE_DOCUMENTS)) {
+    assert.deepEqual(
+      checkPrecutoverEntrypoint(process.cwd(), "CLAUDE.md", `Read ${file}.`),
+      [],
+      file,
+    );
+  }
+  for (const file of Object.keys(M4_ACTIVE_GENERATED_DOCUMENTS)) {
+    assert.deepEqual(
+      checkPrecutoverEntrypoint(process.cwd(), "CLAUDE.md", `Read ${file}.`),
+      [],
+      file,
+    );
+  }
+});
+
+test("pre-cutover entrypoint guard fires for a path that does not exist, and for a glob that can never resolve", () => {
+  assert.equal(
+    checkPrecutoverEntrypoint(process.cwd(), "CLAUDE.md", "Read docs/project/DOES-NOT-EXIST.md.").length,
+    1,
+  );
+  assert.equal(checkPrecutoverEntrypoint(process.cwd(), "CLAUDE.md", "Read docs/project/*.md.").length, 1);
+  assert.equal(checkPrecutoverEntrypoint(process.cwd(), "CLAUDE.md", "Read docs/decisions/*.md.").length, 1);
+});
+
+test("pre-cutover entrypoint guard is silent when nothing docs/project or docs/decisions is named", () => {
+  assert.deepEqual(checkPrecutoverEntrypoint(process.cwd(), "AGENTS.md", "No inactive context links."), []);
+});
+
+test("pre-cutover entrypoint guard's directory rule: fires when any direct child is inactive, passes only when every direct child is active (pinned both ways)", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-entrypoint-directory-"));
+  try {
+    const activeDir = join(root, "docs/project/all-active");
+    mkdirSync(activeDir, { recursive: true });
+    writeFileSync(
+      join(activeDir, "one.md"),
+      "---\nstatus: active\nauthority_active: true\n---\n\n# One\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(activeDir, "two.md"),
+      "---\nstatus: active\nauthority_active: true\n---\n\n# Two\n",
+      "utf8",
+    );
+    assert.deepEqual(
+      checkPrecutoverEntrypoint(root, "CLAUDE.md", "Read docs/project/all-active."),
+      [],
+    );
+
+    const mixedDir = join(root, "docs/project/mixed");
+    mkdirSync(mixedDir, { recursive: true });
+    writeFileSync(
+      join(mixedDir, "one.md"),
+      "---\nstatus: active\nauthority_active: true\n---\n\n# One\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(mixedDir, "two.md"),
+      "---\nstatus: candidate\nauthority_active: false\n---\n\n# Two\n",
+      "utf8",
+    );
+    assert.equal(
+      checkPrecutoverEntrypoint(root, "CLAUDE.md", "Read docs/project/mixed.").length,
+      1,
+    );
+
+    const emptyDir = join(root, "docs/decisions/empty");
+    mkdirSync(emptyDir, { recursive: true });
+    assert.equal(
+      checkPrecutoverEntrypoint(root, "CLAUDE.md", "Read docs/decisions/empty.").length,
+      1,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 const operatorActionsFixture = `schema_version: 1

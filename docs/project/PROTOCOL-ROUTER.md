@@ -1,24 +1,24 @@
 ---
 doc_type: protocol-router
 authority_scope: none
-status: candidate
-complete: false
-phase: M2
+status: active
+complete: true
+phase: M4
 m1_template: false
-authority_active: false
+authority_active: true
 verified_at: 2026-09-11
 generated: true
 ---
 
-# Protocol Router (Candidate)
+# Protocol Router
 
-> [!CAUTION]
-> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**
-> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.
+> [!NOTE]
+> **ACTIVE PROJECT AUTHORITY (M4).**
+> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.
 
-Every full protocol body linked below is itself an inactive mirror (`authority_active: false`); `CLAUDE.md` remains the sole authority for the mirrored rows and `docs/company/CHARTER.md` for production authority. This router is not mandatory startup context until the founder-gated M4 cutover activates it.
+Every full protocol body linked below is, for now, an inactive mirror (`authority_active: false`) under `docs/governance/protocols/`; `CLAUDE.md` remains the authoritative full text for each mirrored row and `docs/company/CHARTER.md` for production authority, until a later batch migrates them. This router itself is the active navigation index from trigger to full body.
 
-**PARTIAL GENERATED VIEW.** Generated from `docs/project/protocol-coverage.yaml`
+**Generated router.** Generated from `docs/project/protocol-coverage.yaml`
 by `scripts/protocol-coverage-lib.mjs` (`npm run context:generate`); checked
 for drift by `npm run protocols:coverage`. Do not hand-edit this file --
 change the manifest and regenerate.

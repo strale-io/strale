@@ -21,16 +21,18 @@
     "status": {
       "enum": [
         "skeleton",
-        "candidate"
+        "candidate",
+        "active"
       ]
     },
     "complete": {
-      "const": false
+      "type": "boolean"
     },
     "phase": {
       "enum": [
         "M1",
-        "M2"
+        "M2",
+        "M4"
       ]
     },
     "m1_template": {
@@ -53,6 +55,9 @@
         "status": {
           "const": "skeleton"
         },
+        "complete": {
+          "const": false
+        },
         "phase": {
           "const": "M1"
         },
@@ -71,6 +76,9 @@
         "status": {
           "const": "candidate"
         },
+        "complete": {
+          "const": false
+        },
         "phase": {
           "const": "M2"
         },
@@ -79,6 +87,34 @@
         },
         "authority_active": {
           "const": false
+        },
+        "verified_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    },
+    {
+      "required": [
+        "m1_template",
+        "authority_active",
+        "verified_at"
+      ],
+      "properties": {
+        "status": {
+          "const": "active"
+        },
+        "complete": {
+          "const": true
+        },
+        "phase": {
+          "const": "M4"
+        },
+        "m1_template": {
+          "const": false
+        },
+        "authority_active": {
+          "const": true
         },
         "verified_at": {
           "type": "string",

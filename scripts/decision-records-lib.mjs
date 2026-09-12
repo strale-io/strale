@@ -21,6 +21,16 @@ export const DECISION_INDEX_CANDIDATE_BANNER =
   "> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**\n" +
   "> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.";
 
+// M4 batch 1d activated this generated index. Byte-identical to
+// project-context-lib.mjs's M4_ACTIVE_BANNER, the same duplication this
+// file already makes for DECISION_INDEX_CANDIDATE_BANNER above (see this
+// file's header comment) rather than importing it, which would make this
+// module and project-context-lib.mjs import each other.
+export const DECISION_INDEX_ACTIVE_BANNER =
+  "> [!NOTE]\n" +
+  "> **ACTIVE PROJECT AUTHORITY (M4).**\n" +
+  "> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.";
+
 const DECISION_ID_PATTERN = "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$";
 const DECISION_RECORD_KEY_PATTERN =
   "^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$";
@@ -1382,7 +1392,7 @@ export function generateDecisionIndex(
   const correctionSection = correctionNotes.length === 0
     ? "_None._"
     : correctionNotes.join("\n");
-  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: candidate\ncomplete: false\nphase: M2\nm1_template: false\nauthority_active: false\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index (Candidate)\n\n${DECISION_INDEX_CANDIDATE_BANNER}\n\n**PARTIAL GENERATED VIEW — ${code("complete: false")}.** The statuses below reproduce the formal decisions; they do not activate this index as project authority. Generated from ${code("docs/decisions/records/DEC-*.md")}.\n\nThe Decision column shows the historical display ID. Internal record keys are the unambiguous graph identities used for links and relationships; they differ from display IDs only when historical IDs collide.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n\n## Resolved historical ID collisions\n\nResolved collisions retain their historical display IDs. Formal records use source-qualified internal keys; documented-only rows remain preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${resolvedCollisionTable}\n\n### Forward migration-state corrections\n\n${correctionSection}\n\n## Unresolved historical ID collisions\n\nThese IDs are excluded from both formal records and relation targets until their conflicting source rows are reconciled. Source details are preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${collisionTable}\n`;
+  return `---\ndoc_type: generated-decision-index\nauthority_scope: none\nstatus: active\ncomplete: true\nphase: M4\nm1_template: false\nauthority_active: true\nverified_at: ${verifiedAt}\ngenerated: true\n---\n\n# Decision Index\n\n${DECISION_INDEX_ACTIVE_BANNER}\n\n**Generated index.** Individual Decision records under ${code("docs/decisions/records/")} preserve their own ${code("migration_status: candidate")} / ${code("authority_active: false")} front matter; migrating each record is separate, later work. This index itself is the active repo-native decisions view. Generated from ${code("docs/decisions/records/DEC-*.md")} by ${code("scripts/decision-records-lib.mjs")} (${code("npm run context:generate")}); do not hand-edit this file.\n\nThe Decision column shows the historical display ID. Internal record keys are the unambiguous graph identities used for links and relationships; they differ from display IDs only when historical IDs collide.\n\n## Active decisions\n\n${table(active)}\n\n## Non-active decisions\n\n${table(inactive)}\n\n## Generated inverse relationships\n\n${inverseTable}\n\n## Resolved historical ID collisions\n\nResolved collisions retain their historical display IDs. Formal records use source-qualified internal keys; documented-only rows remain preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${resolvedCollisionTable}\n\n### Forward migration-state corrections\n\n${correctionSection}\n\n## Unresolved historical ID collisions\n\nThese IDs are excluded from both formal records and relation targets until their conflicting source rows are reconciled. Source details are preserved in ${code("docs/decisions/id-collisions.yaml")}.\n\n${collisionTable}\n`;
 }
 
 export function decisionGeneratedFiles(root) {
