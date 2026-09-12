@@ -453,7 +453,7 @@
     {
       "path": ".claude/commands",
       "owner_area": "claude-commands",
-      "sha256": "ae217db0246687b6f652246cebaf904f05c55d9ca4c0e99db06dac611bb37123",
+      "sha256": "0fa5494a487eb264bb8d352570e08c54e12bc793144dc5e3a1b18d3bc91e4ace",
       "detected_references": [
         ".github/workflows/ci.yml",
         "apps/api/scripts/archive/README.md",
@@ -472,7 +472,7 @@
     {
       "path": ".agents/skills",
       "owner_area": "shared-agent-skills",
-      "sha256": "1cbc5be8ddad10125e5da22522e85dec0545f28fb1aa1d344a6b79ea651af0b3",
+      "sha256": "620490042f0f3a685de53b90f55315161a63cbbde440f3ae8ee8f59556aa8b2b",
       "detected_references": [
         ".github/workflows/ci.yml",
         "AGENTS.md",
