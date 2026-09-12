@@ -71,11 +71,16 @@ and never needs asking.
 > not say that: correct refusals, environmental failures, the caller's own
 > input, our own harness's bookkeeping.
 
-**Count: 6 occasions, 7 mechanisms. Threshold passed long ago.** This family is
+**Count: 7 occasions, 8 mechanisms. Threshold passed long ago.** Row 8's
+mechanism is state drift and is also recorded as F7 incident 11: it appears in
+both family totals because the three-strike rule counts mechanisms per family,
+and a drift that produces a false quality signal is an instance of each. The
+F7 entry carries the mechanism; this row carries the damage. This family is
 the reason the rule exists, and it is open as of 2026-08-22 rather than waiting
 for another. Rows 6 and 7 are the same morning's incident by two different
 routes, counted separately because the mechanisms are separate and only one of
-them is fixed — six of these have had a repair, and the seventh has not.
+them is fixed — six of these have had a repair; the seventh and eighth have
+not.
 
 | # | date | incident | local fix |
 |---|---|---|---|
@@ -86,6 +91,7 @@ them is fixed — six of these have had a repair, and the seventh has not.
 | 5 | 2026-08-21 | Two boot-time migration blocks fought over one flag, poisoning 12 fixture baselines per deploy; the whole of one capability's 51% score was that | blocks partitioned; metadata writes no longer stamp the edit field |
 | 6 | 2026-08-22 | Free-tier front door quarantined on 15 calls, of which zero were defects (one correct "no text on this page", two caller-site errors, two caller-site rate limits) | refusal reclassified; capability re-listed |
 | 7 | 2026-08-22 | Same incident, second mechanism: the floor *measures* paid traffic only but its *remedy* withdraws the free surface too, so a free front door is judged on traffic that is invisible to the decision | **unfixed** |
+| 8 | 2026-09-12 | Six company registries judged on a `dependency_health` fixture the repository had already corrected and production had not — `canadian-company-data` passed none of its runs — 173 in the fourteen-day window when measured — refusing, correctly, a corporation number the Canadian registry says does not exist; three of the six were quarantined by fixture-recapture exhaustion and so have no health signal at all | drift is now reported (`npm run fixtures:drift`); the six production rows are **unfixed** — applying them is a write this operation does not hold. F7 incident 11 is the mechanism |
 
 **The common authority is not the quality floor.** It is the *failure taxonomy*
 — `classifyTransactionFailure` and the correctness invariants that read it —
@@ -722,7 +728,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 10. Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 11 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -1015,6 +1021,66 @@ not write at all (F5 incident 10). The harness's own alarm did fire — "correct
 morning health sweep read the latest 25 events, where a steady low-rate alarm
 never ranked. DAILY-RUN.md step B now groups alarms by capability over the whole
 window since the previous run.
+
+**Incident 11 (2026-09-12) — correcting the repository is not correcting
+production, and nothing compared the two.** `manifests/canadian-company-data
+.yaml` carries a comment dated 2026-08-12 explaining that corporation number
+2408951 is not resolvable and has been swapped for 1007. The manifest was
+corrected. The production `test_suites` row was not, and on 2026-09-12 it still
+held 2408951 — a corporation the official Canadian registry answers "could not
+find" (verified live against the registry, and against corp 1007 which
+resolves). 173 runs in fourteen days, none passed, `regression_detected` every
+two hours for a month.
+
+The mechanism is structural rather than an oversight, which is why no amount of
+care would have caught it: `onboard.ts --backfill` inserts test types that are
+MISSING and updates only `known_answer` (and only under `--discover` / `--fix`).
+An existing `dependency_health` row's input is never rewritten from the
+manifest. So a fixture correction is, for that suite, a no-op — and until this
+morning nothing anywhere compared manifest to production.
+
+**The population, and the denominator discipline that made it usable.** Of 326
+active `dependency_health` suites, **81** differ from their manifest's
+`health_check_input`: 36 passing, 39 with no run in the window, 6 actionable.
+Reporting 81 would have been a wrong-denominator finding (F2). The actionable
+set is the conjunction "differs **and** never passes": **six**, all company
+registries — Canadian, German, Irish, Lithuanian, Spanish, Swiss. Three
+(Irish, Lithuanian, Swiss) had already been quarantined by fixture-recapture
+exhaustion, so those capabilities have no working health signal at all, and the
+recapture machinery had spent three live attempts each retrying a fixture that
+cannot work.
+
+**A correction inside the correction, caught by this batch's own review.** The
+first version of this entry said 80 rather than 81 — it grouped the suite
+rows by their values instead of by suite id, which merged
+`risk-narrative-generate`'s two active suites into one. A count is a
+measurement, and it was made with a collapsing key. It also explained the 36
+passing divergences as "`--discover` improved the DB row while the manifest
+kept a placeholder, so production holds the better fixture". That is
+unevidenced and partly false: nine of the 36 were rewritten at runtime by
+`lib/self-heal.ts` — a third writer of `test_suites.input` the story did not
+mention — and at least two go the other way: `skill-extract`, where
+production holds a generic input and the manifest a rich one, and
+`public-holiday-lookup`, where the manifest is simply stale. The exclusion is
+still right, for a narrower reason: a passing suite is not the actionable
+signal. Writing a *cause* for an exclusion when only the *effect* was measured
+is the same move as scoring a refusal as a defect — this family's own error,
+committed while documenting this family.
+
+**Repair, and what is deliberately not repaired.** `npm run fixtures:drift`
+(`apps/api/scripts/fixture-drift.ts`, logic in `src/lib/fixture-drift.ts`)
+reports exactly that conjunction and is wired into DAILY-RUN.md step B. It
+cannot be a CI gate: the drift lives in production rows and CI has no
+production database, so the sweep is where it belongs. Rewriting the six rows
+is a production write this operation does not hold — it is reported, not
+routed around. Same ask as DECISION-QUEUE.md DQ-27, and the same shape as its
+warning that a settled adjustment can sit unapplied.
+
+**Why it is filed here and counted in F1.** The mechanism is state drift; the
+damage is false quality attribution — a capability correctly refusing a
+nonexistent entity, scored as the capability failing. It is recorded in both
+family totals, because the mechanism belongs to F7 and the damage to F1: this
+entry is the mechanism, F1 row 8 is the damage, and they are one incident.
 
 ### F8 · Duplicated authority
 

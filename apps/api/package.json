@@ -18,7 +18,8 @@
     "lint:no-external-column-access": "node scripts/check-no-external-column-access.mjs",
     "digest": "tsx src/jobs/daily-digest.ts",
     "digest:preview": "tsx src/jobs/digest-preview.ts",
-    "vendor:status": "tsx scripts/vendor-control-tower-report.ts"
+    "vendor:status": "tsx scripts/vendor-control-tower-report.ts",
+    "fixtures:drift": "tsx scripts/fixture-drift.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
