@@ -1,19 +1,19 @@
 ---
 doc_type: project-product
 authority_scope: none
-status: candidate
-complete: false
-phase: M2
+status: active
+complete: true
+phase: M4
 m1_template: false
-authority_active: false
+authority_active: true
 verified_at: 2026-09-01
 ---
 
 # Product
 
-> [!CAUTION]
-> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**
-> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.
+> [!NOTE]
+> **ACTIVE PROJECT AUTHORITY (M4).**
+> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.
 
 ## What Strale is
 
@@ -114,7 +114,7 @@ retrieval or ranking.
 
 ## Evidence basis
 
-This candidate was distilled from the
+This document was distilled from the
 [37-claim reconciliation](../../archive/sessions/2026-09-01-m2-product-state-reconciliation.md)
 and its [claim matrix](../../archive/sessions/2026-09-01-m2-product-state-claim-matrix.json).
 Durable strategy currently remains in [GOALS](../company/GOALS.md),

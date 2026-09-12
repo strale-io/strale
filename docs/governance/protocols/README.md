@@ -64,4 +64,6 @@ batches 6a, 6b and 7). Each one, its governing decision (or the reason it
 has none), and its enforcing code/tests are recorded in
 `docs/project/protocol-coverage.yaml`, checked by `npm run
 protocols:coverage`; `docs/project/PROTOCOL-ROUTER.md` is generated from
-that manifest and stays inactive until the founder-gated M4 cutover.
+that manifest. It became active project authority in M4 batch 1d
+(2026-09-12); the mirror files listed above stay inactive
+(`authority_active: false`) until a later batch migrates them.

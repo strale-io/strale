@@ -23,6 +23,17 @@ export const M2_CANDIDATE_BANNER =
   "> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**\n" +
   "> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.";
 
+// M4 batch 1d: the post-cutover active state. A document carrying this
+// banner has flipped its front matter to status: active, phase: M4,
+// authority_active: true, and is authoritative repo-native project truth on
+// the m4/cutover integration branch. AGENTS.md and CLAUDE.md on main remain
+// authoritative until the single M4 cutover merge folds this branch in; a
+// later batch (batch 2) rewrites those entrypoints to point here.
+export const M4_ACTIVE_BANNER =
+  "> [!NOTE]\n" +
+  "> **ACTIVE PROJECT AUTHORITY (M4).**\n" +
+  "> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.";
+
 const TEMPLATE_SENTINEL = "<!-- M1-TEMPLATE: no project truth -->";
 
 function frontmatter(docType, extra = {}) {
@@ -47,14 +58,10 @@ function skeleton(docType, title, body, extra = {}) {
 }
 
 export const SKELETON_DOCUMENTS = Object.freeze({
-  "docs/project/START-HERE.md": skeleton(
-    "project-navigation",
-    "Start Here",
-    `This file is inert during M1. No root entrypoint links here yet.
-
-Future clean-session order (not active): PRODUCT → STATE → ROADMAP → generated
-decision/recent-work views → protocol router.`,
-  ),
+  // "docs/project/START-HERE.md" moved out of the M1 skeleton set in M4
+  // batch 1d: it is now a generated M4 active document (see
+  // M4_ACTIVE_DOCUMENTS and activeNavigationMarkdown below), produced from
+  // the fixed reading-order list rather than a hand-authored placeholder.
   "docs/project/RECENT.md": skeleton(
     "generated-recent-work",
     "Recent Material Work",
@@ -70,11 +77,12 @@ No authoritative recent-work feed is published during M1.`,
 truth, update duties, and session-close behavior after cutover review.`,
   ),
   // "docs/project/PROTOCOL-ROUTER.md" moved out of the M1 skeleton set in
-  // T6 M3 batch 7: it is now a generated M2 candidate document (see
-  // M2_GENERATED_DOCUMENTS and protocolRouterGeneratedFiles below),
-  // produced from docs/project/protocol-coverage.yaml rather than a
-  // hand-authored placeholder. It stays inactive (authority_active: false)
-  // until the founder-gated M4 cutover.
+  // T6 M3 batch 7: it is a generated document (see M4_ACTIVE_GENERATED_DOCUMENTS
+  // and protocolRouterGeneratedFiles below), produced from
+  // docs/project/protocol-coverage.yaml rather than a hand-authored
+  // placeholder. M4 batch 1d activated it (authority_active: true); the
+  // docs/governance/protocols/ mirrors it links to remain inactive until a
+  // later batch migrates them.
   "docs/governance/README.md": skeleton(
     "governance-navigation",
     "Governance",
@@ -132,24 +140,39 @@ batches 6a, 6b and 7). Each one, its governing decision (or the reason it
 has none), and its enforcing code/tests are recorded in
 \`docs/project/protocol-coverage.yaml\`, checked by \`npm run
 protocols:coverage\`; \`docs/project/PROTOCOL-ROUTER.md\` is generated from
-that manifest and stays inactive until the founder-gated M4 cutover.`,
+that manifest. It became active project authority in M4 batch 1d
+(2026-09-12); the mirror files listed above stay inactive
+(\`authority_active: false\`) until a later batch migrates them.`,
   ),
 });
 
-// These files become authored candidates during M2. They are deliberately not
-// returned by generatedFiles(): running context:generate must never overwrite
+// These files remain hand-authored candidates after M4 batch 1d: a later
+// batch owns their activation. They are deliberately not returned by
+// generatedFiles(): running context:generate must never overwrite
 // reconciled project truth with the old M1 placeholders.
 export const M2_CANDIDATE_DOCUMENTS = Object.freeze({
-  "docs/project/PRODUCT.md": "project-product",
-  "docs/project/STATE.md": "project-state",
-  "docs/project/ROADMAP.md": "project-roadmap",
   "docs/decisions/README.md": "decision-system-readme",
   "docs/decisions/PENDING.md": "pending-founder-decisions",
 });
 
-export const M2_GENERATED_DOCUMENTS = Object.freeze({
+// M4 batch 1d activated these hand-authored documents: status active,
+// phase M4, authority_active true. Still not returned by generatedFiles()
+// for the same reason M2_CANDIDATE_DOCUMENTS is not: they are authored
+// prose, not generated output.
+export const M4_ACTIVE_DOCUMENTS = Object.freeze({
+  "docs/project/PRODUCT.md": "project-product",
+  "docs/project/STATE.md": "project-state",
+  "docs/project/ROADMAP.md": "project-roadmap",
+});
+
+// M4 batch 1d activated these generated documents alongside
+// M4_ACTIVE_DOCUMENTS. Unlike that map, these ARE returned by
+// generatedFiles() (see generateDecisionIndex, protocolRouterMarkdown,
+// activeNavigationMarkdown): context:generate is the only sanctioned writer.
+export const M4_ACTIVE_GENERATED_DOCUMENTS = Object.freeze({
   "docs/project/DECISIONS.md": "generated-decision-index",
   "docs/project/PROTOCOL-ROUTER.md": "protocol-router",
+  "docs/project/START-HERE.md": "project-navigation",
 });
 
 export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
@@ -158,12 +181,17 @@ export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
   "docs/project/ROADMAP.md": 1_500,
   "docs/decisions/README.md": 1_000,
   "docs/decisions/PENDING.md": 1_000,
-  // docs/project/DECISIONS.md is intentionally absent: it is a generated
-  // index (see M2_GENERATED_DOCUMENTS) that grows with the register by
-  // construction, not hand-authored prose. The word budget below guards
-  // hand-authored candidate documents against unbounded prose growth; it
-  // does not apply to generated indexes at all (see the M2_GENERATED_DOCUMENTS
-  // skip in checkCandidateDocument).
+  // docs/project/DECISIONS.md, docs/project/PROTOCOL-ROUTER.md, and
+  // docs/project/START-HERE.md are intentionally absent: they are generated
+  // documents (see M4_ACTIVE_GENERATED_DOCUMENTS) built from a source
+  // register, manifest, or fixed reading-order list, not hand-authored
+  // prose. The word budget
+  // below guards hand-authored documents (candidate or active) against
+  // unbounded prose growth; it does not apply to generated documents at all
+  // (see the M4_ACTIVE_GENERATED_DOCUMENTS skip in validateProjectDocument).
+  // This map name keeps its M2-era name because the same word budget
+  // applies unchanged to both candidate and active project documents; only
+  // the front matter and banner differ by state.
 });
 
 export const INVENTORY_TARGETS = Object.freeze([
@@ -199,18 +227,30 @@ export const PROJECT_DOCUMENT_SCHEMA = {
   properties: {
     doc_type: { type: "string", minLength: 1 },
     authority_scope: { const: "none" },
-    status: { enum: ["skeleton", "candidate"] },
-    complete: { const: false },
-    phase: { enum: ["M1", "M2"] },
+    status: { enum: ["skeleton", "candidate", "active"] },
+    complete: { type: "boolean" },
+    phase: { enum: ["M1", "M2", "M4"] },
     m1_template: { type: "boolean" },
     authority_active: { type: "boolean" },
     verified_at: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
   },
+  // A document is in exactly one of three states. complete is const false
+  // for the two pre-cutover states and const true for the post-cutover
+  // active state below; the top-level properties.complete above is
+  // deliberately loosened to a bare boolean so these three branches can
+  // each pin their own const without conflicting with the other two.
+  // A document that mixes markers from two branches (for example status:
+  // active with phase: M2, or authority_active: true with status:
+  // candidate) satisfies none of the three and fails oneOf -- that is the
+  // half-applied-state guard: an active document with a candidate banner,
+  // or the reverse, must fail, and it does here at the front-matter level
+  // before the banner-text check in validateProjectDocument even runs.
   oneOf: [
     {
       required: ["m1_template"],
       properties: {
         status: { const: "skeleton" },
+        complete: { const: false },
         phase: { const: "M1" },
         m1_template: { const: true },
       },
@@ -219,9 +259,25 @@ export const PROJECT_DOCUMENT_SCHEMA = {
       required: ["m1_template", "authority_active", "verified_at"],
       properties: {
         status: { const: "candidate" },
+        complete: { const: false },
         phase: { const: "M2" },
         m1_template: { const: false },
         authority_active: { const: false },
+        verified_at: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+      },
+    },
+    {
+      // The post-cutover active state (M4 batch 1d). A document reaches
+      // this branch only after context:generate or a hand edit flips every
+      // one of these markers together; m1_template stays false (it never
+      // was, and is not now, an M1 placeholder).
+      required: ["m1_template", "authority_active", "verified_at"],
+      properties: {
+        status: { const: "active" },
+        complete: { const: true },
+        phase: { const: "M4" },
+        m1_template: { const: false },
+        authority_active: { const: true },
         verified_at: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
       },
     },
@@ -613,11 +669,87 @@ export function buildInventory(root) {
   };
 }
 
+// The reading order a fresh session follows from docs/project/START-HERE.md.
+// Each entry names a document this batch activated (or, for the two
+// generated views, activated alongside it) plus a one-line reason to read
+// it. Kept as a fixed list rather than a directory scan so the order is a
+// deliberate editorial choice, not incidental file-listing order.
+const START_HERE_READING_ORDER = Object.freeze([
+  {
+    path: "docs/project/PRODUCT.md",
+    name: "Product",
+    note: "what Strale is, who it is for, and its positioning boundaries",
+  },
+  {
+    path: "docs/project/STATE.md",
+    name: "State",
+    note: "current verified technical, commercial, and website state",
+  },
+  {
+    path: "docs/project/ROADMAP.md",
+    name: "Roadmap",
+    note: "ordered outcomes, gates, and blocked tracks",
+  },
+  {
+    path: "docs/project/DECISIONS.md",
+    name: "Decisions",
+    note: "generated index of formal Decision records",
+  },
+  {
+    path: "docs/project/PROTOCOL-ROUTER.md",
+    name: "Protocol Router",
+    note: "trigger to full mandatory-protocol body",
+  },
+]);
+
+/** Generates docs/project/START-HERE.md's Markdown body. Deterministic:
+ * the reading order above is a fixed list, not a directory scan, so two
+ * runs of `npm run context:generate` never diff. Throws (never silently
+ * emits a navigation page pointing at a document that does not exist) if
+ * any entry in the reading order is missing from disk. */
+export function activeNavigationMarkdown(root, verifiedAt = "2026-09-12") {
+  for (const entry of START_HERE_READING_ORDER) {
+    if (!existsSync(resolve(root, entry.path))) {
+      throw new Error(`cannot generate docs/project/START-HERE.md: missing ${entry.path}`);
+    }
+  }
+  const list = START_HERE_READING_ORDER.map(
+    (entry, index) => `${index + 1}. [${entry.name}](${entry.path.replace("docs/project/", "")}) -- ${entry.note}.`,
+  ).join("\n");
+  return `---
+doc_type: project-navigation
+authority_scope: none
+status: active
+complete: true
+phase: M4
+m1_template: false
+authority_active: true
+verified_at: ${verifiedAt}
+generated: true
+---
+
+# Start Here
+
+${M4_ACTIVE_BANNER}
+
+This is the repo-native entrypoint for a fresh Codex or Claude Code session
+on Strale. Read the documents below in order; each is active project
+authority in its own scope.
+
+${list}
+
+After the list above, the mandatory protocols and rules a session must
+follow are reached through the Protocol Router by trigger, not by reading
+every full body up front.
+`;
+}
+
 export function generatedFiles(root) {
   return {
     ...SKELETON_DOCUMENTS,
     ...decisionGeneratedFiles(root),
     ...protocolRouterGeneratedFiles(root),
+    "docs/project/START-HERE.md": activeNavigationMarkdown(root),
     "docs/project/schemas/project-document.schema.json":
       `${JSON.stringify(PROJECT_DOCUMENT_SCHEMA, null, 2)}\n`,
     "docs/project/schemas/operator-actions.schema.json":
@@ -683,59 +815,93 @@ export function validateSkeletonDocument(file, actual, expected) {
   return findings;
 }
 
-export function validateCandidateDocument(file, actual, expectedDocType) {
+const STATE_VERIFICATION_FIELDS = {
+  backend_reviewed_ref: /^[a-f0-9]{40}$/,
+  production_observed_ref: /^[a-f0-9]{7,40}$/,
+  production_observed_at: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/,
+  production_status: /^ok$/,
+  frontend_main_ref: /^[a-f0-9]{40}$/,
+  frontend_redesign_ref: /^[a-f0-9]{40}$/,
+  state_evidence_ref: /^archive\/sessions\/[a-zA-Z0-9._/-]+\.json$/,
+};
+
+/** Validates a docs/project or docs/decisions document's front matter and
+ * banner against its expected state: "candidate" (M2, authority_active:
+ * false, M2_CANDIDATE_BANNER present) or "active" (M4, authority_active:
+ * true, M4_ACTIVE_BANNER present, no M1/M2 banner text left behind). A
+ * document is in exactly one of the two states -- half-applied is a
+ * contradiction, not a third state: a candidate frontmatter carrying an
+ * active-looking body fails CANDIDATE_BANNER_MISSING (the M2 banner is
+ * absent) or CANDIDATE_CONTAINS_M1_TEMPLATE (an M1 marker leaked in), and
+ * an active frontmatter still carrying the M1 or M2 caution banner fails
+ * ACTIVE_CONTAINS_INACTIVE_BANNER below. */
+export function validateProjectDocument(file, actual, expectedDocType, expectedState) {
   const findings = [];
   const meta = parseFrontmatter(actual);
+  const prefix = expectedState === "active" ? "ACTIVE" : "CANDIDATE";
   if (!meta) {
-    findings.push({ code: "CANDIDATE_FRONTMATTER_MISSING", path: file });
+    findings.push({ code: `${prefix}_FRONTMATTER_MISSING`, path: file });
     return findings;
   }
-  for (const [key, value] of Object.entries({
-    doc_type: expectedDocType,
-    authority_scope: "none",
-    status: "candidate",
-    complete: false,
-    phase: "M2",
-    m1_template: false,
-    authority_active: false,
-  })) {
+  const expectedMarkers = expectedState === "active"
+    ? {
+        doc_type: expectedDocType,
+        authority_scope: "none",
+        status: "active",
+        complete: true,
+        phase: "M4",
+        m1_template: false,
+        authority_active: true,
+      }
+    : {
+        doc_type: expectedDocType,
+        authority_scope: "none",
+        status: "candidate",
+        complete: false,
+        phase: "M2",
+        m1_template: false,
+        authority_active: false,
+      };
+  for (const [key, value] of Object.entries(expectedMarkers)) {
     if (meta[key] !== value) {
-      findings.push({ code: "CANDIDATE_MARKER_INVALID", path: file, detail: key });
+      findings.push({ code: `${prefix}_MARKER_INVALID`, path: file, detail: key });
     }
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(meta.verified_at ?? ""))) {
-    findings.push({ code: "CANDIDATE_VERIFIED_AT_INVALID", path: file });
+    findings.push({ code: `${prefix}_VERIFIED_AT_INVALID`, path: file });
   }
   if (expectedDocType === "project-state") {
-    const stateFields = {
-      backend_reviewed_ref: /^[a-f0-9]{40}$/,
-      production_observed_ref: /^[a-f0-9]{7,40}$/,
-      production_observed_at: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/,
-      production_status: /^ok$/,
-      frontend_main_ref: /^[a-f0-9]{40}$/,
-      frontend_redesign_ref: /^[a-f0-9]{40}$/,
-      state_evidence_ref: /^archive\/sessions\/[a-zA-Z0-9._/-]+\.json$/,
-    };
-    for (const [field, pattern] of Object.entries(stateFields)) {
+    for (const [field, pattern] of Object.entries(STATE_VERIFICATION_FIELDS)) {
       if (!pattern.test(String(meta[field] ?? ""))) {
         findings.push({ code: "STATE_VERIFICATION_REF_INVALID", path: file, detail: field });
       }
     }
   }
-  if (!actual.includes(M2_CANDIDATE_BANNER)) {
-    findings.push({ code: "CANDIDATE_BANNER_MISSING", path: file });
+  if (expectedState === "active") {
+    if (actual.includes(M2_CANDIDATE_BANNER) || actual.includes(M1_BANNER) || actual.includes(TEMPLATE_SENTINEL)) {
+      findings.push({ code: "ACTIVE_CONTAINS_INACTIVE_BANNER", path: file });
+    }
+    if (!actual.includes(M4_ACTIVE_BANNER)) {
+      findings.push({ code: "ACTIVE_BANNER_MISSING", path: file });
+    }
+  } else {
+    if (!actual.includes(M2_CANDIDATE_BANNER)) {
+      findings.push({ code: "CANDIDATE_BANNER_MISSING", path: file });
+    }
+    if (actual.includes(TEMPLATE_SENTINEL) || actual.includes(M1_BANNER)) {
+      findings.push({ code: "CANDIDATE_CONTAINS_M1_TEMPLATE", path: file });
+    }
   }
-  if (actual.includes(TEMPLATE_SENTINEL) || actual.includes(M1_BANNER)) {
-    findings.push({ code: "CANDIDATE_CONTAINS_M1_TEMPLATE", path: file });
-  }
-  // Generated indexes (docs/project/DECISIONS.md and any future entry in
-  // M2_GENERATED_DOCUMENTS) grow with the register by construction -- more
-  // formal records means more rows, unboundedly. The word budget below
-  // exists to catch hand-authored candidate prose sprawling past its
-  // intended length; it was never meant to cap a document whose size is a
-  // direct, expected function of how much has been migrated. Skip it here
-  // rather than raise the number, which would only need raising again.
-  const isGenerated = Object.prototype.hasOwnProperty.call(M2_GENERATED_DOCUMENTS, file);
+  // Generated documents (docs/project/DECISIONS.md, PROTOCOL-ROUTER.md,
+  // START-HERE.md, and any future entry in M4_ACTIVE_GENERATED_DOCUMENTS)
+  // grow with their source register, manifest, or reading-order list by
+  // construction -- more formal records or protocols means more rows,
+  // unboundedly. The word budget below exists to catch hand-authored prose
+  // sprawling past its intended length; it was never meant to cap a
+  // document whose size is a direct, expected function of how much has
+  // been migrated. Skip it here rather than raise the number, which would
+  // only need raising again.
+  const isGenerated = Object.prototype.hasOwnProperty.call(M4_ACTIVE_GENERATED_DOCUMENTS, file);
   const wordLimit = M2_CANDIDATE_WORD_LIMITS[file];
   if (!isGenerated && wordLimit) {
     const wordCount = actual.trim().split(/\s+/).filter(Boolean).length;
@@ -748,6 +914,14 @@ export function validateCandidateDocument(file, actual, expectedDocType) {
     }
   }
   return findings;
+}
+
+export function validateCandidateDocument(file, actual, expectedDocType) {
+  return validateProjectDocument(file, actual, expectedDocType, "candidate");
+}
+
+export function validateActiveDocument(file, actual, expectedDocType) {
+  return validateProjectDocument(file, actual, expectedDocType, "active");
 }
 
 export function validateStateEvidence(root, file, actual) {

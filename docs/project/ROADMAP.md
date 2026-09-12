@@ -1,19 +1,19 @@
 ---
 doc_type: project-roadmap
 authority_scope: none
-status: candidate
-complete: false
-phase: M2
+status: active
+complete: true
+phase: M4
 m1_template: false
-authority_active: false
-verified_at: 2026-09-01
+authority_active: true
+verified_at: 2026-09-12
 ---
 
 # Roadmap
 
-> [!CAUTION]
-> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**
-> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.
+> [!NOTE]
+> **ACTIVE PROJECT AUTHORITY (M4).**
+> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.
 
 This roadmap orders outcomes, not issues. GitHub issues and work packages remain
 execution records; they do not become project truth merely by opening or closing.
@@ -22,8 +22,9 @@ execution records; they do not become project truth merely by opening or closing
 
 - **Cutover gate:** outcome 1 must finish before repo-native files become active
   authority or Notion is retired.
-- **Reconciliation gates:** outcome 2 must finish before #438 or WP10 can be
-  called reconciled or accepted. It does not block safe work in other lanes.
+- **Reconciliation gate:** outcome 2 must finish before #438 can be called
+  reconciled; WP10 is already ACCEPTED (see outcome 2). It does not block
+  safe work in other lanes.
 - **Sequenced product work:** begin WP16.0 containment and WP16.1 benchmarking
   after the current operating-model batch; the non-blocking WP9, WP15, and WP13
   residuals do not gate those two steps. Deeper retrieval changes wait for the
@@ -38,25 +39,27 @@ execution records; they do not become project truth merely by opening or closing
 state, recent changes, decisions, roadmap, and mandatory protocols from one
 small repo-native read path.
 
-Next bounded work:
+Done: the M2 closure audit and its disposition register (T1, T10; zero
+blocking exit gaps), the M3 vendor-current-state shadow replacement plus
+digest, distribution-registry, session-end-draft, scheduled-mechanism, and
+full protocol-coverage batches (T6, done 2026-09-11 with its milestone
+review's three conditions settled).
 
-1. complete the M2 closure audit: add a machine-checkable disposition register
-   for every legacy-authority inventory entry and preserved Decision source;
-2. close the resulting M2 exit gaps through contradiction-checked Decision
-   batches while collision-blocked identities stay excluded;
-3. after the M2 exit gate, prepare the M3 vendor-current-state shadow
-   replacement, followed by Journal/activity and daily-priority replacements;
-4. complete protocol coverage and shadow session/start/end command paths; and
-5. prove entrypoint symmetry and replacement parity before one atomic M4
-   cutover retires active Notion consumers.
+Active now (T7, M4 atomic authority cutover): the batch sequence in
+[the cutover inventory](../../archive/sessions/2026-09-11-m4-cutover-inventory.md)
+section 7 -- retire the `.claude/` starter-kit files, rewrite CLAUDE.md and
+AGENTS.md as peer entrypoints with an entrypoint-parity check, activate the
+repo-native end-session and vendor-switch flows, wire the digest's
+repo-native readers into production, retarget the weekly vendor-roster drift
+off Notion, add the Notion anti-regression check and make report-only checks
+blocking, and last the schema/authority-marker flip this document is part
+of. Each batch merges into the `m4/cutover` integration branch, never
+`main`; the final PR from `m4/cutover` to `main` needs an independent review
+and the founder's yes.
 
-The exact resume scope and safety boundary are maintained in the **Current
-continuation checkpoint** of the
-[migration plan](../strategy/2026-08-31-repo-native-operating-model-migration.md).
-
-The current candidate documents remain `authority_scope: none` until that gate.
 Execution source: the
-[repo-native operating-model migration plan](../strategy/2026-08-31-repo-native-operating-model-migration.md).
+[repo-native operating-model migration plan](../strategy/2026-08-31-repo-native-operating-model-migration.md)
+and [the cutover inventory](../../archive/sessions/2026-09-11-m4-cutover-inventory.md).
 
 ## 2. Close prepared versus reconciled production state
 
@@ -68,12 +71,12 @@ For [issue #438](https://github.com/strale-io/strale/issues/438), independently
 review the corrected founder-gated script and its pre-write global digest guard,
 obtain the exact authority, execute only through the established ephemeral-write
 boundary, and store an independent read-only post-write result. Prepared,
-executed, and reconciled remain distinct states.
-
-**[WP10](../remediation/packages/WP10-RECONCILIATION.md):** run the formal acceptance review using the stored cadence query plus
-the correct application-log evidence for overlap, recovery, and watchdog
-conditions. Record ACCEPT, EXTEND, or FAIL; do not infer acceptance from the
-expired date.
+executed, and reconciled remain distinct states. This remains the only open
+item in this outcome: [WP10](../remediation/packages/WP10-RECONCILIATION.md)
+was ACCEPTED 2026-09-03 (commit `fadc8052`, PR #493) on the stored cadence
+query and application-log evidence -- see
+[STATE](STATE.md#active-reconciliation-and-residuals) for the acceptance
+detail.
 
 ## 3. Establish change attribution
 
@@ -115,16 +118,23 @@ gaps. Do not reopen outreach to the transaction-inferred card buyer.
 
 ## 7. Reconcile and complete the website
 
-**Direction (founder, 2026-09-02; decision record DEC-20260902-A to be filed
-on the founder's confirmation of its text):** the website redesign is built
+**Direction (founder, 2026-09-02; decision record DEC-20260902-A, filed
+2026-09-02 on the founder's confirmation of its text):** the website redesign is built
 inside this repository as `apps/web`, making it a monorepo. Preserve
 the existing frontend material first (done in T11: tags, release
 `preserve-2026-09-02`, tracked candidates), then build the redesign here;
 `strale-frontend` is swept and kept until the cutover ships, not extended.
 
-First preserve and review the local v0.7 design-system candidate against the
-durable v0.5 checkpoint. Rebase/reconcile Homepage v2 with frontend main, run
-build and visual/accessibility verification, then decide what is accepted.
+A dedicated program (`docs/programs/brand-website/PROGRAM.md`, status
+`art-direction-in-progress`, started 2026-09-05) now carries this work
+forward: the founder selected hero treatment B on 2026-09-06, and an
+accepted brand kit (atmosphere, identity/typography, controls, patterns,
+illustrations) has its own index at `design/brand-kit/README.md`. Design
+acceptance for continued work is distinct from production adoption. The
+remaining gaps -- product-proof evidence, asset-rights clearance, editorial
+and illustration briefs, page-level accessibility/performance checks, and
+production token adoption -- are tracked in
+`docs/programs/brand-website/system-completion.json`, not restated here.
 
 After that, complete the remaining homepage outcomes—Featured Tools,
 Developers/x402, Reliability, Pricing/Access, closing CTA, footer, and a final
@@ -136,10 +146,14 @@ as data in `design/tokens/`, not restated here — see `design/README.md` and
 
 ## Blocked tracks
 
-- **WP12:** VERIFY-IP / trusted-hop evidence.
 - **WP14:** VERIFY-LEGAL and founder/legal decisions.
 - **Domain migration:** explicit founder decision before irreversible public or
   infrastructure change.
+
+WP12 is no longer blocked: VERIFY-IP resolved 2026-09-02 (see
+[STATE](STATE.md#active-reconciliation-and-residuals)), and it moved to
+UNBLOCKED_NOT_YET_STARTED -- unstarted implementation work, not a founder or
+evidence block.
 
 Blocked items do not stop unrelated repo, commercial, discovery, or website
 work.
@@ -148,5 +162,5 @@ work.
 
 Ordering and qualifications come from the
 [2026-09-01 M2 reconciliation](../../archive/sessions/2026-09-01-m2-product-state-reconciliation.md)
-and its 37-claim matrix. Update this candidate when an outcome changes
+and its 37-claim matrix. Update this document when an outcome changes
 materially; do not turn it into a completed-work diary.

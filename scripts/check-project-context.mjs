@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   M2_CANDIDATE_DOCUMENTS,
-  M2_GENERATED_DOCUMENTS,
+  M4_ACTIVE_DOCUMENTS,
+  M4_ACTIVE_GENERATED_DOCUMENTS,
   SKELETON_DOCUMENTS,
   buildInventory,
   generatedFiles,
   isDirectInvocation,
+  parseFrontmatter,
   repoRootFrom,
   validateInventory,
+  validateActiveDocument,
   validateCandidateDocument,
   validateOperatorActions,
   validateOperatorActionEvidence,
@@ -32,6 +35,7 @@ function finding(code, path, detail) {
 const GENERATED_CONTEXT_FILES = [
   "docs/project/DECISIONS.md",
   "docs/project/PROTOCOL-ROUTER.md",
+  "docs/project/START-HERE.md",
   "docs/project/RECENT.md",
   "docs/project/legacy-authority-inventory.json",
   "docs/project/schemas/project-document.schema.json",
@@ -88,8 +92,8 @@ export function checkPrivateArchiveStatus(root) {
 // legacy-authority-inventory.json shape/hash validateInventory and the
 // INVENTORY_HASH_DRIFT comparison enforce), plus the one failure mode where
 // computing the expected content itself throws. Every other finding code in
-// this file is about hand-authored candidate or registry content
-// (M2_CANDIDATE_DOCUMENTS, docs/operations/operator-actions.yaml,
+// this file is about hand-authored candidate or active content
+// (M2_CANDIDATE_DOCUMENTS, M4_ACTIVE_DOCUMENTS, docs/operations/operator-actions.yaml,
 // docs/decisions/records, docs/project/m2-closure-register.yaml, the
 // pre-cutover entrypoint guard, the private-archive status) that
 // `context:generate` never touches, so staging an inventory target must not
@@ -110,10 +114,89 @@ export const REGENERATION_FINDING_CODES = new Set([
   "INVENTORY_FIELD_OUT_OF_SCOPE",
 ]);
 
-export function checkPrecutoverEntrypoint(entrypoint, content) {
-  return /docs[\\/](?:project|decisions)(?:[\\/]|\b)/.test(content)
-    ? [finding("M1_ENTRYPOINT_ACTIVATED", entrypoint)]
-    : [];
+// Every docs/project/... or docs/decisions/... path-shaped token an
+// entrypoint's prose names, normalized to forward slashes and with
+// trailing sentence punctuation (a period, comma, closing quote or paren
+// picked up by "Read docs/project/PRODUCT.md.") stripped. A run of "*"
+// (a glob such as "docs/project/*.md") is kept as its own token so the
+// caller can treat it as never resolving to a real path.
+function extractDocPathTokens(content) {
+  const raw = content.match(/docs[\\/](?:project|decisions)(?:[\\/][A-Za-z0-9_.*-]+)*/g) ?? [];
+  const tokens = new Set();
+  for (const match of raw) {
+    const token = match.split("\\").join("/").replace(/[.,;:)'"]+$/, "");
+    tokens.add(token);
+  }
+  return [...tokens];
+}
+
+function frontmatterIsActive(meta) {
+  return !!meta && meta.status === "active" && meta.authority_active === true;
+}
+
+// A directory reference is allowed only when every document anywhere inside
+// it -- at any depth, not only immediate children -- is itself active. This
+// is strict rather than permissive: a growing directory earns the reference
+// only by every member at every depth being active, not by some being
+// active; an empty directory, and one whose only documents live inside a
+// nested subdirectory that is itself empty of documents, both fail rather
+// than passing silently. A directory that contains no document anywhere in
+// its subtree has nothing to verify, so it fails the same way an empty
+// directory does -- there is no such thing as vacuously active.
+function collectDocumentFiles(absoluteDir) {
+  let children;
+  try {
+    children = readdirSync(absoluteDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const files = [];
+  for (const entry of children) {
+    const entryPath = resolve(absoluteDir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectDocumentFiles(entryPath));
+    } else if (entry.isFile() && /\.(md|yaml|yml)$/i.test(entry.name)) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}
+
+function directoryReferenceIsActive(absoluteDir) {
+  const files = collectDocumentFiles(absoluteDir);
+  if (files.length === 0) return false;
+  return files.every((absolute) => {
+    const content = readFileSync(absolute, "utf8");
+    return frontmatterIsActive(parseFrontmatter(content));
+  });
+}
+
+export function checkPrecutoverEntrypoint(root, entrypoint, content) {
+  const findings = [];
+  for (const token of extractDocPathTokens(content)) {
+    if (token.includes("*")) {
+      // A glob is never a real path; it can never be verified active.
+      findings.push(finding("M1_ENTRYPOINT_ACTIVATED", entrypoint, token));
+      continue;
+    }
+    const absolute = resolve(root, token);
+    if (!existsSync(absolute)) {
+      // A path that does not exist must fail, not pass silently.
+      findings.push(finding("M1_ENTRYPOINT_ACTIVATED", entrypoint, token));
+      continue;
+    }
+    if (statSync(absolute).isDirectory()) {
+      if (!directoryReferenceIsActive(absolute)) {
+        findings.push(finding("M1_ENTRYPOINT_ACTIVATED", entrypoint, token));
+      }
+      continue;
+    }
+    const meta = parseFrontmatter(readFileSync(absolute, "utf8"));
+    if (!frontmatterIsActive(meta)) {
+      findings.push(finding("M1_ENTRYPOINT_ACTIVATED", entrypoint, token));
+    }
+  }
+  return findings;
 }
 
 export function runChecks(root = repoRootFrom(import.meta.url)) {
@@ -140,10 +223,7 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     );
   }
 
-  for (const [file, expectedDocType] of Object.entries({
-    ...M2_CANDIDATE_DOCUMENTS,
-    ...M2_GENERATED_DOCUMENTS,
-  })) {
+  for (const [file, expectedDocType] of Object.entries(M2_CANDIDATE_DOCUMENTS)) {
     const absolute = resolve(root, file);
     if (!existsSync(absolute)) {
       findings.push(finding("CANDIDATE_FILE_MISSING", file));
@@ -156,17 +236,35 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
         ...item,
       })),
     );
-    if (expectedDocType === "project-state") {
+    if (expectedDocType === "pending-founder-decisions") {
       findings.push(
-        ...validateStateEvidence(root, file, actual).map((item) => ({
+        ...validatePendingFounderDecisions(file, actual).map((item) => ({
           severity: "warning",
           ...item,
         })),
       );
     }
-    if (expectedDocType === "pending-founder-decisions") {
+  }
+
+  for (const [file, expectedDocType] of Object.entries({
+    ...M4_ACTIVE_DOCUMENTS,
+    ...M4_ACTIVE_GENERATED_DOCUMENTS,
+  })) {
+    const absolute = resolve(root, file);
+    if (!existsSync(absolute)) {
+      findings.push(finding("ACTIVE_FILE_MISSING", file));
+      continue;
+    }
+    const actual = readFileSync(absolute, "utf8");
+    findings.push(
+      ...validateActiveDocument(file, actual, expectedDocType).map((item) => ({
+        severity: "warning",
+        ...item,
+      })),
+    );
+    if (expectedDocType === "project-state") {
       findings.push(
-        ...validatePendingFounderDecisions(file, actual).map((item) => ({
+        ...validateStateEvidence(root, file, actual).map((item) => ({
           severity: "warning",
           ...item,
         })),
@@ -228,7 +326,7 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
 
   for (const entrypoint of ["AGENTS.md", "CLAUDE.md"]) {
     const content = readFileSync(resolve(root, entrypoint), "utf8");
-    findings.push(...checkPrecutoverEntrypoint(entrypoint, content));
+    findings.push(...checkPrecutoverEntrypoint(root, entrypoint, content));
   }
 
   findings.push(...checkPrivateArchiveStatus(root));
@@ -250,7 +348,7 @@ function main() {
   if (json) {
     console.log(JSON.stringify({ mode: "warning-only", findings }, null, 2));
   } else {
-    console.log("project context check: warning-only (M2 candidate foundation)");
+    console.log("project context check: warning-only (M2 candidate + M4 active foundation)");
     if (findings.length === 0) console.log("  no warnings");
     for (const item of findings) {
       console.log(`  WARN ${item.code} ${item.path}${item.detail ? ` — ${item.detail}` : ""}`);

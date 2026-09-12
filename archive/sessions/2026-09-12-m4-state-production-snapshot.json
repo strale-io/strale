@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-09-12T02:22:25.142Z",
+  "source": "read-only GET requests to https://api.strale.io/health and https://api.strale.io/v1/platform/facts",
+  "state_frontmatter": {
+    "backend_reviewed_ref": "e498d5741bdfc7d28fef95bbbd98bf9508835753",
+    "production_observed_ref": "e498d5741bdf",
+    "production_observed_at": "2026-09-12T02:22:25.142Z",
+    "production_status": "ok",
+    "frontend_main_ref": "4be8d251b05e0abf6e23a195913c188ae318056e",
+    "frontend_redesign_ref": "998964716c8601be67d4e71a508a803160434517"
+  },
+  "health": {
+    "status": "ok",
+    "commit": "e498d5741bdf"
+  },
+  "platform_facts": {
+    "capability_counts": {
+      "active_visible": 294,
+      "active_total": 312,
+      "catalogued": 336,
+      "free_tier_slug_count": 11
+    },
+    "solution_count_active": 99,
+    "processing_region": "us-east4-eqdc4a",
+    "processing_jurisdiction": "US",
+    "as_of": "2026-09-12T02:22:07.127Z"
+  },
+  "frontend_refs_note": "The two frontend refs are carried over from the 2026-09-01 snapshot: no frontend observation was taken for this one.",
+  "limitations": [
+    "This is a dated evidence snapshot, not a static authority for mutable platform facts.",
+    "Consumers must re-query /v1/platform/facts before presenting current values."
+  ]
+}

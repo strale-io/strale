@@ -134,23 +134,25 @@ function rowClaudeHeading(row) {
 
 // ── router generation ────────────────────────────────────────────────────
 
-// Byte-identical to project-context-lib.mjs's M2_CANDIDATE_BANNER, the same
-// duplication decision-records-lib.mjs already makes for its own
-// DECISION_INDEX_CANDIDATE_BANNER (see that file's header comment) rather
+// M4 batch 1d activated docs/project/PROTOCOL-ROUTER.md. Byte-identical to
+// project-context-lib.mjs's M4_ACTIVE_BANNER, the same duplication
+// decision-records-lib.mjs already makes for its own
+// DECISION_INDEX_ACTIVE_BANNER (see that file's header comment) rather
 // than importing it, which would make this module and project-context-lib.mjs
-// import each other. check-project-context.mjs's CANDIDATE_BANNER_MISSING
+// import each other. check-project-context.mjs's ACTIVE_BANNER_MISSING
 // check compares against the literal text, not a shared reference.
-const ROUTER_CANDIDATE_BANNER =
-  "> [!CAUTION]\n" +
-  "> **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**\n" +
-  "> Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.";
+const ROUTER_ACTIVE_BANNER =
+  "> [!NOTE]\n" +
+  "> **ACTIVE PROJECT AUTHORITY (M4).**\n" +
+  "> This document is authoritative repo-native project truth on the `m4/cutover` integration branch. `AGENTS.md` and `CLAUDE.md` on `main` remain authoritative until the single M4 cutover merge folds this branch in.";
 
-const ROUTER_EXTRA_CAUTION =
-  "Every full protocol body linked below is itself an inactive mirror " +
-  "(`authority_active: false`); `CLAUDE.md` remains the sole authority for " +
-  "the mirrored rows and `docs/company/CHARTER.md` for production " +
-  "authority. This router is not mandatory startup context until the " +
-  "founder-gated M4 cutover activates it.";
+const ROUTER_MIRROR_NOTE =
+  "Every full protocol body linked below is, for now, an inactive mirror " +
+  "(`authority_active: false`) under `docs/governance/protocols/`; " +
+  "`CLAUDE.md` remains the authoritative full text for each mirrored row " +
+  "and `docs/company/CHARTER.md` for production authority, until a later " +
+  "batch migrates them. This router itself is the active navigation index " +
+  "from trigger to full body.";
 
 /** Generates docs/project/PROTOCOL-ROUTER.md's Markdown body from a
  * schema-valid manifest. Deterministic: the same manifest always produces
@@ -166,22 +168,22 @@ export function protocolRouterMarkdown(manifest) {
   return `---
 doc_type: protocol-router
 authority_scope: none
-status: candidate
-complete: false
-phase: M2
+status: active
+complete: true
+phase: M4
 m1_template: false
-authority_active: false
+authority_active: true
 verified_at: ${manifest.verified_at}
 generated: true
 ---
 
-# Protocol Router (Candidate)
+# Protocol Router
 
-${ROUTER_CANDIDATE_BANNER}
+${ROUTER_ACTIVE_BANNER}
 
-${ROUTER_EXTRA_CAUTION}
+${ROUTER_MIRROR_NOTE}
 
-**PARTIAL GENERATED VIEW.** Generated from \`docs/project/protocol-coverage.yaml\`
+**Generated router.** Generated from \`docs/project/protocol-coverage.yaml\`
 by \`scripts/protocol-coverage-lib.mjs\` (\`npm run context:generate\`); checked
 for drift by \`npm run protocols:coverage\`. Do not hand-edit this file --
 change the manifest and regenerate.
