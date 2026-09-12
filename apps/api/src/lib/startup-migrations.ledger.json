@@ -748,6 +748,28 @@
         "test_suites.updated_at"
       ],
       "sha256": "af9f0be711fe67d9a50c5abd220dae0532127c2d0f339b20a6cf01b7641c19c1"
+    },
+    {
+      "id": "M058",
+      "function": "runMigration0115_resyncCanadianCompanyDataDependencyHealth",
+      "title": "Resync Canadian Company Data Dependency Health",
+      "added": "2026-09-13",
+      "columns_written": [
+        "health_monitor_events.action_taken",
+        "health_monitor_events.capability_slug",
+        "health_monitor_events.details",
+        "health_monitor_events.event_type",
+        "health_monitor_events.human_override",
+        "health_monitor_events.tier",
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected",
+        "test_suites.baseline_captured_at",
+        "test_suites.baseline_output",
+        "test_suites.input",
+        "test_suites.test_mode",
+        "test_suites.updated_at"
+      ],
+      "sha256": "b8b88a767a8e35c1c6ad09fbf68d0feb54ad9931d80e198fb409b2c941657528"
     }
   ],
   "known_overlaps": [

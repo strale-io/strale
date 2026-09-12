@@ -131,6 +131,7 @@
         "apps/api/src/capabilities/serper-input-validation.test.ts",
         "apps/api/src/db/seed-solutions.test.ts",
         "apps/api/src/jobs/capability-promotion.test.ts",
+        "apps/api/src/jobs/invariant-checker.ts",
         "apps/api/src/jobs/quality-floor.test.ts",
         "apps/api/src/jobs/settlement-reconciler.test.ts",
         "apps/api/src/lib/browserless-suite-migration.ts",
@@ -764,7 +765,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "5f542f8a34b7745142be4b0082ebd6189c4d33efe81fa873df8cdf03871334d5",
+      "sha256": "07ad169784f6aeab2014c79cafa0d94ad54d8fd03daaef229934348d8a303e73",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -802,6 +803,7 @@
         "apps/api/src/capabilities/belgian-company-data.ts",
         "apps/api/src/capabilities/providers/latvian-company-data-sdda.ts",
         "apps/api/src/capabilities/web-extract-resilience.test.ts",
+        "apps/api/src/jobs/invariant-checker.ts",
         "apps/api/src/lib/browserless-suite-migration.ts",
         "apps/api/src/lib/check-self-staleness.test.ts",
         "apps/api/src/lib/check-self-staleness.ts",

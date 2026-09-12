@@ -30,6 +30,7 @@ import { sql } from "drizzle-orm";
 import { load as loadYaml } from "js-yaml";
 
 import { findFixtureDrift, type ManifestFixture, type SuiteRow } from "../src/lib/fixture-drift.js";
+import { classifyDriftCause } from "../src/lib/drift-cause.js";
 import { openOperatorDrizzle } from "../src/lib/operator-db.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -73,16 +74,6 @@ function readManifests(): {
   return { fixtures, costClass, quotaCap, quotaWindow };
 }
 
-function classify(sampleFailure: string | null): string {
-  const s = sampleFailure ?? "";
-  if (/refuses invocation from context kind/.test(s)) return "policy_refusal";
-  if (/has exhausted its .* test budget/.test(s)) return "quota_refusal";
-  if (/No confident .* registry match|Ambiguous .* name|none with that exact/.test(s)) return "ambiguous_match";
-  if (/quota exceeded|quota has been temporarily exceeded|daily quota .* exhausted/i.test(s)) return "quota_refusal";
-  if (/No .* (found|company found)|does not exist|could not find/i.test(s)) return "stale_identifier";
-  return "other";
-}
-
 async function main(): Promise<void> {
   const db = openOperatorDrizzle();
   const rows: any = await db.execute(sql`
@@ -121,7 +112,7 @@ async function main(): Promise<void> {
 
   const grouped: Record<string, unknown[]> = {};
   for (const f of findings) {
-    const cause = classify(f.sampleFailure);
+    const cause = classifyDriftCause(f.sampleFailure);
     const entry = {
       slug: f.slug,
       suiteId: f.suiteId,

@@ -5498,7 +5498,7 @@ export async function runMigration0114_releaseCorrectedDependencyHealthFixtures(
 // Active since 1947.
 //
 // Unlike 0113/0114, this row is NOT quarantined (`test_status = 'normal'`,
-// `quarantine_reason IS NULL` as of 2026-09-12 — checked live, read-only):
+// `quarantine_reason IS NULL` as of 2026-09-12, checked live, read-only):
 // the suite keeps recapturing on every scheduled run and keeps failing
 // rather than tripping the fixture-recapture-exhausted lock, so the
 // predicate below matches on the exact stale input value instead of a
@@ -5512,7 +5512,7 @@ export async function runMigration0114_releaseCorrectedDependencyHealthFixtures(
 // `input` is rewritten to the manifest's corrected value directly, the
 // same value `scripts/onboard.ts --backfill --discover` would write via
 // `checkDependencyHealthDrift` (`src/lib/test-input-drift.ts`, the general
-// mechanism PR #677 added) if run against this slug today — this block and
+// mechanism PR #677 added) if run against this slug today; this block and
 // that mechanism converge on the same input, per the brief's instruction
 // not to write a second resync mechanism. `test_mode` stays `live` (already
 // was); baseline is cleared so the next scheduled run captures fresh
@@ -5522,7 +5522,7 @@ export async function runMigration0114_releaseCorrectedDependencyHealthFixtures(
 // one test suite moves from "367 runs, 0 passed against a dead identifier"
 // to its existing schedule against a live one. `free_unlimited`, so this
 // does not reach a paid upstream, and one suite resuming its own cadence is
-// not the bulk-DELETE-style resumption event the protocol targets — no
+// not the bulk-DELETE-style resumption event the protocol targets, no
 // pre-drain or self-throttle needed beyond the exact-literal predicate
 // already built in.
 //

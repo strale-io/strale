@@ -1,0 +1,2629 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "apps/api vitest",
+    "commit": "4632a3e12280fef97f14cc3f4a4c6f33f04b007b"
+  },
+  "at": "2026-09-12T23:05:43.007Z",
+  "inputs": {
+    "command": "npx vitest run (apps/api)",
+    "files": [
+      "src/lib/startup-migrations.test.ts",
+      "src/lib/fixture-drift.test.ts",
+      "src/lib/test-input-drift.test.ts",
+      "src/lib/drift-cause.test.ts",
+      "src/jobs/invariant-checker.test.ts",
+      "src/jobs/invariant-checker.correctness.test.ts",
+      "src/jobs/invariant-checker.fixture-drift.test.ts"
+    ]
+  },
+  "summary": {
+    "ok": true,
+    "numTotalTests": 209,
+    "numPassedTests": 209,
+    "numFailedTests": 0
+  },
+  "topic": "wider-input-drift",
+  "raw": {
+    "numTotalTestSuites": 63,
+    "numPassedTestSuites": 63,
+    "numFailedTestSuites": 0,
+    "numPendingTestSuites": 0,
+    "numTotalTests": 209,
+    "numPassedTests": 209,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "snapshot": {
+      "added": 0,
+      "failure": false,
+      "filesAdded": 0,
+      "filesRemoved": 0,
+      "filesRemovedList": [],
+      "filesUnmatched": 0,
+      "filesUpdated": 0,
+      "matched": 0,
+      "total": 0,
+      "unchecked": 0,
+      "uncheckedKeysByFile": [],
+      "unmatched": 0,
+      "updated": 0,
+      "didUpdate": false
+    },
+    "startTime": 1789254328337,
+    "success": true,
+    "testResults": [
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings treats test-budget exhaustion as environmental",
+            "status": "passed",
+            "title": "treats test-budget exhaustion as environmental",
+            "duration": 1.6308999999998832,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings treats rejected vendor token as environmental",
+            "status": "passed",
+            "title": "treats rejected vendor token as environmental",
+            "duration": 0.218199999999797,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings treats upstream 500 as environmental",
+            "status": "passed",
+            "title": "treats upstream 500 as environmental",
+            "duration": 0.3975000000000364,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings treats upstream 429 as environmental",
+            "status": "passed",
+            "title": "treats upstream 429 as environmental",
+            "duration": 0.09699999999997999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings treats timeout as environmental",
+            "status": "passed",
+            "title": "treats timeout as environmental",
+            "duration": 0.09559999999987667,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings keeps a missing guaranteed field attributable to the capability",
+            "status": "passed",
+            "title": "keeps a missing guaranteed field attributable to the capability",
+            "duration": 0.8721000000000458,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings keeps an all-null response attributable to the capability",
+            "status": "passed",
+            "title": "keeps an all-null response attributable to the capability",
+            "duration": 0.6720000000000255,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings keeps a wrong value attributable to the capability",
+            "status": "passed",
+            "title": "keeps a wrong value attributable to the capability",
+            "duration": 0.10050000000001091,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings treats a missing reason as attributable, not as a free pass",
+            "status": "passed",
+            "title": "treats a missing reason as attributable, not as a free pass",
+            "duration": 0.18380000000001928,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isEnvironmentalFailure — production failure strings"
+            ],
+            "fullName": "isEnvironmentalFailure — production failure strings excludes caller_input and tos_policy from the environmental set",
+            "status": "passed",
+            "title": "excludes caller_input and tos_policy from the environmental set",
+            "duration": 0.18630000000007385,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "scoreCorrectness"
+            ],
+            "fullName": "scoreCorrectness does not fire when every failure is a throttled test budget",
+            "status": "passed",
+            "title": "does not fire when every failure is a throttled test budget",
+            "duration": 1.1263000000001284,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "scoreCorrectness"
+            ],
+            "fullName": "scoreCorrectness does not fire when every failure is an expired vendor token",
+            "status": "passed",
+            "title": "does not fire when every failure is an expired vendor token",
+            "duration": 0.30369999999993524,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "scoreCorrectness"
+            ],
+            "fullName": "scoreCorrectness still fires when the capability's own contract is broken",
+            "status": "passed",
+            "title": "still fires when the capability's own contract is broken",
+            "duration": 0.538899999999785,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "scoreCorrectness"
+            ],
+            "fullName": "scoreCorrectness judges a real defect on the surviving rows, not on the padded total",
+            "status": "passed",
+            "title": "judges a real defect on the surviving rows, not on the padded total",
+            "duration": 0.5873999999998887,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "scoreCorrectness"
+            ],
+            "fullName": "scoreCorrectness quotes only capability-attributable failures back to the operator",
+            "status": "passed",
+            "title": "quotes only capability-attributable failures back to the operator",
+            "duration": 0.20029999999997017,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "scoreCorrectness"
+            ],
+            "fullName": "scoreCorrectness is unchanged for a healthy capability",
+            "status": "passed",
+            "title": "is unchanged for a healthy capability",
+            "duration": 0.14609999999993306,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789254329595,
+        "endTime": 1789254329603.2002,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-ad528d91d4e3a442c/apps/api/src/jobs/invariant-checker.correctness.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "checkFixtureInputDrift"
+            ],
+            "fullName": "checkFixtureInputDrift fires an alert with a by-cause breakdown when the actionable set is non-empty",
+            "status": "passed",
+            "title": "fires an alert with a by-cause breakdown when the actionable set is non-empty",
+            "duration": 4.86889999999994,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "checkFixtureInputDrift"
+            ],
+            "fullName": "checkFixtureInputDrift stays silent when the stored input already matches the manifest",
+            "status": "passed",
+            "title": "stays silent when the stored input already matches the manifest",
+            "duration": 0.7424000000000888,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "checkFixtureInputDrift"
+            ],
+            "fullName": "checkFixtureInputDrift stays silent when the suite is currently passing despite the divergence",
+            "status": "passed",
+            "title": "stays silent when the suite is currently passing despite the divergence",
+            "duration": 0.3451999999999771,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "checkFixtureInputDrift"
+            ],
+            "fullName": "checkFixtureInputDrift groups a policy refusal separately from a stale identifier in the same run",
+            "status": "passed",
+            "title": "groups a policy refusal separately from a stale identifier in the same run",
+            "duration": 0.7416000000000622,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789254329469,
+        "endTime": 1789254329475.7417,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-ad528d91d4e3a442c/apps/api/src/jobs/invariant-checker.fixture-drift.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "isLyingBreakerRow — Phase 3 Invariant #13"
+            ],
+            "fullName": "isLyingBreakerRow — Phase 3 Invariant #13 flags the DK production row shape from Phase 2 session start",
+            "status": "passed",
+            "title": "flags the DK production row shape from Phase 2 session start",
+            "duration": 1.256399999999985,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isLyingBreakerRow — Phase 3 Invariant #13"
+            ],
+            "fullName": "isLyingBreakerRow — Phase 3 Invariant #13 does not flag a normal healthy row (closed + total_successes > 0)",
+            "status": "passed",
+            "title": "does not flag a normal healthy row (closed + total_successes > 0)",
+            "duration": 0.13829999999984466,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isLyingBreakerRow — Phase 3 Invariant #13"
+            ],
+            "fullName": "isLyingBreakerRow — Phase 3 Invariant #13 does not flag a never-tested row (closed + last_success_at null + total_successes 0)",
+            "status": "passed",
+            "title": "does not flag a never-tested row (closed + last_success_at null + total_successes 0)",
+            "duration": 0.10360000000014224,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isLyingBreakerRow — Phase 3 Invariant #13"
+            ],
+            "fullName": "isLyingBreakerRow — Phase 3 Invariant #13 does not flag an open or half_open row even if other fields look suspicious",
+            "status": "passed",
+            "title": "does not flag an open or half_open row even if other fields look suspicious",
+            "duration": 0.13840000000004693,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "isLyingBreakerRow — Phase 3 Invariant #13"
+            ],
+            "fullName": "isLyingBreakerRow — Phase 3 Invariant #13 does not flag a closed row with at least one real success even if last_success_at is recent",
+            "status": "passed",
+            "title": "does not flag a closed row with at least one real success even if last_success_at is recent",
+            "duration": 0.09250000000020009,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789254329595,
+        "endTime": 1789254329597.1384,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-ad528d91d4e3a442c/apps/api/src/jobs/invariant-checker.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause classifies an ALLOW_MATRIX context refusal as policy_refusal",
+            "status": "passed",
+            "title": "classifies an ALLOW_MATRIX context refusal as policy_refusal",
+            "duration": 1.3517999999999688,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause classifies a daily test budget exhaustion as quota_refusal",
+            "status": "passed",
+            "title": "classifies a daily test budget exhaustion as quota_refusal",
+            "duration": 0.198599999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause classifies a vendor 429 quota message as quota_refusal",
+            "status": "passed",
+            "title": "classifies a vendor 429 quota message as quota_refusal",
+            "duration": 0.24940000000003693,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause classifies a low-confidence name-match refusal as ambiguous_match",
+            "status": "passed",
+            "title": "classifies a low-confidence name-match refusal as ambiguous_match",
+            "duration": 0.17269999999996344,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause classifies a registry not-found message as stale_identifier",
+            "status": "passed",
+            "title": "classifies a registry not-found message as stale_identifier",
+            "duration": 0.19790000000000418,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause falls back to other for a message matching none of the known shapes",
+            "status": "passed",
+            "title": "falls back to other for a message matching none of the known shapes",
+            "duration": 0.12839999999999918,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause falls back to other for null or undefined, never throws",
+            "status": "passed",
+            "title": "falls back to other for null or undefined, never throws",
+            "duration": 0.0969000000000051,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "classifyDriftCause"
+            ],
+            "fullName": "classifyDriftCause prefers policy_refusal over stale_identifier when a message could match both shapes",
+            "status": "passed",
+            "title": "prefers policy_refusal over stale_identifier when a message could match both shapes",
+            "duration": 0.10120000000000573,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789254328927,
+        "endTime": 1789254328929.198,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-ad528d91d4e3a442c/apps/api/src/lib/drift-cause.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift reports a suite whose production fixture differs from the manifest and never passes",
+            "status": "passed",
+            "title": "reports a suite whose production fixture differs from the manifest and never passes",
+            "duration": 1.8974000000000046,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift reports the canadian-company-data case",
+            "status": "passed",
+            "title": "reports the canadian-company-data case",
+            "duration": 0.4481999999999857,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift does NOT report a differing fixture that passes",
+            "status": "passed",
+            "title": "does NOT report a differing fixture that passes",
+            "duration": 0.12950000000000728,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift does NOT report a failing suite whose fixture matches its manifest",
+            "status": "passed",
+            "title": "does NOT report a failing suite whose fixture matches its manifest",
+            "duration": 0.21069999999997435,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift does NOT report a suite with no runs in the window",
+            "status": "passed",
+            "title": "does NOT report a suite with no runs in the window",
+            "duration": 0.15579999999999927,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift does NOT report when the manifest has no health_check_input to compare against",
+            "status": "passed",
+            "title": "does NOT report when the manifest has no health_check_input to compare against",
+            "duration": 0.10800000000000409,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift ignores test types other than the one asked for",
+            "status": "passed",
+            "title": "ignores test types other than the one asked for",
+            "duration": 0.21920000000000073,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift treats key order as meaningless, so a reordered fixture is not drift",
+            "status": "passed",
+            "title": "treats key order as meaningless, so a reordered fixture is not drift",
+            "duration": 0.17179999999996198,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift sorts active capabilities first, then by how many runs have been wasted",
+            "status": "passed",
+            "title": "sorts active capabilities first, then by how many runs have been wasted",
+            "duration": 0.2249999999999659,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift carries the suite id so a finding names the row to fix",
+            "status": "passed",
+            "title": "carries the suite id so a finding names the row to fix",
+            "duration": 0.17929999999995516,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift carries the latest failure through to the finding",
+            "status": "passed",
+            "title": "carries the latest failure through to the finding",
+            "duration": 0.2155999999999949,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift reports a null failure as null rather than dropping the field",
+            "status": "passed",
+            "title": "reports a null failure as null rather than dropping the field",
+            "duration": 0.19909999999998718,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "findFixtureDrift"
+            ],
+            "fullName": "findFixtureDrift pins last-wins when two manifests claim one slug",
+            "status": "passed",
+            "title": "pins last-wins when two manifests claim one slug",
+            "duration": 0.1383999999999901,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "canonicalise"
+            ],
+            "fullName": "canonicalise sorts nested objects, not only the top level",
+            "status": "passed",
+            "title": "sorts nested objects, not only the top level",
+            "duration": 0.13680000000005066,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "canonicalise"
+            ],
+            "fullName": "canonicalise keeps array order, which does carry meaning",
+            "status": "passed",
+            "title": "keeps array order, which does carry meaning",
+            "duration": 0.194500000000005,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "canonicalise"
+            ],
+            "fullName": "canonicalise renders null, and renders undefined as null rather than returning undefined",
+            "status": "passed",
+            "title": "renders null, and renders undefined as null rather than returning undefined",
+            "duration": 0.10439999999999827,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789254328895,
+        "endTime": 1789254328900.1946,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-ad528d91d4e3a442c/apps/api/src/lib/fixture-drift.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0029 (actual_cost_cents)"
+            ],
+            "fullName": "startup-migrations — block 0029 (actual_cost_cents) first run: adds column when information_schema reports absence",
+            "status": "passed",
+            "title": "first run: adds column when information_schema reports absence",
+            "duration": 2.4063999999998487,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0029 (actual_cost_cents)"
+            ],
+            "fullName": "startup-migrations — block 0029 (actual_cost_cents) second run: skips when column already exists",
+            "status": "passed",
+            "title": "second run: skips when column already exists",
+            "duration": 0.33590000000003783,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0093 (fixture_recapture_failures)"
+            ],
+            "fullName": "startup-migrations — block 0093 (fixture_recapture_failures) issues a single ADD COLUMN IF NOT EXISTS statement",
+            "status": "passed",
+            "title": "issues a single ADD COLUMN IF NOT EXISTS statement",
+            "duration": 0.3123000000000502,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0093 (fixture_recapture_failures)"
+            ],
+            "fullName": "startup-migrations — block 0093 (fixture_recapture_failures) a second invocation issues the identical statement — no app-level branching to race",
+            "status": "passed",
+            "title": "a second invocation issues the identical statement — no app-level branching to race",
+            "duration": 0.23489999999992506,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0093 (fixture_recapture_failures)"
+            ],
+            "fullName": "startup-migrations — block 0093 (fixture_recapture_failures) never reads information_schema before the ALTER — the exact shape that created the two-boot race",
+            "status": "passed",
+            "title": "never reads information_schema before the ALTER — the exact shape that created the two-boot race",
+            "duration": 0.15630000000010114,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0060 (marketplace_eligible)"
+            ],
+            "fullName": "startup-migrations — block 0060 (marketplace_eligible) emits two ADD COLUMN IF NOT EXISTS — independently idempotent",
+            "status": "passed",
+            "title": "emits two ADD COLUMN IF NOT EXISTS — independently idempotent",
+            "duration": 0.45479999999997744,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0062 (paid-vendor costs)"
+            ],
+            "fullName": "startup-migrations — block 0062 (paid-vendor costs) first run: updates rows; post-condition check passes; reports counts",
+            "status": "passed",
+            "title": "first run: updates rows; post-condition check passes; reports counts",
+            "duration": 0.45489999999995234,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0062 (paid-vendor costs)"
+            ],
+            "fullName": "startup-migrations — block 0062 (paid-vendor costs) second run: idempotent — both UPDATEs return 0 rows; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — both UPDATEs return 0 rows; outcome reports already-classified",
+            "duration": 0.22070000000007894,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0062 (paid-vendor costs)"
+            ],
+            "fullName": "startup-migrations — block 0062 (paid-vendor costs) post-condition violation throws (would fail boot)",
+            "status": "passed",
+            "title": "post-condition violation throws (would fail boot)",
+            "duration": 0.996900000000096,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0030 (compliance columns)"
+            ],
+            "fullName": "startup-migrations — block 0030 (compliance columns) first run: adds 3 columns + index when integrity_hash is absent",
+            "status": "passed",
+            "title": "first run: adds 3 columns + index when integrity_hash is absent",
+            "duration": 0.6073999999998705,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0030 (compliance columns)"
+            ],
+            "fullName": "startup-migrations — block 0030 (compliance columns) second run: skips when integrity_hash column already exists",
+            "status": "passed",
+            "title": "second run: skips when integrity_hash column already exists",
+            "duration": 0.2443999999998141,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0031 (test_results composite index)"
+            ],
+            "fullName": "startup-migrations — block 0031 (test_results composite index) emits CREATE INDEX IF NOT EXISTS unconditionally — Postgres-level idempotent",
+            "status": "passed",
+            "title": "emits CREATE INDEX IF NOT EXISTS unconditionally — Postgres-level idempotent",
+            "duration": 0.21810000000004948,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0063 (invoice-extract cost reclassify)"
+            ],
+            "fullName": "startup-migrations — block 0063 (invoice-extract cost reclassify) first run: updates 4 rows when invoice-extract suites are at 0; post-check passes",
+            "status": "passed",
+            "title": "first run: updates 4 rows when invoice-extract suites are at 0; post-check passes",
+            "duration": 0.3912000000000262,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0063 (invoice-extract cost reclassify)"
+            ],
+            "fullName": "startup-migrations — block 0063 (invoice-extract cost reclassify) second run: idempotent — UPDATE returns 0 rows; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — UPDATE returns 0 rows; outcome reports already-classified",
+            "duration": 0.17290000000002692,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0063 (invoice-extract cost reclassify)"
+            ],
+            "fullName": "startup-migrations — block 0063 (invoice-extract cost reclassify) post-condition violation throws (would fail boot)",
+            "status": "passed",
+            "title": "post-condition violation throws (would fail boot)",
+            "duration": 0.22860000000014224,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0064 (always-LLM Haiku costs)"
+            ],
+            "fullName": "startup-migrations — block 0064 (always-LLM Haiku costs) first run: updates rows when always-LLM Haiku suites are at 0; post-check passes",
+            "status": "passed",
+            "title": "first run: updates rows when always-LLM Haiku suites are at 0; post-check passes",
+            "duration": 1.251299999999901,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0064 (always-LLM Haiku costs)"
+            ],
+            "fullName": "startup-migrations — block 0064 (always-LLM Haiku costs) second run: idempotent — UPDATE returns 0 rows; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — UPDATE returns 0 rows; outcome reports already-classified",
+            "duration": 0.6803999999999633,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0064 (always-LLM Haiku costs)"
+            ],
+            "fullName": "startup-migrations — block 0064 (always-LLM Haiku costs) post-condition violation throws (would fail boot)",
+            "status": "passed",
+            "title": "post-condition violation throws (would fail boot)",
+            "duration": 0.6739999999999782,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0064 (always-LLM Haiku costs)"
+            ],
+            "fullName": "startup-migrations — block 0064 (always-LLM Haiku costs) UPDATE binds every slug in BLOCK_0064_SLUGS as a parameter (no string concat)",
+            "status": "passed",
+            "title": "UPDATE binds every slug in BLOCK_0064_SLUGS as a parameter (no string concat)",
+            "duration": 0.5349999999998545,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0065 (PR #86 leaky-cap cleanup)"
+            ],
+            "fullName": "startup-migrations — block 0065 (PR #86 leaky-cap cleanup) first run: bumps website-to-company cost AND fixes us-company-data fixture",
+            "status": "passed",
+            "title": "first run: bumps website-to-company cost AND fixes us-company-data fixture",
+            "duration": 0.4642999999998665,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0065 (PR #86 leaky-cap cleanup)"
+            ],
+            "fullName": "startup-migrations — block 0065 (PR #86 leaky-cap cleanup) second run: idempotent — both UPDATEs return 0 rows; outcome reports already-fixed",
+            "status": "passed",
+            "title": "second run: idempotent — both UPDATEs return 0 rows; outcome reports already-fixed",
+            "duration": 0.18509999999992033,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0065 (PR #86 leaky-cap cleanup)"
+            ],
+            "fullName": "startup-migrations — block 0065 (PR #86 leaky-cap cleanup) post-condition violation (cost) throws (would fail boot)",
+            "status": "passed",
+            "title": "post-condition violation (cost) throws (would fail boot)",
+            "duration": 0.19390000000021246,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0065 (PR #86 leaky-cap cleanup)"
+            ],
+            "fullName": "startup-migrations — block 0065 (PR #86 leaky-cap cleanup) post-condition violation (fixture) throws (would fail boot)",
+            "status": "passed",
+            "title": "post-condition violation (fixture) throws (would fail boot)",
+            "duration": 0.18299999999999272,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0067 (cost_class taxonomy)"
+            ],
+            "fullName": "startup-migrations — block 0067 (cost_class taxonomy) first run: adds 4 columns + 3 CHECK constraints when none exist",
+            "status": "passed",
+            "title": "first run: adds 4 columns + 3 CHECK constraints when none exist",
+            "duration": 0.6399000000001251,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0067 (cost_class taxonomy)"
+            ],
+            "fullName": "startup-migrations — block 0067 (cost_class taxonomy) second run: skips constraint ADDs when pg_constraint reports presence",
+            "status": "passed",
+            "title": "second run: skips constraint ADDs when pg_constraint reports presence",
+            "duration": 0.22019999999997708,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0068 (seed DE/DK/SK cost_class)"
+            ],
+            "fullName": "startup-migrations — block 0068 (seed DE/DK/SK cost_class) first run: updates 3 rows (DE=1, DK=1, SK=1); reports total affected",
+            "status": "passed",
+            "title": "first run: updates 3 rows (DE=1, DK=1, SK=1); reports total affected",
+            "duration": 0.3657999999998083,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0068 (seed DE/DK/SK cost_class)"
+            ],
+            "fullName": "startup-migrations — block 0068 (seed DE/DK/SK cost_class) second run: idempotent — all UPDATEs return 0 rows after first apply",
+            "status": "passed",
+            "title": "second run: idempotent — all UPDATEs return 0 rows after first apply",
+            "duration": 0.12570000000005166,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0068 (seed DE/DK/SK cost_class)"
+            ],
+            "fullName": "startup-migrations — block 0068 (seed DE/DK/SK cost_class) missing-rows path: zero rows hit when caps don't exist in DB",
+            "status": "passed",
+            "title": "missing-rows path: zero rows hit when caps don't exist in DB",
+            "duration": 0.1150000000000091,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0069 (reconcile eligibility from cost_class)"
+            ],
+            "fullName": "startup-migrations — block 0069 (reconcile eligibility from cost_class) first run: reconciles, post-check passes, reports row count",
+            "status": "passed",
+            "title": "first run: reconciles, post-check passes, reports row count",
+            "duration": 0.4099999999998545,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0069 (reconcile eligibility from cost_class)"
+            ],
+            "fullName": "startup-migrations — block 0069 (reconcile eligibility from cost_class) second run: idempotent — UPDATE returns 0; post-check still passes",
+            "status": "passed",
+            "title": "second run: idempotent — UPDATE returns 0; post-check still passes",
+            "duration": 0.18650000000002365,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0069 (reconcile eligibility from cost_class)"
+            ],
+            "fullName": "startup-migrations — block 0069 (reconcile eligibility from cost_class) post-condition violation throws (would fail boot)",
+            "status": "passed",
+            "title": "post-condition violation throws (would fail boot)",
+            "duration": 0.23420000000010077,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0070 (capability_budget_counters)"
+            ],
+            "fullName": "startup-migrations — block 0070 (capability_budget_counters) first run: creates table + index + CHECK constraint",
+            "status": "passed",
+            "title": "first run: creates table + index + CHECK constraint",
+            "duration": 0.5821000000000822,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0070 (capability_budget_counters)"
+            ],
+            "fullName": "startup-migrations — block 0070 (capability_budget_counters) second run: skips CHECK ADD when pg_constraint reports presence",
+            "status": "passed",
+            "title": "second run: skips CHECK ADD when pg_constraint reports presence",
+            "duration": 0.17620000000010805,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0071 (bulk-classify free_unlimited)"
+            ],
+            "fullName": "startup-migrations — block 0071 (bulk-classify free_unlimited) first run: UPDATEs the eligible slug subset; reports rows_affected",
+            "status": "passed",
+            "title": "first run: UPDATEs the eligible slug subset; reports rows_affected",
+            "duration": 0.4025000000001455,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0071 (bulk-classify free_unlimited)"
+            ],
+            "fullName": "startup-migrations — block 0071 (bulk-classify free_unlimited) second run: idempotent — count=0; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — count=0; outcome reports already-classified",
+            "duration": 0.13909999999987122,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0071 (bulk-classify free_unlimited)"
+            ],
+            "fullName": "startup-migrations — block 0071 (bulk-classify free_unlimited) does not touch already-classified rows (idempotency by AND cost_class IS NULL)",
+            "status": "passed",
+            "title": "does not touch already-classified rows (idempotency by AND cost_class IS NULL)",
+            "duration": 0.17749999999978172,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b1-free-unlimited-slugs list"
+            ],
+            "fullName": "startup-migrations — phase-b1-free-unlimited-slugs list list size is within the 170-200 audit-bounded range",
+            "status": "passed",
+            "title": "list size is within the 170-200 audit-bounded range",
+            "duration": 0.1855000000000473,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b1-free-unlimited-slugs list"
+            ],
+            "fullName": "startup-migrations — phase-b1-free-unlimited-slugs list list is alphabetically sorted (audit-trail discipline)",
+            "status": "passed",
+            "title": "list is alphabetically sorted (audit-trail discipline)",
+            "duration": 0.6724999999999,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b1-free-unlimited-slugs list"
+            ],
+            "fullName": "startup-migrations — phase-b1-free-unlimited-slugs list list has no duplicates",
+            "status": "passed",
+            "title": "list has no duplicates",
+            "duration": 0.14170000000012806,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0072 (classify free_quota high-confidence)"
+            ],
+            "fullName": "startup-migrations — block 0072 (classify free_quota high-confidence) first run: UPDATEs the 8 free_quota slugs with per-cap quota params",
+            "status": "passed",
+            "title": "first run: UPDATEs the 8 free_quota slugs with per-cap quota params",
+            "duration": 0.4624999999998636,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0072 (classify free_quota high-confidence)"
+            ],
+            "fullName": "startup-migrations — block 0072 (classify free_quota high-confidence) second run: idempotent — count=0; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — count=0; outcome reports already-classified",
+            "duration": 0.14530000000013388,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0072 (classify free_quota high-confidence)"
+            ],
+            "fullName": "startup-migrations — block 0072 (classify free_quota high-confidence) does not touch already-classified rows (cost_class IS NULL safety filter)",
+            "status": "passed",
+            "title": "does not touch already-classified rows (cost_class IS NULL safety filter)",
+            "duration": 0.09009999999989304,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0073 (classify free_unlimited medium-conf)"
+            ],
+            "fullName": "startup-migrations — block 0073 (classify free_unlimited medium-conf) first run: UPDATEs the 5 medium-conf scraping slugs",
+            "status": "passed",
+            "title": "first run: UPDATEs the 5 medium-conf scraping slugs",
+            "duration": 0.29320000000006985,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0073 (classify free_unlimited medium-conf)"
+            ],
+            "fullName": "startup-migrations — block 0073 (classify free_unlimited medium-conf) second run: idempotent — count=0; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — count=0; outcome reports already-classified",
+            "duration": 0.09110000000009677,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b2 slug lists (audit-trail invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b2 slug lists (audit-trail invariants) PHASE_B2_FREE_QUOTA_HIGH_CONF has 8 entries",
+            "status": "passed",
+            "title": "PHASE_B2_FREE_QUOTA_HIGH_CONF has 8 entries",
+            "duration": 0.0724999999999909,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b2 slug lists (audit-trail invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b2 slug lists (audit-trail invariants) PHASE_B2_FREE_QUOTA_HIGH_CONF entries have valid quota shapes",
+            "status": "passed",
+            "title": "PHASE_B2_FREE_QUOTA_HIGH_CONF entries have valid quota shapes",
+            "duration": 0.8149999999998272,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b2 slug lists (audit-trail invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b2 slug lists (audit-trail invariants) PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF has 5 entries (audit-pinned count)",
+            "status": "passed",
+            "title": "PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF has 5 entries (audit-pinned count)",
+            "duration": 0.09379999999987376,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b2 slug lists (audit-trail invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b2 slug lists (audit-trail invariants) PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF has no duplicates",
+            "status": "passed",
+            "title": "PHASE_B2_FREE_UNLIMITED_MEDIUM_CONF has no duplicates",
+            "duration": 0.06799999999998363,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b2 slug lists (audit-trail invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b2 slug lists (audit-trail invariants) B.2 slug lists do not overlap with B.1 free_unlimited",
+            "status": "passed",
+            "title": "B.2 slug lists do not overlap with B.1 free_unlimited",
+            "duration": 0.260300000000143,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0074 (classify ANTHROPIC paid_prepaid)"
+            ],
+            "fullName": "startup-migrations — block 0074 (classify ANTHROPIC paid_prepaid) first run: UPDATEs the 83 ANTHROPIC slugs to paid_prepaid",
+            "status": "passed",
+            "title": "first run: UPDATEs the 83 ANTHROPIC slugs to paid_prepaid",
+            "duration": 0.30160000000000764,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0074 (classify ANTHROPIC paid_prepaid)"
+            ],
+            "fullName": "startup-migrations — block 0074 (classify ANTHROPIC paid_prepaid) second run: idempotent — count=0; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — count=0; outcome reports already-classified",
+            "duration": 0.08609999999998763,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0074 (classify ANTHROPIC paid_prepaid)"
+            ],
+            "fullName": "startup-migrations — block 0074 (classify ANTHROPIC paid_prepaid) does not overwrite already-classified rows (safety filter pin)",
+            "status": "passed",
+            "title": "does not overwrite already-classified rows (safety filter pin)",
+            "duration": 0.07190000000014152,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants) list size is within the audit-bounded range",
+            "status": "passed",
+            "title": "list size is within the audit-bounded range",
+            "duration": 0.0724999999999909,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants) list is alphabetically sorted (audit-trail discipline)",
+            "status": "passed",
+            "title": "list is alphabetically sorted (audit-trail discipline)",
+            "duration": 0.11539999999990869,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants) list has no duplicates",
+            "status": "passed",
+            "title": "list has no duplicates",
+            "duration": 0.0602000000001226,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b3 ANTHROPIC slug list (audit invariants) does not overlap with B.1 free_unlimited or B.2 free_quota/free_unlimited",
+            "status": "passed",
+            "title": "does not overlap with B.1 free_unlimited or B.2 free_quota/free_unlimited",
+            "duration": 3.108800000000201,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0075 (classify free_quota low-confidence)"
+            ],
+            "fullName": "startup-migrations — block 0075 (classify free_quota low-confidence) first run: issues 8 per-cap UPDATEs with chat-supplied quota_cap values",
+            "status": "passed",
+            "title": "first run: issues 8 per-cap UPDATEs with chat-supplied quota_cap values",
+            "duration": 0.5770999999999731,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0075 (classify free_quota low-confidence)"
+            ],
+            "fullName": "startup-migrations — block 0075 (classify free_quota low-confidence) second run: all 8 UPDATEs return 0 rows; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: all 8 UPDATEs return 0 rows; outcome reports already-classified",
+            "duration": 0.14390000000003056,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0075 (classify free_quota low-confidence)"
+            ],
+            "fullName": "startup-migrations — block 0075 (classify free_quota low-confidence) safety filter pin — every UPDATE includes AND cost_class IS NULL",
+            "status": "passed",
+            "title": "safety filter pin — every UPDATE includes AND cost_class IS NULL",
+            "duration": 0.24949999999989814,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b4 low-conf free_quota cap list (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b4 low-conf free_quota cap list (invariants) has exactly 8 entries (audit-pinned count)",
+            "status": "passed",
+            "title": "has exactly 8 entries (audit-pinned count)",
+            "duration": 0.08770000000004075,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b4 low-conf free_quota cap list (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b4 low-conf free_quota cap list (invariants) every entry has valid shape (slug + quota_cap > 0)",
+            "status": "passed",
+            "title": "every entry has valid shape (slug + quota_cap > 0)",
+            "duration": 0.2243999999998323,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b4 low-conf free_quota cap list (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b4 low-conf free_quota cap list (invariants) contains the 8 chat-supplied slugs",
+            "status": "passed",
+            "title": "contains the 8 chat-supplied slugs",
+            "duration": 0.09140000000002146,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b4 low-conf free_quota cap list (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b4 low-conf free_quota cap list (invariants) pins per-cap quota_cap values (chat-supplied authoritative table)",
+            "status": "passed",
+            "title": "pins per-cap quota_cap values (chat-supplied authoritative table)",
+            "duration": 0.1612999999999829,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b4 low-conf free_quota cap list (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b4 low-conf free_quota cap list (invariants) does not overlap with B.1 / B.2 / B.3 slug lists",
+            "status": "passed",
+            "title": "does not overlap with B.1 / B.2 / B.3 slug lists",
+            "duration": 0.4478999999998905,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0076 (classify non-Anthropic paid_prepaid)"
+            ],
+            "fullName": "startup-migrations — block 0076 (classify non-Anthropic paid_prepaid) first run: UPDATEs DB-present slugs to paid_prepaid (orphans skipped by cost_class IS NULL+absent-row filter)",
+            "status": "passed",
+            "title": "first run: UPDATEs DB-present slugs to paid_prepaid (orphans skipped by cost_class IS NULL+absent-row filter)",
+            "duration": 0.2897000000000389,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0076 (classify non-Anthropic paid_prepaid)"
+            ],
+            "fullName": "startup-migrations — block 0076 (classify non-Anthropic paid_prepaid) second run: idempotent — count=0; outcome reports already-classified",
+            "status": "passed",
+            "title": "second run: idempotent — count=0; outcome reports already-classified",
+            "duration": 0.10300000000006548,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0076 (classify non-Anthropic paid_prepaid)"
+            ],
+            "fullName": "startup-migrations — block 0076 (classify non-Anthropic paid_prepaid) safety filter pin — UPDATE includes AND cost_class IS NULL",
+            "status": "passed",
+            "title": "safety filter pin — UPDATE includes AND cost_class IS NULL",
+            "duration": 0.05719999999996617,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0077 (free_quota overrides — BAG + EP-Online)"
+            ],
+            "fullName": "startup-migrations — block 0077 (free_quota overrides — BAG + EP-Online) first run: per-cap UPDATEs with chat-supplied quota_cap values",
+            "status": "passed",
+            "title": "first run: per-cap UPDATEs with chat-supplied quota_cap values",
+            "duration": 0.23569999999995161,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0077 (free_quota overrides — BAG + EP-Online)"
+            ],
+            "fullName": "startup-migrations — block 0077 (free_quota overrides — BAG + EP-Online) second run: idempotent — both UPDATEs return 0",
+            "status": "passed",
+            "title": "second run: idempotent — both UPDATEs return 0",
+            "duration": 0.06889999999998508,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0079 (ee_directors)"
+            ],
+            "fullName": "startup-migrations — block 0079 (ee_directors) first run: creates tables + indexes + singleton CHECK constraint",
+            "status": "passed",
+            "title": "first run: creates tables + indexes + singleton CHECK constraint",
+            "duration": 0.3994999999999891,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0079 (ee_directors)"
+            ],
+            "fullName": "startup-migrations — block 0079 (ee_directors) second run: skips the ALTER TABLE when CHECK constraint already exists",
+            "status": "passed",
+            "title": "second run: skips the ALTER TABLE when CHECK constraint already exists",
+            "duration": 0.1594000000000051,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0080 (cy_directors)"
+            ],
+            "fullName": "startup-migrations — block 0080 (cy_directors) first run: creates tables + indexes + singleton CHECK constraint",
+            "status": "passed",
+            "title": "first run: creates tables + indexes + singleton CHECK constraint",
+            "duration": 0.3708999999998923,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0080 (cy_directors)"
+            ],
+            "fullName": "startup-migrations — block 0080 (cy_directors) second run: skips the ALTER TABLE when CHECK constraint already exists",
+            "status": "passed",
+            "title": "second run: skips the ALTER TABLE when CHECK constraint already exists",
+            "duration": 0.13010000000008404,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b5 slug lists (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b5 slug lists (invariants) PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS has the expected 10 entries",
+            "status": "passed",
+            "title": "PHASE_B5_NON_ANTHROPIC_PAID_PREPAID_SLUGS has the expected 10 entries",
+            "duration": 0.12479999999982283,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b5 slug lists (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b5 slug lists (invariants) PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS has exactly 2 entries with pinned values",
+            "status": "passed",
+            "title": "PHASE_B5_FREE_QUOTA_OVERRIDE_CAPS has exactly 2 entries with pinned values",
+            "duration": 0.12279999999987012,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — phase-b5 slug lists (invariants)"
+            ],
+            "fullName": "startup-migrations — phase-b5 slug lists (invariants) B.5 slug lists do not overlap with B.1 / B.2 / B.3 / B.4",
+            "status": "passed",
+            "title": "B.5 slug lists do not overlap with B.1 / B.2 / B.3 / B.4",
+            "duration": 0.7863999999999578,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0087 (un-hide content-redacted rows)"
+            ],
+            "fullName": "startup-migrations — block 0087 (un-hide content-redacted rows) clears deleted_at only for this sweep's own signature",
+            "status": "passed",
+            "title": "clears deleted_at only for this sweep's own signature",
+            "duration": 0.27640000000019427,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0087 (un-hide content-redacted rows)"
+            ],
+            "fullName": "startup-migrations — block 0087 (un-hide content-redacted rows) un-hides without un-redacting — no payload column is written",
+            "status": "passed",
+            "title": "un-hides without un-redacting — no payload column is written",
+            "duration": 0.373299999999972,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0087 (un-hide content-redacted rows)"
+            ],
+            "fullName": "startup-migrations — block 0087 (un-hide content-redacted rows) is a no-op on re-run once the repair has landed",
+            "status": "passed",
+            "title": "is a no-op on re-run once the repair has landed",
+            "duration": 0.08100000000013097,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0102 (account lifecycle tables)"
+            ],
+            "fullName": "startup-migrations — block 0102 (account lifecycle tables) creates both tables and their indexes idempotently",
+            "status": "passed",
+            "title": "creates both tables and their indexes idempotently",
+            "duration": 0.5263999999999669,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0102 (account lifecycle tables)"
+            ],
+            "fullName": "startup-migrations — block 0102 (account lifecycle tables) the backfill cannot duplicate an entitlement",
+            "status": "passed",
+            "title": "the backfill cannot duplicate an entitlement",
+            "duration": 0.32600000000002183,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0102 (account lifecycle tables)"
+            ],
+            "fullName": "startup-migrations — block 0102 (account lifecycle tables) pins the SQL hash expression that has to agree with hashEmail",
+            "status": "passed",
+            "title": "pins the SQL hash expression that has to agree with hashEmail",
+            "duration": 0.12449999999989814,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0102 (account lifecycle tables)"
+            ],
+            "fullName": "startup-migrations — block 0102 (account lifecycle tables) skips accounts whose address has already been erased",
+            "status": "passed",
+            "title": "skips accounts whose address has already been erased",
+            "duration": 0.11850000000004002,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0102 (account lifecycle tables)"
+            ],
+            "fullName": "startup-migrations — block 0102 (account lifecycle tables) creates the Stripe replay index, which no migration block owned before",
+            "status": "passed",
+            "title": "creates the Stripe replay index, which no migration block owned before",
+            "duration": 0.11750000000006366,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0102 (account lifecycle tables)"
+            ],
+            "fullName": "startup-migrations — block 0102 (account lifecycle tables) does not re-run the backfill once the ledger records it",
+            "status": "passed",
+            "title": "does not re-run the backfill once the ledger records it",
+            "duration": 0.12620000000015352,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — BLOCKS list (canonical block set)"
+            ],
+            "fullName": "startup-migrations — BLOCKS list (canonical block set) exports the expected 57 blocks in historical order",
+            "status": "passed",
+            "title": "exports the expected 57 blocks in historical order",
+            "duration": 2.042900000000145,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0083 (x402 payer hash)"
+            ],
+            "fullName": "startup-migrations — block 0083 (x402 payer hash) adds the column and index idempotently (IF NOT EXISTS markers present)",
+            "status": "passed",
+            "title": "adds the column and index idempotently (IF NOT EXISTS markers present)",
+            "duration": 0.6228000000000975,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0083 (x402 payer hash)"
+            ],
+            "fullName": "startup-migrations — block 0083 (x402 payer hash) no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "status": "passed",
+            "title": "no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "duration": 0.21029999999996107,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0082 (reclassify throttled free_unlimited)"
+            ],
+            "fullName": "startup-migrations — block 0082 (reclassify throttled free_unlimited) first run: single VALUES-CTE UPDATE reclassifies all 19 target slugs",
+            "status": "passed",
+            "title": "first run: single VALUES-CTE UPDATE reclassifies all 19 target slugs",
+            "duration": 1.29099999999994,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0082 (reclassify throttled free_unlimited)"
+            ],
+            "fullName": "startup-migrations — block 0082 (reclassify throttled free_unlimited) second run: idempotent — count=0 once reclassified",
+            "status": "passed",
+            "title": "second run: idempotent — count=0 once reclassified",
+            "duration": 0.15660000000002583,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0082 (reclassify throttled free_unlimited)"
+            ],
+            "fullName": "startup-migrations — block 0082 (reclassify throttled free_unlimited) does not touch a cap already moved off free_unlimited by an operator",
+            "status": "passed",
+            "title": "does not touch a cap already moved off free_unlimited by an operator",
+            "duration": 0.10269999999991342,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0082 (reclassify throttled free_unlimited)"
+            ],
+            "fullName": "startup-migrations — block 0082 (reclassify throttled free_unlimited) no captured UPDATE binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "status": "passed",
+            "title": "no captured UPDATE binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "duration": 0.15239999999994325,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) has exactly 19 entries",
+            "status": "passed",
+            "title": "has exactly 19 entries",
+            "duration": 0.08110000000010587,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) every entry has a positive integer quota_cap",
+            "status": "passed",
+            "title": "every entry has a positive integer quota_cap",
+            "duration": 0.7039999999999509,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) has no duplicate slugs",
+            "status": "passed",
+            "title": "has no duplicate slugs",
+            "duration": 0.08969999999999345,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) does not overlap any prior B1-B5 classification batch",
+            "status": "passed",
+            "title": "does not overlap any prior B1-B5 classification batch",
+            "duration": 0.365099999999984,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) pins the Etherscan family at the vendor's documented 100,000/day literal",
+            "status": "passed",
+            "title": "pins the Etherscan family at the vendor's documented 100,000/day literal",
+            "duration": 0.15089999999986503,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) every quotaCap equals deriveQuotaCapFromRateLimit(rateLimit) — no hand-computed drift",
+            "status": "passed",
+            "title": "every quotaCap equals deriveQuotaCapFromRateLimit(rateLimit) — no hand-computed drift",
+            "duration": 0.28749999999990905,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) every PHASE_C1_THROTTLED_UPSTREAM_SOURCE entry has a well-formed rateLimit citation",
+            "status": "passed",
+            "title": "every PHASE_C1_THROTTLED_UPSTREAM_SOURCE entry has a well-formed rateLimit citation",
+            "duration": 1.012599999999793,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants)"
+            ],
+            "fullName": "startup-migrations — PHASE_C1_THROTTLED_UPSTREAM_RECLASSIFY (invariants) each reclassified capability's manifest known_rate_limit matches this migration's citation exactly",
+            "status": "passed",
+            "title": "each reclassified capability's manifest known_rate_limit matches this migration's citation exactly",
+            "duration": 28.168100000000095,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0078 (transactions capability_id index)"
+            ],
+            "fullName": "startup-migrations — block 0078 (transactions capability_id index) emits CREATE INDEX IF NOT EXISTS for the compound index",
+            "status": "passed",
+            "title": "emits CREATE INDEX IF NOT EXISTS for the compound index",
+            "duration": 0.5311000000001513,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0078 (transactions capability_id index)"
+            ],
+            "fullName": "startup-migrations — block 0078 (transactions capability_id index) idempotent re-run: IF NOT EXISTS makes re-runs a Postgres-level no-op",
+            "status": "passed",
+            "title": "idempotent re-run: IF NOT EXISTS makes re-runs a Postgres-level no-op",
+            "duration": 0.2940000000000964,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — failure-aborts-boot semantics (orchestrator)"
+            ],
+            "fullName": "startup-migrations — failure-aborts-boot semantics (orchestrator) propagates a throw from a block (executor-level failure on first query)",
+            "status": "passed",
+            "title": "propagates a throw from a block (executor-level failure on first query)",
+            "duration": 2.7590000000000146,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — failure-aborts-boot semantics (orchestrator)"
+            ],
+            "fullName": "startup-migrations — failure-aborts-boot semantics (orchestrator) propagates a post-condition violation thrown by a later block",
+            "status": "passed",
+            "title": "propagates a post-condition violation thrown by a later block",
+            "duration": 0.45860000000016043,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0089 (deactivate us-court-search)"
+            ],
+            "fullName": "startup-migrations — block 0089 (deactivate us-court-search) takes the capability off every surface, not just x402",
+            "status": "passed",
+            "title": "takes the capability off every surface, not just x402",
+            "duration": 0.30510000000003856,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0089 (deactivate us-court-search)"
+            ],
+            "fullName": "startup-migrations — block 0089 (deactivate us-court-search) is idempotent — the WHERE clause makes a re-run a no-op",
+            "status": "passed",
+            "title": "is idempotent — the WHERE clause makes a re-run a no-op",
+            "duration": 0.1370999999999185,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0089 (deactivate us-court-search)"
+            ],
+            "fullName": "startup-migrations — block 0089 (deactivate us-court-search) records a reversible reason naming the credential to restore",
+            "status": "passed",
+            "title": "records a reversible reason naming the credential to restore",
+            "duration": 0.24410000000011678,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0089 (deactivate us-court-search)"
+            ],
+            "fullName": "startup-migrations — block 0089 (deactivate us-court-search) no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "status": "passed",
+            "title": "no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "duration": 0.13340000000016516,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0090 (capability output contracts)"
+            ],
+            "fullName": "startup-migrations — block 0090 (capability output contracts) writes properties, reliability and the two replacement fixtures",
+            "status": "passed",
+            "title": "writes properties, reliability and the two replacement fixtures",
+            "duration": 0.6620000000000346,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0090 (capability output contracts)"
+            ],
+            "fullName": "startup-migrations — block 0090 (capability output contracts) is idempotent — every statement is guarded by IS DISTINCT FROM",
+            "status": "passed",
+            "title": "is idempotent — every statement is guarded by IS DISTINCT FROM",
+            "duration": 0.37770000000000437,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0090 (capability output contracts)"
+            ],
+            "fullName": "startup-migrations — block 0090 (capability output contracts) no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "status": "passed",
+            "title": "no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "duration": 0.39830000000006294,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0091 (stale beneficial-ownership assertions)"
+            ],
+            "fullName": "startup-migrations — block 0091 (stale beneficial-ownership assertions) asserts only fields the executor actually returns",
+            "status": "passed",
+            "title": "asserts only fields the executor actually returns",
+            "duration": 0.4056000000000495,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0091 (stale beneficial-ownership assertions)"
+            ],
+            "fullName": "startup-migrations — block 0091 (stale beneficial-ownership assertions) targets only the schema_check suite carrying the dead names",
+            "status": "passed",
+            "title": "targets only the schema_check suite carrying the dead names",
+            "duration": 0.21400000000016917,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0091 (stale beneficial-ownership assertions)"
+            ],
+            "fullName": "startup-migrations — block 0091 (stale beneficial-ownership assertions) is idempotent — both statements guard on IS DISTINCT FROM",
+            "status": "passed",
+            "title": "is idempotent — both statements guard on IS DISTINCT FROM",
+            "duration": 0.13840000000004693,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0091 (stale beneficial-ownership assertions)"
+            ],
+            "fullName": "startup-migrations — block 0091 (stale beneficial-ownership assertions) no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "status": "passed",
+            "title": "no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "duration": 0.13040000000000873,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0092 (growth bundles onto the x402 rail)"
+            ],
+            "fullName": "startup-migrations — block 0092 (growth bundles onto the x402 rail) puts exactly the four growth bundles on the rail, and nothing else",
+            "status": "passed",
+            "title": "puts exactly the four growth bundles on the rail, and nothing else",
+            "duration": 0.5217000000000098,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0092 (growth bundles onto the x402 rail)"
+            ],
+            "fullName": "startup-migrations — block 0092 (growth bundles onto the x402 rail) retires itself: once applied, a later boot issues NO update at all",
+            "status": "passed",
+            "title": "retires itself: once applied, a later boot issues NO update at all",
+            "duration": 0.27099999999995816,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0092 (growth bundles onto the x402 rail)"
+            ],
+            "fullName": "startup-migrations — block 0092 (growth bundles onto the x402 rail) records the ledger row only after the update has succeeded",
+            "status": "passed",
+            "title": "records the ledger row only after the update has succeeded",
+            "duration": 0.15360000000009677,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0092 (growth bundles onto the x402 rail)"
+            ],
+            "fullName": "startup-migrations — block 0092 (growth bundles onto the x402 rail) creates its ledger table idempotently before reading it",
+            "status": "passed",
+            "title": "creates its ledger table idempotently before reading it",
+            "duration": 0.10379999999986467,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0092 (growth bundles onto the x402 rail)"
+            ],
+            "fullName": "startup-migrations — block 0092 (growth bundles onto the x402 rail) never renders ANY((...)) — the row-value tuple Postgres rejects",
+            "status": "passed",
+            "title": "never renders ANY((...)) — the row-value tuple Postgres rejects",
+            "duration": 0.3451999999999771,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0092 (growth bundles onto the x402 rail)"
+            ],
+            "fullName": "startup-migrations — block 0092 (growth bundles onto the x402 rail) no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "status": "passed",
+            "title": "no captured statement binds a Date instance (DEC-20260504-A bind-encoder shape)",
+            "duration": 0.1713999999999487,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — eligibility reconcile is not a content edit"
+            ],
+            "fullName": "startup-migrations — eligibility reconcile is not a content edit 0066 does not stamp updated_at (a scheduling flag is not an edit)",
+            "status": "passed",
+            "title": "0066 does not stamp updated_at (a scheduling flag is not an edit)",
+            "duration": 0.1793999999999869,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — eligibility reconcile is not a content edit"
+            ],
+            "fullName": "startup-migrations — eligibility reconcile is not a content edit 0069 does not stamp updated_at either",
+            "status": "passed",
+            "title": "0069 does not stamp updated_at either",
+            "duration": 0.08450000000016189,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — eligibility reconcile is not a content edit"
+            ],
+            "fullName": "startup-migrations — eligibility reconcile is not a content edit 0066 claims only capabilities 0069 does not — UPDATE and post-check alike",
+            "status": "passed",
+            "title": "0066 claims only capabilities 0069 does not — UPDATE and post-check alike",
+            "duration": 0.15430000000014843,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0094 (clear churn-invalidated baselines)"
+            ],
+            "fullName": "startup-migrations — block 0094 (clear churn-invalidated baselines) clears only paid fixture baselines owned by a free-classified capability",
+            "status": "passed",
+            "title": "clears only paid fixture baselines owned by a free-classified capability",
+            "duration": 0.30609999999978754,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0094 (clear churn-invalidated baselines)"
+            ],
+            "fullName": "startup-migrations — block 0094 (clear churn-invalidated baselines) is idempotent: requires a non-null baseline, so a recaptured suite is not re-cleared",
+            "status": "passed",
+            "title": "is idempotent: requires a non-null baseline, so a recaptured suite is not re-cleared",
+            "duration": 0.25909999999998945,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0100 (re-list url-to-markdown)"
+            ],
+            "fullName": "startup-migrations — block 0100 (re-list url-to-markdown) flips both flags and writes the promotion event together",
+            "status": "passed",
+            "title": "flips both flags and writes the promotion event together",
+            "duration": 0.2717000000000098,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0100 (re-list url-to-markdown)"
+            ],
+            "fullName": "startup-migrations — block 0100 (re-list url-to-markdown) writes the event in the shape the floor clamp and promotion job read",
+            "status": "passed",
+            "title": "writes the event in the shape the floor clamp and promotion job read",
+            "duration": 0.3130999999998494,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0100 (re-list url-to-markdown)"
+            ],
+            "fullName": "startup-migrations — block 0100 (re-list url-to-markdown) does not claim a promotion that did not happen",
+            "status": "passed",
+            "title": "does not claim a promotion that did not happen",
+            "duration": 0.0987999999999829,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0100 (re-list url-to-markdown)"
+            ],
+            "fullName": "startup-migrations — block 0100 (re-list url-to-markdown) never fires twice — a later quarantine is not undone on the next deploy",
+            "status": "passed",
+            "title": "never fires twice — a later quarantine is not undone on the next deploy",
+            "duration": 0.11189999999987776,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0100 (re-list url-to-markdown)"
+            ],
+            "fullName": "startup-migrations — block 0100 (re-list url-to-markdown) cannot produce the half-quarantine state the WP8 constraint forbids",
+            "status": "passed",
+            "title": "cannot produce the half-quarantine state the WP8 constraint forbids",
+            "duration": 0.15530000000012478,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block identity is unique, not just the function name"
+            ],
+            "fullName": "startup-migrations — block identity is unique, not just the function name no two blocks share a ledger id",
+            "status": "passed",
+            "title": "no two blocks share a ledger id",
+            "duration": 1.1469999999999345,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block identity is unique, not just the function name"
+            ],
+            "fullName": "startup-migrations — block identity is unique, not just the function name no two blocks share a BlockResult label either",
+            "status": "passed",
+            "title": "no two blocks share a BlockResult label either",
+            "duration": 1.9172000000000935,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block identity is unique, not just the function name"
+            ],
+            "fullName": "startup-migrations — block identity is unique, not just the function name every registered block function has a distinct number prefix",
+            "status": "passed",
+            "title": "every registered block function has a distinct number prefix",
+            "duration": 0.1996999999998934,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block identity is unique, not just the function name"
+            ],
+            "fullName": "startup-migrations — block identity is unique, not just the function name block numbers only ever increase",
+            "status": "passed",
+            "title": "block numbers only ever increase",
+            "duration": 1.0107000000000426,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0101 runs its one-shot work exactly once"
+            ],
+            "fullName": "startup-migrations — block 0101 runs its one-shot work exactly once purges the unprotected era on first install, and never again",
+            "status": "passed",
+            "title": "purges the unprotected era on first install, and never again",
+            "duration": 0.7940999999998439,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0101 runs its one-shot work exactly once"
+            ],
+            "fullName": "startup-migrations — block 0101 runs its one-shot work exactly once refuses rather than bulk-deleting when the unprotected backlog is large",
+            "status": "passed",
+            "title": "refuses rather than bulk-deleting when the unprotected backlog is large",
+            "duration": 0.24120000000016262,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0101 runs its one-shot work exactly once"
+            ],
+            "fullName": "startup-migrations — block 0101 runs its one-shot work exactly once does not record itself as applied when it fails partway",
+            "status": "passed",
+            "title": "does not record itself as applied when it fails partway",
+            "duration": 0.2644999999999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0101 runs its one-shot work exactly once"
+            ],
+            "fullName": "startup-migrations — block 0101 runs its one-shot work exactly once writes its ledger row after the verification, not before it",
+            "status": "passed",
+            "title": "writes its ledger row after the verification, not before it",
+            "duration": 1.2269999999998618,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0112 (list the eight free-public-API capabilities)"
+            ],
+            "fullName": "startup-migrations — block 0112 (list the eight free-public-API capabilities) lists all eight and writes one promotion event each",
+            "status": "passed",
+            "title": "lists all eight and writes one promotion event each",
+            "duration": 0.44290000000000873,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0112 (list the eight free-public-API capabilities)"
+            ],
+            "fullName": "startup-migrations — block 0112 (list the eight free-public-API capabilities) moves lifecycle_state, without which the listing sells nothing",
+            "status": "passed",
+            "title": "moves lifecycle_state, without which the listing sells nothing",
+            "duration": 0.2782999999999447,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0112 (list the eight free-public-API capabilities)"
+            ],
+            "fullName": "startup-migrations — block 0112 (list the eight free-public-API capabilities) refuses any capability a vendor suspension has withdrawn",
+            "status": "passed",
+            "title": "refuses any capability a vendor suspension has withdrawn",
+            "duration": 0.14190000000007785,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0112 (list the eight free-public-API capabilities)"
+            ],
+            "fullName": "startup-migrations — block 0112 (list the eight free-public-API capabilities) corrects the six fabricated rules and leaves cve-details alone",
+            "status": "passed",
+            "title": "corrects the six fabricated rules and leaves cve-details alone",
+            "duration": 0.28379999999992833,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0112 (list the eight free-public-API capabilities)"
+            ],
+            "fullName": "startup-migrations — block 0112 (list the eight free-public-API capabilities) writes the event in the shape the floor clamp and promotion job read",
+            "status": "passed",
+            "title": "writes the event in the shape the floor clamp and promotion job read",
+            "duration": 0.2681999999999789,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0112 (list the eight free-public-API capabilities)"
+            ],
+            "fullName": "startup-migrations — block 0112 (list the eight free-public-API capabilities) does not claim a promotion that did not happen",
+            "status": "passed",
+            "title": "does not claim a promotion that did not happen",
+            "duration": 0.09120000000007167,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations — block 0112 (list the eight free-public-API capabilities)"
+            ],
+            "fullName": "startup-migrations — block 0112 (list the eight free-public-API capabilities) never fires twice — a later quarantine is not undone on the next deploy",
+            "status": "passed",
+            "title": "never fires twice — a later quarantine is not undone on the next deploy",
+            "duration": 0.11379999999985557,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0114 (release corrected dependency_health fixtures)"
+            ],
+            "fullName": "startup-migrations: block 0114 (release corrected dependency_health fixtures) releases all three suites, rewrites input to the corrected value, and writes one event each",
+            "status": "passed",
+            "title": "releases all three suites, rewrites input to the corrected value, and writes one event each",
+            "duration": 0.34569999999985157,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0114 (release corrected dependency_health fixtures)"
+            ],
+            "fullName": "startup-migrations: block 0114 (release corrected dependency_health fixtures) scopes the UPDATE to exactly the three named slugs and dependency_health only",
+            "status": "passed",
+            "title": "scopes the UPDATE to exactly the three named slugs and dependency_health only",
+            "duration": 0.16039999999998145,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0114 (release corrected dependency_health fixtures)"
+            ],
+            "fullName": "startup-migrations: block 0114 (release corrected dependency_health fixtures) does not claim a release when no matching quarantined suite remains",
+            "status": "passed",
+            "title": "does not claim a release when no matching quarantined suite remains",
+            "duration": 0.08120000000008076,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0114 (release corrected dependency_health fixtures)"
+            ],
+            "fullName": "startup-migrations: block 0114 (release corrected dependency_health fixtures) never fires twice, idempotent on a second boot",
+            "status": "passed",
+            "title": "never fires twice, idempotent on a second boot",
+            "duration": 0.08590000000003783,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0115 (resync canadian-company-data dependency_health)"
+            ],
+            "fullName": "startup-migrations: block 0115 (resync canadian-company-data dependency_health) rewrites the stale corporation number to the manifest's corrected value and writes one event",
+            "status": "passed",
+            "title": "rewrites the stale corporation number to the manifest's corrected value and writes one event",
+            "duration": 0.2565999999999349,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0115 (resync canadian-company-data dependency_health)"
+            ],
+            "fullName": "startup-migrations: block 0115 (resync canadian-company-data dependency_health) scopes the UPDATE to canadian-company-data, dependency_health, and the exact stale input",
+            "status": "passed",
+            "title": "scopes the UPDATE to canadian-company-data, dependency_health, and the exact stale input",
+            "duration": 0.1516999999998916,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0115 (resync canadian-company-data dependency_health)"
+            ],
+            "fullName": "startup-migrations: block 0115 (resync canadian-company-data dependency_health) does not claim a resync when no matching stale input remains",
+            "status": "passed",
+            "title": "does not claim a resync when no matching stale input remains",
+            "duration": 0.09180000000014843,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "startup-migrations: block 0115 (resync canadian-company-data dependency_health)"
+            ],
+            "fullName": "startup-migrations: block 0115 (resync canadian-company-data dependency_health) never fires twice, idempotent on a second boot",
+            "status": "passed",
+            "title": "never fires twice, idempotent on a second boot",
+            "duration": 0.08940000000006876,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789254329511,
+        "endTime": 1789254329598.1516,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-ad528d91d4e3a442c/apps/api/src/lib/startup-migrations.test.ts"
+      },
+      {
+        "assertionResults": [
+          {
+            "ancestorTitles": [
+              "deriveDependencyHealthInput"
+            ],
+            "fullName": "deriveDependencyHealthInput uses health_check_input when the manifest declares one",
+            "status": "passed",
+            "title": "uses health_check_input when the manifest declares one",
+            "duration": 1.547399999999982,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "deriveDependencyHealthInput"
+            ],
+            "fullName": "deriveDependencyHealthInput falls back to the first known_answer fixture's input when there is no health_check_input",
+            "status": "passed",
+            "title": "falls back to the first known_answer fixture's input when there is no health_check_input",
+            "duration": 0.17149999999998045,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "deriveDependencyHealthInput"
+            ],
+            "fullName": "deriveDependencyHealthInput falls back to {} when neither exists",
+            "status": "passed",
+            "title": "falls back to {} when neither exists",
+            "duration": 0.10820000000001073,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "checkDependencyHealthDrift"
+            ],
+            "fullName": "checkDependencyHealthDrift detects drift when the manifest's health_check_input changed after the row was written",
+            "status": "passed",
+            "title": "detects drift when the manifest's health_check_input changed after the row was written",
+            "duration": 0.26350000000002183,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "checkDependencyHealthDrift"
+            ],
+            "fullName": "checkDependencyHealthDrift reports no drift once the stored input matches the current manifest",
+            "status": "passed",
+            "title": "reports no drift once the stored input matches the current manifest",
+            "duration": 0.0957000000000221,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          },
+          {
+            "ancestorTitles": [
+              "checkDependencyHealthDrift"
+            ],
+            "fullName": "checkDependencyHealthDrift is scoped to the single capability passed in, an unrelated capability's drift result never changes",
+            "status": "passed",
+            "title": "is scoped to the single capability passed in, an unrelated capability's drift result never changes",
+            "duration": 0.15570000000002437,
+            "failureMessages": [],
+            "meta": {},
+            "tags": []
+          }
+        ],
+        "startTime": 1789254328945,
+        "endTime": 1789254328948.1558,
+        "status": "passed",
+        "message": "",
+        "name": "C:/Users/pette/Projects/strale/.claude/worktrees/agent-ad528d91d4e3a442c/apps/api/src/lib/test-input-drift.test.ts"
+      }
+    ]
+  }
+}
