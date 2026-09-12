@@ -134,28 +134,39 @@ function frontmatterIsActive(meta) {
   return !!meta && meta.status === "active" && meta.authority_active === true;
 }
 
-// A directory reference is allowed only when every file directly inside it
-// (immediate children, not a recursive walk) is itself active. This is
-// strict rather than permissive: a growing directory earns the reference
-// only by every direct member being active, not by some being active; an
-// empty directory (nothing to verify) also fails rather than passing
-// silently. Recursion is deliberately excluded -- one level is what
-// "directly inside it" means, and it keeps the rule auditable without
-// requiring a full-tree front-matter read for a single entrypoint mention.
-function directoryReferenceIsActive(absoluteDir) {
+// A directory reference is allowed only when every document anywhere inside
+// it -- at any depth, not only immediate children -- is itself active. This
+// is strict rather than permissive: a growing directory earns the reference
+// only by every member at every depth being active, not by some being
+// active; an empty directory, and one whose only documents live inside a
+// nested subdirectory that is itself empty of documents, both fail rather
+// than passing silently. A directory that contains no document anywhere in
+// its subtree has nothing to verify, so it fails the same way an empty
+// directory does -- there is no such thing as vacuously active.
+function collectDocumentFiles(absoluteDir) {
   let children;
   try {
     children = readdirSync(absoluteDir, { withFileTypes: true });
   } catch {
-    return false;
+    return [];
   }
-  const files = children
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .filter((name) => /\.(md|yaml|yml)$/i.test(name));
+  const files = [];
+  for (const entry of children) {
+    const entryPath = resolve(absoluteDir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...collectDocumentFiles(entryPath));
+    } else if (entry.isFile() && /\.(md|yaml|yml)$/i.test(entry.name)) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}
+
+function directoryReferenceIsActive(absoluteDir) {
+  const files = collectDocumentFiles(absoluteDir);
   if (files.length === 0) return false;
-  return files.every((name) => {
-    const content = readFileSync(resolve(absoluteDir, name), "utf8");
+  return files.every((absolute) => {
+    const content = readFileSync(absolute, "utf8");
     return frontmatterIsActive(parseFrontmatter(content));
   });
 }

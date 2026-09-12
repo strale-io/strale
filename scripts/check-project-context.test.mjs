@@ -342,6 +342,65 @@ test("pre-cutover entrypoint guard's directory rule: fires when any direct child
   }
 });
 
+test("pre-cutover entrypoint guard's directory rule inspects the whole subtree, not only immediate children", () => {
+  const root = mkdtempSync(join(tmpdir(), "strale-entrypoint-nested-"));
+  try {
+    // Every immediate child of nested-all-active is itself active, but a
+    // nested subdirectory holds an inactive document. Before the fix,
+    // directoryReferenceIsActive only inspected direct children (isFile())
+    // and skipped subdirectories entirely, so this inactive document never
+    // fired -- planting it here proves the gap and the fix closes it.
+    const nestedDir = join(root, "docs/project/nested-all-active");
+    const innerDir = join(nestedDir, "inner");
+    mkdirSync(innerDir, { recursive: true });
+    writeFileSync(
+      join(nestedDir, "one.md"),
+      "---\nstatus: active\nauthority_active: true\n---\n\n# One\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(innerDir, "two.md"),
+      "---\nstatus: candidate\nauthority_active: false\n---\n\n# Two\n",
+      "utf8",
+    );
+    assert.equal(
+      checkPrecutoverEntrypoint(root, "CLAUDE.md", "Read docs/project/nested-all-active.").length,
+      1,
+      "a nested inactive document must fire, not just immediate children",
+    );
+
+    // The positive case: every document at every depth is active.
+    const nestedActiveDir = join(root, "docs/project/nested-fully-active");
+    const nestedActiveInner = join(nestedActiveDir, "inner");
+    mkdirSync(nestedActiveInner, { recursive: true });
+    writeFileSync(
+      join(nestedActiveDir, "one.md"),
+      "---\nstatus: active\nauthority_active: true\n---\n\n# One\n",
+      "utf8",
+    );
+    writeFileSync(
+      join(nestedActiveInner, "two.md"),
+      "---\nstatus: active\nauthority_active: true\n---\n\n# Two\n",
+      "utf8",
+    );
+    assert.deepEqual(
+      checkPrecutoverEntrypoint(root, "CLAUDE.md", "Read docs/project/nested-fully-active."),
+      [],
+    );
+
+    // A directory whose only subdirectory holds no documents at all still
+    // fails -- there is no such thing as vacuously active.
+    const emptyNestedDir = join(root, "docs/project/nested-empty");
+    mkdirSync(join(emptyNestedDir, "inner"), { recursive: true });
+    assert.equal(
+      checkPrecutoverEntrypoint(root, "CLAUDE.md", "Read docs/project/nested-empty.").length,
+      1,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 const operatorActionsFixture = `schema_version: 1
 doc_type: operator-actions
 authority_scope: none
