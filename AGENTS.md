@@ -241,11 +241,11 @@ manifest to confirm every row is named here too.
 
 | Trigger (verbatim scope from CLAUDE.md -- treat as a superset, not a paraphrase) | Protocol | CLAUDE.md heading |
 |---|---|---|
-| New executor file in `src/capabilities/`, new or modified DB row in `capabilities` table, new capability slug, manifest file, seed entry, OR the prompt mentions adding/creating a capability | Capability Onboarding Protocol (DEC-20260320-B) | "Adding New Capabilities (MANDATORY PIPELINE)" + "Capability Onboarding Protocol (DEC-20260320-B)" |
-| The session prompt mentions a PR on a framework repo (Pipedream, LangFlow, Flowise, pydantic-ai, langchain, crewAI, agno, composio, semantic-kernel, awesome-list, etc.), OR modifies files under `packages/*-strale/`, OR edits PyPI/npm publication metadata | Distribution PR Integrity Protocol (DEC-20260422-A) | "Distribution PR Integrity Protocol (DEC-20260422-A)" |
-| The commit message references a cert-audit finding code (Y-/A-/B-/RED-/MED-/CRIT-/F-AUDIT-), OR the change adds/modifies a function that runs inside a wallet transaction, an audit-trail builder, a chain-integrity primitive, a spend-cap check, an idempotency check, or **any other money/compliance-critical path** | Audit-Follow-up Test Coverage Protocol (DEC-20260504-A) | "Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)" |
-| ANY deploy that fixes a long-silent bulk operation (retention, archival, reconciliation, batch processing, periodic cleanup) | Bulk-Operation Deploy Protocol (DEC-20260504-B) | "Bulk-Operation Deploy Protocol (DEC-20260504-B)" |
-| ANY PR that adds a code path which depends on a deploy-pipeline behavior (migrations running, env vars read, build steps, startup hooks, **scheduled jobs**, cron triggers) | Deploy Mechanism Verification Protocol (DEC-20260504-C) | "Deploy Mechanism Verification Protocol (DEC-20260504-C)" |
+| New executor file in `src/capabilities/`, new or modified DB row in `capabilities` table, new capability slug, manifest file, seed entry, OR the prompt mentions adding/creating a capability | Capability Onboarding Protocol (DEC-20260320-B) | CLAUDE.md heading: "Adding New Capabilities (MANDATORY PIPELINE)" + "Capability Onboarding Protocol (DEC-20260320-B)" |
+| The session prompt mentions a PR on a framework repo (Pipedream, LangFlow, Flowise, pydantic-ai, langchain, crewAI, agno, composio, semantic-kernel, awesome-list, etc.), OR modifies files under `packages/*-strale/`, OR edits PyPI/npm publication metadata | Distribution PR Integrity Protocol (DEC-20260422-A) | CLAUDE.md heading: "Distribution PR Integrity Protocol (DEC-20260422-A)" |
+| The commit message references a cert-audit finding code (Y-/A-/B-/RED-/MED-/CRIT-/F-AUDIT-), OR the change adds/modifies a function that runs inside a wallet transaction, an audit-trail builder, a chain-integrity primitive, a spend-cap check, an idempotency check, or **any other money/compliance-critical path** | Audit-Follow-up Test Coverage Protocol (DEC-20260504-A) | CLAUDE.md heading: "Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)" |
+| ANY deploy that fixes a long-silent bulk operation (retention, archival, reconciliation, batch processing, periodic cleanup) | Bulk-Operation Deploy Protocol (DEC-20260504-B) | CLAUDE.md heading: "Bulk-Operation Deploy Protocol (DEC-20260504-B)" |
+| ANY PR that adds a code path which depends on a deploy-pipeline behavior (migrations running, env vars read, build steps, startup hooks, **scheduled jobs**, cron triggers) | Deploy Mechanism Verification Protocol (DEC-20260504-C) | CLAUDE.md heading: "Deploy Mechanism Verification Protocol (DEC-20260504-C)" |
 
 Also always in force, each with its own row in the protocol coverage manifest:
 
@@ -270,8 +270,8 @@ Also always in force, each with its own row in the protocol coverage manifest:
 
 **Code-review gate:** if any code was modified this session, run the `go`
 skill (`.agents/skills/go/SKILL.md`) before ending the session -- never end a
-session over unreviewed code. Docs-only / AGENTS.md / Notion-only sessions
-are exempt.
+session over unreviewed code. Docs-only / AGENTS.md-only sessions are
+exempt.
 
 ## Active Decisions
 
@@ -299,21 +299,39 @@ full, deliberately: a founder-reserved boundary is exactly the case the
 brief for this batch says must not be lost to condensing. Governing
 principle: *the tier of risk stays the same, the width expands.* No
 technical question goes to Petter -- architecture, implementation, what to
-measure and how, what to build and in what order, testing, tooling, and
-vendor-API choice are all Claude's/Codex's to decide; asking him to
-arbitrate a technical choice is a failure of the role. The agent also
-decides-then-tells on: turning services on/off, pricing inside the existing
-€0.02-€1.00 band, quality gates, quarantine/promote, refunds, retries,
-delisting, merging its own work once repo gates pass, dispatching agents,
-scheduling sessions, and spend inside €50/week. **Petter alone decides --
-reserved, not delegable:** spend beyond the €50/week envelope; anything that
-legally binds Moonlighter AB, which the charter defines broadly -- creating
-accounts, accepting terms, signing agreements, or **contacting a vendor as
-the company at all** (not just signing a contract); one-way public acts
-(publishing a package version that can't be unpublished, a first statement
-in a channel never used before); pricing outside the existing band; and
-anything a regulator would read as a claim about the product. The charter's
-founder-gated list is broader still -- vendor/license commitments,
+measure and how, what to build and in what order, testing, refactors,
+infrastructure, data modelling, tooling, and vendor-API choice are all
+Claude's/Codex's to decide; asking him to arbitrate a technical choice is a
+failure of the role, not diligence. If a technical decision has a business
+consequence, the agent makes the call and reports the consequence in plain
+English. The agent also decides-then-tells on (he can reverse any of it):
+turning services on/off, pricing inside the existing €0.02-€1.00 band,
+quality gates, quarantine/promote, refunds, retries, delisting, merging its
+own work once repo gates pass, dispatching agents, scheduling sessions, and
+spend inside €50/week. **Petter alone decides -- reserved, not delegable:**
+spend beyond the €50/week envelope, or any new recurring cost; anything
+that legally binds Moonlighter AB, which the charter defines broadly --
+creating accounts, accepting terms, signing agreements, or **contacting a
+vendor as the company at all** (not just signing a contract); one-way
+public acts (publishing a package version that can't be unpublished,
+submitting to a directory that does not accept removal, or a first
+statement in a channel never used before); pricing outside the existing
+band; and anything a regulator would read as a claim about the product.
+Everything else is the agent's; on a genuinely borderline item, it takes
+the reversible version and says so.
+
+The act-first duties added 2026-08-22 (DEC-20260822-A) narrow this further
+in one direction only: demonstrably inaccurate public copy gets corrected
+down to what is true without asking, but never strengthened into a new
+claim (that stays founder-gated), and anything a regulator would read as a
+claim about the product stays Petter's in both directions, including
+withdrawing one. The hard boundary added the same day stands regardless of
+how obvious an item looks: an item sitting in the decision queue as
+`approval_required` stays there until Petter moves it, not because it was
+reclassified as routine, and a missing production write credential is a
+stop, not an obstacle to route around.
+
+The charter's founder-gated list is broader still -- vendor/license commitments,
 deactivating revenue earners, DEC-20260428-B-grade builds, new external
 claims, **new capabilities** (charter classifies capability creation as
 approval_required -- broad technical authority does NOT delegate it),

@@ -68,9 +68,11 @@ function manifestYaml(rows) {
 }
 
 /** A minimal, otherwise-clean fixture: both entrypoints carry the bootstrap
- * pointer and the given manifest row's heading; the manifest and schema are
- * written so checkSchema(root) succeeds. Callers mutate one file's content
- * (or the manifest) to plant exactly the failure their test proves. */
+ * pointer and the given manifest row's heading, named alongside a locator
+ * ("CLAUDE.md"), so it satisfies rule (b) without relying on an own-text
+ * heading match. The manifest and schema are written so checkSchema(root)
+ * succeeds. Callers mutate one file's content (or the manifest) to plant
+ * exactly the failure their test proves. */
 function cleanFixture({ rows = [manifestRow()], claudeExtra = "", agentsExtra = "" } = {}) {
   const dir = makeFixture();
   const heading = rows[0].source.replace("CLAUDE.md heading: ", "");
@@ -145,11 +147,12 @@ test("PROTOCOL_UNREACHABLE: fires when AGENTS.md never names a CLAUDE.md-sourced
   }
 });
 
-test("PROTOCOL_UNREACHABLE: a condensed rephrasing that drops the trailing qualifier still passes", () => {
+test("PROTOCOL_UNREACHABLE: a condensed rephrasing that drops the trailing qualifier still passes, as long as it keeps a locator", () => {
   const dir = cleanFixture();
   try {
     // AGENTS.md names the core heading text without the "(DEC-TEST)" suffix
-    // -- the brief's own example of legitimate condensation, not a gap.
+    // -- the brief's own example of legitimate condensation, not a gap --
+    // and keeps "CLAUDE.md" as the locator, in the same sentence.
     writeFiles(dir, { "AGENTS.md": `${BOOTSTRAP_LINE}Read about Example Protocol in CLAUDE.md.\n` });
     const result = checkProtocolReachability(dir, readBoth(dir));
     assert.deepEqual(result, []);
@@ -158,7 +161,7 @@ test("PROTOCOL_UNREACHABLE: a condensed rephrasing that drops the trailing quali
   }
 });
 
-test("PROTOCOL_UNREACHABLE: a CHARTER.md-sourced row is reachable via a CHARTER.md mention, not the heading text", () => {
+test("PROTOCOL_UNREACHABLE: a CHARTER.md-sourced row is reachable via a name and a CHARTER.md locator together, not the heading text", () => {
   const dir = cleanFixture({
     rows: [
       manifestRow({
@@ -172,8 +175,8 @@ test("PROTOCOL_UNREACHABLE: a CHARTER.md-sourced row is reachable via a CHARTER.
   try {
     // CLAUDE.md fixture (from cleanFixture) never mentions CHARTER.md for
     // this row's heading (its own body is a CLAUDE.md heading by default);
-    // rewrite both fixture files without the row's own heading text at all,
-    // to isolate the CHARTER.md-mention path.
+    // rewrite both fixture files without the row's own CHARTER.md heading
+    // text at all, to isolate the CHARTER.md-locator path.
     writeFiles(dir, {
       "CLAUDE.md": `${BOOTSTRAP_LINE}Nothing about production authority here.\n`,
       "AGENTS.md": `${BOOTSTRAP_LINE}Nothing about production authority here either.\n`,
@@ -182,12 +185,69 @@ test("PROTOCOL_UNREACHABLE: a CHARTER.md-sourced row is reachable via a CHARTER.
     assert.ok(broken.some((f) => f.file === "CLAUDE.md" && f.detail.includes("production-authority")));
     assert.ok(broken.some((f) => f.file === "AGENTS.md" && f.detail.includes("production-authority")));
 
+    // A CHARTER.md mention on its own is still not enough: the row must
+    // also be named. Naming it by its row `name` (not its CHARTER.md
+    // heading text) is sufficient, in the same sentence as the locator.
     writeFiles(dir, {
-      "CLAUDE.md": `${BOOTSTRAP_LINE}Full text: \`docs/company/CHARTER.md\`.\n`,
-      "AGENTS.md": `${BOOTSTRAP_LINE}Full text: \`docs/company/CHARTER.md\`.\n`,
+      "CLAUDE.md": `${BOOTSTRAP_LINE}A CHARTER.md mention with no name: \`docs/company/CHARTER.md\`.\n`,
+      "AGENTS.md": `${BOOTSTRAP_LINE}A CHARTER.md mention with no name: \`docs/company/CHARTER.md\`.\n`,
+    });
+    const namelessLocator = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(namelessLocator.some((f) => f.file === "CLAUDE.md" && f.detail.includes("production-authority")));
+    assert.ok(namelessLocator.some((f) => f.file === "AGENTS.md" && f.detail.includes("production-authority")));
+
+    writeFiles(dir, {
+      "CLAUDE.md": `${BOOTSTRAP_LINE}Production authority (DEC-TEST): full text in \`docs/company/CHARTER.md\`.\n`,
+      "AGENTS.md": `${BOOTSTRAP_LINE}Production authority (DEC-TEST): full text in \`docs/company/CHARTER.md\`.\n`,
     });
     const fixed = checkProtocolReachability(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("PROTOCOL_UNREACHABLE: the review's exact defeat -- a paragraph naming every protocol with no locator anywhere -- fails", () => {
+  const dir = cleanFixture({
+    rows: [
+      manifestRow(),
+      manifestRow({
+        id: "second-protocol",
+        name: "Second Protocol (DEC-TEST-2)",
+        full_body: "docs/governance/protocols/SECOND_PROTOCOL.md",
+        source: "CLAUDE.md heading: Second Protocol (DEC-TEST-2)",
+      }),
+    ],
+  });
+  try {
+    // CLAUDE.md still carries both rows' own headings (must keep working),
+    // but AGENTS.md is rewritten exactly the way the review's edit did it:
+    // a paragraph naming every protocol, no pointer to CLAUDE.md, no path.
+    writeFiles(dir, {
+      "CLAUDE.md": `${BOOTSTRAP_LINE}### Example Protocol (DEC-TEST)\n\nBody.\n\n### Second Protocol (DEC-TEST-2)\n\nBody.\n`,
+      "AGENTS.md": `${BOOTSTRAP_LINE}Mandatory protocols in force: Example Protocol (DEC-TEST) and Second Protocol (DEC-TEST-2).\n`,
+    });
+    const result = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(result.some((f) => f.file === "AGENTS.md" && f.detail.includes("example-protocol")));
+    assert.ok(result.some((f) => f.file === "AGENTS.md" && f.detail.includes("second-protocol")));
+    // CLAUDE.md itself still passes via its own headings.
+    assert.ok(!result.some((f) => f.file === "CLAUDE.md"));
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("PROTOCOL_UNREACHABLE: a name and a locator in different blocks (a table header naming the locator, a different row naming the protocol) still fails", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "AGENTS.md":
+        `${BOOTSTRAP_LINE}| Protocol | CLAUDE.md heading |\n` +
+        `|---|---|\n` +
+        `| Example Protocol (DEC-TEST) | see above |\n`,
+    });
+    const result = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(result.some((f) => f.file === "AGENTS.md" && f.detail.includes("example-protocol")));
   } finally {
     cleanup(dir);
   }
@@ -198,12 +258,19 @@ test("PROTOCOL_UNREACHABLE: a CHARTER.md-sourced row is reachable via a CHARTER.
 test("MUTABLE_FACT_FOUND (MONEY): fires on a nonzero price, clears once removed", () => {
   const dir = cleanFixture();
   try {
-    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nThis costs €50 per call.\n` });
-    const broken = checkMutableFacts(readBoth(dir));
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\nThis costs €50 per call.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
     assert.ok(broken.some((f) => f.code === "MUTABLE_FACT_FOUND" && f.detail.includes("MONEY")));
 
-    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8").replace("This costs €50 per call.\n", "")}` });
-    const fixed = checkMutableFacts(readBoth(dir));
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nThis costs €50 per call.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
   } finally {
     cleanup(dir);
@@ -214,7 +281,7 @@ test("MUTABLE_FACT_FOUND (MONEY): a zero-value amount is never flagged", () => {
   const dir = cleanFixture();
   try {
     writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nFixture mode costs €0 externally.\n` });
-    const result = checkMutableFacts(readBoth(dir));
+    const result = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(result, []);
   } finally {
     cleanup(dir);
@@ -227,7 +294,7 @@ test("MUTABLE_FACT_FOUND (MONEY): allowlisted inside a named structural section,
     writeFiles(dir, {
       "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\n## Operating Charter (DEC-20260815-A) -- division of authority\n\nSpend inside €50/week.\n\n## Next Section\n\nA later section repeats €50/week outside the allowlisted heading.\n`,
     });
-    const result = checkMutableFacts(readBoth(dir));
+    const result = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(
       result.filter((f) => f.file === "AGENTS.md"),
       [{ code: "MUTABLE_FACT_FOUND", file: "AGENTS.md", detail: 'MONEY at line 12: "€50"' }],
@@ -243,8 +310,49 @@ test("MUTABLE_FACT_FOUND (MONEY): a fenced code block's literal is never flagged
     writeFiles(dir, {
       "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n\`\`\`yaml\nprice: "€50"\n\`\`\`\n`,
     });
-    const result = checkMutableFacts(readBoth(dir));
+    const result = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(result, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (MONEY): a figure inside a mirrored protocol body does not fire", () => {
+  const dir = cleanFixture();
+  try {
+    // The clean fixture's CLAUDE.md already puts "Fixture protocol body."
+    // under the row's own heading -- add a nonzero price there. It is a
+    // mirrored protocol section (the row's CLAUDE.md heading), so rule (c)
+    // must not flag it, even though the same figure elsewhere would fire.
+    const claude = readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+      "Fixture protocol body.\n",
+      "Fixture protocol body. A 2026-04-30 finding cited a €50 fee as evidence.\n",
+    );
+    writeFiles(dir, { "CLAUDE.md": claude });
+    const result = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(result, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (MONEY): spelled-out currency (a currency word instead of a symbol) fires, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\nThis widget costs 0.75 EUR.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("MONEY") && f.detail.includes("0.75 EUR")));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nThis widget costs 0.75 EUR.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
   } finally {
     cleanup(dir);
   }
@@ -253,14 +361,64 @@ test("MUTABLE_FACT_FOUND (MONEY): a fenced code block's literal is never flagged
 test("MUTABLE_FACT_FOUND (COUNT): fires on a capability/solution count, clears once removed", () => {
   const dir = cleanFixture();
   try {
-    writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n300+ capabilities across 7 verticals.\n` });
-    const broken = checkMutableFacts(readBoth(dir));
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n300+ capabilities across 7 verticals.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
     assert.ok(broken.some((f) => f.detail.includes("COUNT")));
 
     writeFiles(dir, {
-      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace("300+ capabilities across 7 verticals.\n", ""),
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\n300+ capabilities across 7 verticals.\n",
+        "",
+      ),
     });
-    const fixed = checkMutableFacts(readBoth(dir));
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (COUNT): a countable noun outside the fixed five fires, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n290 registries are covered today.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("COUNT") && f.detail.includes("290 registries")));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\n290 registries are covered today.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (COUNT): a spelled-out count fires, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\nTwo hundred and ninety capabilities across seven verticals.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("COUNT") && /two hundred and ninety capabilities/i.test(f.detail)));
+    assert.ok(broken.some((f) => f.detail.includes("COUNT") && /seven verticals/i.test(f.detail)));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nTwo hundred and ninety capabilities across seven verticals.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
   } finally {
     cleanup(dir);
@@ -271,48 +429,93 @@ test("MUTABLE_FACT_FOUND (DATE): fires on a dated-status label, clears once remo
   const dir = cleanFixture();
   try {
     writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nNew capabilities (March 2026).\n` });
-    const broken = checkMutableFacts(readBoth(dir));
+    const broken = checkMutableFacts(dir, readBoth(dir));
     assert.ok(broken.some((f) => f.detail.includes("DATE")));
 
     writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}`.replace("New capabilities (March 2026).\n", "") });
-    const fixed = checkMutableFacts(readBoth(dir));
+    const fixed = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
   } finally {
     cleanup(dir);
   }
 });
 
-test("MUTABLE_FACT_FOUND (DATE): fires on an 'as of <date>' staleness claim, clears once removed", () => {
+test("MUTABLE_FACT_FOUND (DATE): fires on an 'as of <ISO date>' staleness claim, clears once removed", () => {
   const dir = cleanFixture();
   try {
     writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nStale as of 2026-08-17.\n` });
-    const broken = checkMutableFacts(readBoth(dir));
+    const broken = checkMutableFacts(dir, readBoth(dir));
     assert.ok(broken.some((f) => f.detail.includes("DATE")));
 
     writeFiles(dir, { "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace("Stale as of 2026-08-17.\n", "") });
-    const fixed = checkMutableFacts(readBoth(dir));
+    const fixed = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
   } finally {
     cleanup(dir);
   }
 });
 
-test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): fires on a decision id plus a multi-word summary, clears once removed", () => {
+test("MUTABLE_FACT_FOUND (DATE): fires on an 'as of <Month YYYY>' staleness claim, clears once removed", () => {
   const dir = cleanFixture();
   try {
     writeFiles(dir, {
-      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nDEC-20260905-A — Benefit-first brand positioning and terminology.\n`,
+      "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\nTwo hundred and ninety capabilities across seven verticals as of September 2026.\n`,
     });
-    const broken = checkMutableFacts(readBoth(dir));
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("DATE") && /as of september 2026/i.test(f.detail)));
+    assert.ok(broken.some((f) => f.detail.includes("COUNT")));
+
+    writeFiles(dir, {
+      "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace(
+        "Two hundred and ninety capabilities across seven verticals as of September 2026.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): fires on a decision id plus a multi-word summary after a dash, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\nDEC-20260905-A — Benefit-first brand positioning and terminology.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
     assert.ok(broken.some((f) => f.detail.includes("DECISION_SUMMARY")));
 
     writeFiles(dir, {
       "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
-        "DEC-20260905-A — Benefit-first brand positioning and terminology.\n",
+        "\n### Unrelated section\n\nDEC-20260905-A — Benefit-first brand positioning and terminology.\n",
         "",
       ),
     });
-    const fixed = checkMutableFacts(readBoth(dir));
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): fires on a decision id plus a multi-word summary after a colon, clears once removed", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\nDEC-20260905-A: benefit-first positioning was approved by the founder this month.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(broken.some((f) => f.detail.includes("DECISION_SUMMARY")));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nDEC-20260905-A: benefit-first positioning was approved by the founder this month.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(fixed, []);
   } finally {
     cleanup(dir);
@@ -323,7 +526,7 @@ test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a bare decision id with no dash-sum
   const dir = cleanFixture();
   try {
     writeFiles(dir, { "CLAUDE.md": `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\nSee DEC-20260905-A for the full text.\n` });
-    const result = checkMutableFacts(readBoth(dir));
+    const result = checkMutableFacts(dir, readBoth(dir));
     assert.deepEqual(result, []);
   } finally {
     cleanup(dir);
