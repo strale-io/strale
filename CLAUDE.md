@@ -1,5 +1,7 @@
 ## Workflow Protocol
 
+Project map: `docs/project/START-HERE.md`. Protocol index: `docs/project/PROTOCOL-ROUTER.md`. Both remain M1/M2 skeletons until a later batch activates them as authority.
+
 ### Session Start
 1. Declare session intent (one sentence: what is this session for?)
 2. Determine mode:
@@ -79,20 +81,6 @@ batches are added to the register**: an independent same-provider review in a
 separate context satisfies the review requirement, and the PR says which review
 ran. The register and `codex:check` stay in place, so the waived history cannot
 be edited, deleted or reopened.
-
-### Repo-native migration continuation — pre-cutover
-
-When a session is asked to continue the repo-native operating-model migration,
-start in an isolated worktree from current `origin/main` and read the
-**Current continuation checkpoint** in
-`docs/strategy/2026-08-31-repo-native-operating-model-migration.md` before
-choosing work. Follow the exact handoff and next bounded task named there. Do
-not work from the dirty shared checkout or infer the next step from an older
-dated handoff.
-
-This is a navigation pointer, not M4 cutover. Candidate project documents
-remain inactive and Notion-backed workflows remain authoritative until the
-explicit atomic cutover.
 
 ### Program register — where multi-batch work resumes
 
@@ -209,30 +197,6 @@ Both wired into CI after `docs:test` / `archive:index:test`.
    branches recorded in `scripts/handoff/baseline.json` wait for a founder
    decision and are never deleted by a session.
 
-### Notion Access (REQUIRED)
-- Project Home: https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
-- To-do & Build Plan: https://www.notion.so/33c67c87-082c-81c3-a72b-cc59b10ff4ac
-- Decisions DB: ea57671f-7167-44e4-a254-c0a1de79e7f9
-- Governance: How we work > How this workspace works (33c67c87-082c-81ea-8417-c4a701d68611)
-
-### Notion Workspace Structure (8 sections under Project Home)
-1. 🏠 Start Here — overview + navigation
-2. 🎯 Strategy — what Strale is, the problem, opportunity, competitive landscape, business model
-3. 🛠️ Products — SQS, Audit Trail, Discovery, Capabilities & solutions, Feature Registry DB
-4. ✅ To-do & Build Plan — THE ONLY task list (To-do DB + Deferred DB)
-5. 📣 Go-to-market — distribution surfaces, activation funnel, brand & voice, social media, Social Media Posts DB
-6. 🔧 Internals — testing system, testing rules, onboarding pipeline, bug fix framework, tech stack
-7. 📓 Journal — session logs, brainstorms, analyses (Journal DB)
-8. ⚙️ How we work — working rules, governance, Decisions DB, Glossary DB
-
-### Notion Governance Rules (enforced)
-- **Check before creating** — look at the page directory before creating any new page
-- ONE page per topic — never create v2, update existing subpage
-- Brainstorms go to Journal DB, not as standalone pages
-- To-do DB is THE ONLY task list — action items never live in prose
-- Superseded pages archived same session (prefix + move to archive)
-- Search existing pages before creating new ones
-
 ### GitHub Access (REQUIRED)
 - Repo: strale (local)
 - Main branch: main
@@ -240,9 +204,7 @@ Both wired into CI after `docs:test` / `archive:index:test`.
 - Commit message format: Conventional Commits (`type(scope): description`)
 
 ### Project Spec
-The original MVP spec files have been removed from this repo (archived to Notion).
-For current build plan, priorities, and architecture, see Notion Project Home:
-https://www.notion.so/31167c87-082c-81fb-96da-d3188d34aa72
+What Strale is: `docs/project/PRODUCT.md`. Current operating state, verified against production: `docs/project/STATE.md`. Ordered outcomes and execution shape: `docs/project/ROADMAP.md`. The generated index of active and superseded decisions: `docs/project/DECISIONS.md`.
 
 ### Tech Stack
 - Runtime: Node.js + TypeScript
@@ -280,92 +242,23 @@ strale/
 
 ### Active Decisions
 
-#### MVP Decisions (Feb 2026)
-- DEC-1: Scope reduced to 4-week MVP proving developers will let agents buy capabilities
-- DEC-2: Prepaid wallet via Stripe Checkout — internal ledger for micropayments, zero per-transaction cost
-- DEC-3: No bidding/auction — fixed pricing, instant routing, keyword matching for 5 capabilities
-- DEC-4: Founder is the only provider for first 3 months
-- DEC-5: TypeScript backend (Hono + Drizzle + PostgreSQL)
-- DEC-6: EU/Nordic data wedge — 5 seed capabilities
-- DEC-7: Use Browserless.io instead of self-hosted Puppeteer (unanimous reviewer feedback)
-- DEC-8: SELECT FOR UPDATE row-level locking on wallet debits (unanimous)
-- DEC-9: Idempotency-Key header on POST /v1/do (unanimous)
-- DEC-10: €2.00 trial credits on signup, no card required (unanimous)
-- DEC-11: Rating endpoint removed from MVP (unanimous)
-- DEC-12: screenshot-url and eu-address-validate dropped; replaced by vat-validate and annual-report-extract
-- DEC-13: Invoice extraction price raised to €0.50
-- DEC-14: Don't charge before execution succeeds — lock → execute → deduct on success
-- DEC-15: Add capability_slug override to POST /v1/do
-- DEC-16: Add dry_run mode to POST /v1/do
-- DEC-17: Return wallet_balance_cents in /v1/do response
-- DEC-18: Dashboard scope reduced to: register, API key, balance, top-up, transaction list
-- DEC-19: Structured error responses with stable error_code enum
-- DEC-20: Hash API keys in DB, store key_prefix for lookup
-- DEC-21: Rate limiting: 10 req/sec per key + €100/hour spend cap
-- DEC-22: Hybrid sync/async execution — sync for <5s, async+poll for longer capabilities
-- DEC-23: TypeScript SDK ships before Python SDK
-- DEC-20260225-P-c5d6: 6th table — failed_requests (id, user_id, task, category, max_price_cents, created_at) logs every no_matching_capability response
-- DEC-20260225-P-m5n6: swedish-company-data accepts fuzzy natural-language input; cheap LLM call resolves to org number before registry lookup
+Settled decisions are indexed by the generated `docs/project/DECISIONS.md`, which links to the underlying record file behind each entry. Founder decisions still pending are tracked in `docs/company/DECISION-QUEUE.md`. A new decision, or a supersession of an active one, follows the Contradiction Protocol in Workflow Invariants below, including a same-change update to whichever of these files it touches.
 
----
-
-#### Current Decisions (March 2026)
-- DEC-20260302-A: Capability Pricing Framework (€0.02–€1.00 per call)
-- DEC-20260302-B: Capability QA Framework (tiered scheduling: smoke/daily/weekly)
-- DEC-20260302-C: Historical homepage prescription; superseded for the apps/web redesign by DEC-20260905-A. Its outcome-before-plumbing rationale is preserved.
-- DEC-20260303-D: Search input uses query completions, not result dropdown
-- DEC-20260303-E: POST /v1/suggest uses Voyage AI embeddings + Claude Haiku re-ranking
-- DEC-20260303-G: Historical eleven-section homepage order; superseded for the apps/web redesign by DEC-20260905-A. Evidence still belongs near the claim it supports.
-- DEC-20260305-A through G: Trust display centralization, test infrastructure, security hardening
-- DEC-20260306-A through F: Test run audit log, metric consistency, capability detail audit
-- DEC-20260307: SQS Constitution adopted as authoritative scoring spec; Notion Governance Protocol established
-
-#### Current Decisions (April 2026)
-- **DEC-20260428-A** (global, active): Third-party scraping doctrine — three-tier framework. Tier 1: Strale itself never operates scrapers (absolute). Tier 2: may consume vendor-scraped data when underlying data is public records by statute, vendor has documented redistribution rights + indemnification, vendor provides primary-source provenance per fact, and Strale discloses sourcing via `provenance.upstream_vendor` / `acquisition_method` / `primary_source_reference`. Tier 3: prefer licensed-bulk over scraping-derived when both are available at compatible economics. Anchored on Meta v. Bright Data (NDCal Jan 2024) and hiQ v. LinkedIn (settled Dec 2022, $500k judgment). Supersedes the implicit absolute no-scraping rule. Full doctrine: Notion Decisions DB (page id `35067c87-082c-810d-b6a4-edf9f14b4446`).
-- **DEC-20260428-B** (global, active): Engineering bar for Strale-built data services (sanctions/PEP, UBO, adverse media, future registry self-builds). Codifies regulatory-grade requirements: versioned dataset with stale-data circuit breaker, source-list manifest per response, Merkle-rooted ingest, match explainability, confidence buckets, dispute endpoint with disposition tracking, replay capability, golden test suite, canary deploys, per-list kill switches, GDPR Art. 22 compliance, threat-model document and public methodology page mandatory before production. AI synthesis steps (e.g. risk-narrative-generate) must require per-flag source citation, "screening checks found" framing, and never assert facts not present in input. Pairs with DEC-20260428-A.
-
-#### Current Decisions (September 2026)
-- **DEC-20260910-A** (global, active): **The Codex review backlog is waived under the founder's 2026-09-07 review policy.** Directed by Petter in session on 2026-09-10 ("go with option 1, waive all 36"). The 2026-09-07 policy made cross-provider review optional — an independent review may be same-provider in a separate context — which removed the obligation `docs/programs/codex-review-backlog.yaml` existed to track. All 36 pending rows (CX-1 to CX-36; 23 high, 13 medium) passed `policy.review_by` of 2026-09-07 and made `codex:check` fail on `main`, blocking every PR from 2026-09-07 to 2026-09-10. They are closed `waived`, `waived_by: petter`, citing this decision. No new batches are added to the register; `codex:check` remains so the waived history stays immutable. Amends DEC-20260903-A (does not delete its register). Full text: the Review routing section above.
-- **DEC-20260905-A** (global, active): **Benefit-first positioning for the redesign.** Founder approved the reviewed positioning brief on 5 September: tools and data for AI agents; useful recurring agent work first, shared access/integration benefit next, customer-visible execution evidence with route-specific limits. Marketing uses tools; data services remains explanatory and technical identifiers remain in API contexts. Quiet Material is the control for refinement, not newly adopted production tokens or final artwork. Broad-library strategy, x402 priority and claim/publication gates remain. Supersedes DEC-20260302-C and DEC-20260303-G homepage composition prescriptions for the redesign while preserving their outcome-first and evidence-near-claim rationale. Adoption and narrow VOICE.md reconciliation: `docs/strategy/2026-09-05-brand-direction-adoption.md`; execution resumes at `docs/programs/brand-website/PROGRAM.md`.
-- **DEC-20260904-C** (global, active): **Capabilities labelled Unverified are listed on the website with the label, not hidden.** Directed by Petter 2026-09-04 on an M2 batch-9 finding whose premise turned out stale: the website's `isSQSUnqualified` filter would have hidden every capability labelled Unverified, but it has had no callers since the 2026-08 audit follow-up, and strale.dev already lists such capabilities dimmed with an "Awaiting traffic" badge. Affirms DEC-20260313-C and the current behaviour; pending and Building-track-record states keep their behaviour. The dead filter was aligned with the decision in `strale-frontend` PR #24 (kept in maintenance under DEC-20260902-A) so a revived caller cannot reintroduce hiding. Lesson: a comment is not evidence of behaviour; check the callers. Notion Decisions DB entry filed 2026-09-04; repo-native record follows through the M2 closure path.
-- **DEC-20260904-B** (operational, active): **Cross-surface identity mechanism for the M2 closure register (git-qualified record keys).** The record-key grammar gains a second source qualifier, symmetric to `--notion-<32 hex page id>`: `--git-<7 to 40 lowercase hex>`, naming the commit that introduced the claim directly in Git (`^DEC-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*(?:--notion-[0-9a-f]{32}|--git-[0-9a-f]{7,40})?$`). A git-qualified record must have `id` equal to the key with the qualifier removed, `source_kind: git-native`/`source_rows: []`, and `git_provenance` equal to its own first evidence entry, a full-sha `https://github.com/strale-io/strale/commit/<sha>` URL whose prefix matches and which is an ancestor of HEAD (findings `RECORD_GIT_KEY_ID_MISMATCH`/`_SOURCE_KIND`/`_PROVENANCE_MISMATCH`/`_NOT_ANCESTOR`; `COMMIT_UNVERIFIABLE` when git is unreachable). A bare collided id — now including a cross-surface collision id — is never a record key (`RECORD_KEY_BARE_CROSS_SURFACE_ID`). A cross-surface row may resolve to `resolved_collision`/`documented_only` only when a git-qualified record exists for the collision id AND a gap report cited in the row's own evidence names its page id; `row_disposition: formal_record` stays unsupported on a cross-surface row this stage (`CROSS_SURFACE_FORMAL_RECORD_UNSUPPORTED`); any other combination is `DECISION_ROW_CROSS_SURFACE_STATE_INVALID`. Stage 1 only (lands and verifies the mechanism): creates no `DEC-20260422-A.md` record in either meaning and does not change that row's disposition. Full text in the formal candidate record for this id (M2 candidate path, inactive); mechanism gap: `archive/sessions/2026-09-01-m2-enforcement-protocol-source-gaps.md`.
-- **DEC-20260904-A** (operational, active): **Pre-readiness feature-scoped M2 decision rows are evidence-only.** A preserved M2 closure-register Decision row is classified `intentionally_historical` (evidence-only) rather than left pending migration when it is `active`, `historical_scope: feature`, decided before 2026-08-12 (the `DEC-20260812-A` readiness-program adoption date), still `not_yet_reconciled`, and not a collision-registry row, a Git-native protocol label, or an existing formal-record id. 76 of 216 private rows matched at archive commit `995cece3`; the remaining 129 `not_yet_reconciled` rows (128 global, 1 temporary) are unaffected and stay G1 batch work. Full predicate, exclusions, and rationale in the formal candidate record for this id (M2 candidate path, inactive); row list: `archive/sessions/2026-09-04-m2-g1-pre-readiness-feature-rows-gaps.md`.
-- **DEC-20260903-A** (global, active): **Work does not stop for the Codex quota; the review debt is a checked register.** Directed by Petter 2026-09-03. Amends the 2026-09-01 review-routing override and its 2026-09-02 amendment: the fresh read-only Claude agent remains the independent review, no track may be blocked on the Codex review path alone, and every batch that would otherwise have gone to Codex is recorded in `docs/programs/codex-review-backlog.yaml` until a Codex verdict archived under `archive/` closes it or Petter waives it naming a decision. Enforced against git by `npm run codex:check`. Notion Decisions DB entry filed 2026-09-03; full text in the Review routing section above.
-- **DEC-20260902-A** (global, active): **The website redesign is built inside this repository as `apps/web` (monorepo).** Directed by Petter 2026-09-02. Preserve first, then build: `strale-frontend` was swept and its design material preserved (release `preserve-2026-09-02`, archive tags, tracked candidates) and is kept, not extended, until the `apps/web` site serves production. Design-token work lands in `apps/web`. Reversal: a new record if Cloudflare Pages cannot build from a monorepo subdirectory or the site source must stay private. Notion Decisions DB entry filed 2026-09-02; repo-native record follows through the M2 closure path.
-
-#### Current Decisions (August 2026)
-- **DEC-20260813-A** (global, active): **DEC-20260518-F affirmed as the operative interpretation of DEC-20260428-A.** Tier 1 ("Strale never operates scrapers") targets bulk collection and scraping infrastructure, NOT targeted per-call parsing. Per-call HTML/PDF parsing of statutorily-public registry pages is permitted when ALL four constraints hold: (a) statutorily public, (b) registry ToS permits per-call automated access — verified and recorded in the capability's manifest before launch, (c) per-entity/per-customer-request, never bulk, (d) attribution + provenance preserved. Still absolute: bulk crawling, ToS-prohibited targets (DEC-20260420-H social platforms, DEC-20260427-H-4 Google), robots.txt evasion, CAPTCHA solving, proxy rotation, login-wall circumvention. Preference order: official API > licensed bulk > Tier-2 vendor > per-call parsing — F is the floor, not the default. Opens the Greece per-call path; supersedes the absolutist reading in the 2026-05-18 MT/HU partials. Full text: Notion Decisions DB `3bb67c87-082c-8101-a08a-ddaf92ffb5df`.
-- **DEC-20260815-A** (global, active): **Operating charter — Claude runs day-to-day operations.** Full text `docs/company/CHARTER.md`. Amends (does not merely extend) DEC-20260812-A's escalation contract. Principle: *the tier of risk stays the same, the width expands.* **No technical question goes to Petter** — architecture, implementation, what to measure, what to build and in what order, testing, tooling, vendor-API choice are all Claude's; asking him to arbitrate a technical choice is a failure of the role. Claude also decides-then-tells on: turning services on/off, pricing inside the existing €0.02–€1.00 band, quality gates, quarantine/promote, refunds, retries, delisting, merging its own work once repo gates pass, dispatching agents, scheduling sessions, spend inside €50/week. **Petter alone decides:** spend beyond the envelope, anything legally binding Moonlighter AB (accounts, terms, vendor contact), one-way public acts, pricing outside the band, and regulator-facing claims. **Shipping is never Petter's decision** — the session that opens a PR merges it and reports afterwards in plain English; the morning check-in sweeps every open PR and dirty branch daily; a merge is not "shipped" until the served artifact is verified. **Customer-data boundary:** no outreach derived from transaction evidence; telemetry yields anonymous product insight only; named prospects come from public research or from customers who registered; a payment is not a relationship; content is redacted at 90 days on every capability; widening any of this is Petter's explicit call. Companion docs: `GOALS.md` (revenue ladder, EUR-denominated), `DECISION-QUEUE.md`, `BUDGET.md`, `WORKFORCE.md`, `MEASUREMENT.md`, `DESIGN-SYSTEM.md`. Notion Decisions DB entry: `3be67c87-082c-8143-b70d-c6503893ba73` (filed 2026-08-15).
-- **DEC-20260822-A** (global, active): **Daily-run reform — two artifacts, wider autonomy, systematic self-improvement.** Directed by Petter 2026-08-22 on reviewing a week of daily runs. Amends DEC-20260815-A (does not supersede it). Three parts. **(1) Two artifacts per daily run.** An *internal operating record* (`handoff/_general/from-code/`) carrying the full technical evidence, and a *CEO morning brief* (`docs/company/briefs/YYYY-MM-DD.md`) written only after the operating work is complete: ~300–600 words of non-technical English (a target; the gate warns above it and fails only past a 900-word ceiling), five fixed sections (business performance · what materially changed · fixed automatically · working on now · needs your decision), no filenames/commit ids/queries/branches/test counts/jargon. The brief is a synthesis, never a work log. **(2) Wider autonomy, unchanged risk ceiling.** Claude now acts without asking on: obvious reversible evidence-backed code errors; false monitoring/instrumentation signals; demonstrably inaccurate public copy (**narrowing only** — a stronger replacement claim stays founder-gated); routine internal-account/data cleanup, quarantine/promotion, refunds, retries, delisting where policy already determines the answer; and investigating factual/technical uncertainty rather than escalating it. Every escalation must first fail the test *"could further code inspection, production measurement, experimentation, or an existing decision resolve this?"*, and must carry five fields: the choice, what is established, the options, my recommendation, the concrete consequence of each. **No unresolved technical question ever reaches Petter.** **(3) Failure families and the three-strike rule.** `docs/company/LESSONS.md` tracks recurring mistakes by family (F1 false quality attribution, F2 wrong denominator, F3 billing/economic judgement, F4 misleading metric, F5 hollow test, F6 stale public claim, F7 state drift, F8 duplicated authority, F9 incorrect escalation, F10 approval-boundary breach). Counts live in LESSONS.md and are not restated here — three documents carried three different figures for F1 before this rule. A third materially similar incident in one family automatically becomes a root-cause investigation — identify the shared authority, measure the full affected population, falsify the hypothesis, repair the mechanism, add a discriminating guard, replay history, verify in production. F1 (quality/failure attribution) and F5 (hollow tests) are both past threshold and their investigations are **open now**; F10 was opened at two incidents because one breach of an approval gate costs the gate its meaning. Authority files: `docs/company/DAILY-RUN.md` (the run itself; the `strale-checkin-morning` scheduled task is a pointer to it, never a copy), `docs/company/LESSONS.md`, amended `CHARTER.md` / `MEASUREMENT.md` / `WORKFORCE.md`. **(4) Authorization is bound to code, not prose.** Autonomy is limited by hard authorization boundaries: being right about an action is never authority to take it, an approval-gated item leaves Petter's queue only when he moves it, and a permission not held is a stop rather than an obstacle. Daily-run items carry one of three statuses — `SYSTEM_ACTING` (decided and done, inside delegated authority), `FOUNDER_DECISION` (judgement is his), `AUTHORIZATION_UNAVAILABLE` (decision settled, execution permission absent — never authority to act, and never used for something already done). These are names for shapes produced by `apps/api/src/lib/production-authority.ts` (DEC-20260822-B / PR #361), which the charter binds to by symbol; `charter-authorization-binding.test.ts` fails if the charter names a symbol that module does not export. Machinery: `apps/api/src/lib/metrics/commercial.ts` (+ tests), `scripts/commercial-brief.ts`, `src/lib/ceo-brief-lint.ts` + `scripts/check-ceo-brief.ts` wired into CI.
-- **DEC-20260812-A** (global, active): **Readiness program adopted.** The 2026-08-05 Direction Plan Part One (library-as-product, x402 primary rail) plus the Platform Readiness & Self-Operation Program (`docs/strategy/2026-08-12-platform-readiness-program.md`) are the operating strategy. Supersedes DEC-20260502-A (Counterparty Assurance rename/ICP) and DEC-20260503-A (dual-domain architecture); the Counterparty Assurance framing is retired as primary product — compliance is a separate track gated on customer discovery. Confirmed defaults: €25 external-cost cap per full-catalog prod sweep (denylist honored); escalation contract (platform acts alone on quarantine/promote, fixture refresh, retries, delisting, refunds, draft PRs — humans decide spend above cap, vendor/license, pricing, deactivating revenue earners, DEC-20260428-B-grade builds, new external claims); quality floor quarantine <70% / deactivate <30% on ≥10 real calls/30d, auto-promote on recovery; factory may dark-launch zero-maintenance-class capabilities (invisible + non-x402 until first green week). Full text: Notion Decisions DB `3ba67c87-082c-8129-86c6-c35d82bc986f`.
+Two ids named in this section's prior text have no settled disposition and no record: `DEC-20260305-A` (no Notion row, closure-register row, or git-history text names a distinct decision under this id) and `DEC-20260303-E` (its substance is verified live in `apps/api/src/routes/suggest.ts`, but the closure register already classifies its source row evidence-only, a conflict this batch did not resolve). Both are `unclear` in `archive/sessions/2026-09-11-m4-b1b-decision-records.md`; treat neither as resolved, historical, or in force without reading that report first.
 
 ### Capabilities & Quality
-<!-- Reminder: changes to capabilities, SDKs, or integrations require updating public/llms.txt in strale-frontend -->
-290+ capabilities across 7 verticals (company-data, compliance, developer-tools, finance, data-processing, web-scraping, monitoring) plus 100+ bundled solutions across 6 categories. Full catalog: GET /v1/capabilities. Solutions: GET /v1/solutions. Counts grow frequently — check `manifests/*.yaml` and recent git log for exact current numbers.
 
-**x402 Payment Gateway (March 2026):**
-All capabilities and solutions available via x402 pay-per-use USDC payments on Base mainnet. No signup or API key needed — payment IS the auth. DB-driven: adding capabilities to x402 requires only `UPDATE capabilities SET x402_enabled = true`. Catalog: GET /x402/catalog. Discovery: GET /.well-known/x402.json. Wildcard handler: GET/POST /x402/:slug.
+Capability and solution counts, per-capability descriptions, prices, and dated addition lists are mutable runtime facts, not authored project truth: read `GET /v1/capabilities`, `GET /v1/solutions`, `GET /v1/platform/facts`, or `manifests/*.yaml` for exact current numbers. `docs/project/STATE.md`'s "Live platform facts" section states the same rule for capability, solution, free-tier, vendor, region, and retention values.
 
-**New capabilities (March 2026):**
-- `pep-check` — Dilisense consolidated PEP database (230+ territories, EU C/2023/724-aligned, RCAs included). Category: compliance. Price: €0.05. Transparency: algorithmic. Uses DILISENSE_API_KEY. (OpenSanctions previously primary with Dilisense fallback; OS dropped 2026-04-27 commit `16ca790` — single-vendor on Dilisense per DEC-20260429-A.)
-- `adverse-media-check` — Dilisense Adverse Media (235k+ news sources, FATF-categorized) primary; Serper.dev (Google) fallback with deterministic keyword classification. No LLM. Category: compliance. Price: €0.20. Transparency: algorithmic. Uses DILISENSE_API_KEY (primary) + SERPER_API_KEY (fallback). Risk-level rule documented in output via `risk_level_thresholds`.
-- `risk-narrative-generate` — AI synthesis of structured check results into plain-language risk narrative. Category: agent-tooling. Price: €0.05. Transparency: ai_generated. Uses ANTHROPIC_API_KEY.
-- `au-company-data` — Australian Business Register (ABR) lookup by ABN. Category: company-data. Price: €0.05. Transparency: algorithmic. Uses ABN_LOOKUP_GUID.
-
-**New solutions (March 2026):**
-- KYB Essentials (×20 countries) — Quick company verification. 3-4 checks, €1.50. Slug: `kyb-essentials-{cc}`
-- KYB Complete (×20 countries) — Full compliance check with risk narrative. 11-14 checks, €2.50. Slug: `kyb-complete-{cc}`
-- Invoice Verify (×20 countries) — Invoice fraud detection with risk narrative. 12-14 checks, €2.50. Slug: `invoice-verify-{cc}`
-- Countries: SE, NO, DK, FI, UK, DE, FR, NL, BE, AT, IE, ES, IT, CH, PL, PT, US, CA, AU, SG
-- Predecessors that overlap the KYB families: kyc-sweden, kyc-norway, kyc-denmark, kyc-finland, verify-us-company. This file previously recorded them as deprecated with `isActive: false`; production contradicted that on 2026-08-14. Status is deliberately not restated here — read `is_active` / `x402_enabled` from the `solutions` table (per the drift-prevention rule below) before acting on them, and do not deactivate any of them on the strength of a line in this file.
+**x402 Payment Gateway:** All capabilities and solutions are available via x402 pay-per-use USDC payments on Base mainnet. No signup or API key needed: payment is the auth. DB-driven: adding capabilities to x402 requires only `UPDATE capabilities SET x402_enabled = true`. Catalog: GET /x402/catalog. Discovery: GET /.well-known/x402.json. Wildcard handler: GET/POST /x402/:slug.
 
 SQS scoring engine deleted per DEC-20260503-B (PR1 shipped 2026-05-05). The dual-profile model (QP + RP + 5×5 matrix), the `min_sqs` request parameter on POST /v1/do, the platform floor SQS gate, the floor-aware solution SQS rule, the public `/v1/quality/:slug` endpoint, and the automatic lifecycle transitions (probation→active, active→degraded, degraded→active, degraded→suspended) are all gone. PR2 will drop the residual schema columns (`qp_score`, `rp_score`, `matrix_sqs`, `matrix_sqs_raw`, `trend`, `guidance_*`) and the `sqs_daily_snapshot` table, and rename `capability_health` → `source_health`. Test scheduling now filters on `test_suites.scheduled_testing_eligible = TRUE` (DEC-20260503-B), with `external_cost_cents = 0` as the underlying source of truth. A startup migration rewrites the flag on every boot: `SET scheduled_testing_eligible = (external_cost_cents = 0)`. Consequence: hand-editing `scheduled_testing_eligible` is silently reverted at the next deploy; `external_cost_cents` is the only durable knob even though it appears billing-only. Paid capabilities are not proactively tested; quality signals come from production observability, piggyback test suites, and any zero-cost auth-less probes the vendor permits. Circuit-breaker logic on `capability_health` survives. Fixture and canary test modes survive.
 
-Free-tier: 11 capabilities as of 2026-08 (email-validate, dns-lookup, json-repair, url-to-markdown, iban-validate, plus 6 crypto address validators: bitcoin/eth/solana/tron/dogecoin/xrp-address-validate) require no auth/signup. Canonical list is `is_free_tier = true` in the capabilities table, surfaced via `GET /v1/platform/facts` (`free_tier_slugs`) — check there before quoting a count. IP-based daily rate limit (10/day, enforced via DB counter in do.ts using `rateLimitByIp`). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
+Canonical free-tier list is `is_free_tier = true` in the capabilities table, surfaced via `GET /v1/platform/facts` (`free_tier_slugs`): check there before quoting a count or a name. IP-based daily rate limit (10/day, enforced via DB counter in do.ts using `rateLimitByIp`). Authenticated users calling free-tier capabilities get normal rate limits and no wallet debit.
 
 Testing: test_suites table has `test_mode` column: `live` (calls real API), `fixture` (uses saved data, €0 external cost), `canary` (periodic live check at reduced frequency). `external_cost_cents` tracks estimated external API cost per test execution.
 
-Stripe is LIVE in production (sk_live_ key on Railway). Local .env uses sk_test_ for development.
+Which Stripe key runs where is documented in `config/env-manifest.yaml`'s `STRIPE_SECRET_KEY` row, not restated here.
 
 ### Adding New Capabilities (MANDATORY PIPELINE)
 
@@ -562,7 +455,7 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 
 **Required steps (non-negotiable):**
 
-1. **Read the spec first.** Before writing any code, read the Capability Onboarding Pipeline design spec. If Notion is accessible, fetch page `32467c87-082c-819a-a731-d8a5f7237b33`. If not, the key requirements are listed below.
+1. **Read the spec first.** Before writing any code, read the Capability Onboarding Pipeline design spec: the key requirements are listed below.
 2. **Create/update onboarding manifest** (YAML file in repo) with: slug, name, description, category, schemas, pricing, data_source, transparency_tag, test_fixtures (known_answer + health_check_input), output_field_reliability for ALL output fields, and at least 1 limitation.
 3. **Declare output_field_reliability** for every output field: `guaranteed` (always present), `common` (usually present), or `rare` (sometimes present). Only `guaranteed` fields get `not_null` test assertions.
 4. **Set avg_latency_ms** — measure from test execution or estimate from transparency_tag (algorithmic=20ms, ai_generated=3000ms, mixed=2000ms, external API=check similar capabilities).
@@ -665,28 +558,25 @@ scheduler excludes them from all runs (test-runner.ts line 117). They are never 
 
 ### Quick Session Checklist
 1. Declare session intent
-2. Connectivity check (Git + handoff; Notion if needed). Log failures.
+2. Connectivity check (Git + handoff). Log failures.
 3. Read handoff/from-chat/ for pending items (if empty, proceed)
 4. Do the work
-5. **Code-review gate (before /end-session):** if any code was modified this session and `/go` was not run on it, halt and run `/go` (or escalate to Petter if a hard refusal blocks /go). Never run `/end-session` over unreviewed code. Docs / CLAUDE.md / Notion-only sessions are exempt.
-6. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
-7. Write handoff file to `handoff/_general/from-code/`. Even one-liner, starts with Intent:
-8. Create Journal entry in Notion (even one line)
+5. **Code-review gate (before /end-session):** if any code was modified this session and `/go` was not run on it, halt and run `/go` (or escalate to Petter if a hard refusal blocks /go). Never run `/end-session` over unreviewed code. Docs / CLAUDE.md-only sessions are exempt.
+6. **Close per the Session contract:** the handoff gate (`npm run handoff:check`) must pass before stopping, and the session's work is recorded as an updated `next_action` in the program register or a new `handoff/_general/from-code/` file (even one-liner, starts with Intent:).
 
 ### Full Session Checklist
 1. Declare session intent
-2. Run full Pre-Build Connectivity Checklist. Log failures.
-3. Read Project Home → current focus
-4. Read last 5 relevant Journal entries filtered by feature
+2. Connectivity check (Git + handoff), per Session contract step 1 (orient first). Log failures.
+3. Read the program register (`docs/programs/README.md`, active track's `next_action`) for current focus
+4. Read `handoff/_general/from-code/` for recent related work
 5. Read active Decisions — global always, feature-scope when relevant
 6. Read handoff/from-chat/ for pending specs or feedback
 7. Do the work
-8. **Code-review gate (before /end-session):** if any code was modified this session and `/go` was not run on it, halt and run `/go` (or escalate to Petter if a hard refusal blocks /go). Never run `/end-session` over unreviewed code. Docs / CLAUDE.md / Notion-only sessions are exempt.
-9. Move completed To-do items to Archive > Completed To-dos (page ID: 34067c87-082c-814e-a45c-fa8d851c8f12)
-10. Create Journal entry (full format)
-11. Log decisions made (respect authority thresholds)
-12. Save session summary to `handoff/_general/from-code/`
-13. Contradiction check if decisions were made
+8. **Code-review gate (before /end-session):** if any code was modified this session and `/go` was not run on it, halt and run `/go` (or escalate to Petter if a hard refusal blocks /go). Never run `/end-session` over unreviewed code. Docs / CLAUDE.md-only sessions are exempt.
+9. **Close per the Session contract:** the handoff gate (`npm run handoff:check`) must pass before stopping.
+10. Record a decision made this session as a new decision record, following the format of the entries listed in `docs/project/DECISIONS.md` (respect authority thresholds; global decisions always get confirmation)
+11. Save session summary to `handoff/_general/from-code/`
+12. Contradiction check if decisions were made
 
 ### Shared-Checkout Rule (concurrency safety)
 
@@ -744,9 +634,7 @@ Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESO
 **Root contains exactly:** `README.md`, `CLAUDE.md`, `AGENTS.md` (+ `.agents/`, `.codex/`), `WORKTREES.md`, `LICENSE`; the monorepo build files (`package.json`, `package-lock.json`, `tsconfig.json`); and four MCP/package-registry discovery manifests each *required* at repo root by the registry that reads it — `context7.json` (Context7), `glama.json` (Glama MCP directory), `server.json` (the official MCP registry, `io.github.strale-io/strale`), `smithery.yaml` (Smithery stdio install config). None of the four can move: each registry's crawler looks for its file at the repository root by convention, not at a configurable path. (T5, 2026-09-02: the two review/pre-flight checklists that previously sat at root — `DISTRIBUTION_PR_PREFLIGHT.md`, `REVIEW_TEMPLATE.md` — moved to `docs/governance/protocols/`; nothing reads them from the root path.) `AGENTS.md` is a condensed derivative of CLAUDE.md for Codex-CLI sessions — CLAUDE.md is canon; AGENTS.md points at CLAUDE.md sections for anything that can drift rather than restating it. Refresh AGENTS.md against CLAUDE.md whenever drift is noticed (new decisions, new mandatory protocols, Shared-Checkout Rule changes) rather than letting it go stale again.
 
 ### Workflow Invariants (Non-Negotiable)
-- NEVER edit Journal entries, Decision content, or Deferred content
-- NEVER delete anything in Notion
-- Corrections → new Journal entry, type = course-correction
+- An active decision record's protected sections (Decision, Context, Rationale, Consequences, Reversal conditions) are never edited in place; change is a new record with an explicit `supersedes`, `amends`, `interprets`, or `affirms` relationship.
 - Global decisions → ALWAYS get confirmation
 - Supersessions → ALWAYS use Contradiction Protocol (including CLAUDE.md update).
   When a new decision contradicts an active one: (1) quote both, side by
@@ -760,7 +648,6 @@ Large investigative/audit/session reports (AUDIT-*, FIX_PHASE_*, SESSION_*, RESO
 **Conflict duty:** If the human's request would contradict an active Decision, state the conflict before proceeding. Quote the specific Decision being violated and ask the human to confirm, supersede, or revise.
 
 ### Degraded Mode
-If Notion unavailable: work continues, log to handoff files with [BACKFILL] prefix.
 If Git unavailable: STOP. Fix before proceeding.
 
 ## Cross-Repo Updates
