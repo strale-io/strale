@@ -304,6 +304,38 @@ test("DUPLICATE_PROTOCOL_INDEX: two index sections are reported, whichever one t
   }
 });
 
+test("DUPLICATE_PROTOCOL_INDEX: an underline-style second index counts, a fenced example does not -- round 5 review", () => {
+  const dir = cleanFixture();
+  try {
+    // Written with an underline instead of hashes, this renders as a real
+    // heading, so a second index in that style must count the same.
+    const base = readFileSync(join(dir, "AGENTS.md"), "utf8");
+    writeFiles(dir, {
+      "AGENTS.md":
+        base + NL + NL + "Mandatory Protocols" + NL + "===================" + NL + NL +
+        "The row has been dropped from this file." + NL,
+    });
+    const underline = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(
+      underline.some((f) => f.code === "DUPLICATE_PROTOCOL_INDEX" && f.file === "AGENTS.md"),
+      JSON.stringify(underline),
+    );
+
+    // Quoted inside a fence it is an example, not a heading, and must not
+    // be counted: that would block an author documenting the pattern.
+    writeFiles(dir, {
+      "AGENTS.md": base + NL + NL + "An example of the index heading:" + NL + NL + FENCE + NL + "## Mandatory Protocols" + NL + FENCE + NL,
+    });
+    const fenced = checkProtocolReachability(dir, readBoth(dir));
+    assert.ok(
+      !fenced.some((f) => f.code === "DUPLICATE_PROTOCOL_INDEX"),
+      JSON.stringify(fenced),
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test("CLAUDE_SECTION_UNEXTRACTABLE: a duplicate heading is reported as itself, not as a missing protocol -- round 4 finding 2", () => {
   const dir = cleanFixture();
   try {

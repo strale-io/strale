@@ -625,6 +625,33 @@ function normalizeForMatch(text) {
  * carrying the protocol's own text, which is checked separately.
  */
 const PROTOCOL_INDEX_HEADING = /^#{1,6}\s*Mandatory Protocols\b/i;
+// The same heading written in the underline style, which renders as a real
+// heading and so must count the same. Round 5's second review satisfied the
+// index rule by writing a conflicting second index this way, invisible to a
+// matcher that only knew the hash style.
+const PROTOCOL_INDEX_TEXT = /^\s*Mandatory Protocols\b/i;
+const SETEXT_UNDERLINE = /^\s*(=+|-+)\s*$/;
+
+/** Every line index at which a protocol index heading starts, in either
+ * heading style, skipping fenced content so a heading quoted in an example
+ * block is not mistaken for a real one (round 5 review, second attack). */
+function protocolIndexHeadingLines(content) {
+  const lines = content.split("\n");
+  const hits = [];
+  walkFenceAware(lines, (line, index, fenced) => {
+    if (fenced) return;
+    if (PROTOCOL_INDEX_HEADING.test(line)) {
+      hits.push({ index, level: (line.match(/^#+/) ?? ["#"])[0].length });
+      return;
+    }
+    // Underline style: this line is the text, the next is the underline.
+    const next = lines[index + 1];
+    if (PROTOCOL_INDEX_TEXT.test(line) && next !== undefined && SETEXT_UNDERLINE.test(next)) {
+      hits.push({ index, level: next.trim().startsWith("=") ? 1 : 2 });
+    }
+  });
+  return hits;
+}
 
 /** The lines of a file's protocol index section, or null when it has none.
  * Null means pointers cannot be counted from that file at all: falling back
@@ -638,14 +665,15 @@ const PROTOCOL_INDEX_HEADING = /^#{1,6}\s*Mandatory Protocols\b/i;
  * that only a stale copy still lists. Round 5 finding 1, the same shape as
  * the duplicate protocol heading round 4 fixed. */
 export function protocolIndexCount(content) {
-  return content.split("\n").filter((line) => PROTOCOL_INDEX_HEADING.test(line)).length;
+  return protocolIndexHeadingLines(content).length;
 }
 
 function protocolIndexContent(content) {
   const lines = content.split("\n");
-  const start = lines.findIndex((line) => PROTOCOL_INDEX_HEADING.test(line));
-  if (start < 0) return null;
-  const level = (lines[start].match(/^#+/) ?? ["#"])[0].length;
+  const [first] = protocolIndexHeadingLines(content);
+  if (first === undefined) return null;
+  const start = first.index;
+  const level = first.level;
   const rest = lines.slice(start + 1);
   const endOffset = rest.findIndex((line) => {
     const match = line.match(/^(#+)\s/);
