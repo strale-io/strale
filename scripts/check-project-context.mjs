@@ -8,7 +8,6 @@ import {
   SKELETON_DOCUMENTS,
   buildInventory,
   generatedFiles,
-  isCutoverUnderway,
   isDirectInvocation,
   repoRootFrom,
   validateInventory,
@@ -111,12 +110,7 @@ export const REGENERATION_FINDING_CODES = new Set([
   "INVENTORY_FIELD_OUT_OF_SCOPE",
 ]);
 
-export function checkPrecutoverEntrypoint(entrypoint, content, cutoverUnderway = false) {
-  // Once the M4 cutover track (cto-readiness T7) is under way, an entrypoint
-  // pointing at docs/project or docs/decisions is expected, not a violation:
-  // that is the whole point of the cutover batches. Before T7 starts, the
-  // rule is exactly what it always was.
-  if (cutoverUnderway) return [];
+export function checkPrecutoverEntrypoint(entrypoint, content) {
   return /docs[\\/](?:project|decisions)(?:[\\/]|\b)/.test(content)
     ? [finding("M1_ENTRYPOINT_ACTIVATED", entrypoint)]
     : [];
@@ -232,10 +226,9 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     }
   }
 
-  const cutoverUnderway = isCutoverUnderway(root);
   for (const entrypoint of ["AGENTS.md", "CLAUDE.md"]) {
     const content = readFileSync(resolve(root, entrypoint), "utf8");
-    findings.push(...checkPrecutoverEntrypoint(entrypoint, content, cutoverUnderway));
+    findings.push(...checkPrecutoverEntrypoint(entrypoint, content));
   }
 
   findings.push(...checkPrivateArchiveStatus(root));

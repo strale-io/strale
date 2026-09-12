@@ -1251,34 +1251,6 @@ export function isDirectInvocation(importMetaUrl) {
   return invoked === modulePath;
 }
 
-// The M4 cutover track (cto-readiness T7) is the fact the repository already
-// maintains about whether the cutover is under way. Reading it here, instead
-// of a new hand-maintained flag, means the pre-cutover entrypoint guard and
-// the program register can never disagree: the same tracks.yaml that
-// `npm run programs:check` validates (schema, exactly one active track, no
-// open dependency) is the one source read below.
-export const CUTOVER_TRACKS_FILE = "docs/programs/cto-readiness/tracks.yaml";
-export const CUTOVER_TRACK_ID = "T7";
-const CUTOVER_UNDERWAY_STATUSES = new Set(["active", "founder_gated", "done"]);
-
-/**
- * True once the M4 cutover track has moved past "queued". A missing or
- * unreadable register (bad YAML, no matching track, wrong shape) is treated
- * as "not started" -- the strict, pre-cutover behaviour -- rather than
- * throwing, so a broken register cannot silently unlock the entrypoint guard
- * it exists to gate.
- */
-export function isCutoverUnderway(root) {
-  let register;
-  try {
-    register = parseYaml(readFileSync(resolve(root, CUTOVER_TRACKS_FILE), "utf8"));
-  } catch {
-    return false;
-  }
-  const track = register?.tracks?.find?.((t) => t?.id === CUTOVER_TRACK_ID);
-  return CUTOVER_UNDERWAY_STATUSES.has(track?.status);
-}
-
 export function assertIsolatedWorktree(root) {
   const gitDir = slash(git(root, "rev-parse", "--absolute-git-dir")).toLowerCase();
   const commonDir = slash(
