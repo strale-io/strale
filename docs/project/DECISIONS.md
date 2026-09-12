@@ -6,7 +6,7 @@ complete: false
 phase: M2
 m1_template: false
 authority_active: false
-verified_at: 2026-09-06
+verified_at: 2026-09-10
 generated: true
 ---
 
@@ -43,10 +43,24 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260225-P-u7v8`](../decisions/records/DEC-20260225-P-u7v8.md) — Backend language: TypeScript. MCP SDK is TS-native, ecosystem alignment, seamless MCP server addition later. | `DEC-20260225-P-u7v8` | active | `backend-language-typescript` | technical | petter | 2026-02-25 |
 | [`DEC-20260225-P-w9x0`](../decisions/records/DEC-20260225-P-w9x0.md) — MVP seed capabilities: 5 locked in. Swedish company data (€0.80), URL screenshot (€0.05), invoice/receipt extraction (€0.30), web page structured extraction (€0.15), EU address validation (€0.10). 3 of 5 use Puppeteer. EU/Nordic data access as wedge. | `DEC-20260225-P-w9x0` | active | `mvp-seed-capabilities-five-locked-in` | technical | petter | 2026-02-25 |
 | [`DEC-20260225-P-y1z2`](../decisions/records/DEC-20260225-P-y1z2.md) — External review synthesis: 8 unanimous, 8 majority changes, 7 disagreements resolved | `DEC-20260225-P-y1z2` | active | `external-review-synthesis` | product | petter | 2026-02-25 |
+| [`DEC-10`](../decisions/records/DEC-10.md) — 2.00 EUR trial credits on signup, no card required | `DEC-10` | active | `trial-credits` | product | petter | 2026-02-26 |
+| [`DEC-14`](../decisions/records/DEC-14.md) — Do not charge before execution succeeds; lock, execute, then deduct | `DEC-14` | active | `charge-on-success` | technical | petter | 2026-02-26 |
+| [`DEC-15`](../decisions/records/DEC-15.md) — Add capability_slug override to POST /v1/do | `DEC-15` | active | `v1-do-capability-slug-override` | technical | petter | 2026-02-26 |
+| [`DEC-16`](../decisions/records/DEC-16.md) — Add dry_run mode to POST /v1/do | `DEC-16` | active | `v1-do-dry-run-mode` | technical | petter | 2026-02-26 |
+| [`DEC-17`](../decisions/records/DEC-17.md) — Return wallet_balance_cents in the /v1/do response | `DEC-17` | active | `v1-do-wallet-balance-response` | technical | petter | 2026-02-26 |
+| [`DEC-19`](../decisions/records/DEC-19.md) — Structured error responses with a stable error_code enum | `DEC-19` | active | `structured-error-codes` | technical | petter | 2026-02-26 |
+| [`DEC-2`](../decisions/records/DEC-2.md) — Prepaid wallet via Stripe Checkout, internal ledger for micropayments | `DEC-2` | active | `prepaid-wallet-architecture` | technical | petter | 2026-02-26 |
+| [`DEC-20`](../decisions/records/DEC-20.md) — Hash API keys in the database; store key_prefix for lookup | `DEC-20` | active | `hashed-api-keys` | technical | petter | 2026-02-26 |
 | [`DEC-20260226-P-q1r2`](../decisions/records/DEC-20260226-P-q1r2.md) — Strale MVP live: API on Railway, straleio@0.1.0 on npm, 5 capabilities | `DEC-20260226-P-q1r2` | active | `mvp-launch-milestone` | technical | petter | 2026-02-26 |
 | [`DEC-20260226-P-s3t4`](../decisions/records/DEC-20260226-P-s3t4.md) — EU AI Act compliance hooks on transactions: audit_trail, transparency_marker, data_jurisdiction | `DEC-20260226-P-s3t4` | active | `eu-ai-act-compliance-hooks` | technical | petter | 2026-02-26 |
 | [`DEC-20260226-P-u5v6`](../decisions/records/DEC-20260226-P-u5v6.md) — Expanded to 13 capabilities across 5 categories | `DEC-20260226-P-u5v6` | active | `capability-catalog-13` | product | petter | 2026-02-26 |
 | [`DEC-20260226-P-w7x8`](../decisions/records/DEC-20260226-P-w7x8.md) — Expanded to 35 capabilities: 19 European registries and more | `DEC-20260226-P-w7x8` | active | `capability-catalog-35` | product | petter | 2026-02-26 |
+| [`DEC-21`](../decisions/records/DEC-21.md) — Rate limiting of 10 requests per second per key, plus a 100 EUR per hour spend cap | `DEC-21` | active | `rate-limiting-and-spend-cap` | technical | petter | 2026-02-26 |
+| [`DEC-22`](../decisions/records/DEC-22.md) — Hybrid sync/async execution, sync below a threshold and async-plus-poll above it | `DEC-22` | active | `hybrid-sync-async-execution` | technical | petter | 2026-02-26 |
+| [`DEC-5`](../decisions/records/DEC-5.md) — TypeScript backend on Hono, Drizzle, and PostgreSQL | `DEC-5` | active | `backend-tech-stack` | technical | petter | 2026-02-26 |
+| [`DEC-7`](../decisions/records/DEC-7.md) — Use Browserless.io instead of self-hosted Puppeteer | `DEC-7` | active | `browserless-headless-browser` | technical | petter | 2026-02-26 |
+| [`DEC-8`](../decisions/records/DEC-8.md) — SELECT FOR UPDATE row-level locking on wallet debits | `DEC-8` | active | `wallet-debit-row-locking` | technical | petter | 2026-02-26 |
+| [`DEC-9`](../decisions/records/DEC-9.md) — Idempotency-Key header on POST /v1/do | `DEC-9` | active | `v1-do-idempotency-key` | technical | petter | 2026-02-26 |
 | [`DEC-20260227-P-a1b2`](../decisions/records/DEC-20260227-P-a1b2.md) — Provider Growth timeline accelerated: Phase 0 is 200+ capabilities at launch | `DEC-20260227-P-a1b2` | active | `provider-growth-phase-0-acceleration` | product | petter | 2026-02-27 |
 | [`DEC-20260227-P-i9j0`](../decisions/records/DEC-20260227-P-i9j0.md) — Security architecture: provider-hosted execution is the permanent model | `DEC-20260227-P-i9j0` | active | `provider-hosted-execution-permanent` | technical | petter | 2026-02-27 |
 | [`DEC-20260227-P-m3n4`](../decisions/records/DEC-20260227-P-m3n4.md) — Defer: developer tools, hackathons, BYOD referrals, narrow wedge strategy | `DEC-20260227-P-m3n4` | active | `provider-growth-deferred-strategies` | product | petter | 2026-02-27 |
@@ -249,8 +263,12 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260822-A`](../decisions/records/DEC-20260822-A.md) — Reform daily operations with two artifacts, wider autonomy, and failure families | `DEC-20260822-A` | active | `autonomous-operating-model` | global | petter | 2026-08-22 |
 | [`DEC-20260827-A`](../decisions/records/DEC-20260827-A.md) — austrian-company-data migrates to the official Firmenbuch via JustizOnline IWG/HVD API | `DEC-20260827-A` | active | `registry-integration` | global | petter | 2026-08-27 |
 | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) — Treat the context pack as complete founder input and make reconciliation M2 work | `DEC-20260901-A` | active | `project-memory-system-of-record` | global | petter | 2026-09-01 |
+| [`DEC-20260902-A`](../decisions/records/DEC-20260902-A.md) — The website redesign is built inside this repository as apps/web | `DEC-20260902-A` | active | `website-redesign-in-monorepo` | global | petter | 2026-09-02 |
+| [`DEC-20260903-A`](../decisions/records/DEC-20260903-A.md) — Work does not stop for the Codex quota; the review debt is a checked register | `DEC-20260903-A` | active | `codex-review-backlog-register` | global | petter | 2026-09-03 |
 | [`DEC-20260904-A`](../decisions/records/DEC-20260904-A.md) — Pre-readiness feature-scoped M2 decision rows are evidence-only | `DEC-20260904-A` | active | `m2-closure-register-classification` | operational | claude | 2026-09-04 |
 | [`DEC-20260904-B`](../decisions/records/DEC-20260904-B.md) — Cross-surface identity mechanism for the M2 closure register (git-qualified record keys) | `DEC-20260904-B` | active | `m2-closure-register-cross-surface-identity` | operational | claude | 2026-09-04 |
+| [`DEC-20260904-C`](../decisions/records/DEC-20260904-C.md) — Capabilities labelled Unverified are listed with the label, not hidden | `DEC-20260904-C` | active | `unverified-capabilities-listed-not-hidden` | global | petter | 2026-09-04 |
+| [`DEC-20260905-A`](../decisions/records/DEC-20260905-A.md) — Benefit-first positioning for the redesign | `DEC-20260905-A` | active | `redesign-benefit-first-positioning` | global | petter | 2026-09-05 |
 | [`DEC-20260905-B`](../decisions/records/DEC-20260905-B.md) — Closing-review corrections to the M2 candidate set, round 1 | `DEC-20260905-B` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-05 |
 | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) — Closing-review corrections to the M2 candidate set, round 2 and sweep | `DEC-20260905-C` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-05 |
 | [`DEC-20260905-D`](../decisions/records/DEC-20260905-D.md) — Closing-review corrections to the M2 candidate set, round 3 | `DEC-20260905-D` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-05 |
@@ -267,6 +285,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260905-O`](../decisions/records/DEC-20260905-O.md) — Closing-review corrections to the M2 candidate set, round-13 finding | `DEC-20260905-O` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 | [`DEC-20260905-P`](../decisions/records/DEC-20260905-P.md) — Closing-review corrections to the M2 candidate set, round-14 finding and a second resolution report | `DEC-20260905-P` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
 | [`DEC-20260905-Q`](../decisions/records/DEC-20260905-Q.md) — Closing-review corrections to the M2 candidate set, round-15 findings and the resolution-report clause | `DEC-20260905-Q` | active | `m2-closing-review-corrections` | operational | claude | 2026-09-06 |
+| [`DEC-20260910-A`](../decisions/records/DEC-20260910-A.md) — The Codex review backlog is waived under the founder's 2026-09-07 review policy | `DEC-20260910-A` | active | `codex-review-backlog-waiver` | global | petter | 2026-09-10 |
 
 ## Non-active decisions
 
@@ -320,6 +339,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260309-G`](../decisions/records/DEC-20260309-G.md) | `DEC-20260309-G` | `amended_by` | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` |
 | [`DEC-20260310-F`](../decisions/records/DEC-20260310-F.md) | `DEC-20260310-F` | `amended_by` | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` |
 | [`DEC-20260310-F`](../decisions/records/DEC-20260310-F.md) | `DEC-20260310-F` | `amended_by` | [`DEC-20260905-J`](../decisions/records/DEC-20260905-J.md) | `DEC-20260905-J` |
+| [`DEC-20260313-C`](../decisions/records/DEC-20260313-C.md) | `DEC-20260313-C` | `affirmed_by` | [`DEC-20260904-C`](../decisions/records/DEC-20260904-C.md) | `DEC-20260904-C` |
 | [`DEC-20260313-C`](../decisions/records/DEC-20260313-C.md) | `DEC-20260313-C` | `amended_by` | [`DEC-20260905-B`](../decisions/records/DEC-20260905-B.md) | `DEC-20260905-B` |
 | [`DEC-20260313-C`](../decisions/records/DEC-20260313-C.md) | `DEC-20260313-C` | `amended_by` | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` |
 | [`DEC-20260313-C`](../decisions/records/DEC-20260313-C.md) | `DEC-20260313-C` | `amended_by` | [`DEC-20260905-J`](../decisions/records/DEC-20260905-J.md) | `DEC-20260905-J` |
@@ -500,6 +520,7 @@ The Decision column shows the historical display ID. Internal record keys are th
 | [`DEC-20260820-E-WEBSITE-SEARCH-WEB`](../decisions/records/DEC-20260820-E-WEBSITE-SEARCH-WEB.md) | `DEC-20260820-E-WEBSITE-SEARCH-WEB` | `related_from` | [`DEC-20260820-F-WEBSITE-RISK-RESPONSIVE`](../decisions/records/DEC-20260820-F-WEBSITE-RISK-RESPONSIVE.md) | `DEC-20260820-F-WEBSITE-RISK-RESPONSIVE` |
 | [`DEC-20260827-A`](../decisions/records/DEC-20260827-A.md) | `DEC-20260827-A` | `amended_by` | [`DEC-20260905-J`](../decisions/records/DEC-20260905-J.md) | `DEC-20260905-J` |
 | [`DEC-20260831-A`](../decisions/records/DEC-20260831-A.md) | `DEC-20260831-A` | `superseded_by` | [`DEC-20260901-A`](../decisions/records/DEC-20260901-A.md) | `DEC-20260901-A` |
+| [`DEC-20260903-A`](../decisions/records/DEC-20260903-A.md) | `DEC-20260903-A` | `amended_by` | [`DEC-20260910-A`](../decisions/records/DEC-20260910-A.md) | `DEC-20260910-A` |
 | [`DEC-20260904-B`](../decisions/records/DEC-20260904-B.md) | `DEC-20260904-B` | `amended_by` | [`DEC-20260905-M`](../decisions/records/DEC-20260905-M.md) | `DEC-20260905-M` |
 | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` | `amended_by` | [`DEC-20260905-D`](../decisions/records/DEC-20260905-D.md) | `DEC-20260905-D` |
 | [`DEC-20260905-C`](../decisions/records/DEC-20260905-C.md) | `DEC-20260905-C` | `amended_by` | [`DEC-20260905-L`](../decisions/records/DEC-20260905-L.md) | `DEC-20260905-L` |
