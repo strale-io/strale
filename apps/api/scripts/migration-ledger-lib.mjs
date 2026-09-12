@@ -341,8 +341,15 @@ export function checkLedger(root) {
     }
   }
 
-  // Column-overlap detection: skip "unknown", skip already-allowlisted columns.
-  const allowlisted = new Set((ledger.known_overlaps ?? []).map((o) => o.column));
+  // Column-overlap detection: skip "unknown", skip writes named in that
+  // column's own known_overlaps entry. A `known_overlaps` entry allowlists
+  // only the specific blocks named in its `blocks` array — a column is never
+  // exempt wholesale just because it has an entry at all. A block writing an
+  // overlapping column that the entry does not name is its own finding, even
+  // when other writers of the same column are documented.
+  const allowlistedBlocksByColumn = new Map(
+    (ledger.known_overlaps ?? []).map((o) => [o.column, new Set(o.blocks ?? [])]),
+  );
   const writers = new Map(); // column -> [block ids]
   for (const row of ledger.blocks ?? []) {
     if (row.columns_written.length === 1 && row.columns_written[0] === "unknown") continue;
@@ -352,11 +359,17 @@ export function checkLedger(root) {
     }
   }
   for (const [col, blockIds] of writers) {
-    if (blockIds.length > 1 && !allowlisted.has(col)) {
+    if (blockIds.length <= 1) continue;
+    const allowedBlocks = allowlistedBlocksByColumn.get(col);
+    for (const id of blockIds) {
+      if (allowedBlocks && allowedBlocks.has(id)) continue;
+      const entryHint = allowedBlocks
+        ? `known_overlaps["${col}"].blocks (currently: ${[...allowedBlocks].join(", ") || "none"})`
+        : `a new known_overlaps entry for column "${col}"`;
       findings.push({
         code: "DUPLICATE_COLUMN_WRITER",
-        block: blockIds.join(", "),
-        detail: `${col} is written by ${blockIds.length} blocks (${blockIds.join(", ")}) and is not in known_overlaps — this is the 2026-08-21 incident class (two blocks deriving one column can fight every boot). Verify they don't conflict (disjoint WHERE, or a later block superseding an earlier one) and add a known_overlaps entry, or fix the collision.`,
+        block: id,
+        detail: `${col} is written by ${blockIds.length} blocks (${blockIds.join(", ")}); ${id} is not named in ${entryHint} — this is the 2026-08-21 incident class (two blocks deriving one column can fight every boot). Verify ${id}'s write is disjoint from the other writers of ${col} and add ${id} to ${entryHint} with a note explaining why, or fix the collision.`,
       });
     }
   }

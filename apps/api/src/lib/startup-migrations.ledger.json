@@ -794,18 +794,23 @@
         "M040",
         "M050",
         "M051",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 7): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M005, M006, M007, M008, M040, M050, M051. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 7): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M005, M006, M007, M008, M040, M050, M051. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (0113, 2026-09-12) writes updated_at only for the 32 rows released by its own predicate (test_type IN negative/edge_case/known_bad AND the fixture_recapture_exhausted marker AND the 12 named browserless-suite-migration.ts slugs); disjoint from every other writer here by that predicate, none of which target those test_type values with that marker. M057 (0114, 2026-09-12) writes updated_at only for the 3 dependency_health rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = 'dependency_health' AND the fixture_recapture_exhausted marker), test_type disjoint from M056's IN list. M058 (0115, 2026-09-13) writes updated_at only for the single canadian-company-data dependency_health row matching its own predicate (capability_slug = 'canadian-company-data' AND test_type = 'dependency_health' AND input = the exact stale literal '{\"corporation_number\":\"2408951\"}'); disjoint from M050 (known_answer test_type only) and M051 (beneficial-ownership-lookup slug only), and canadian-company-data is not an openregister-vendor capability so M040 never reaches it; ledger-guarded to fire exactly once. The tightened overlap check (2026-09-13) surfaced that M056 and M057 had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "test_suites.input",
       "blocks": [
         "M008",
         "M040",
-        "M050"
+        "M050",
+        "M057",
+        "M058"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M008, M040, M050. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 3): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M008, M040, M050. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M057 (0114, 2026-09-12) rewrites input to a per-slug literal only for the 3 rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = 'dependency_health' AND the fixture_recapture_exhausted marker); disjoint from M050 (test_type = 'known_answer' only) and from M040 (none of the three slugs is an openregister-vendor capability: CRO Open Data, Lithuanian Open Data, and Zefix respectively). M058 (0115, 2026-09-13) rewrites input to a single literal ('{\"corporation_number\":\"1007\"}') only where capability_slug = 'canadian-company-data' AND test_type = 'dependency_health' AND the current input already equals the exact stale literal '{\"corporation_number\":\"2408951\"}'; disjoint from M050 (test_type = 'known_answer' only, never dependency_health), from M057 (a disjoint capability_slug set), and from M040 (openregister-vendor joins; canadian-company-data's data source is Corporations Canada, not openregister), and self-limiting since the predicate stops matching once the row is rewritten. The tightened overlap check (2026-09-13) surfaced that M057 had joined this column's write set without being added to this entry, which it should have been at the time it was ledgered."
     },
     {
       "column": "test_suites.scheduled_testing_eligible",
@@ -928,54 +933,72 @@
       "blocks": [
         "M029",
         "M040",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (0113, 2026-09-12), M057 (0114, 2026-09-12) and M058 (0115, 2026-09-13) each INSERT one health_monitor_events row per test_suites row their own UPDATE affected (looped, never a blanket write), so they add rows rather than mutate any existing one; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "health_monitor_events.capability_slug",
       "blocks": [
         "M029",
         "M040",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (0113, 2026-09-12), M057 (0114, 2026-09-12) and M058 (0115, 2026-09-13) each INSERT one health_monitor_events row per test_suites row their own UPDATE affected (looped, never a blanket write), so they add rows rather than mutate any existing one; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "health_monitor_events.details",
       "blocks": [
         "M029",
         "M040",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (0113, 2026-09-12), M057 (0114, 2026-09-12) and M058 (0115, 2026-09-13) each INSERT one health_monitor_events row per test_suites row their own UPDATE affected (looped, never a blanket write), so they add rows rather than mutate any existing one; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "health_monitor_events.event_type",
       "blocks": [
         "M029",
         "M040",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (0113, 2026-09-12), M057 (0114, 2026-09-12) and M058 (0115, 2026-09-13) each INSERT one health_monitor_events row per test_suites row their own UPDATE affected (looped, never a blanket write), so they add rows rather than mutate any existing one; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "health_monitor_events.human_override",
       "blocks": [
         "M029",
         "M040",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (0113, 2026-09-12), M057 (0114, 2026-09-12) and M058 (0115, 2026-09-13) each INSERT one health_monitor_events row per test_suites row their own UPDATE affected (looped, never a blanket write), so they add rows rather than mutate any existing one; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "health_monitor_events.tier",
       "blocks": [
         "M029",
         "M040",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Append-only event log, not a mutable column: each block INSERTs a new row, guarded by its own condition (e.g. `if (affected > 0)`), never overwrites another block's row. Verified by reading both blocks' code. Not the 2026-08-21 incident class (that was two UPDATEs disagreeing on one row's value). Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (0113, 2026-09-12), M057 (0114, 2026-09-12) and M058 (0115, 2026-09-13) each INSERT one health_monitor_events row per test_suites row their own UPDATE affected (looped, never a blanket write), so they add rows rather than mutate any existing one; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "startup_migration_ledger.block",
@@ -984,9 +1007,12 @@
         "M030",
         "M031",
         "M052",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (`0113_releaseWronglyQuarantinedRefusalSuites`), M057 (`0114_releaseCorrectedDependencyHealthFixtures`) and M058 (`0115_resyncCanadianCompanyDataDependencyHealth`) each key their own row on their own distinct `BLOCK` string constant, same as every other writer of this column; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "startup_migration_ledger.rows_affected",
@@ -995,9 +1021,12 @@
         "M030",
         "M031",
         "M052",
-        "M055"
+        "M055",
+        "M056",
+        "M057",
+        "M058"
       ],
-      "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots."
+      "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (`0113_releaseWronglyQuarantinedRefusalSuites`), M057 (`0114_releaseCorrectedDependencyHealthFixtures`) and M058 (`0115_resyncCanadianCompanyDataDependencyHealth`) each key their own row on their own distinct `BLOCK` string constant, same as every other writer of this column; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered."
     },
     {
       "column": "capabilities.deactivation_reason",
@@ -1028,18 +1057,20 @@
       "blocks": [
         "M040",
         "M054",
-        "M057"
+        "M057",
+        "M058"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M057 (0114, 2026-09-12) clears the baseline only for the exact three test_suites rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = dependency_health AND the fixture_recapture_exhausted quarantine marker), disjoint from M040/M054 by that same predicate."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M057 (0114, 2026-09-12) clears the baseline only for the exact three test_suites rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = dependency_health AND the fixture_recapture_exhausted quarantine marker), disjoint from M040/M054 by that same predicate. M058 (0115, 2026-09-13) clears the baseline only for the single canadian-company-data dependency_health row matching its own predicate (capability_slug = 'canadian-company-data' AND test_type = 'dependency_health' AND input = the exact stale literal '{\"corporation_number\":\"2408951\"}'); disjoint from M054 because M054 requires test_mode = 'fixture' and this row's test_mode is already 'live' (per the block's own comment), and disjoint from M040 because canadian-company-data is not an openregister-vendor capability."
     },
     {
       "column": "test_suites.baseline_output",
       "blocks": [
         "M040",
         "M054",
-        "M057"
+        "M057",
+        "M058"
       ],
-      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M057 (0114, 2026-09-12) clears the baseline only for the exact three test_suites rows named in its own predicate — see the M057 note on baseline_captured_at above."
+      "note": "Day-one allowlist (T15, 2026-09-02): mechanical extraction cannot tell an UPDATE of an existing row's value apart from an INSERT of a brand-new row with this column in its VALUES/SELECT list, and both count as \"written\" here. Spot-checked a sample of this column's writers (not all 2): the UPDATE-style ones guard on `WHERE ... IS NULL` / `IS DISTINCT FROM` (source comments document deliberate row-set partitioning, e.g. \"Block 0069 owns every classified capability\" at the 0066/0069 pair), and the INSERT-style ones guard on `WHERE NOT EXISTS`. No runtime trace was taken. Blocks: M040, M054. Flagged as a judgement call in the T15 handoff — worth a real verification pass, not a merge blocker. M057 (0114, 2026-09-12) clears the baseline only for the exact three test_suites rows named in its own predicate — see the M057 note on baseline_captured_at above. M058 (0115, 2026-09-13) clears the baseline only for the single canadian-company-data dependency_health row matching its own predicate — see the M058 note on baseline_captured_at above."
     },
     {
       "column": "test_suites.validation_rules",
@@ -1063,9 +1094,10 @@
       "blocks": [
         "M040",
         "M056",
-        "M057"
+        "M057",
+        "M058"
       ],
-      "note": "M040 (vendor control tower) writes test_mode as part of vendor-dependency suspension/restoration, scoped by vendor_capability_dependencies/vendor_capability_suspensions joins for capabilities tied to a specific vendor account. M056 (0113, 2026-09-12) writes test_mode only for the 32 test_suites rows matching an exact wrong-lock signature: test_type IN (negative, edge_case, known_bad) AND quarantine_reason LIKE the fixture_recapture_exhausted: marker AND capability_slug IN the 12 browserless-suite-migration.ts target capabilities. Disjoint by construction: M056 never touches a row unless it carries that specific quarantine_reason, which M040 never writes or reads. M057 (0114, 2026-09-12) writes test_mode = 'live' only for the 3 dependency_health rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = 'dependency_health' AND the same fixture_recapture_exhausted marker); test_type disjoint from M056's IN list (dependency_health is not negative/edge_case/known_bad), and capability_slug disjoint from M040's vendor-suspension joins by the same check already run for M056."
+      "note": "M040 (vendor control tower) writes test_mode as part of vendor-dependency suspension/restoration, scoped by vendor_capability_dependencies/vendor_capability_suspensions joins for capabilities tied to a specific vendor account. M056 (0113, 2026-09-12) writes test_mode only for the 32 test_suites rows matching an exact wrong-lock signature: test_type IN (negative, edge_case, known_bad) AND quarantine_reason LIKE the fixture_recapture_exhausted: marker AND capability_slug IN the 12 browserless-suite-migration.ts target capabilities. Disjoint by construction: M056 never touches a row unless it carries that specific quarantine_reason, which M040 never writes or reads. M057 (0114, 2026-09-12) writes test_mode = 'live' only for the 3 dependency_health rows named in its own predicate (capability_slug IN irish/lithuanian/swiss-company-data AND test_type = 'dependency_health' AND the same fixture_recapture_exhausted marker); test_type disjoint from M056's IN list (dependency_health is not negative/edge_case/known_bad), and capability_slug disjoint from M040's vendor-suspension joins by the same check already run for M056. M058 (0115, 2026-09-13) writes test_mode = 'live' only for the single canadian-company-data dependency_health row matching its own predicate (capability_slug = 'canadian-company-data' AND test_type = 'dependency_health' AND input = the exact stale literal '{\"corporation_number\":\"2408951\"}'); this row is not quarantined (quarantine_reason IS NULL, per the block's own comment) so it never carries M056's fixture_recapture_exhausted marker, and canadian-company-data is not an openregister-vendor capability so M040 never reaches it."
     },
     {
       "column": "test_suites.fixture_recapture_failures",

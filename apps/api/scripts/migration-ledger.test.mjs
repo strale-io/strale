@@ -266,3 +266,48 @@ test("a block marked ['unknown'] never participates in duplicate-column detectio
     assert.deepEqual(codes(root), []);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-column, per-block allowlisting (the M058/ledger overlap gap): a column
+// gaining one known_overlaps entry must not permanently exempt every later
+// block that writes it. Only a block named in that column's own `blocks`
+// array passes; an overlapping write by a block the entry does not name is
+// still a finding, even while other writers of the same column are
+// documented.
+// ---------------------------------------------------------------------------
+
+test("a block writing an already-allowlisted column, but not named in that column's entry, still fails DUPLICATE_COLUMN_WRITER", () => {
+  const ledger = computeLedgerFor(TWO_BLOCK_SOURCE);
+  ledger.blocks[0].columns_written = ["widgets.name"];
+  ledger.blocks[1].columns_written = ["widgets.name"];
+  // The entry documents M001 only — M002 joined the column's write set
+  // without ever being added, the exact shape M058 was found in.
+  ledger.known_overlaps = [{ column: "widgets.name", blocks: ["M001"], note: "test fixture: only M001 documented." }];
+  withFixture(TWO_BLOCK_SOURCE, ledger, (root) => {
+    const findings = checkLedger(root).findings.filter((f) => f.code === "DUPLICATE_COLUMN_WRITER");
+    assert.equal(findings.length, 1);
+    assert.equal(findings[0].block, "M002");
+    assert.match(findings[0].detail, /M002/);
+    assert.match(findings[0].detail, /widgets\.name/);
+  });
+
+  // Naming M002 in the same entry (a disjointness note, per M057's example)
+  // clears the finding without needing a second entry.
+  const documented = structuredClone(ledger);
+  documented.known_overlaps = [{ column: "widgets.name", blocks: ["M001", "M002"], note: "test fixture: both documented." }];
+  withFixture(TWO_BLOCK_SOURCE, documented, (root) => {
+    assert.deepEqual(codes(root), []);
+  });
+});
+
+test("a column with no known_overlaps entry at all still fails every writer, same as before the per-block tightening", () => {
+  const ledger = computeLedgerFor(TWO_BLOCK_SOURCE);
+  ledger.blocks[0].columns_written = ["widgets.name"];
+  ledger.blocks[1].columns_written = ["widgets.name"];
+  ledger.known_overlaps = [];
+  withFixture(TWO_BLOCK_SOURCE, ledger, (root) => {
+    const findings = checkLedger(root).findings.filter((f) => f.code === "DUPLICATE_COLUMN_WRITER");
+    const blocksNamed = findings.map((f) => f.block).sort();
+    assert.deepEqual(blocksNamed, ["M001", "M002"]);
+  });
+});
