@@ -7,13 +7,13 @@ phase: M4
 m1_template: false
 authority_active: true
 verified_at: 2026-09-12
-backend_reviewed_ref: 596e9c7f6dbe474f89d31e035bd47dd81673cb0b
-production_observed_ref: 596e9c7f6dbe
-production_observed_at: 2026-08-31T23:31:38.346Z
+backend_reviewed_ref: e498d5741bdfc7d28fef95bbbd98bf9508835753
+production_observed_ref: e498d5741bdf
+production_observed_at: 2026-09-12T02:22:25.142Z
 production_status: ok
 frontend_main_ref: 4be8d251b05e0abf6e23a195913c188ae318056e
 frontend_redesign_ref: 998964716c8601be67d4e71a508a803160434517
-state_evidence_ref: archive/sessions/2026-09-01-m2-canonical-state-production-snapshot.json
+state_evidence_ref: archive/sessions/2026-09-12-m4-state-production-snapshot.json
 ---
 
 # Current State
@@ -34,8 +34,10 @@ is now balancing four outcomes: finish the repo-native operating model, close
 bounded production/governance residuals, improve discovery, and turn early buyer
 diversification into repeat habits.
 
-This candidate distinguishes reviewed code, live production, branch-local
+This document distinguishes reviewed code, live production, branch-local
 frontend source, and formal acceptance. Those states must not be collapsed.
+The two frontend refs above are carried over from the 2026-09-01 snapshot:
+this observation covered the backend and its public facts only.
 
 ## Verified refs
 
@@ -79,8 +81,11 @@ settled.
 ## Live platform facts
 
 A dated read-only summary of the `/health` and `/v1/platform/facts` responses
-used for this candidate is preserved in the
-[production snapshot](../../archive/sessions/2026-09-01-m2-canonical-state-production-snapshot.json).
+behind the refs above is preserved in the
+[production snapshot](../../archive/sessions/2026-09-12-m4-state-production-snapshot.json);
+the earlier
+[2026-09-01 snapshot](../../archive/sessions/2026-09-01-m2-canonical-state-production-snapshot.json)
+remains the source of the two frontend refs.
 Capability, solution, free-tier, vendor, region, and retention values are mutable
 runtime facts: read the endpoint or the future generated state view rather than
 copying their values into authored project truth.
