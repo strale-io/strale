@@ -71,6 +71,7 @@ import {
   runMigration0100_relistUrlToMarkdown,
   runMigration0112_promoteFreeApiEight,
   runMigration0101_capabilityInvocations,
+  runMigration0114_releaseCorrectedDependencyHealthFixtures,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1362,7 +1363,7 @@ describe("startup-migrations — block 0102 (account lifecycle tables)", () => {
 });
 
 describe("startup-migrations — BLOCKS list (canonical block set)", () => {
-  it("exports the expected 56 blocks in historical order", () => {
+  it("exports the expected 57 blocks in historical order", () => {
     // Pin the canonical block list so an accidental scope-creep edit
     // (adding a block to BLOCKS without updating tests / admin endpoint
     // expectations) trips a test failure. Order matters because the
@@ -1426,6 +1427,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0111_vendorControlTower",
       "runMigration0112_promoteFreeApiEight",
       "runMigration0113_releaseWronglyQuarantinedRefusalSuites",
+      "runMigration0114_releaseCorrectedDependencyHealthFixtures",
     ]);
   });
 });
@@ -2309,7 +2311,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(113);
+    expect(Math.max(...numbers)).toBe(114);
   });
 });
 
@@ -2558,6 +2560,75 @@ describe("startup-migrations — block 0112 (list the eight free-public-API capa
     expect(result.rows_affected).toBe(0);
     const joined = stub.renderedSql.join(" | ").toLowerCase();
     expect(joined).not.toMatch(/update capabilities/);
+    expect(joined).not.toMatch(/update test_suites/);
+    expect(joined).not.toMatch(/insert into health_monitor_events/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+});
+
+describe("startup-migrations — block 0114 (release corrected dependency_health fixtures)", () => {
+  // The three rows this block targets, as the UPDATE ... RETURNING would hand
+  // back in production. Order matches the WHERE clause's IN list.
+  const releasedRows = () =>
+    [
+      { id: "dae1b5b2-f8fd-4ac8-9c23-300d27d6ac5d", capability_slug: "irish-company-data", test_type: "dependency_health" },
+      { id: "c5260ec7-f02d-4d37-afc9-10e9a90f3497", capability_slug: "lithuanian-company-data", test_type: "dependency_health" },
+      { id: "79197c2f-be82-4c2d-8f55-0f472768a48c", capability_slug: "swiss-company-data", test_type: "dependency_health" },
+    ] as unknown[];
+
+  it("releases all three suites, rewrites input to the corrected value, and writes one event each", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRows(), {}, {}, {}, {}] });
+    const result = await runMigration0114_releaseCorrectedDependencyHealthFixtures(stub);
+    expect(result.rows_affected).toBe(3);
+    expect(result.outcome).toContain("released 3");
+
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q));
+    expect(update).toBeDefined();
+    // The corrected values, verified live against each registry before this
+    // block was written — see the block's own doc comment.
+    expect(update!).toContain("513174");
+    expect(update!).toContain("304151376");
+    expect(update!).toContain("CHE-101.602.521");
+    expect(update!.toLowerCase()).toContain("test_status = 'normal'");
+    expect(update!.toLowerCase()).toContain("quarantine_reason = null");
+    expect(update!.toLowerCase()).toContain("fixture_recapture_failures = 0");
+    expect(update!.toLowerCase()).toContain("test_mode = 'live'");
+
+    const events = stub.renderedSql.filter((q) => /insert into health_monitor_events/i.test(q));
+    expect(events).toHaveLength(3);
+  });
+
+  // Exact predicate: cannot touch a row outside the three named slugs, and
+  // cannot touch a different test_type on one of those three slugs.
+  it("scopes the UPDATE to exactly the three named slugs and dependency_health only", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRows(), {}, {}, {}, {}] });
+    await runMigration0114_releaseCorrectedDependencyHealthFixtures(stub);
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q))!;
+    const whereClause = update.slice(update.toLowerCase().indexOf("where"));
+    expect(whereClause).toContain("test_type = 'dependency_health'");
+    expect(whereClause).toContain("quarantine_reason LIKE 'fixture_recapture_exhausted:%'");
+    for (const slug of ["irish-company-data", "lithuanian-company-data", "swiss-company-data"]) {
+      expect(whereClause).toContain(slug);
+    }
+    // An unrelated capability's row is never named in the predicate, so the
+    // WHERE clause cannot match it regardless of its own quarantine_reason.
+    expect(whereClause).not.toContain("canadian-company-data");
+    expect(whereClause).not.toContain("spanish-company-data");
+  });
+
+  it("does not claim a release when no matching quarantined suite remains", async () => {
+    const stub = makeStub({ queue: [{}, [], [], {}] });
+    const result = await runMigration0114_releaseCorrectedDependencyHealthFixtures(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no matching quarantined/);
+  });
+
+  it("never fires twice — idempotent on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0114_releaseCorrectedDependencyHealthFixtures" }]] });
+    const result = await runMigration0114_releaseCorrectedDependencyHealthFixtures(stub);
+    expect(result.rows_affected).toBe(0);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
     expect(joined).not.toMatch(/update test_suites/);
     expect(joined).not.toMatch(/insert into health_monitor_events/);
     expect(result.outcome).toMatch(/already applied/);
