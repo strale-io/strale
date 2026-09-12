@@ -384,22 +384,14 @@ excluded_sections:
       outside the manifest; the M4 rewrite of CLAUDE.md and AGENTS.md as
       peer entrypoints restates session-start rules, and that rewrite is
       where they are reconsidered.
-  - heading: "Repo-native migration continuation — pre-cutover"
-    reason: >-
-      States explicitly that it is a navigation pointer to the migration
-      checkpoint document, not a protocol in its own right.
-  - heading: "Notion Access (REQUIRED)"
-    reason: "Reference list of Notion workspace URLs and page ids, not a protocol."
-  - heading: "Notion Workspace Structure (8 sections under Project Home)"
-    reason: "Structural reference describing the Notion workspace layout, not a protocol."
-  - heading: "Notion Governance Rules (enforced)"
-    reason: >-
-      Governs conduct inside Notion, which lives outside this repository,
-      so no repository check can verify it, and no decision id names it.
   - heading: "GitHub Access (REQUIRED)"
     reason: "Reference data naming the repository and branch pattern, not a protocol."
   - heading: "Project Spec"
-    reason: "Pointer to the Notion project home for the build plan, not a protocol."
+    reason: >-
+      Pointer to docs/project/PRODUCT.md, STATE.md, ROADMAP.md, and
+      DECISIONS.md for the build plan, not a protocol. Rewritten at M4
+      batch 2 to drop the Notion Project Home pointer
+      (archive/sessions/2026-09-11-m4-b2-claude-md.md).
   - heading: "Tech Stack"
     reason: "Reference list of technology choices, not a protocol."
   - heading: "Project Structure"
@@ -415,26 +407,26 @@ excluded_sections:
   - heading: "Quick Session Checklist"
     reason: >-
       A per-session checklist that mostly restates the Session Start and
-      Session contract headings, plus Notion steps (to-do archiving, a
-      Journal entry) while Notion is the authority. One step is its own:
-      run /go before /end-session and never end a session over unreviewed
-      code. No repository check enforces that step and it names no
-      decision, so under this manifest's test the section is excluded.
-      Decided 2026-09-11 (M3 milestone review condition 2): the
-      review-before-close step stays outside the manifest, because it
-      names no decision and nothing enforces it. Two neighbouring rows
-      guard related points but not this one: review-routing governs the
-      independent review a PR gets before merge, and session-contract's
-      hooks refuse a direct push to main and check handoff hygiene. Neither
-      checks that /go ran, so a session can still push an unreviewed branch
-      and stop; what keeps that code out of main is the review before
-      merge. The M4 entrypoint rewrite, which retires the Notion steps,
-      restates the step and is where making it enforceable is reconsidered.
+      Session contract headings. One step is its own: run /go before
+      /end-session and never end a session over unreviewed code. No
+      repository check enforces that step and it names no decision, so
+      under this manifest's test the section is excluded. Decided
+      2026-09-11 (M3 milestone review condition 2): the review-before-close
+      step stays outside the manifest, because it names no decision and
+      nothing enforces it. Two neighbouring rows guard related points but
+      not this one: review-routing governs the independent review a PR
+      gets before merge, and session-contract's hooks refuse a direct push
+      to main and check handoff hygiene. Neither checks that /go ran, so a
+      session can still push an unreviewed branch and stop; what keeps that
+      code out of main is the review before merge. Rewritten at M4 batch 2
+      to drop the Notion to-do-archiving and Journal-entry steps in favour
+      of the Session contract's own handoff gate and program register
+      (archive/sessions/2026-09-11-m4-b2-claude-md.md).
   - heading: "Full Session Checklist"
     reason: >-
       The Quick Session Checklist expanded for full sessions, including the
       same review-before-close step; excluded for the same reason, and the
-      same M4 note applies.
+      same M4 batch 2 rewrite note applies.
   - heading: "Report Filing Convention"
     reason: >-
       Prescribes where reports are filed and names the repository-root
@@ -442,18 +434,22 @@ excluded_sections:
       decision id governs it.
   - heading: "Workflow Invariants (Non-Negotiable)"
     reason: >-
-      Mostly conduct inside Notion (never edit Journal, Decision or
-      Deferred content, no deletion, corrections as new entries). Its
-      conflict duty (state a conflict with an active decision before
-      acting) and its supersession rule (which includes a CLAUDE.md update)
-      also bind work in this repository. It names no decision id and no
-      repository check enforces it, so it is excluded under this
-      manifest's test; the M4 cutover should carry the conflict duty and
-      supersession rule into the repository's decision process.
+      Its protected-sections rule (an active decision record's Decision,
+      Context, Rationale, Consequences, and Reversal conditions are never
+      edited in place), conflict duty (state a conflict with an active
+      decision before acting), and supersession rule (which includes a
+      CLAUDE.md update) bind work in this repository. It names no decision
+      id and no repository check enforces it, so it is excluded under this
+      manifest's test. Rewritten at M4 batch 2 to drop the Notion-conduct
+      lines and restate the protected-sections rule without a path
+      reference, since docs/decisions/README.md is itself inactive
+      (m1_entrypoint_activated would fire on that reference)
+      (archive/sessions/2026-09-11-m4-b2-claude-md.md).
   - heading: "Degraded Mode"
     reason: >-
-      Short operational fallback guidance for Notion or Git unavailability,
-      not code-enforced and not tied to a decision id.
+      Short operational fallback guidance for Git unavailability, not
+      code-enforced and not tied to a decision id. Rewritten at M4 batch 2
+      to drop the Notion-unavailable line.
   - heading: "Cross-Repo Updates"
     reason: >-
       Section header introducing the frontend-file update triggers; the

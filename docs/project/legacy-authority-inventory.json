@@ -62,6 +62,7 @@
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md",
+        "archive/sessions/2026-09-11-m4-b2-claude-md.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/enforcement-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
@@ -114,7 +115,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "89b062f432e3747bf8012891f6a5ffc1dad834bf70600b507e9caac7bc6cebb1",
+      "sha256": "fa634818f2daa1467abd8b2efcecc54a21fd8dbe973557d1bda474bbbabbbe07",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/commands/end-session.md",
@@ -223,6 +224,7 @@
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md",
         "archive/sessions/2026-09-11-m4-b1b-decision-records.md",
+        "archive/sessions/2026-09-11-m4-b2-claude-md.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/DEPRECATION_CHECKLIST.md",
@@ -564,6 +566,7 @@
         "archive/sessions/2026-09-11-m3-milestone-review.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md",
+        "archive/sessions/2026-09-11-m4-b2-claude-md.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "config/env-manifest.yaml",
         "design/PROVENANCE.md",
@@ -630,7 +633,6 @@
       "sha256": "f7862e554471c1fa22b96fb879dbd0169ad24b732465e795f8a3d68b4dcfb985",
       "detected_references": [
         "AGENTS.md",
-        "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/scripts/check-vendor-roster-drift.ts",
         "apps/api/src/lib/attribution.ts",
@@ -834,6 +836,7 @@
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
         "archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md",
+        "archive/sessions/2026-09-11-m4-b2-claude-md.md",
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/CONTAINMENT_REPORT.md",
         "archive/sessions/FIX_PHASE_A_verification.md",

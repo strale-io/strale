@@ -32,7 +32,7 @@ source_heading: "Capability Onboarding Protocol (DEC-20260320-B)"
 
 **Required steps (non-negotiable):**
 
-1. **Read the spec first.** Before writing any code, read the Capability Onboarding Pipeline design spec. If Notion is accessible, fetch page `32467c87-082c-819a-a731-d8a5f7237b33`. If not, the key requirements are listed below.
+1. **Read the spec first.** Before writing any code, read the Capability Onboarding Pipeline design spec: the key requirements are listed below.
 2. **Create/update onboarding manifest** (YAML file in repo) with: slug, name, description, category, schemas, pricing, data_source, transparency_tag, test_fixtures (known_answer + health_check_input), output_field_reliability for ALL output fields, and at least 1 limitation.
 3. **Declare output_field_reliability** for every output field: `guaranteed` (always present), `common` (usually present), or `rare` (sometimes present). Only `guaranteed` fields get `not_null` test assertions.
 4. **Set avg_latency_ms** — measure from test execution or estimate from transparency_tag (algorithmic=20ms, ai_generated=3000ms, mixed=2000ms, external API=check similar capabilities).
