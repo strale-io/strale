@@ -1,0 +1,20 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "27232f98b16d6e63a7e28177f44d989b3a528c9f"
+  },
+  "at": "2026-09-13T04:30:25.266Z",
+  "inputs": {
+    "source": "C:/tmp/notion-regression-result.json"
+  },
+  "summary": {
+    "ok": true,
+    "findings_count": 0
+  },
+  "topic": "m4-b7-notion-regression",
+  "raw": {
+    "ok": true,
+    "findings": []
+  }
+}
