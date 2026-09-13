@@ -52,6 +52,14 @@ COPY config/vendors.yaml config/vendors.yaml
 # missing path, rather than letting a broken image ship and fail silently
 # in production the way apps/api/scripts/apply-migrations.ts did on
 # 2026-05-04.
+#
+# Three of the four are read by the digest today. config/vendors.yaml is in
+# the settled M4 list of paths the readers use, but no reader reachable from
+# this image reads it yet, so it is copied and required here on the
+# specification's authority rather than on a reader's. Do not remove it to
+# tidy up: check whether a reader has since appeared, and change the
+# specification first if one never does. The discrepancy is recorded in the
+# batch 5 handoff under handoff/_general/from-code/.
 RUN for f in \
       docs/company/DECISION-QUEUE.md \
       handoff/_general/from-code \
@@ -62,7 +70,7 @@ RUN for f in \
         echo "image verification failed: required path missing from image: $f" >&2; \
         exit 1; \
       fi; \
-    done && echo "image verification: all four repo-native digest paths present"
+    done && echo "image verification: all four required repo-native paths present"
 
 # Build MCP server first (apps/api imports from it)
 RUN npm run build --workspace=packages/mcp-server
