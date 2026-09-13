@@ -114,10 +114,23 @@
  *       table row, a block quote line, or a list item with its wrapped
  *       continuation lines is its own unit, and an ordinary paragraph's
  *       lines are joined into one before any pattern runs, using the same
- *       block shape rule (b)'s extractBlocks already established. No
- *       pattern needed widening for this -- every one already matches
- *       across the embedded newline a joined unit carries, because each
- *       uses `\s`, which matches a newline the same as a space.
+ *       block shape rule (b)'s extractBlocks already established. Round 7
+ *       claimed no pattern needed widening for this, on the theory that
+ *       every one already matched across a joined unit's embedded newline
+ *       because each used `\s`. That claim was false (round 8 finding 1):
+ *       AS_OF_RE, VALID_THROUGH_RE, CURRENT_THROUGH_RE and LAST_VERIFIED_RE
+ *       joined their trigger words with a literal ASCII space, which
+ *       matches only that one character and never the newline a wrap
+ *       inserts, so a wrap landing inside "as of", "valid through",
+ *       "current through" or "Last verified" produced no finding at all --
+ *       invisible under the very paragraph-join this round 7 comment
+ *       describes, for the shapes it claimed were already covered. All four
+ *       now use `\s+`, and every remaining pattern in this file was
+ *       re-audited line by line and confirmed already `\s`-based (see
+ *       scanMutableFacts's own comment for the full account, including the
+ *       one class of duplicate reporting the same audit turned up: a count
+ *       matching both the named-noun and the generic-noun pattern at once
+ *       is now deduplicated to a single finding, round 8 finding 3).
  *   (d) M1_ENTRYPOINT_ACTIVATED -- reused verbatim from
  *       scripts/check-project-context.mjs's checkPrecutoverEntrypoint
  *       rather than re-implemented, per this batch's brief.
@@ -900,17 +913,27 @@ const MONTH_NAMES_RE =
 const DATE_VALUE_RE = `(?:\\d{4}-\\d{2}(?:-\\d{2})?|${MONTH_NAMES_RE}\\s+\\d{4}|Q[1-4]\\s+\\d{4})`;
 const DATED_PARENTHETICAL_RE = new RegExp(`\\(${MONTH_NAMES_RE}\\s+\\d{4}\\)`, "g");
 // "as of <date>" in any of the three date shapes, including the quarter form.
-const AS_OF_RE = new RegExp(`\\bas of ${DATE_VALUE_RE}\\b`, "gi");
+// Every gap between trigger words, and between the trigger phrase and the
+// date, uses \s+ rather than a literal " " (round 8 finding 1): a literal
+// space matches only a single ASCII space character, never the newline an
+// ordinary paragraph wrap inserts, so a phrase that happens to wrap at one
+// of its internal spaces went dark under the paragraph-scoped scan the
+// round 7 fix introduced -- invisible exactly when an ordinary wrap fell
+// inside "as of", "Last verified", "valid through" or "current through",
+// while the same text unwrapped still matched. \s+ matches a newline the
+// same as a space, closing the gap for any wrap position, not just the one
+// found first.
+const AS_OF_RE = new RegExp(`\\bas\\s+of\\s+${DATE_VALUE_RE}\\b`, "gi");
 // The other ordinary ways a dated status is written in this repo's prose,
 // beyond "(Month YYYY)" and "as of <date>": "Last verified: <date>",
 // "Updated <date>", "valid through <date>", "refreshed <date>", "reviewed
 // <date>" and "current through <date>" (round 3 finding 4 adds the last
 // four). All six are staleness claims about the current state of a section,
 // exactly the shape rule (c) exists to catch.
-const LAST_VERIFIED_RE = new RegExp(`\\bLast verified:?\\s+${DATE_VALUE_RE}\\b`, "gi");
+const LAST_VERIFIED_RE = new RegExp(`\\bLast\\s+verified:?\\s+${DATE_VALUE_RE}\\b`, "gi");
 const UPDATED_STATUS_RE = new RegExp(`\\bUpdated\\s+(?:on\\s+)?${DATE_VALUE_RE}\\b`, "gi");
-const VALID_THROUGH_RE = new RegExp(`\\bvalid through ${DATE_VALUE_RE}\\b`, "gi");
-const CURRENT_THROUGH_RE = new RegExp(`\\bcurrent through ${DATE_VALUE_RE}\\b`, "gi");
+const VALID_THROUGH_RE = new RegExp(`\\bvalid\\s+through\\s+${DATE_VALUE_RE}\\b`, "gi");
+const CURRENT_THROUGH_RE = new RegExp(`\\bcurrent\\s+through\\s+${DATE_VALUE_RE}\\b`, "gi");
 const REFRESHED_RE = new RegExp(`\\brefreshed\\s+(?:on\\s+)?${DATE_VALUE_RE}\\b`, "gi");
 const REVIEWED_RE = new RegExp(`\\breviewed\\s+(?:on\\s+)?${DATE_VALUE_RE}\\b`, "gi");
 const DEC_ID_RE = /\bDEC-\d{8}(?:-[A-Za-z0-9]+)*\b/g;
@@ -975,6 +998,15 @@ function findMoney(line) {
   return hits;
 }
 
+// Deliberately not deduplicated here: NAMED_COUNT_FORWARD_RE and
+// GENERIC_COUNT_FORWARD_RE both match the same span whenever the noun is
+// one of the five curated plurals (e.g. "290 capabilities"), because the
+// named pattern exists precisely to catch the singular form the generic
+// one misses, not to replace it on the plural forms they share. The
+// resulting duplicate is one fact reported twice, not two facts -- it is
+// collapsed once, by category+snippet+line, in scanMutableFacts below,
+// which sees every finder's output and can tell a true duplicate from two
+// distinct facts on the same line (round 8 finding 3).
 function findCounts(line) {
   const hits = [];
   for (const m of line.matchAll(NAMED_COUNT_FORWARD_RE)) hits.push({ category: "COUNT", snippet: m[0] });
@@ -1199,11 +1231,29 @@ function extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms) 
  * heading (mirroredHeadingForms). Runs each pattern finder over a whole
  * paragraph-joined unit (extractFactScanUnits above) rather than one raw
  * line at a time, so a fact split across an ordinary paragraph wrap is not
- * invisible to the scan (round 7 finding 1); every pattern already matches
- * across the embedded newline a joined unit carries, because each one uses
- * `\s`, which matches a newline the same as a space. Returns raw
- * {category, line, snippet} hits, `line` naming the unit's start line; the
- * caller turns them into findings. */
+ * invisible to the scan (round 7 finding 1). Round 7's own claim that every
+ * pattern already matched across a joined unit's embedded newline because
+ * each one used `\s` was false for three of them (round 8 finding 1):
+ * AS_OF_RE, VALID_THROUGH_RE and CURRENT_THROUGH_RE joined their trigger
+ * words with a literal ASCII space, which matches only that one character
+ * and never the newline a wrap inserts, so a wrap landing inside "as of",
+ * "valid through" or "current through" went dark under this very scan --
+ * exactly the failure the paragraph-join was supposed to close. Auditing
+ * every pattern in the file for the same class (not only the three cases
+ * the round happened to name) found a fourth instance already living beside
+ * them: LAST_VERIFIED_RE joined "Last" and "verified" with the same literal
+ * space. All four now use `\s+` between every trigger word and before the
+ * date, so a wrap at any internal position is caught the same as the
+ * unwrapped text; the rest of this file's patterns were audited and found
+ * already `\s`-based throughout (see each pattern's own definition above).
+ * Two of the four finders below can report the same fact twice: findCounts'
+ * named-noun and generic-noun patterns both match one occurrence whenever
+ * the noun is one of the five curated plurals (round 8 finding 3), so hits
+ * are deduplicated below by category, snippet and line before being
+ * returned -- one fact reported once, while two distinct facts sharing a
+ * line (different snippets, or the same snippet at a different line) still
+ * report separately. Returns raw {category, line, snippet} hits, `line`
+ * naming the unit's start line; the caller turns them into findings. */
 export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()) {
   const allowlistedHeadings = new Set(
     MUTABLE_FACT_ALLOWLIST.filter((entry) => entry.file === file).flatMap((entry) =>
@@ -1211,6 +1261,7 @@ export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()
     ),
   );
   const hits = [];
+  const seen = new Set();
   const lines = content.split("\n");
   for (const unit of extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms)) {
     if (unit.excluded) continue;
@@ -1221,6 +1272,14 @@ export function scanMutableFacts(file, content, mirroredHeadingForms = new Set()
       ...findDates(normalized),
       ...findDecisionSummaries(normalized),
     ]) {
+      // The same fact matched by two different patterns (findCounts' named-
+      // and generic-noun regexes on a curated plural, round 8 finding 3) is
+      // one occurrence, not two: dedupe on category+snippet+line, the same
+      // identity a reader would use to tell "is this the same finding
+      // again?" from "is this a different fact?".
+      const key = JSON.stringify([hit.category, hit.snippet, unit.startLine]);
+      if (seen.has(key)) continue;
+      seen.add(key);
       hits.push({ ...hit, line: unit.startLine });
     }
   }

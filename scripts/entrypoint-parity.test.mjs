@@ -1385,6 +1385,155 @@ test("MUTABLE_FACT_FOUND: a fence still flushes the paragraph before it, so a fa
   }
 });
 
+// ── round 8 finding 1: a literal space cannot match a joined-unit newline ──
+
+test("MUTABLE_FACT_FOUND (DATE): an 'as of' staleness claim wrapped at either internal space still fires", () => {
+  const dir = cleanFixture();
+  try {
+    const wraps = [
+      "This capability list is accurate as\nof September 2026 and will need review later on.",
+      "This capability list is accurate as of\nSeptember 2026 and will need review later on.",
+    ];
+    for (const text of wraps) {
+      writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\n${text}\n` });
+      const broken = checkMutableFacts(dir, readBoth(dir));
+      assert.ok(
+        broken.some((f) => f.file === "AGENTS.md" && f.detail.includes("DATE")),
+        JSON.stringify(broken),
+      );
+      writeFiles(dir, {
+        "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace(`\n${text}\n`, ""),
+      });
+    }
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DATE): a 'valid through' staleness claim wrapped at either internal space still fires", () => {
+  const dir = cleanFixture();
+  try {
+    const wraps = [
+      "The pricing is valid\nthrough September 2026 for existing customers.",
+      "The pricing is valid through\nSeptember 2026 for existing customers.",
+    ];
+    for (const text of wraps) {
+      writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\n${text}\n` });
+      const broken = checkMutableFacts(dir, readBoth(dir));
+      assert.ok(
+        broken.some((f) => f.file === "AGENTS.md" && f.detail.includes("DATE")),
+        JSON.stringify(broken),
+      );
+      writeFiles(dir, {
+        "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace(`\n${text}\n`, ""),
+      });
+    }
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DATE): a 'current through' staleness claim wrapped at either internal space still fires", () => {
+  const dir = cleanFixture();
+  try {
+    const wraps = [
+      "That guarantee stays current\nthrough September 2026 unless renegotiated.",
+      "That guarantee stays current through\nSeptember 2026 unless renegotiated.",
+    ];
+    for (const text of wraps) {
+      writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\n${text}\n` });
+      const broken = checkMutableFacts(dir, readBoth(dir));
+      assert.ok(
+        broken.some((f) => f.file === "AGENTS.md" && f.detail.includes("DATE")),
+        JSON.stringify(broken),
+      );
+      writeFiles(dir, {
+        "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace(`\n${text}\n`, ""),
+      });
+    }
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DATE): a 'Last verified' staleness claim wrapped between 'Last' and 'verified' still fires", () => {
+  const dir = cleanFixture();
+  try {
+    const wraps = [
+      "Last\nverified: 2026-08-01 by the founder.",
+      "Last verified:\n2026-08-01 by the founder.",
+    ];
+    for (const text of wraps) {
+      writeFiles(dir, { "AGENTS.md": `${readFileSync(join(dir, "AGENTS.md"), "utf8")}\n${text}\n` });
+      const broken = checkMutableFacts(dir, readBoth(dir));
+      assert.ok(
+        broken.some((f) => f.file === "AGENTS.md" && f.detail.includes("DATE")),
+        JSON.stringify(broken),
+      );
+      writeFiles(dir, {
+        "AGENTS.md": readFileSync(join(dir, "AGENTS.md"), "utf8").replace(`\n${text}\n`, ""),
+      });
+    }
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── round 8 finding 3: one fact matched twice reports once ─────────────────
+
+test("MUTABLE_FACT_FOUND (COUNT): a count on one of the five named plurals, matched by both the named and generic pattern, reports once", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "The platform currently lists 290 capabilities across every vertical.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    const countHits = broken.filter(
+      (f) => f.file === "CLAUDE.md" && f.detail.includes("COUNT") && /290 capabilities/i.test(f.detail),
+    );
+    assert.equal(countHits.length, 1, JSON.stringify(broken));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nThe platform currently lists 290 capabilities across every vertical.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (COUNT): two genuinely distinct counts on the same line still report twice", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "The platform lists 290 capabilities and twelve registries on this line.\n",
+    });
+    const result = checkMutableFacts(dir, readBoth(dir));
+    const countHits = result.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("COUNT"));
+    assert.equal(countHits.length, 2, JSON.stringify(countHits));
+    assert.ok(countHits.some((f) => /290 capabilities/i.test(f.detail)), JSON.stringify(countHits));
+    assert.ok(countHits.some((f) => /twelve registries/i.test(f.detail)), JSON.stringify(countHits));
+  } finally {
+    cleanup(dir);
+  }
+});
+
 // ── real repo ─────────────────────────────────────────────────────────────
 
 test("real repo: CLAUDE.md and AGENTS.md pass entrypoint parity today", () => {
