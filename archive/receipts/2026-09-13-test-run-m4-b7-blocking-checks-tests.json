@@ -1,0 +1,29 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "27232f98b16d6e63a7e28177f44d989b3a528c9f"
+  },
+  "at": "2026-09-13T04:30:21.910Z",
+  "inputs": {
+    "source": "C:\\Users\\pette\\AppData\\Local\\Temp\\claude\\C--Users-pette-Projects-strale\\4f68dcca-de52-4ade-b2b2-8341f736268e\\scratchpad\\m4-b7-test-run.json"
+  },
+  "summary": {
+    "ok": true,
+    "pass": 165,
+    "fail": 0
+  },
+  "topic": "m4-b7-blocking-checks-tests",
+  "raw": {
+    "ok": true,
+    "suites": [
+      "scripts/no-notion-regression.test.mjs",
+      "scripts/protocol-coverage.test.mjs",
+      "scripts/check-project-context.test.mjs",
+      "scripts/entrypoint-parity.test.mjs",
+      "scripts/candidates.test.mjs"
+    ],
+    "pass": 165,
+    "fail": 0
+  }
+}

@@ -24,13 +24,13 @@
  * manifest by protocolRouterMarkdown/protocolRouterGeneratedFiles below --
  * is up to date (ROUTER_STALE).
  *
- * A single check runs as a warning rather than a blocking finding today, per the
- * migration plan (docs/strategy/2026-08-31-repo-native-operating-model-
- * migration.md, M3 exit criteria): DECISION_ID_UNCOVERED, a decision id
- * CLAUDE.md names inside a covered protocol's own section, or that
- * apps/api/src code cites next to the word "protocol", with no manifest row
- * citing it. This warning becomes a blocking finding at the M4 cutover, when
- * the full guard in item 16 of the plan's blocking-checks list goes live.
+ * DECISION_ID_UNCOVERED is a blocking finding (M4 cutover, batch 7): a
+ * decision id CLAUDE.md names inside a covered protocol's own section, or
+ * that apps/api/src code cites next to the word "protocol", with no
+ * manifest row citing it. It ran as a report-only warning through M3 (per
+ * the migration plan, docs/strategy/2026-08-31-repo-native-operating-model-
+ * migration.md, M3 exit criteria); the promotion follows the plan's own
+ * item 16.
  *
  * authority_active in the manifest stays false throughout: this check
  * proves internal consistency of an inactive coverage record. It never
@@ -208,15 +208,15 @@ export function protocolRouterGeneratedFiles(root) {
   return { [ROUTER_PATH]: protocolRouterMarkdown(manifest) };
 }
 
-// ── decision references (report-only, becomes blocking at M4) ───────────
+// ── decision references (blocking finding, M4 batch 7) ──────────────────
 
 const CLAUDE_DECISION_RE = /\bDEC-\d{8}(?:-[A-Za-z0-9]+)*\b/g;
 
 /** Decision ids CLAUDE.md names inside one of the covered protocol sections
  * (the section owned by a heading a manifest row claims, per
  * `coveredHeadings`), plus decision ids apps/api/src code cites on a line
- * that also contains the word "protocol" (case-insensitive). Used only for
- * the DECISION_ID_UNCOVERED warning; never for a blocking finding. */
+ * that also contains the word "protocol" (case-insensitive). Feeds the
+ * DECISION_ID_UNCOVERED finding below. */
 function decisionIdsNamedByProtocolSections(root, coveredHeadings) {
   const text = readNormalized(root, CLAUDE_MD_PATH);
   const lines = text.split("\n");
@@ -356,15 +356,17 @@ export function checkAllProtocolCoverage(root) {
     findings.push({ code: "ROUTER_STALE", file: ROUTER_PATH, detail: "router content does not match docs/project/protocol-coverage.yaml; run npm run context:generate" });
   }
 
-  // Report-only: a decision id named inside a covered protocol section, or
-  // cited next to "protocol" in apps/api/src code, with no manifest row.
-  // Becomes a blocking finding at the M4 cutover (see this file's header).
-  const coveredDecisions = new Set(rows.map((row) => row.decision).filter((d) => d !== "none"));
+  // Blocking finding (M4 batch 7): a decision id named inside a covered
+  // protocol section, or cited next to "protocol" in apps/api/src code,
+  // with no manifest row. A row's decisions array may cite more than one
+  // decision (for example an amendment alongside the decision it amends);
+  // every entry other than the sentinel "none" counts as covered.
+  const coveredDecisions = new Set(rows.flatMap((row) => row.decisions).filter((d) => d !== "none"));
   const namedInClaude = decisionIdsNamedByProtocolSections(root, coveredHeadings);
   const namedInCode = decisionIdsCitedNextToProtocolInCode(root);
   for (const id of new Set([...namedInClaude, ...namedInCode])) {
     if (!coveredDecisions.has(id)) {
-      warnings.push({
+      findings.push({
         code: "DECISION_ID_UNCOVERED",
         file: namedInClaude.has(id) ? CLAUDE_MD_PATH : "apps/api/src",
         detail: `decision id "${id}" is named next to a protocol but no ${MANIFEST_PATH} row cites it as its decision`,

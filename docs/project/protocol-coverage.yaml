@@ -30,7 +30,7 @@ protocols:
       and the active track) and before stopping (the handoff gate must pass).
     full_body: docs/governance/protocols/SESSION_CONTRACT.md
     source: "CLAUDE.md heading: Session contract — both tools, every session"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Establishes session workflow directly in CLAUDE.md; not tied to a
       numbered decision id.
@@ -49,7 +49,7 @@ protocols:
       modifies a *-strale package.
     full_body: docs/governance/protocols/DISTRIBUTION_PR_INTEGRITY.md
     source: "CLAUDE.md heading: Distribution PR Integrity Protocol (DEC-20260422-A)"
-    decision: DEC-20260422-A
+    decisions: [DEC-20260422-A]
     decision_record: docs/decisions/records/DEC-20260422-A--git-3b256587.md
     enforced_by:
       - apps/api/scripts/check-framework-packages.mjs
@@ -63,7 +63,7 @@ protocols:
       capability.
     full_body: docs/governance/protocols/CAPABILITY_ONBOARDING.md
     source: "CLAUDE.md heading: Capability Onboarding Protocol (DEC-20260320-B)"
-    decision: DEC-20260320-B
+    decisions: [DEC-20260320-B]
     decision_record: docs/decisions/records/DEC-20260320-B.md
     enforced_by:
       - apps/api/scripts/onboard.ts
@@ -78,7 +78,7 @@ protocols:
       --fix, --strict) rather than the protocol's trigger/rules text.
     full_body: docs/governance/protocols/CAPABILITY_ONBOARDING_PIPELINE.md
     source: "CLAUDE.md heading: Adding New Capabilities (MANDATORY PIPELINE)"
-    decision: DEC-20260320-B
+    decisions: [DEC-20260320-B]
     decision_record: docs/decisions/records/DEC-20260320-B.md
     enforced_by:
       - apps/api/scripts/onboard.ts
@@ -94,7 +94,7 @@ protocols:
       chain-integrity primitive, spend-cap check, or idempotency check.
     full_body: docs/governance/protocols/AUDIT_FOLLOWUP_TEST_COVERAGE.md
     source: "CLAUDE.md heading: Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
-    decision: DEC-20260504-A
+    decisions: [DEC-20260504-A]
     decision_record: docs/decisions/records/DEC-20260504-A.md
     enforced_by: []
     enforced_by_note: >-
@@ -108,7 +108,7 @@ protocols:
       reconciliation, batch processing, periodic cleanup).
     full_body: docs/governance/protocols/BULK_OPERATION_DEPLOY.md
     source: "CLAUDE.md heading: Bulk-Operation Deploy Protocol (DEC-20260504-B)"
-    decision: DEC-20260504-B
+    decisions: [DEC-20260504-B]
     decision_record: docs/decisions/records/DEC-20260504-B.md
     enforced_by: []
     enforced_by_note: >-
@@ -123,7 +123,7 @@ protocols:
       scheduled jobs, cron triggers.
     full_body: docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md
     source: "CLAUDE.md heading: Deploy Mechanism Verification Protocol (DEC-20260504-C)"
-    decision: DEC-20260504-C
+    decisions: [DEC-20260504-C]
     decision_record: docs/decisions/records/DEC-20260504-C.md
     enforced_by:
       - scripts/scheduled-reachability-lib.mjs
@@ -136,7 +136,7 @@ protocols:
       switching or a git-history-editing command in a non-isolated worktree.
     full_body: docs/governance/protocols/SHARED_CHECKOUT_RULE.md
     source: "CLAUDE.md heading: Shared-Checkout Rule (concurrency safety)"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Concurrency-safety rule established directly in CLAUDE.md; not tied
       to a numbered decision id.
@@ -154,7 +154,7 @@ protocols:
       node_modules to the main checkout, or removes a worktree.
     full_body: docs/governance/protocols/WORKTREE_NODE_MODULES_HAZARD.md
     source: "CLAUDE.md heading: Worktree node_modules Hazard"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Concurrency-safety rule established directly in CLAUDE.md; not tied
       to a numbered decision id.
@@ -178,7 +178,7 @@ protocols:
       a paid external API, or a test suite's scheduling behavior.
     full_body: docs/governance/protocols/TEST_INFRASTRUCTURE_COST_PRINCIPLES.md
     source: "CLAUDE.md heading: Test Infrastructure Cost Principles (always enforce)"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Cost-control principles established directly in CLAUDE.md; not tied
       to a numbered decision id.
@@ -196,7 +196,7 @@ protocols:
       changed.
     full_body: docs/governance/protocols/WIRE_SHAPE_TRUST_ENDPOINTS.md
     source: "CLAUDE.md heading: Wire-shape rule for /v1/public/ops/trust/* endpoints"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Serialization rule established directly in CLAUDE.md following a
       2026-04-30 cert-audit finding; not tied to a numbered decision id.
@@ -218,7 +218,7 @@ protocols:
     source: >-
       docs/company/CHARTER.md heading: What "authorized" means is defined
       in code, not here
-    decision: DEC-20260822-B
+    decisions: [DEC-20260822-B]
     decision_record: null
     decision_record_note: >-
       DEC-20260822-B is named in CLAUDE.md's DEC-20260822-A entry and in
@@ -236,13 +236,12 @@ protocols:
       gone to Codex must be recorded in the review backlog.
     full_body: docs/governance/protocols/REVIEW_ROUTING.md
     source: "CLAUDE.md heading: Review routing"
-    decision: DEC-20260903-A
+    decisions: [DEC-20260903-A, DEC-20260910-A]
     decision_record: null
     decision_record_note: >-
       Recorded only in CLAUDE.md's Active Decisions section and the Notion
-      Decisions DB. The same CLAUDE.md section also carries the 2026-09-07
-      founder review policy and DEC-20260910-A, which amend it without a
-      separate decision record file either.
+      Decisions DB. DEC-20260910-A amends DEC-20260903-A's register without
+      a separate decision record file either.
     enforced_by:
       - scripts/check-codex-backlog.mjs
 
@@ -254,7 +253,7 @@ protocols:
       is recorded.
     full_body: docs/governance/protocols/PROGRAM_REGISTER.md
     source: "CLAUDE.md heading: Program register — where multi-batch work resumes"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Program-register convention established directly in CLAUDE.md; not
       tied to a numbered decision id.
@@ -270,7 +269,7 @@ protocols:
       decide between docs/research/ and docs/company/IDEAS.md.
     full_body: docs/governance/protocols/RESEARCH_AND_IDEAS.md
     source: "CLAUDE.md heading: Research and ideas — where each one lives"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Research/ideas filing convention established directly in CLAUDE.md;
       not tied to a numbered decision id.
@@ -287,7 +286,7 @@ protocols:
       candidate token direction.
     full_body: docs/governance/protocols/DESIGN_TOKENS.md
     source: "CLAUDE.md heading: Design tokens — where design values live"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Design-token convention established directly in CLAUDE.md; not tied
       to a numbered decision id.
@@ -304,7 +303,7 @@ protocols:
       model id; or writes a public claim about the platform.
     full_body: docs/governance/protocols/CHEAP_EXTRAS_REGISTERS.md
     source: "CLAUDE.md heading: Cheap extras — env manifest, model registry, claims register (T14)"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Env-manifest, model-registry and claims-register conventions
       established directly in CLAUDE.md (T14); not tied to a numbered
@@ -324,7 +323,7 @@ protocols:
       startup-migration block in apps/api/src/lib/startup-migrations.ts.
     full_body: docs/governance/protocols/EVIDENCE_RECEIPTS_MIGRATION_LEDGER.md
     source: "CLAUDE.md heading: Evidence receipts and the migration ledger (T15)"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Receipt and migration-ledger conventions established directly in
       CLAUDE.md (T15); not tied to a numbered decision id.
@@ -341,7 +340,7 @@ protocols:
       session is deciding how to respond.
     full_body: docs/governance/protocols/SCORING_INTEGRITY_RETIRED.md
     source: "CLAUDE.md heading: Scoring Integrity (retired with the SQS engine — DEC-20260503-B)"
-    decision: DEC-20260503-B
+    decisions: [DEC-20260503-B]
     decision_record: docs/decisions/records/DEC-20260503-B.md
     enforced_by: []
     enforced_by_note: >-
@@ -357,7 +356,7 @@ protocols:
       free-tier list, processing region).
     full_body: docs/governance/protocols/DRIFT_PREVENTION_SURFACES.md
     source: "CLAUDE.md heading: Drift-prevention surfaces"
-    decision: none
+    decisions: [none]
     decision_reason: >-
       Drift-prevention convention established directly in CLAUDE.md; not
       tied to a numbered decision id.

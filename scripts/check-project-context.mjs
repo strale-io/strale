@@ -324,10 +324,17 @@ export function runChecks(root = repoRootFrom(import.meta.url)) {
     }
   }
 
-  for (const entrypoint of ["AGENTS.md", "CLAUDE.md"]) {
-    const content = readFileSync(resolve(root, entrypoint), "utf8");
-    findings.push(...checkPrecutoverEntrypoint(root, entrypoint, content));
-  }
+  // checkPrecutoverEntrypoint's own M1_ENTRYPOINT_ACTIVATED finding is not
+  // run here a second time (M4 batch 7 part three): scripts/entrypoint-
+  // parity-lib.mjs's checkInactiveDocumentReferences already calls this
+  // exact exported function on both entrypoints, and npm run
+  // entrypoint:check already blocks CI on it. Running the identical check
+  // against the identical two files from two CLI entry points reported the
+  // same finding twice for no added protection. The function itself stays
+  // exported and unchanged -- entrypoint-parity-lib.mjs still depends on it
+  // directly, and it continues to guard any entrypoint reference to a
+  // still-inactive document (docs/project/candidates/* today, or a future
+  // one) exactly as before.
 
   findings.push(...checkPrivateArchiveStatus(root));
 
@@ -346,16 +353,23 @@ function main() {
   const findings = runChecks();
   const json = process.argv.includes("--json");
   if (json) {
-    console.log(JSON.stringify({ mode: "warning-only", findings }, null, 2));
+    console.log(JSON.stringify({ mode: "blocking", findings }, null, 2));
   } else {
-    console.log("project context check: warning-only (M2 candidate + M4 active foundation)");
-    if (findings.length === 0) console.log("  no warnings");
+    console.log("project context check: blocking (M2 candidate + M4 active foundation)");
+    if (findings.length === 0) console.log("  no findings");
     for (const item of findings) {
-      console.log(`  WARN ${item.code} ${item.path}${item.detail ? ` — ${item.detail}` : ""}`);
+      console.log(`  ${item.severity.toUpperCase()} ${item.code} ${item.path}${item.detail ? ` — ${item.detail}` : ""}`);
     }
   }
-  // M1 contract: findings are reports, never a blocking exit code.
-  process.exitCode = 0;
+  // M4 batch 7 part two: every finding this check produces is deterministic
+  // (a generated-file byte comparison, a front-matter contract, a decision
+  // record's own schema and cross-references), so the migration plan's own
+  // rollout-mode design ("Cutover PR: all deterministic checks become
+  // blocking") applies without exception -- there is no lower-severity
+  // finding code here that stays advisory. The severity field on each
+  // finding is retained for display and for JSON consumers; it no longer
+  // gates the exit code.
+  process.exitCode = findings.length === 0 ? 0 : 1;
 }
 
 if (isDirectInvocation(import.meta.url)) main();

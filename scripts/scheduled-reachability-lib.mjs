@@ -333,8 +333,8 @@ export function resolveStepInvocations(step, startCwd = "") {
  * Secret names keyed by the environment variable name that carries them,
  * read from the job's `env` first, then the step's own `env` (a step-level
  * mapping for the same variable name wins) -- review finding 4. A step
- * that reads NOTION_API_KEY from secrets.NOTION_TOKEN returns
- * { NOTION_API_KEY: "NOTION_TOKEN" }; renaming the variable while keeping
+ * that reads SOME_API_KEY from secrets.SOME_TOKEN returns
+ * { SOME_API_KEY: "SOME_TOKEN" }; renaming the variable while keeping
  * the secret changes the key, which MECHANISM_SECRET_MISMATCH now catches.
  */
 export function stepEnvSecrets(jobEnv, stepEnv) {

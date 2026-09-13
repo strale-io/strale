@@ -516,8 +516,9 @@ jobs:
       # already-mirrored CLAUDE.md heading has a row, and proves the
       # generated docs/project/PROTOCOL-ROUTER.md is up to date. A single
       # additional check (a decision id named next to "protocol" with no
-      # manifest row) is report-only until the M4 cutover. authority_active
-      # stays false.
+      # manifest row citing it, DECISION_ID_UNCOVERED) is blocking as of M4
+      # batch 7 -- see scripts/protocol-coverage-lib.mjs's header.
+      # authority_active stays false.
       - run: npm run protocols:coverage
       - run: npm run protocols:coverage:test
       # Entrypoint parity (M4 batch 3, scripts/entrypoint-parity-lib.mjs):
@@ -543,6 +544,17 @@ jobs:
       # verified" failure class.
       - run: npm run scheduled:check
       - run: npm run scheduled:test
+      # Notion anti-regression check (M4 batch 7, migration plan M6 fixture
+      # 4): scans every tracked file for a reintroduced NOTION_API_KEY,
+      # NOTION_TOKEN, api.notion.com, @notionhq, or Notion MCP tool
+      # reference, plus a bare "Notion" instruction reintroduced in
+      # .claude/ or .agents/. Every remaining legitimate mention is
+      # allowlisted by exact path (archive/, handoff/, decision records, or
+      # a handful of named historical documents) or, for two still-live
+      # files, exempted only on a comment line -- a real read added to
+      # either file on a non-comment line still fails this check. Blocking.
+      - run: npm run notion-regression:check
+      - run: npm run notion-regression:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
       # Voyage/GPT model id lives in one place with a pinned_at date and a
       # decision reference: fails on a model-id literal anywhere else in
@@ -605,9 +617,10 @@ jobs:
       # REGISTER (*:test under scripts/) — always runs.
       - run: npm run handoff:test
       # Repo-native project-context layer (M1/M2 candidates, decision graph,
-      # M2 closure register). The checker itself is warning-only by contract
-      # until M4; its test suite is not, and it asserts the checked-in context
-      # is warning-clean, so drift on these files fails the build here.
+      # M2 closure register). Blocking as of M4 batch 7 part two: the
+      # checker's exit code now reflects its findings, having run warning-
+      # only through M3. Its test suite asserts the checked-in context has
+      # zero findings, so drift on these files fails the build here.
       # REGISTER (context:*) — always runs.
       - run: npm run context:check
       - run: npm run context:test

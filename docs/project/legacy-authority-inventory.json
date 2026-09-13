@@ -374,6 +374,7 @@
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-10.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
+        "handoff/_general/from-code/2026-09-13-m4-b7-blocking-checks.md",
         "handoff/_general/from-code/2026-09-13-m4-cutover-integration-branch.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -396,6 +397,7 @@
         "scripts/m2-closure-register.test.mjs",
         "scripts/m2-quote-fidelity.mjs",
         "scripts/m2-quote-fidelity.test.mjs",
+        "scripts/no-notion-regression-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/protocol-coverage.test.mjs",
         "scripts/protocol-extraction-lib.mjs",
@@ -461,7 +463,7 @@
     {
       "path": ".claude/commands",
       "owner_area": "claude-commands",
-      "sha256": "4d145727c9db107f18baed02489d1223fcea43bf6825a5067bc93a778078c2d2",
+      "sha256": "1ae18b918d645d5cf42c7136dfb79687606ede4bff06d7faab2a878f59a3b2ad",
       "detected_references": [
         "apps/api/scripts/archive/README.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
@@ -474,14 +476,16 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "handoff/_general/from-code/2026-04-30-cert-audit-drift-prevention-and-bucket-c.md",
         "handoff/_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md",
+        "handoff/_general/from-code/2026-09-13-m4-b7-blocking-checks.md",
         "scripts/candidates.test.mjs",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/no-notion-regression.test.mjs"
       ]
     },
     {
       "path": ".agents/skills",
       "owner_area": "shared-agent-skills",
-      "sha256": "17c5f0b991aaf86b66c57153685643135306c5161195f405e042dc5f04998168",
+      "sha256": "b2a1066a1a16f919754b0479f85e5611744aa2fffa06fc0b2d25559d73f398bc",
       "detected_references": [
         "AGENTS.md",
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
@@ -494,8 +498,10 @@
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
         "handoff/_general/from-code/2026-08-19-checkin-morning.md",
         "handoff/_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md",
+        "handoff/_general/from-code/2026-09-13-m4-b7-blocking-checks.md",
         "scripts/candidates.test.mjs",
-        "scripts/m2-closure-register-lib.mjs"
+        "scripts/m2-closure-register-lib.mjs",
+        "scripts/no-notion-regression.test.mjs"
       ]
     },
     {
@@ -641,6 +647,7 @@
         "scripts/guard-production-write-access.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.test.mjs",
+        "scripts/no-notion-regression.test.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
@@ -714,6 +721,8 @@
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
         "handoff/_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md",
         "scripts/m2-closure-register-lib.mjs",
+        "scripts/no-notion-regression-lib.mjs",
+        "scripts/no-notion-regression.test.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
         "scripts/research.test.mjs",
@@ -765,7 +774,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "d56c01396a67b71bd2152495276212b72afb696343c87bbb39b433b37c1185c9",
+      "sha256": "b52878fb249f6d2a2435fef35d8725b49342faca83e3bb0f676867b66d7a8711",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -949,6 +958,8 @@
         "scripts/handoff/orient.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs",
+        "scripts/no-notion-regression-lib.mjs",
+        "scripts/no-notion-regression.test.mjs",
         "scripts/program-tracks.test.mjs",
         "scripts/receipts-lib.mjs",
         "scripts/receipts.test.mjs",

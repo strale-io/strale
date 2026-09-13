@@ -9,7 +9,7 @@
 # schedule trigger, has a step matching `step` whose resolved command
 # invokes `runs`, that `runs` exists on disk, and that the step's `env`
 # reads exactly the secrets named. `secrets` is a map of environment
-# variable name to secret name (e.g. NOTION_API_KEY: NOTION_TOKEN), read
+# variable name to secret name (e.g. SOME_API_KEY: SOME_TOKEN), read
 # from the step's `env` and the job's `env` -- not a bare list of secret
 # names, so renaming the variable while keeping the secret is a
 # MECHANISM_SECRET_MISMATCH (review round 1 finding). The reverse direction
