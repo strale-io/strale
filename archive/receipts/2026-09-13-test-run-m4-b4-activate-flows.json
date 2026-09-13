@@ -1,0 +1,28 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/candidates.test.mjs",
+    "commit": "315b102f357b659c56c1bb6dd286977145587c18"
+  },
+  "at": "2026-09-13T01:25:05.556Z",
+  "inputs": {
+    "source": "C:\\Users\\pette\\AppData\\Local\\Temp\\claude\\C--Users-pette-Projects-strale\\4f68dcca-de52-4ade-b2b2-8341f736268e\\scratchpad\\candidates-test-summary.json"
+  },
+  "summary": {
+    "ok": true,
+    "failures_count": 0,
+    "test_count": 10,
+    "pass": 10,
+    "fail": 0,
+    "command": "npm run candidates:test"
+  },
+  "topic": "m4-b4-activate-flows",
+  "raw": {
+    "ok": true,
+    "failures": [],
+    "test_count": 10,
+    "pass": 10,
+    "fail": 0,
+    "command": "npm run candidates:test"
+  }
+}
