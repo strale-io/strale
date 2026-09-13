@@ -336,7 +336,7 @@ test("ROUTER_STALE: router file missing entirely", () => {
   }
 });
 
-test("DECISION_ID_UNCOVERED: a decision id named inside a covered section is a warning, not a finding", () => {
+test("DECISION_ID_UNCOVERED: a decision id named inside a covered section with no citing row is a blocking finding (M4 batch 7)", () => {
   const dir = cleanFixture({
     rows: [manifestRow()],
   });
@@ -345,10 +345,26 @@ test("DECISION_ID_UNCOVERED: a decision id named inside a covered section is a w
   });
   try {
     const result = checkAllProtocolCoverage(dir);
-    assert.deepEqual(result.findings, []);
     assert.ok(
-      result.warnings.some((w) => w.code === "DECISION_ID_UNCOVERED" && w.detail.includes("DEC-88888888-Q")),
+      result.findings.some((f) => f.code === "DECISION_ID_UNCOVERED" && f.detail.includes("DEC-88888888-Q")),
     );
+    assert.deepEqual(result.warnings, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("DECISION_ID_UNCOVERED: a row citing more than one decision covers every id in its decisions array", () => {
+  const dir = cleanFixture({
+    rows: [manifestRow({ decisions: ["DEC-88888888-Q", "DEC-77777777-R"], decision_reason: undefined })],
+  });
+  writeFiles(dir, {
+    "CLAUDE.md": claudeMdFixture({ bodyLines: [...MIRROR_BODY, "See DEC-88888888-Q and DEC-77777777-R for background."] }),
+  });
+  try {
+    const result = checkAllProtocolCoverage(dir);
+    assert.deepEqual(result.findings, []);
+    assert.deepEqual(result.warnings, []);
   } finally {
     cleanup(dir);
   }
