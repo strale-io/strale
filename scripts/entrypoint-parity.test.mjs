@@ -49,7 +49,7 @@ function manifestRow(overrides = {}) {
     trigger: "A test fixture exercises this protocol.",
     full_body: "docs/governance/protocols/EXAMPLE_PROTOCOL.md",
     source: "CLAUDE.md heading: Example Protocol (DEC-TEST)",
-    decision: "none",
+    decisions: ["none"],
     decision_reason: "Fixture row; not tied to a numbered decision id.",
     decision_record: null,
     decision_record_note: "Recorded only in the fixture.",

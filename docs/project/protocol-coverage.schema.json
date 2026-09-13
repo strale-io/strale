@@ -49,11 +49,11 @@
     "protocolRow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "trigger", "full_body", "source", "decision", "decision_record", "enforced_by"],
+      "required": ["id", "name", "trigger", "full_body", "source", "decisions", "decision_record", "enforced_by"],
       "allOf": [
         {
-          "if": { "properties": { "decision": { "const": "none" } } },
-          "then": { "required": ["decision_reason"] },
+          "if": { "properties": { "decisions": { "contains": { "const": "none" } } } },
+          "then": { "required": ["decision_reason"], "properties": { "decisions": { "items": { "const": "none" }, "maxItems": 1 } } },
           "else": { "not": { "required": ["decision_reason"] } }
         },
         {
@@ -89,15 +89,16 @@
           "minLength": 1,
           "description": "Where full_body's text is copied from: a CLAUDE.md heading (for the ten mirrored rows) or another document's section heading (production authority: a docs/company/CHARTER.md heading)."
         },
-        "decision": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The governing decision id (e.g. DEC-20260320-B), or the literal \"none\" when no numbered decision governs this protocol."
+        "decisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The governing decision id(s) (e.g. [\"DEC-20260320-B\"], or more than one when several decisions govern this protocol, e.g. an amendment), or the single-element array [\"none\"] when no numbered decision governs this protocol. \"none\" never appears alongside a real id."
         },
         "decision_reason": {
           "type": "string",
           "minLength": 1,
-          "description": "Required when decision is \"none\": why no decision id governs this protocol."
+          "description": "Required when decisions is [\"none\"]: why no decision id governs this protocol."
         },
         "decision_record": {
           "type": ["string", "null"],

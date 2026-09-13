@@ -359,7 +359,10 @@ export function checkAllProtocolCoverage(root) {
   // Report-only: a decision id named inside a covered protocol section, or
   // cited next to "protocol" in apps/api/src code, with no manifest row.
   // Becomes a blocking finding at the M4 cutover (see this file's header).
-  const coveredDecisions = new Set(rows.map((row) => row.decision).filter((d) => d !== "none"));
+  // A row's decisions array may cite more than one decision (for example
+  // an amendment alongside the decision it amends); every entry other than
+  // the sentinel "none" counts as covered.
+  const coveredDecisions = new Set(rows.flatMap((row) => row.decisions).filter((d) => d !== "none"));
   const namedInClaude = decisionIdsNamedByProtocolSections(root, coveredHeadings);
   const namedInCode = decisionIdsCitedNextToProtocolInCode(root);
   for (const id of new Set([...namedInClaude, ...namedInCode])) {

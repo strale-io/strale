@@ -85,7 +85,7 @@ function manifestRow(overrides = {}) {
     trigger: "A test fixture exercises this protocol.",
     full_body: "docs/governance/protocols/EXAMPLE_PROTOCOL.md",
     source: `CLAUDE.md heading: ${MIRROR_HEADING}`,
-    decision: "none",
+    decisions: ["none"],
     decision_reason: "Fixture row; not tied to a numbered decision id.",
     decision_record: null,
     decision_record_note: "Recorded only in the CLAUDE.md fixture.",
@@ -194,7 +194,7 @@ test("DECISION_RECORD_MISSING: decision_record path does not exist", () => {
   const dir = cleanFixture({
     rows: [
       manifestRow({
-        decision: "DEC-99999999-Z",
+        decisions: ["DEC-99999999-Z"],
         decision_reason: undefined,
         decision_record: "docs/decisions/records/DOES-NOT-EXIST.md",
         decision_record_note: undefined,
@@ -354,20 +354,15 @@ test("DECISION_ID_UNCOVERED: a decision id named inside a covered section is a w
   }
 });
 
-test("real repository: docs/project/protocol-coverage.yaml and the generated router pass with no findings", () => {
+test("real repository: docs/project/protocol-coverage.yaml and the generated router pass with no findings and no warnings", () => {
   const result = checkAllProtocolCoverage(realRoot);
   assert.deepEqual(result.findings, []);
-  // The "Review routing" section names both DEC-20260903-A (this row's
-  // decision, which created npm run codex:check) and DEC-20260910-A (the
-  // amendment that waived the register), so one of the two is always
-  // report-only DECISION_ID_UNCOVERED -- see the row's decision_record_note
-  // in docs/project/protocol-coverage.yaml. Not a finding; becomes blocking
-  // guard scope only at the M4 cutover per this file's header.
-  assert.deepEqual(
-    result.warnings.map((w) => w.code),
-    ["DECISION_ID_UNCOVERED"],
-  );
-  assert.ok(result.warnings[0].detail.includes("DEC-20260910-A"));
+  // The "Review routing" row's decisions array now cites both
+  // DEC-20260903-A (which created npm run codex:check) and DEC-20260910-A
+  // (the amendment that waived the register), so neither id is uncovered
+  // any more -- see docs/project/protocol-coverage.yaml's review-routing
+  // row.
+  assert.deepEqual(result.warnings, []);
 });
 
 test("real repository: two generations of the router are byte-identical (deterministic)", () => {
