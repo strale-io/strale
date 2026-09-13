@@ -287,8 +287,7 @@ describe("class C — shared fetch layers are ledgered exactly", () => {
     // internal operations — our schedule, our accounts, no caller involved
     "lib/daily-digest/fetch-beacon.ts": 2,
     "lib/daily-digest/fetch-ecosystem.ts": 4,
-    "lib/daily-digest/fetch-notion.ts": 4,
-    "lib/daily-digest/fetch-shiplog.ts": 3,
+    "lib/daily-digest/fetch-shiplog.ts": 1,
     "lib/daily-digest/send.ts": 2,
     "lib/github-issues.ts": 2,
     "lib/vendor-control-tower.ts": 2,

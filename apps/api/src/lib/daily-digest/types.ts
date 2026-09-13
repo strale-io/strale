@@ -92,6 +92,11 @@ export interface Scoreboard {
 
 export interface DigestData {
   generatedAt: string;
+  // The commit the built image is serving (RAILWAY_GIT_COMMIT_SHA, full
+  // 40-hex, via resolveDeployCommit/deployCommitOrNull). Null outside
+  // production or when the identity could not be resolved -- printed so a
+  // stale deploy is visible (M4 batch 5, DEC-20260504-C).
+  imageCommit: string | null;
   platformActivity: PlatformActivity;
   platformHealth: PlatformHealth;
   shipLog: ShipLog;

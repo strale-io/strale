@@ -29,7 +29,11 @@
 # section 4) found seven script-invoking steps in weekly-drift.yml and one
 # in m3-digest-shadow.yml. stale-branches.yml has a schedule trigger too,
 # but every one of its steps runs inline shell/`gh` commands, never a
-# repository script file -- so it contributes no entry here. The Railway
+# repository script file -- so it contributes no entry here. The
+# m3-digest-shadow-comparison entry that used to sit here for
+# m3-digest-shadow.yml was removed in M4 batch 5: the workflow and its
+# script were retired along with the digest's last Notion reads (see the
+# railway-digest-cron entry's purpose below). The Railway
 # strale-digest-cron service is scheduled but is not a GitHub Actions
 # workflow at all; it is recorded below as verifiable: false, since its
 # cron schedule lives in Railway's own project configuration
@@ -138,23 +142,6 @@ mechanisms:
       ({"0":"{","1":"\"",...}), the signature of a JS string getting
       JSON.stringify'd twice on some write path.
 
-  - id: m3-digest-shadow-comparison
-    workflow: .github/workflows/m3-digest-shadow.yml
-    trigger: schedule
-    step:
-      match: name
-      value: Run the repo-native digest shadow comparison
-    runs: scripts/digest-shadow.mjs
-    secrets:
-      NOTION_API_KEY: NOTION_TOKEN
-    purpose: >
-      Report-only shadow run of the repo-native digest priority readers
-      (T6 M3 batch 2) against the live Notion digest data. Never fails the
-      build, never writes anywhere, never changes what the production
-      digest email renders. NOTION_TOKEN is mapped to the digest code's own
-      NOTION_API_KEY variable name (config/env-manifest.yaml documents the
-      two-name pair).
-
   - id: railway-digest-cron
     verifiable: false
     reason: >
@@ -170,4 +157,13 @@ mechanisms:
       - apps/api/railway-config.md
     purpose: >
       Runs the daily digest email job once per day
-      (apps/api/src/jobs/daily-digest.ts).
+      (apps/api/src/jobs/daily-digest.ts). As of M4 batch 5 it no longer
+      calls Notion: gatherDigestData() reads
+      docs/company/DECISION-QUEUE.md, handoff/_general/from-code/, and
+      docs/operations/distribution-registry.yaml directly from the files
+      the Dockerfile copies into the image, and prints the serving image's
+      commit (RAILWAY_GIT_COMMIT_SHA) in its own job log and in the
+      rendered email's footer. The m3-digest-shadow-comparison entry that
+      used to sit below this one is retired: it compared these repo-native
+      readers against the live Notion digest, and once this entry stopped
+      reading Notion there was nothing left to compare against.

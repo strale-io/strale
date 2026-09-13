@@ -9,11 +9,12 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-304 files (277 with a recorded intent, 27 without).
+305 files (278 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-cutover-integration-branch.md`](_general/from-code/2026-09-13-m4-cutover-integration-branch.md) | record what the `m4/cutover` integration branch has changed so far, what |
+| 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b5-digest-production.md`](_general/from-code/2026-09-13-m4-b5-digest-production.md) | M4 batch 5 -- wire the daily digest's repo-native readers into |
 | 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md`](_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md) | M4 batch 4 (T7, cto-readiness): activate the repo-native end-session |
 | 2026-09-11 | [`handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md`](_general/from-code/2026-09-11-t6-vendor-strand-complete.md) | continue T6 (M3 repo-native workflows) as architect and reviewer, delegating implementation to Sonnet workers; this s... |
 | 2026-09-11 | [`handoff/_general/from-code/2026-09-11-multichain-and-job-countries.md`](_general/from-code/2026-09-11-multichain-and-job-countries.md) | founder asked (2026-09-11) whether the Alchemy-based capabilities |
