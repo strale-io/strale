@@ -106,6 +106,7 @@
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
+        "handoff/_general/from-code/2026-09-13-m4-cutover-integration-branch.md",
         "scripts/candidates.test.mjs",
         "scripts/check-entrypoint-parity.mjs",
         "scripts/entrypoint-parity-lib.mjs",
@@ -372,6 +373,7 @@
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-10.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
+        "handoff/_general/from-code/2026-09-13-m4-cutover-integration-branch.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -751,7 +753,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "42f0b5e056c503afb220e8dff320aa05b141ee860b12ea35f80e29c38f871796",
+      "sha256": "f5f089db2c70371d5266b5161b7f32f6cf7d880a26b54e3249199680eceae9ec",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
