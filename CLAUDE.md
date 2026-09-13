@@ -9,6 +9,38 @@ Project map: `docs/project/START-HERE.md`. Protocol index: `docs/project/PROTOCO
    - **Full:** New feature, design exploration, multi-component work, anything requiring decisions
 3. Escalation triggers: second feature touched, design decision emerges, >2hr estimate, contradiction detected.
 
+### Mandatory Protocols, and where each body lives
+
+Every protocol the coverage manifest tracks, with the document that
+carries its text. A trigger firing makes its protocol non-negotiable, and a
+prompt that does not mention its steps does not make them optional. This
+index is what `npm run entrypoint:check` reads to confirm both entrypoints
+can reach every protocol, and it is checked against the coverage manifest
+that `npm run protocols:coverage` validates.
+
+| Protocol | Body |
+|---|---|
+| Session contract (both tools, every session) | this file, under "Session contract — both tools, every session" (mirror: `docs/governance/protocols/SESSION_CONTRACT.md`) |
+| Distribution PR Integrity Protocol (DEC-20260422-A) | this file, under "Distribution PR Integrity Protocol (DEC-20260422-A)" (mirror: `docs/governance/protocols/DISTRIBUTION_PR_INTEGRITY.md`) |
+| Capability Onboarding Protocol (DEC-20260320-B) | this file, under "Capability Onboarding Protocol (DEC-20260320-B)" (mirror: `docs/governance/protocols/CAPABILITY_ONBOARDING.md`) |
+| Adding New Capabilities (MANDATORY PIPELINE) | this file, under "Adding New Capabilities (MANDATORY PIPELINE)" (mirror: `docs/governance/protocols/CAPABILITY_ONBOARDING_PIPELINE.md`) |
+| Audit-Follow-up Test Coverage Protocol (DEC-20260504-A) | this file, under "Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)" (mirror: `docs/governance/protocols/AUDIT_FOLLOWUP_TEST_COVERAGE.md`) |
+| Bulk-Operation Deploy Protocol (DEC-20260504-B) | this file, under "Bulk-Operation Deploy Protocol (DEC-20260504-B)" (mirror: `docs/governance/protocols/BULK_OPERATION_DEPLOY.md`) |
+| Deploy Mechanism Verification Protocol (DEC-20260504-C) | this file, under "Deploy Mechanism Verification Protocol (DEC-20260504-C)" (mirror: `docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md`) |
+| Shared-Checkout Rule (concurrency safety) | this file, under "Shared-Checkout Rule (concurrency safety)" (mirror: `docs/governance/protocols/SHARED_CHECKOUT_RULE.md`) |
+| Worktree node_modules Hazard | this file, under "Worktree node_modules Hazard" (mirror: `docs/governance/protocols/WORKTREE_NODE_MODULES_HAZARD.md`) |
+| Test Infrastructure Cost Principles (always enforce) | this file, under "Test Infrastructure Cost Principles (always enforce)" (mirror: `docs/governance/protocols/TEST_INFRASTRUCTURE_COST_PRINCIPLES.md`) |
+| Wire-shape rule for /v1/public/ops/trust/* endpoints | this file, under "Wire-shape rule for /v1/public/ops/trust/* endpoints" (mirror: `docs/governance/protocols/WIRE_SHAPE_TRUST_ENDPOINTS.md`) |
+| Production authority (DEC-20260822-B) | `docs/company/CHARTER.md` |
+| Review routing | this file, under "Review routing" (mirror: `docs/governance/protocols/REVIEW_ROUTING.md`) |
+| Program register — where multi-batch work resumes | this file, under "Program register — where multi-batch work resumes" (mirror: `docs/governance/protocols/PROGRAM_REGISTER.md`) |
+| Research and ideas — where each one lives | this file, under "Research and ideas — where each one lives" (mirror: `docs/governance/protocols/RESEARCH_AND_IDEAS.md`) |
+| Design tokens — where design values live | this file, under "Design tokens — where design values live" (mirror: `docs/governance/protocols/DESIGN_TOKENS.md`) |
+| Cheap extras — env manifest, model registry, claims register (T14) | this file, under "Cheap extras — env manifest, model registry, claims register (T14)" (mirror: `docs/governance/protocols/CHEAP_EXTRAS_REGISTERS.md`) |
+| Evidence receipts and the migration ledger (T15) | this file, under "Evidence receipts and the migration ledger (T15)" (mirror: `docs/governance/protocols/EVIDENCE_RECEIPTS_MIGRATION_LEDGER.md`) |
+| Scoring Integrity (retired with the SQS engine — DEC-20260503-B) | this file, under "Scoring Integrity (retired with the SQS engine — DEC-20260503-B)" (mirror: `docs/governance/protocols/SCORING_INTEGRITY_RETIRED.md`) |
+| Drift-prevention surfaces | this file, under "Drift-prevention surfaces" (mirror: `docs/governance/protocols/DRIFT_PREVENTION_SURFACES.md`) |
+
 ### Review routing
 
 Read the dated record below in full, including the backlog obligations.
@@ -242,7 +274,7 @@ strale/
 
 ### Active Decisions
 
-Settled decisions are indexed by the generated `docs/project/DECISIONS.md`, which links to the underlying record file behind each entry. Founder decisions still pending are tracked in `docs/company/DECISION-QUEUE.md`. A new decision, or a supersession of an active one, follows the Contradiction Protocol in Workflow Invariants below, including a same-change update to whichever of these files it touches.
+Settled decisions are indexed by the generated `docs/project/DECISIONS.md`, which links to the underlying record file behind each entry. Founder decisions still pending are tracked in `docs/company/DECISION-QUEUE.md`. A new decision, or a supersession of an active one, follows the Contradiction Protocol in Workflow Invariants below, including a same-change update to whichever of these files it touches. Division of authority between Petter and the agent is defined in code and explained in full in `docs/company/CHARTER.md` (production authority, DEC-20260822-B); read it before assuming an ambiguous action is delegated.
 
 Two ids named in this section's prior text have no settled disposition and no record: `DEC-20260305-A` (no Notion row, closure-register row, or git-history text names a distinct decision under this id) and `DEC-20260303-E` (its substance is verified live in `apps/api/src/routes/suggest.ts`, but the closure register already classifies its source row evidence-only, a conflict this batch did not resolve). Both are `unclear` in `archive/sessions/2026-09-11-m4-b1b-decision-records.md`; treat neither as resolved, historical, or in force without reading that report first.
 
