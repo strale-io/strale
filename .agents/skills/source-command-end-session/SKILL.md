@@ -1,6 +1,6 @@
 ---
 name: "source-command-end-session"
-description: "End-of-session verification — runs the close-check, then writes the handoff file and Journal entry, and surfaces loose threads."
+description: "End-of-session verification — runs the close-check, then writes the handoff file with its session-log front matter, and surfaces loose threads."
 ---
 
 # source-command-end-session
@@ -11,9 +11,9 @@ Use this skill when the user asks to run the migrated source command `end-sessio
 
 # /end-session — verify, then write session artifacts + surface loose threads
 
-Purpose: complete CLAUDE.md's Quick Session Checklist on Petter's behalf (AGENTS.md → "Session Checklists" carries the Codex-flavored pointer to the same list — AGENTS.md has no numbered checklist of its own, CLAUDE.md's is canonical). **This command DOES write the handoff file and Journal entry** — that's the standing preference (set 2026-04-27). It still does not create Decisions DB entries, To-do mutations, or other governance artifacts without explicit per-item approval.
+Purpose: complete CLAUDE.md's Quick Session Checklist on Petter's behalf (AGENTS.md → "Session Checklists" carries the Codex-flavored pointer to the same list — AGENTS.md has no numbered checklist of its own, CLAUDE.md's is canonical). **This command DOES write the handoff file, with front matter carrying session identity** — that's the standing preference (set 2026-04-27, carried into repo-native form at the M4 cutover). It still does not create `docs/company/DECISION-QUEUE.md` entries, `docs/decisions/records/` files, or other governance artifacts without explicit per-item approval, and it does not mutate a program register's `next_action` beyond flagging drift.
 
-Run these steps in order. After the checks, write the artifacts (steps 2 and 3) before producing the final report.
+Run these steps in order. After the checks, write the artifact (step 2, with the front matter added in step 3) before producing the final report.
 
 ## 1. Run the codebase close-check script
 
@@ -35,50 +35,56 @@ If a handoff file authored *this session* already exists for today's topic (e.g.
 
 If the session was genuinely trivial (single trivial fix, nothing worth recording), still write a one-line handoff. Skipping is Petter's call, not yours.
 
-## 3. Create the Journal entry in Notion (Notion stays the authority until the M4 cutover merges)
+## 3. Add the session-log front matter to the handoff file
 
-Create a session-log entry in the Journal data source (`collection://8f54383b-3227-42c2-bee4-77a091027f8f`) with:
+Above the `Intent:` line, add a YAML front-matter block carrying what the Notion Journal entry used to carry:
 
-- `Title`: `Session log — <topic> YYYY-MM-DD` (matches existing entry pattern)
-- `Type`: `session`
-- `Source`: `code`
-- `Actor`: `Codex`
-- `Action Required`: `no` (unless the session left explicit follow-ups for Petter)
-- `Content`: mirror the handoff file's structure — Intent, Outcome, Open, Non-obvious learnings. Don't duplicate the entire handoff verbatim, but cover the same ground.
+```yaml
+---
+title: "Session log - <topic> YYYY-MM-DD"
+type: session
+source: code
+actor: Codex
+action_required: false    # true if the session left explicit follow-ups for Petter
+---
+Intent: <one line, as today>
+```
 
-If a Journal entry from this session already exists, don't duplicate — report its title + URL. Use `notion-search` with `filters.created_date_range` = today and `Actor = Codex` to check first.
+`action_required: true` means a `docs/company/DECISION-QUEUE.md` `your_call` entry is open from this session, not a general reading-list flag (settled by `DQ-32` in `docs/company/DECISION-QUEUE.md`).
+
+If a front-matter block for this session's handoff already exists (the file was written earlier this session), don't duplicate it — report its path.
 
 **What this step does NOT do:**
-- Create Decisions DB entries — those still require explicit Petter approval per AGENTS.md governance authority thresholds.
-- Mutate the To-do DB — flag drift only.
+- Create `docs/company/DECISION-QUEUE.md` or `docs/decisions/records/` entries — those still require explicit Petter approval per AGENTS.md governance authority thresholds.
+- Mutate a program register's `next_action` — flag drift only.
 - Update memory unless explicitly asked.
 
-## 4. Check Notion To-do DB for state drift
+## 4. Check the active track's `next_action` for drift (replaces the Notion To-do DB query, which listed "in progress" items owned by `Codex`)
 
-Query the To-do DB (`collection://33a67c87-082c-8033-8ac5-000ba9922392`):
+Read the active track's `next_action` in `docs/programs/*/tracks.yaml` (`npm run programs:check` validates the register itself):
 
-a. **"In progress" items owned by `Codex`:** list them. Are any actually abandoned (haven't been touched in days)? Surface them — user decides what to do.
+a. **Does the active track's `next_action` still describe reality** after this session's work? If the session advanced or completed a batch, the `next_action` text must say so. Flag drift; do not silently leave a stale `next_action`.
+b. There is no repo-native "in progress, owned by `Codex`" per-item list to check against — the register carries one `next_action` narrative per track, not a per-item ownership column.
 
-b. **"Done" items updated today:** per AGENTS.md "Move completed To-do items to Archive > Completed To-dos (page `34067c87-082c-814e-a45c-fa8d851c8f12`)", these should be archived. Flag if any aren't yet.
-
-Do NOT mutate status. Flag only.
+Do NOT mutate `next_action`. Flag only.
 
 ## 5. Check for contradictions / unlogged decisions
 
 Review the conversation for signals that require governance action per AGENTS.md:
 
-- **Decisions made** (the user authorized a non-trivial tradeoff): check Decisions DB (`ea57671f-7167-44e4-a254-c0a1de79e7f9`) for an entry matching; flag if missing.
-- **Contradictions with active Decisions**: per AGENTS.md Workflow Invariants, supersessions must use the Contradiction Protocol. If this session contradicted an existing Decision without following it, flag RED.
+- **Decisions made** (the user authorized a non-trivial tradeoff): check `docs/company/DECISION-QUEUE.md` for a `decided` entry and `docs/decisions/records/` for a formal record matching it; flag if neither exists.
+- **Decisions Petter needs to make**: check `docs/company/DECISION-QUEUE.md` for a `your_call` entry matching anything this session surfaced that needs him; flag if missing.
+- **Contradictions with active Decisions**: per AGENTS.md Workflow Invariants, supersessions must use the Contradiction Protocol. If this session contradicted an existing decision record without following it, flag RED.
 - **Memory of precedent**: if something was agreed that'd benefit future sessions, user may want to save it to memory or update AGENTS.md.
 
-Flag; do not mutate.
+Flag; do not write to `docs/company/DECISION-QUEUE.md` or `docs/decisions/records/`.
 
 ## 6. Surface remaining loose threads
 
-From the script output + Notion state:
+From the script output + repo-native state (handoff front matter, `tracks.yaml`, `docs/company/DECISION-QUEUE.md`, `docs/decisions/records/`):
 
-- Handoff files uncommitted → list them. Note any that are redundant (already captured in Notion) and safe to delete.
-- Caps stuck in `validating` → is this a known issue (existing Notion task?) or new? Flag per item.
+- Handoff files uncommitted → list them. Note any that are redundant and safe to delete.
+- Caps stuck in `validating` → is this a known issue (existing `DECISION-QUEUE.md` entry?) or new? Flag per item.
 - Open circuit breakers → is there an alert/task tracking each?
 - Strategy brainstorms raised this session that are sitting un-discussed?
 
@@ -93,10 +99,10 @@ Give the user a structured summary:
 ✗ Red       (N items blockers)
 
 Handoff file:                 ✓ <path> (written this session)
-Journal entry:               ✓ <title + URL> (written this session)
+Front matter:              ✓ title/type/source/actor/action_required set
 Decisions to log:          [0 | N to-confirm]
 Supersessions:             [none | N requires Contradiction Protocol]
-To-do DB state:            [clean | N items need attention]
+Active track next_action:  [current | N items need attention]
 Codebase:                  [pushed | N unpushed on <branch>]
 DB ↔ code parity:          [aligned | N drift items]
 
@@ -109,10 +115,9 @@ Ready to close? (yes / [which item you want to address first])
 
 ## Rules
 
-- **Write the handoff file and Journal entry** as part of the standard flow — Petter set this preference 2026-04-27. Don't ask first; don't flag them as missing for him to write. Skip only if a session-authored handoff for the same topic already exists.
-- **Never create a Decisions DB entry on the user's behalf.** Decisions still require explicit Petter approval per AGENTS.md governance authority thresholds. Flag if the session made a decision that needs logging.
-- **Never mutate Notion to-do status** without explicit per-item user confirmation.
+- **Write the handoff file, with its front matter,** as part of the standard flow — Petter set this preference 2026-04-27. Don't ask first; don't flag it as missing for him to write. Skip only if a session-authored handoff for the same topic already exists.
+- **Never write a `docs/company/DECISION-QUEUE.md` entry or a `docs/decisions/records/*.md` file on the user's behalf.** Decisions still require explicit Petter approval per AGENTS.md governance authority thresholds. Flag if the session made a decision that needs logging.
+- **Never mutate a program register's `next_action` to claim state it did not actually reach.** Only overwrite it with the session's own truthful account.
 - If `DATABASE_URL` isn't set, skip DB checks and flag in the report.
-- If Notion MCP tools are unavailable, write the handoff file anyway (filesystem); skip the Journal step and flag loudly — never silently proceed.
 - Distinguish pre-existing issues from new ones honestly. Don't hide issues you introduced; don't take credit for issues you didn't.
 - If the script exits 2 (red findings), default to "don't close yet" unless the user explicitly overrides — but still write the artifacts so the work is recorded.
