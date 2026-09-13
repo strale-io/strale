@@ -15,6 +15,7 @@ import {
   checkProtocolReachability,
   checkMutableFacts,
   checkInactiveDocumentReferences,
+  extractFactScanUnits,
   repoRootFrom,
   BOOTSTRAP_TOKENS,
 } from "./entrypoint-parity-lib.mjs";
@@ -1529,6 +1530,200 @@ test("MUTABLE_FACT_FOUND (COUNT): two genuinely distinct counts on the same line
     assert.equal(countHits.length, 2, JSON.stringify(countHits));
     assert.ok(countHits.some((f) => /290 capabilities/i.test(f.detail)), JSON.stringify(countHits));
     assert.ok(countHits.some((f) => /twelve registries/i.test(f.detail)), JSON.stringify(countHits));
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── round 9: remove the newline-assuming-step bug class, not one more patch ─
+
+test("extractFactScanUnits: no unit ever contains a newline, across paragraphs, list items, table rows, block quotes, headings and fenced content", () => {
+  const lines = [
+    "This is an ordinary paragraph",
+    "wrapped across two lines with no marker of its own.",
+    "",
+    "- A list item",
+    "  with a wrapped continuation line.",
+    "",
+    "| Column A | Column B |",
+    "| --- | --- |",
+    "| one | two |",
+    "",
+    "> A block quote line",
+    "> and its second line.",
+    "",
+    "### A heading",
+    "",
+    "```",
+    "a fenced line",
+    "that spans two lines",
+    "```",
+    "",
+    "A final paragraph.",
+  ];
+  const units = extractFactScanUnits(lines, new Set(), new Set());
+  assert.ok(units.length > 0);
+  for (const unit of units) {
+    assert.ok(!unit.text.includes("\n"), JSON.stringify(unit));
+  }
+});
+
+test("extractFactScanUnits: a joined unit's internal whitespace is collapsed to single spaces", () => {
+  const lines = ["This paragraph wraps", "  with leading indentation on its second line."];
+  const units = extractFactScanUnits(lines, new Set(), new Set());
+  assert.equal(units.length, 1);
+  assert.equal(
+    units[0].text,
+    "This paragraph wraps with leading indentation on its second line.",
+  );
+});
+
+// ── round 9 finding: normalizeLineForScan's bare `.` never matched a joined
+// unit's embedded newline, so an emphasis span wrapped across it was missed
+// entirely (three planted cases from the round 9 finding) ──────────────────
+
+test("MUTABLE_FACT_FOUND (COUNT): an italic span wrapped between the count and the named noun still fires -- round 9 finding", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "_290\ncapabilities_ of ours are listed here.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.file === "CLAUDE.md" && f.detail.includes("COUNT")),
+      JSON.stringify(broken),
+    );
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\n_290\ncapabilities_ of ours are listed here.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DATE): a 'valid through' claim wrapped inside an italic span still fires -- round 9 finding", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "The pricing is _valid through\nQ3 2026_ for existing customers.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    assert.ok(
+      broken.some((f) => f.file === "CLAUDE.md" && f.detail.includes("DATE")),
+      JSON.stringify(broken),
+    );
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nThe pricing is _valid through\nQ3 2026_ for existing customers.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (COUNT): a bold span wrapped between the count and the named noun fires with a clean, newline-free snippet -- round 9 finding", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "**290\ncapabilities** are listed here.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    const hit = broken.find((f) => f.file === "CLAUDE.md" && f.detail.includes("COUNT"));
+    assert.ok(hit, JSON.stringify(broken));
+    // Before round 9's fix, a bold two-marker span still produced this
+    // finding (the paired markers happened to collapse to nothing, leaving
+    // \s+ to match the raw newline), but its snippet carried the newline
+    // verbatim -- exactly the old shape the redesign is supposed to remove.
+    assert.ok(!hit.detail.includes("\n"), JSON.stringify(hit));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\n**290\ncapabilities** are listed here.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── round 9: findDecisionSummaries' snippet is the matched slice, not the
+// whole unit, so two distinct decision summaries sharing one unit both
+// report ─────────────────────────────────────────────────────────────────
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): two distinct decision summaries sharing one paragraph-joined unit both report", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "DEC-20260101-A retired the old widget entirely for good. DEC-20260102-B\n" +
+        "replaced it with a much better one.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    const summaries = broken.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("DECISION_SUMMARY"));
+    assert.equal(summaries.length, 2, JSON.stringify(summaries));
+    assert.ok(summaries.some((f) => f.detail.includes("DEC-20260101-A")), JSON.stringify(summaries));
+    assert.ok(summaries.some((f) => f.detail.includes("DEC-20260102-B")), JSON.stringify(summaries));
+    // Each snippet names only its own decision id, not the other one -- the
+    // whole-unit snippet this replaces would have had both ids in each.
+    const first = summaries.find((f) => f.detail.includes("DEC-20260101-A"));
+    const second = summaries.find((f) => f.detail.includes("DEC-20260102-B"));
+    assert.ok(!first.detail.includes("DEC-20260102-B"), JSON.stringify(first));
+    assert.ok(!second.detail.includes("DEC-20260101-A"), JSON.stringify(second));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nDEC-20260101-A retired the old widget entirely for good. DEC-20260102-B\nreplaced it with a much better one.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a decision id repeated verbatim in one unit still dedupes to one finding", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "DEC-20260901-A: approved the redesign. DEC-20260901-A: approved the redesign.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    const summaries = broken.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("DECISION_SUMMARY"));
+    assert.equal(summaries.length, 1, JSON.stringify(summaries));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nDEC-20260901-A: approved the redesign. DEC-20260901-A: approved the redesign.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
   } finally {
     cleanup(dir);
   }

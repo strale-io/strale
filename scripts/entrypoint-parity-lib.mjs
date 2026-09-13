@@ -125,12 +125,27 @@
  *       "current through" or "Last verified" produced no finding at all --
  *       invisible under the very paragraph-join this round 7 comment
  *       describes, for the shapes it claimed were already covered. All four
- *       now use `\s+`, and every remaining pattern in this file was
- *       re-audited line by line and confirmed already `\s`-based (see
- *       scanMutableFacts's own comment for the full account, including the
- *       one class of duplicate reporting the same audit turned up: a count
+ *       now use `\s+`. Round 8's repair widened four patterns and its own
+ *       docblock then claimed every remaining pattern had been re-audited
+ *       and confirmed newline-safe; round 9 found that claim false too --
+ *       normalizeLineForScan's emphasis-stripping regexes used a bare `.`,
+ *       which never matches a newline without the `s` flag, so an emphasis
+ *       span wrapped across a joined unit's embedded newline was missed,
+ *       and the failed strip then broke the word boundary every count and
+ *       date pattern depends on. Two rounds of "patch the one instance
+ *       found, claim the rest is audited" is the bug class, not a one-off:
+ *       the fix is that extractFactScanUnits below no longer produces a
+ *       unit whose text can contain a newline at all (it joins a unit's
+ *       lines with a single space and collapses internal whitespace, see
+ *       that function's own comment), so no pattern or normalization step
+ *       in this file -- including normalizeLineForScan -- ever sees one
+ *       again, and no further per-pattern audit is needed or claimed. The
+ *       invariant is enforced by "extractFactScanUnits: no unit ever
+ *       contains a newline" in scripts/entrypoint-parity.test.mjs, not by a
+ *       docblock's own assertion (see scanMutableFacts's comment for the
+ *       one class of duplicate reporting the join makes possible: a count
  *       matching both the named-noun and the generic-noun pattern at once
- *       is now deduplicated to a single finding, round 8 finding 3).
+ *       is deduplicated to a single finding, round 8 finding 3).
  *   (d) M1_ENTRYPOINT_ACTIVATED -- reused verbatim from
  *       scripts/check-project-context.mjs's checkPrecutoverEntrypoint
  *       rather than re-implemented, per this batch's brief.
@@ -922,7 +937,11 @@ const DATED_PARENTHETICAL_RE = new RegExp(`\\(${MONTH_NAMES_RE}\\s+\\d{4}\\)`, "
 // inside "as of", "Last verified", "valid through" or "current through",
 // while the same text unwrapped still matched. \s+ matches a newline the
 // same as a space, closing the gap for any wrap position, not just the one
-// found first.
+// found first. Since round 9, extractFactScanUnits never hands this pattern
+// a unit containing a newline at all (see that function's own comment), so
+// this distinction no longer matters for that reason; \s+ is kept because
+// it is also correct and there is no reason to narrow it back to a literal
+// space.
 const AS_OF_RE = new RegExp(`\\bas\\s+of\\s+${DATE_VALUE_RE}\\b`, "gi");
 // The other ordinary ways a dated status is written in this repo's prose,
 // beyond "(Month YYYY)" and "as of <date>": "Last verified: <date>",
@@ -1036,13 +1055,38 @@ function findDates(line) {
   return hits;
 }
 
+// A fresh (non-global, no shared lastIndex) copy of DEC_ID_RE, used to find
+// where the *next* decision id starts inside one match's own summary text,
+// so two decision ids sharing one unit each get their own snippet instead
+// of one snippet bleeding into the next id's summary.
+const NEXT_DEC_ID_RE = /\bDEC-\d{8}(?:-[A-Za-z0-9]+)*\b/;
+// The end of the first sentence in a summary: a period followed by
+// whitespace or the end of the string. Used the same way -- to stop a
+// snippet at the end of its own sentence rather than running on into
+// whatever comes next in the unit.
+const SENTENCE_END_RE = /\.(?:\s|$)/;
+
 function findDecisionSummaries(line) {
   const hits = [];
   for (const match of line.matchAll(DEC_ID_RE)) {
     const rest = line.slice(match.index + match[0].length);
-    if (summaryFollows(rest)) {
-      hits.push({ category: "DECISION_SUMMARY", snippet: line.trim() });
-    }
+    if (!summaryFollows(rest)) continue;
+    // The snippet is the matched decision id plus its own summary text,
+    // stopping at whichever comes first: the next decision id in the same
+    // unit, or the end of the first sentence. Without this cutoff, two
+    // distinct decision-summary sentences sharing one paragraph-joined unit
+    // would both report the same "whole unit" snippet, and the dedup key
+    // below (category + snippet + line) would then collapse two genuinely
+    // distinct facts into a single reported finding -- the bug this fix
+    // closes. Falling back to the rest of the unit when neither is found
+    // keeps behaviour for a summary with no trailing punctuation at all.
+    const nextId = NEXT_DEC_ID_RE.exec(rest);
+    const sentenceEnd = SENTENCE_END_RE.exec(rest);
+    let cut = rest.length;
+    if (nextId) cut = Math.min(cut, nextId.index);
+    if (sentenceEnd) cut = Math.min(cut, sentenceEnd.index + 1);
+    const snippet = `${match[0]}${rest.slice(0, cut)}`.trim();
+    hits.push({ category: "DECISION_SUMMARY", snippet });
   }
   return hits;
 }
@@ -1056,6 +1100,18 @@ function findDecisionSummaries(line) {
 // text, emphasis markers disappear, and "|" cell separators become plain
 // spaces. Applied once, ahead of findMoney/findCounts/findDates/
 // findDecisionSummaries, so none of them need shape-specific handling.
+//
+// `line` here is always a scanMutableFacts unit's text, which
+// extractFactScanUnits guarantees never contains a newline (round 9 fix).
+// That is what makes the bare `.` in the emphasis-stripping regexes below
+// safe: `.` never matches a newline without the `s` flag, so before round
+// 9's fix an emphasis span wrapped across a joined unit's embedded newline
+// (e.g. "_valid through\nQ3 2026_") was missed entirely, and the failed
+// strip then left a stray "_" against the digits, breaking the word
+// boundary every count and date pattern starts with. Adding the `s` flag
+// here would have been the fourth patch to the same bug class; removing
+// the newline at the source instead means this function needs no special
+// newline-handling of its own, now or when a future pattern is added here.
 function normalizeLineForScan(line) {
   let s = line;
   // "![alt](url)" -> "alt" (image first, so its "!" never confuses the link
@@ -1157,14 +1213,34 @@ function verifiedMirroredHeadingForms(root, extractionProblems = []) {
  * heading's own text under the *post-toggle* state, preserved unchanged so
  * every existing exclusion test keeps behaving identically.
  *
+ * A joined unit's lines are combined with a single space, and every run of
+ * whitespace in the result (an indented continuation line's leading spaces,
+ * a wrap's own space, several spaces in a row) is then collapsed to exactly
+ * one space (round 9 fix). This is the whole fix: rounds 8 and 9 each found
+ * one more place downstream -- a literal-space trigger phrase, then a
+ * bare-`.` emphasis-stripping regex -- that assumed single-line input and
+ * silently failed on the embedded newline a joined unit used to carry.
+ * Removing the newline here, once, at the one place units are produced,
+ * removes the assumption everywhere at once instead of auditing every
+ * pattern and normalization step in the file for it a fourth time. The
+ * invariant this establishes -- no unit's `text` ever contains a newline,
+ * and internal whitespace is always a single space -- is enforced by
+ * "extractFactScanUnits: no unit ever contains a newline" in
+ * scripts/entrypoint-parity.test.mjs, exercised over a fixture covering
+ * paragraphs, list items, table rows, block quotes, headings and fenced
+ * content.
+ *
  * Returns `{ text, startLine, excluded }` units, `startLine` 1-based and
  * naming the unit's first line -- the location a finding reports for every
  * hit inside it, whether the matched text begins on that line or a later
  * one it was joined from. A paragraph's start is the useful, stable pointer:
  * once a fact can span more than one line, "look at this paragraph" points
  * a reader at something real, where "look at the line the match started on"
- * would depend on which of several joined lines it happened to land on. */
-function extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms) {
+ * would depend on which of several joined lines it happened to land on. A
+ * finding's snippet no longer contains an embedded newline either, which
+ * reads better in a terminal or a PR comment than the old two-line snippet
+ * did. */
+export function extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms) {
   const units = [];
   let excluded = false;
   let excludedLevel = 0;
@@ -1173,7 +1249,10 @@ function extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms) 
   let currentExcluded = false;
 
   const flush = () => {
-    if (current.length) units.push({ text: current.join("\n"), startLine: currentStart, excluded: currentExcluded });
+    if (current.length) {
+      const text = current.join(" ").replace(/\s+/g, " ").trim();
+      units.push({ text, startLine: currentStart, excluded: currentExcluded });
+    }
     current = [];
     currentStart = null;
   };
@@ -1231,21 +1310,22 @@ function extractFactScanUnits(lines, allowlistedHeadings, mirroredHeadingForms) 
  * heading (mirroredHeadingForms). Runs each pattern finder over a whole
  * paragraph-joined unit (extractFactScanUnits above) rather than one raw
  * line at a time, so a fact split across an ordinary paragraph wrap is not
- * invisible to the scan (round 7 finding 1). Round 7's own claim that every
- * pattern already matched across a joined unit's embedded newline because
- * each one used `\s` was false for three of them (round 8 finding 1):
- * AS_OF_RE, VALID_THROUGH_RE and CURRENT_THROUGH_RE joined their trigger
- * words with a literal ASCII space, which matches only that one character
- * and never the newline a wrap inserts, so a wrap landing inside "as of",
- * "valid through" or "current through" went dark under this very scan --
- * exactly the failure the paragraph-join was supposed to close. Auditing
- * every pattern in the file for the same class (not only the three cases
- * the round happened to name) found a fourth instance already living beside
- * them: LAST_VERIFIED_RE joined "Last" and "verified" with the same literal
- * space. All four now use `\s+` between every trigger word and before the
- * date, so a wrap at any internal position is caught the same as the
- * unwrapped text; the rest of this file's patterns were audited and found
- * already `\s`-based throughout (see each pattern's own definition above).
+ * invisible to the scan (round 7 finding 1).
+ *
+ * extractFactScanUnits now guarantees every unit's text contains no newline
+ * character and has its internal whitespace collapsed to single spaces
+ * (round 9 fix, see that function's own comment). Every pattern and every
+ * normalization step below therefore always sees single-line input, exactly
+ * as it did before round 7 introduced the joined unit -- this is the
+ * invariant "extractFactScanUnits: no unit ever contains a newline" in
+ * scripts/entrypoint-parity.test.mjs enforces, and it is what closes the bug
+ * class three consecutive rounds (8, 9, and the one this replaces) each
+ * found a new instance of: some step downstream of the join assumed
+ * single-line input and silently failed on the embedded newline a joined
+ * unit used to carry. A one-line-at-a-time audit of every pattern in this
+ * file is not repeated here, because it is no longer the thing that makes
+ * this correct -- the invariant enforced by that test is.
+ *
  * Two of the four finders below can report the same fact twice: findCounts'
  * named-noun and generic-noun patterns both match one occurrence whenever
  * the noun is one of the five curated plurals (round 8 finding 3), so hits
