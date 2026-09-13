@@ -191,6 +191,18 @@
  * sections are never checked against the mirror in the first place (see
  * verifiedMirroredHeadingForms's comment); that fidelity check is out of
  * this batch's scope.
+ *
+ * A known limitation of the decision-summary snippet in rule (c), stated
+ * plainly rather than chased with a heuristic (round 10): the reported
+ * snippet is the matched decision id plus its following text, capped at
+ * DECISION_SUMMARY_SNIPPET_CAP characters with a trailing marker when cut,
+ * so a long summary is shown truncated in the finding, not in full. Round 9
+ * tried to end the snippet at an inferred boundary -- the next decision id,
+ * or the end of the first sentence -- and round 10 found both inferences
+ * wrong: an abbreviation's period is not a sentence end, and a decision id
+ * merely mentioned inside another summary is not the start of its own. The
+ * fixed cap reports the underlying fact just the same; only its displayed
+ * text is shorter.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -1055,37 +1067,36 @@ function findDates(line) {
   return hits;
 }
 
-// A fresh (non-global, no shared lastIndex) copy of DEC_ID_RE, used to find
-// where the *next* decision id starts inside one match's own summary text,
-// so two decision ids sharing one unit each get their own snippet instead
-// of one snippet bleeding into the next id's summary.
-const NEXT_DEC_ID_RE = /\bDEC-\d{8}(?:-[A-Za-z0-9]+)*\b/;
-// The end of the first sentence in a summary: a period followed by
-// whitespace or the end of the string. Used the same way -- to stop a
-// snippet at the end of its own sentence rather than running on into
-// whatever comes next in the unit.
-const SENTENCE_END_RE = /\.(?:\s|$)/;
+// Where a decision-summary snippet is cut off, so a long summary is shown
+// truncated rather than in full (round 10 fix). A fixed length, not an
+// inferred sentence or next-id boundary: round 9 cut at whichever of "next
+// decision id" or "end of sentence" came first, but neither is knowable
+// from the text alone. A period followed by whitespace is often an
+// abbreviation, not a sentence end (round 10 finding 1: "(e.g. widgets)"
+// truncated the snippet at "e.g."), and a decision id merely mentioned
+// inside another decision's summary is not the start of its own summary
+// (round 10 finding 2: "...unlike DEC-20260102-B which never shipped" cut
+// to a dangling "unlike"). A fixed cap avoids inferring either boundary.
+const DECISION_SUMMARY_SNIPPET_CAP = 120;
+const DECISION_SUMMARY_SNIPPET_MARKER = "...";
 
 function findDecisionSummaries(line) {
   const hits = [];
   for (const match of line.matchAll(DEC_ID_RE)) {
     const rest = line.slice(match.index + match[0].length);
     if (!summaryFollows(rest)) continue;
-    // The snippet is the matched decision id plus its own summary text,
-    // stopping at whichever comes first: the next decision id in the same
-    // unit, or the end of the first sentence. Without this cutoff, two
-    // distinct decision-summary sentences sharing one paragraph-joined unit
-    // would both report the same "whole unit" snippet, and the dedup key
-    // below (category + snippet + line) would then collapse two genuinely
-    // distinct facts into a single reported finding -- the bug this fix
-    // closes. Falling back to the rest of the unit when neither is found
-    // keeps behaviour for a summary with no trailing punctuation at all.
-    const nextId = NEXT_DEC_ID_RE.exec(rest);
-    const sentenceEnd = SENTENCE_END_RE.exec(rest);
-    let cut = rest.length;
-    if (nextId) cut = Math.min(cut, nextId.index);
-    if (sentenceEnd) cut = Math.min(cut, sentenceEnd.index + 1);
-    const snippet = `${match[0]}${rest.slice(0, cut)}`.trim();
+    // The snippet is the matched decision id plus whatever summary text
+    // follows it, capped at a fixed length with a trailing marker when it
+    // was cut. Two properties keep the dedup key below (category + snippet
+    // + line) correct: every snippet begins with its own decision id, so
+    // two distinct ids never share a snippet even after the cap; and an id
+    // plus summary repeated verbatim within the cap produces the same
+    // snippet both times, which still dedupes to one finding.
+    const full = `${match[0]}${rest}`;
+    const truncated = full.length > DECISION_SUMMARY_SNIPPET_CAP;
+    const snippet = truncated
+      ? `${full.slice(0, DECISION_SUMMARY_SNIPPET_CAP).trimEnd()}${DECISION_SUMMARY_SNIPPET_MARKER}`
+      : full.trim();
     hits.push({ category: "DECISION_SUMMARY", snippet });
   }
   return hits;

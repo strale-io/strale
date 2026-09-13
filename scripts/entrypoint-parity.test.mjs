@@ -1684,12 +1684,15 @@ test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): two distinct decision summaries sha
     assert.equal(summaries.length, 2, JSON.stringify(summaries));
     assert.ok(summaries.some((f) => f.detail.includes("DEC-20260101-A")), JSON.stringify(summaries));
     assert.ok(summaries.some((f) => f.detail.includes("DEC-20260102-B")), JSON.stringify(summaries));
-    // Each snippet names only its own decision id, not the other one -- the
-    // whole-unit snippet this replaces would have had both ids in each.
-    const first = summaries.find((f) => f.detail.includes("DEC-20260101-A"));
-    const second = summaries.find((f) => f.detail.includes("DEC-20260102-B"));
-    assert.ok(!first.detail.includes("DEC-20260102-B"), JSON.stringify(first));
-    assert.ok(!second.detail.includes("DEC-20260101-A"), JSON.stringify(second));
+    // Each snippet starts with its own decision id and the two snippets are
+    // distinct, so the dedup key (category + snippet + line) still keeps
+    // them apart. Round 10 removed the next-id cutoff this test used to
+    // check for (a mention of DEC-20260102-B inside DEC-20260101-A's own
+    // snippet no longer truncates it, per round 10 finding 2), so the first
+    // snippet may now legitimately include the second id's text too.
+    const first = summaries.find((f) => f.detail.includes('"DEC-20260101-A'));
+    const second = summaries.find((f) => f.detail.includes('"DEC-20260102-B'));
+    assert.notEqual(first.detail, second.detail, JSON.stringify(summaries));
 
     writeFiles(dir, {
       "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
@@ -1707,18 +1710,139 @@ test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): two distinct decision summaries sha
 test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a decision id repeated verbatim in one unit still dedupes to one finding", () => {
   const dir = cleanFixture();
   try {
+    // The repeated phrase (id + summary) is deliberately longer than
+    // DECISION_SUMMARY_SNIPPET_CAP (round 10): once both occurrences'
+    // captured text is at least that long, each snippet truncates to the
+    // same first-120-characters prefix of the identical phrase, so the two
+    // occurrences dedupe to one finding under the category+snippet+line
+    // key even though round 10 removed the next-id and sentence cutoffs
+    // that used to make this converge. A phrase shorter than the cap would
+    // not dedupe this way, because the first occurrence's untruncated text
+    // would run on into the second occurrence's own text.
+    const phrase =
+      "DEC-20260901-A: approved the redesign because of extensive testing " +
+      "across multiple environments and careful review of every " +
+      "consequence considered before finalizing this call.";
+    assert.ok(phrase.length > 120, "fixture phrase must exceed the snippet cap");
     writeFiles(dir, {
       "CLAUDE.md":
-        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
-        "DEC-20260901-A: approved the redesign. DEC-20260901-A: approved the redesign.\n",
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n${phrase} ${phrase}\n`,
     });
     const broken = checkMutableFacts(dir, readBoth(dir));
     const summaries = broken.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("DECISION_SUMMARY"));
     assert.equal(summaries.length, 1, JSON.stringify(summaries));
+    assert.ok(summaries[0].detail.trim().endsWith('..."'), JSON.stringify(summaries));
 
     writeFiles(dir, {
       "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
-        "\n### Unrelated section\n\nDEC-20260901-A: approved the redesign. DEC-20260901-A: approved the redesign.\n",
+        `\n### Unrelated section\n\n${phrase} ${phrase}\n`,
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+// ── round 10: findDecisionSummaries' snippet is a fixed-length cap, not an
+// inferred sentence or next-id boundary ─────────────────────────────────────
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): an abbreviation's period does not truncate the snippet", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "DEC-20260101-A retired the old registry lookup (e.g. widgets) for good\n" +
+        "reasons stated below.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    const summaries = broken.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("DECISION_SUMMARY"));
+    assert.equal(summaries.length, 1, JSON.stringify(summaries));
+    // The old sentence-boundary inference stopped at "(e.g." because a
+    // period followed by whitespace read as a sentence end -- round 10
+    // finding 1. The snippet must run past the abbreviation.
+    assert.ok(summaries[0].detail.startsWith('DECISION_SUMMARY at line'), JSON.stringify(summaries));
+    assert.ok(summaries[0].detail.includes("DEC-20260101-A retired the old registry lookup"), JSON.stringify(summaries));
+    assert.ok(!summaries[0].detail.includes('(e.g."'), JSON.stringify(summaries));
+    assert.ok(summaries[0].detail.includes("reasons stated below"), JSON.stringify(summaries));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nDEC-20260101-A retired the old registry lookup (e.g. widgets) for good\nreasons stated below.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a mention of another decision id does not truncate the snippet", () => {
+  const dir = cleanFixture();
+  try {
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        "DEC-20260101-A retired the old widget for good, unlike DEC-20260102-B\n" +
+        "which never shipped.\n",
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    const summaries = broken.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("DECISION_SUMMARY"));
+    assert.equal(summaries.length, 1, JSON.stringify(summaries));
+    // The old next-id-boundary inference stopped at "unlike" because
+    // DEC-20260102-B is only mentioned, not the start of its own summary --
+    // round 10 finding 2. The snippet must run past that mention.
+    assert.ok(summaries[0].detail.includes("DEC-20260101-A retired the old widget for good"), JSON.stringify(summaries));
+    assert.ok(!summaries[0].detail.trim().endsWith("unlike\""), JSON.stringify(summaries));
+    assert.ok(summaries[0].detail.includes("which never shipped"), JSON.stringify(summaries));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        "\n### Unrelated section\n\nDEC-20260101-A retired the old widget for good, unlike DEC-20260102-B\nwhich never shipped.\n",
+        "",
+      ),
+    });
+    const fixed = checkMutableFacts(dir, readBoth(dir));
+    assert.deepEqual(fixed, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test("MUTABLE_FACT_FOUND (DECISION_SUMMARY): a snippet longer than the cap is truncated with a marker, and two distinct ids still dedupe apart", () => {
+  const dir = cleanFixture();
+  try {
+    const longTail = "x".repeat(200);
+    writeFiles(dir, {
+      "CLAUDE.md":
+        `${readFileSync(join(dir, "CLAUDE.md"), "utf8")}\n### Unrelated section\n\n` +
+        `DEC-20260101-A retired the old widget for a very long list of reasons: ${longTail}. ` +
+        `DEC-20260102-B replaced it with a very long list of reasons too: ${longTail}.\n`,
+    });
+    const broken = checkMutableFacts(dir, readBoth(dir));
+    const summaries = broken.filter((f) => f.file === "CLAUDE.md" && f.detail.includes("DECISION_SUMMARY"));
+    // Both ids still report, and as two distinct findings -- a cap that
+    // truncated both summaries down to an identical prefix would have
+    // collapsed them into one finding under the category+snippet+line
+    // dedup key, which is exactly what this test would catch.
+    assert.equal(summaries.length, 2, JSON.stringify(summaries));
+    assert.ok(summaries.some((f) => f.detail.includes("DEC-20260101-A")), JSON.stringify(summaries));
+    assert.ok(summaries.some((f) => f.detail.includes("DEC-20260102-B")), JSON.stringify(summaries));
+    const first = summaries.find((f) => f.detail.includes("DEC-20260101-A"));
+    const second = summaries.find((f) => f.detail.includes("DEC-20260102-B"));
+    assert.notEqual(first.detail, second.detail, JSON.stringify(summaries));
+    assert.ok(first.detail.trim().endsWith('..."'), JSON.stringify(first));
+    assert.ok(second.detail.trim().endsWith('..."'), JSON.stringify(second));
+
+    writeFiles(dir, {
+      "CLAUDE.md": readFileSync(join(dir, "CLAUDE.md"), "utf8").replace(
+        `\n### Unrelated section\n\nDEC-20260101-A retired the old widget for a very long list of reasons: ${longTail}. ` +
+          `DEC-20260102-B replaced it with a very long list of reasons too: ${longTail}.\n`,
         "",
       ),
     });
