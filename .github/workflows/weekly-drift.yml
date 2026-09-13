@@ -72,18 +72,16 @@ jobs:
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
-      # Vendor Roster ↔ Decisions DB drift. Flags vendor rows whose
-      # Last evaluated date is older than a Decision in the window
-      # mentioning that vendor — surfaces the 2026-04-30 failure mode
-      # where DEC-20260429-A deferred OpenSanctions but the Roster row
-      # stayed at Self-built for an extra day.
+      # Vendor register drift (M4 batch 6: retargeted off Notion). Runs
+      # config/vendors.yaml's own self-consistency and cross-surface
+      # contract (the same checkAllVendors logic npm run vendors:check
+      # enforces on every PR) on a schedule, so a divergence on `main` that
+      # bypassed a PR gate is still caught.
       - id: vendor-roster
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
         run: |
           set +e
           set -o pipefail
-          cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts --strict 2>&1 | tee /tmp/vendor-roster.txt
+          cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts 2>&1 | tee /tmp/vendor-roster.txt
           echo "exit=$?" >> $GITHUB_OUTPUT
         continue-on-error: true
 
@@ -218,7 +216,7 @@ jobs:
             cat /tmp/fetch-timeout.txt
             echo '```'
             echo ""
-            echo "## Vendor Roster ↔ Decisions drift"
+            echo "## Vendor register drift"
             echo '```'
             cat /tmp/vendor-roster.txt
             echo '```'
