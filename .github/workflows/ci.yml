@@ -616,9 +616,10 @@ jobs:
       # REGISTER (*:test under scripts/) — always runs.
       - run: npm run handoff:test
       # Repo-native project-context layer (M1/M2 candidates, decision graph,
-      # M2 closure register). The checker itself is warning-only by contract
-      # until M4; its test suite is not, and it asserts the checked-in context
-      # is warning-clean, so drift on these files fails the build here.
+      # M2 closure register). Blocking as of M4 batch 7 part two: the
+      # checker's exit code now reflects its findings, having run warning-
+      # only through M3. Its test suite asserts the checked-in context has
+      # zero findings, so drift on these files fails the build here.
       # REGISTER (context:*) — always runs.
       - run: npm run context:check
       - run: npm run context:test

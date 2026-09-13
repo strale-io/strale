@@ -72,6 +72,17 @@ export const FULL_FILE_ALLOWLIST_FILES = new Set([
   "docs/operations/distribution-registry.md",
   "apps/api/railway-config.md",
   "apps/api/docs/drift-check-refactor-proposal.md",
+  // This check's own test suite deliberately plants every signal pattern
+  // as fixture data (string literals, not comments) to prove the check
+  // fires on each one -- excluding a scanner's own test fixtures from its
+  // own results is the standard shape for this kind of self-referential
+  // check.
+  "scripts/no-notion-regression.test.mjs",
+  // This check's own library necessarily writes out the literal pattern
+  // strings it detects (its docstring, the CREDENTIAL_PATTERNS regexes,
+  // and the COMMENT_ONLY_ALLOWLIST reason strings quoting the file they
+  // describe) -- a scanner always names what it scans for.
+  "scripts/no-notion-regression-lib.mjs",
 ]);
 
 /** Exact repo-relative paths where a match is exempt only on a comment

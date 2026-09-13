@@ -87,6 +87,14 @@ test("a bare notion.so citation URL is never a signal (a human-read citation, no
   assert.deepEqual(findings, []);
 });
 
+test("FULL_FILE_ALLOWLIST_FILES: the check's own library and test file are self-exempt (a scanner necessarily names what it scans for)", () => {
+  const findings = scan({
+    "scripts/no-notion-regression-lib.mjs": "const re = /NOTION_API_KEY/; // detects NOTION_TOKEN, api.notion.com, @notionhq too\n",
+    "scripts/no-notion-regression.test.mjs": 'const findings = scan({ "x.ts": "NOTION_API_KEY NOTION_TOKEN api.notion.com @notionhq" });\n',
+  });
+  assert.deepEqual(findings, []);
+});
+
 test("FULL_FILE_ALLOWLIST directory: archive/ is fully exempt", () => {
   const findings = scan({
     "archive/sessions/old-report.md": "This report cites NOTION_API_KEY and NOTION_TOKEN as historical fact.\n",
