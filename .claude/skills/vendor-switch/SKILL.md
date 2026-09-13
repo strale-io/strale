@@ -80,7 +80,7 @@ this is your fix list. Update each surface:
 - Frontend public/ static fallbacks (llms.txt, .well-known/agent.json,
   .well-known/mcp.json) — these can't read the hook, so just replace
   the literal name
-- Any DPA / sub-processor list (Privacy §5 + the Notion DPA template)
+- Any DPA / sub-processor list (Privacy §5 + the vendor's DPA/sub-processor template documentation)
 
 For React components, prefer the hook pattern:
 

@@ -543,6 +543,17 @@ jobs:
       # verified" failure class.
       - run: npm run scheduled:check
       - run: npm run scheduled:test
+      # Notion anti-regression check (M4 batch 7, migration plan M6 fixture
+      # 4): scans every tracked file for a reintroduced NOTION_API_KEY,
+      # NOTION_TOKEN, api.notion.com, @notionhq, or Notion MCP tool
+      # reference, plus a bare "Notion" instruction reintroduced in
+      # .claude/ or .agents/. Every remaining legitimate mention is
+      # allowlisted by exact path (archive/, handoff/, decision records, or
+      # a handful of named historical documents) or, for two still-live
+      # files, exempted only on a comment line -- a real read added to
+      # either file on a non-comment line still fails this check. Blocking.
+      - run: npm run notion-regression:check
+      - run: npm run notion-regression:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
       # Voyage/GPT model id lives in one place with a pinned_at date and a
       # decision reference: fails on a model-id literal anywhere else in

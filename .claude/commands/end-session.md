@@ -31,7 +31,7 @@ If the session was genuinely trivial (single trivial fix, nothing worth recordin
 
 ## 3. Add the session-log front matter to the handoff file
 
-Above the `Intent:` line, add a YAML front-matter block carrying what the Notion Journal entry used to carry:
+Above the `Intent:` line, add a YAML front-matter block carrying what the retired per-session journal entry used to carry:
 
 ```yaml
 ---
@@ -53,7 +53,7 @@ If a front-matter block for this session's handoff already exists (the file was 
 - Mutate a program register's `next_action` — flag drift only.
 - Update memory unless explicitly asked.
 
-## 4. Check the active track's `next_action` for drift (replaces the Notion To-do DB query, which listed "in progress" items owned by `Claude code`)
+## 4. Check the active track's `next_action` for drift (replaces the retired to-do query, which listed "in progress" items owned by `Claude code`)
 
 Read the active track's `next_action` in `docs/programs/*/tracks.yaml` (`npm run programs:check` validates the register itself):
 

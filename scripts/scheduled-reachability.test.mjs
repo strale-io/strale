@@ -209,7 +209,7 @@ test("resolveWorkingDirectory: an absolute or variable working-directory is not 
 // ── unit: stepEnvSecrets (review finding 4) ─────────────────────────────
 
 test("stepEnvSecrets: maps the environment variable name to the secret name it reads", () => {
-  assert.deepEqual(stepEnvSecrets(undefined, { NOTION_API_KEY: "${{ secrets.NOTION_TOKEN }}" }), { NOTION_API_KEY: "NOTION_TOKEN" });
+  assert.deepEqual(stepEnvSecrets(undefined, { SOME_API_KEY: "${{ secrets.SOME_TOKEN }}" }), { SOME_API_KEY: "SOME_TOKEN" });
 });
 
 test("stepEnvSecrets: reads the job's env, and the step's env wins on a name collision", () => {
@@ -592,9 +592,9 @@ test("MECHANISM_SECRET_MISMATCH: renaming the environment variable while keeping
         "    steps:",
         "      - id: secret-step",
         "        env:",
-        // renamed from NOTION_API_KEY to NOTION_KEY -- the secret behind
-        // it (NOTION_TOKEN) is unchanged.
-        "          NOTION_KEY: ${{ secrets.NOTION_TOKEN }}",
+        // renamed from SOME_API_KEY to SOME_KEY -- the secret behind
+        // it (SOME_TOKEN) is unchanged.
+        "          SOME_KEY: ${{ secrets.SOME_TOKEN }}",
         "        run: node scripts/needs-secret.mjs",
         "",
       ].join("\n"),
@@ -609,7 +609,7 @@ test("MECHANISM_SECRET_MISMATCH: renaming the environment variable while keeping
         "      value: secret-step",
         "    runs: scripts/needs-secret.mjs",
         "    secrets:",
-        "      NOTION_API_KEY: NOTION_TOKEN",
+        "      SOME_API_KEY: SOME_TOKEN",
         "    purpose: fixture",
         "",
       ].join("\n"),

@@ -44,7 +44,7 @@
         "secrets": {
           "type": "object",
           "additionalProperties": { "type": "string", "minLength": 1 },
-          "description": "Map of environment-variable name to secret name, read from the step's `env` and the job's `env` (step wins on a name collision), e.g. { \"NOTION_API_KEY\": \"NOTION_TOKEN\" }. Empty object if the step reads no secret. A map, not a list, so renaming the variable while keeping the secret is a MECHANISM_SECRET_MISMATCH -- the check compares both the variable name and the secret name."
+          "description": "Map of environment-variable name to secret name, read from the step's `env` and the job's `env` (step wins on a name collision), e.g. { \"SOME_API_KEY\": \"SOME_TOKEN\" }. Empty object if the step reads no secret. A map, not a list, so renaming the variable while keeping the secret is a MECHANISM_SECRET_MISMATCH -- the check compares both the variable name and the secret name."
         },
         "purpose": { "type": "string", "minLength": 1 }
       }
