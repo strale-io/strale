@@ -18,12 +18,15 @@ import { renderDigestEmail } from "../lib/daily-digest/render-email.js";
 import { sendDigestEmail } from "../lib/daily-digest/send.js";
 import { saveSnapshot } from "../lib/daily-digest/snapshots.js";
 import { log, logError } from "../lib/log.js";
+import { deployCommitOrNull } from "../lib/receipt/deploy-identity.js";
 
 async function main() {
   const startTime = Date.now();
   const runId = randomUUID();
   const jobLog = log.child({ job: "daily-digest", job_run_id: runId });
-  jobLog.info({ label: "digest-start" }, "digest-start");
+  // The commit the running image is serving (DEC-20260504-C: print it so a
+  // stale deploy is visible instead of assumed from a clean deploy log).
+  jobLog.info({ label: "digest-start", image_commit: deployCommitOrNull() }, "digest-start");
 
   try {
     jobLog.info({ label: "digest-gather-start" }, "digest-gather-start");

@@ -1,0 +1,35 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "0002060801b77718c8ed5aa57e23cbd2435b6783"
+  },
+  "at": "2026-09-13T01:58:38.107Z",
+  "inputs": {
+    "source": "C:\\Users\\pette\\AppData\\Local\\Temp\\claude\\C--Users-pette-Projects-strale\\4f68dcca-de52-4ade-b2b2-8341f736268e\\scratchpad\\m4-b5-test-evidence.json"
+  },
+  "summary": {
+    "ok": true,
+    "raw_output_file": "m4-b5-test-evidence.txt, captured in the same scratchpad directory during the M4 batch 5 session; reproducible by re-running the two commands above"
+  },
+  "topic": "m4-b5-digest-production",
+  "raw": {
+    "ok": true,
+    "commands": [
+      {
+        "cmd": "npm run digest:repo-native:test",
+        "tests": 19,
+        "pass": 19,
+        "fail": 0
+      },
+      {
+        "cmd": "cd apps/api && npx vitest run src/lib/daily-digest/repo-native-readers.test.ts src/lib/unbounded-body-reads.test.ts src/jobs/no-boot-relative-timers.test.ts",
+        "test_files": 3,
+        "tests": 33,
+        "pass": 33,
+        "fail": 0
+      }
+    ],
+    "raw_output_file": "m4-b5-test-evidence.txt, captured in the same scratchpad directory during the M4 batch 5 session; reproducible by re-running the two commands above"
+  }
+}
