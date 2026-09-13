@@ -765,17 +765,6 @@
     - .env
     - workflow
   example_value: development
-- name: NOTION_TOKEN
-  purpose: Notion integration token used by check-vendor-roster-drift.ts and the weekly-drift workflow to query the Vendor Roster / Decisions databases. NOTION_API_KEY, the daily digest's former Notion credential, was removed in M4 batch 5 once the digest's three Notion readers (fetch-notion.ts, fetch-shiplog.ts's fetchNotionWorkspaceActivity, digest-shadow.mjs) were replaced by repo-native readers; this row is the only remaining Notion credential and is retargeted off Notion in a later batch (M4 batch 6).
-  provider: Notion
-  holder: petter
-  cost_class: free
-  required_in:
-    - local
-    - ci
-  set_in:
-    - .env
-    - workflow
 - name: NULL_RATIO_RULE_ENABLED
   purpose: Feature flag (DEC-20260409-A) enabling the null-output correctness tier in test-runner.ts. Defaults to disabled.
   provider: internal

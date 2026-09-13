@@ -1,0 +1,146 @@
+{
+  "kind": "check",
+  "produced_by": {
+    "script": "apps/api/scripts/check-vendor-roster-drift.ts",
+    "commit": "1fe0f38a99357b9c216c832cc536372e93ce2b1b"
+  },
+  "at": "2026-09-13T02:36:00.156Z",
+  "inputs": {
+    "source": "C:\\Users\\pette\\AppData\\Local\\Temp\\claude\\C--Users-pette-Projects-strale\\4f68dcca-de52-4ade-b2b2-8341f736268e\\scratchpad\\m4-b6-vendor-roster-drift-evidence.json"
+  },
+  "summary": {
+    "ok": true
+  },
+  "topic": "m4-b6-vendor-roster-drift-retarget",
+  "raw": {
+    "ok": true,
+    "commands": [
+      {
+        "cmd": "cd apps/api && npx tsc --noEmit",
+        "result": {
+          "ok": true,
+          "note": "no output; typecheck passes clean"
+        }
+      },
+      {
+        "cmd": "npm run vendors:test",
+        "result": {
+          "ok": true,
+          "tests": 78,
+          "pass": 78,
+          "fail": 0
+        }
+      },
+      {
+        "cmd": "npm run vendors:check -- --json",
+        "result": {
+          "ok": true,
+          "findings_count": 0,
+          "warnings_count": 27,
+          "vendor_count": 88
+        }
+      },
+      {
+        "cmd": "npm run scheduled:check -- --json",
+        "result": {
+          "ok": true,
+          "findings_count": 0,
+          "warnings_count": 0,
+          "mechanism_count": 8
+        }
+      },
+      {
+        "cmd": "npm run env:check -- --json",
+        "result": {
+          "ok": true,
+          "findings_count": 0,
+          "variable_count": 127,
+          "row_count": 132
+        }
+      },
+      {
+        "cmd": "npm run docs:test",
+        "result": {
+          "ok": true,
+          "tests": 6,
+          "pass": 6,
+          "fail": 0
+        }
+      },
+      {
+        "cmd": "npm run context:check",
+        "result": {
+          "ok": true,
+          "note": "no warnings"
+        }
+      },
+      {
+        "cmd": "npm run receipts:check",
+        "result": {
+          "ok": true,
+          "receipts_checked": 54,
+          "note": "11 pre-existing HANDOFF_BARE_TEST_COUNT warnings unrelated to this batch"
+        }
+      },
+      {
+        "cmd": "npm run programs:check",
+        "result": {
+          "ok": true,
+          "tracks_checked": [
+            "docs/programs/brand-website/tracks.yaml",
+            "docs/programs/cto-readiness/tracks.yaml"
+          ]
+        }
+      },
+      {
+        "cmd": "cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts (clean tree)",
+        "result": {
+          "ok": true,
+          "exit_code": 0,
+          "message": "No drift detected. 88 vendor(s) in config/vendors.yaml checked against schema, history, and cross-surface references."
+        }
+      }
+    ],
+    "planted_failures": [
+      {
+        "name": "manifest lags code: dead NOTION_TOKEN row after its last reader is removed",
+        "method": "temporarily re-added the NOTION_TOKEN row to config/env-manifest.yaml while apps/api/scripts/check-vendor-roster-drift.ts no longer reads process.env.NOTION_TOKEN",
+        "command": "npm run env:check",
+        "observed_exit_code": 1,
+        "observed_finding": "DEAD_ENV_ROW config/env-manifest.yaml: config/env-manifest.yaml documents NOTION_TOKEN but no code under apps/api/src, apps/api/scripts, packages, scripts reads it -- mark it retired: <date> or remove the row",
+        "reverted": true,
+        "reverted_verified_clean": "npm run env:check exit 0, ok environment manifest contract"
+      },
+      {
+        "name": "scheduled-mechanisms secrets map mismatch",
+        "method": "temporarily set config/scheduled-mechanisms.yaml's weekly-drift-vendor-roster.secrets to { NOTION_TOKEN: NOTION_TOKEN } while .github/workflows/weekly-drift.yml's vendor-roster step declares no env/secrets after this batch's edit",
+        "command": "npm run scheduled:check",
+        "observed_exit_code": 1,
+        "observed_finding": "MECHANISM_SECRET_MISMATCH .github/workflows/weekly-drift.yml: entry \"weekly-drift-vendor-roster\": declared secrets {\"NOTION_TOKEN\":\"NOTION_TOKEN\"} do not match the step's actual secrets {}",
+        "reverted": true,
+        "reverted_verified_clean": "npm run scheduled:check exit 0, ok scheduled mechanism reachability"
+      },
+      {
+        "name": "retargeted drift check exits non-zero on real drift, zero on none",
+        "method": "temporarily changed the openregister vendor's id to browserless in config/vendors.yaml (a duplicate id, colliding a real PROVIDERS entry, and dropping a vendor at HEAD relative to the base branch)",
+        "command": "cd apps/api && npx tsx scripts/check-vendor-roster-drift.ts",
+        "observed_exit_code": 1,
+        "observed_findings": [
+          "DUPLICATE_VENDOR_ID config/vendors.yaml: vendor id browserless appears 2 times",
+          "PROVIDER_VENDOR_MISSING apps/api/src/lib/dependency-manifest.ts: PROVIDERS entry \"openregister\" has no matching vendor id in config/vendors.yaml",
+          "VENDOR_REMOVED config/vendors.yaml: vendor openregister existed at the base and is gone from HEAD; a vendor is never removed or renamed, only its lifecycle appended to",
+          "VENDOR_VIEW_STALE docs/project/VENDORS.md: docs/project/VENDORS.md differs from what npm run vendors:view would write now; regenerate and commit it"
+        ],
+        "reverted": true,
+        "reverted_verified_clean": "npx tsx scripts/check-vendor-roster-drift.ts exit 0, No drift detected. 88 vendor(s) in config/vendors.yaml checked against schema, history, and cross-surface references."
+      }
+    ],
+    "notion_token_last_reader_search": {
+      "searches_run": [
+        "git grep -n \"process\\\\.env\\\\.NOTION_TOKEN|env\\\\.NOTION_TOKEN|NOTION_TOKEN\" -- *.ts *.mjs *.js *.yml *.yaml (before edit)",
+        "git grep -n \"NOTION_TOKEN\" -- *.ts *.mjs *.js *.yml *.yaml (after edit)"
+      ],
+      "result": "the only live process.env.NOTION_TOKEN read in the repository, before this batch, was apps/api/scripts/check-vendor-roster-drift.ts:260; after removing it, every remaining NOTION_TOKEN match in tracked *.ts/*.mjs/*.js/*.yml/*.yaml files is prose (comments, docs, historical handoff/session files, the scheduled-mechanisms-lib.mjs docstring example, and this script's own new header comment describing what was removed) -- no code reads it"
+    }
+  }
+}
