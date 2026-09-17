@@ -87,8 +87,13 @@ values. Verified in the live system this evening: all four now hold the
 corrected value, none is quarantined any more, and the Canadian, Irish and
 Swiss checks are passing again — 58 of 61, 58 of 60 and 59 of 60 over the last
 five days, against none at all before. The Lithuanian one still fails every
-run, but for an unrelated reason: the Lithuanian registry itself is returning a
-server error. **So this was never a request only you could grant, and I should
+run — 62 of 62 since its value was corrected — but for an unrelated reason
+that is not this entry's subject: it gets a server error from the Lithuanian
+data portal. That error does **not** reproduce from this machine against the
+same addresses, including the multi-page sequence the service actually walks,
+so it is something about where our live system sits rather than the registry
+being down; diagnosing it needs the live environment and is queued as ordinary
+engineering, not as anything for you. **So this was never a request only you could grant, and I should
 have found the deploy-time route on 12 September rather than asking.** What
 remains is two: the Spanish one, whose corrected value I verified working this
 evening and which the same deploy-time route can fix — queued as the next
