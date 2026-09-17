@@ -529,7 +529,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "137394494423259833eeb234d091c2c6d8992435960da0d358af6e42d8e67924",
+      "sha256": "173387ad35d4a115076e7b72ade14c70b19f6f274cda402ffc5b33e09aa9584a",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -634,6 +634,7 @@
         "handoff/_general/from-code/2026-09-06-checkin-morning.md",
         "handoff/_general/from-code/2026-09-11-checkin-morning.md",
         "handoff/_general/from-code/2026-09-12-checkin-morning.md",
+        "handoff/_general/from-code/2026-09-17-checkin-morning.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -645,7 +646,8 @@
         "scripts/protocol-coverage-lib.mjs",
         "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
-        "scripts/research.test.mjs"
+        "scripts/research.test.mjs",
+        "scripts/scheduled-outcomes-lib.mjs"
       ]
     },
     {
@@ -765,7 +767,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "07ad169784f6aeab2014c79cafa0d94ad54d8fd03daaef229934348d8a303e73",
+      "sha256": "1f35a61d2279f7ff3e78618ee87ddadee6a7dacd3d638ed30444e4bd42642a63",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

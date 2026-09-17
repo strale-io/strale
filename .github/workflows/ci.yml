@@ -531,6 +531,17 @@ jobs:
       # verified" failure class.
       - run: npm run scheduled:check
       - run: npm run scheduled:test
+      # Scheduled OUTCOMES (scripts/scheduled-outcomes-lib.mjs). The check
+      # above proves a scheduled mechanism is reachable; every fact it reads
+      # is static, and all of them stayed true through five consecutive
+      # failed scheduled runs of weekly-drift.yml (2026-08-17 to 2026-09-14),
+      # the last four of them on a DATABASE_URL secret whose value had stopped
+      # authenticating (the fifth failed earlier, for another reason). Only
+      # the TESTS run here: the check itself reads GitHub's run history, so
+      # a pull request that changed no workflow must not fail because a
+      # credential expired on a Sunday. It runs in the morning sweep
+      # (docs/company/DAILY-RUN.md step B) as `npm run scheduled:outcomes`.
+      - run: npm run scheduled:outcomes:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/
       # Voyage/GPT model id lives in one place with a pinned_at date and a
       # decision reference: fails on a model-id literal anywhere else in

@@ -124,6 +124,28 @@ remembering which vendor dashboard needs a manual check.
 > is known to be right. Applying a correction is a production write: report it,
 > do not reach for a path that happens to be open. LESSONS.md F1.
 
+> **A scheduled check can be wired correctly and still be dead.** Run
+> `npm run scheduled:outcomes`. `npm run scheduled:check` proves the wiring
+> — the workflow exists, has a cron trigger, has a step that invokes the
+> script, and that step reads the secrets the register names. Every one of
+> those facts is static, and every one of them was true on 2026-09-17 while
+> `weekly-drift.yml` had failed **five consecutive scheduled runs** (its last
+> green cron run was 2026-08-10). The four from 2026-08-24 fail with
+> `password authentication failed for user "postgres"`; the one before them
+> failed earlier and differently, and reading one cause across a whole streak
+> because its recent members share one is a mistake this file has made before.
+> The register's `DATABASE_URL: DATABASE_URL` line was still accurate — the
+> step does read that secret; the secret's *value* had stopped authenticating,
+> and a declaration cannot carry a value. Seven drift mechanisms hang off that
+> one workflow, three of them reading production; those three last read it on
+> 2026-08-18 via a manual re-run that succeeded, so measure the blindness from
+> there rather than from the streak. Nothing in this run looked at a scheduled
+> workflow's conclusion, so the red was never read. The check
+> watches every scheduled workflow, not only the ones the register declares,
+> and treats two consecutive failed *scheduled* runs as a finding — a manual
+> re-run someone kicked off to look at the failure is not evidence the cron
+> is healthy, and one such re-run is the nearest green in that history.
+
 Credential failures for Serper and Dilisense are re-armed automatically only
 after the configured API-key value changes; the tower stores a one-way key
 fingerprint, never the credential, and spends no synthetic vendor call. A

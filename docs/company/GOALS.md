@@ -944,6 +944,68 @@ conversion.
   not per day; harmless while decisions are 0, but it is not the documented
   bound.
 
+- **The one buyer has demand we are failing, and it is in German company data**
+  (measured 2026-09-17, `who-called --slug german-company-data --days 30` and a
+  per-payer day breakdown through the x402 payer hash). `german-company-data`
+  took **218 paying calls in 30 days and completed 45**. Every one of those
+  calls is the largest payer — the same wallet that is 93.5% of revenue — and
+  the traffic is not one dead burst: 195 calls on 2026-08-24, then single
+  probes on 09-10 and 09-14, then **21 more on 2026-09-17, of which 9
+  completed and 12 failed**. Nobody was charged for a failure (verified two
+  ways: the gateway settles only after a result, `x402-gateway-v2.ts`; and all
+  12 failed rows carry a null settlement id).
+
+  The failures split by cause, and the split is the point. Of the 173 failures
+  across the month, **127 are the vendor answering `HTTP 402: Payment
+  Required`** — our free allowance exhausted mid-list on 2026-08-24, the
+  incident already recorded as F2 incident 11. The rest, and **all 12 of
+  today's**, are the capability correctly refusing an ambiguous or unmatched
+  German company name: "GAD GmbH" (5 equal matches), "LSP GmbH" (3), "ibea
+  GmbH", "admatec GmbH", "EAAT GmbH Chemnitz", "Active Group GmbH". Each of
+  the six was tried exactly twice, which reads as a retry rather than six
+  separate intentions.
+
+  **What this is evidence of, and what it is not.** It is *not* evidence of a
+  second payer — it is the first one. It is evidence that the buyer's actual
+  job is resolving small German companies (insurance brokers and GmbHs, by the
+  names) from names alone, and that our German coverage answers fewer than
+  half of them. The refusals are correct under the standing rule that a
+  registry name search must score and refuse rather than return the first
+  result; that rule is not in question. What is in question is whether a flat
+  refusal is the right *product* answer when we already computed the candidate
+  list and put it in the error prose. Returning it as data would let the agent
+  disambiguate instead of retrying the same string. Not yet built, and not yet
+  a decision — recorded here because concentration is the binding constraint
+  and this is the first direct evidence of what the concentrated buyer wants
+  more of.
+
+- **The account buyer came back after 17 days and surveyed the catalogue a
+  second time** (measured 2026-09-17, production read-only, account-side
+  transactions). Recorded here because the 2026-09-12 brief had them at two
+  weeks silent against a previous longest gap of two days, and that reading is
+  now superseded rather than merely stale. They bought on **14, 15 and 16
+  September** — 1 call, then **25 calls across 24 distinct capabilities**
+  (trademarks, container tracking, CSV/SQL/markdown utilities, DNS/MX, weather,
+  VASP, GitHub, crypto sentiment, company data), then 2. That is the same shape
+  as their 2026-08-25 visit (14 calls, 12 capabilities) but weighted to
+  general-purpose rather than compliance. Between the two surveys, one product
+  — `competitor-compare` at €1.00 — bought on **four separate days**. €14.98
+  across 35 days.
+
+  **This is the most second-payer-shaped evidence we have**, and it is
+  qualitatively different from the x402 long tail: those are single one-cent
+  calls from wallets we never see again, and this is a repeat visitor with one
+  recurring purchase at a price that matters. Two surveys is still not a
+  pattern, and the concentration numbers do not move — they sit outside the
+  x402 payer measure entirely, which is itself worth knowing.
+
+  **The one thing they asked for and could not get:** `price-compare` for the
+  US, tried twice three minutes apart on 2026-09-16, refused because coverage
+  is Nordic-only (PriceRunner) and no licensed US source exists. Not charged.
+  A named coverage gap hit by the buyer currently evaluating us — unlike the
+  German name-matching gap, this one needs a licensed source, not a code
+  change, so it is a vendor question and therefore founder-gated if pursued.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |

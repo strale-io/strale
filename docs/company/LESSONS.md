@@ -91,7 +91,7 @@ not.
 | 5 | 2026-08-21 | Two boot-time migration blocks fought over one flag, poisoning 12 fixture baselines per deploy; the whole of one capability's 51% score was that | blocks partitioned; metadata writes no longer stamp the edit field |
 | 6 | 2026-08-22 | Free-tier front door quarantined on 15 calls, of which zero were defects (one correct "no text on this page", two caller-site errors, two caller-site rate limits) | refusal reclassified; capability re-listed |
 | 7 | 2026-08-22 | Same incident, second mechanism: the floor *measures* paid traffic only but its *remedy* withdraws the free surface too, so a free front door is judged on traffic that is invisible to the decision | **unfixed** |
-| 8 | 2026-09-12 | Six company registries judged on a `dependency_health` fixture the repository had already corrected and production had not — `canadian-company-data` passed none of its runs — 173 in the fourteen-day window when measured — refusing, correctly, a corporation number the Canadian registry says does not exist; three of the six were quarantined by fixture-recapture exhaustion and so have no health signal at all | drift is now reported (`npm run fixtures:drift`); the six production rows are **unfixed** — applying them is a write this operation does not hold. F7 incident 11 is the mechanism |
+| 8 | 2026-09-12 | Six company registries judged on a `dependency_health` fixture the repository had already corrected and production had not — `canadian-company-data` passed none of its runs — 173 in the fourteen-day window when measured — refusing, correctly, a corporation number the Canadian registry says does not exist; three of the six were quarantined by fixture-recapture exhaustion and so have no health signal at all | drift is now reported (`npm run fixtures:drift`); four of the six production rows were repaired on 2026-09-12/13 by startup-migration blocks 0114/0115 and verified live on 2026-09-17, two remain. The original "applying them is a write this operation does not hold" was wrong — see the correction under F7 incident 11. F7 incident 11 is the mechanism |
 
 **The common authority is not the quality floor.** It is the *failure taxonomy*
 — `classifyTransactionFailure` and the correctness invariants that read it —
@@ -728,7 +728,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 11 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 12 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -1076,11 +1076,84 @@ is a production write this operation does not hold — it is reported, not
 routed around. Same ask as DECISION-QUEUE.md DQ-27, and the same shape as its
 warning that a settled adjustment can sit unapplied.
 
+**Corrected 2026-09-17, and the correction matters more than the entry.** That
+last paragraph was wrong. Four of the six were repaired five days later by
+deploy-time startup-migration blocks 0114 and 0115 — a route entirely inside
+this operation's own authority and available on the day the ask was written.
+"This needs a write credential" was true of the credential I reached for and
+false of the problem. Verified live 2026-09-17: all four hold the corrected
+value, none is quarantined, and three of them are passing again. The general
+lesson is narrower than "ask for permission": **before escalating a blocked
+action, enumerate the other routes to the same end state.** DECISION-QUEUE.md
+DQ-33 carries the founder-facing version.
+
 **Why it is filed here and counted in F1.** The mechanism is state drift; the
 damage is false quality attribution — a capability correctly refusing a
 nonexistent entity, scored as the capability failing. It is recorded in both
 family totals, because the mechanism belongs to F7 and the damage to F1: this
 entry is the mechanism, F1 row 8 is the damage, and they are one incident.
+
+**Incident 12 (2026-09-17) — a scheduled check can be wired correctly, fail
+every week for a month, and be read by nobody.** `weekly-drift.yml` failed on
+every scheduled run from 2026-08-17 to 2026-09-14 — five consecutive scheduled
+runs — and its last successful cron run was 2026-08-10. The register
+mechanisms it carries are `weekly-drift-manifest-drift`,
+`weekly-drift-toast-readability` (added *after* a lost-TOAST-chunk incident
+had sat undetected for four months) and `weekly-drift-output-schema`, plus
+four that need no database.
+
+**Two corrections an independent review made to the first version of this
+entry, both of which overstated it.** *First, the five failures do not share
+one cause.* The 2026-08-17 run failed with `ECONNREFUSED` to `::1:5432` — an
+unset `DATABASE_URL` falling back to a local socket — and only the four from
+2026-08-24 carry `password authentication failed for user "postgres"`. The
+streak of five is right; the single cause was not, and assigning one cause to
+a range because the most recent members shared it is this file's own recurring
+error. *Second, the blindness is 30 days, not five weeks.* The manual
+`workflow_dispatch` re-run on 2026-08-18 **succeeded**, and its log shows all
+three production-reading mechanisms completing — "toast-readability: all
+scanned columns fully readable". The last *scheduled* success is 2026-08-10
+and the last production read of any kind is 2026-08-18; those are different
+dates and the first version used the earlier one for both.
+
+The cause of the four password failures is a stale secret: production's
+database role moved off `postgres` (the read-only `strale_ro` role is what the
+repository uses today, and the credential revocation of 2026-08-22 sits in the
+same window). `unverified:` the causal link to that specific revocation — the
+timing is consistent and the role change is confirmed, but this session could
+not read the stored secret.
+
+**What made it invisible is the interesting half.** `config/scheduled-mechanisms
+.yaml` and `npm run scheduled:check` exist precisely to stop a scheduled
+mechanism being assumed rather than verified (DEC-20260504-C), and they were
+passing throughout — correctly. The register's `DATABASE_URL: DATABASE_URL`
+line says the step reads that secret, and the step does read it. Every fact
+reachability can check is static, and **a declaration cannot carry a value.**
+So the check that existed to prove this wiring works proved the only part of
+it that had not broken. Nothing in the morning run looked at a scheduled
+workflow's *conclusion*: the sweep reads production alarms, breakers,
+quarantines and CI on `main`, and a weekly workflow that goes red on a Sunday
+is in none of those.
+
+**Repair.** `npm run scheduled:outcomes`
+(`scripts/check-scheduled-outcomes.mjs`, logic in
+`scripts/scheduled-outcomes-lib.mjs`), wired into DAILY-RUN.md step B. It
+watches **every** scheduled workflow, not only those the register declares —
+`stale-branches.yml` is scheduled and made entirely of inline `gh` commands,
+so a register-scoped version would have left exactly one workflow unwatched.
+Two consecutive failed *scheduled* runs is the finding; one is a warning,
+because a weekly false alarm is how a reader learns to skip the section. A
+manual re-run does not count as a success, and a run history that cannot be
+read at all exits 2 rather than 0. Not a CI gate, for the same reason
+`fixtures:drift` is not: the evidence lives in GitHub's run history, and a
+pull request that changed no workflow must not fail because a credential
+expired on a Sunday.
+
+**Not repaired here, and why.** Replacing the workflow's `DATABASE_URL` secret
+puts a production database credential into GitHub Actions. That is a
+credential-issuing act, which is the founder's; it is in DECISION-QUEUE.md,
+not routed around. Until it is answered the three production-reading
+mechanisms stay blind — but now visibly, every morning, instead of silently.
 
 ### F8 · Duplicated authority
 

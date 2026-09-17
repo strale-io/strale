@@ -14,6 +14,42 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-34** · `your_call` · owner Petter · raised 2026-09-17T19:30Z · no deadline — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
+Once a week an automated sweep checks seven things that can quietly drift apart
+— among them whether what our records say about each service matches what the
+live system holds, and whether the compliance evidence we store is still
+readable. Three of the seven need to read the live database. They cannot: the
+sweep signs in with a database account we stopped using, and every weekly run
+since 24 August has failed at that step.
+*What was measured (two independent ways, this evening, and corrected after an
+independent review):* the run history shows five consecutive failed weekly runs.
+Four of them fail on the password; the fifth, on 17 August, failed earlier and
+for a different reason. Someone re-ran the sweep by hand on 18 August and that
+run **succeeded** — so the three database checks last worked on 18 August, a
+month ago, not five weeks. The error on the four names the account, and the
+account named is not the one this machine uses today. The timing sits inside
+the window in which we revoked a set of credentials after finding one exposed,
+though I cannot prove that revocation is what broke it.
+*Sized before escalating:* nothing a customer touches is affected — the sweep
+only reads and reports. The cost is that three drift checks have been blind for
+a month, one of which exists because a data-corruption problem once went
+unnoticed for four months. No corruption is known; the point is that we would
+not currently know.
+*Why it is here and not done:* fixing it means putting a live database password
+into our code-hosting provider's secret store. Issuing or placing a credential
+as the company is yours, not mine, and being sure which password is right is not
+the same as having permission to install it.
+*What I did instead:* built the morning check that would have caught this in
+week one (`npm run scheduled:outcomes`) and wired it into the daily run. It
+watches every scheduled job, treats two consecutive weekly failures as a
+finding, and refuses to report "clean" when it cannot see. From tomorrow this is
+visible every morning instead of silently red.
+*If you do nothing:* the three checks stay blind and the morning brief keeps
+reporting it. The other four in that sweep need no database and do still run —
+verified in the run's own output, where they report their results normally —
+so this is three checks out of seven, not all seven.
+*How you'd reverse it:* remove the secret again; nothing else changes.
+
 **DQ-33** · `your_call` · owner Petter · raised 2026-09-12T06:30Z · no deadline — **six company registries are being health-checked with a test input we already know is wrong, and correcting it is a database write I cannot make**
 Six of our company-registry services are judged every day by a check that uses
 a lookup value that does not work. The right values are already written down in
@@ -47,6 +83,29 @@ the parked write credential — and it is the third time a settled correction ha
 been recorded without reaching production, which DQ-27 predicted would make it
 a family. Logged as LESSONS.md F7 incident 11 / F1 row 8.
 *How you'd reverse it:* nothing to reverse; this is a request for a route.
+*Update 2026-09-17 — four of the six are already fixed, and not by the route
+this asked for.* Two deploy-time repair steps shipped on 12 and 13 September
+(they run once when new code goes live, which is ordinary engineering and needs
+no separate permission) corrected the Canadian, Irish, Lithuanian and Swiss
+values. Verified in the live system this evening: all four now hold the
+corrected value, none is quarantined any more, and the Canadian, Irish and
+Swiss checks are passing again — 58 of 61, 58 of 60 and 59 of 60 over the last
+five days, against none at all before. The Lithuanian one still fails every
+run — 62 of 62 since its value was corrected — but for an unrelated reason
+that is not this entry's subject: it gets a server error from the Lithuanian
+data portal. That error does **not** reproduce from this machine against the
+same addresses, including the multi-page sequence the service actually walks,
+so it is something about where our live system sits rather than the registry
+being down; diagnosing it needs the live environment and is queued as ordinary
+engineering, not as anything for you. **So this was never a request only you could grant, and I should
+have found the deploy-time route on 12 September rather than asking.** What
+remains is two: the Spanish one, whose corrected value I verified working this
+evening and which the same deploy-time route can fix — queued as the next
+session's first task, needing nothing from you — and the German one, which
+cannot be verified from here at all because its supplier key exists only in the
+live environment, and correcting it to an unverified value would replace a
+known-wrong test with an unknown one. This entry stays open until you close it;
+I am recording what changed, not deciding it is closed.
 
 **DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
 *Answered:* Petter, in chat, accepting the recommendation: the repo-native
