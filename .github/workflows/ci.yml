@@ -534,8 +534,9 @@ jobs:
       # Scheduled OUTCOMES (scripts/scheduled-outcomes-lib.mjs). The check
       # above proves a scheduled mechanism is reachable; every fact it reads
       # is static, and all of them stayed true through five consecutive
-      # failed Sunday runs of weekly-drift.yml (2026-08-17 to 2026-09-14) on
-      # a DATABASE_URL secret whose value had stopped authenticating. Only
+      # failed scheduled runs of weekly-drift.yml (2026-08-17 to 2026-09-14),
+      # the last four of them on a DATABASE_URL secret whose value had stopped
+      # authenticating (the fifth failed earlier, for another reason). Only
       # the TESTS run here: the check itself reads GitHub's run history, so
       # a pull request that changed no workflow must not fail because a
       # credential expired on a Sunday. It runs in the morning sweep

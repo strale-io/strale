@@ -130,13 +130,17 @@ remembering which vendor dashboard needs a manual check.
 > script, and that step reads the secrets the register names. Every one of
 > those facts is static, and every one of them was true on 2026-09-17 while
 > `weekly-drift.yml` had failed **five consecutive scheduled runs** (its last
-> green cron run was 2026-08-10) with `password authentication failed for
-> user "postgres"`. The register's `DATABASE_URL: DATABASE_URL` line was
-> still accurate — the step does read that secret; the secret's *value* had
-> stopped authenticating after the August credential revocation, and a
-> declaration cannot carry a value. Seven drift mechanisms hang off that one
-> workflow, three of them reading production. Nothing in this run looked at a
-> scheduled workflow's conclusion, so the red was never read. The check
+> green cron run was 2026-08-10). The four from 2026-08-24 fail with
+> `password authentication failed for user "postgres"`; the one before them
+> failed earlier and differently, and reading one cause across a whole streak
+> because its recent members share one is a mistake this file has made before.
+> The register's `DATABASE_URL: DATABASE_URL` line was still accurate — the
+> step does read that secret; the secret's *value* had stopped authenticating,
+> and a declaration cannot carry a value. Seven drift mechanisms hang off that
+> one workflow, three of them reading production; those three last read it on
+> 2026-08-18 via a manual re-run that succeeded, so measure the blindness from
+> there rather than from the streak. Nothing in this run looked at a scheduled
+> workflow's conclusion, so the red was never read. The check
 > watches every scheduled workflow, not only the ones the register declares,
 > and treats two consecutive failed *scheduled* runs as a finding — a manual
 > re-run someone kicked off to look at the failure is not evidence the cron

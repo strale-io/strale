@@ -8,15 +8,20 @@
  * one of them was true on 2026-09-17 for three mechanisms that had not
  * completed a single successful run since 2026-08-18.
  *
- * `weekly-drift.yml` failed on every scheduled run from 2026-08-24 to
- * 2026-09-14 — four consecutive Sundays — with
- * `password authentication failed for user "postgres"`. The register's
- * `DATABASE_URL: DATABASE_URL` declaration was still correct: the step does
- * read that secret. The secret's *value* had stopped authenticating, and a
- * declaration cannot carry a value. Three production-reading drift checks
- * (`sweep-manifest-drift`, `toast-readability`, `output-schema`) were blind
- * for four weeks, and nothing in the morning run looked at a scheduled
- * workflow's conclusion, so nobody read the red.
+ * `weekly-drift.yml` failed on five consecutive scheduled runs, 2026-08-17 to
+ * 2026-09-14; its last successful cron run was 2026-08-10. The four from
+ * 2026-08-24 fail with `password authentication failed for user "postgres"`
+ * (2026-08-17 failed earlier, on ECONNREFUSED to a local socket — the streak
+ * is real, the single cause was not, and an independent review caught that
+ * conflation). The register's `DATABASE_URL: DATABASE_URL` declaration was
+ * still correct throughout: the step does read that secret. The secret's
+ * *value* had stopped authenticating, and a declaration cannot carry a value.
+ * Three production-reading drift mechanisms — `weekly-drift-manifest-drift`,
+ * `weekly-drift-toast-readability`, `weekly-drift-output-schema` — last read
+ * production on 2026-08-18, via a manual re-run that succeeded, so the
+ * blindness is a month rather than the five weeks the streak suggests. Nothing
+ * in the morning run looked at a scheduled workflow's conclusion, so nobody
+ * read the red.
  *
  * This library answers the other question: when the mechanism last ran, did
  * it succeed? It is deliberately pure — it takes run lists as data, so the
@@ -41,7 +46,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
-import { hasScheduleTrigger } from "./scheduled-reachability-lib.mjs";
+import { hasScheduleTrigger, parseWorkflowFile } from "./scheduled-reachability-lib.mjs";
 import { repoRootFrom } from "./program-tracks-lib.mjs";
 
 export { repoRootFrom };
@@ -69,9 +74,25 @@ export const CONSECUTIVE_FAILURE_THRESHOLD = 2;
  * a GitHub Actions workflow at all) contribute nothing: there is no run
  * history to read.
  */
-export function scheduledWorkflows(root) {
+export function scheduledWorkflows(root, { listFiles = (dir) => readdirSync(dir) } = {}) {
   const mechanismsByWorkflow = new Map();
-  const doc = parseYaml(readFileSync(resolve(root, REGISTER_PATH), "utf8"));
+  const unreadable = [];
+
+  let doc = null;
+  try {
+    doc = parseYaml(readFileSync(resolve(root, REGISTER_PATH), "utf8"));
+  } catch (err) {
+    // The register is evidence, not the subject. A malformed one must not
+    // stop the check reading run history; it becomes its own finding.
+    unreadable.push({
+      code: "REGISTER_UNREADABLE",
+      severity: "warning",
+      workflow: REGISTER_PATH,
+      mechanisms: [],
+      detail: `could not read ${REGISTER_PATH}: ${err.message} — mechanism names are omitted, workflows are still watched`,
+      facts: null,
+    });
+  }
   for (const m of doc?.mechanisms ?? []) {
     if (m?.verifiable === false) continue;
     if (m?.trigger !== "schedule") continue;
@@ -80,14 +101,48 @@ export function scheduledWorkflows(root) {
   }
 
   const out = [];
-  for (const file of readdirSync(resolve(root, WORKFLOWS_DIR)).sort()) {
+  let files;
+  try {
+    // Not sorted here: the single source of ordering is the sort on the way
+    // out. `listFiles` is injectable only so a test can hand this an unsorted
+    // listing — readdirSync happens to return alphabetical order on the
+    // filesystems we run on, which made the sort look redundant to a mutation
+    // run against real directories. POSIX does not promise that order.
+    files = listFiles(resolve(root, WORKFLOWS_DIR));
+  } catch (err) {
+    unreadable.push({
+      code: "WORKFLOWS_DIR_UNREADABLE",
+      severity: "failure",
+      workflow: WORKFLOWS_DIR,
+      mechanisms: [],
+      detail: `could not list ${WORKFLOWS_DIR}: ${err.message}`,
+      facts: null,
+    });
+    return { workflows: out, unreadable };
+  }
+
+  for (const file of files) {
     if (!/\.ya?ml$/.test(file)) continue;
     const path = `${WORKFLOWS_DIR}/${file}`;
-    const workflow = parseYaml(readFileSync(join(resolve(root, WORKFLOWS_DIR), file), "utf8"));
-    if (!hasScheduleTrigger(workflow)) continue;
+    // parseWorkflowFile never throws — it returns a finding instead. A
+    // workflow this check cannot parse is one whose schedule it cannot see,
+    // which is a finding, never a silent exclusion.
+    const parsed = parseWorkflowFile(root, path);
+    if (!parsed.ok) {
+      unreadable.push({
+        code: "WORKFLOW_UNREADABLE",
+        severity: "failure",
+        workflow: path,
+        mechanisms: mechanismsByWorkflow.get(path) ?? [],
+        detail: `${parsed.finding.detail} — this check cannot tell whether it is scheduled`,
+        facts: null,
+      });
+      continue;
+    }
+    if (!hasScheduleTrigger(parsed.workflow)) continue;
     out.push({ workflow: path, mechanisms: mechanismsByWorkflow.get(path) ?? [] });
   }
-  return out.sort((a, b) => a.workflow.localeCompare(b.workflow));
+  return { workflows: out.sort((a, b) => a.workflow.localeCompare(b.workflow)), unreadable };
 }
 
 /**
@@ -187,14 +242,82 @@ export function assessWorkflow({ workflow, mechanisms, runs }) {
 }
 
 /**
- * Assess every declared scheduled workflow. `runsByWorkflow` maps the
- * register's workflow path to its run list; a workflow absent from the map
- * is reported as having no runs rather than skipped, so a fetch that
- * silently returned nothing cannot read as clean.
+ * The `gh` argv for one workflow's run history. Extracted so a test can
+ * assert on it: the whole network half of this tool was untested until a
+ * review pointed out that lowering the default `--limit` to 1 made the real
+ * five-failure history read as a single flake — a warning, exit 0 — with all
+ * twelve tests still green.
  */
-export function assessAll({ workflows, runsByWorkflow }) {
-  const results = [];
+export function ghRunListArgs(workflowPath, limit) {
+  return [
+    "run",
+    "list",
+    "--workflow",
+    workflowPath.slice(workflowPath.lastIndexOf("/") + 1),
+    "--limit",
+    String(limit),
+    "--json",
+    "conclusion,createdAt,event,databaseId",
+  ];
+}
+
+/**
+ * The default number of runs fetched per workflow. It must comfortably
+ * exceed the longest failure streak worth reporting: at 1 a five-run streak
+ * reads as a flake and the check exits 0.
+ */
+export const DEFAULT_RUN_LIMIT = 20;
+
+/**
+ * Fetch each workflow's history, isolating the failures.
+ *
+ * `run` is injected (`(args) => string`) so tests drive it without `gh`. One
+ * workflow that cannot be read — renamed, added on a branch, `gh` returning
+ * 404 — becomes its own finding and the others are still read. Before this,
+ * a single 404 aborted the whole fetch and the morning sweep printed
+ * "could not read scheduled run history", making the weekly-drift finding
+ * disappear from the tool built to surface it.
+ */
+function firstLine(err) {
+  const text = String(err?.message ?? err);
+  const nl = text.indexOf(String.fromCharCode(10));
+  return (nl === -1 ? text : text.slice(0, nl)).trim();
+}
+
+export function fetchRunsPerWorkflow({ workflows, limit, run }) {
+  const runsByWorkflow = {};
+  const unreadable = [];
   for (const w of workflows) {
+    try {
+      const parsed = JSON.parse(run(ghRunListArgs(w.workflow, limit)));
+      if (!Array.isArray(parsed)) throw new Error("run list was not an array");
+      runsByWorkflow[w.workflow] = parsed;
+    } catch (err) {
+      unreadable.push({
+        code: "RUN_HISTORY_UNREADABLE",
+        severity: "failure",
+        workflow: w.workflow,
+        mechanisms: w.mechanisms,
+        detail: `could not read this workflow's run history: ${firstLine(err)}`,
+        facts: null,
+      });
+    }
+  }
+  return { runsByWorkflow, unreadable };
+}
+
+/**
+ * Assess every scheduled workflow. `runsByWorkflow` maps the workflow path to
+ * its run list; a workflow absent from the map is reported as having no runs
+ * rather than skipped, so a fetch that silently returned nothing cannot read
+ * as clean. A workflow that already has an `unreadable` finding is skipped
+ * here, so one problem is not reported twice under two codes.
+ */
+export function assessAll({ workflows, runsByWorkflow, unreadable = [] }) {
+  const alreadyReported = new Set(unreadable.map((u) => u.workflow));
+  const results = [...unreadable];
+  for (const w of workflows) {
+    if (alreadyReported.has(w.workflow)) continue;
     const finding = assessWorkflow({
       workflow: w.workflow,
       mechanisms: w.mechanisms,

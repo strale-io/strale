@@ -1,0 +1,76 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "a1cbb686d5476097e1cdc09859927eeec3e5223a"
+  },
+  "at": "2026-09-17T20:26:10.317Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/2e1f23e7-64ad-46ed-81a4-8639a0ae5de0/scratchpad/receipt.json"
+  },
+  "summary": {
+    "suite": "scripts/scheduled-outcomes.test.mjs",
+    "command": "node --test scripts/scheduled-outcomes.test.mjs (cwd repo root)",
+    "test_files_passed": 1,
+    "tests_passed": 24,
+    "tests_failed": 0
+  },
+  "topic": "scheduled-outcomes-guard",
+  "raw": {
+    "suite": "scripts/scheduled-outcomes.test.mjs",
+    "command": "node --test scripts/scheduled-outcomes.test.mjs (cwd repo root)",
+    "test_files_passed": 1,
+    "tests_passed": 24,
+    "tests_failed": 0,
+    "mutation_verification": [
+      {
+        "mutation": "drop the `event === \"schedule\"` filter in classifyRuns",
+        "result": "7 failed — a manual workflow_dispatch re-run would count as a scheduled success"
+      },
+      {
+        "mutation": "CONSECUTIVE_FAILURE_THRESHOLD 2 -> 1",
+        "result": "7 failed — a single flake would be reported as a finding"
+      },
+      {
+        "mutation": "a workflow absent from the fetch reads as one successful run",
+        "result": "3 failed — a fetch that returned nothing would read as clean"
+      },
+      {
+        "mutation": "DEFAULT_RUN_LIMIT 20 -> 1",
+        "result": "3 failed — at limit 1 the real five-failure history reads as a flake, warning, exit 0. Found by the independent review; survived the first suite."
+      },
+      {
+        "mutation": "drop the workflow sort",
+        "result": "3 failed — report order would follow whatever the filesystem listed. Found by the independent review; needed an injected directory listing to discriminate, because readdirSync happens to return alphabetical order here."
+      },
+      {
+        "mutation": "`warnings: results` instead of partitioning on severity",
+        "result": "5 failed — findings would also appear as warnings. Found by the independent review; survived the first suite because no test had both in one call."
+      },
+      {
+        "mutation": "drop the register's `verifiable: false` and `trigger !== schedule` filters",
+        "result": "3 failed — mechanism ids would attach to workflows that do not own them. Found by the independent review; needed a planted register to discriminate, because the committed register's only verifiable:false entry names no workflow file."
+      },
+      {
+        "mutation": "accept a run list that is not an array",
+        "result": "3 failed — a `gh` error object would read as an empty history"
+      },
+      {
+        "mutation": "drop `event` from the ghRunListArgs --json field list",
+        "result": "3 failed — the manual-re-run filter would have no field to read"
+      },
+      {
+        "mutation": "`--runs-json` with no value falls through to the network",
+        "result": "1 failed — the flag would silently hit `gh` instead of refusing"
+      },
+      {
+        "mutation": "an unparseable workflow is silently skipped instead of reported",
+        "result": "3 failed — a workflow whose schedule cannot be read would vanish from the report"
+      }
+    ],
+    "notes": [
+      "Eleven mutations, every one caught. Four of them were found by an independent read-only review that ran its own mutation pass against the first version of this suite and reported them surviving; the tests added for those four are the reason they now fail.",
+      "The check was also run against the real GitHub run history, where it reports SCHEDULED_WORKFLOW_FAILING on .github/workflows/weekly-drift.yml: 5 consecutive failed scheduled runs, last successful scheduled run 2026-08-10T08:25:53Z."
+    ]
+  }
+}

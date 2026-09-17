@@ -14,21 +14,25 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-34** · `your_call` · owner Petter · raised 2026-09-17T19:30Z · no deadline — **our weekly automated sweep has not completed a single run since 10 August, because the password it uses to read the live database no longer works**
+**DQ-34** · `your_call` · owner Petter · raised 2026-09-17T19:30Z · no deadline — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
 Once a week an automated sweep checks seven things that can quietly drift apart
 — among them whether what our records say about each service matches what the
 live system holds, and whether the compliance evidence we store is still
-readable. Three of the seven need to read the live database. Since 10 August
-they cannot: the sweep signs in with a database account we stopped using, and
-every weekly run since has failed at that step.
-*What was measured (two independent ways, this evening):* the run history shows
-five consecutive failed weekly runs and one manual re-run in between; the error
-names the account, and the account named is not the one this machine uses today.
-The timing sits inside the window in which we revoked a set of credentials after
-finding one of them exposed.
+readable. Three of the seven need to read the live database. They cannot: the
+sweep signs in with a database account we stopped using, and every weekly run
+since 24 August has failed at that step.
+*What was measured (two independent ways, this evening, and corrected after an
+independent review):* the run history shows five consecutive failed weekly runs.
+Four of them fail on the password; the fifth, on 17 August, failed earlier and
+for a different reason. Someone re-ran the sweep by hand on 18 August and that
+run **succeeded** — so the three database checks last worked on 18 August, a
+month ago, not five weeks. The error on the four names the account, and the
+account named is not the one this machine uses today. The timing sits inside
+the window in which we revoked a set of credentials after finding one exposed,
+though I cannot prove that revocation is what broke it.
 *Sized before escalating:* nothing a customer touches is affected — the sweep
 only reads and reports. The cost is that three drift checks have been blind for
-five weeks, one of which exists because a data-corruption problem once went
+a month, one of which exists because a data-corruption problem once went
 unnoticed for four months. No corruption is known; the point is that we would
 not currently know.
 *Why it is here and not done:* fixing it means putting a live database password

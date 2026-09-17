@@ -16,16 +16,21 @@ days. `unverified:` why — the task definition lives outside version control
 
 ## Headline
 
-1. **A scheduled check can be wired correctly, fail every week for five weeks,
+1. **A scheduled check can be wired correctly, fail every week for a month,
    and be read by nobody.** `weekly-drift.yml` has failed **five consecutive
    scheduled runs**; its last successful cron run was **2026-08-10**, and the
-   only green since is a manual re-run on 2026-08-18. Every failure is
-   `password authentication failed for user "postgres"` — production's role
-   moved to the read-only `strale_ro` and the workflow's `DATABASE_URL` secret
-   did not. Seven drift mechanisms hang off that one workflow and three read
-   production, including the TOAST-readability pass added *after* a corruption
-   incident sat undetected for four months. `npm run scheduled:check` passed
-   throughout, correctly: **a declaration cannot carry a value.** Shipped:
+   only green since is a manual re-run on 2026-08-18. The four failures from
+   2026-08-24 are `password authentication failed for user "postgres"` —
+   production's role moved to the read-only `strale_ro` and the workflow's
+   `DATABASE_URL` secret did not. (The fifth, 2026-08-17, failed earlier and
+   differently, on `ECONNREFUSED` to a local socket; **and the 2026-08-18
+   manual re-run succeeded, reading production**, so the blindness is 30 days,
+   not five weeks. Both corrections came from the independent review — see
+   section F — and both were in the first version of this record.) Seven drift
+   mechanisms hang off that one workflow and three read production, including
+   the TOAST-readability pass added *after* a corruption incident sat
+   undetected for four months. `npm run scheduled:check` passed throughout,
+   correctly: **a declaration cannot carry a value.** Shipped:
    `npm run scheduled:outcomes` (PR #683). The secret itself is founder-gated →
    **DQ-34**.
 2. **DQ-33 was never a request only the founder could grant, and I should have
@@ -306,10 +311,11 @@ corrected it against the log.
   in GitHub's run history, and a PR that changed no workflow must not fail
   because a credential expired on a Sunday. Only the tests run in CI.
 
-**Tests discriminate — verified by mutation, not asserted.** Dropping the
-`event === "schedule"` filter fails 3; `CONSECUTIVE_FAILURE_THRESHOLD` 2 → 1
-fails 1; making an absent workflow read clean fails 1. Each was run and
-reverted.
+**Tests discriminate — verified by mutation, not asserted.** Eleven mutations,
+every one caught; receipt
+`archive/receipts/2026-09-17-test-run-scheduled-outcomes-guard.json`. Four of
+the eleven were found *by the review* against the first version of this suite
+and are the reason it grew from 12 tests to 24 — see section F.
 
 **Not done, deliberately.** Replacing the secret puts a production database
 credential into GitHub Actions — a credential-issuing act, which is the
@@ -435,6 +441,108 @@ a decision, because one buyer's afternoon is not yet a product brief.
 - `docs/programs/cto-readiness/tracks.yaml` — T7's `next_action` rewritten:
   batches 1d/4/5/6 are merged, batch 7 is PR #682 with its rescued follow-up
   and its do-not-merge-as-it-stands reason, owner and deadline.
+
+## F. Independent review of this batch, and what it changed
+
+PR #683 was reviewed by a fresh read-only agent in a separate context (the
+2026-09-07 policy route). Verdict **PASS WITH FINDINGS**. It confirmed every
+load-bearing *count* independently — the five-run streak with every event and
+conclusion, the 2026-08-10 last green, the 2026-08-18 dispatch, the seven
+register mechanisms and their three `DATABASE_URL` readers, `scheduled:check`
+passing, all three named mutations, all three CLI exit paths, the inventory,
+the whole `check` job (42 gates, all passing), and the DQ-33 production numbers
+against production read-only. **What it falsified was the prose.**
+
+**Two must-fix findings, both accepted, both about claims Petter reads.**
+
+1. **The five failures do not share one cause.** `gh run view 32007709257
+   --log-failed` on the 2026-08-17 run gives `AggregateError [ECONNREFUSED]`
+   to `::1:5432` and `127.0.0.1:5432` — an unset `DATABASE_URL` falling back
+   to a local socket — with no `28P01` anywhere. Only the four from 2026-08-24
+   carry the password failure. I reproduced this myself before accepting it.
+   The streak of five is right; assigning the recent members' cause to the
+   whole range is not, and it is the same move as reading a failure count as
+   one cause, which DAILY-RUN.md warns about in its own step B.
+2. **"Blind for five weeks" is contradicted by evidence the PR itself cited.**
+   The 2026-08-18 `workflow_dispatch` re-run **succeeded**, and its log shows
+   all three production-reading mechanisms completing —
+   `toast-readability: all scanned columns fully readable`. Reproduced.
+   The last *scheduled* success (2026-08-10) and the last production read of
+   any kind (2026-08-18) are different dates, and I had used the earlier one
+   for both. Blindness is **30 days**. DQ-34's headline said "has not completed
+   a single run since 10 August" while DQ-34's own body two paragraphs down
+   said "one manual re-run in between" — the headline is the part that shows in
+   the panel.
+
+**Four surviving mutations, all in the half the first suite never touched: the
+network path.** The reviewer ran its own mutation pass and reported these
+passing 12/12:
+
+| mutation | why it mattered |
+|---|---|
+| `DEFAULT_RUN_LIMIT` 20 → 1 | the real five-failure history reads as one flake → warning → **exit 0**. The tool reporting "all clear" on the exact history it was built for. |
+| drop both workflow sorts | report order would follow the filesystem |
+| `warnings: results` (no partition) | findings would also be printed as warnings |
+| drop the register's `verifiable:false` / `trigger` filters | mechanism ids attach to workflows that do not own them |
+
+Every test passed `--runs-json`, so nothing exercised the default limit, the
+`gh` argv, the fetch loop or the JSON parse. Fixed by extracting
+`ghRunListArgs`, `fetchRunsPerWorkflow` and `DEFAULT_RUN_LIMIT` as injectable
+units and testing them. Two of the four needed more than a test to become
+discriminating: the sort mutation is a no-op against a real directory because
+`readdirSync` returns alphabetical order here, so the listing is now injected
+unsorted and the redundant second sort removed; and the register filters are
+a no-op against the committed register because its only `verifiable: false`
+entry names no workflow file, so the test plants a register where the excluded
+entries *do* name one.
+
+**Three should-fix findings, all real defects in the new tool, all fixed.**
+
+- **One unreadable workflow aborted the whole fetch.** The loop was inside a
+  single `try`, so a `gh` 404 on a renamed or branch-only workflow made the
+  morning sweep print "could not read scheduled run history" — and the
+  weekly-drift finding would have vanished, in the tool built to stop exactly
+  that. Now per-workflow: `RUN_HISTORY_UNREADABLE` is its own failure-level
+  finding and every other workflow is still read.
+- **An unparseable workflow YAML threw**, outside the try/catch, exiting 1 with
+  a raw stack trace where the header promises 2. Now uses
+  `parseWorkflowFile` from the sibling reachability lib — documented as never
+  throwing — and reports `WORKFLOW_UNREADABLE`. A malformed *register* is a
+  warning rather than a failure, because the register supplies names, not the
+  subject.
+- **`--runs-json` with no value silently went to the network.** `argv[i+1]`
+  was `undefined`, which is falsy. Both flags now reject a missing value or a
+  value that is itself a flag, with exit 2.
+
+**Five notes, four acted on.** The test fixture claimed to be verbatim run
+history and had four rounded timestamps and two omitted failed dispatch runs —
+replaced with the real twelve rows, `gh` ids and all. The three "mechanisms"
+named in prose were script names, not register ids (`sweep-manifest-drift` vs
+`weekly-drift-manifest-drift`); the CLI always printed the right ones, the
+prose now does too. The PR said 39 gates where there are 42. And the missing
+receipt is written:
+`archive/receipts/2026-09-17-test-run-scheduled-outcomes-guard.json`, carrying
+all eleven mutations.
+
+**One note left open, deliberately.** Nothing machine-verifies that
+`scheduled:outcomes` is actually run each morning — it exists as prose in
+DAILY-RUN.md, which is the same shape of declaration this incident is about.
+`fixtures:drift` has the same gap. Making a morning-sweep step machine-checked
+is its own piece of work (it needs a record of what the sweep ran, which does
+not exist), and inventing it inside this batch would be worse than naming it.
+**Owner:** a future session. **Deadline:** none set; it is a hardening item,
+not a defect.
+
+**Two things the reviewer could not verify, recorded as it left them.** That
+the 2026-08-22 credential revocation is what broke the secret — timing is
+consistent and the role change is confirmed, but neither of us can read the
+stored value, and DQ-34 now hedges accordingly. And whether the German
+registry fixture's `SAP SE` works, for the reason D2 already gives.
+
+**One difference between its numbers and mine, explained rather than
+reconciled away:** it read `canadian-company-data` at 59/61 where I recorded
+58/61. A passing run landed at 2026-09-17T19:49Z, after my 19:30Z measurement.
+The window rolls; both are right at their own time.
 
 ## Next session
 
