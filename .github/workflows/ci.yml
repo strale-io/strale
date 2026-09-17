@@ -545,14 +545,21 @@ jobs:
       - run: npm run scheduled:check
       - run: npm run scheduled:test
       # Notion anti-regression check (M4 batch 7, migration plan M6 fixture
-      # 4): scans every tracked file for a reintroduced NOTION_API_KEY,
-      # NOTION_TOKEN, api.notion.com, @notionhq, or Notion MCP tool
-      # reference, plus a bare "Notion" instruction reintroduced in
-      # .claude/ or .agents/. Every remaining legitimate mention is
-      # allowlisted by exact path (archive/, handoff/, decision records, or
-      # a handful of named historical documents) or, for two still-live
-      # files, exempted only on a comment line -- a real read added to
-      # either file on a non-comment line still fails this check. Blocking.
+      # 4; review round fix): scans every tracked file, case-insensitively,
+      # for a reintroduced NOTION_API_KEY, NOTION_TOKEN, api.notion.com or
+      # notion.so/api/, @notionhq, or Notion MCP tool reference, plus a
+      # bare "Notion" instruction reintroduced in .claude/ or .agents/.
+      # Every remaining legitimate mention is allowlisted by exact path
+      # (archive/, the write-once handoff/_general/from-code/ subtree,
+      # decision records, or a handful of named historical documents), or,
+      # for two still-live files, exempted only on a comment line -- a real
+      # read added to either file on a non-comment line still fails this
+      # check. An honest prose explanation that Notion is no longer used
+      # can carry the `notion-regression-allow: historical` marker instead
+      # of an allowlist entry; the marker never suppresses a real
+      # credential/API/tool match. This check catches an accidental
+      # reintroduction, not a deliberately concealed one -- see the
+      # library's header for the threat model. Blocking.
       - run: npm run notion-regression:check
       - run: npm run notion-regression:test
       # Model registry (T14, apps/api/src/lib/models.ts): every Claude/

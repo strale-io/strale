@@ -1,10 +1,14 @@
 // Tests for the Notion anti-regression check (M4 batch 7 part one,
-// scripts/no-notion-regression-lib.mjs, scripts/check-no-notion-regression.mjs).
+// scripts/no-notion-regression-lib.mjs, scripts/check-no-notion-regression.mjs;
+// review round fix landed the case-insensitive env-var patterns, the
+// notion.so/api/ host, the narrowed handoff/ allowlist, the removed
+// apps/api/railway-config.md exemption, and the PROSE_HISTORICAL_MARKER).
 // Plants each signal pattern in ordinary executable code outside every
 // allowlist and confirms it fires; confirms each allowlisted item does not
-// fire; and proves an allowlisted file is not a blanket exemption by
+// fire; proves an allowlisted file is not a blanket exemption by
 // planting a genuine new (non-comment) read inside an already-allowlisted
-// file and confirming it still fires.
+// file and confirming it still fires; and proves the prose marker lets an
+// honest explanation pass while never suppressing a real credential match.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -66,6 +70,27 @@ test("api.notion.com match is case-insensitive", () => {
   assert.deepEqual(codes(findings), ["NOTION_API_URL"]);
 });
 
+test("notion.so/api/ (Notion's private API host) outside the allowlist fires", () => {
+  const findings = scan({
+    "apps/api/src/lib/new-thing.ts": 'await fetch("https://www.notion.so/api/v3/loadPageChunk");\n',
+  });
+  assert.deepEqual(codes(findings), ["NOTION_API_URL"]);
+});
+
+test("NOTION_API_KEY match is case-insensitive: a lowercase spelling fires", () => {
+  const findings = scan({
+    "apps/api/src/lib/new-thing.ts": "const key = process.env.notion_api_key;\n",
+  });
+  assert.deepEqual(codes(findings), ["NOTION_API_KEY"]);
+});
+
+test("NOTION_TOKEN match is case-insensitive: a lowercase spelling fires", () => {
+  const findings = scan({
+    "apps/api/src/lib/new-thing.ts": "const token = process.env.notion_token;\n",
+  });
+  assert.deepEqual(codes(findings), ["NOTION_TOKEN"]);
+});
+
 test("@notionhq SDK import outside the allowlist fires", () => {
   const findings = scan({
     "apps/api/src/lib/new-thing.ts": 'import { Client } from "@notionhq/client";\n',
@@ -102,9 +127,31 @@ test("FULL_FILE_ALLOWLIST directory: archive/ is fully exempt", () => {
   assert.deepEqual(findings, []);
 });
 
-test("FULL_FILE_ALLOWLIST directory: handoff/ is fully exempt", () => {
+test("FULL_FILE_ALLOWLIST directory: handoff/_general/from-code/ is fully exempt", () => {
   const findings = scan({
     "handoff/_general/from-code/2026-01-01-example.md": "Removed the last NOTION_TOKEN read.\n",
+  });
+  assert.deepEqual(findings, []);
+});
+
+test("handoff/_general/from-chat/ is NOT exempt: a live instruction surface, not historical (M4 batch 7 review round fix)", () => {
+  const findings = scan({
+    "handoff/_general/from-chat/2026-09-13-example.md": "const token = process.env.NOTION_TOKEN;\n",
+  });
+  assert.deepEqual(codes(findings), ["NOTION_TOKEN"]);
+  assert.equal(findings[0].file, "handoff/_general/from-chat/2026-09-13-example.md");
+});
+
+test("handoff/README.md is exempt (regenerated index of from-code/ and from-chat/ intents)", () => {
+  const findings = scan({
+    "handoff/README.md": "Removed the last NOTION_TOKEN read, per the historical intent line.\n",
+  });
+  assert.deepEqual(findings, []);
+});
+
+test("handoff/_general/README.md is exempt (static historical relocation note)", () => {
+  const findings = scan({
+    "handoff/_general/README.md": "This note used to explain the NOTION_API_KEY-reading digest.\n",
   });
   assert.deepEqual(findings, []);
 });
@@ -130,6 +177,37 @@ test("a directory outside the allowlist named similarly (archive-old/) is NOT ex
     "archive-old/report.md": "NOTION_API_KEY\n",
   });
   assert.deepEqual(codes(findings), ["NOTION_API_KEY"]);
+});
+
+test("FULL_FILE_ALLOWLIST_FILES: docs/operations/distribution-registry.md is fully exempt", () => {
+  const findings = scan({
+    "docs/operations/distribution-registry.md":
+      "This design note cites NOTION_API_KEY and api.notion.com as background for the shadow comparison.\n",
+  });
+  assert.deepEqual(findings, []);
+});
+
+test("FULL_FILE_ALLOWLIST_FILES: apps/api/docs/drift-check-refactor-proposal.md is fully exempt", () => {
+  const findings = scan({
+    "apps/api/docs/drift-check-refactor-proposal.md":
+      "The deferred option would require NOTION_TOKEN at the build step that queries the Roster.\n",
+  });
+  assert.deepEqual(findings, []);
+});
+
+test("FULL_FILE_ALLOWLIST_FILES: docs/programs/cto-readiness/tracks.yaml is fully exempt", () => {
+  const findings = scan({
+    "docs/programs/cto-readiness/tracks.yaml":
+      "next_action: only when NOTION_API_KEY is set, loads the live Notion getPriorities() and compares\n",
+  });
+  assert.deepEqual(findings, []);
+});
+
+test("apps/api/railway-config.md is NO LONGER exempt (removed from FULL_FILE_ALLOWLIST_FILES, M4 batch 7 review round fix): a planted Notion instruction fires", () => {
+  const findings = scan({
+    "apps/api/railway-config.md": "   - `NOTION_TOKEN` (for ship-log / Notion activity)\n",
+  });
+  assert.deepEqual(codes(findings), ["NOTION_TOKEN"]);
 });
 
 // ── COMMENT_ONLY_ALLOWLIST: exempt only on a comment line, never a blanket
@@ -199,6 +277,49 @@ test("a bare 'Notion' mention outside .claude/ and .agents/ is not an instructio
     "docs/company/CHARTER.md": "This used to mention Notion.\n",
   });
   assert.deepEqual(findings, []);
+});
+
+// ── PROSE_HISTORICAL_MARKER: lets honest prose explain Notion's absence
+// without a file-wide allowlist entry, and cannot be used to wave through
+// a real reintroduction (M4 batch 7 review round fix) ────────────────────
+
+test("prose marker: an honest historical explanation in .claude/ with the marker does not fire", () => {
+  const findings = scan({
+    ".claude/commands/example.md":
+      "This step used to write to the Notion Journal; it no longer does. notion-regression-allow: historical\n",
+  });
+  assert.deepEqual(findings, []);
+});
+
+test("prose marker: an honest historical explanation in .agents/ with the marker does not fire", () => {
+  const findings = scan({
+    ".agents/skills/example/SKILL.md":
+      "The Notion To-do DB read described here was retired. notion-regression-allow: historical\n",
+  });
+  assert.deepEqual(findings, []);
+});
+
+test("prose marker: without the marker, the same bare mention still fires (the marker is not a broad exemption)", () => {
+  const findings = scan({
+    ".claude/commands/example.md": "This step used to write to the Notion Journal; it no longer does.\n",
+  });
+  assert.deepEqual(codes(findings), ["NOTION_INSTRUCTION_SURFACE"]);
+});
+
+test("prose marker does NOT suppress a real credential pattern on the same line: cannot be used to reintroduce a live read", () => {
+  const findings = scan({
+    ".claude/commands/example.md":
+      "const token = process.env.NOTION_TOKEN; // notion-regression-allow: historical\n",
+  });
+  assert.deepEqual(codes(findings), ["NOTION_TOKEN"]);
+});
+
+test("prose marker does NOT suppress an api.notion.com reference on the same line", () => {
+  const findings = scan({
+    ".claude/commands/example.md":
+      'await fetch("https://api.notion.com/v1/x"); // notion-regression-allow: historical\n',
+  });
+  assert.deepEqual(codes(findings), ["NOTION_API_URL"]);
 });
 
 test("real repository: checkNoNotionRegression reports zero findings on the committed tree", () => {

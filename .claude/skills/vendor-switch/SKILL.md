@@ -80,7 +80,11 @@ this is your fix list. Update each surface:
 - Frontend public/ static fallbacks (llms.txt, .well-known/agent.json,
   .well-known/mcp.json) — these can't read the hook, so just replace
   the literal name
-- Any DPA / sub-processor list (Privacy §5 + the vendor's DPA/sub-processor template documentation)
+- Any DPA / sub-processor list (Privacy §5 + the document processing
+  agreement and sub-processor template for the vendor). That template
+  still lives outside this repository and has no repo-native replacement
+  yet — see `archive/sessions/2026-09-11-m4-cutover-inventory.md` section
+  1, row 6, before assuming it can be edited or generated from here.
 
 For React components, prefer the hook pattern:
 
