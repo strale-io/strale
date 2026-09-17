@@ -529,7 +529,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "137394494423259833eeb234d091c2c6d8992435960da0d358af6e42d8e67924",
+      "sha256": "b208a037e9c1d8988f32c14c2e6c4a44dd0b5d8d94b7a0cb37ad7f93d133b841",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -645,7 +645,8 @@
         "scripts/protocol-coverage-lib.mjs",
         "scripts/receipts.test.mjs",
         "scripts/research-lib.mjs",
-        "scripts/research.test.mjs"
+        "scripts/research.test.mjs",
+        "scripts/scheduled-outcomes-lib.mjs"
       ]
     },
     {

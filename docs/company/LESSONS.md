@@ -728,7 +728,7 @@ reasoned suppression a surface file can declare — diagnosed today, not shipped
 > never executed, a branch recorded as deleted that still exists, a document
 > whose evidence went stale months ago.
 
-**Count: 11 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
+**Count: 12 (incident 11, 2026-09-12, is the manifest-to-production arm and is counted in F1 row 8 for its damage; incident 12, 2026-09-17, is a third arm — a mechanism whose static declaration stayed true while the thing it declared stopped running). Root cause of the branch-deletion arm found 2026-08-31 (incident 7); incident 8 on 2026-09-03 and incident 9 on 2026-09-06 are different arms, and incident 10 (it happened on 2026-08-25, before incident 8, and was found on 2026-09-11) is incident 8's arm — see below.** A capability recorded as switched off that served errors for two
 more days; three branches recorded as deleted that were still on the remote;
 GOALS.md carrying three claims that re-measurement contradicted; a docstring
 asserting a wiring that had never existed — and, on 2026-08-23, **the same
@@ -1081,6 +1081,52 @@ damage is false quality attribution — a capability correctly refusing a
 nonexistent entity, scored as the capability failing. It is recorded in both
 family totals, because the mechanism belongs to F7 and the damage to F1: this
 entry is the mechanism, F1 row 8 is the damage, and they are one incident.
+
+**Incident 12 (2026-09-17) — a scheduled check can be wired correctly, fail
+every week for five weeks, and be read by nobody.** `weekly-drift.yml` failed
+on every scheduled run from 2026-08-17 to 2026-09-14 with `password
+authentication failed for user "postgres"`; its last successful cron run was
+2026-08-10, and the only green in between is a manual re-run on 2026-08-18.
+The cause is a stale secret: production's database role moved off `postgres`
+(the read-only `strale_ro` role is what the repository uses today, and the
+credential revocation of 2026-08-22 sits in the same window), while the
+workflow's `DATABASE_URL` secret did not. Seven drift mechanisms hang off that
+one workflow and three of them read production — `sweep-manifest-drift`,
+`toast-readability` (added *after* a lost-TOAST-chunk incident had sat
+undetected for four months) and `output-schema`. All three were blind for the
+whole period.
+
+**What made it invisible is the interesting half.** `config/scheduled-mechanisms
+.yaml` and `npm run scheduled:check` exist precisely to stop a scheduled
+mechanism being assumed rather than verified (DEC-20260504-C), and they were
+passing throughout — correctly. The register's `DATABASE_URL: DATABASE_URL`
+line says the step reads that secret, and the step does read it. Every fact
+reachability can check is static, and **a declaration cannot carry a value.**
+So the check that existed to prove this wiring works proved the only part of
+it that had not broken. Nothing in the morning run looked at a scheduled
+workflow's *conclusion*: the sweep reads production alarms, breakers,
+quarantines and CI on `main`, and a weekly workflow that goes red on a Sunday
+is in none of those.
+
+**Repair.** `npm run scheduled:outcomes`
+(`scripts/check-scheduled-outcomes.mjs`, logic in
+`scripts/scheduled-outcomes-lib.mjs`), wired into DAILY-RUN.md step B. It
+watches **every** scheduled workflow, not only those the register declares —
+`stale-branches.yml` is scheduled and made entirely of inline `gh` commands,
+so a register-scoped version would have left exactly one workflow unwatched.
+Two consecutive failed *scheduled* runs is the finding; one is a warning,
+because a weekly false alarm is how a reader learns to skip the section. A
+manual re-run does not count as a success, and a run history that cannot be
+read at all exits 2 rather than 0. Not a CI gate, for the same reason
+`fixtures:drift` is not: the evidence lives in GitHub's run history, and a
+pull request that changed no workflow must not fail because a credential
+expired on a Sunday.
+
+**Not repaired here, and why.** Replacing the workflow's `DATABASE_URL` secret
+puts a production database credential into GitHub Actions. That is a
+credential-issuing act, which is the founder's; it is in DECISION-QUEUE.md,
+not routed around. Until it is answered the three production-reading
+mechanisms stay blind — but now visibly, every morning, instead of silently.
 
 ### F8 · Duplicated authority
 
