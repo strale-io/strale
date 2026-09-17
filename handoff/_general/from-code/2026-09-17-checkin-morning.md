@@ -48,10 +48,12 @@ days. `unverified:` why — the task definition lives outside version control
    and **21 of them today**, of which 9 completed and 12 were refusals on
    ambiguous German company names. Nobody was charged for a failure.
 5. **The account buyer the last brief called two weeks silent came back** — on
-   14 and 15 September, after a 17-day gap, with a 25-call sweep across 24
+   14, 15 and 16 September, after a 17-day gap, with a 25-call sweep across 24
    different capabilities. Two broad surveys of the catalogue three weeks
    apart, with one €1.00 product bought on four separate days in between. The
-   most second-payer-shaped evidence in the data.
+   most second-payer-shaped evidence in the data. The only thing they asked
+   for and did not get: US price comparison, tried twice, which we cover for
+   the Nordics only.
 6. Revenue: last completed week **€51.97**, the week before **€58.77** —
    `growth()` reads **falling**, second week running. Largest payer **93.5%**
    of the *x402* side; the account buyer above sits outside that measure.
@@ -103,8 +105,18 @@ buying of one thing:
 | 2026-08-28 | 3 | 1 (`competitor-compare`) | 3.00 |
 | 2026-09-14 | 1 | 1 (`competitor-compare`) | 1.00 |
 | 2026-09-15 | 25 | **24** — trademarks, containers, CSV/SQL/markdown utilities, DNS/MX, weather, VASP, GitHub, crypto sentiment, company data | 2.89 |
+| 2026-09-16 | 2 | 1 (`price-compare`, **both refused**) | 0.00 |
 
-€14.98 over 35 days. Two broad surveys of the catalogue three weeks apart —
+€14.98 over 35 days, and the return runs **three** consecutive days, not two.
+
+**The one thing they asked for and could not get is specific and worth
+naming.** Both 2026-09-16 calls are `price-compare` for `"us"`, refused with
+"Price comparison currently covers Nordic countries only (SE/NO/DK/FI) via
+PriceRunner. \"us\" is not supported — no licensed price source exists". They
+tried twice, three minutes apart. Not charged. That is a named coverage gap
+hit by the only buyer currently evaluating the catalogue — a better demand
+signal than anything in the aggregate numbers, and unlike the German
+name-matching gap it needs a licensed source rather than a code change. Two broad surveys of the catalogue three weeks apart —
 compliance-flavoured in August, general-purpose in September — with one
 product, `competitor-compare` at €1.00, bought on **four separate days** in
 between. This is what an evaluation looks like, and `competitor-compare` is

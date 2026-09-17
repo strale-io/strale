@@ -979,6 +979,33 @@ conversion.
   and this is the first direct evidence of what the concentrated buyer wants
   more of.
 
+- **The account buyer came back after 17 days and surveyed the catalogue a
+  second time** (measured 2026-09-17, production read-only, account-side
+  transactions). Recorded here because the 2026-09-12 brief had them at two
+  weeks silent against a previous longest gap of two days, and that reading is
+  now superseded rather than merely stale. They bought on **14, 15 and 16
+  September** — 1 call, then **25 calls across 24 distinct capabilities**
+  (trademarks, container tracking, CSV/SQL/markdown utilities, DNS/MX, weather,
+  VASP, GitHub, crypto sentiment, company data), then 2. That is the same shape
+  as their 2026-08-25 visit (14 calls, 12 capabilities) but weighted to
+  general-purpose rather than compliance. Between the two surveys, one product
+  — `competitor-compare` at €1.00 — bought on **four separate days**. €14.98
+  across 35 days.
+
+  **This is the most second-payer-shaped evidence we have**, and it is
+  qualitatively different from the x402 long tail: those are single one-cent
+  calls from wallets we never see again, and this is a repeat visitor with one
+  recurring purchase at a price that matters. Two surveys is still not a
+  pattern, and the concentration numbers do not move — they sit outside the
+  x402 payer measure entirely, which is itself worth knowing.
+
+  **The one thing they asked for and could not get:** `price-compare` for the
+  US, tried twice three minutes apart on 2026-09-16, refused because coverage
+  is Nordic-only (PriceRunner) and no licensed US source exists. Not charged.
+  A named coverage gap hit by the buyer currently evaluating us — unlike the
+  German name-matching gap, this one needs a licensed source, not a code
+  change, so it is a vendor question and therefore founder-gated if pursued.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
