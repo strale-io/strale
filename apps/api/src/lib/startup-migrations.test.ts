@@ -73,6 +73,7 @@ import {
   runMigration0101_capabilityInvocations,
   runMigration0114_releaseCorrectedDependencyHealthFixtures,
   runMigration0115_resyncCanadianCompanyDataDependencyHealth,
+  runMigration0116_resyncSpanishCompanyDataDependencyHealth,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1430,6 +1431,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0113_releaseWronglyQuarantinedRefusalSuites",
       "runMigration0114_releaseCorrectedDependencyHealthFixtures",
       "runMigration0115_resyncCanadianCompanyDataDependencyHealth",
+      "runMigration0116_resyncSpanishCompanyDataDependencyHealth",
     ]);
   });
 });
@@ -2313,7 +2315,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(115);
+    expect(Math.max(...numbers)).toBe(116);
   });
 });
 
@@ -2694,5 +2696,70 @@ describe("startup-migrations: block 0115 (resync canadian-company-data dependenc
     expect(joined).not.toMatch(/update test_suites/);
     expect(joined).not.toMatch(/insert into health_monitor_events/);
     expect(result.outcome).toMatch(/already applied/);
+  });
+});
+
+describe("startup-migrations: block 0116 (resync spanish-company-data dependency_health)", () => {
+  const releasedRow = () =>
+    [{ id: "f7f09533-7ff9-4ef7-957d-46d4bbd903bc", capability_slug: "spanish-company-data", test_type: "dependency_health" }] as unknown[];
+
+  it("rewrites the refused company name to the manifest's NIF and writes one event", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    const result = await runMigration0116_resyncSpanishCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(1);
+    expect(result.outcome).toContain("resynced 1");
+
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q));
+    expect(update).toBeDefined();
+    const setClause = update!.slice(0, update!.toLowerCase().indexOf("where"));
+    // The corrected value, verified live on 2026-09-17 and 2026-09-18.
+    expect(setClause).toContain('{"nif":"A20072302"}');
+    expect(setClause.toLowerCase()).toContain("test_mode = 'live'");
+    expect(setClause.toLowerCase()).toContain("baseline_output = null");
+
+    const events = stub.renderedSql.filter((q) => /insert into health_monitor_events/i.test(q));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain("auto_fix");
+  });
+
+  it("scopes the UPDATE to spanish-company-data, dependency_health, and the exact stale input", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    await runMigration0116_resyncSpanishCompanyDataDependencyHealth(stub);
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q))!;
+    const whereClause = update.slice(update.toLowerCase().indexOf("where"));
+    expect(whereClause).toContain("test_type = 'dependency_health'");
+    expect(whereClause).toContain("capability_slug = 'spanish-company-data'");
+    // The stale literal, so the known_answer and schema_check suites that
+    // already hold the NIF, and this suite once resynced, never match.
+    expect(whereClause).toContain('{"company_name":"Telefonica"}');
+    expect(whereClause).not.toContain("german-company-data");
+    expect(whereClause).not.toContain("canadian-company-data");
+  });
+
+  it("does not claim a resync when no matching stale input remains", async () => {
+    const stub = makeStub({ queue: [{}, [], [], {}] });
+    const result = await runMigration0116_resyncSpanishCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no matching stale/);
+  });
+
+  it("never fires twice, idempotent on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0116_resyncSpanishCompanyDataDependencyHealth" }]] });
+    const result = await runMigration0116_resyncSpanishCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(0);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
+    expect(joined).not.toMatch(/update test_suites/);
+    expect(joined).not.toMatch(/insert into health_monitor_events/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+
+  it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    await runMigration0116_resyncSpanishCompanyDataDependencyHealth(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
   });
 });
