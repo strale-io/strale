@@ -307,12 +307,28 @@ query alone; and it made no live registry call, so the Telefonica/NIF results
 rest on my two days of calls. Both are recorded as single-source here for that
 reason.
 
+## G. Shipped and verified in production
+
+PR #684 merged as `bbc3a3cc` after CI passed (`check`, `integration-db`,
+`classify`); `git diff` of the branch tip `c63ec29c` against `origin/main`
+after the merge is empty, so the merge carried the head that was reviewed.
+`GET /health` served `bbc3a3ccfda4`. Production, read-only, after deploy:
+
+- `startup_migration_ledger`: `0116_resyncSpanishCompanyDataDependencyHealth`,
+  applied 2026-09-18T06:38:24Z, `rows_affected = 1`;
+- the suite `f7f09533-…` now holds `{"nif": "A20072302"}`, `test_mode =
+  live`, baseline cleared, `updated_at` the same instant;
+- one `auto_fix` / `resynced_stale_dependency_health_input` event.
+
+The deploy mechanism did what the PR said it would (DEC-20260504-C). What is
+not yet observed is a *passing* run: the suite is schedule tier C.
+
 ## Next session
 
-1. **Verify block 0116 landed in production** if this session did not: the
-   Spanish `dependency_health` `input` is `{"nif":"A20072302"}` and the
-   ledger holds `0116_resyncSpanishCompanyDataDependencyHealth` with
-   `rows_affected = 1`; then its runs should start passing.
+1. **Confirm the Spanish `dependency_health` suite now passes** — its first
+   runs after 2026-09-18T06:38Z. If it does not, the corrected value is
+   wrong in production conditions, which two days of laptop calls would not
+   have shown.
 2. **Land the rescued b7 work and merge PR #682** — unchanged from yesterday:
    fresh worktree from `m4/b7-blocking-checks`, work from
    `origin/rescue/wip-2026-09-17-b7-fix-work-171f7c3`, never take over the
