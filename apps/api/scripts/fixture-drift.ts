@@ -160,10 +160,12 @@ async function main(): Promise<void> {
       console.log(`      ${f.runs} run(s), 0 passed — ${f.sampleFailure ?? "no failure recorded"}`);
       console.log("");
     }
-    console.log("  Each needs the production row rewritten from the manifest. `onboard.ts");
-    console.log("  --backfill` will NOT do it: it inserts missing test types and updates");
-    console.log("  only known_answer. Applying these is a production write, which needs an");
-    console.log("  authorised attended session (see DECISION-QUEUE.md DQ-27).");
+    console.log("  Each needs the production row rewritten from the manifest, once the");
+    console.log("  manifest value has itself been verified live. The route is a ledgered");
+    console.log("  startup-migration block (blocks 0114-0116 are the pattern): it applies");
+    console.log("  on deploy through the normal PR gates, so it needs no write credential.");
+    console.log("  `onboard.ts --backfill --discover` also resyncs the row, but only as a");
+    console.log("  direct production write from wherever it runs; do not reach for that.");
   }
 }
 

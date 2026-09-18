@@ -106,6 +106,17 @@ cannot be verified from here at all because its supplier key exists only in the
 live environment, and correcting it to an unverified value would replace a
 known-wrong test with an unknown one. This entry stays open until you close it;
 I am recording what changed, not deciding it is closed.
+*Update 2026-09-18 — the Spanish one is fixed by the same route, pending
+deploy.* Its corrected value was checked against the live registry a second
+time this morning (the old value is still refused as ambiguous, the new one
+still resolves), exactly one live test holds the old value, and the deploy-time
+correction for it is written, tested and reviewed; it takes effect when that
+change goes live. That leaves the German one, unchanged and for the reason
+above. Separately, the Irish check stopped passing overnight: the Irish
+registry's open-data service is not answering from here either, so this is the
+registry being down, not the old value coming back. The system has parked that
+check and will restore it on its own after two passes. This entry stays open
+until you close it.
 
 **DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
 *Answered:* Petter, in chat, accepting the recommendation: the repo-native

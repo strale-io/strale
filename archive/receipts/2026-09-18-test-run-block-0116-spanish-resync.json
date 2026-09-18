@@ -1,0 +1,55 @@
+{
+  "kind": "test-run",
+  "produced_by": {
+    "script": "scripts/write-receipt.mjs",
+    "commit": "f0d75ec32bcf855c9873d84a30f8c098ef59f592"
+  },
+  "at": "2026-09-18T06:13:56.408Z",
+  "inputs": {
+    "source": "C:/Users/pette/AppData/Local/Temp/claude/C--Users-pette-Projects-strale/427db7f8-128d-4fd8-ad3b-c847c41a7219/scratchpad/receipt.json"
+  },
+  "summary": {
+    "suite": "apps/api/src/lib/startup-migrations.test.ts",
+    "command": "npx vitest run src/lib/startup-migrations.test.ts (cwd apps/api)",
+    "test_files_passed": 1,
+    "tests_passed": 159,
+    "tests_failed": 0
+  },
+  "topic": "block-0116-spanish-resync",
+  "raw": {
+    "suite": "apps/api/src/lib/startup-migrations.test.ts",
+    "command": "npx vitest run src/lib/startup-migrations.test.ts (cwd apps/api)",
+    "test_files_passed": 1,
+    "tests_passed": 159,
+    "tests_failed": 0,
+    "mutation_verification": [
+      {
+        "mutation": "block 0116 SET input NIF A20072302 -> B00000000",
+        "result": "1 failed - the corrected value is asserted"
+      },
+      {
+        "mutation": "delete the exact stale-literal predicate AND input = '{\"company_name\":\"Telefonica\"}'",
+        "result": "1 failed - the UPDATE would rewrite any spanish dependency_health row"
+      },
+      {
+        "mutation": "disable block 0116's ledger guard (if (prior.length > 0) -> if (false))",
+        "result": "1 failed - a second boot would re-run the UPDATE. A first attempt edited a different block because the index matched the registration list; it survived for that reason and was redone targeting const BLOCK = \"0116_\""
+      },
+      {
+        "mutation": "drop test_mode = 'live' from the SET clause",
+        "result": "1 failed"
+      },
+      {
+        "mutation": "remove block 0116 from the BLOCKS registration array",
+        "result": "2 failed - registration order and highest block number"
+      }
+    ],
+    "live_verification": {
+      "date": "2026-09-18",
+      "route": "registered executor, one call per input, free_quota cost class",
+      "stale_input": "{\"company_name\":\"Telefonica\"} -> throws No confident Spanish registry match (correct refusal)",
+      "corrected_input": "{\"nif\":\"A20072302\"} -> CONSTRUCCIONES AMENABAR SA, active, openmercantil.es",
+      "production_rows_matching_predicate": 1
+    }
+  }
+}
