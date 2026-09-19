@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-308 files (281 with a recorded intent, 27 without).
+309 files (282 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-19 | [`handoff/_general/from-code/2026-09-19-checkin-morning.md`](_general/from-code/2026-09-19-checkin-morning.md) | run the 2026-09-19 morning operating session under DAILY-RUN.md — |
 | 2026-09-18 | [`handoff/_general/from-code/2026-09-18-checkin-morning.md`](_general/from-code/2026-09-18-checkin-morning.md) | run the 2026-09-18 morning operating session under DAILY-RUN.md — |
 | 2026-09-17 | [`handoff/_general/from-code/2026-09-17-checkin-morning.md`](_general/from-code/2026-09-17-checkin-morning.md) | run the 2026-09-17 morning operating session under DAILY-RUN.md — |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-wider-input-drift-sweep.md`](_general/from-code/2026-09-12-wider-input-drift-sweep.md) | close the wider stored-input drift PR #677's own sweep flagged (34 |
