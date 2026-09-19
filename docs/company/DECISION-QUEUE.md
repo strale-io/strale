@@ -117,6 +117,18 @@ registry's open-data service is not answering from here either, so this is the
 registry being down, not the old value coming back. The system has parked that
 check and will restore it on its own after two passes. This entry stays open
 until you close it.
+*Update 2026-09-19 — the Spanish correction is live; the German one is
+deliberately left until 7 October.* The Spanish value went live on 18 September
+and is confirmed in the live system; that check runs about every three days
+and has not run since, so a *passing* result is not yet observed. For the
+German one there is now a second reason to wait besides the one above: our
+largest buyer is using German lookups again, the free supplier allowance that
+serves them has room for roughly thirty more answered lookups before it resets
+on 7 October, and a corrected check that passes would spend a lookup's worth
+of that allowance every time it runs (a failing one spends almost none).
+Fixing our own test at the expense of the paying customer's lookups is the
+wrong trade, so it waits for the reset. This entry stays open until you close
+it.
 
 **DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
 *Answered:* Petter, in chat, accepting the recommendation: the repo-native

@@ -1006,6 +1006,45 @@ conversion.
   German name-matching gap, this one needs a licensed source, not a code
   change, so it is a vendor question and therefore founder-gated if pursued.
 
+- **The account buyer made their largest single visit yet, and it was a third
+  survey** (measured 2026-09-19, `payerFacts` per week, second-sourced by a
+  read-only slug breakdown of the same account that reconciles to it). On the
+  evening of **2026-09-18** they bought **61 calls, €5.02, across 48 distinct
+  capabilities, every one completed** — one or two calls each, most of them
+  alphabetically early in the catalogue (address, bank, barcode, charity, code,
+  company, contract, cookie, CVE ...). By week: €2.00 (w/c 08-17), €9.09
+  (08-24), nothing for two weeks, **€8.91 over 84 calls (09-14, three paying
+  days, week not finished)**. Same shape as both earlier visits — breadth,
+  not depth — so it is still evaluation, not usage; the new facts are size
+  (their biggest day) and that nothing they touched failed. Correction to the
+  entry above: this account **is** inside the payer measure — `payerFacts`
+  keys it `user:v1:…` — and it is €8.91 of the €9.84 that everyone other than
+  the largest buyer spent this week. No outreach (DQ-21).
+
+- **The largest buyer's German demand is back, and our free vendor allowance
+  now covers about thirty more answered lookups before it resets on 7 October**
+  (measured 2026-09-19). `who-called --slug german-company-data`: 32 paying
+  calls in the last two days, 15 answered, 17 correctly refused; 34 in twelve
+  days. The vendor tower reads OpenRegister at **328 of 500** credits (363
+  yesterday, 500 at the 09-07 reset). Second source, from the executor's own
+  cost model (`german-company-data.ts`: 11 credits per answered name lookup, 1
+  per refusal that stops at autocomplete): 15 × 11 + ~19 × 1 ≈ 184 against 172
+  measured — consistent. So **328 credits ≈ 29 answered lookups**. At the
+  twelve-day average (~14 credits/day) the allowance outlasts the reset; one
+  list like 2026-08-24's (195 calls) would exhaust it within the hour, and
+  the tower would suspend German and its three bundles until 7 October, as it
+  did last time. The 08-27 trigger ("re-open if the reset is exhausted again
+  immediately") has **not** fired — 34% used in twelve days is not immediate —
+  so nothing is bought. Two consequences recorded rather than acted on:
+  (1) DQ-33's German half should *not* be forced now: a corrected health
+  check that passes spends 11 of these credits a run instead of 1; (2) the
+  quality floor already proposed deactivating German on 2026-09-18 (26%
+  completion on 191 calls/30d) and deferred it because the counted failures —
+  the 127 vendor 402s of 08-24 — fall on one day; refusals are not counted.
+  Those 402s leave the 30-day window on 2026-09-23, after which the proposal
+  has nothing to stand on. A second exhaustion spread over two days would
+  change that, which is one more reason to watch the runway daily.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
