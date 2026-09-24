@@ -1,4 +1,10 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
+import { logWarn } from "../lib/log.js";
+import {
+  CLASSIFIER_SNAPSHOT_FETCHED_AT,
+  FORMA_SNAPSHOT,
+  STATUSAS_SNAPSHOT,
+} from "./lib/lithuanian-classifiers.js";
 
 /**
  * Lithuanian company data via the data.gov.lt Spinta API
@@ -64,7 +70,7 @@ async function fetchAllPages<T>(url: string): Promise<T[]> {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) throw new Error(`Spinta classifier fetch HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`Spinta classifier fetch HTTP ${res.status} (page ${i + 1})`);
     const page = (await res.json()) as SpintaPage<T>;
     all.push(...(page._data ?? []));
     next = page._page?.next;
@@ -73,19 +79,48 @@ async function fetchAllPages<T>(url: string): Promise<T[]> {
   return all;
 }
 
+// Where the labels in the current cache came from. "snapshot" means the live
+// read failed and the bundled copy is standing in; provenance says so.
+let classifierSource: "live" | "snapshot" = "live";
+// After a failed live read, try again sooner than the full TTL.
+const CLASSIFIER_RETRY_MS = 60 * 60 * 1000;
+
+function loadSnapshot(): void {
+  formaCache.clear();
+  statusCache.clear();
+  for (const [id, f] of Object.entries(FORMA_SNAPSHOT)) formaCache.set(id, { _id: id, ...f });
+  for (const [id, s] of Object.entries(STATUSAS_SNAPSHOT)) statusCache.set(id, { _id: id, ...s });
+  classifierSource = "snapshot";
+}
+
 async function ensureClassifiers(): Promise<void> {
   if (Date.now() - classifiersLoadedAt < CLASSIFIER_TTL_MS && formaCache.size > 0) return;
   if (classifiersInflight) return classifiersInflight;
   classifiersInflight = (async () => {
-    const [formas, statuses] = await Promise.all([
-      fetchAllPages<ClassifierRecord>(FORMA_MODEL),
-      fetchAllPages<ClassifierRecord>(STATUSAS_MODEL),
-    ]);
-    formaCache.clear();
-    statusCache.clear();
-    for (const f of formas) formaCache.set(f._id, f);
-    for (const s of statuses) statusCache.set(s._id, s);
-    classifiersLoadedAt = Date.now();
+    try {
+      const [formas, statuses] = await Promise.all([
+        fetchAllPages<ClassifierRecord>(FORMA_MODEL),
+        fetchAllPages<ClassifierRecord>(STATUSAS_MODEL),
+      ]);
+      formaCache.clear();
+      statusCache.clear();
+      for (const f of formas) formaCache.set(f._id, f);
+      for (const s of statuses) statusCache.set(s._id, s);
+      classifierSource = "live";
+      classifiersLoadedAt = Date.now();
+    } catch (err) {
+      // The classifiers only turn a legal-form or status id into its label.
+      // From production they answered HTTP 500 on every run from 2026-08-21
+      // while the same requests succeeded from elsewhere, and failing here
+      // failed every lookup. The labels change rarely, so a bundled copy
+      // stands in, and the live read is retried after CLASSIFIER_RETRY_MS.
+      logWarn("lithuanian-classifier-fallback", "classifier read failed; using bundled snapshot", {
+        snapshot: CLASSIFIER_SNAPSHOT_FETCHED_AT,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      loadSnapshot();
+      classifiersLoadedAt = Date.now() - CLASSIFIER_TTL_MS + CLASSIFIER_RETRY_MS;
+    }
   })();
   try {
     await classifiersInflight;
@@ -169,6 +204,15 @@ registerCapability("lithuanian-company-data", async (input: CapabilityInput) => 
 
   const forma = record.forma ? formaCache.get(record.forma._id) : undefined;
   const statusas = record.statusas ? statusCache.get(record.statusas._id) : undefined;
+  // legal_form and status are guaranteed fields; an id the active cache does
+  // not know (e.g. a form added after the bundled snapshot) would null them.
+  if ((record.forma && !forma) || (record.statusas && !statusas)) {
+    logWarn("lithuanian-classifier-miss", "classifier id not in cache", {
+      source: classifierSource,
+      forma_id: record.forma && !forma ? record.forma._id : undefined,
+      statusas_id: record.statusas && !statusas ? record.statusas._id : undefined,
+    });
+  }
 
   // Override status to a derived label when the entity is deregistered: the
   // canonical statusas can lag in some records (e.g. statusas == "neįregistruotas"
@@ -227,7 +271,9 @@ registerCapability("lithuanian-company-data", async (input: CapabilityInput) => 
       attribution:
         "VĮ Registrų centras (Lithuanian Centre of Registers) — Juridinių asmenų registras, via data.gov.lt",
       source_note:
-        "Real-time query against the Lithuanian Open Data Portal (data.gov.lt) via the Spinta JSON API.",
+        classifierSource === "live"
+          ? "Real-time query against the Lithuanian Open Data Portal (data.gov.lt) via the Spinta JSON API."
+          : `Real-time query against the Lithuanian Open Data Portal (data.gov.lt) via the Spinta JSON API. Legal-form and status labels come from a copy of the registry's classifiers taken ${CLASSIFIER_SNAPSHOT_FETCHED_AT}, because the live classifier read failed.`,
     },
   };
 });

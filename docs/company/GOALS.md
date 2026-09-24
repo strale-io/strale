@@ -1045,6 +1045,47 @@ conversion.
   has nothing to stand on. A second exhaustion spread over two days would
   change that, which is one more reason to watch the runway daily.
 
+- **The week of 2026-09-14 closed at €62.31, up from €51.97 — the two-week
+  fall is over, and the rise was broader than the largest buyer** (measured
+  2026-09-24, `commercial-brief.ts`). 11 payers; the largest buyer 83.4%
+  (€51.99 vs €10.32 from everyone else), down from 93.5% the week before;
+  two payers bought on more than one day. Of the €10.32, €8.91 is the
+  account buyer. So the week is still one buyer's week, with the second
+  buyer's evaluation as the difference.
+
+- **The account buyer came back four days running for the first time**
+  (measured 2026-09-24, `payerFacts` for the week of 09-21, second-sourced by
+  a read-only breakdown of the same account's rows that reconciles exactly:
+  87 completed paid calls = €6.75, plus 5 free-tier and 2 failed rows the
+  measure rightly excludes). **2026-09-21**: a fourth survey, 81 calls across
+  81 capabilities, 79 completed; the two failures were correct refusals
+  (US federal job search not supported; an invalid `purpose` value).
+  **09-22**: 6 calls, 5 capabilities (CSV, currency, exchange rate, LEI, a
+  social-post generator). **09-23**: 4 calls, SEO audit and SERP analysis,
+  €0.75. **09-24**: 3 calls (company enrichment, company tech stack, a market
+  sentiment index). The follow-ups are small and differ each day, so this
+  reads as an evaluation narrowing rather than a habit; what is new is
+  consecutive days. Every paid call they made this week completed. No
+  outreach (DQ-21).
+
+- **The German deactivation proposal fell away on 2026-09-23, as predicted**
+  (measured 2026-09-24, `health_monitor_events` `quality_floor`): the floor
+  proposed German on 09-21 and 09-22 and deferred both as a one-day burst;
+  from 09-23 it evaluates with no proposals. German itself was quiet this
+  week — 7 paying calls in five days, 2 answered (`who-called`, harness 0).
+  OpenRegister 291/500 (328 five days earlier) — ~26 answered lookups of
+  runway to the 10-07 reset.
+
+- **`lithuanian-company-data` has not completed a call since 2026-08-21 while
+  listed for sale** (measured 2026-09-24: last completed transaction
+  2026-08-21T02:55Z; 95 of 95 calls in six days failed, all harness; no
+  customer attempt in that window). The cause is the classifier read, which
+  only maps legal-form and status ids to labels and answers HTTP 500 from
+  production only. Fixed in the 2026-09-24 check-in by answering from a
+  bundled copy of the classifiers when the live read fails; whether the
+  register read itself works from production is the open question the next
+  `dependency_health` run answers (hourly).
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
