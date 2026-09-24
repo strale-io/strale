@@ -174,8 +174,9 @@ page number, so the log discriminates page 1 from a later page.
 **Tests** (`lithuanian-company-data.test.ts`, 4): snapshot answers on a
 classifier 500; no retry on every call; live labels preferred; register
 failure still fails. **4/4 pass on the fix; 3/4 fail against the
-`origin/main` executor** (the fourth — "live labels preferred" — passes on
-both, as it should). Live run of the fixed executor against the real API:
+`origin/main` executor** (measured: snapshot, no-retry and register-failure
+fail; "live labels preferred" passes on both, as it should — the register
+test fails pre-fix only because the classifier error is thrown first). Live run of the fixed executor against the real API:
 full output, live labels, normal `source_note`. Root `npm run typecheck`
 clean (after building `mcp-server` and `sdk-typescript` in the worktree);
 `lint:no-bare-catch`, `lint:no-unguarded-user-fetch`, `check-ssrf-inventory`,
@@ -212,8 +213,13 @@ the suite's results, above.
 ## F. Review
 
 Independent same-provider review in a separate context (a fresh read-only
-agent that did not author the change) of commit `26820582` — verdict recorded
-in the PR body. No new Codex-register row (DEC-20260910-A).
+agent that did not author the change) of commit `26820582`: **PASS WITH
+NITS**, no correctness bugs; retry math, inflight concurrency, snapshot shape
+(199 ids, no duplicates) and provenance wording verified. One nit — an id
+missing from a stale snapshot would silently null a guaranteed field — fixed
+in a follow-up commit with a `lithuanian-classifier-miss` warning. (The
+reviewer read the register-failure test as passing pre-fix; measured, it
+fails pre-fix — see D.) No new Codex-register row (DEC-20260910-A).
 
 ## Next session
 

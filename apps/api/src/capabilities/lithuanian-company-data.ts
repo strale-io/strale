@@ -204,6 +204,15 @@ registerCapability("lithuanian-company-data", async (input: CapabilityInput) => 
 
   const forma = record.forma ? formaCache.get(record.forma._id) : undefined;
   const statusas = record.statusas ? statusCache.get(record.statusas._id) : undefined;
+  // legal_form and status are guaranteed fields; an id the active cache does
+  // not know (e.g. a form added after the bundled snapshot) would null them.
+  if ((record.forma && !forma) || (record.statusas && !statusas)) {
+    logWarn("lithuanian-classifier-miss", "classifier id not in cache", {
+      source: classifierSource,
+      forma_id: record.forma && !forma ? record.forma._id : undefined,
+      statusas_id: record.statusas && !statusas ? record.statusas._id : undefined,
+    });
+  }
 
   // Override status to a derived label when the entity is deregistered: the
   // canonical statusas can lag in some records (e.g. statusas == "neįregistruotas"
