@@ -49,6 +49,8 @@ reporting it. The other four in that sweep need no database and do still run —
 verified in the run's own output, where they report their results normally —
 so this is three checks out of seven, not all seven.
 *How you'd reverse it:* remove the secret again; nothing else changes.
+*Update 2026-09-24:* the Sunday 21 September run failed the same way — six in
+a row now. Nothing else has changed.
 
 **DQ-33** · `your_call` · owner Petter · raised 2026-09-12T06:30Z · no deadline — **six company registries are being health-checked with a test input we already know is wrong, and correcting it is a database write I cannot make**
 Six of our company-registry services are judged every day by a check that uses
@@ -129,6 +131,15 @@ of that allowance every time it runs (a failing one spends almost none).
 Fixing our own test at the expense of the paying customer's lookups is the
 wrong trade, so it waits for the reset. This entry stays open until you close
 it.
+*Update 2026-09-24 — the Spanish check passes.* It ran twice since the
+correction went live, on 21 and 24 September, and passed both times; before
+the correction it failed. That leaves only the German one, still deliberately
+waiting for 7 October. The German check no longer appears in the morning's
+drift report, but only because it has not run at all in the last fortnight
+and the report ignores checks with no runs — it is not fixed. The Lithuanian
+check's separate server error has a fix going live today (the service now
+answers from a stored copy of the registry's label tables when that one
+request fails). This entry stays open until you close it.
 
 **DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
 *Answered:* Petter, in chat, accepting the recommendation: the repo-native
