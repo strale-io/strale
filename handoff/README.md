@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-310 files (283 with a recorded intent, 27 without).
+311 files (284 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-09-25 | [`handoff/_general/from-code/2026-09-25-checkin-morning.md`](_general/from-code/2026-09-25-checkin-morning.md) | run the 2026-09-25 operating session under DAILY-RUN.md — measure the |
 | 2026-09-24 | [`handoff/_general/from-code/2026-09-24-checkin-morning.md`](_general/from-code/2026-09-24-checkin-morning.md) | run the 2026-09-24 operating session under DAILY-RUN.md — measure the |
 | 2026-09-19 | [`handoff/_general/from-code/2026-09-19-checkin-morning.md`](_general/from-code/2026-09-19-checkin-morning.md) | run the 2026-09-19 morning operating session under DAILY-RUN.md — |
 | 2026-09-18 | [`handoff/_general/from-code/2026-09-18-checkin-morning.md`](_general/from-code/2026-09-18-checkin-morning.md) | run the 2026-09-18 morning operating session under DAILY-RUN.md — |

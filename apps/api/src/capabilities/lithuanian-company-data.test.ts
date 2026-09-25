@@ -92,3 +92,13 @@ describe("lithuanian-company-data classifiers", () => {
     await expect(exec({ company_code: "304151376" })).rejects.toThrow(/Lithuanian Open Data Portal returned HTTP 500/);
   });
 });
+
+// After the snapshot shipped, the register query itself failed 5/5 from
+// production while answering 200 elsewhere. Off sale until production can
+// reach it; a DB flag alone would not stop direct executor callers.
+describe("lithuanian-company-data availability", () => {
+  it("is in DEACTIVATED until the register answers our production host", async () => {
+    const { getDeactivatedCapabilities } = await import("./auto-register.js");
+    expect(getDeactivatedCapabilities().get("lithuanian-company-data")).toMatch(/production/);
+  });
+});
