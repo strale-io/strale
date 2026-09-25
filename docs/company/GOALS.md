@@ -1085,6 +1085,26 @@ conversion.
   bundled copy of the classifiers when the live read fails; whether the
   register read itself works from production is the open question the next
   `dependency_health` run answers (hourly).
+  **Answered 2026-09-25: it does not.** The five runs after the fix deployed
+  (receipt deploy commit `b136d933`, 09-24T20:31Z → 09-25T04:31Z) all failed
+  with "Lithuanian Open Data Portal returned HTTP 500" — the register query
+  itself — while the same URL answered 200 in 0.4 s from the operator's
+  machine the same morning. The portal refuses production's egress, not the
+  request. Taken off sale via `DEACTIVATED` in the 2026-09-25 check-in; the
+  snapshot fix stays, so reactivation needs only a reachable register.
+
+- **The account buyer came back a fifth day running, and began repeating
+  itself** (measured 2026-09-25, `payerFacts` since the previous run and for
+  the week of 09-21 — €27.32 total, reconciling exactly with
+  `commercial-brief.ts`; second-sourced by that account's 11 rows since
+  09-24T19:53Z = €1.15, all completed). Days active this week: 21–25, all
+  five. Since the previous run: `fear-greed-index` ×3 (two sittings),
+  `company-tech-stack` ×3, `stock-quote` ×3, `url-to-text` ×2. On 09-24 it
+  had already called `company-tech-stack` and `fear-greed-index` once each.
+  **First time the same capabilities recur across days** — the evaluation
+  reading of 09-24 ("small and different each day") no longer fits; this is
+  the first shape that looks like use. Still one account, €7.90 this week;
+  no outreach (DQ-21).
 
 ## Active experiments (M1)
 
