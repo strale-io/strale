@@ -327,6 +327,10 @@ const DEACTIVATED = new Map<string, string>([
   // Uzņēmumu reģistra atvērtie dati resource. Free, real-time JSON, no
   // signup, CC0 1.0 (public domain — unrestricted commercial use).
   // acquisition_method: direct_api per DEC-20260428-A Tier 2.
+  [
+    "lithuanian-company-data",
+    "deactivated 2026-09-25: get.data.gov.lt answers our production host with HTTP 500 and every other caller with 200. No call completed from 2026-08-21; the 2026-09-24 classifier-snapshot fix removed one failing read and exposed the next — the register query itself failed 5/5 after that deploy while the same URL answered 200 off-platform. Zero customer calls in the window. Reactivate once the register answers from where production runs (a different egress, or the portal lifting the block), proven by a production-side read, not a local one.",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21
