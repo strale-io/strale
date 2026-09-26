@@ -128,3 +128,4 @@ output_field_reliability:
   published_account_count: guaranteed
   response_generated_at: guaranteed
   joint_liability_risk: guaranteed
+geography: eu

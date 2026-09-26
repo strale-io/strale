@@ -74,6 +74,7 @@ import {
   runMigration0114_releaseCorrectedDependencyHealthFixtures,
   runMigration0115_resyncCanadianCompanyDataDependencyHealth,
   runMigration0116_resyncSpanishCompanyDataDependencyHealth,
+  runMigration0117_clearStandingCatalogueAlerts,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1432,6 +1433,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0114_releaseCorrectedDependencyHealthFixtures",
       "runMigration0115_resyncCanadianCompanyDataDependencyHealth",
       "runMigration0116_resyncSpanishCompanyDataDependencyHealth",
+      "runMigration0117_clearStandingCatalogueAlerts",
     ]);
   });
 });
@@ -2315,7 +2317,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(116);
+    expect(Math.max(...numbers)).toBe(117);
   });
 });
 
@@ -2757,6 +2759,81 @@ describe("startup-migrations: block 0116 (resync spanish-company-data dependency
   it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
     const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
     await runMigration0116_resyncSpanishCompanyDataDependencyHealth(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations: block 0117 (clear standing catalogue alerts)", () => {
+  const CZ = [
+    "cz-bank-account-validate", "cz-birth-number-validate", "cz-datova-schranka-id-validate",
+    "cz-ico-validate", "cz-unreliable-vat-payer",
+  ];
+  const geoRows = () => CZ.map((slug) => ({ slug })) as unknown[];
+  const fixtureRows = () =>
+    ["16b0562f-f3b4-4304-99f3-efa2958f584d", "cbfe8595-ff75-4785-aa51-21e3b5f81287", "7cc6d880-79d2-46e8-a248-3277f55cdab3"]
+      .map((id) => ({ id, capability_slug: "adverse-media-check", test_type: "known_answer" })) as unknown[];
+
+  it("fills geography, renames the alias input, and writes one event", async () => {
+    const stub = makeStub({ queue: [{}, [], geoRows(), fixtureRows(), {}, {}] });
+    const result = await runMigration0117_clearStandingCatalogueAlerts(stub);
+    expect(result.rows_affected).toBe(8);
+    expect(result.outcome).toContain("5 capability");
+    expect(result.outcome).toContain("3 known_answer");
+    const events = stub.renderedSql.filter((q) => /insert into health_monitor_events/i.test(q));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain("auto_fix");
+  });
+
+  it("only fills a NULL geography, only for the five Czech slugs", async () => {
+    const stub = makeStub({ queue: [{}, [], geoRows(), fixtureRows(), {}, {}] });
+    await runMigration0117_clearStandingCatalogueAlerts(stub);
+    const update = stub.renderedSql.find((q) => /update capabilities/i.test(q))!;
+    expect(update).toContain("geography = 'eu'");
+    const where = update.slice(update.toLowerCase().indexOf("where"));
+    expect(where.toLowerCase()).toContain("geography is null");
+    for (const slug of CZ) expect(where).toContain(`'${slug}'`);
+    // The sibling that already holds 'eu' is never a target.
+    expect(where).not.toContain("'cz-company-data'");
+  });
+
+  it("scopes the fixture rewrite to adverse-media-check known_answer and the exact stale literals", async () => {
+    const stub = makeStub({ queue: [{}, [], geoRows(), fixtureRows(), {}, {}] });
+    await runMigration0117_clearStandingCatalogueAlerts(stub);
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q))!;
+    expect(update).toContain("jsonb_build_object('name', input->>'entity_name')");
+    const where = update.slice(update.toLowerCase().indexOf("where"));
+    expect(where).toContain("capability_slug = 'adverse-media-check'");
+    expect(where).toContain("test_type = 'known_answer'");
+    expect(where).toContain('{"entity_name":"Wirecard AG"}');
+    expect(where).toContain('{"entity_name":"Spotify Technology SA"}');
+    expect(where).not.toContain("aml-risk-score");
+    expect(where).not.toContain("vasp");
+  });
+
+  it("does not claim a fix when nothing matches", async () => {
+    const stub = makeStub({ queue: [{}, [], [], [], {}] });
+    const result = await runMigration0117_clearStandingCatalogueAlerts(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no matching/);
+  });
+
+  it("never fires twice, idempotent on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0117_clearStandingCatalogueAlerts" }]] });
+    const result = await runMigration0117_clearStandingCatalogueAlerts(stub);
+    expect(result.rows_affected).toBe(0);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
+    expect(joined).not.toMatch(/update capabilities/);
+    expect(joined).not.toMatch(/update test_suites/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+
+  it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
+    const stub = makeStub({ queue: [{}, [], geoRows(), fixtureRows(), {}, {}] });
+    await runMigration0117_clearStandingCatalogueAlerts(stub);
     for (const query of stub.captured) {
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);

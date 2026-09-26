@@ -108,3 +108,4 @@ output_field_reliability:
   account_checksum_ok: guaranteed
   checksum_algorithm: guaranteed
   reason: guaranteed
+geography: eu
