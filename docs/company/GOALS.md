@@ -1106,6 +1106,40 @@ conversion.
   the first shape that looks like use. Still one account, €7.90 this week;
   no outreach (DQ-21).
 
+- **The account buyer's stock quotes now arrive on a clock** (measured
+  2026-09-26, that account's rows since 09-25T07:01Z, reconciling with
+  `payerFacts` for the same window: 8 completed paid calls = €0.62).
+  `stock-quote` at 15:13, 16:42, 18:11, 19:35 and 21:05Z on 09-25 — an
+  interval of about 90 minutes — then 02:54Z; `company-tech-stack` again at
+  02:42Z. Active six days of six this week (€8.52 so far, every paid call
+  completed). Evenly spaced repeats of one capability are the first shape in
+  this account that reads as an agent running a scheduled job rather than a
+  person evaluating. Still one account; no outreach (DQ-21).
+
+- **The largest buyer is spending less this week, and nothing on our side
+  explains it** (measured 2026-09-26, `payerFacts` per UTC day, second-sourced
+  by the commercial pack's week-in-progress figures, which reconcile exactly:
+  €30.69, largest 71.2%). Its daily spend 09-21..09-25: €9.74, €2.20, €2.84,
+  €4.13, €2.95 — €21.86 in five days against €51.99 across the whole prior
+  week — and nothing yet on 09-26 (last call 09-25T23:13Z). Its failures this
+  week are few (26 of 334 calls; image-to-text 7, base64 6, German 5) and
+  uncharged. The mix changed: last week serp-analyze and image-to-text
+  (€17.15 together); this week adverse-media-check (€8.00) and seo-audit
+  (€3.30). A smaller workload, not a broken one. The week closes Sunday.
+
+- **Our largest buyer asked for US private companies we cannot answer**
+  (measured 2026-09-26, `who-called --slug us-company-data --days 14`: 121
+  x402 calls, 113 failed, zero harness; per-day read of the same buyer's rows).
+  On 2026-09-18 it sent 114 US company names in one sitting — Fireblocks,
+  ActiveCampaign, Muck Rack, BetterCloud and the like. 6 were answered, 103
+  were correctly refused because SEC EDGAR only holds companies that file
+  with the SEC, and 5 hit a genuine SEC HTTP 500. It tried twice more on
+  09-19 and has not called the capability since. The refusals were not
+  charged and the quality floor correctly did not count them (156 evaluated,
+  no proposal). This is unmet demand from the one buyer who matters most:
+  private-company basics for US software firms. Logged in IDEAS.md; a source
+  must fit DEC-20260428-A, and buying one is spend, so it is research first.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
