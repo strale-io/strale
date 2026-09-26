@@ -77,3 +77,4 @@ output_field_reliability:
   is_valid: guaranteed
   reason: guaranteed
   format_spec: guaranteed
+geography: eu

@@ -123,3 +123,4 @@ output_field_reliability:
   has_check_digit: guaranteed
   checksum_ok: guaranteed
   reason: guaranteed
+geography: eu
