@@ -1140,6 +1140,40 @@ conversion.
   private-company basics for US software firms. Logged in IDEAS.md; a source
   must fit DEC-20260428-A, and buying one is spend, so it is research first.
 
+- **The largest buyer has nearly stopped buying from us, while it still has
+  money and still buys from others** (measured 2026-09-27; `payerFacts` per
+  UTC day, second-sourced on-chain from the public Base ledger). Daily spend
+  09-21..09-27: €9.74, €2.20, €2.84, €4.13, €2.95, **€0.44, €0.02** (by
+  07:00Z); calls 96 → 43 → 63 → 85 → 21 → 10 → 1. Every product it used
+  dropped to zero together — image-to-text 171 calls in 09-14..09-24 then
+  none, email-validate 93 → 0, serp-analyze 75 → 0, adverse-media-check
+  42 → 0 — so this is a buyer-wide change, not one product breaking. Our side
+  is clean: few failures and uncharged, no stuck or failed settlements (every
+  settlement intent `recorded`), no spike in refusals from its client
+  (`Deno/2.7.14`), the 402 challenge and catalogue answer normally, and the
+  revenue-heartbeat and settlement-volume alarms fired as designed (09-25,
+  09-26). **Its wallet is funded**: USDC 123.96 now, after a ~$270 top-up
+  around 09-21 (unlike the 2026-09-04 stop, when it had run dry). In the last
+  24 h it paid $14.00 to 9 recipients: Strale **$0.50** (9 transfers);
+  kadec0 (search/scraper utilities) $3.34 / 76; the x402atlas Google-Trends
+  service $3.40 / 68; blockrun.ai (its LLM routing) $6.70 / 30. Across the
+  prior days the two steady utility suppliers held their volume (kadec0
+  73/95/126/76 transfers per 24 h, Trends 38/65/91/68) while ours fell
+  50/51/16/9 — our share of that steady non-LLM spend went from about a third
+  to about 7%. Its LLM spend also collapsed (6,204 transfers the day before,
+  30 in the last 24 h), which says its on-demand work shrank; the steady
+  suppliers look like scheduled jobs that carried on. `unverified:` whether
+  it substituted another supplier for us or its end users simply stopped
+  asking for the kind of work we did — public data cannot separate the two.
+  No outreach (charter customer-data boundary). The week of 09-21 closes
+  tonight well below €62.31.
+
+- **The account buyer runs a daily job on us** (measured 2026-09-27, that
+  account's rows): `company-tech-stack` at 02:42Z on 09-25, 09-26 and 09-27
+  (02:23Z on 09-24). The ~90-minute `stock-quote` cadence seen on 09-25 did
+  not repeat on 09-26. Bought on all seven days of the week, €8.97. Still one
+  account; no outreach (DQ-21).
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
