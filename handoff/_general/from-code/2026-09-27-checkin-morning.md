@@ -259,7 +259,21 @@ it is the only lying-shape row (`lying_total` 1). `startup-migrations.test.ts`
 "never invents a failure" case fails; planted `AND total_successes = 0` →
 `AND true` → the scope case fails; both restored, 171/171.
 `npm run migrations:check` ok (61 blocks); `migrations:test` 19/19. Root
-`npm run typecheck` and independent review: see "Review" below.
+`npm run typecheck` (incl. `typecheck:scripts`) exit 0 after building the MCP
+and TS SDK packages in the fresh worktree.
+
+**Review:** independent same-provider review in a separate context (fresh
+read-only agent): **PASS**, all seven claims confirmed against production and
+source (sole writers in `circuit-breaker.ts`; last `/v1/do` call 08-16; the
+false timestamp 5 ms before a failed transaction, and *no* test_results rows
+at all for the slug on 08-11..08-13; predicate matches 1 row; only
+`digest-compiler.ts` reads the field and it is null-safe; tests discriminate).
+One process note: the reviewer mutation-tested by editing the worktree file
+despite a read-only brief; it restored it and the tree was verified clean
+afterwards (`git status` empty before the next change). Future briefs should
+say "mutation-test in a copy, never in the worktree". No Codex-register row
+(DEC-20260910-A). CI's first run failed only on `handoff/README.md` index
+staleness (a new handoff file); regenerated with `npm run archive:index`.
 
 **Workload (DEC-20260504-B):** one row, once. **Deploy dependency
 (DEC-20260504-C):** `runStartupMigrations()` from `index.ts`; 0118 is the
