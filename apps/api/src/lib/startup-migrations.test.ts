@@ -75,6 +75,7 @@ import {
   runMigration0115_resyncCanadianCompanyDataDependencyHealth,
   runMigration0116_resyncSpanishCompanyDataDependencyHealth,
   runMigration0117_clearStandingCatalogueAlerts,
+  runMigration0118_clearDanishFalseBreakerSuccess,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1434,6 +1435,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0115_resyncCanadianCompanyDataDependencyHealth",
       "runMigration0116_resyncSpanishCompanyDataDependencyHealth",
       "runMigration0117_clearStandingCatalogueAlerts",
+      "runMigration0118_clearDanishFalseBreakerSuccess",
     ]);
   });
 });
@@ -2317,7 +2319,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(117);
+    expect(Math.max(...numbers)).toBe(118);
   });
 });
 
@@ -2834,6 +2836,68 @@ describe("startup-migrations: block 0117 (clear standing catalogue alerts)", () 
   it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
     const stub = makeStub({ queue: [{}, [], geoRows(), fixtureRows(), {}, {}] });
     await runMigration0117_clearStandingCatalogueAlerts(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations: block 0118 (clear the false Danish breaker success)", () => {
+  const cleared = () => [{ capability_slug: "danish-company-data" }] as unknown[];
+
+  it("clears last_success_at on the one row and writes one event", async () => {
+    const stub = makeStub({ queue: [{}, [], cleared(), {}, {}] });
+    const result = await runMigration0118_clearDanishFalseBreakerSuccess(stub);
+    expect(result.rows_affected).toBe(1);
+    expect(result.outcome).toMatch(/cleared the false last_success_at/);
+    const events = stub.renderedSql.filter((q) => /insert into health_monitor_events/i.test(q));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain("auto_fix");
+  });
+
+  it("only nulls last_success_at, and never invents a failure", async () => {
+    const stub = makeStub({ queue: [{}, [], cleared(), {}, {}] });
+    await runMigration0118_clearDanishFalseBreakerSuccess(stub);
+    const update = stub.renderedSql.find((q) => /update capability_health/i.test(q))!;
+    const set = update.slice(update.toLowerCase().indexOf("set"), update.toLowerCase().indexOf("where"));
+    expect(set.replace(/\s+/g, " ").trim()).toBe("SET last_success_at = NULL");
+    expect(update).not.toMatch(/total_failures|last_failure_at|consecutive_failures|state\s*=\s*'open'/i);
+  });
+
+  it("scopes the write to the Danish row still holding the false timestamp", async () => {
+    const stub = makeStub({ queue: [{}, [], cleared(), {}, {}] });
+    await runMigration0118_clearDanishFalseBreakerSuccess(stub);
+    const update = stub.renderedSql.find((q) => /update capability_health/i.test(q))!;
+    const where = update.slice(update.toLowerCase().indexOf("where"));
+    expect(where).toContain("capability_slug = 'danish-company-data'");
+    expect(where).toContain("state = 'closed'");
+    expect(where).toContain("total_successes = 0");
+    // A one-second window around the false value: a genuine later success
+    // (or any other timestamp) never matches.
+    expect(where).toContain("last_success_at >= '2026-08-12T22:38:22Z'");
+    expect(where).toContain("last_success_at <  '2026-08-12T22:38:23Z'");
+  });
+
+  it("does not claim a fix when nothing matches", async () => {
+    const stub = makeStub({ queue: [{}, [], [], {}] });
+    const result = await runMigration0118_clearDanishFalseBreakerSuccess(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no matching/);
+  });
+
+  it("never fires twice, idempotent on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0118_clearDanishFalseBreakerSuccess" }]] });
+    const result = await runMigration0118_clearDanishFalseBreakerSuccess(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ").toLowerCase()).not.toMatch(/update capability_health/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+
+  it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
+    const stub = makeStub({ queue: [{}, [], cleared(), {}, {}] });
+    await runMigration0118_clearDanishFalseBreakerSuccess(stub);
     for (const query of stub.captured) {
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
