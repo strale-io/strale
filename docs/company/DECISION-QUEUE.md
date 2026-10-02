@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-34** · `your_call` · owner Petter · raised 2026-09-17T19:30Z · no deadline — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
+**DQ-34** · `answered` · owner Petter · raised 2026-09-17T19:30Z · answered 2026-10-02 — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
 Once a week an automated sweep checks seven things that can quietly drift apart
 — among them whether what our records say about each service matches what the
 live system holds, and whether the compliance evidence we store is still
@@ -53,6 +53,23 @@ so this is three checks out of seven, not all seven.
 a row now. Nothing else has changed.
 *Update 2026-09-25:* no new weekly run since (next is Sunday 28 September);
 still six in a row, still the same cause.
+*Update 2026-10-02 (morning):* the 28 September run failed the same way — seven
+in a row.
+**Answered 2026-10-02 by Petter, in session:** "install the database password
+so the weekly sweep can read the database again." Done the same session: the
+repository's `DATABASE_URL` Actions secret now holds the **read-only**
+production role (`strale_ro`, the one this machine uses), with TLS required
+(`sslmode=require`; tested first — the connection reports `ssl = true`, and the
+role refuses even a temporary-table write with `25006`, so the sweep cannot
+change anything). No other workflow reads that secret. A manual run
+(36986562098, 2026-10-02T08:52Z) proved it: all three database checks ran —
+manifest↔database comparison (343 clean, 1 drifted: `fear-greed-index`
+`output_field_reliability`), audit-column readability (every scanned column
+readable, 1,280,589 transactions), output-schema corruption (0). The run's
+overall red is real findings, not the password: that one drift and six
+`ROSTER_VENDOR_UNREGISTERED` names (Global Database, Allabolag.se, PitchBook,
+einSearch.IO / 1099 line, Crunchbase Enterprise, D&B Direct+). Both are
+working items for the next morning run, not decisions.
 
 **DQ-33** · `your_call` · owner Petter · raised 2026-09-12T06:30Z · no deadline — **six company registries are being health-checked with a test input we already know is wrong, and correcting it is a database write I cannot make**
 Six of our company-registry services are judged every day by a check that uses
