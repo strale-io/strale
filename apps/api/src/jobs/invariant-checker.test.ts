@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isLyingBreakerRow } from "./invariant-checker.js";
+import { isLyingBreakerRow, LYING_BREAKER_REMEDIATION } from "./invariant-checker.js";
 
 // Phase 3 Harden — Invariant Check #13 regression test. The Phase 2
 // incident (memo: docs/research/2026-05-07-dk-phase2-understand.md on
@@ -70,5 +70,22 @@ describe("isLyingBreakerRow — Phase 3 Invariant #13", () => {
         totalSuccesses: 1,
       }),
     ).toBe(false);
+  });
+});
+
+describe("lying_breaker remediation text", () => {
+  // The alert's advice used to add a failure (`total_failures + 1`,
+  // `last_failure_at = NOW()`) to erase a false success. Block 0118 showed the
+  // correct repair nulls only last_success_at; the advice must not regress.
+  it("nulls last_success_at and never invents a failure", () => {
+    expect(LYING_BREAKER_REMEDIATION).toMatch(/last_success_at = NULL/);
+    expect(LYING_BREAKER_REMEDIATION).not.toMatch(/total_failures\s*=/);
+    expect(LYING_BREAKER_REMEDIATION).not.toMatch(/last_failure_at\s*=/);
+    expect(LYING_BREAKER_REMEDIATION).not.toMatch(/consecutive_failures\s*=/);
+  });
+
+  it("scopes the write to the lying shape, not the whole slug", () => {
+    expect(LYING_BREAKER_REMEDIATION).toMatch(/total_successes = 0/);
+    expect(LYING_BREAKER_REMEDIATION).toMatch(/state = 'closed'/);
   });
 });

@@ -1174,6 +1174,23 @@ conversion.
   not repeat on 09-26. Bought on all seven days of the week, €8.97. Still one
   account; no outreach (DQ-21).
 
+- **The largest buyer came back within two days, and bigger** (measured
+  2026-10-02; `payerFacts` per UTC day, equal to the commercial pack's week
+  totals). Daily spend 09-27..10-01: €2.46, €3.32, €4.11, €11.02, **€16.28**
+  (483 calls on 10-01, its largest day since at least 09-21); €5.64 on 10-02
+  by 06:21Z. Week of 09-28 so far €40.37 of €42.87 (94.2%). Its mix changed:
+  email-validate 405 calls (€12.15) and google-search 101 (€10.10) since
+  09-28, against image-to-text 191 → 58 and us-company-data 119 → 1. So the
+  09-27 entry's "substitution vs less work" question resolves toward *less
+  work, then different work* — a supplier swap would not reverse in two days.
+  Every paid failure it hit this week was a correct refusal or the target
+  site's own error (`who-called --errors`, five slugs). Concentration is the
+  same risk in the other direction: the week of 09-21 closed **€36.13**
+  (falling from €62.31; 68.5% one buyer) and this week will close higher on
+  the same single buyer. One small habit is visible elsewhere: wallet
+  `x402:v1:59273355…` has bought one jwt-decode (2c) every day 09-27..10-02,
+  ~01:00–04:30Z — a scheduled job, worth cents.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
