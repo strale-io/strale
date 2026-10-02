@@ -1156,6 +1156,21 @@ export function isLyingBreakerRow(row: {
   return row.state === "closed" && row.lastSuccessAt !== null && row.totalSuccesses === 0;
 }
 
+/**
+ * The repair the alert recommends. It previously told the operator to also
+ * set `last_failure_at = NOW()` and `total_failures + 1` — recording a failure
+ * that never happened in order to erase a success that never happened. Block
+ * 0118 (2026-09-27) cleared the Danish row correctly by nulling only the false
+ * value; this text now says the same thing.
+ */
+export const LYING_BREAKER_REMEDIATION =
+  "Null only the false value, through a ledgered startup-migration block (never by hand): " +
+  "UPDATE capability_health SET last_success_at = NULL WHERE capability_slug = '<slug>' " +
+  "AND state = 'closed' AND total_successes = 0 AND last_success_at within one second of the false timestamp. " +
+  "Leave every failure field as it is: the row's failures are real, and adding one would record " +
+  "a failure that never happened. First confirm no customer-path success exists for the slug at " +
+  "that timestamp (see block 0118 for the worked example).";
+
 async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }> {
   const db = getDb();
 
@@ -1208,8 +1223,7 @@ async function checkLyingBreakers(): Promise<{ alerts: number; checked: number }
         last_failure_at: r.lastFailureAt?.toISOString() ?? null,
         updated_at: r.updatedAt.toISOString(),
       })),
-      remediation:
-        "Reset the row by hand: UPDATE capability_health SET state='closed', last_success_at=NULL, last_failure_at=NOW(), total_failures = total_failures + 1, consecutive_failures = 0, updated_at=NOW() WHERE capability_slug='<slug>'. Only do this AFTER Fix A + Fix B have shipped to prod (otherwise the next 2-hour test batch re-creates the lying state).",
+      remediation: LYING_BREAKER_REMEDIATION,
     },
   });
 
