@@ -1191,6 +1191,19 @@ conversion.
   `x402:v1:59273355…` has bought one jwt-decode (2c) every day 09-27..10-02,
   ~01:00–04:30Z — a scheduled job, worth cents.
 
+- **The 10-01 surge did not hold; the week of 09-28 closed on one buyer**
+  (measured 2026-10-10; `payerFacts` per UTC day and per week, equal to the
+  commercial pack). Week of 09-28 closed **€53.35** (rising from €36.13),
+  94.0% one buyer (€50.13 vs €3.22). The largest buyer's daily spend since:
+  €9.48 (10-02), €0.73, €5.19, €2.92, €4.86, €9.69, €6.02, €3.05 — no day
+  near 10-01's €16.28. Week of 10-05 is **€31.34 at day 6**, 85.9% one buyer,
+  so it will close near the 09-21 level, not the 09-28 one. Below the largest
+  buyer, two small habits are firming: the account buyer bought on 5 of 6
+  days this week (€3.05, already above last week's €2.62), and wallet
+  `x402:v1:2e55b616…` on 4 days (€0.75). The daily jwt-decode wallet
+  stopped after 10-02. Still no second buyer worth more than a few euros a
+  week; concentration, not growth, remains the read. No outreach.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |

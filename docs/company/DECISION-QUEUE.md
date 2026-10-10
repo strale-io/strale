@@ -168,6 +168,16 @@ this period and none are lost; it is taken off sale until the registry answers
 our live system, which is a hosting question, not anything for you. This
 entry's own subject is now only the German check, still waiting for 7 October.
 This entry stays open until you close it.
+*Update 2026-10-10 — the German correction is written and goes live with this
+morning's change.* The supplier allowance reset on 7 October, which removed
+the reason to wait. The other reason — that the corrected value could not be
+checked from here — turned out not to need checking from here: the German
+service's own second live check already uses the corrected value, and it
+passed in the live system on 7 October, twelve minutes after the old one
+failed. The same deploy-time route used for the other five corrects it; it
+costs about one supplier credit each time the check runs, against an
+allowance that is almost untouched this month. With that, all six registries
+this entry named are corrected. It stays open until you close it.
 
 **DQ-32** · `answered` · owner Petter · raised 2026-09-11T20:00Z · answered 2026-09-11 — **after the switch from Notion, the digest's "action required" means decisions waiting on you**
 *Answered:* Petter, in chat, accepting the recommendation: the repo-native
