@@ -76,6 +76,7 @@ import {
   runMigration0116_resyncSpanishCompanyDataDependencyHealth,
   runMigration0117_clearStandingCatalogueAlerts,
   runMigration0118_clearDanishFalseBreakerSuccess,
+  runMigration0119_resyncGermanCompanyDataDependencyHealth,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1436,6 +1437,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0116_resyncSpanishCompanyDataDependencyHealth",
       "runMigration0117_clearStandingCatalogueAlerts",
       "runMigration0118_clearDanishFalseBreakerSuccess",
+      "runMigration0119_resyncGermanCompanyDataDependencyHealth",
     ]);
   });
 });
@@ -2319,7 +2321,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(118);
+    expect(Math.max(...numbers)).toBe(119);
   });
 });
 
@@ -2898,6 +2900,72 @@ describe("startup-migrations: block 0118 (clear the false Danish breaker success
   it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
     const stub = makeStub({ queue: [{}, [], cleared(), {}, {}] });
     await runMigration0118_clearDanishFalseBreakerSuccess(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations: block 0119 (resync german-company-data dependency_health)", () => {
+  const releasedRow = () =>
+    [{ id: "69a00c0a-7eeb-4e9e-b6ad-e6314ac3a2be", capability_slug: "german-company-data", test_type: "dependency_health" }] as unknown[];
+
+  it("rewrites the refused company name to the manifest's SAP SE and writes one event", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    const result = await runMigration0119_resyncGermanCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(1);
+    expect(result.outcome).toContain("resynced 1");
+
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q));
+    expect(update).toBeDefined();
+    const setClause = update!.slice(0, update!.toLowerCase().indexOf("where"));
+    // The manifest's health_check_input, passing live in production's
+    // schema_check suite on 2026-10-07.
+    expect(setClause).toContain('{"company_name":"SAP SE"}');
+    expect(setClause.toLowerCase()).toContain("test_mode = 'live'");
+    expect(setClause.toLowerCase()).toContain("baseline_output = null");
+
+    const events = stub.renderedSql.filter((q) => /insert into health_monitor_events/i.test(q));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain("auto_fix");
+  });
+
+  it("scopes the UPDATE to german-company-data, dependency_health, and the exact stale input", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    await runMigration0119_resyncGermanCompanyDataDependencyHealth(stub);
+    const update = stub.renderedSql.find((q) => /update test_suites/i.test(q))!;
+    const whereClause = update.slice(update.toLowerCase().indexOf("where"));
+    expect(whereClause).toContain("test_type = 'dependency_health'");
+    expect(whereClause).toContain("capability_slug = 'german-company-data'");
+    // The stale literal, so the known_answer and schema_check suites that
+    // already hold SAP SE, and this suite once resynced, never match.
+    expect(whereClause).toContain('{"company_name":"Google"}');
+    expect(whereClause).not.toContain("SAP SE");
+    expect(whereClause).not.toContain("spanish-company-data");
+  });
+
+  it("does not claim a resync when no matching stale input remains", async () => {
+    const stub = makeStub({ queue: [{}, [], [], {}] });
+    const result = await runMigration0119_resyncGermanCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ")).not.toMatch(/insert into health_monitor_events/i);
+    expect(result.outcome).toMatch(/no matching stale/);
+  });
+
+  it("never fires twice, idempotent on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0119_resyncGermanCompanyDataDependencyHealth" }]] });
+    const result = await runMigration0119_resyncGermanCompanyDataDependencyHealth(stub);
+    expect(result.rows_affected).toBe(0);
+    const joined = stub.renderedSql.join(" | ").toLowerCase();
+    expect(joined).not.toMatch(/update test_suites/);
+    expect(joined).not.toMatch(/insert into health_monitor_events/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+
+  it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
+    const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
+    await runMigration0119_resyncGermanCompanyDataDependencyHealth(stub);
     for (const query of stub.captured) {
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
