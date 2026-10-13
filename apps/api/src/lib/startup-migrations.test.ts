@@ -77,6 +77,7 @@ import {
   runMigration0117_clearStandingCatalogueAlerts,
   runMigration0118_clearDanishFalseBreakerSuccess,
   runMigration0119_resyncGermanCompanyDataDependencyHealth,
+  runMigration0120_declareFearGreedAttribution,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1438,6 +1439,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0117_clearStandingCatalogueAlerts",
       "runMigration0118_clearDanishFalseBreakerSuccess",
       "runMigration0119_resyncGermanCompanyDataDependencyHealth",
+      "runMigration0120_declareFearGreedAttribution",
     ]);
   });
 });
@@ -2321,7 +2323,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(119);
+    expect(Math.max(...numbers)).toBe(120);
   });
 });
 
@@ -2966,6 +2968,64 @@ describe("startup-migrations: block 0119 (resync german-company-data dependency_
   it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
     const stub = makeStub({ queue: [{}, [], releasedRow(), {}, {}] });
     await runMigration0119_resyncGermanCompanyDataDependencyHealth(stub);
+    for (const query of stub.captured) {
+      const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
+      expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
+    }
+  });
+});
+
+describe("startup-migrations: block 0120 (declare fear-greed-index attribution)", () => {
+  const updatedRow = () => [{ slug: "fear-greed-index" }] as unknown[];
+
+  it("adds attribution as guaranteed and as a string property, merging rather than replacing", async () => {
+    const stub = makeStub({ queue: [{}, [], updatedRow(), {}] });
+    const result = await runMigration0120_declareFearGreedAttribution(stub);
+    expect(result.rows_affected).toBe(1);
+    expect(result.outcome).toContain("now declares attribution");
+
+    const update = stub.renderedSql.find((q) => /update capabilities/i.test(q));
+    expect(update).toBeDefined();
+    const setClause = update!.slice(0, update!.toLowerCase().indexOf("where"));
+    // Merge (||) and jsonb_set, so the six existing keys survive.
+    expect(setClause).toContain(`|| '{"attribution":"guaranteed"}'::jsonb`);
+    expect(setClause).toContain("'{properties,attribution}'");
+    expect(setClause).toContain(`'{"type":"string"}'::jsonb`);
+  });
+
+  it("scopes the UPDATE to fear-greed-index and to a row still missing the declaration", async () => {
+    const stub = makeStub({ queue: [{}, [], updatedRow(), {}] });
+    await runMigration0120_declareFearGreedAttribution(stub);
+    const update = stub.renderedSql.find((q) => /update capabilities/i.test(q))!;
+    const whereClause = update.slice(update.toLowerCase().indexOf("where"));
+    expect(whereClause).toContain("slug = 'fear-greed-index'");
+    expect(whereClause).toContain("? 'attribution'");
+    expect(whereClause).toContain("? 'properties'");
+  });
+
+  it("is disjoint from M050: fear-greed-index has no entry in CAPABILITY_OUTPUT_CONTRACTS", async () => {
+    const { CAPABILITY_OUTPUT_CONTRACTS } = await import("./capability-output-contracts.js");
+    expect(Object.keys(CAPABILITY_OUTPUT_CONTRACTS)).not.toContain("fear-greed-index");
+  });
+
+  it("does not claim a change when the row already declares it", async () => {
+    const stub = makeStub({ queue: [{}, [], [], {}] });
+    const result = await runMigration0120_declareFearGreedAttribution(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toMatch(/no change/);
+  });
+
+  it("never fires twice, idempotent on a second boot", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0120_declareFearGreedAttribution" }]] });
+    const result = await runMigration0120_declareFearGreedAttribution(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.join(" | ").toLowerCase()).not.toMatch(/update capabilities/);
+    expect(result.outcome).toMatch(/already applied/);
+  });
+
+  it("no captured statement binds a Date or Buffer (DEC-20260504-A bind-encoder shape)", async () => {
+    const stub = makeStub({ queue: [{}, [], updatedRow(), {}] });
+    await runMigration0120_declareFearGreedAttribution(stub);
     for (const query of stub.captured) {
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
