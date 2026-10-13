@@ -852,6 +852,19 @@
         "test_suites.updated_at"
       ],
       "sha256": "dc247268fb59f83c60b8b1205d86897ff6a39847d98a6991accb1b78006c66db"
+    },
+    {
+      "id": "M063",
+      "function": "runMigration0120_declareFearGreedAttribution",
+      "title": "Declare Fear Greed Attribution",
+      "added": "2026-10-13",
+      "columns_written": [
+        "capabilities.output_field_reliability",
+        "capabilities.output_schema",
+        "startup_migration_ledger.block",
+        "startup_migration_ledger.rows_affected"
+      ],
+      "sha256": "183295945260f9b7038b69666cba02b1f65cd7373d63f4c4db0be6b53ca60ad3"
     }
   ],
   "known_overlaps": [
@@ -1126,7 +1139,8 @@
         "M059",
         "M060",
         "M061",
-        "M062"
+        "M062",
+        "M063"
       ],
       "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (`0113_releaseWronglyQuarantinedRefusalSuites`), M057 (`0114_releaseCorrectedDependencyHealthFixtures`) and M058 (`0115_resyncCanadianCompanyDataDependencyHealth`) each key their own row on their own distinct `BLOCK` string constant, same as every other writer of this column; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered. M059 (`0116_resyncSpanishCompanyDataDependencyHealth`) keys its own row on its own distinct `BLOCK` string constant, same as every other writer of this column. M060 (0117, 2026-09-26) inserts only its own block key '0117_clearStandingCatalogueAlerts' with ON CONFLICT DO NOTHING, so it never touches another block's row. M061 (0118, 2026-09-27) inserts only its own ledger key 0118_clearDanishFalseBreakerSuccess with ON CONFLICT DO NOTHING; no other block writes that key. M062 (0119, 2026-10-10) inserts at most one auto_fix health_monitor_events row and one startup_migration_ledger row keyed on its own block id '0119_resyncGermanCompanyDataDependencyHealth', the same append-only shape as M059; it never updates an existing row, so it cannot contend with another writer."
     },
@@ -1144,7 +1158,8 @@
         "M059",
         "M060",
         "M061",
-        "M062"
+        "M062",
+        "M063"
       ],
       "note": "Shared idempotency-marker table: every block using the `CREATE TABLE IF NOT EXISTS startup_migration_ledger` + `ON CONFLICT (block) DO NOTHING` pattern logs its own (block, rows_affected) row keyed on its own unique `block` string — non-overlapping by construction. Bookkeeping, not a derived-value conflict. Block 0112 (M055) joins this column 2026-09-05: scoped to the eight PR #518 free-public-API slugs (and their dependency_health suites), disjoint from the other writers, guarded on deactivation_reason IS NULL, and ledger-guarded to fire exactly once so it cannot ping-pong across boots. M056 (`0113_releaseWronglyQuarantinedRefusalSuites`), M057 (`0114_releaseCorrectedDependencyHealthFixtures`) and M058 (`0115_resyncCanadianCompanyDataDependencyHealth`) each key their own row on their own distinct `BLOCK` string constant, same as every other writer of this column; the tightened overlap check (2026-09-13) surfaced that these three had joined this column's write set without being added to this entry, which they should have been at the time each was ledgered. M059 (`0116_resyncSpanishCompanyDataDependencyHealth`) keys its own row on its own distinct `BLOCK` string constant, same as every other writer of this column. M060 (0117, 2026-09-26) inserts only its own block key '0117_clearStandingCatalogueAlerts' with ON CONFLICT DO NOTHING, so it never touches another block's row. M061 (0118, 2026-09-27) inserts only its own ledger key 0118_clearDanishFalseBreakerSuccess with ON CONFLICT DO NOTHING; no other block writes that key. M062 (0119, 2026-10-10) inserts at most one auto_fix health_monitor_events row and one startup_migration_ledger row keyed on its own block id '0119_resyncGermanCompanyDataDependencyHealth', the same append-only shape as M059; it never updates an existing row, so it cannot contend with another writer."
     },
@@ -1249,6 +1264,22 @@
         "M057"
       ],
       "note": "Same predicate pair as test_suites.quarantine_reason immediately above: M056 resets test_status to 'normal' only for its 32 negative/edge_case/known_bad rows, M057 only for its 3 dependency_health rows. Disjoint by the same test_type argument."
+    },
+    {
+      "column": "capabilities.output_field_reliability",
+      "blocks": [
+        "M050",
+        "M063"
+      ],
+      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row."
+    },
+    {
+      "column": "capabilities.output_schema",
+      "blocks": [
+        "M050",
+        "M063"
+      ],
+      "note": "M050 (0090, 2026-08-17) writes this column only for the slugs listed in CAPABILITY_OUTPUT_CONTRACTS (lib/capability-output-contracts.ts). M063 (0120, 2026-10-13) writes it only for slug = 'fear-greed-index', which is not in that module (startup-migrations.test.ts asserts it), and only once (ledgered). Disjoint by slug, so the two never contend for the same row."
     }
   ]
 }
