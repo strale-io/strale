@@ -1,5 +1,7 @@
 ## Workflow Protocol
 
+**Times for Petter:** give every time in Swedish local time (Europe/Stockholm: CET, CEST in summer), never UTC. UTC stays only in machine artifacts (logs, receipts, cron, commit metadata). Petter, 2026-10-15.
+
 ### Session Start
 1. Declare session intent (one sentence: what is this session for?)
 2. Determine mode:
