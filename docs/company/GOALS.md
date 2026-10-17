@@ -1204,6 +1204,22 @@ conversion.
   stopped after 10-02. Still no second buyer worth more than a few euros a
   week; concentration, not growth, remains the read. No outreach.
 
+- **The largest buyer stepped up to about €12 a day and held it for a week**
+  (measured 2026-10-17 ~22:00Z; `payerFacts` per UTC day and per week, equal
+  to the commercial pack). Correction to the entry above: week of 10-05 did
+  not close "near the 09-21 level" — it closed **€44.50** (falling from
+  €53.35; 88.7% one buyer, €39.47 vs €5.03), because its last day, 10-11,
+  carried €11.24. The largest buyer's daily spend since: €10.64 (10-11),
+  €12.91, €12.68, €12.05, €8.46, €14.09, €7.62 (10-17, partial) — €11.80 a
+  day over the six full days, against €5.64 a day across week 10-05. Week of
+  10-12 is **€71.95 at day 6**, 94.2% one buyer (€67.81 vs €4.14); it needs
+  €1.08 on its last day to pass the best completed week on record (08-24,
+  €73.03). Below the largest buyer the tier shrank: the account buyer bought
+  on 3 of 6 days (€1.56), wallet `x402:v1:2e55b616…` has bought nothing
+  since 10-11, and the one new face of note (`x402:v1:6bfcaec6…`, €2.25 over
+  10-11/10-12, image-to-text) has not returned. Read: more revenue, same
+  single dependency, deeper. No outreach.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |

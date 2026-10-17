@@ -104,6 +104,7 @@
         "handoff/_general/from-code/2026-09-05-m2-register-tests-synthetic-collision.md",
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
+        "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs",
@@ -366,6 +367,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-10.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-19-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -530,7 +532,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "d7ca9d914f947fa1fcf84996fa5a28e64e60b78032445afa8a9f07c3ad4ed4fb",
+      "sha256": "3d2c97d24ced0e23d3c141567d0fd6ff68c9460908649289b723544e5e64bf07",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -644,6 +646,7 @@
         "handoff/_general/from-code/2026-09-27-checkin-morning.md",
         "handoff/_general/from-code/2026-10-02-checkin-morning.md",
         "handoff/_general/from-code/2026-10-10-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -776,7 +779,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f483ba84a23f29f5f41c3375d665839db8a4bfd2a037b21141fb7495bb703d54",
+      "sha256": "2e4c5c33581a8a4a5ee165c27720538dcba1eb00c20bcb612ed8ee826dec6017",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

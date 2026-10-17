@@ -71,7 +71,7 @@ and never needs asking.
 > not say that: correct refusals, environmental failures, the caller's own
 > input, our own harness's bookkeeping.
 
-**Count: 7 occasions, 8 mechanisms. Threshold passed long ago.** Row 8's
+**Count: 8 occasions, 9 mechanisms. Threshold passed long ago.** (Row 9 added 2026-10-17.) Row 8's
 mechanism is state drift and is also recorded as F7 incident 11: it appears in
 both family totals because the three-strike rule counts mechanisms per family,
 and a drift that produces a false quality signal is an instance of each. The
@@ -92,6 +92,7 @@ not.
 | 6 | 2026-08-22 | Free-tier front door quarantined on 15 calls, of which zero were defects (one correct "no text on this page", two caller-site errors, two caller-site rate limits) | refusal reclassified; capability re-listed |
 | 7 | 2026-08-22 | Same incident, second mechanism: the floor *measures* paid traffic only but its *remedy* withdraws the free surface too, so a free front door is judged on traffic that is invisible to the decision | **unfixed** |
 | 8 | 2026-09-12 | Six company registries judged on a `dependency_health` fixture the repository had already corrected and production had not — `canadian-company-data` passed none of its runs — 173 in the fourteen-day window when measured — refusing, correctly, a corporation number the Canadian registry says does not exist; three of the six were quarantined by fixture-recapture exhaustion and so have no health signal at all | drift is now reported (`npm run fixtures:drift`); four of the six production rows were repaired on 2026-09-12/13 by startup-migration blocks 0114/0115 and verified live on 2026-09-17, two remain. The original "applying them is a write this operation does not hold" was wrong — see the correction under F7 incident 11. F7 incident 11 is the mechanism |
+| 9 | 2026-10-16 | The Polish registry served an HTTP 200 HTML maintenance page; the test classifier called the resulting JSON-parse error `capability_bug` (tier-2, "internal") 24 times in two days, because a generic `/unexpected token/i` bug rule runs before the HTML-page rule that exists for exactly this case — so that rule had never fired. Harness traffic only | step 4 now yields to markup evidence (`<!DOCTYPE`/`<html`), 2026-10-17; discriminating tests |
 
 **The common authority is not the quality floor.** It is the *failure taxonomy*
 — `classifyTransactionFailure` and the correctness invariants that read it —

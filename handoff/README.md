@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-317 files (290 with a recorded intent, 27 without).
+318 files (291 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-17 | [`handoff/_general/from-code/2026-10-17-checkin-morning.md`](_general/from-code/2026-10-17-checkin-morning.md) | run the 2026-10-17 operating session under DAILY-RUN.md — the first |
 | 2026-10-13 | [`handoff/_general/from-code/2026-10-13-fear-greed-attribution-drift.md`](_general/from-code/2026-10-13-fear-greed-attribution-drift.md) | Petter asked for a status check and a fix if anything was broken. |
 | 2026-10-10 | [`handoff/_general/from-code/2026-10-10-checkin-morning.md`](_general/from-code/2026-10-10-checkin-morning.md) | run the 2026-10-10 operating session under DAILY-RUN.md — the first |
 | 2026-10-02 | [`handoff/_general/from-code/2026-10-02-dq34-weekly-drift-credential.md`](_general/from-code/2026-10-02-dq34-weekly-drift-credential.md) | carry out Petter's in-session answer to DQ-34 ("install the database |
