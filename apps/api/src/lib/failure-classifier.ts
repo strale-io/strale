@@ -195,6 +195,12 @@ const UPSTREAM_EMPTY_PATTERNS = [
   /unexpected.*<.*position 0/i,   // JSON.parse on HTML at position 0
 ];
 
+// Markup evidence in a parse error: the body was an HTML page, not JSON.
+const HTML_BODY_PATTERNS = [
+  /<!DOCTYPE/i,
+  /<html/i,
+];
+
 // Upstream API returned data but specific fields are wrong/missing
 const VALIDATION_ASSERTION_PATTERNS = [
   /expected non-null/i,           // field was null when guaranteed
@@ -301,7 +307,16 @@ export function classifyFailure(
 
   // ── 4. CAPABILITY_BUG ─────────────────────────────────────────────────
   // Internal code errors — highest signal, fully counts against SQS
-  if (!executionSucceeded && matchesAny(reason, CAPABILITY_BUG_PATTERNS)) {
+  // A JSON.parse failure on a markup body is the upstream serving a web page
+  // (maintenance, error page) where it promised JSON — step 6's verdict, which
+  // `/unexpected token/i` here used to pre-empt, so step 6's HTML patterns
+  // never fired. Requires markup evidence, so an LLM reply like "<thinking>"
+  // still lands here.
+  if (
+    !executionSucceeded &&
+    matchesAny(reason, CAPABILITY_BUG_PATTERNS) &&
+    !matchesAny(reason, HTML_BODY_PATTERNS)
+  ) {
     return {
       verdict: "capability_bug",
       confidence: "high",

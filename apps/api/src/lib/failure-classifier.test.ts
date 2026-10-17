@@ -107,3 +107,37 @@ describe("classifyFailure — compliance refusal (Phase-4 tail fix)", () => {
     expect(result.verdict).not.toBe("test_design");
   });
 });
+
+// 2026-10-17: from 2026-10-16 the Polish KRS API answered every request with
+// an HTTP 200 "Przerwa techniczna" (technical break) HTML page. The executor's
+// JSON.parse threw this message (Node's own wording, reproduced against the
+// captured body), and step 4's `/unexpected token/i` called it capability_bug
+// before step 6's HTML patterns could see it — 24 false "internal" verdicts.
+const HTML_MAINTENANCE_PAGE_MESSAGE =
+  "Execution error: Unexpected token '<', \"\r\n\r\n<html>\r\n<h\"... is not valid JSON";
+
+describe("classifyFailure — HTML page where JSON was promised", () => {
+  it("classifies a JSON.parse failure on an HTML page as upstream_transient, not capability_bug", () => {
+    const result = classifyFailure(HTML_MAINTENANCE_PAGE_MESSAGE, false, false, "dependency_health", {});
+    expect(result.verdict).toBe("upstream_transient");
+  });
+
+  it("does the same for a <!DOCTYPE body", () => {
+    const result = classifyFailure(
+      "Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON", false, false, "known_answer", {},
+    );
+    expect(result.verdict).toBe("upstream_transient");
+  });
+
+  it("still calls a parse failure without markup evidence a capability_bug", () => {
+    const result = classifyFailure(
+      "Unexpected token '<', \"<thinking>\"... is not valid JSON", false, false, "known_answer", {},
+    );
+    expect(result.verdict).toBe("capability_bug");
+  });
+
+  it("a deterministic capability still cannot blame an upstream", () => {
+    const result = classifyFailure(HTML_MAINTENANCE_PAGE_MESSAGE, false, false, "known_answer", {}, false, "deterministic");
+    expect(result.verdict).toBe("capability_bug");
+  });
+});
