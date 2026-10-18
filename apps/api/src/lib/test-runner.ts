@@ -62,10 +62,15 @@ function computeOutputHash(output: unknown): string | null {
  * and with them the markup evidence the classifier needs: a JSON.parse of an
  * HTML maintenance page, `Unexpected token '<', "\n\n<html>\n<he"...`, comes
  * out as `Unexpected token ' <he"...` and reads as our own bug. Classify on
- * the raw error; keep storing the sanitized one.
+ * the error with its markup kept — whitespace collapsed and length capped as
+ * the sanitizer does, so text a long page used to hide stays hidden — and
+ * keep storing the sanitized one.
  */
 function classifierReason(executionError: string | null, failureReason: string | null): string | null {
-  return executionError ? `Execution error: ${executionError}` : failureReason;
+  if (!executionError) return failureReason;
+  let msg = executionError.replace(/\s+/g, " ").trim();
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  return `Execution error: ${msg}`;
 }
 
 /**

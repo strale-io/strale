@@ -122,6 +122,20 @@ describe("runTests — classification reads the raw execution error", () => {
     expect(insertResultsCalls[0].failureClassification).toBe("capability_bug");
   });
 
+  it("the regression path classifies the same page as upstream_transient", async () => {
+    const row = suiteRow("ai_assisted");
+    suiteRows = [{
+      ...row,
+      suite: { ...row.suite, testType: "regression", baselineOutput: { name: "x" } },
+    }];
+    mockExecutor.mockRejectedValue(jsonParseError(KRS_MAINTENANCE_BODY));
+
+    await runTests({ capabilitySlug: "fake-registry-cap" });
+
+    expect(insertResultsCalls).toHaveLength(1);
+    expect(insertResultsCalls[0].failureClassification).toBe("upstream_transient");
+  });
+
   it("a deterministic capability serving the same error is still capability_bug", async () => {
     suiteRows = [suiteRow("deterministic")];
     mockExecutor.mockRejectedValue(jsonParseError(KRS_MAINTENANCE_BODY));
