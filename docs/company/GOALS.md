@@ -1220,6 +1220,15 @@ conversion.
   10-11/10-12, image-to-text) has not returned. Read: more revenue, same
   single dependency, deeper. No outreach.
 
+- **Week of 10-12 is the best week on record before it has closed**
+  (measured 2026-10-18 ~06:20Z; `discreteWeeks(14)` and `payerFacts` for
+  10-12 → now, equal: 7431 c, €0 unattributed). **€74.31** with ~18 hours of
+  its last UTC day left, past 08-24's €73.03 and every week back to 07-13.
+  94.4% one buyer (€70.17 vs €4.14 from six others); the largest buyer was
+  active on all 7 days. Nobody below it bought overnight. The read is
+  unchanged and sharper: the record is one buyer's step-up, not breadth.
+  No outreach.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
