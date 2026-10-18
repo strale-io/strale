@@ -71,7 +71,7 @@ and never needs asking.
 > not say that: correct refusals, environmental failures, the caller's own
 > input, our own harness's bookkeeping.
 
-**Count: 8 occasions, 9 mechanisms. Threshold passed long ago.** (Row 9 added 2026-10-17.) Row 8's
+**Count: 8 occasions, 9 mechanisms. Threshold passed long ago.** (Row 9 added 2026-10-17; its fix was inert in production until 2026-10-18 — F5 incident 11.) Row 8's
 mechanism is state drift and is also recorded as F7 incident 11: it appears in
 both family totals because the three-strike rule counts mechanisms per family,
 and a drift that produces a false quality signal is an instance of each. The
@@ -457,7 +457,7 @@ to verify were broken?* For F7 incident 8: *which consumers read this setting,
 and did the strictest one accept it?* Same question. A reader who agrees with
 the paragraph above and does not ask one of these has changed nothing.
 
-**Count: 10 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, incident 9 is the same checkout still being the cause, and incident 10 (2026-09-11) is a mock-rendered SQL test that could not fail on the defect it guarded.** Integration
+**Count: 11 — threshold reached, investigation OPENED 2026-08-22. Incident 8 is incident 7's direct consequence, incident 9 is the same checkout still being the cause, incident 10 (2026-09-11) is a mock-rendered SQL test that could not fail on the defect it guarded, and incident 11 (2026-10-18) is a unit test fed a message its production caller never produces.** Integration
 suites skipped for months because a required variable was set in no workflow; a
 budget regression test that exercised the ORM rather than the fix and passed
 either way; two gates that could not fail (a script directory outside the
@@ -673,6 +673,30 @@ clean-input pass and all three caught only because the PR was required to
 show a failing case first. That is the population this rule is drawn from —
 stated exactly as the two source handoffs record it, not rounded up to a
 larger count this file cannot verify.
+
+**Incident 11, 2026-10-18 — the right fix, tested on a message production never
+sends.** The 2026-10-17 classifier change (F1 row 9: an HTML page where JSON was
+promised is upstream, not our bug) shipped with four unit tests that failed
+before it and passed after, the input copied verbatim from Node's `JSON.parse`
+on the captured registry body. It deployed and changed nothing: the next six
+production classifications of the same maintenance page still read
+`capability_bug`. The test runner never hands the classifier the raw error — it
+hands it the stored failure reason, which `sanitizeErrorMessage` has already
+stripped of every `<...>` tag, so `Unexpected token '<', "
+
+<html>
+<he"...`
+arrives as `Unexpected token ' <he"...` with no markup left for the new rule to
+see. The test discriminated *the function*; it did not discriminate *the
+behaviour*, because the function's only production caller transforms the input
+first. Found the next morning by reading the post-deploy classifications rather
+than trusting the green. Fixed by classifying on the unsanitized error (markup
+kept, whitespace collapse and length cap retained) while still storing the
+sanitized one, with tests that drive the runner end to end and fail on the
+unfixed runner at both call sites. *The discriminating question in this dress:*
+**is the test's input the value the production caller actually passes, or the
+value I assume it passes?** For a classifier, take the input from a stored
+production row, not from a reconstruction.
 
 ### F6 · Stale or unsupported public claim
 

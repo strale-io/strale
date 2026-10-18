@@ -57,6 +57,23 @@ function computeOutputHash(output: unknown): string | null {
 }
 
 /**
+ * The text the failure classifier reads. The stored failure_reason runs the
+ * execution error through sanitizeErrorMessage, which strips `<...>` tags —
+ * and with them the markup evidence the classifier needs: a JSON.parse of an
+ * HTML maintenance page, `Unexpected token '<', "\n\n<html>\n<he"...`, comes
+ * out as `Unexpected token ' <he"...` and reads as our own bug. Classify on
+ * the error with its markup kept — whitespace collapsed and length capped as
+ * the sanitizer does, so text a long page used to hide stays hidden — and
+ * keep storing the sanitized one.
+ */
+function classifierReason(executionError: string | null, failureReason: string | null): string | null {
+  if (!executionError) return failureReason;
+  let msg = executionError.replace(/\s+/g, " ").trim();
+  if (msg.length > 500) msg = msg.slice(0, 497) + "...";
+  return `Execution error: ${msg}`;
+}
+
+/**
  * Decide whether a test result should feed `recordTestEvidence` (positive
  * health signal to the circuit breaker).
  *
@@ -802,7 +819,7 @@ async function runSingleTest(
   const previouslyPassed = (suite.lastClassification as any)?.verdict !== "test_design";
   const classification = !passed
     ? classifyFailure(
-        failureReason, executionSucceeded, validationFailed,
+        classifierReason(executionError, failureReason), executionSucceeded, validationFailed,
         suite.testType, suite.input as Record<string, unknown>,
         previouslyPassed, capabilityTypeMap?.get(suite.capabilitySlug),
       )
@@ -1271,7 +1288,7 @@ async function runRegressionTest(
     const failureReason = executionError
       ? `Execution error: ${sanitizeErrorMessage(executionError) ?? executionError}`
       : "No output returned";
-    const cls = classifyFailure(failureReason, !executionError, false, "regression", suite.input as Record<string, unknown>);
+    const cls = classifyFailure(classifierReason(executionError, failureReason), !executionError, false, "regression", suite.input as Record<string, unknown>);
     await db.insert(testResults).values({
       testSuiteId: suite.id,
       capabilitySlug: suite.capabilitySlug,
