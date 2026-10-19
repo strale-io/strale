@@ -108,3 +108,30 @@ export async function withRetry<T>(
   // Should never reach here, but TypeScript needs it
   throw lastError ?? new Error("withRetry: exhausted all attempts");
 }
+
+/**
+ * The one transient-retry policy for running a capability executor on a
+ * customer rail. Deterministic capabilities run once (a retry cannot change
+ * their answer); everything else gets one retry after ~1 s on the transient
+ * patterns above (429/502/503/504, network resets).
+ *
+ * Shared on purpose. Until 2026-10-19 only POST /v1/do applied this policy;
+ * the x402 gateway called the executor bare, so a wallet buyer whose request
+ * met a registry's momentary "slow down" failed where an account buyer's
+ * identical request was retried and served (2026-10-05: eight paid French
+ * lookups lost to HTTP 429 in three minutes). Both rails call this so the
+ * policy cannot drift between them again.
+ */
+export function executeWithTransientRetry<T>(
+  executor: (input: Record<string, unknown>) => Promise<T>,
+  input: Record<string, unknown>,
+  capability: { slug: string; capabilityType: string | null | undefined },
+): Promise<T> {
+  return capability.capabilityType === "deterministic"
+    ? executor(input)
+    : withRetry(() => executor(input), {
+        maxRetries: 1,
+        baseDelayMs: 1000,
+        slug: capability.slug,
+      });
+}

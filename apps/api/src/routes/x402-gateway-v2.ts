@@ -62,6 +62,7 @@ import { getShareableUrl } from "../lib/audit-token.js";
 import { TRANSACTION_RETENTION_DAYS } from "../lib/data-retention.js";
 import { validateX402Input } from "../lib/x402-input-validation.js";
 import { recordX402Miss } from "../lib/x402-demand.js";
+import { executeWithTransientRetry } from "../lib/retry.js";
 import { createHash } from "node:crypto";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -1684,7 +1685,10 @@ x402GatewayV2.on(["GET", "POST"], ["/:slug", "/v2/:slug"], async (c) => {
   // and those are different failures for a capability's quality record.
   let factRecorded = false;
   try {
-    result = await executor(inputs);
+    // Same transient-retry policy as POST /v1/do (lib/retry.ts). Inside the
+    // try and before settle, so a retry that still fails takes the unpaid
+    // failure path below; the 300 s authorization window absorbs the ~1 s wait.
+    result = await executeWithTransientRetry(executor, inputs, cap);
     await recordPaidInvocation({
       capabilitySlug: cap.slug,
       rail: "x402_gateway",

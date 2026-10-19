@@ -68,7 +68,7 @@ import {
   computeFreshnessGrade,
   type FreshnessInfo,
 } from "../lib/trust-grade.js";
-import { withRetry } from "../lib/retry.js";
+import { executeWithTransientRetry } from "../lib/retry.js";
 import { buildFailureProvenance, getProcessingJurisdictions, validateProvenanceAtBoundary } from "../lib/provenance-builder.js";
 import { getProcessingLocation } from "../lib/processing-location.js";
 // F-0-009 Stage 2: integrity hashing moved to jobs/integrity-hash-retry.ts.
@@ -492,14 +492,7 @@ async function executeWithRetry(
 ): Promise<any> {
   const startedAt = Date.now();
   try {
-    const result =
-      capability.capabilityType === "deterministic"
-        ? await executor(input)
-        : await withRetry(() => executor(input), {
-            maxRetries: 1,
-            baseDelayMs: 1000,
-            slug: capability.slug,
-          });
+    const result = await executeWithTransientRetry(executor, input, capability);
     recordFactWithoutHoldingTheLock({
       capabilitySlug: capability.slug,
       rail: "v1_do",
