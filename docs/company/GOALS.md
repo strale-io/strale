@@ -1229,6 +1229,16 @@ conversion.
   unchanged and sharper: the record is one buyer's step-up, not breadth.
   No outreach.
 
+- **Week of 10-12 closed as the best completed week on record: €77.57**
+  (measured 2026-10-19 ~06:15Z; commercial pack and `revenueCents` +
+  `payerFacts` for 10-12T00:00Z → 10-18T23:59Z, equal: 7757 c, €0
+  unattributed). Up from €44.50 (10-05) and past 08-24's €73.03. **94.7% one
+  buyer** (€73.43 vs €4.14 across six others), up from 88.7%; the largest
+  bought on all 7 days. Only one other payer bought on more than one day
+  (the account buyer, 3 days, €1.56). Revenue and dependency rose together.
+  M1's concentration bar (none above 60%) remains further away than its
+  revenue bar. No outreach.
+
 ## Active experiments (M1)
 
 | id | bet | measure | kill criterion |
