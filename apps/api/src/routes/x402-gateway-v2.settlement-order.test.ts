@@ -38,6 +38,9 @@ const SOURCE_PATH =
 
 let source: string;
 
+/** How the wildcard handler runs its executor (lib/retry.ts, shared with POST /v1/do). */
+const EXECUTOR_CALL = "await executeWithTransientRetry(executor, inputs";
+
 beforeAll(() => {
   source = readFileSync(SOURCE_PATH, "utf-8");
 });
@@ -134,10 +137,11 @@ function allCatchBlocks(handlerBody: string): string[] {
 
 /**
  * Slice the catch block immediately following the first
- * `try { … result = await executor(inputs); … }` in the handler body.
+ * `try { … result = await executeWithTransientRetry(executor, inputs, …); … }`
+ * in the handler body.
  */
 function extractExecutorCatchBlock(handlerBody: string): string {
-  const execIdx = handlerBody.indexOf("await executor(inputs)");
+  const execIdx = handlerBody.indexOf(EXECUTOR_CALL);
   if (execIdx === -1) throw new Error("executor call not found in handler");
   const tryIdx = handlerBody.lastIndexOf("try {", execIdx);
   if (tryIdx === -1) throw new Error("no `try {` precedes executor call");
@@ -186,8 +190,8 @@ describe("x402-gateway-v2 — DEC-14 settlement ordering", () => {
     });
 
     it("settleX402Payment is called only after executor() returns", () => {
-      const execIdx = body.indexOf("await executor(inputs)");
-      expect(execIdx, "executor(inputs) call must exist").toBeGreaterThan(-1);
+      const execIdx = body.indexOf(EXECUTOR_CALL);
+      expect(execIdx, "executor call must exist").toBeGreaterThan(-1);
 
       const settles = settleIndices(body);
       expect(settles.length, "expected at least one settle call").toBeGreaterThan(0);

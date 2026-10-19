@@ -1184,7 +1184,7 @@ mechanisms stay blind — but now visibly, every morning, instead of silently.
 
 > The same rule stated in two places, which then diverge.
 
-**Count: 3.** The charter's escalation contract, which an earlier draft claimed
+**Count: 4** (the fourth is incident 4 below). The charter's escalation contract, which an earlier draft claimed
 to extend while contradicting; two boot-time migration blocks deriving one
 column from different sources and overwriting each other every deploy; the daily
 run procedure, which until today existed only outside the repo while three
@@ -1192,6 +1192,21 @@ in-repo documents described parts of it. **State: INVESTIGATION DUE.**
 Standing rule: one authority per rule, and everything else points at it. This
 file, DAILY-RUN.md and CHARTER.md are each written to be pointed at rather than
 copied.
+
+**Incident 4 (2026-10-19) — two customer rails, two retry policies.** POST
+/v1/do retried a non-deterministic executor once on HTTP 429/502/503/504; the
+x402 gateway's capability handler called the executor bare. The policy lived
+inline in one route and nowhere in the other. Cost: on 2026-10-05 a wallet
+buyer lost eight paid French lookups to the registry's momentary 429 — an
+account buyer's identical calls would have been retried. Found 2026-10-10,
+deferred three runs, fixed 2026-10-19: one `executeWithTransientRetry` in
+`lib/retry.ts`, called by both rails, with a structural test that fails on a
+bare executor call in either route. This is the second rail asymmetry on the
+same pair (the `assertBillableOutput` gap the gateway's WP4 comment records was
+the first). **Count: 4.** The investigation this family is due should start
+here: enumerate every per-call policy `routes/do.ts` applies around an executor
+and check each against the x402 gateway, rather than waiting for a customer to
+find the next one. Not done in this run.
 
 ### F9 · Incorrect founder escalation
 
