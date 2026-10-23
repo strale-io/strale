@@ -242,7 +242,8 @@ protocols:
       Recorded only in CLAUDE.md's Active Decisions section and the Notion
       Decisions DB. The same CLAUDE.md section also carries the 2026-09-07
       founder review policy and DEC-20260910-A, which amend it without a
-      separate decision record file either.
+      separate decision record file either, and DEC-20261024-A (2026-10-24),
+      which retires the clause keeping codex:check.
     enforced_by:
       - scripts/check-codex-backlog.mjs
 

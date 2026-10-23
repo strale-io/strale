@@ -2,11 +2,13 @@
 doc_type: creative-brief
 authority_scope: none
 program: brand-website
-status: proposed-for-founder-review
+status: adopted
 date: 2026-10-23
 ---
 
 # Three-level messaging — proposed
+
+> **Adopted 2026-10-24 by Petter (DEC-20261024-B).** Where the text below says "proposed", read it as the historical review status.
 
 **Status: proposed, not adopted.** These are the benefit, what-it-does and feature lines for the new site, written in the three-level model Petter uses for Cinver:
 

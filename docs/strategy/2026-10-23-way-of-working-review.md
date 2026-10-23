@@ -1,5 +1,7 @@
 # Way of working: what Strale should change
 
+> **Step 0 approved 2026-10-24 (DEC-20261024-A)**, items 2, 4 and 5 for Petter to confirm. The text below is the review as written.
+
 **Status: proposal, nothing applied.** Written 2026-10-23 for Petter. No rule,
 hook, gate or entrypoint was changed. Every "retire" or "simplify" below waits
 for his yes, and the ones that remove a safety rule or move authority are his

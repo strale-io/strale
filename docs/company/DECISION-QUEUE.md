@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-38** · `your_call` · owner Petter · raised 2026-10-24 · no deadline — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
+**DQ-38** · `answered` · owner Petter · raised 2026-10-24 · answered 2026-10-24 — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
 The independent review of DQ-37 found claims in the public web3 methodology
 (`/v1/web3-assurance/methodology`) that are false, and they are more serious
 than the source names fixed so far: they describe regulatory capabilities we
@@ -53,6 +53,7 @@ regulator could rely on.
 *If you approve:* I make exactly these edits and verify them in production.
 *If you do nothing:* the methodology keeps claiming OFAC wallet screening and
 Travel Rule support that do not exist.
+**Answered 2026-10-24 by Petter, in session:** "go with your recommendations on all quick decisions under #2". Implementation follows.
 
 **DQ-37** · `answered` · owner Petter · raised 2026-10-23 19:30 CEST · answered 2026-10-23 — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
 The independent review of DQ-36 found more lines in the public web3 methodology
@@ -127,7 +128,7 @@ catalogue and methodology afterwards.
 stopped using.
 **Answered 2026-10-23 by Petter, in session:** "I approve DQ-36 as drafted: correct the sanctions and web3 methodology copy and verify it in production." Done the same day: the code, manifest, package and DPIA edits, plus startup block 0122 for the production `sanctions-check` row.
 
-**DQ-35** · `your_call` · owner Petter · raised 2026-10-23 14:50 CEST · no deadline — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
+**DQ-35** · `answered` · owner Petter · raised 2026-10-23 14:50 CEST · answered 2026-10-24 — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
 You asked whether our scraping rules are too strict compared with other
 players. They are in places, and the catalogue also doesn't follow them. The
 written rule says Strale never runs a scraper and only resells
@@ -164,6 +165,7 @@ under either rule; I can close that one now if you want, without deciding the
 rest.
 *How you'd reverse it:* a later decision restores the stricter rule. Any tool
 reopened under it is switched off again through the same deactivation list.
+**Answered 2026-10-24 by Petter, in session:** "go with your recommendations on all quick decisions under #2". Recorded as DEC-20261023-A (active) in CLAUDE.md; the adoption work listed in the proposal follows.
 
 **DQ-34** · `answered` · owner Petter · raised 2026-09-17T19:30Z · answered 2026-10-02 — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
 Once a week an automated sweep checks seven things that can quietly drift apart

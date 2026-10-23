@@ -3,10 +3,12 @@ doc_type: decision-proposal
 authority_scope: none
 decision: DEC-20261023-A
 date: 2026-10-23
-status: proposed
+status: active
 ---
 
 # Proposal: replace the scraping doctrine with one risk-based data-access rule
+
+> **Adopted 2026-10-24 by Petter (DEC-20261023-A is active).** The text below was written as a proposal and is kept as drafted; its "not in force" statements describe the time of drafting.
 
 Proposed decision **DEC-20261023-A**, drafted for Petter's review. It is not in
 force. It becomes a decision only when Petter adopts it. The M2 decision

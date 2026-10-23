@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "ac90ead6722209f9502f4e84479c9c42f556efe5e8c888032d665fc8598104ee",
+      "sha256": "9aaa01a0e7b3f20280f247f7d7f1cdce93da71e3e4ddb8331d59c6fe16d893e0",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -119,7 +119,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "a6f7bd670dd4e4c7b7476218a7777855b524e813eccceb2e9884e0275fa3956a",
+      "sha256": "85dc175a4bdf52b68280e1f1c80de4981ea6b8b3f8a6cb388b6413c0de1af775",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -268,6 +268,7 @@
         "context7.json",
         "docs/README.md",
         "docs/company/CHARTER.md",
+        "docs/company/DECISION-QUEUE.md",
         "docs/company/LESSONS.md",
         "docs/operations/distribution-registry.md",
         "docs/operations/distribution-registry.yaml",
@@ -545,7 +546,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "7cc1fb89a7a3dc039b3a253cbaea1c914eb2e1338ed6d24f89a63d3d5c8ca22e",
+      "sha256": "ce8b8862b6d9e12ee6561b80952592c07b533efaab7a41bfe7a275b45a34823f",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -682,7 +683,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "9f7ab3e6d86435d15152cce45e6c9ce4fe0c9ac62add3595c339b5eb20bf8e46",
+      "sha256": "f206bf74d05f0183ca957e148302e3b6bae318d65438bbb81b3bdd0015b92722",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",

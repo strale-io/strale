@@ -88,5 +88,5 @@ are closed as `waived`, `waived_by: petter`, citing that decision. **No new
 batches are added to the register**: an independent same-provider review in a
 separate context satisfies the review requirement, and the PR says which review
 ran. The register and `codex:check` stay in place, so the waived history cannot
-be edited, deleted or reopened.
+be edited, deleted or reopened. (The `codex:check` clause is superseded by DEC-20261024-A.)
 <!-- END VERBATIM FROM CLAUDE.md -->
