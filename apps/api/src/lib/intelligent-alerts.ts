@@ -258,12 +258,11 @@ async function handleExternalProbeResult(
     if (!pending) return;
     pendingAlerts.delete(key);
     if (pending.alerted) {
-      if (!isInCooldown(key, "healthy")) {
-        await sendRecoveryEmail(dependency, pending);
-        recordCooldown(key, "healthy");
-      } else {
-        log.info({ label: "situation-recovery-suppressed", dependency }, "situation-recovery-suppressed");
-      }
+      // No cooldown check: escalation sends at most one email per outage, so
+      // its recovery cannot flap — and the cooldown the escalation just set
+      // would otherwise swallow the close of an outage that ends within 60 min.
+      await sendRecoveryEmail(dependency, pending);
+      recordCooldown(key, "healthy");
       return;
     }
     await logSituationAssessment(
@@ -364,11 +363,13 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
 
 /**
  * Failed paid calls by real customers to capabilities behind `dependency`
- * since `since`. Paid = not free tier; real = x402 (no user) or a user outside
- * the internal-account rule, which also excludes the test harness's account.
+ * (including those that fall back to it) since `since`. Paid = a priced, non
+ * free-tier call; real = x402 (no user) or a user outside the internal-account
+ * rule, which also excludes the test harness's account.
  */
 export async function countPaidCustomerFailures(dependency: string, since: Date): Promise<number> {
-  const slugs = getProvider(dependency)?.capabilities ?? [];
+  const provider = getProvider(dependency);
+  const slugs = [...new Set([...(provider?.capabilities ?? []), ...(provider?.fallbackCapabilities ?? [])])];
   if (slugs.length === 0) return 0;
   try {
     const { getDb } = await import("../db/index.js");
@@ -379,6 +380,7 @@ export async function countPaidCustomerFailures(dependency: string, since: Date)
       WHERE t.status = 'failed'
         AND t.created_at >= ${since.toISOString()}::timestamptz
         AND COALESCE(t.is_free_tier, false) = false
+        AND t.price_cents > 0
         AND (t.user_id IS NULL OR t.user_id NOT IN (
           SELECT id FROM users WHERE ${internalAccountEmailExclusionSql()}
         ))

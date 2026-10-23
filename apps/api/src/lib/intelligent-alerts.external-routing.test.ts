@@ -145,12 +145,22 @@ describe("an external outage hurting paying customers emails at once", () => {
     for (let m = 0; m <= 62; m += 2) await probe("vies", false, m);
     const q = queries.find((x) => x.includes("FROM transactions"))!;
     expect(q).toContain("is_free_tier");
+    expect(q).toContain("price_cents > 0");
     expect(q).toContain("lower(email) LIKE");
     expect(q).toContain('"vat-validate"');
     // postgres-js cannot encode a Date bound into sql`` (the PR #43 incident).
     const hasDate = (v: unknown): boolean =>
       v instanceof Date || (typeof v === "object" && v !== null && Object.values(v).some(hasDate));
     expect(rawQueries.some(hasDate)).toBe(false);
+  });
+
+  it("emails the recovery even when the outage ends within the hour after the escalation", async () => {
+    paidFailures = 1;
+    for (let m = 0; m <= 60; m += 2) await probe("vies", false, m);
+    expect(sentEmails).toHaveLength(1);
+    await probe("vies", true, 70);
+    expect(sentEmails).toHaveLength(2);
+    expect(sentEmails[1].subject).toBe("Strale — VIES (EU Commission) recovered");
   });
 
   it("does not email again for an outage already emailed before a restart", async () => {

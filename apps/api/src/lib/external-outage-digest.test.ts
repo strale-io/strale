@@ -8,6 +8,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 const sentEmails: Array<{ subject: string; html: string }> = [];
 const healthEvents: Array<{ eventType: string; details: Record<string, unknown> }> = [];
 let probeRows: Array<{ dependency: string; created_at: string; healthy: boolean }> = [];
+let lastWindowEnd: string | null = null;
 
 vi.mock("./digest-sender.js", () => ({
   isEmailConfigured: () => true,
@@ -23,7 +24,12 @@ vi.mock("./health-monitor.js", () => ({
 }));
 
 vi.mock("../db/index.js", () => ({
-  getDb: () => ({ execute: async () => probeRows }),
+  getDb: () => ({
+    execute: async (q: unknown) =>
+      JSON.stringify(q).includes("'external_outage_digest'")
+        ? (lastWindowEnd ? [{ window_end: lastWindowEnd }] : [])
+        : probeRows,
+  }),
 }));
 
 import {
@@ -32,6 +38,7 @@ import {
   renderExternalOutageDigest,
   sendExternalOutageDigest,
   isDigestSendHour,
+  digestWindowStart,
   type ProbeRow,
 } from "./external-outage-digest.js";
 
@@ -45,6 +52,7 @@ beforeEach(() => {
   sentEmails.length = 0;
   healthEvents.length = 0;
   probeRows = [];
+  lastWindowEnd = null;
 });
 
 describe("isExternalDependency", () => {
@@ -163,6 +171,24 @@ describe("sendExternalOutageDigest", () => {
     expect(result).toMatchObject({ sent: false, reason: "preview" });
     expect(result.html).toContain("VIES");
     expect(sentEmails).toHaveLength(0);
+  });
+});
+
+describe("digestWindowStart", () => {
+  it("starts where the previous summary ended, so a late send leaves no gap and an early one no overlap", () => {
+    const prev = new Date(END.getTime() - 26 * 3600_000);
+    expect(digestWindowStart(END, prev)).toEqual(prev);
+  });
+
+  it("defaults to 24 hours, and catches up at most 48 hours after a missed day", () => {
+    expect(digestWindowStart(END, null)).toEqual(new Date(END.getTime() - 24 * 3600_000));
+    expect(digestWindowStart(END, new Date(END.getTime() - 5 * 86400_000))).toEqual(new Date(END.getTime() - 48 * 3600_000));
+  });
+
+  it("is used by the send: the window in the record starts at the previous window's end", async () => {
+    lastWindowEnd = new Date(END.getTime() - 20 * 3600_000).toISOString();
+    await sendExternalOutageDigest(END);
+    expect(healthEvents[0].details.window_start).toBe(lastWindowEnd);
   });
 });
 

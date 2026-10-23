@@ -259,16 +259,45 @@ export interface ExternalOutageDigestResult {
   summaries: DependencyOutageSummary[];
 }
 
+/** A missed day is caught up, but never more than this far back. */
+const MAX_WINDOW_MS = 48 * 60 * 60 * 1000;
+
 /**
- * Build the summary for the 24 hours before `now` and send it, unless nothing
- * went down — then no email at all. `previewOnly` builds without sending.
+ * Where the previous summary's window ended, so consecutive summaries neither
+ * overlap nor leave a gap when one is sent at 08:01 and the next at 11:50, or
+ * when a send failed (a failed send records nothing, so the next run covers
+ * its period). Null when no summary has run yet.
+ */
+async function loadLastWindowEnd(): Promise<Date | null> {
+  const result = await getDb().execute(sql`
+    SELECT details->>'window_end' AS window_end
+    FROM health_monitor_events
+    WHERE event_type = 'external_outage_digest'
+      AND created_at >= now() - interval '3 days'
+    ORDER BY created_at DESC
+    LIMIT 1
+  `);
+  const value = rowsOf(result)[0]?.window_end;
+  const d = typeof value === "string" ? new Date(value) : null;
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+}
+
+export function digestWindowStart(now: Date, lastWindowEnd: Date | null): Date {
+  if (!lastWindowEnd || lastWindowEnd >= now) return new Date(now.getTime() - DIGEST_WINDOW_MS);
+  return new Date(Math.max(lastWindowEnd.getTime(), now.getTime() - MAX_WINDOW_MS));
+}
+
+/**
+ * Build the summary for the period since the previous one (normally the 24
+ * hours before `now`) and send it, unless nothing went down — then no email at
+ * all. `previewOnly` builds without sending or recording.
  */
 export async function sendExternalOutageDigest(
   now: Date = new Date(),
   opts: { previewOnly?: boolean } = {},
 ): Promise<ExternalOutageDigestResult> {
   const windowEnd = now;
-  const windowStart = new Date(now.getTime() - DIGEST_WINDOW_MS);
+  const windowStart = digestWindowStart(now, await loadLastWindowEnd());
   const summaries = summarizeExternalOutages(await loadProbeRows(windowStart, windowEnd), windowStart, windowEnd);
 
   if (summaries.length === 0) {

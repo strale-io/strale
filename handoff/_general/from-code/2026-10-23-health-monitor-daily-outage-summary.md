@@ -1,0 +1,57 @@
+Intent: stop per-event Health Monitor emails for outside data sources; send one daily summary instead.
+
+# Health Monitor — daily outside data-source outage summary
+
+**Date:** 2026-10-23 · **Branch:** `claude/health-monitor-daily-digest-ee6a1e` · **PR:** draft, not merged.
+
+## Why
+
+Petter's inbox received 577 "Strale Health Monitor" emails between 2026-08-24
+and 2026-10-23 (~10/day): "<source> is not responding", "<source> recovered",
+"Multiple dependencies failing simultaneously". In production, every alert
+email of the 30 days before this change (`health_monitor_events`,
+`situation_assessment` with `alert_sent=true`, plus recoveries) concerned a
+third-party source. None was actionable for him.
+
+## What changed
+
+- `apps/api/src/lib/external-outage-digest.ts` (new): `isExternalDependency`
+  (manifest tier not `self-hosted` and not `strale_infrastructure`; unknown
+  names count as Strale's own and keep alerting), a pure
+  `summarizeExternalOutages` over persisted `dependency_probe` rows, the email
+  renderer (Swedish time, plain language), and `sendExternalOutageDigest`
+  (no email when nothing went down; records an `external_outage_digest`
+  health event either way).
+- `intelligent-alerts.ts`: external dependencies go through
+  `handleExternalProbeResult` — no per-event email. Immediate email only when
+  the outage has lasted ≥ 60 min AND ≥ 1 failed paid, non-internal call hit a
+  capability behind it since it went down (or the assessment already carries
+  `customersAffected`). One email per outage (in-memory + DB dedupe across
+  restarts); recovery is emailed only for an escalated outage.
+- `test-scheduler.ts`: sends the summary on the first poll from 08:00 to
+  11:59 Europe/Stockholm (due slot `external-outage-digest`, 12h interval).
+- `internal-health-monitor.ts`: `POST /v1/internal/health-monitor/send-external-outage-digest`
+  (`{ "preview_only": true }` to preview).
+- Unchanged: Browserless/own-service alerts, scheduler-stale, mass test
+  failure, "API failed to start", `alerting.ts` ("Strale Alerts").
+
+## Evidence
+
+- Tests: `external-outage-digest.test.ts` (13), `intelligent-alerts.external-routing.test.ts` (9);
+  7 of the 9 routing tests fail against the pre-change `intelligent-alerts.ts`.
+- Read-only production preview for 20–23 Oct: 3–7 sources per day; OpenAlex
+  down ~21–22 h every day for a month.
+- 30-day backtest: 0 days on which the escalation rule would have fired.
+
+## Deploy
+
+No new env vars. Uses existing `RESEND_API_KEY`, `HEALTH_DIGEST_EMAIL`,
+`HEALTH_DIGEST_FROM`. Schedule is in-process (no Railway cron).
+
+## Follow-ups (not done)
+
+- OpenAlex probe/source has been failing ~21 h/day for a month — the daily
+  summary will list it every day until investigated.
+- Both older digests are dead in production: the business "Strale Daily
+  Digest" (Railway `strale-digest-cron`, last snapshot 2026-04-14) and the
+  weekly HM-2 digest (no schedule).
