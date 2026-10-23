@@ -301,7 +301,10 @@ export async function sendExternalOutageDigest(
   const summaries = summarizeExternalOutages(await loadProbeRows(windowStart, windowEnd), windowStart, windowEnd);
 
   if (summaries.length === 0) {
-    await recordRun(false, "nothing_to_report", summaries, windowStart, windowEnd);
+    // A preview must not record: the next real run starts its window at the
+    // last recorded window_end, so a recorded preview would drop the hours
+    // before it from the next morning's email.
+    if (!opts.previewOnly) await recordRun(false, "nothing_to_report", summaries, windowStart, windowEnd);
     return { sent: false, reason: "nothing_to_report", subject: null, html: null, summaries };
   }
 
