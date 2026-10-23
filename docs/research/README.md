@@ -11,7 +11,7 @@
 >
 > Contract: [research.schema.json](research.schema.json). Checker: `scripts/check-research.mjs`.
 
-Total files: 42 (40 topics with a current answer, 1 historical).
+Total files: 43 (41 topics with a current answer, 1 historical).
 
 ## Current, by topic
 
@@ -25,6 +25,7 @@ Total files: 42 (40 topics with a current answer, 1 historical).
 | brand-foundation-discovery | [2026-09-05-brand-foundation-discovery.md](2026-09-05-brand-foundation-discovery.md) | What product evidence, existing design work, and reference practices should inform Strale's brand and website program? | 2026-09-05 | 0 |
 | bundesapi-civic-tech-audit | [2026-05-06-bundesapi-civic-tech-audit.md](2026-05-06-bundesapi-civic-tech-audit.md) | Is the bundesAPI civic-tech stack a credible fallback data source for DE Counterparty Assurance if OpenRegister's audit-retention question can't be resolved? | 2026-05-06 | 0 |
 | cy-registry-build-path | [2026-05-07-cy-registry-build-path.md](2026-05-07-cy-registry-build-path.md) | What is the build path for ingesting Cyprus's DRCOR company registry open data? | 2026-05-07 | 0 |
+| delegate-competitive-analysis | [2026-10-23-delegate-competitive-analysis.md](2026-10-23-delegate-competitive-analysis.md) | What does Delegate (dlgt.io) offer, build and say that Strale should add, copy or deliberately avoid, across capabilities, product and go-to-market? | 2026-10-23 | 0 |
 | dk-cvr-breaker-false-recovery-investigation | [2026-05-07-dk-phase2-understand.md](2026-05-07-dk-phase2-understand.md) | Why did the danish-company-data circuit breaker appear stuck open, and what does the Phase 2 investigation establish about its real state? | 2026-05-07 | 0 |
 | es-registry-build-path-verify | [2026-05-07-es-registry-build-path-verify.md](2026-05-07-es-registry-build-path-verify.md) | Does the chosen ES registry data path (opendata.registradores.org plus BORME plus sede.registradores.org self-build) still hold up under a fresh technical-viability probe? | 2026-05-07 | 0 |
 | eu-gap-recovery-synthesis | [2026-05-07-gap-recovery-synthesis.md](2026-05-07-gap-recovery-synthesis.md) | Across the LU, BG, CY, and HU gap-recovery spikes, which countries close as Tier-1 self-build candidates and which stay in gap? | 2026-05-07 | 0 |
