@@ -3,7 +3,7 @@
   "status": "proposed",
   "supersedes": "quiet-material-v0.7",
   "superseded_by": null,
-  "notes": "Website design system derived from BrandKit Lab strale-reference-kit-06 (9 September 2026), chosen by the founder as the visual direction on 23 October 2026. Brand colours, font families, type roles (hero, campaign, section, detail, body, compact, label), the 8px control radius and the reveal durations are carried over from the kit unchanged. The dark theme, interaction/status/code/chart colours, the extra type roles (subhead, lead, ui, small, code, stat), spacing, elevation, grid and motion easing are derived here and are not in the kit. Palette keys: brand.* are theme-independent; light.* and dark.* are role colours that resolve to the same CSS custom property per theme; chart.light.* and chart.dark.* are the categorical chart slots, in fixed order. Human guide: design/brand-kit/open-flow/README.md. Contrast proof is generated from layout.contrast by design/brand-kit/open-flow/build.mjs into CONTRAST.md. Production (active.json) is unchanged.",
+  "notes": "Website design system derived from BrandKit Lab strale-reference-kit-06 (9 September 2026), chosen by the founder as the visual direction on 23 October 2026. The eleven kit colours (brand.* except brand.image-ground, which is sampled from the kit artwork), the font families, the type roles hero, campaign, section, detail, body, compact and label, the 8px control radius and the reveal durations are carried over from the kit unchanged. The dark theme, interaction/status/code/chart colours, the extra type roles (subhead, lead, ui, small, code, stat), spacing, elevation, grid and motion easing are derived here and are not in the kit. Palette keys: brand.* are theme-independent; light.* and dark.* are role colours that resolve to the same CSS custom property per theme; chart.light.* and chart.dark.* are the categorical chart slots, in fixed order. Human guide: design/brand-kit/open-flow/README.md. Contrast proof is generated from layout.contrast by design/brand-kit/open-flow/build.mjs into CONTRAST.md. Production (active.json) is unchanged.",
   "palette": {
     "brand.blue": "#3027ff",
     "brand.violet": "#7222ff",
@@ -11,6 +11,7 @@
     "brand.soft": "#eecff2",
     "brand.ink": "#17151c",
     "brand.paper": "#ffffff",
+    "brand.border": "#d2cfd8",
     "brand.mist-blue": "#e4e8ff",
     "brand.mist-teal": "#d7efeb",
     "brand.deep-violet": "#29164b",
@@ -28,7 +29,7 @@
     "light.text-inverse": "#ffffff",
     "light.text-on-action": "#ffffff",
     "light.border": "#d2cfd8",
-    "light.border-strong": "#857d92",
+    "light.border-strong": "#7a7287",
     "light.action": "#3027ff",
     "light.action-hover": "#2118d6",
     "light.action-active": "#1a10b0",
@@ -36,6 +37,9 @@
     "light.link": "#3027ff",
     "light.link-hover": "#2118d6",
     "light.focus": "#3027ff",
+    "light.focus-inverse": "#ffffff",
+    "light.focus-code": "#b9b5ff",
+    "light.indicator": "#3027ff",
     "light.success": "#16703f",
     "light.success-bg": "#e6f4ea",
     "light.warning": "#8a5300",
@@ -73,6 +77,9 @@
     "dark.link": "#b9b5ff",
     "dark.link-hover": "#d6d3ff",
     "dark.focus": "#b9b5ff",
+    "dark.focus-inverse": "#ffffff",
+    "dark.focus-code": "#b9b5ff",
+    "dark.indicator": "#b9b5ff",
     "dark.success": "#5fd08f",
     "dark.success-bg": "#10301f",
     "dark.warning": "#f0b44d",
@@ -195,7 +202,7 @@
         "family": "body",
         "weight": 400,
         "min": 16,
-        "max": 18,
+        "max": 19,
         "line": 1.6,
         "tracking": 0,
         "measure": "62ch",
@@ -206,7 +213,7 @@
         "family": "body",
         "weight": 400,
         "min": 16,
-        "max": 16,
+        "max": 17,
         "line": 1.5,
         "tracking": 0,
         "measure": "58ch",
@@ -594,6 +601,90 @@
         "bg": "surface-sunken",
         "min": 3,
         "use": "Form field boundary on alternate sections (non-text)"
+      },
+      {
+        "fg": "border-strong",
+        "bg": "surface-soft",
+        "min": 3,
+        "use": "Form field boundary on surface-soft (non-text)"
+      },
+      {
+        "fg": "link",
+        "bg": "surface-soft",
+        "min": 4.5,
+        "use": "Inline link on surface-soft"
+      },
+      {
+        "fg": "focus",
+        "bg": "surface-soft",
+        "min": 3,
+        "use": "Focus ring on surface-soft (non-text)"
+      },
+      {
+        "fg": "border-strong",
+        "bg": "surface-blue",
+        "min": 3,
+        "use": "Form field boundary on surface-blue (non-text)"
+      },
+      {
+        "fg": "link",
+        "bg": "surface-blue",
+        "min": 4.5,
+        "use": "Inline link on surface-blue"
+      },
+      {
+        "fg": "focus",
+        "bg": "surface-blue",
+        "min": 3,
+        "use": "Focus ring on surface-blue (non-text)"
+      },
+      {
+        "fg": "border-strong",
+        "bg": "surface-teal",
+        "min": 3,
+        "use": "Form field boundary on surface-teal (non-text)"
+      },
+      {
+        "fg": "link",
+        "bg": "surface-teal",
+        "min": 4.5,
+        "use": "Inline link on surface-teal"
+      },
+      {
+        "fg": "focus",
+        "bg": "surface-teal",
+        "min": 3,
+        "use": "Focus ring on surface-teal (non-text)"
+      },
+      {
+        "fg": "focus-inverse",
+        "bg": "surface-inverse",
+        "min": 3,
+        "use": "Focus ring on the deep-violet band (non-text)"
+      },
+      {
+        "fg": "focus-code",
+        "bg": "code-bg",
+        "min": 3,
+        "use": "Focus ring inside code blocks (non-text)"
+      },
+      {
+        "fg": "indicator",
+        "bg": "canvas",
+        "min": 3,
+        "use": "Selected tab / current page underline, checkbox and radio fill on canvas (non-text)"
+      },
+      {
+        "fg": "indicator",
+        "bg": "surface",
+        "min": 3,
+        "use": "Selected tab / current page underline, checkbox and radio fill on surface (non-text)"
+      },
+      {
+        "fg": "indicator",
+        "bg": "surface-sunken",
+        "min": 3,
+        "use": "Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text)"
       },
       {
         "fg": "success",

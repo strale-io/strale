@@ -11,6 +11,7 @@
   --brand-soft: #eecff2;
   --brand-ink: #17151c;
   --brand-paper: #ffffff;
+  --brand-border: #d2cfd8;
   --brand-mist-blue: #e4e8ff;
   --brand-mist-teal: #d7efeb;
   --brand-deep-violet: #29164b;
@@ -76,14 +77,14 @@
   --type-lead-measure: 52ch;
   --type-lead-features: normal;
   --type-body-family: var(--font-body);
-  --type-body-size: clamp(16px, 15.3333px + 0.1852vw, 18px);
+  --type-body-size: clamp(16px, 15px + 0.2778vw, 19px);
   --type-body-weight: 400;
   --type-body-line: 1.6;
   --type-body-tracking: 0;
   --type-body-measure: 62ch;
   --type-body-features: normal;
   --type-compact-family: var(--font-body);
-  --type-compact-size: 16px;
+  --type-compact-size: clamp(16px, 15.6667px + 0.0926vw, 17px);
   --type-compact-weight: 400;
   --type-compact-line: 1.5;
   --type-compact-tracking: 0;
@@ -200,6 +201,22 @@
   --z-dropdown: 30;
   --z-overlay: 40;
   --z-toast: 50;
+  --region-wide-x: 6%;
+  --region-wide-y: 8%;
+  --region-wide-width: 53%;
+  --region-wide-height: 54%;
+  --region-centre-field-x: 16%;
+  --region-centre-field-y: 12%;
+  --region-centre-field-width: 68%;
+  --region-centre-field-height: 48%;
+  --region-card-field-x: 8%;
+  --region-card-field-y: 8%;
+  --region-card-field-width: 76%;
+  --region-card-field-height: 49%;
+  --region-portrait-field-x: 8%;
+  --region-portrait-field-y: 7%;
+  --region-portrait-field-width: 84%;
+  --region-portrait-field-height: 49%;
 }
 @media (min-width: 768px) {
   :root {
@@ -233,7 +250,7 @@
   --text-inverse: #ffffff;
   --text-on-action: #ffffff;
   --border: #d2cfd8;
-  --border-strong: #857d92;
+  --border-strong: #7a7287;
   --action: #3027ff;
   --action-hover: #2118d6;
   --action-active: #1a10b0;
@@ -241,6 +258,9 @@
   --link: #3027ff;
   --link-hover: #2118d6;
   --focus: #3027ff;
+  --focus-inverse: #ffffff;
+  --focus-code: #b9b5ff;
+  --indicator: #3027ff;
   --success: #16703f;
   --success-bg: #e6f4ea;
   --warning: #8a5300;
@@ -294,6 +314,9 @@
     --link: #b9b5ff;
     --link-hover: #d6d3ff;
     --focus: #b9b5ff;
+    --focus-inverse: #ffffff;
+    --focus-code: #b9b5ff;
+    --indicator: #b9b5ff;
     --success: #5fd08f;
     --success-bg: #10301f;
     --warning: #f0b44d;
@@ -346,6 +369,9 @@
   --link: #b9b5ff;
   --link-hover: #d6d3ff;
   --focus: #b9b5ff;
+  --focus-inverse: #ffffff;
+  --focus-code: #b9b5ff;
+  --indicator: #b9b5ff;
   --success: #5fd08f;
   --success-bg: #10301f;
   --warning: #f0b44d;

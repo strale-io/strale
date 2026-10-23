@@ -104,7 +104,7 @@ function themeVars(t, theme) {
   v['color-scheme-value'] = theme;
   return v;
 }
-export function renderTokensCss(t) {
+export function renderTokensCss(t, prov = loadProvenance()) {
   const L = t.layout, base = {};
   for (const [k, x] of Object.entries(pick(t, 'brand.'))) base[`brand-${k}`] = x;
   for (const [k, x] of Object.entries(pick(t, 'chart.seq.'))) base[`chart-seq-${k}`] = x;
@@ -136,6 +136,8 @@ export function renderTokensCss(t) {
     'section-space': `var(--space-${L.section_rhythm_px.base})`, 'nav-h': `${L.nav.height_mobile_px}px`
   });
   for (const [k, z] of Object.entries(L.z)) base[`z-${k}`] = z;
+  // Kit-declared reading regions, so layouts place text from the asset record instead of copying numbers.
+  for (const a of prov.imagery) if (a.region) for (const k of ['x', 'y', 'width', 'height']) base[`region-${a.id}-${k}`] = `${+(a.region[k] * 100).toFixed(2)}%`;
   const bp = L.breakpoints_px;
   const md = { gutter: `var(--space-${L.gutter_px.md})`, 'grid-columns': L.grid.columns.md, 'column-gap': `var(--space-${L.grid.column_gap_px.md})`, 'section-space': `var(--space-${L.section_rhythm_px.md})`, 'nav-h': `${L.nav.height_px}px` };
   const lg = { gutter: `var(--space-${L.gutter_px.lg})`, 'grid-columns': L.grid.columns.lg, 'column-gap': `var(--space-${L.grid.column_gap_px.lg})`, 'section-space': `var(--space-${L.section_rhythm_px.lg})` };
@@ -221,18 +223,18 @@ const swatch = (name, hex, note = '') => `<figure class="swatch"><span class="sw
 const ROLE_GROUPS = [
   ['Surfaces', ['canvas', 'surface', 'surface-sunken', 'surface-soft', 'surface-blue', 'surface-teal', 'surface-inverse']],
   ['Text and borders', ['text', 'text-muted', 'text-inverse', 'border', 'border-strong']],
-  ['Interaction', ['action', 'action-hover', 'action-active', 'action-subtle', 'link', 'link-hover', 'focus']],
+  ['Interaction', ['action', 'action-hover', 'action-active', 'action-subtle', 'link', 'link-hover', 'indicator', 'focus', 'focus-inverse', 'focus-code']],
   ['Status (always with an icon and words)', ['success', 'success-bg', 'warning', 'warning-bg', 'danger', 'danger-bg', 'info', 'info-bg']],
   ['Code', ['code-bg', 'code-text', 'code-muted', 'code-keyword', 'code-string', 'code-number', 'code-property']]
 ];
 function genPalette(t) {
-  const brandNotes = { blue: 'Primary expression; action colour', violet: 'Flow and depth; never a state', teal: 'Graphic family; not text, not success', soft: 'Editorial surface, dark text', ink: 'Reading text', paper: 'Clear reading space', 'mist-blue': 'Secondary light surface', 'mist-teal': 'Grouped information', 'deep-violet': 'Dark field, light text', 'logo-black': 'Wordmark only', 'image-ground': 'Ground of the flow artwork' };
+  const brandNotes = { blue: 'Primary expression; action colour', violet: 'Flow and depth; never a state', teal: 'Graphic family; not text, not success', soft: 'Editorial surface, dark text', ink: 'Reading text', paper: 'Clear reading space', 'mist-blue': 'Secondary light surface', 'mist-teal': 'Grouped information', 'deep-violet': 'Dark field, light text', 'logo-black': 'Wordmark only', border: 'Quiet division (kit); the light border role', 'image-ground': 'Sampled from the artwork; not a kit colour' };
   const brand = Object.entries(pick(t, 'brand.')).map(([k, v]) => swatch(`brand-${k}`, v, brandNotes[k] || '')).join('');
   const themes = THEMES.map(theme => {
     const roles = rolesFor(t, theme);
     return `<div class="theme-panel" data-theme="${theme}"><h4 class="theme-panel-title">${theme === 'light' ? 'Light' : 'Dark'} theme roles</h4>${ROLE_GROUPS.map(([g, keys]) => `<p class="label">${esc(g)}</p><div class="swatch-grid">${keys.map(k => swatch(k, roles[k])).join('')}</div>`).join('')}</div>`;
   }).join('');
-  return `<h3 class="subhead">Brand colours (kit-06, unchanged)</h3><div class="swatch-grid">${brand}</div><h3 class="subhead">Role tokens</h3><p class="muted">Components use role tokens only. The same name resolves per theme.</p><div class="theme-pair">${themes}</div>`;
+  return `<h3 class="subhead">Brand colours: the eleven kit-06 colours, unchanged, plus the sampled artwork ground</h3><div class="swatch-grid">${brand}</div><h3 class="subhead">Role tokens</h3><p class="muted">Components use role tokens only. The same name resolves per theme.</p><div class="theme-pair">${themes}</div>`;
 }
 function genContrast(t) {
   const rows = contrastResults(t);
@@ -285,6 +287,8 @@ export function fillSpecimen(html, regions) {
 }
 
 // ---- literal lint for hand-written specimen CSS and inline styles ----
+// Percentages, ch, deg, fr and unitless numbers (opacity, counts) are allowed: they are proportions, not design values.
+const NAMED_COLOURS = new Set('black white red green blue yellow orange purple pink violet indigo navy teal cyan aqua magenta fuchsia lime olive maroon silver gray grey brown beige tan gold coral salmon crimson lavender ivory khaki plum orchid turquoise'.split(' '));
 export function definedVars(tokensCss, localCss = '') {
   return new Set([...tokensCss.matchAll(/(--[\w-]+)\s*:/g), ...localCss.matchAll(/(--_[\w-]+)\s*:/g)].map(m => m[1]));
 }
@@ -300,19 +304,24 @@ export function lintCss(css, t, defined, where = 'specimen.css') {
       l = l.replace(/\d+(?:\.\d+)?px/g, '');
     }
     for (const m of l.matchAll(/#[0-9a-f]{3,8}\b/gi)) errors.push(`${where}: hex literal ${m[0]}`);
-    for (const m of l.matchAll(/(?<![\w-])(\d*\.?\d+)(px|rem|em|pt|ms|s|vh|vw|vmin|vmax)\b/g)) if (+m[1] !== 0) errors.push(`${where}: off-token length ${m[0]}`);
-    if (/\b(rgb|rgba|hsl|hsla)\(/.test(l)) errors.push(`${where}: colour function literal`);
+    for (const m of l.matchAll(/(?<![\w.])(-?\d*\.?\d+)(px|rem|em|pt|ms|s|vh|vw|vmin|vmax|cqi|cqw)\b/gi)) if (+m[1] !== 0) errors.push(`${where}: off-token length ${m[0]}`);
+    if (/\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\(/i.test(l)) errors.push(`${where}: colour function literal`);
+    for (const d of l.matchAll(/(?:^|[;{\s])(color|background(?:-color)?|border(?:-[a-z]+)*|outline(?:-color)?|fill|stroke|box-shadow|accent-color|text-decoration(?:-color)?|caret-color)\s*:\s*([^;}]+)/gi)) {
+      const words = d[2].replace(/var\([^)]*\)/g, '').toLowerCase().match(/[a-z]+/g) || [];
+      for (const w of words) if (NAMED_COLOURS.has(w)) errors.push(`${where}: named colour ${w}`);
+    }
     const ff = l.match(/font-family\s*:\s*([^;]+)/);
     if (ff && !/^\s*(var\(--[\w-]+\)|inherit)\s*$/.test(ff[1])) errors.push(`${where}: raw font-family ${ff[1].trim()}`);
   }
   for (const m of body.matchAll(/var\((--[\w-]+)/g)) if (!defined.has(m[1])) errors.push(`${where}: unknown token ${m[1]}`);
   return errors;
 }
-export function lintSpecimen(html, css, t, tokensCss) {
+export function lintSpecimen(html, css, t, tokensCss, js = '') {
   const defined = definedVars(tokensCss, css);
   const errors = lintCss(css, t, defined);
   for (const m of html.matchAll(/style="([^"]*)"/g)) errors.push(...lintCss(m[1], t, defined, 'index.html inline style'));
   if (/<style[\s>]/.test(html)) errors.push('index.html: put styles in specimen.css, not a <style> block');
+  for (const m of js.matchAll(/#[0-9a-f]{6}\b|\b\d+px\b/gi)) errors.push(`specimen.js: style literal ${m[0]}`);
   for (const m of html.matchAll(/(?:src|href)="(\.\.\/[^"#]+|[^":#?]+\.(?:css|js|png|svg))"/g)) {
     const p = resolve(here, 'specimen', m[1]);
     if (m[1] === '../tokens.css') continue; // generated alongside this check
@@ -324,10 +333,10 @@ export function lintSpecimen(html, css, t, tokensCss) {
 // ---- main ----
 export function buildAll(t = loadTokens(), prov = loadProvenance()) {
   validate(t, prov);
-  const tokensCss = renderTokensCss(t);
+  const tokensCss = renderTokensCss(t, prov);
   const contrastMd = renderContrastMd(t);
   const html = fillSpecimen(read('specimen/index.html'), generatedRegions(t, prov));
-  const errors = lintSpecimen(html, read('specimen/specimen.css'), t, tokensCss);
+  const errors = lintSpecimen(html, read('specimen/specimen.css'), t, tokensCss, read('specimen/specimen.js'));
   assert.deepEqual(errors, [], 'Specimen lint');
   return { 'tokens.css': tokensCss, 'CONTRAST.md': contrastMd, 'specimen/index.html': html };
 }

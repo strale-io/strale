@@ -104,7 +104,7 @@
         1536,
         1024
       ],
-      "kit_check": "no-region-declared",
+      "kit_check": "not-in-kit-library",
       "region": null,
       "role": "Decorative colour environment only. No text over it; use beside text or behind a solid surface."
     },
@@ -119,7 +119,7 @@
         1536,
         1024
       ],
-      "kit_check": "no-region-declared",
+      "kit_check": "not-in-kit-library",
       "region": null,
       "role": "The glow image. Atmosphere for a contained media panel or behind a solid reading surface; never text directly on it. The one raster that reads well on the dark canvas."
     },
@@ -134,7 +134,7 @@
         800,
         380
       ],
-      "kit_check": "endpoints-unresolved",
+      "kit_check": "not-in-kit-library (endpoints unresolved)",
       "region": null,
       "role": "Vector supporting graphic. Transparent, so it is the dark-theme partner for the raster fields and the motion-reveal subject."
     }

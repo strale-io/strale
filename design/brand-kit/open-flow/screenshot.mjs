@@ -44,7 +44,7 @@ try {
           window.scrollTo(0, 0);
         }, ids);
         const h = await page.evaluate(() => document.documentElement.scrollHeight);
-        if (h > 16000) problems.push(`${name}/${scheme}/${part}: part is ${h}px tall; split it further`);
+        if (h > 16384) problems.push(`${name}/${scheme}/${part}: part is ${h}px tall; split it further`);
         await page.screenshot({ path: resolve(out, `${name}-${scheme}-${part}.png`), fullPage: true });
       }
       await page.close();

@@ -57,13 +57,19 @@
     });
   });
 
-  // Copy: confirm in words, announce, then reset.
+  // Copy: confirm in words (or say it failed), announce through a separate status region, then reset.
   document.querySelectorAll('[data-copy]').forEach(function (b) {
-    b.setAttribute('aria-live', 'polite');
     b.addEventListener('click', function () {
-      var block = b.closest('.code'), panel = block.querySelector('[role="tabpanel"]:not([hidden]) pre') || block.querySelector('pre');
-      var done = function () { b.classList.add('is-copied'); b.querySelector('span').textContent = 'Copied'; b.querySelector('use').setAttribute('href', '#i-check'); setTimeout(function () { b.classList.remove('is-copied'); b.querySelector('span').textContent = 'Copy'; b.querySelector('use').setAttribute('href', '#i-copy'); }, 1800); };
-      try { navigator.clipboard.writeText(panel.textContent).then(done, done); } catch (e) { done(); }
+      var block = b.closest('.code'), status = block.querySelector('[data-copy-status]');
+      var panel = block.querySelector('[role="tabpanel"]:not([hidden]) pre') || block.querySelector('pre');
+      var finish = function (ok) {
+        var label = ok ? 'Copied' : 'Copy failed';
+        b.classList.toggle('is-copied', ok); b.querySelector('span').textContent = label;
+        b.querySelector('use').setAttribute('href', ok ? '#i-check' : '#i-error');
+        if (status) status.textContent = ok ? 'Code copied to clipboard' : 'Could not copy; select the code and copy it manually';
+        setTimeout(function () { b.classList.remove('is-copied'); b.querySelector('span').textContent = 'Copy'; b.querySelector('use').setAttribute('href', '#i-copy'); if (status) status.textContent = ''; }, 1800);
+      };
+      try { navigator.clipboard.writeText(panel.textContent).then(function () { finish(true); }, function () { finish(false); }); } catch (e) { finish(false); }
     });
   });
 
@@ -73,9 +79,11 @@
     var show = function (state) { view.querySelectorAll('.result-state').forEach(function (s) { s.hidden = s.dataset.state !== state; }); };
     view.querySelectorAll('[data-run]').forEach(function (b) {
       b.addEventListener('click', function () {
+        // aria-disabled, not disabled: the focused button keeps keyboard focus while the run is in progress.
         var target = b.dataset.run, primary = view.querySelector('[data-run="success"]');
-        primary.setAttribute('aria-busy', 'true'); primary.disabled = true; show('loading');
-        setTimeout(function () { primary.removeAttribute('aria-busy'); primary.disabled = false; show(target); }, 900);
+        if (primary.getAttribute('aria-disabled') === 'true') return;
+        primary.setAttribute('aria-busy', 'true'); primary.setAttribute('aria-disabled', 'true'); show('loading');
+        setTimeout(function () { primary.removeAttribute('aria-busy'); primary.removeAttribute('aria-disabled'); show(target); }, 900);
       });
     });
   }
