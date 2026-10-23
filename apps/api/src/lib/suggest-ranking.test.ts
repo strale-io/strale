@@ -21,7 +21,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { applyConditionalSolutionBonus, scoreKeywordMatch, type KeywordScorable } from "./suggest.js";
+import {
+  applyConditionalSolutionBonus,
+  isSlugFamilyMatch,
+  scoreKeywordMatch,
+  scoreTypeaheadItem,
+  typeaheadQueryWords,
+  type KeywordScorable,
+} from "./suggest.js";
 import { tokenize } from "./tokenize.js";
 
 type Row = { item: { type: "solution" | "capability"; slug: string }; score: number };
@@ -198,5 +205,97 @@ describe("keyword item scoring", () => {
   it("returns zero for a query sharing nothing with the item", () => {
     const dns = item("dns-lookup", "DNS Lookup", "Query DNS records.", ["dns", "lookup", "records"]);
     expect(score(dns, "sanctions screening")).toBe(0);
+  });
+});
+
+/**
+ * Slug-shaped queries. Website visitors typed "invoice-verify" and
+ * "company-data" into the typeahead box in October 2026 and got zero results,
+ * although 22 invoice-verify-{cc} solutions and 34 *-company-data capabilities
+ * exist. The query was split only on whitespace while the token index splits
+ * on hyphens, so a hyphenated word matched no token, no prefix, and no slug
+ * unless it was one slug exactly.
+ */
+describe("slug-family matching", () => {
+  const catalogItem = (slug: string, name: string, description: string): KeywordScorable => ({
+    slug,
+    name,
+    description,
+    tokens: tokenize(`${name} ${description} ${slug}`),
+    primaryTokens: tokenize(`${name} ${slug}`),
+  });
+
+  const invoiceVerifySe = catalogItem(
+    "invoice-verify-se",
+    "Invoice Verify — Sweden",
+    "Invoice fraud detection for Swedish suppliers.",
+  );
+  const belgianCompanyData = catalogItem(
+    "belgian-company-data",
+    "Belgian Company Data",
+    "Look up a Belgian company in the KBO registry.",
+  );
+  const ukCompanyData = catalogItem(
+    "uk-company-data",
+    "UK Company Data",
+    "Look up a UK company at Companies House.",
+  );
+  const vatValidate = catalogItem("vat-validate", "VAT Validate", "Validate an EU VAT number.");
+
+  const typeaheadScore = (it: KeywordScorable, query: string) => {
+    const { words, slugWords } = typeaheadQueryWords(query);
+    return scoreTypeaheadItem(it, words, slugWords, []).score;
+  };
+  const keywordScore = (it: KeywordScorable, query: string) =>
+    scoreKeywordMatch(it, tokenize(query), [], typeaheadQueryWords(query).slugWords);
+
+  it("names a family by a hyphenated run of whole slug segments", () => {
+    expect(isSlugFamilyMatch("invoice-verify-se", "invoice-verify")).toBe(true);
+    expect(isSlugFamilyMatch("belgian-company-data", "company-data")).toBe(true);
+    expect(isSlugFamilyMatch("uk-company-data", "company-data")).toBe(true);
+    expect(isSlugFamilyMatch("swedish-company-data", "swedish-company-data")).toBe(true);
+  });
+
+  it("does not treat partial segments or bare words as a family", () => {
+    expect(isSlugFamilyMatch("invoice-verify-se", "voice-ver")).toBe(false);
+    expect(isSlugFamilyMatch("invoice-verify-se", "invoice-")).toBe(false);
+    expect(isSlugFamilyMatch("vat-validate", "validate")).toBe(false);
+    expect(isSlugFamilyMatch("vat-validate", "web3-assurance")).toBe(false);
+  });
+
+  it("still matches a one-word slug exactly", () => {
+    expect(isSlugFamilyMatch("translate", "translate")).toBe(true);
+  });
+
+  it("finds the invoice-verify family from the typed slug", () => {
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(0);
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(
+      typeaheadScore(vatValidate, "invoice-verify"),
+    );
+  });
+
+  it("finds every *-company-data capability from \"company-data\"", () => {
+    for (const it of [belgianCompanyData, ukCompanyData]) {
+      expect(typeaheadScore(it, "company-data")).toBeGreaterThan(0);
+    }
+    expect(typeaheadScore(vatValidate, "company-data")).toBe(0);
+  });
+
+  it("scores a hyphenated query at least as high as the spaced one", () => {
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(
+      typeaheadScore(invoiceVerifySe, "invoice verify"),
+    );
+  });
+
+  it("gives the keyword path the same family bonus, once", () => {
+    // belgian-company-data misses the identity bonus ("belgian" is not typed),
+    // so before the family match it trailed uk-company-data, whose two long
+    // slug words were both named.
+    expect(keywordScore(belgianCompanyData, "company-data")).toBe(
+      keywordScore(ukCompanyData, "company-data"),
+    );
+    // Slug hit and identity both mean "names this item": +2, not +4.
+    const spaced = scoreKeywordMatch(invoiceVerifySe, tokenize("invoice verify"), []);
+    expect(keywordScore(invoiceVerifySe, "invoice-verify")).toBe(spaced);
   });
 });
