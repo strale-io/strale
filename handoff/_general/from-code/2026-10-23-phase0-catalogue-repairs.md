@@ -56,6 +56,23 @@ Nothing is published until Petter approves.
 - Petter's standing preference: no fixed or recurring-cost services before
   recurring revenue.
 
+**Independent review:** PASS WITH FIXES, all applied.
+- The step renumber now runs unconditionally, guarded on slot 13 being free.
+- `seed-kyb-solutions.ts` no longer rebuilds the SE credit-report step or its
+  copy.
+- The tests now assert the step order and the renumber scope. Each was
+  mutation-checked: a broken guard and a swapped order both fail.
+
+**Follow-up, open:** the wallet and gas tools' `input_schema`, `data_source`
+and limitation text, and `TRANSFER_CHAINS`/`GAS_CHAINS`, still list Base,
+Arbitrum, Optimism, Polygon and BNB.
+- Today a call for one of them fails with Alchemy's HTTP 403 instead of a clean
+  refusal.
+- Narrowing the lists breaks six routing tests that cover those networks.
+- **The right fix depends on Petter:** either he enables the networks on the
+  Alchemy app (an account action), or the lists and schema are narrowed
+  together and the routing tests are rewritten.
+
 **Verify after deploy:**
 1. In the boot log, block 0121's outcome shows 4 delisted, 1 step removed, 1
    relisted, 15 bundles and 3 capabilities on x402, and 5 descriptions narrowed.
