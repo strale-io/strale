@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-321 files (294 with a recorded intent, 27 without).
+322 files (295 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-23 | [`handoff/_general/from-code/2026-10-23-way-of-working-review.md`](_general/from-code/2026-10-23-way-of-working-review.md) | compare Strale's rules and processes with Petter's newer way of |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-typeahead-slug-family.md`](_general/from-code/2026-10-23-typeahead-slug-family.md) | make GET /v1/suggest/typeahead find slug-shaped queries such as |
 | 2026-10-19 | [`handoff/_general/from-code/2026-10-19-checkin-morning.md`](_general/from-code/2026-10-19-checkin-morning.md) | run the 2026-10-19 operating session under DAILY-RUN.md — close week |
 | 2026-10-18 | [`handoff/_general/from-code/2026-10-18-checkin-morning.md`](_general/from-code/2026-10-18-checkin-morning.md) | run the 2026-10-18 operating session under DAILY-RUN.md — on schedule |
