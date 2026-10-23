@@ -30,8 +30,9 @@
  * was paged 43 times on ordinary pauses, because its 2.8h average put the bar
  * at ~8h. Now an alert names the silence by the customer's last paid call, so
  * it fires once and re-arms only when they call again; and the rhythm is their
- * usual LONG pause (95th-percentile gap), not the average. Replayed over the
- * same 30 days: 23 alerts. The main wallet still alerts at the 6-hour floor.
+ * usual daily long pause (the median of each day's longest gap), not the
+ * average gap. Replayed over the same 30 days: 11 alerts. The main wallet's
+ * bar is ~7h, still well inside the 21-hour outage below.
  */
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
@@ -59,17 +60,21 @@ const TRAILING_DAYS = 14;
 const ALERT_COOLDOWN_MS = (TRAILING_DAYS + 1) * 24 * 60 * 60 * 1000;
 
 /**
- * Their rhythm is their usual LONG pause: this percentile of the gaps between
- * their paid calls in the window. Not the average — a bursty caller averages
- * a few hours yet pauses overnight every day, and the average paged on each
- * of those pauses (2026-10, see the header).
+ * Their rhythm is their usual daily long pause: for each day, the longest gap
+ * that ended that day; then this percentile (the median) across days. Not the
+ * average gap — a bursty caller averages a few hours yet pauses overnight
+ * every day, and the average paged on each of those pauses (2026-10, see the
+ * header). Not a percentile of all gaps either: every extra call in a burst
+ * adds a near-zero gap, so at ~20 calls per burst the overnight pause falls
+ * out of the top 5% and the bar collapses to the floor. One value per day
+ * cannot be outvoted.
  */
-const RHYTHM_GAP_PERCENTILE = 0.95;
+const RHYTHM_DAILY_PERCENTILE = 0.5;
 
 /**
- * How many times their usual long pause must elapse before we care: twice
- * the longest pause they normally take is unusual for them, not an ordinary
- * lull. (Was 3 × the average gap; the percentile already sits at the long end.)
+ * How many times their usual daily long pause must elapse before we care:
+ * twice the pause they take on a typical day is unusual for them, not an
+ * ordinary lull. (Was 3 × the average gap.)
  */
 const SILENCE_MULTIPLE = 2;
 
@@ -95,7 +100,7 @@ export interface HeartbeatFinding {
   actor: string;
   activeDays: number;
   hoursSilent: number;
-  /** Their usual long pause between paid calls (RHYTHM_GAP_PERCENTILE). */
+  /** Their usual daily long pause between paid calls (RHYTHM_DAILY_PERCENTILE). */
   usualLongGapHours: number;
   revenueCents: number;
   /** Their last paid call — the start of this silence, and its identity. */
@@ -120,27 +125,38 @@ export async function findSilentPayers(): Promise<HeartbeatFinding[]> {
         AND ${sql.raw(ACTOR_KEY_SQL)} IS NOT NULL
         AND ${externalCustomers("t")}
     ),
+    -- Their own rhythm, measured in gaps BETWEEN CALLS, not in active days —
+    -- a days-based estimate is floored at ~24h by construction and made the
+    -- alert unable to fire inside a day. The first call's gap is NULL.
     gaps AS (
-      SELECT actor, created_at, price_cents,
+      SELECT actor, created_at,
              EXTRACT(EPOCH FROM (created_at - LAG(created_at) OVER (PARTITION BY actor ORDER BY created_at))) / 3600.0 AS gap_hours
       FROM paid
+    ),
+    daily_longest AS (
+      SELECT actor, MAX(gap_hours) AS longest
+      FROM gaps
+      WHERE gap_hours IS NOT NULL
+      GROUP BY actor, date_trunc('day', created_at)
+    ),
+    rhythm AS (
+      SELECT actor,
+             percentile_cont(${sql.raw(String(RHYTHM_DAILY_PERCENTILE))}) WITHIN GROUP (ORDER BY longest) AS usual
+      FROM daily_longest
+      GROUP BY actor
     )
-    SELECT actor,
-           COUNT(DISTINCT date_trunc('day', created_at))::int AS active_days,
-           SUM(price_cents)::int                              AS revenue_cents,
-           ROUND(EXTRACT(EPOCH FROM (now() - MAX(created_at))) / 3600.0, 1) AS hours_silent,
-           to_char(MAX(created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS last_paid_at,
-           -- Their own rhythm: the usual LONG gap between calls. Measured in
-           -- gaps between calls, not in active days — a days-based estimate
-           -- is floored at ~24h by construction and made the alert unable to
-           -- fire inside a day. The first call's gap is NULL, which the
-           -- percentile ignores; a single-call actor cannot reach
-           -- MIN_ACTIVE_DAYS, so the COALESCE is belt-and-braces.
-           ROUND(COALESCE(percentile_cont(${sql.raw(String(RHYTHM_GAP_PERCENTILE))}) WITHIN GROUP (ORDER BY gap_hours), 0)::numeric, 2)
-             AS usual_long_gap_hours
-    FROM gaps
-    GROUP BY actor
-    HAVING COUNT(DISTINCT date_trunc('day', created_at)) >= ${MIN_ACTIVE_DAYS}
+    SELECT p.actor,
+           COUNT(DISTINCT date_trunc('day', p.created_at))::int AS active_days,
+           SUM(p.price_cents)::int                              AS revenue_cents,
+           ROUND(EXTRACT(EPOCH FROM (now() - MAX(p.created_at))) / 3600.0, 1) AS hours_silent,
+           to_char(MAX(p.created_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS last_paid_at,
+           -- One rhythm row per actor; MAX only satisfies GROUP BY. A
+           -- single-call actor has none, but cannot reach MIN_ACTIVE_DAYS.
+           ROUND(COALESCE(MAX(r.usual), 0)::numeric, 2) AS usual_long_gap_hours
+    FROM paid p
+    LEFT JOIN rhythm r ON r.actor = p.actor
+    GROUP BY p.actor
+    HAVING COUNT(DISTINCT date_trunc('day', p.created_at)) >= ${MIN_ACTIVE_DAYS}
   `)) as unknown as Array<{
     actor: string; active_days: number; revenue_cents: number;
     hours_silent: number; usual_long_gap_hours: number; last_paid_at: string;

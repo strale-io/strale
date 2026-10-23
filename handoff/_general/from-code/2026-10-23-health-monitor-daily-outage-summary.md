@@ -56,9 +56,9 @@ customers — 42 from one user account. Two causes in
    2.8h, p95 10.8h), so the bar was ~8h and every overnight pause paged.
 
 Fix: key = customer + last paid call (one alert per silence, re-arms on the
-next paid call, 15-day cooldown); rhythm = 2 × 95th-percentile gap between
-paid calls, floor still 6h. Replay over the same 30 days: 78 → 23 alerts. The
-main wallet (p95 gap 0.9h) still alerts at 6h. No reminder: the condition the
+next paid call, 15-day cooldown); rhythm = 2 × the median of each day's longest
+gap between paid calls (burst-proof, unlike a percentile of all gaps — found in review), floor still 6h. Replay over the same 30 days: 78 → 11 alerts. The
+main wallet's bar is 6.9h (inside the 21h outage). No reminder: the condition the
 first email describes does not change while the silence lasts. 9 of 13 tests
 fail against the old file.
 

@@ -20,10 +20,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const execute = vi.fn();
 vi.mock("../db/index.js", () => ({ getDb: () => ({ execute }) }));
 const sentKeys: string[] = [];
+const cooldowns: number[] = [];
 const alertLedger = new Set<string>();
 vi.mock("../lib/alert-once.js", () => ({
   // Same contract as the real alertOnce: one send per key inside the cooldown.
-  alertOnce: async (key: string) => {
+  alertOnce: async (key: string, cooldownMs: number) => {
+    cooldowns.push(cooldownMs);
     if (alertLedger.has(key)) return false;
     alertLedger.add(key);
     sentKeys.push(key);
@@ -44,7 +46,7 @@ function row(over: Partial<Record<string, unknown>> = {}) {
     active_days: 12,          // established: paid on 12 of the last 14 days
     revenue_cents: 4800,
     hours_silent: 2,
-    usual_long_gap_hours: 28, // their 95th-percentile pause between paid calls
+    usual_long_gap_hours: 28, // median of each day's longest pause between paid calls
     last_paid_at: "2026-10-20T08:00:00.000Z",
     ...over,
   };
@@ -53,6 +55,7 @@ function row(over: Partial<Record<string, unknown>> = {}) {
 beforeEach(() => {
   execute.mockReset();
   sentKeys.length = 0;
+  cooldowns.length = 0;
   alertLedger.clear();
 });
 
@@ -111,21 +114,23 @@ describe("the floor and the multiple both apply", () => {
 
   it("does not page a bursty caller on an ordinary overnight pause", async () => {
     // The production case: an account averaging a 2.8h gap (the old bar was
-    // 3 × 2.8 ≈ 8h) whose 95th-percentile pause is 10.5h. A 9.7h pause paged
-    // it under the old rule; it is normal for them.
-    execute.mockResolvedValue([row({ usual_long_gap_hours: 10.5, hours_silent: 9.7 })]);
+    // 3 × 2.8 ≈ 8h) whose typical daily longest pause is ~16h. A 9.7h pause
+    // paged it under the old rule; it is normal for them.
+    execute.mockResolvedValue([row({ usual_long_gap_hours: 16, hours_silent: 9.7 })]);
     expect(await findSilentPayers()).toHaveLength(0);
-    execute.mockResolvedValue([row({ usual_long_gap_hours: 10.5, hours_silent: 22 })]);
+    execute.mockResolvedValue([row({ usual_long_gap_hours: 16, hours_silent: 40 })]);
     expect(await findSilentPayers()).toHaveLength(1);
   });
 
-  it("reads the rhythm as a percentile of gaps between calls, not an average", async () => {
+  it("reads the rhythm as the median of each day's longest gap, which extra calls per burst cannot outvote", async () => {
     execute.mockResolvedValue([]);
     await findSilentPayers();
     const query = JSON.stringify(execute.mock.calls[0][0]);
-    expect(query).toContain("percentile_cont(");
-    expect(query).toContain("0.95");
     expect(query).toContain("LAG(created_at)");
+    expect(query).toContain("MAX(gap_hours)");
+    expect(query).toContain("GROUP BY actor, date_trunc('day', created_at)");
+    expect(query).toContain("percentile_cont(");
+    expect(query).toContain("0.5");
   });
 });
 
@@ -137,6 +142,9 @@ describe("one alert per silence", () => {
       await tick();
     }
     expect(sentKeys).toHaveLength(1);
+    // The key alone is not enough: a cooldown shorter than a silence can last
+    // (a customer stays in the 14-day window) would re-send it — the old 12h.
+    expect(Math.min(...cooldowns)).toBeGreaterThanOrEqual(14 * 24 * 3600_000);
   });
 
   it("re-arms when the customer pays again, and a new silence alerts straight away", async () => {
