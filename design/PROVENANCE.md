@@ -13,6 +13,14 @@ it), `superseded` (replaced by a later direction in the same lineage),
 active review, earlier than proposed), `rejected` (closed without adoption;
 preserved as history, excluded from implementation).
 
+## Open Flow (BrandKit Lab reference kit 06) — `proposed`, 2026-10-23
+
+**The founder's visual-direction choice for the website.** On 23 October 2026 Petter chose `strale-reference-kit-06` (BrandKit Lab, 9 September 2026) as Strale's visual direction for the redesign and asked for a complete website design system built from it. It supersedes Quiet Material as the visual direction. Positioning (DEC-20260905-A) is unchanged. The candidate system is [Open Flow 0.1](brand-kit/open-flow/README.md), values in `design/tokens/candidates/open-flow.json`, with exploration record [`2026-10-23-open-flow-kit-06`](explorations/2026-10-23-open-flow-kit-06/README.md). The eleven kit colours, the fonts, the kit's seven type roles, the 8px radius and the reveal timings carry over unchanged. The page canvas `#fdf7fe` is sampled from the artwork ground, not a kit colour. The dark theme, interaction/status/chart colours, extra type roles, spacing, grid and components are derived. Artwork and fonts are byte-identical copies, hash-bound in `brand-kit/open-flow/provenance.json`. The kit's STRALE wordmark stays a candidate; the flowing-S logo is retained. Not adopted; `active.json` is unchanged.
+
+## Quiet Material — superseded as the visual direction, 2026-10-23
+
+Every Quiet Material entry below is now history. The founder's 23 October choice of kit-06 replaced it as the website's visual direction. Its files, token candidates, builds and receipts stay in place unchanged, so their checks keep passing and the record stays exact. Their `proposed` statuses describe the period before the change; none of them is an implementation input for the redesign.
+
 ## Quiet Material consolidation — `proposed`, 2026-09-05
 
 The [current register and catalogue](brand-kit/quiet-material/README.md) retain all fourteen atmospheric assets and nine gradients from the preserved v0.7 package. This is source/recipe consolidation inside the retained direction, not another identity. Its token candidate carries exact retained CSS values plus document-only specimen geometry; production tokens and the original package are unchanged. Reconciliation choices and remaining source/rights gaps are explicit in its register.

@@ -24,6 +24,11 @@ promoted to `active.json`.
 
 ## Current entries
 
+- [`2026-10-23-open-flow-kit-06/`](2026-10-23-open-flow-kit-06/README.md)
+  — status: proposed. The founder-chosen visual direction (BrandKit Lab kit 06).
+  Candidate token file: `design/tokens/candidates/open-flow.json`. Supersedes
+  Quiet Material as the direction.
+
 - [`2026-09-05-brand-directions/`](2026-09-05-brand-directions/README.md)
   — status: rejected. Founder preferred the existing redesign. Resume at
   `docs/programs/brand-website/SYSTEM-COMPLETION.md`; these concepts are history.
@@ -33,5 +38,5 @@ promoted to `active.json`.
   DEC-20260905-A; excluded from implementation. Original v0.7 remains the baseline.
 
 - [`2026-09-01-quiet-material-v0.7/`](2026-09-01-quiet-material-v0.7/README.md)
-  — status: proposed. Candidate token file:
+  — status: superseded (by the founder's kit-06 choice, 2026-10-23). Candidate token file:
   `design/tokens/candidates/quiet-material-v0.7.json`.
