@@ -38,7 +38,7 @@ Page references point to [SITE-STRUCTURE.md](SITE-STRUCTURE.md). Nothing here is
 1. **Give your agent a new tool without opening another provider account.**
 2. **Add tools as your agent's work grows, through the connection you already have.**
 3. **Pay per call, with no subscription or contract.**
-4. **Let your agent pay its own way: with an x402 wallet it pays per request, and nobody signs up.**
+4. **Let your agent pay its own way: on eligible tools, an x402 wallet pays per request and nobody signs up.**
 
 **Hero:** line 1 is the headline. Line 2 is the supporting line, followed directly by the catalogue search box, so the reader sees the breadth at once. Lines 3 and 4 open the benefits section (Home §2), each next to a concrete example:
 
@@ -105,7 +105,7 @@ The Security page carries two more supporting facts, which are not marketing lin
 | L3.7 | Tool pages; Home §4 | `provenance.source` and `fetched_at` from executors | `provenance-included` is **allowed, qualified**: only where the route returns it (proof gap 2). The source may be a vendor rather than the register (see L2.5). |
 | L3.8 | Docs §6; Home §4 sample | `GET /v1/transactions/:id`; content cleared at 90 days (`CUSTOMER_CONTENT_COLUMNS`, `lib/customer-content.ts`) | **Proof gap 1.** API-key calls only: x402 responses carry no transaction ID. |
 | L3.9 | Home §8; Tools filter; Pricing §5 | facts `free_tier_slugs`; IP limit in `do.ts` | Plain description; the free count is rendered live. |
-| L3.10 | Company data hub §2 | `/v1/public/ops/trust/capabilities/batch` (`tested`, `last_tested_at`, `pass_rate`) | Show untested registers as untested. On 2026-10-23, six of 25 had no recorded test (CZ, EE, FI, FR, NO, US), and three were below 100% (DE 83, LV 83, SK 60). Never a badge or a score; never "every tool tested" (forbidden). |
+| L3.10 | Company data hub §2 | `/v1/public/ops/trust/capabilities/batch` (`tested`, `last_tested_at`, `pass_rate`) is the only source for test status | `/v1/capabilities` also has a `last_tested_at`, which disagrees: for example, CZ, EE, FI and NO show 2026-08-12 there but "not tested" in the trust batch. Never mix the two on one page. Show untested registers as untested. On 2026-10-23, six of 25 had no recorded test (CZ, EE, FI, FR, NO, US), and three were below 100% (DE 83, LV 83, SK 60). Never a badge or a score; never "every tool tested" (forbidden). |
 | Security: review | Security §7 | `POST /v1/transactions/:id/dispute`, a GDPR Art. 22(3) intake reviewed by a person | Promise review, not correction or a response time. API-key calls only. |
 | Security: retention | Security §2 | facts `pii_retention_days` (90); `CUSTOMER_CONTENT_COLUMNS` clears input, output, error and audit body | Value rendered live. Before publishing, confirm in production that the older backlog noted in `apps/api/src/lib/data-retention.ts` has drained. |
 
