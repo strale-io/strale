@@ -71,6 +71,7 @@
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-05-brand-direction-adoption.md",
+        "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
         "handoff/_general/from-code/2026-05-18-pii-fixture-audit-legal-representatives.md",
         "handoff/_general/from-code/2026-05-18-uk-ubo-smoke-eu30-reaudit-directors-verification.md",
         "handoff/_general/from-code/2026-06-24-llm-json-truncation-fix.md",
@@ -105,6 +106,7 @@
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs",
@@ -281,6 +283,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-09-05-brand-direction-adoption.md",
+        "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
         "handoff/_general/from-code/2026-03-18-dark-launch-qualification.md",
         "handoff/_general/from-code/2026-03-18-smart-onboarding-pipeline.md",
         "handoff/_general/from-code/2026-03-21-integrity-check.md",
@@ -368,6 +371,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -532,7 +536,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "20b77667cf58d3ae76908a3fc6a5ce0837b31fe3ab9d41e3439030be6bd13afc",
+      "sha256": "8caaf31d732e5904dcdf22dcd7a9bf806545fc5aab73a5e652804c10d5ab6f04",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -649,6 +653,7 @@
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "handoff/_general/from-code/2026-10-18-checkin-morning.md",
         "handoff/_general/from-code/2026-10-19-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -667,7 +672,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "f7862e554471c1fa22b96fb879dbd0169ad24b732465e795f8a3d68b4dcfb985",
+      "sha256": "a885c3a974fe8fbcabebe7d553c033d8c50ac0af6d1cd0437f617d3bb7f578d4",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -729,6 +734,7 @@
         "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
@@ -781,7 +787,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "1981fb88541994fa12eb0f3cd7dc0beafbabf0e1329af70756e8ddff4a0ca862",
+      "sha256": "db7bbecf8742fe105fe5123c3932000c47d02e1cda98e96fd066e81a851d9ed1",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

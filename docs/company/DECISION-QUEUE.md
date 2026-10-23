@@ -14,6 +14,33 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-35** · `your_call` · owner Petter · raised 2026-10-23T12:50Z · no deadline — **our scraping rule is stricter than the law on public facts and looser than its own text in practice; a replacement rule is drafted for you**
+You asked whether our scraping rules are too strict compared with other
+players. They are both too strict and not followed. The written rule says
+Strale never runs a scraper and only resells vendor-collected data when it is
+a statutory public record. Yet our Google-search tools resell vendor-collected
+Google results, and our page-reading tools fetch any public page a customer
+names. Meanwhile the rule switched off public, non-personal sources with no
+legal problem, such as the EU court-case search.
+*What was established (research on 2026-10-23, not legal advice):* reading
+public pages while logged out is low risk in the US. Getting around anti-bot
+measures, using logins or fake accounts, and reselling data about identifiable
+people are where companies have actually been sued or fined, the last of these
+especially in the EU.
+*The proposal:* replace the three tiers with one rule built on those risk
+factors: a "never" list, an "allowed with checks" lane for single public
+non-personal reads and vendor data whose terms permit resale, and a preference
+for official and licensed sources. Social-platform and people data stay off.
+Full text, with the tools it would unlock and the ones that stay off:
+[the proposal](../strategy/2026-10-23-data-access-risk-rule-proposal.md).
+*Why it is yours:* it sets legal risk for Moonlighter AB. A short review by an
+EU or Swedish technology lawyer before adopting is recommended, and that spend
+is also yours.
+*If you do nothing:* the current rule stays in force, and the catalogue keeps
+not quite matching it.
+*How you'd reverse it:* a later decision restores the stricter rule; any tool
+reopened under it is switched off again through the same deactivation list.
+
 **DQ-34** · `answered` · owner Petter · raised 2026-09-17T19:30Z · answered 2026-10-02 — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
 Once a week an automated sweep checks seven things that can quietly drift apart
 — among them whether what our records say about each service matches what the
