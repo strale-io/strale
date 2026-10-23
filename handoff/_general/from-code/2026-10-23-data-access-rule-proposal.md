@@ -24,15 +24,22 @@ adding a formal record trips `CLOSING_REVIEW_STALE` and the count checks.
 So the proposal lives in `docs/strategy/`, and on adoption it is recorded in
 CLAUDE.md Active Decisions, as DEC-20260910-A was.
 
-**On adoption, the next session:**
+**On adoption, the next session** follows the proposal's "On adoption" list:
+1. Record the decision in CLAUDE.md, and update AGENTS.md.
+2. Stop the fetch path routing around blocks in `web-provider.ts` (no
+   Jina/Browserless fallthrough after 401/403/429 or a challenge page), and add
+   a robots.txt check.
+3. Add `acquisition_method` and the lane to provenance and to manifests.
+4. Record Serper's and Jina's terms.
+5. Decide `social-profile-check`, then blocklist Reddit.
+6. Update the DEACTIVATED notes and the memory note.
 
-1. Adds DEC-20261023-A to CLAUDE.md Active Decisions and rewrites the doctrine
-   bullets, plus AGENTS.md.
-2. Adds `reddit.com` to `apps/api/src/lib/tos-blocklist.ts`.
-3. Updates the DEACTIVATED notes that cite Tier 1.
-4. Replaces the project memory note on the three-tier doctrine.
-5. Reviews each "unlock" tool's executor against the lanes before reactivating
-   it.
+**Independent review:** a fresh same-provider agent in a separate context
+returned FAIL on the first draft with 19 findings. Among them: never item 3
+would have banned the live sanctions, PEP and adverse-media tools;
+`social-profile-check` was not mentioned; the claim that the fetch tools
+already honour blocks was false; Tier 2 conditions and the terms check were
+dropped without saying so. All are addressed in this version.
 
 Checks run in the worktree: `docs:check` passes, and `context:check` reports
 no warnings after `context:generate`.
