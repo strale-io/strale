@@ -43,6 +43,25 @@ third-party source. None was actionable for him.
   down ~21–22 h every day for a month.
 - 30-day backtest: 0 days on which the escalation rule would have fired.
 
+## Second item: "A paying customer has gone quiet" repeats (separate commit)
+
+Production ledger (`health_monitor_events`, `event_type='alert_sent'`,
+`alert_key LIKE 'revenue-heartbeat:%'`): 76 alerts in 30 days from 4
+customers — 42 from one user account. Two causes in
+`apps/api/src/jobs/revenue-heartbeat.ts`:
+
+1. The 12h cooldown keyed on the customer re-paged the same silence every 12h
+   (x402 wallets stopped for good: 24h, 36h … 230h).
+2. Rhythm = 3 × average gap. The account calls in bursts (median gap ~0, mean
+   2.8h, p95 10.8h), so the bar was ~8h and every overnight pause paged.
+
+Fix: key = customer + last paid call (one alert per silence, re-arms on the
+next paid call, 15-day cooldown); rhythm = 2 × 95th-percentile gap between
+paid calls, floor still 6h. Replay over the same 30 days: 78 → 23 alerts. The
+main wallet (p95 gap 0.9h) still alerts at 6h. No reminder: the condition the
+first email describes does not change while the silence lasts. 9 of 13 tests
+fail against the old file.
+
 ## Deploy
 
 No new env vars. Uses existing `RESEND_API_KEY`, `HEALTH_DIGEST_EMAIL`,
