@@ -545,7 +545,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "1f51d6ec4b9eba6f589593d21e88ee5e02f357e423118596dedd990a0dfd7590",
+      "sha256": "50b285ec804249942e9795c4e9251b24f9842e6203c33ff7852aa265e70e3e00",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -689,6 +689,7 @@
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/scripts/check-vendor-roster-drift.ts",
         "apps/api/src/lib/attribution.ts",
+        "apps/api/src/lib/startup-migrations.ts",
         "apps/api/src/lib/vendor-terms.ts",
         "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
@@ -745,6 +746,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-phase0-catalogue-repairs.md",
         "handoff/_general/from-code/2026-10-23-portfolio-plan.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
@@ -800,7 +802,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "9946103290088b0753fd456a9855ac03fbe1fa79d76a764cc3cea9a0b9457bc8",
+      "sha256": "2a0c3942dbb6aefc3a50270b949f0053416011a3adcbd7e19ce98f95f9241f5f",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
