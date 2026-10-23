@@ -6,12 +6,13 @@ Petter asked on 2026-10-23 whether Strale's scraping rules are too strict
 compared with other players. The answer, drafted as proposed decision
 DEC-20261023-A in
 [the proposal](../../../docs/strategy/2026-10-23-data-access-risk-rule-proposal.md),
-is that the written doctrine is stricter than the law on public, non-personal
-facts and is not followed by the catalogue as written. The proposal replaces
+is that the written doctrine is stricter than recent court rulings suggest on
+public, non-personal facts and is not followed by the catalogue as written. The proposal replaces
 it with three lanes:
 
-- **Never:** logins, getting around anti-bot measures, personal data, litigating
-  platforms, database extraction, resale against vendor terms, media.
+- **Never:** logins, getting around blocks, harvesting people data for resale
+  (AML/KYB screening excepted), litigating platforms, commercial aggregators,
+  resale against vendor terms, media.
 - **Allowed with checks:** customer-directed and per-call public reads, and
   vendor data with resale rights.
 - **Preferred:** official and licensed sources.
@@ -39,7 +40,11 @@ returned FAIL on the first draft with 19 findings. Among them: never item 3
 would have banned the live sanctions, PEP and adverse-media tools;
 `social-profile-check` was not mentioned; the claim that the fetch tools
 already honour blocks was false; Tier 2 conditions and the terms check were
-dropped without saying so. All are addressed in this version.
+dropped without saying so. A re-review returned PASS WITH FIXES with 13 further
+text fixes, which were applied. They cover qualified record keys for collided
+ids, a court-published personal data carve-out, behaviour-defined lanes
+covering every fetch tool, the honest user agent, and the TikTok/YouTube
+rulings.
 
 Checks run in the worktree: `docs:check` passes, and `context:check` reports
 no warnings after `context:generate`.

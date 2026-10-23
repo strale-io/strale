@@ -47,9 +47,10 @@ There are three lanes.
    are listed in `apps/api/src/lib/tos-blocklist.ts`: today LinkedIn,
    Facebook, Instagram, X, Glassdoor, Trustpilot, Google Search and Google
    Patents. Reddit is added.
-   - Data about these platforms bought from a vendor is also excluded, with
+   - Data from these platforms bought from a vendor is also excluded, with
      two exceptions: the platform's own licensed API (a commercial decision),
-     or search-engine result pages from a SERP vendor (see the vendor lane).
+     or search-engine data (result pages, autocomplete) from a SERP vendor
+     (see the vendor lane).
 5. **Commercial aggregators and credit-data sites.** Databases such as
    allabolag.se and northdata.com, whether by systematic extraction or by
    per-call reads. They hold an EU database right in what they compiled, and
@@ -64,24 +65,35 @@ There are three lanes.
 ### Allowed with checks
 
 - **Customer-directed fetch of one public page.**
-  - *What:* a single public, logged-out page, fetched once per call because
-    the customer named the URL in the request.
-  - *Conditions:* Strale identifies itself honestly and stops at an explicit
-    block (HTTP 401/403/429, a challenge page, robots.txt `Disallow` for the
-    path). It never retries a blocked request through another route. The
-    fetch-path blocklist stays in force.
-  - *Tools:* `url-to-markdown`, `web-extract`, `screenshot-url`, `seo-audit`
-    and `tech-stack-detect`.
-  - **This is not how they work today** (see "On adoption").
-- **Per-call reads of public sources Strale chooses.**
-  - *What:* public, non-personal facts read from a public website, government
-    portal or court register, one entity per call, on behalf of a request.
+  - *What:* any capability that fetches a URL the customer supplies in the
+    request. It fetches a single public, logged-out page once per call.
   - *Conditions:*
-    - The source's terms do not forbid automated access, verified and recorded
-      in the manifest before launch. This keeps DEC-20260813-A's constraint (b)
-      and widens its permission from statutory registries to any such public
-      source.
-    - The same block-honouring rules apply.
+    - Strale sends an honest user agent on every fetch route.
+    - It stops at an explicit block: HTTP 401/403/429, a challenge page, or
+      robots.txt `Disallow` for the path.
+    - It never retries a blocked request through another route.
+    - The fetch-path blocklist stays in force.
+  - *Deliberate relaxation:* there is no per-site terms check, because the
+    customer chooses the page. The blocklist is the only terms gate here. This
+    relaxes the "prohibited access" half of DEC-20260428-A's reversal
+    condition for customer-named pages; the "evasive access" half is kept by
+    the block rules.
+  - **This is not how these tools work today** (see "On adoption").
+- **Per-call reads of public sources Strale chooses.**
+  - *What:* any capability that reads a public website, government portal or
+    court register that Strale selected, one entity per call, on behalf of a
+    request. This covers web-provider and Browserless reads.
+  - *Conditions:*
+    - The data is non-personal. *Exception:* personal data that a court or
+      registry publishes by law, returned as published for that one request,
+      never compiled into profiles.
+    - The source's terms permit automated per-call access, verified and
+      recorded in the manifest before launch. This keeps DEC-20260813-A's
+      constraint (b) and widens its permission from statutory registries to
+      any such public source.
+    - Attribution and provenance are preserved, as DEC-20260813-A
+      constraint (d) requires.
+    - The same block-honouring and honest-identification rules apply.
     - No bulk crawling, pre-fetching or mirroring.
 - **Vendor data, whatever the vendor's collection method.**
   - *What:* for example, search-result data from a SERP vendor.
@@ -119,9 +131,14 @@ Every capability's manifest records which lane it uses. A new source in the
 
 Strale's no-scraping posture began on 2026-04-20/21 as a product promise for
 Payee Assurance, later Counterparty Assurance.
-- DEC-20260420-I quotes the doctrine it operationalised: direct data
+- DEC-20260420-I (record key
+  `DEC-20260420-I--notion-34867c87082c81c8b9d4c6b5568bbcef`; the id is shared
+  with an unrelated row) quotes the doctrine it operationalised: direct data
   connections only, no scraping, full ToS compliance with every provider.
-- DEC-20260421-C made a "No scraping" landing-page line a v1 launch blocker.
+- DEC-20260421-C (record key
+  `DEC-20260421-C--notion-34967c87082c81bd8c6bf8e92e901711`; the id is shared
+  with an unrelated row) made a "No scraping" landing-page line a v1 launch
+  blocker.
 - DEC-20260427-H and DEC-20260427-I recorded per-site bans with their reasons
   (each site's terms forbid automated access, or an aggregator's content was
   being taken).
@@ -151,7 +168,12 @@ The doctrine as written no longer matches the catalogue:
     and sends challenge pages to a real browser.
   - That is retrying around a block, the behaviour the courts and this
     proposal treat as the real risk.
-  - No fetch path checks robots.txt.
+  - No fetch path honours robots.txt `Disallow`.
+  - `tech-stack-detect` sends a spoofed desktop Chrome user agent, and the
+    Jina and Browserless routes do not identify as Strale.
+  - About twenty other capabilities fetch customer-supplied URLs through the
+    same paths. Some read sources Strale chose through Browserless, such as
+    enforcementtracker.com, maersk.com and PriceRunner search.
 - **Live tools with personal data.** `social-profile-check` (live, €0.05)
   probes user profiles on TikTok, Reddit, YouTube, Pinterest, GitHub, npm and
   PyPI. The compliance screening tools (`sanctions-check`, `pep-check`,
@@ -214,8 +236,12 @@ It drops two things knowingly:
   was never true across the catalogue.
 
 DEC-20260428-A's reversal condition asks that any relaxation keep a verifiable
-sourcing chain. This proposal keeps one by requiring the vendor and
-acquisition method on every answer; making that true is adoption work.
+sourcing chain and the prohibition on prohibited or evasive access.
+- **Sourcing chain:** kept, by requiring the vendor and acquisition method on
+  every answer. Making that true is adoption work.
+- **Evasive access:** kept, through never item 2 and the block rules.
+- **Prohibited access:** relaxed deliberately, and only for pages a customer
+  names, where the blocklist is the gate.
 
 ## Consequences
 
@@ -226,14 +252,14 @@ Each needs an executor review against the lanes before it goes live.
 | Tool | Blocked today because | Under this rule |
 |---|---|---|
 | `product-search` | Strale-operated Google Shopping scrape (blocklisted) | Allowed via a SERP vendor whose terms permit resale. Direct Google access stays blocked. |
-| `keyword-suggest` | Calls an undocumented Google endpoint directly | Allowed via a vendor with resale rights. Direct Google access stays blocked. |
+| `keyword-suggest` | Calls an undocumented Google endpoint directly | Allowed via a SERP vendor's autocomplete data with resale rights (never item 4 carve-out). Direct Google access stays blocked. |
+| `eu-court-case-search` | Tier 1 categorical (2026-04-28, before DEC-20260518-F and DEC-20260813-A) | Allowed under the per-call lane, including the carve-out for personal data courts publish, once CURIA's and HUDOC's terms are recorded as permitting per-call access. |
 | Government-portal readers (pattern) | Tier 1 categorical | Allowed per call for public, non-personal company facts where no API exists and the portal's terms allow it. Each needs its manifest note. |
 
 ### Tools already permitted today (migration or terms work, not a doctrine change)
 
 | Tool | Route |
 |---|---|
-| `eu-court-case-search` | Arguably already allowed under DEC-20260813-A as a per-call read of a statutory public register, once CURIA's and HUDOC's terms are checked and recorded. Judgments contain personal data that courts publish; read and return only per call. |
 | `patent-search` | EPO OPS or USPTO. Google Patents stays blocked. |
 | `salary-benchmark` | Rebuild on Eurostat and US BLS statistics. Adzuna is not available: `vendor-terms.ts` prohibits it. Glassdoor stays blocked. |
 | `australian-company-data` | Redundant: `au-company-data` covers it by API. Leave off. |
@@ -250,7 +276,7 @@ Each needs an executor review against the lanes before it goes live.
 | `github-user-profile` | Personal data resale (never item 3) |
 | `amazon-price` | Anti-bot (CAPTCHA) and terms; needs a licensed product-data API |
 | `ip-geolocation`, `ip-risk-score`, `crypto-price`, `flight-status`, `host-exposure-lookup`, the `token-security-check` family, `docker-hub-info` | Vendor terms forbid commercial resale on the tier used; only a paid licence changes this |
-| Any social-platform content (X, Instagram, Facebook, TikTok, Reddit) | Never lane. Licensed APIs (X pay-per-use, Reddit commercial) are a separate commercial decision |
+| Any content from blocklisted social platforms (X, Instagram, Facebook, Reddit) | Never item 4. Licensed APIs (X pay-per-use, Reddit commercial) are a separate commercial decision |
 
 ### Live tools that need a decision on adoption
 
@@ -258,24 +284,36 @@ Each needs an executor review against the lanes before it goes live.
 |---|---|
 | `social-profile-check` | Probes personal profiles on TikTok, Reddit, YouTube, Pinterest, GitHub, npm and PyPI, and is live and paid. Under never item 3 it should be deactivated or reduced to package registries (npm, PyPI). Blocklisting Reddit without changing it would make it silently report "does not exist", because `checkPlatform` turns a blocklist refusal into `exists: false`. |
 | `google-search`, `serp-analyze`, `brand-mention-search`, adverse-media fallback | Allowed under the SERP carve-out **only once** Serper's terms are confirmed to permit resale and recorded in `vendor-terms.ts`. If they do not, these need a vendor that does. |
-| `url-to-markdown`, `web-extract`, `screenshot-url`, `seo-audit`, `tech-stack-detect` | Allowed only after the fetch path stops at a block: no Jina or Browserless fallthrough after 401/403/429 or a challenge page, plus a robots.txt check. Jina Reader's terms must also be checked, because it sits on that path on a free tier. |
+| Every capability that fetches a customer-supplied URL. Includes `url-to-markdown`, `web-extract`, `screenshot-url`, `seo-audit`, `tech-stack-detect`, `company-enrich`, `cookie-scan`, `domain-contact-extract`, `html-to-pdf`, `landing-page-roast`, `page-speed-test`, `privacy-policy-analyze`, `product-reviews-extract`, `terms-of-service-extract`, `accessibility-audit`, `structured-scrape`, `pricing-page-extract`, `return-policy-extract`, `competitor-compare`, `company-tech-stack` | Allowed only once the whole web-provider and Browserless path stops at a block (no Jina or Browserless fallthrough after 403/429 or a challenge page), honours robots.txt `Disallow`, and sends an honest user agent. Jina Reader's terms must be checked, because it sits on that path on a free tier. `domain-contact-extract` must also be checked against never item 3. |
+| Capabilities that read a source Strale chose through Browserless or web-provider: `gdpr-fine-lookup` (enforcementtracker.com), `container-track` (maersk.com), `eu-trademark-search`, `japanese-company-data`, `customs-duty-lookup`, `price-compare` (PriceRunner search) | Each needs its source's terms recorded as permitting per-call access, and a check against never item 5 for aggregators (enforcementtracker.com and PriceRunner may be). |
+| `youtube-summarize`, and the TikTok and YouTube probes in `social-profile-check` | YouTube and TikTok are not on the blocklist, and their terms restrict automated access outside their APIs. Rule per platform: the official API, or off. |
 
 ### On adoption
 
-1. DEC-20261023-A becomes active and supersedes DEC-20260428-A,
-   DEC-20260518-F, DEC-20260813-A, DEC-20260421-C and DEC-20260420-I. It
-   interprets DEC-20260427-H and DEC-20260427-I: their site bans stay, now
+1. DEC-20261023-A becomes active and supersedes these records, named by record
+   key so the unrelated rows sharing two of the ids are untouched:
+   - `DEC-20260428-A`
+   - `DEC-20260518-F`
+   - `DEC-20260813-A`
+   - `DEC-20260421-C--notion-34967c87082c81bd8c6bf8e92e901711`
+   - `DEC-20260420-I--notion-34867c87082c81c8b9d4c6b5568bbcef`
+
+   It interprets DEC-20260427-H and DEC-20260427-I: their site bans stay, now
    under never items 4 and 5.
 2. Rewrite the CLAUDE.md doctrine bullets and the AGENTS.md summary.
-3. Change `web-provider.ts` and the fetch tools to stop at blocks and to check
-   robots.txt.
+3. Change the whole fetch path (`web-provider.ts`, the Browserless and Jina
+   routes, and direct fetches) to stop at blocks, honour robots.txt
+   `Disallow`, and send an honest user agent. This includes removing the
+   spoofed user agent in `tech-stack-detect`.
 4. Add `acquisition_method` and the lane to every answer's provenance and to
    manifests. Today SERP tools return only a source name and timestamp, and
    `data_source_type` does not record the lane.
 5. Check Serper's and Jina's terms and record them.
 6. Decide `social-profile-check`, then add Reddit to `tos-blocklist.ts`.
-7. Update the DEACTIVATED notes that cite Tier 1, and replace the project
-   memory note on the three-tier doctrine.
+7. Update every code and doc citation of the superseded ids. These include
+   the DEACTIVATED notes, the `tos-blocklist.ts` header, `vendor-terms.ts`,
+   and the executors and jobs that cite DEC-20260813-A or DEC-20260518-F.
+   Also replace the project memory note on the three-tier doctrine.
 
 **Recommended before adoption:** a short review of the EU personal-data and
 database-right points by a Swedish or EU technology lawyer. This is a spend
