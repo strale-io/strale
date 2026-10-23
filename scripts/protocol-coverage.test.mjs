@@ -368,8 +368,7 @@ test("real repository: docs/project/protocol-coverage.yaml and the generated rou
     result.warnings.map((w) => w.code),
     ["DECISION_ID_UNCOVERED", "DECISION_ID_UNCOVERED"],
   );
-  const details = result.warnings.map((w) => w.detail).join("
-");
+  const details = result.warnings.map((w) => w.detail).join(" | ");
   assert.ok(details.includes("DEC-20260910-A"));
   assert.ok(details.includes("DEC-20261024-A"));
 });
