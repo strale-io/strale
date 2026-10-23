@@ -117,7 +117,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "c7f8ac48b88e3bc642d508abd5ce4ea37a789f1d1dc65956183c700e2e54a19a",
+      "sha256": "a6f7bd670dd4e4c7b7476218a7777855b524e813eccceb2e9884e0275fa3956a",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -674,7 +674,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "43e2a4af6d53bb8ca52c96e390cceddcd2b4d3ed24e931f267f6de9b9338dc5e",
+      "sha256": "11cf77fb269471728ff95dd15d04525809f9c325dcb7e9ab7377f8fe96571fbf",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -790,7 +790,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "e167070fab5e9ffb8977640711bf2f1f8d31c8b705364f535f8f82657aad592b",
+      "sha256": "4ee5348c39ebe71c6d3c1506b9c1bcae1409194597931dd50153ba4ccecd8072",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

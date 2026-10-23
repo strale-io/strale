@@ -9,7 +9,7 @@ date: 2026-09-05
 
 # Strale positioning and creative brief
 
-> **Lead message superseded 2026-10-23 by DEC-20261023-B** ([adoption record](../../strategy/2026-10-23-positioning-adoption.md)): the global per-call tool library is the story, and official-source company and compliance data is the flagship. This brief's audience and claim boundaries still apply.
+> **Lead message superseded 2026-10-23 by DEC-20261023-B** ([adoption record](../../strategy/2026-10-23-positioning-adoption.md)): the global per-call tool library is the story, and official-source company and compliance data, worldwide, is the flagship. This brief's audience, benefit-first ordering and claim boundaries still apply.
 
 **The adopted promise: give your agents useful external tools without building each provider integration yourself.**
 
