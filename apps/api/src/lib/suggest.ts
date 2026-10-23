@@ -608,33 +608,100 @@ export function isSlugFamilyMatch(slug: string, word: string): boolean {
   return `-${slug}-`.includes(`-${word}-`);
 }
 
-/**
- * Split a typeahead query two ways. `words` is what gets matched against item
- * tokens and name/description prefixes; it splits on hyphens because the
- * token index does, so "invoice-verify" scores like "invoice verify" instead
- * of matching nothing. `slugWords` keeps the typed words whole for the
- * slug-family check, which needs the hyphens.
- */
-export function typeaheadQueryWords(query: string): { words: string[]; slugWords: string[] } {
-  const qLower = query.toLowerCase().trim();
-  const slugWords = qLower.split(/\s+/).filter((w) => w.length > 0);
-  const words = [...new Set(qLower.split(/[\s-]+/).filter((w) => w.length > 0))];
-  return { words, slugWords };
+/** A hyphenated query word, normalized, and the forms it is matched by. */
+export interface HyphenatedWord {
+  word: string;
+  /** Empty when any segment was under 2 characters ("e-mail"): matching the
+   *  rest alone would answer a different question than the one typed. */
+  parts: string[];
+  /** The word without hyphens ("email"), for spellings the catalog joins. */
+  joined: string;
 }
 
-/** Score one catalog item for typeahead, before the geography boost and the
- *  field-wide solution bonus. Exported for testing. */
+export interface TypeaheadQuery {
+  /** Plain words, matched against tokens and name/description prefixes. */
+  words: string[];
+  /** Slug-shaped words ("invoice-verify"), matched as a unit — see scoreTypeaheadItem. */
+  hyphenated: HyphenatedWord[];
+}
+
+/**
+ * Parse a typeahead query. A hyphenated word is kept whole for the slug-family
+ * check and split into parts for matching, because the token index splits on
+ * hyphens. Doubled and dangling hyphens are dropped ("invoice-verify-" is still
+ * being typed). A word with a 1-letter segment gets no parts at all: the
+ * letter would prefix-match nearly every item, and the remainder alone ("mail"
+ * for "e-mail") is not what was asked for, so only the family and joined forms
+ * can match it.
+ */
+export function parseTypeaheadQuery(query: string): TypeaheadQuery {
+  const words: string[] = [];
+  const hyphenated: HyphenatedWord[] = [];
+  for (const raw of query.toLowerCase().trim().split(/\s+/)) {
+    const word = raw.replace(/-+/g, "-").replace(/^-|-$/g, "");
+    if (word.length === 0) continue;
+    if (!word.includes("-")) {
+      if (!words.includes(word)) words.push(word);
+      continue;
+    }
+    const segments = word.split("-");
+    const parts = segments.every((p) => p.length > 1) ? segments : [];
+    hyphenated.push({ word, parts, joined: segments.join("") });
+  }
+  return { words, hyphenated };
+}
+
+/** Every word a query could match on — the input to the alias bridge. */
+export function typeaheadTerms(q: TypeaheadQuery): string[] {
+  const hyphenTerms = q.hyphenated.flatMap((h) => (h.parts.length > 0 ? h.parts : [h.joined]));
+  return [...new Set([...q.words, ...hyphenTerms])];
+}
+
+/**
+ * Score one catalog item for typeahead, before the geography boost and the
+ * field-wide solution bonus. Exported for testing.
+ *
+ * A hyphenated word counts for an item only when it names the item's slug
+ * family (+2, then its parts score as usual) or every one of its parts
+ * matches this item. Scoring the parts independently would turn a slug nobody
+ * sells ("web3-assurance") into matches on whichever items mention "web3",
+ * and an exact slug ("vat-validate") into a lookup trailed by every
+ * *-validate item. The query names one thing; the parts must agree on it.
+ */
 export function scoreTypeaheadItem(
   item: KeywordScorable,
-  qWords: readonly string[],
-  slugWords: readonly string[],
+  query: TypeaheadQuery,
   aliasTerms: Iterable<string>,
 ): { score: number; snippet?: string } {
   let score = 0;
   let snippet: string | undefined;
 
+  // Prefix matching on name/description words for partial matches
+  const nameWords = item.name.toLowerCase().split(/[\s\-—]+/);
+  const descWords = item.description.toLowerCase().split(/[\s\-—]+/);
+  const hits = (w: string) =>
+    item.tokens.has(w) ||
+    nameWords.some((nw) => nw.startsWith(w)) ||
+    descWords.some((dw) => dw.startsWith(w));
+
+  const qWords = [...query.words];
+  for (const { word, parts, joined } of query.hyphenated) {
+    if (isSlugFamilyMatch(item.slug, word)) {
+      // Exact slug or slug-family match: +2
+      score += 2;
+      qWords.push(...parts);
+    } else if (item.tokens.has(joined)) {
+      qWords.push(joined);
+    } else if (parts.length > 0 && parts.every(hits)) {
+      qWords.push(...parts);
+    }
+  }
+
+  // Exact one-word slug: +2
+  if (query.words.some((w) => w === item.slug)) score += 2;
+
   // Token matching: +1 for each query word found in item tokens
-  for (const word of qWords) {
+  for (const word of new Set(qWords)) {
     if (item.tokens.has(word)) score++;
   }
 
@@ -643,14 +710,7 @@ export function scoreTypeaheadItem(
     else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
   }
 
-  // Exact slug or slug-family match: +2
-  if (slugWords.some((w) => isSlugFamilyMatch(item.slug, w))) score += 2;
-
-  // Prefix matching on name/description words for partial matches
-  const nameWords = item.name.toLowerCase().split(/[\s\-—]+/);
-  const descWords = item.description.toLowerCase().split(/[\s\-—]+/);
-
-  for (const qw of qWords) {
+  for (const qw of new Set(qWords)) {
     if (nameWords.some((nw) => nw.startsWith(qw) && !item.tokens.has(qw))) {
       score++;
       // Build snippet from name if prefix matched
@@ -671,7 +731,8 @@ export async function typeahead(
   typeFilter?: "solution" | "capability",
 ): Promise<TypeaheadResponse> {
   const items = await loadCatalog();
-  const { words: qWords, slugWords } = typeaheadQueryWords(query);
+  const parsed = parseTypeaheadQuery(query);
+  const qWords = typeaheadTerms(parsed);
 
   if (qWords.length === 0) {
     return { results: [], total: 0 };
@@ -686,7 +747,7 @@ export async function typeahead(
   for (const item of items) {
     // Type filter: skip items that don't match the requested type
     if (typeFilter && item.type !== typeFilter) continue;
-    const base = scoreTypeaheadItem(item, qWords, slugWords, aliasTerms);
+    const base = scoreTypeaheadItem(item, parsed, aliasTerms);
     let score = base.score;
     const snippet = base.snippet;
 
@@ -1170,7 +1231,7 @@ function suggestKeyword(
 
   const scored: Array<{ item: CatalogItem; score: number }> = [];
 
-  const slugWords = typeaheadQueryWords(query).slugWords;
+  const slugWords = parseTypeaheadQuery(query).hyphenated.map((h) => h.word);
 
   for (const item of items) {
     const score = scoreKeywordMatch(item, queryTokens, aliasTerms, slugWords);

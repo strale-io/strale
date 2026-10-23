@@ -25,8 +25,8 @@ import {
   applyConditionalSolutionBonus,
   isSlugFamilyMatch,
   scoreKeywordMatch,
+  parseTypeaheadQuery,
   scoreTypeaheadItem,
-  typeaheadQueryWords,
   type KeywordScorable,
 } from "./suggest.js";
 import { tokenize } from "./tokenize.js";
@@ -242,12 +242,28 @@ describe("slug-family matching", () => {
   );
   const vatValidate = catalogItem("vat-validate", "VAT Validate", "Validate an EU VAT number.");
 
-  const typeaheadScore = (it: KeywordScorable, query: string) => {
-    const { words, slugWords } = typeaheadQueryWords(query);
-    return scoreTypeaheadItem(it, words, slugWords, []).score;
-  };
+  const ibanValidate = catalogItem("iban-validate", "IBAN Validate", "Validate an IBAN and its checksum.");
+  const ensResolve = catalogItem("ens-resolve", "ENS Resolve", "Resolve a web3 ENS name to an address.");
+  const emailValidate = catalogItem(
+    "email-validate",
+    "Email Validate",
+    "Validate an email address for syntax and deliverability.",
+  );
+  const annualReport = catalogItem(
+    "annual-report-extract",
+    "Annual Report Extract",
+    "Extract figures from an annual report.",
+  );
+
+  const typeaheadScore = (it: KeywordScorable, query: string) =>
+    scoreTypeaheadItem(it, parseTypeaheadQuery(query), []).score;
   const keywordScore = (it: KeywordScorable, query: string) =>
-    scoreKeywordMatch(it, tokenize(query), [], typeaheadQueryWords(query).slugWords);
+    scoreKeywordMatch(
+      it,
+      tokenize(query),
+      [],
+      parseTypeaheadQuery(query).hyphenated.map((h) => h.word),
+    );
 
   it("names a family by a hyphenated run of whole slug segments", () => {
     expect(isSlugFamilyMatch("invoice-verify-se", "invoice-verify")).toBe(true);
@@ -279,6 +295,41 @@ describe("slug-family matching", () => {
       expect(typeaheadScore(it, "company-data")).toBeGreaterThan(0);
     }
     expect(typeaheadScore(vatValidate, "company-data")).toBe(0);
+  });
+
+  it("matches nothing for a slug nobody sells", () => {
+    // "web3-assurance" and "eu-company-due-diligence" were typed in October
+    // 2026 and name no slug. Scoring their parts independently matched every
+    // item mentioning web3, or eu, or company; those are coverage gaps.
+    for (const it of [ensResolve, vatValidate, belgianCompanyData, invoiceVerifySe]) {
+      expect(typeaheadScore(it, "web3-assurance")).toBe(0);
+      expect(typeaheadScore(it, "eu-company-due-diligence")).toBe(0);
+    }
+  });
+
+  it("keeps an exact hyphenated slug a precise lookup", () => {
+    expect(typeaheadScore(vatValidate, "vat-validate")).toBeGreaterThan(0);
+    // shares "validate" only: no longer trails the exact hit
+    expect(typeaheadScore(ibanValidate, "vat-validate")).toBe(0);
+  });
+
+  it("does not let a one-letter part prefix-match everything", () => {
+    // "e-mail" used to return nothing; splitting it naively matched every item
+    // with a word starting in "e" (174 of them, led by *-extract).
+    expect(typeaheadScore(annualReport, "e-mail")).toBe(0);
+  });
+
+  it("reaches a joined spelling the catalog uses", () => {
+    expect(typeaheadScore(emailValidate, "e-mail")).toBeGreaterThan(0);
+  });
+
+  it("still names the family while the slug is half typed", () => {
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify-")).toBe(
+      typeaheadScore(invoiceVerifySe, "invoice-verify"),
+    );
+    expect(typeaheadScore(invoiceVerifySe, "invoice--verify")).toBe(
+      typeaheadScore(invoiceVerifySe, "invoice-verify"),
+    );
   });
 
   it("scores a hyphenated query at least as high as the spaced one", () => {
