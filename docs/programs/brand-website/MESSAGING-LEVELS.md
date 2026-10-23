@@ -12,7 +12,7 @@ date: 2026-10-23
 
 ## Who it is written for
 
-The 23 October positioning report recommends one main story: official-source answers about European companies, paid per call, with the rest of the library behind the same connection. The reader is therefore:
+The 23 October positioning report recommends one main story: official-source answers about European companies, paid per call, with the rest of the library behind the same connection. This changes the lead set by DEC-20260905-A (useful agent work first) and the library-as-product framing of DEC-20260812-A. Adopting it therefore needs a founder decision record, not only approval of this file. The reader is therefore:
 
 - **First,** a developer or technical founder building an agent that deals with companies it doesn't know: onboarding suppliers or customers, paying invoices, screening counterparties, preparing company checks for a person to approve. Typically this is at a procurement, invoicing, marketplace or fintech-onboarding product.
 - **Second,** a router or marketplace operator looking for European company data it cannot easily build itself.

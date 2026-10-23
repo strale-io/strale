@@ -287,7 +287,7 @@ Everything else stays: tool pages, Docs, Pricing, Security, the machine surfaces
 
 ## Decisions this needs from Petter
 
-1. **Positioning:** recommended story or library-first. This sets the hero, the header and the use-case order (see the report).
+1. **Positioning:** recommended story or library-first. This sets the hero, the header and the use-case order (see the report). The recommended story changes the lead adopted in DEC-20260905-A and the library-as-product framing of DEC-20260812-A, so choosing it means a new decision record.
 2. **Approve the page set and header.**
 3. **About:** name the founder, or present the company only.
 4. **For platforms:** change the Terms so platforms may supply Strale's tools to their users? Until then the page stays unpublished, and router outreach runs against Terms that forbid what it offers.
