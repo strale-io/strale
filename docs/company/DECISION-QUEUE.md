@@ -14,6 +14,44 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-35** · `your_call` · owner Petter · raised 2026-10-23 14:50 CEST · no deadline — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
+You asked whether our scraping rules are too strict compared with other
+players. They are in places, and the catalogue also doesn't follow them. The
+written rule says Strale never runs a scraper and only resells
+vendor-collected data when it is a public record by law. Yet our Google-search
+tools resell vendor-collected Google results, our page-reading tools fetch any
+page a customer names, and when a site blocks them they try again through
+another route. Meanwhile the rule switched off public sources with no known
+terms problem, such as the EU court-case search.
+*What was established (research on 2026-10-23, not legal advice):* reading
+public pages while logged out is low risk in the US. The places where
+companies have actually been sued or fined are getting around anti-bot
+measures, using logins or fake accounts, and reselling data about identifiable
+people, the last especially in the EU.
+*The proposal:* one rule built on those risk factors, in three lanes:
+- *never:* logins, getting around blocks, harvesting people data, the
+  platforms that enforce their bans, commercial aggregators such as
+  allabolag, and resale against vendor terms;
+- *allowed with checks:* single public reads and vendor data with resale
+  rights;
+- *preferred:* official and licensed sources.
+Compliance screening (sanctions, PEP, adverse media) stays allowed. Social
+content and people-profile data stay off. One live tool that checks whether a
+username exists on social sites would need to be cut back or switched off.
+Adopting it also means fixing our page-reading tools so they stop when a site
+says no.
+Full text, with the tools it unlocks, keeps off and needs decided:
+[the proposal](../strategy/2026-10-23-data-access-risk-rule-proposal.md).
+*Why it is yours:* it sets legal risk for Moonlighter AB. A short review by an
+EU or Swedish technology lawyer before adopting is recommended, and that spend
+is also yours.
+*If you do nothing:* the current rule stays in force, and the gap between it
+and what the tools do stays open. The retry-around-a-block behaviour is a gap
+under either rule; I can close that one now if you want, without deciding the
+rest.
+*How you'd reverse it:* a later decision restores the stricter rule. Any tool
+reopened under it is switched off again through the same deactivation list.
+
 **DQ-34** · `answered` · owner Petter · raised 2026-09-17T19:30Z · answered 2026-10-02 — **our weekly automated sweep has failed every Sunday for a month, because the password it uses to read the live database no longer works**
 Once a week an automated sweep checks seven things that can quietly drift apart
 — among them whether what our records say about each service matches what the
