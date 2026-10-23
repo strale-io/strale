@@ -6,9 +6,7 @@
 
 slug: gas-price-check
 name: Gas Price Check
-description: >-
-  Current gas fees on Ethereum, Polygon or BNB Chain: safe, proposed and fast prices in Gwei plus the base fee,
-  computed from the priority fees actually paid over the last 20 blocks.
+description: "Current gas fees on Ethereum mainnet: safe, proposed and fast prices in Gwei plus the base fee, computed from the priority fees actually paid over the last 20 blocks."
 category: web3
 cost_class: free_quota
 quota_window: daily

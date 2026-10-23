@@ -78,6 +78,12 @@ import {
   runMigration0118_clearDanishFalseBreakerSuccess,
   runMigration0119_resyncGermanCompanyDataDependencyHealth,
   runMigration0120_declareFearGreedAttribution,
+  runMigration0121_phase0CatalogueRepairs,
+  PHASE0_DK_BUNDLE_SLUGS,
+  PHASE0_X402_BUNDLE_SLUGS,
+  PHASE0_NARROWED_DESCRIPTIONS,
+  KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION,
+  KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1440,6 +1446,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0118_clearDanishFalseBreakerSuccess",
       "runMigration0119_resyncGermanCompanyDataDependencyHealth",
       "runMigration0120_declareFearGreedAttribution",
+      "runMigration0121_phase0CatalogueRepairs",
     ]);
   });
 });
@@ -2323,7 +2330,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(120);
+    expect(Math.max(...numbers)).toBe(121);
   });
 });
 
@@ -3030,5 +3037,83 @@ describe("startup-migrations: block 0120 (declare fear-greed-index attribution)"
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
     }
+  });
+});
+
+describe("startup-migrations: block 0121 (Phase 0 catalogue repairs)", () => {
+  const rows = (n: number, key = "slug") => Array.from({ length: n }, (_, i) => ({ [key]: `r${i}` })) as unknown[];
+  // CREATE, ledger SELECT, DK delist, DELETE step, reorder, relist, bundles, caps, 5 descriptions, ledger INSERT.
+  const fullQueue = () => [
+    {}, [], rows(4), rows(1, "id"), {}, rows(1), rows(15), rows(3),
+    rows(1), rows(1), rows(1), rows(1), rows(1), {},
+  ];
+
+  it("runs once: a ledgered block makes no writes on later boots", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0121_phase0CatalogueRepairs" }]] });
+    const result = await runMigration0121_phase0CatalogueRepairs(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("already applied once");
+    expect(stub.renderedSql.some((q) => /^\s*(update|delete|insert)/i.test(q))).toBe(false);
+  });
+
+  it("applies all four repairs and records itself last", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    const result = await runMigration0121_phase0CatalogueRepairs(stub);
+    expect(result.rows_affected).toBe(4 + 1 + 1 + 15 + 3 + 5);
+    expect(result.outcome).toContain("4 Danish bundle(s) delisted");
+    expect(result.outcome).toContain("15 bundle(s) and 3 capability(ies) put on x402");
+    expect(result.outcome).toContain("5 description(s) narrowed");
+    expect(stub.renderedSql.some((q) => /set step_order = 13/i.test(q))).toBe(true);
+    expect(stub.renderedSql[stub.renderedSql.length - 1]).toMatch(/insert into startup_migration_ledger/i);
+  });
+
+  it("skips the step reorder when there is no dead step to remove", async () => {
+    const queue = fullQueue();
+    queue.splice(3, 2, []); // DELETE returns nothing, and no reorder call follows
+    const stub = makeStub({ queue });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    expect(stub.renderedSql.some((q) => /set step_order = 13/i.test(q))).toBe(false);
+  });
+
+  it("binds no array, Date or Buffer parameter (the boot crash-loop class)", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    for (const q of stub.captured) {
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(Array.isArray(p)).toBe(false);
+        expect(p instanceof Date).toBe(false);
+        expect(Buffer.isBuffer(p)).toBe(false);
+      }
+    }
+    expect(stub.renderedSql.some((q) => /\bany\s*\(/i.test(q))).toBe(false);
+  });
+
+  it("guards every write on the row's current state", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    const sqls = stub.renderedSql.map((q) => q.toLowerCase().replace(/\s+/g, " "));
+    const delist = sqls.find((q) => q.includes("update solutions") && q.includes("is_active = false,"))!;
+    expect(delist).toContain("and is_active = true");
+    const relist = sqls.find((q) => q.includes("update solutions") && q.includes("is_active = true,"))!;
+    expect(relist).toContain("deactivation_reason is null");
+    expect(relist).toContain("not exists");
+    const caps = sqls.find((q) => q.includes("update capabilities") && q.includes("x402_enabled = true"))!;
+    expect(caps).toContain("visible = true");
+    expect(caps).toContain("x402_enabled = false");
+    expect(caps).toContain("deactivation_reason is null");
+    const descriptions = sqls.filter((q) => q.includes("set description"));
+    expect(descriptions).toHaveLength(5);
+    for (const q of descriptions) expect(q).toContain("starts_with(description");
+  });
+
+  it("touches only the intended slugs, and the narrowed copy claims nothing unserved", () => {
+    expect(PHASE0_X402_BUNDLE_SLUGS).toHaveLength(15);
+    for (const slug of PHASE0_X402_BUNDLE_SLUGS) expect(slug).toMatch(/^(kyb-essentials|kyb-complete|invoice-verify)-(at|gr|hr|ie|sg)$/);
+    for (const slug of PHASE0_DK_BUNDLE_SLUGS) expect(PHASE0_X402_BUNDLE_SLUGS).not.toContain(slug);
+    for (const [, [, next]] of Object.entries(PHASE0_NARROWED_DESCRIPTIONS)) {
+      expect(next).not.toMatch(/Base|Arbitrum|Optimism|Polygon|BNB|France|USAJOBS/);
+    }
+    expect(KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION).not.toMatch(/credit/i);
+    expect(KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION).toMatch(/credit report summary/);
   });
 });
