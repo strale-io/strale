@@ -47,7 +47,7 @@ const EXPLAINERS: Record<string, ExplainerSpec> = {
     evidence_keys: ["is_match", "matched_lists", "match_classification"],
     severity: CRITICAL,
     why: () =>
-      "Counterparty matched against an OFAC SDN, UN, EU, OFSI, or Swiss SECO sanctions list. Transacting with sanctioned entities is prohibited under the caller's regulatory regime.",
+      "Counterparty matched against an OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions list. Transacting with sanctioned entities is prohibited under the caller's regulatory regime.",
   },
   WALLET_MALICIOUS: {
     source_evaluator: "wallet-history-risk",

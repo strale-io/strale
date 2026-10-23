@@ -79,6 +79,11 @@ import {
   runMigration0119_resyncGermanCompanyDataDependencyHealth,
   runMigration0120_declareFearGreedAttribution,
   runMigration0121_phase0CatalogueRepairs,
+  runMigration0122_correctSanctionsSourceCopy,
+  DQ36_OLD_SANCTIONS_DESCRIPTION,
+  DQ36_NEW_SANCTIONS_DESCRIPTION,
+  DQ36_OLD_SANCTIONS_DATA_SOURCE,
+  DQ36_NEW_SANCTIONS_DATA_SOURCE,
   PHASE0_DK_BUNDLE_SLUGS,
   PHASE0_X402_BUNDLE_SLUGS,
   PHASE0_NARROWED_DESCRIPTIONS,
@@ -1447,6 +1452,7 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0119_resyncGermanCompanyDataDependencyHealth",
       "runMigration0120_declareFearGreedAttribution",
       "runMigration0121_phase0CatalogueRepairs",
+      "runMigration0122_correctSanctionsSourceCopy",
     ]);
   });
 });
@@ -2330,7 +2336,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(121);
+    expect(Math.max(...numbers)).toBe(122);
   });
 });
 
@@ -3136,5 +3142,36 @@ describe("startup-migrations: block 0121 (Phase 0 catalogue repairs)", () => {
     }
     expect(KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION).not.toMatch(/credit/i);
     expect(KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION).toMatch(/credit report summary/);
+  });
+});
+
+describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
+  it("runs once", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0122_correctSanctionsSourceCopy" }]] });
+    const result = await runMigration0122_correctSanctionsSourceCopy(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.some((q) => /^\s*update/i.test(q))).toBe(false);
+  });
+
+  it("rewrites only sanctions-check, and only while it still carries the OFSI wording", async () => {
+    const stub = makeStub({ queue: [{}, [], [{ slug: "sanctions-check" }], [{ slug: "sanctions-check" }], {}] });
+    const result = await runMigration0122_correctSanctionsSourceCopy(stub);
+    expect(result.rows_affected).toBe(2);
+    const updates = stub.captured.filter((q) => /update capabilities/i.test(dialect.sqlToQuery(q).sql));
+    expect(updates).toHaveLength(2);
+    for (const q of updates) {
+      const { sql: text, params } = dialect.sqlToQuery(q);
+      expect(text).toContain("slug = 'sanctions-check'");
+      expect(params.some((p) => typeof p === "string" && p.includes("UK OFSI"))).toBe(true);
+      expect(params.some((p) => typeof p === "string" && p.includes("UK Sanctions List"))).toBe(true);
+      for (const p of params) expect(Array.isArray(p) || p instanceof Date).toBe(false);
+    }
+  });
+
+  it("the new copy no longer names OFSI and keeps everything else", () => {
+    expect(DQ36_NEW_SANCTIONS_DESCRIPTION).not.toMatch(/OFSI/);
+    expect(DQ36_NEW_SANCTIONS_DATA_SOURCE).not.toMatch(/OFSI/);
+    expect(DQ36_NEW_SANCTIONS_DESCRIPTION.replace("the UK Sanctions List", "UK OFSI")).toBe(DQ36_OLD_SANCTIONS_DESCRIPTION);
+    expect(DQ36_NEW_SANCTIONS_DATA_SOURCE.replace("UK Sanctions List", "UK OFSI")).toBe(DQ36_OLD_SANCTIONS_DATA_SOURCE);
   });
 });

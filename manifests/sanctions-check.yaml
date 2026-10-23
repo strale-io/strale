@@ -1,9 +1,7 @@
 slug: sanctions-check
 name: Sanctions Check
 description: >-
-  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, Swiss SECO, BIS, World
-  Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade
-  evidence: match results with named source attribution and country attribution.
+  Check if a person or entity is on sanctions lists (EU, US OFAC, UN, the UK Sanctions List, Swiss SECO, BIS, World Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade evidence: match results with named source attribution and country attribution.
 category: compliance
 cost_class: paid_prepaid
 quota_window: none
@@ -134,7 +132,7 @@ output_schema:
         - dilisense
     queried_at:
       type: string
-data_source: Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)
+data_source: Dilisense consolidated (OFAC SDN, EU FSF, UN SC, UK Sanctions List, CH SECO, BIS, World Bank, EBRD, ADB + 125 national sanctions/debarment lists; full attribution at https://dilisense.com/en/sources/sanction-sources)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch

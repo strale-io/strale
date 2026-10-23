@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-36** · `your_call` · owner Petter · raised 2026-10-23 17:40 CEST · no deadline — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
+**DQ-36** · `answered` · owner Petter · raised 2026-10-23 17:40 CEST · answered 2026-10-23 — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
 Several public descriptions of how our sanctions and web3 checks work name
 sources that are out of date. Compliance and methodology claims are yours to
 publish, so here is the corrected wording for approval. Nothing below is changed
@@ -57,6 +57,7 @@ and yours to publish.
 catalogue and methodology afterwards.
 *If you do nothing:* the copy keeps naming a closed list and three sources we
 stopped using.
+**Answered 2026-10-23 by Petter, in session:** "I approve DQ-36 as drafted: correct the sanctions and web3 methodology copy and verify it in production." Done the same day: the code, manifest, package and DPIA edits, plus startup block 0122 for the production `sanctions-check` row.
 
 **DQ-35** · `your_call` · owner Petter · raised 2026-10-23 14:50 CEST · no deadline — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
 You asked whether our scraping rules are too strict compared with other
