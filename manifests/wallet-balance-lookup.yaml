@@ -6,9 +6,7 @@
 
 slug: wallet-balance-lookup
 name: Wallet Balance Lookup
-description: >-
-  Get a wallet's native balance and the ERC-20 tokens it most recently sent or received, on Ethereum, Base, Arbitrum,
-  Optimism or Polygon.
+description: "Get a wallet's ETH balance and the ERC-20 tokens it most recently sent or received, on Ethereum mainnet."
 category: web3
 cost_class: free_quota
 quota_window: daily

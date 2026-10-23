@@ -78,6 +78,17 @@ import {
   runMigration0118_clearDanishFalseBreakerSuccess,
   runMigration0119_resyncGermanCompanyDataDependencyHealth,
   runMigration0120_declareFearGreedAttribution,
+  runMigration0121_phase0CatalogueRepairs,
+  runMigration0122_correctSanctionsSourceCopy,
+  DQ36_OLD_SANCTIONS_DESCRIPTION,
+  DQ36_NEW_SANCTIONS_DESCRIPTION,
+  DQ36_OLD_SANCTIONS_DATA_SOURCE,
+  DQ36_NEW_SANCTIONS_DATA_SOURCE,
+  PHASE0_DK_BUNDLE_SLUGS,
+  PHASE0_X402_BUNDLE_SLUGS,
+  PHASE0_NARROWED_DESCRIPTIONS,
+  KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION,
+  KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION,
   runStartupMigrations,
   type MigrationExecutor,
 } from "./startup-migrations.js";
@@ -1440,6 +1451,8 @@ describe("startup-migrations — BLOCKS list (canonical block set)", () => {
       "runMigration0118_clearDanishFalseBreakerSuccess",
       "runMigration0119_resyncGermanCompanyDataDependencyHealth",
       "runMigration0120_declareFearGreedAttribution",
+      "runMigration0121_phase0CatalogueRepairs",
+      "runMigration0122_correctSanctionsSourceCopy",
     ]);
   });
 });
@@ -2323,7 +2336,7 @@ describe("startup-migrations — block identity is unique, not just the function
     const numbers = BLOCKS.map((fn) => Number(/runMigration(\d+)_/.exec(fn.name)?.[1] ?? "0"));
     const sorted = [...numbers].sort((a, b) => a - b);
     expect(numbers).toEqual(sorted);
-    expect(Math.max(...numbers)).toBe(120);
+    expect(Math.max(...numbers)).toBe(122);
   });
 });
 
@@ -3030,5 +3043,145 @@ describe("startup-migrations: block 0120 (declare fear-greed-index attribution)"
       const chunks = (query as unknown as { queryChunks?: unknown[] }).queryChunks ?? [];
       expect(chunks.filter((c) => c instanceof Date || Buffer.isBuffer(c))).toEqual([]);
     }
+  });
+});
+
+describe("startup-migrations: block 0121 (Phase 0 catalogue repairs)", () => {
+  const rows = (n: number, key = "slug") => Array.from({ length: n }, (_, i) => ({ [key]: `r${i}` })) as unknown[];
+  // CREATE, ledger SELECT, DK delist, DELETE step, reorder, relist, bundles, caps, 5 descriptions, ledger INSERT.
+  const fullQueue = () => [
+    {}, [], rows(4), rows(1, "id"), {}, rows(1), rows(15), rows(3),
+    rows(1), rows(1), rows(1), rows(1), rows(1), {},
+  ];
+
+  it("runs once: a ledgered block makes no writes on later boots", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0121_phase0CatalogueRepairs" }]] });
+    const result = await runMigration0121_phase0CatalogueRepairs(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(result.outcome).toContain("already applied once");
+    expect(stub.renderedSql.some((q) => /^\s*(update|delete|insert)/i.test(q))).toBe(false);
+  });
+
+  it("applies all four repairs and records itself last", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    const result = await runMigration0121_phase0CatalogueRepairs(stub);
+    expect(result.rows_affected).toBe(4 + 1 + 1 + 15 + 3 + 5);
+    expect(result.outcome).toContain("4 Danish bundle(s) delisted");
+    expect(result.outcome).toContain("1 description corrected (bundle stays inactive)");
+    expect(result.outcome).toContain("15 bundle(s) and 3 capability(ies) put on x402");
+    expect(result.outcome).toContain("5 description(s) narrowed");
+    expect(stub.renderedSql.some((q) => /set step_order = 13/i.test(q))).toBe(true);
+    expect(stub.renderedSql[stub.renderedSql.length - 1]).toMatch(/insert into startup_migration_ledger/i);
+  });
+
+  it("renumbers even when a retry finds the dead step already gone, never into an occupied slot", async () => {
+    const queue = fullQueue();
+    queue.splice(3, 1, []); // the DELETE already ran on an earlier, failed boot
+    const stub = makeStub({ queue });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    const renumber = stub.renderedSql.find((q) => /set step_order = 13/i.test(q));
+    expect(renumber).toBeDefined();
+    const where = renumber!.toLowerCase().replace(/\s+/g, " ");
+    expect(where).toContain("step_order = 14");
+    expect(where).toContain("capability_slug = 'risk-narrative-generate'");
+    expect(where).toContain("slug = 'kyb-complete-se'");
+    expect(where).toContain("not exists");
+    expect(where).toContain("s2.step_order = 13");
+  });
+
+  it("removes the dead step and corrects the copy, but never switches a solution on itself", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    const deleteAt = stub.renderedSql.findIndex((q) => /delete from solution_steps/i.test(q));
+    expect(deleteAt).toBeGreaterThan(-1);
+    expect(stub.renderedSql[deleteAt]).toContain("'credit-report-summary'");
+    expect(stub.renderedSql[deleteAt]).toContain("'kyb-complete-se'");
+    const recopy = stub.renderedSql.find((q) => /update solutions/i.test(q) && /long_description/i.test(q))!;
+    expect(recopy.toLowerCase().replace(/\s+/g, " ")).toContain("and long_description = $");
+    // Activation belongs to the shared predicate (solution-activation.ts), not to this block.
+    const setClauses = stub.renderedSql
+      .filter((q) => /update solutions/i.test(q))
+      .map((q) => q.slice(0, q.toLowerCase().indexOf("where")));
+    expect(setClauses.some((q) => /is_active\s*=\s*true/i.test(q))).toBe(false);
+  });
+
+  it("binds no array, Date or Buffer parameter (the boot crash-loop class)", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    for (const q of stub.captured) {
+      for (const p of dialect.sqlToQuery(q).params) {
+        expect(Array.isArray(p)).toBe(false);
+        expect(p instanceof Date).toBe(false);
+        expect(Buffer.isBuffer(p)).toBe(false);
+      }
+    }
+    expect(stub.renderedSql.some((q) => /\bany\s*\(/i.test(q))).toBe(false);
+  });
+
+  it("guards every write on the row's current state", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    const sqls = stub.renderedSql.map((q) => q.toLowerCase().replace(/\s+/g, " "));
+    const delist = sqls.find((q) => q.includes("update solutions") && q.includes("is_active = false,"))!;
+    expect(delist).toContain("and is_active = true");
+    const caps = sqls.find((q) => q.includes("update capabilities") && q.includes("x402_enabled = true"))!;
+    expect(caps).toContain("visible = true");
+    expect(caps).toContain("x402_enabled = false");
+    expect(caps).toContain("deactivation_reason is null");
+    const descriptions = sqls.filter((q) => q.includes("set description"));
+    expect(descriptions).toHaveLength(5);
+    for (const q of descriptions) expect(q).toContain("starts_with(description");
+  });
+
+  it("touches only the intended slugs, and the narrowed copy claims nothing unserved", () => {
+    expect(PHASE0_X402_BUNDLE_SLUGS).toHaveLength(15);
+    for (const slug of PHASE0_X402_BUNDLE_SLUGS) expect(slug).toMatch(/^(kyb-essentials|kyb-complete|invoice-verify)-(at|gr|hr|ie|sg)$/);
+    for (const slug of PHASE0_DK_BUNDLE_SLUGS) expect(PHASE0_X402_BUNDLE_SLUGS).not.toContain(slug);
+    for (const [, [, next]] of Object.entries(PHASE0_NARROWED_DESCRIPTIONS)) {
+      expect(next).not.toMatch(/Base|Arbitrum|Optimism|Polygon|BNB|France|USAJOBS/);
+    }
+    expect(KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION).not.toMatch(/credit/i);
+    expect(KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION).toMatch(/credit report summary/);
+  });
+});
+
+describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
+  it("runs once", async () => {
+    const stub = makeStub({ queue: [{}, [{ block: "0122_correctSanctionsSourceCopy" }]] });
+    const result = await runMigration0122_correctSanctionsSourceCopy(stub);
+    expect(result.rows_affected).toBe(0);
+    expect(stub.renderedSql.some((q) => /^\s*update/i.test(q))).toBe(false);
+  });
+
+  it("rewrites only sanctions-check, and only while it still carries the OFSI wording", async () => {
+    const stub = makeStub({ queue: [{}, [], [{ slug: "sanctions-check" }], [{ slug: "sanctions-check" }], {}] });
+    const result = await runMigration0122_correctSanctionsSourceCopy(stub);
+    expect(result.rows_affected).toBe(2);
+    const updates = stub.captured.filter((q) => /update capabilities/i.test(dialect.sqlToQuery(q).sql));
+    expect(updates).toHaveLength(2);
+    for (const q of updates) {
+      const { sql: text, params } = dialect.sqlToQuery(q);
+      expect(text).toContain("slug = 'sanctions-check'");
+      expect(params.some((p) => typeof p === "string" && p.includes("UK OFSI"))).toBe(true);
+      expect(params.some((p) => typeof p === "string" && p.includes("UK Sanctions List"))).toBe(true);
+      for (const p of params) expect(Array.isArray(p) || p instanceof Date).toBe(false);
+    }
+  });
+
+  it("the new copy is exactly what the manifest declares (the guard would otherwise match no row)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const yaml = (await import("js-yaml")).default;
+    const manifest = yaml.load(
+      readFileSync(new URL("../../../../manifests/sanctions-check.yaml", import.meta.url), "utf8"),
+    ) as { description: string; data_source: string };
+    expect(manifest.description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
+    expect(manifest.data_source).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
+  });
+
+  it("the new copy no longer names OFSI and keeps everything else", () => {
+    expect(DQ36_NEW_SANCTIONS_DESCRIPTION).not.toMatch(/OFSI/);
+    expect(DQ36_NEW_SANCTIONS_DATA_SOURCE).not.toMatch(/OFSI/);
+    expect(DQ36_NEW_SANCTIONS_DESCRIPTION.replace("the UK Sanctions List", "UK OFSI")).toBe(DQ36_OLD_SANCTIONS_DESCRIPTION);
+    expect(DQ36_NEW_SANCTIONS_DATA_SOURCE.replace("UK Sanctions List", "UK OFSI")).toBe(DQ36_OLD_SANCTIONS_DATA_SOURCE);
   });
 });

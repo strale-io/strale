@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "b32554e0902b482e75c56113c431d208618bc61990e339f1de21882b01028c1c",
+      "sha256": "ac90ead6722209f9502f4e84479c9c42f556efe5e8c888032d665fc8598104ee",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -72,6 +72,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-05-brand-direction-adoption.md",
         "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
+        "docs/strategy/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-05-18-pii-fixture-audit-legal-representatives.md",
         "handoff/_general/from-code/2026-05-18-uk-ubo-smoke-eu30-reaudit-directors-verification.md",
         "handoff/_general/from-code/2026-06-24-llm-json-truncation-fix.md",
@@ -107,6 +108,8 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-positioning-decision.md",
+        "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs",
@@ -116,7 +119,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "dc35ffbf917ccaf2521761a0b62c885cd928ecad445d7c9d7d8b420725bd483a",
+      "sha256": "a6f7bd670dd4e4c7b7476218a7777855b524e813eccceb2e9884e0275fa3956a",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -284,6 +287,7 @@
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-09-05-brand-direction-adoption.md",
         "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
+        "docs/strategy/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-03-18-dark-launch-qualification.md",
         "handoff/_general/from-code/2026-03-18-smart-onboarding-pipeline.md",
         "handoff/_general/from-code/2026-03-21-integrity-check.md",
@@ -372,6 +376,8 @@
         "handoff/_general/from-code/2026-09-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-positioning-decision.md",
+        "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -413,6 +419,7 @@
         "archive/sessions/2026-09-11-m4-cutover-inventory.md",
         "archive/sessions/audit-output/parallel-audits-2026-08-12/scripts-rightsizing.md",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
+        "docs/strategy/2026-10-23-way-of-working-review.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
     },
@@ -493,6 +500,7 @@
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "docs/strategy/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-04-30-cert-audit-drift-prevention-and-bucket-c.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs"
@@ -529,6 +537,7 @@
         "archive/sessions/2026-09-06-agent-hook-setup/fixture-verification.json",
         "docs/programs/cto-readiness/tracks.yaml",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
+        "docs/strategy/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-09-02-t3-session-end-gate.md",
         "scripts/m2-closure-register-lib.mjs"
       ]
@@ -536,7 +545,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "1f51d6ec4b9eba6f589593d21e88ee5e02f357e423118596dedd990a0dfd7590",
+      "sha256": "7cc1fb89a7a3dc039b3a253cbaea1c914eb2e1338ed6d24f89a63d3d5c8ca22e",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -614,6 +623,7 @@
         "docs/research/2026-09-05-brand-foundation-discovery.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-10-m3-vendor-state-model.md",
+        "docs/strategy/2026-10-23-way-of-working-review.md",
         "docs/x402-listing.md",
         "handoff/README.md",
         "handoff/_general/from-code/2026-08-15-checkin-defects-and-eureg-rebuild.md",
@@ -672,13 +682,14 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "6410b773f1a6c635078f8868b659c2bbd83cf9f6e73276420efc21b70aa23463",
+      "sha256": "9f7ab3e6d86435d15152cce45e6c9ce4fe0c9ac62add3595c339b5eb20bf8e46",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/scripts/check-vendor-roster-drift.ts",
         "apps/api/src/lib/attribution.ts",
+        "apps/api/src/lib/startup-migrations.ts",
         "apps/api/src/lib/vendor-terms.ts",
         "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-positioning-brief.json",
@@ -735,6 +746,10 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-phase0-catalogue-repairs.md",
+        "handoff/_general/from-code/2026-10-23-portfolio-plan.md",
+        "handoff/_general/from-code/2026-10-23-positioning-decision.md",
+        "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
@@ -787,7 +802,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f247ae2453d5d34f7338ded640888bc375c4ccb0315759c2bccfa71cff97e60f",
+      "sha256": "abbd830b21487131c188373ebad749a459fd1b512e728574770fbad8ff9db1a0",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -955,6 +970,7 @@
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
+        "docs/strategy/2026-10-23-way-of-working-review.md",
         "package.json",
         "scripts/candidates.test.mjs",
         "scripts/check-receipts.mjs",

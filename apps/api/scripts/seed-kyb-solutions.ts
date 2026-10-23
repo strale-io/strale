@@ -309,16 +309,9 @@ function buildKybComplete(c: Country): SolutionDef {
     inputMap: { email: "$input.contact_email" },
   });
 
-  // Group 4b: Country-specific litigation/bankruptcy bonus
-  if (c.code === "se") {
-    steps.push({
-      capabilitySlug: "credit-report-summary",
-      stepOrder: stepOrder++,
-      canParallel: true,
-      parallelGroup: 4,
-      inputMap: { org_number: "$input.org_number" },
-    });
-  }
+  // Group 4b: Country-specific litigation/bankruptcy bonus. (SE's
+  // credit-report-summary step was removed 2026-10-23, block 0121: that
+  // capability has no compliant source and is in the DEACTIVATED map.)
   if (c.code === "fr") {
     // BODACC official commercial-registry events feed; elevates insolvency
     // signal (procédures collectives) for FR risk decisions.
@@ -371,7 +364,6 @@ function buildKybComplete(c: Country): SolutionDef {
     marketingName: `KYB Complete — ${c.name}`,
     description: `Comprehensive company verification for ${c.name}. Full compliance check including registry verification, sanctions screening, PEP screening, adverse media search, digital presence analysis, and a plain-language risk narrative.`,
     longDescription: `Performs ${checkCount} automated checks for ${c.name} companies: official registry lookup, ${c.isEU ? "VAT validation (registry-derived or caller-provided), " : ""}LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation${
-      c.code === "se" ? " plus credit report summary" :
       c.code === "fr" ? " plus BODACC commercial-registry and insolvency events" :
       c.code === "no" ? " plus Brreg bankruptcy / dissolution detail" :
       c.code === "uk" ? " plus Companies House insolvency cases" : ""

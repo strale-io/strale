@@ -14,6 +14,119 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-38** · `your_call` · owner Petter · raised 2026-10-24 · no deadline — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
+The independent review of DQ-37 found claims in the public web3 methodology
+(`/v1/web3-assurance/methodology`) that are false, and they are more serious
+than the source names fixed so far: they describe regulatory capabilities we
+do not have. Nothing is changed yet.
+*What was established (code read, 2026-10-24):*
+- The sanctions evaluator runs only for protocol and domain targets, by name,
+  via Dilisense. Its own comment says the OFAC crypto-address list is "not yet
+  wired into Strale". No wallet address is screened against OFAC's listed
+  addresses.
+- No Travel Rule code exists. `caller_jurisdiction` is read only to grade
+  mixer exposure.
+- The glossary still lists codes that only the switched-off GoPlus tools could
+  produce: eight `WALLET_*` codes, seven `TOKEN_*` codes and `APPROVALS_RISKY`.
+- `contract-verification` now runs on Sourcify alone, so the published
+  "Sourcify vs Etherscan" disagreement compares Sourcify with itself, while
+  still labelling one side Etherscan.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| `regulatory_posture.ofac` | "OFAC SDN + crypto-specific addresses screened. Tornado Cash treated as graded …" | "Protocol and domain counterparties are screened by name against consolidated sanctions lists (Dilisense). Screening wallet addresses against OFAC's listed crypto addresses is not currently offered. Tornado Cash is treated as graded (delisted March 2025), not binary-blocked." |
+| `regulatory_posture.mica` | "… Counterparty wallet screening + Travel Rule transmission supported via reverse-call mode." | "EU MiCA full enforcement July 1 2026. Counterparty wallet checks (age, mixer exposure, known scam clusters) are available; Travel Rule transmission is not offered." |
+| `regulatory_posture.fatf` | "FATF Travel Rule jurisdiction-aware verdict surface available via caller_jurisdiction parameter." | "caller_jurisdiction adjusts how mixer exposure is graded. Strale does not provide Travel Rule support." |
+| Reason-code glossary and explanations | `WALLET_PHISHING`, `WALLET_MONEY_LAUNDERING`, `WALLET_FINANCIAL_CRIME`, `WALLET_CYBERCRIME`, `WALLET_DARKWEB`, `WALLET_BLACKLIST`, `WALLET_FAKE_KYC`, `WALLET_MALICIOUS_MINING`, the seven `TOKEN_*` codes, `APPROVALS_RISKY` | Remove while no source can produce them |
+| Source of `contract-verification` | "Sourcify + Alchemy (Ethereum mainnet)" (approved in DQ-37; Alchemy is only used to check the address format) | "Sourcify" (licence "Apache 2.0 (Sourcify)") |
+| The `contract_verification_mismatch` disagreement | "Sourcify says … Etherscan says …" (sources sourcify.dev, etherscan.io) | Remove until a second, independent verification source exists |
+
+Code hygiene that goes with it (technical, mine to do): `verdict.ts` still adds
+`WALLET_HISTORY_CLEAN` and `TOKEN_SAFETY_OK` when the GoPlus evaluators succeed.
+They cannot succeed today; the two lines go too, so the codes cannot come back
+without their glossary entries.
+
+*Why it is yours:* these are regulatory and methodology claims a customer or
+regulator could rely on.
+*If you approve:* I make exactly these edits and verify them in production.
+*If you do nothing:* the methodology keeps claiming OFAC wallet screening and
+Travel Rule support that do not exist.
+
+**DQ-37** · `answered` · owner Petter · raised 2026-10-23 19:30 CEST · answered 2026-10-23 — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
+The independent review of DQ-36 found more lines in the public web3 methodology
+(`/v1/web3-assurance/methodology`, plus the explanation text) that credit
+sources we no longer use. They were outside the table you approved, so nothing
+is changed yet.
+*What was established (2026-10-23):*
+- GoPlus: both GoPlus tools have been switched off since 2026-09-10 over its
+  licence terms.
+- Etherscan: wallet data and contract checks moved to Alchemy and Sourcify on
+  2026-09-11. The remaining Etherscan calls refuse unless a commercial plan is
+  configured, which it is not.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| Source of `wallet-identity` | "Etherscan API" | "Alchemy (Ethereum mainnet)" |
+| Source of `wallet-history-risk` | "GoPlus address-security API" | "not currently offered (no licensed source)" |
+| Source of `contract-verification` | "Etherscan getsourcecode + Sourcify" | "Sourcify + Alchemy (Ethereum mainnet)" |
+| Sources of `sister-rug`, `wallet-velocity`, `stablecoin-issuer` | Etherscan | "not currently offered (needs a commercial Etherscan plan)" |
+| Reason code `WALLET_MALICIOUS` (methodology and explanation) | "GoPlus address-security flagged the wallet as malicious" | Remove the code from the published glossary while no source can produce it |
+| Reason codes `WALLET_HISTORY_CLEAN`, `TOKEN_SAFETY_OK` | credit GoPlus | Remove while no source can produce them |
+
+*Why it is yours:* methodology claims are yours to publish.
+*If you approve:* I make exactly these edits and verify them in production.
+*If you do nothing:* the methodology keeps crediting checks we cannot run.
+**Answered 2026-10-23 by Petter, in session:** "I approve DQ-37 as drafted: correct the remaining web3 methodology claims and verify in production." Done the same day in `methodology.ts` and `explanation.ts`. Still naming Etherscan, outside the approved table: `CONTRACT_UNVERIFIED` ("not verified on Etherscan or Sourcify") and an illustrative example in the disagreements field description.
+
+**DQ-36** · `answered` · owner Petter · raised 2026-10-23 17:40 CEST · answered 2026-10-23 — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
+Several public descriptions of how our sanctions and web3 checks work name
+sources that are out of date. Compliance and methodology claims are yours to
+publish, so here is the corrected wording for approval. Nothing below is changed
+yet.
+*What was established (2026-10-23):*
+- The UK's OFSI Consolidated List closed on 28 January 2026; the UK Sanctions
+  List replaced it (gov.uk).
+- Dilisense's public source page still lists two "HMT - OFSI" sources, and also
+  "The UK Sanctions List" (UK Government). So "UK OFSI" is not the operative UK
+  list any more.
+- The web3 methodology (served at `/v1/web3-assurance/methodology`) says:
+  - sanctions come from "Dilisense + direct OFAC/UN/EU/OFSI lists". No code
+    fetches those lists directly; everything comes from Dilisense.
+  - wallet data comes from Etherscan. The wallet tools moved to Alchemy on
+    2026-09-11, when Etherscan's free terms turned out to forbid commercial use.
+  - token-safety and approval data come from GoPlus. Both GoPlus tools were
+    switched off on 2026-09-10 over GoPlus's licence terms.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| `sanctions-check` description (manifest, catalogue, npm package) | "(EU, US OFAC, UN, UK OFSI, Swiss SECO, …)" | "(EU, US OFAC, UN, the UK Sanctions List, Swiss SECO, …)" |
+| `sanctions-check` data source | "OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, …" | "OFAC SDN, EU FSF, UN SC, UK Sanctions List, CH SECO, …" |
+| Limitation shown to customers (`seed-limitations.ts`) | "from OFAC, EU, UN, UK OFSI, and 120+ other sources via dilisense" | "from OFAC, EU, UN, the UK Sanctions List and 120+ other sources via Dilisense" |
+| Web3 reason code `SANCTIONS_MATCH` (methodology and explanation) | "OFAC SDN, UN, EU, OFSI, or Swiss SECO sanctions lists" | "OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions lists" |
+| Web3 methodology, sanctions source | "Dilisense (consolidated) + direct OFAC/UN/EU/OFSI lists" | "Dilisense consolidated sanctions database" |
+| Web3 methodology, wallet transactions and balance sources | "Etherscan API" (licence "Etherscan ToS") | "Alchemy (Ethereum mainnet)" (licence "Alchemy terms") |
+| Web3 methodology, token safety and approvals | "GoPlus … API" | Remove the entries, or mark them "not currently offered" until a licensed source exists |
+| DPIA for sanctions and PEP (internal record) | "HM Treasury OFSI"; "UK persons against OFSI under … SAMLA" | "the UK Sanctions List"; "UK persons against the UK Sanctions List under … SAMLA" |
+
+The internal source mirror (`dilisense-sources.ts`) already lists "UK Government —
+Sanctions List" and keeps Dilisense's own "HMT OFSI" labels. It mirrors their
+page and is not a claim of ours, so it stays as is.
+
+*Why it is yours:* these are compliance and methodology statements a regulator or
+customer could rely on. The charter makes them mine to detect, measure and draft,
+and yours to publish.
+*If you approve:* I make exactly these edits in one PR and verify the served
+catalogue and methodology afterwards.
+*If you do nothing:* the copy keeps naming a closed list and three sources we
+stopped using.
+**Answered 2026-10-23 by Petter, in session:** "I approve DQ-36 as drafted: correct the sanctions and web3 methodology copy and verify it in production." Done the same day: the code, manifest, package and DPIA edits, plus startup block 0122 for the production `sanctions-check` row.
+
 **DQ-35** · `your_call` · owner Petter · raised 2026-10-23 14:50 CEST · no deadline — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
 You asked whether our scraping rules are too strict compared with other
 players. They are in places, and the catalogue also doesn't follow them. The

@@ -126,11 +126,7 @@ const API_VERSION = "0.1";
 const REASON_CODE_GLOSSARY: Record<string, { severity: "critical" | "review"; description: string }> = {
   SANCTIONS_MATCH: {
     severity: "critical",
-    description: "Counterparty matched against OFAC SDN, UN, EU, OFSI, or Swiss SECO sanctions lists.",
-  },
-  WALLET_MALICIOUS: {
-    severity: "critical",
-    description: "GoPlus address-security flagged the wallet as malicious.",
+    description: "Counterparty matched against OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions lists.",
   },
   WALLET_PHISHING: { severity: "critical", description: "Wallet linked to phishing activity." },
   WALLET_MONEY_LAUNDERING: { severity: "critical", description: "Wallet associated with money-laundering activity." },
@@ -226,9 +222,7 @@ const REASON_CODE_GLOSSARY: Record<string, { severity: "critical" | "review"; de
 };
 
 const POSITIVE_REASON_CODES: Record<string, string> = {
-  WALLET_HISTORY_CLEAN: "GoPlus address-security found no malicious indicators on the wallet.",
   WALLET_AGE_ESTABLISHED: "Wallet has documented activity history (not freshly created).",
-  TOKEN_SAFETY_OK: "GoPlus token-security found no critical issues with the token contract.",
   CONTRACT_VERIFIED: "Contract source code is verified.",
   SCAM_CLUSTER_NO_MATCH: "Wallet is not in the ScamSniffer phishing-cluster corpus.",
   MIXER_NO_MATCH: "Wallet is not a known mixer address.",
@@ -325,14 +319,14 @@ methodologyRoute.get("/", (c) => {
 
 function methodologySource(evaluatorName: string): { evaluator: string; primary_source: string; license: string } | null {
   const sources: Record<string, { primary_source: string; license: string }> = {
-    "wallet-identity": { primary_source: "Etherscan API", license: "Etherscan ToS" },
-    "wallet-history-risk": { primary_source: "GoPlus address-security API", license: "GoPlus public API" },
-    "wallet-transactions": { primary_source: "Etherscan API", license: "Etherscan ToS" },
-    "wallet-balance": { primary_source: "Etherscan API", license: "Etherscan ToS" },
-    "token-safety": { primary_source: "GoPlus token-security API", license: "GoPlus public API" },
-    "contract-verification": { primary_source: "Etherscan getsourcecode + Sourcify", license: "Etherscan ToS + Apache 2.0 (Sourcify)" },
-    "approval-inventory": { primary_source: "GoPlus token-approval-security API", license: "GoPlus public API" },
-    sanctions: { primary_source: "Dilisense (consolidated) + direct OFAC/UN/EU/OFSI lists", license: "Dilisense ToS" },
+    "wallet-identity": { primary_source: "Alchemy (Ethereum mainnet)", license: "Alchemy terms" },
+    "wallet-history-risk": { primary_source: "not currently offered (no licensed source)", license: "n/a" },
+    "wallet-transactions": { primary_source: "Alchemy (Ethereum mainnet)", license: "Alchemy terms" },
+    "wallet-balance": { primary_source: "Alchemy (Ethereum mainnet)", license: "Alchemy terms" },
+    "token-safety": { primary_source: "not currently offered (no licensed source)", license: "n/a" },
+    "contract-verification": { primary_source: "Sourcify + Alchemy (Ethereum mainnet)", license: "Apache 2.0 (Sourcify) + Alchemy terms" },
+    "approval-inventory": { primary_source: "not currently offered (no licensed source)", license: "n/a" },
+    sanctions: { primary_source: "Dilisense consolidated sanctions database", license: "Dilisense ToS" },
     "protocol-risk": { primary_source: "DefiLlama protocols + hacks DB", license: "DefiLlama public API" },
     "bridge-legitimacy": { primary_source: "DefiLlama bridges + L2Beat", license: "DefiLlama + L2Beat public" },
     "bridge-config-risk": {
@@ -344,7 +338,7 @@ function methodologySource(evaluatorName: string): { evaluator: string; primary_
     "scam-cluster": { primary_source: "ScamSniffer scam-database (GitHub)", license: "MIT" },
     "eas-attestations": { primary_source: "Ethereum Attestation Service GraphQL", license: "EAS public-good infrastructure" },
     "erc-8004-reputation": { primary_source: "On-chain reads via configured ERC-8004 registry", license: "On-chain public data" },
-    "sister-rug": { primary_source: "Etherscan + DefiLlama Hacks DB cross-reference", license: "Etherscan ToS + DefiLlama public" },
+    "sister-rug": { primary_source: "not currently offered (needs a commercial Etherscan plan)", license: "n/a" },
     "web3-antivirus-risk": { primary_source: "Web3 Antivirus public API", license: "Web3 Antivirus public API" },
     "pre-trade-simulation": { primary_source: "Tenderly Simulation API", license: "Tenderly free tier" },
     "rekt-database": { primary_source: "de.fi REKT Database (token-gated)", license: "de.fi API" },
@@ -353,14 +347,8 @@ function methodologySource(evaluatorName: string): { evaluator: string; primary_
       primary_source: "DefiLlama protocols + protocol detail + hacks DB (1-hop composability via parent/fork/oracle dependencies)",
       license: "DefiLlama public API",
     },
-    "wallet-velocity": {
-      primary_source: "Etherscan tx history (analyzed for velocity / sweep / dormancy patterns)",
-      license: "Etherscan ToS",
-    },
-    "stablecoin-issuer": {
-      primary_source: "Etherscan tokentx + Strale-curated stablecoin issuer registry (Circle, Tether, MakerDAO, Paxos, FirstDigital, Ethena Labs)",
-      license: "Etherscan ToS + public regulator filings",
-    },
+    "wallet-velocity": { primary_source: "not currently offered (needs a commercial Etherscan plan)", license: "n/a" },
+    "stablecoin-issuer": { primary_source: "not currently offered (needs a commercial Etherscan plan)", license: "n/a" },
     "bytecode-similarity": {
       primary_source: "On-chain eth_getCode + Strale-curated rug-bytecode index (v0.1 exact-match; v0.2 fuzzy similarity)",
       license: "On-chain public data; Strale-curated index",

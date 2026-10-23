@@ -725,6 +725,20 @@ async function runAuxiliaryTasks(): Promise<void> {
       logError("test-scheduler-retention-cleanup-failed", err);
     }
   }
+
+  // Daily summary of outside data-source outages, from 08:00 Swedish time.
+  // The hour check comes first so the due slot is only consumed in the window.
+  {
+    const { isDigestSendHour, sendExternalOutageDigest, DIGEST_DUE_INTERVAL_MS } =
+      await import("../lib/external-outage-digest.js");
+    if (isDigestSendHour(new Date()) && await shouldRun("external-outage-digest", DIGEST_DUE_INTERVAL_MS)) {
+      try {
+        await sendExternalOutageDigest();
+      } catch (err) {
+        logError("test-scheduler-external-outage-digest-failed", err);
+      }
+    }
+  }
 }
 
 // ─── Poll cycle ─────────────────────────────────────────────────────────────
@@ -781,9 +795,11 @@ async function pollCycle(): Promise<void> {
       let runnableSuites: OverdueSuite[] = overdue;
       let skippedSlugs: string[] = [];
       try {
-        const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
+        // A recent run (PROBE_REUSE_MS) is enough here; probing on every
+        // one-minute poll hit each provider ~1,000 times a day.
+        const { getRecentDependencyHealth } = await import("../lib/dependency-health.js");
         const { getActiveProviders } = await import("../lib/dependency-manifest.js");
-        const providerHealth = await runDependencyHealthChecks();
+        const providerHealth = await getRecentDependencyHealth();
         const unhealthySlugs = new Set<string>();
         for (const provider of getActiveProviders()) {
           const health = providerHealth[provider.name];

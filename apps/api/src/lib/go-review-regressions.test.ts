@@ -198,8 +198,11 @@ describe("revenue heartbeat: the alert can detect the outage it cites", () => {
     // settlement outage named in the file's own docstring would not have
     // fired.
     expect(src).not.toMatch(/\$\{String\(TRAILING_DAYS\)\} \* 24\.0/);
-    expect(src).toMatch(/MAX\(created_at\) - MIN\(created_at\)/);
-    expect(src).toMatch(/GREATEST\(COUNT\(\*\) - 1, 1\)/);
+    // Since 2026-10-23 the cadence is each day's longest gap between
+    // consecutive calls (median across days), not the mean gap — still
+    // measured between calls, so the floor, not ~24h, governs a chatty caller.
+    expect(src).toMatch(/LAG\(created_at\) OVER \(PARTITION BY actor ORDER BY created_at\)/);
+    expect(src).toMatch(/MAX\(gap_hours\)/);
   });
 
   it("the floor is below the 21-hour incident it was built for", () => {
