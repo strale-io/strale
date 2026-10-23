@@ -71,6 +71,7 @@
         "docs/strategy/2026-08-31-notion-consumer-migration-inventory.md",
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-09-05-brand-direction-adoption.md",
+        "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-05-18-pii-fixture-audit-legal-representatives.md",
         "handoff/_general/from-code/2026-05-18-uk-ubo-smoke-eu30-reaudit-directors-verification.md",
@@ -106,6 +107,7 @@
         "handoff/_general/from-code/2026-09-06-agent-hook-setup.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
@@ -283,6 +285,7 @@
         "docs/strategy/2026-08-31-repo-native-operating-model-migration.md",
         "docs/strategy/2026-08-receita-federal-bulk-ingest-design.md",
         "docs/strategy/2026-09-05-brand-direction-adoption.md",
+        "docs/strategy/2026-10-23-data-access-risk-rule-proposal.md",
         "docs/strategy/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-03-18-dark-launch-qualification.md",
         "handoff/_general/from-code/2026-03-18-smart-onboarding-pipeline.md",
@@ -371,6 +374,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -539,7 +543,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "20b77667cf58d3ae76908a3fc6a5ce0837b31fe3ab9d41e3439030be6bd13afc",
+      "sha256": "1f51d6ec4b9eba6f589593d21e88ee5e02f357e423118596dedd990a0dfd7590",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -657,6 +661,7 @@
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "handoff/_general/from-code/2026-10-18-checkin-morning.md",
         "handoff/_general/from-code/2026-10-19-checkin-morning.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -675,7 +680,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "848df46cfa7ab85ad8a4b341177469e05296a853e0cc9a2142cc74c5a00621ce",
+      "sha256": "eba27a82d64331ebf5c30fbdeac22320bb5ececf5ed17c3a119e5a9771386285",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -737,6 +742,7 @@
         "handoff/_general/from-code/2026-09-06-brand-narrative-reset.md",
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
+        "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
@@ -790,7 +796,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "1097007580e9f348d6f6b502df11a7468eba61e2ccf90c3f6c719f2a2e4d0461",
+      "sha256": "b4231cb72cd7f2a57221466adae0a4d790247e963429b42623f74ddeb57a0577",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
