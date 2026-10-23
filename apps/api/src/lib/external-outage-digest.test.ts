@@ -171,6 +171,14 @@ describe("sendExternalOutageDigest", () => {
     expect(result).toMatchObject({ sent: false, reason: "preview" });
     expect(result.html).toContain("VIES");
     expect(sentEmails).toHaveLength(0);
+    expect(healthEvents).toHaveLength(0);
+  });
+
+  it("records nothing when previewing a quiet day, so the next morning's window is not cut short", async () => {
+    probeRows = [];
+    const result = await sendExternalOutageDigest(END, { previewOnly: true });
+    expect(result).toMatchObject({ sent: false, reason: "nothing_to_report" });
+    expect(healthEvents).toHaveLength(0);
   });
 });
 
