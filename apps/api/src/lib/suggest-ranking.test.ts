@@ -317,6 +317,13 @@ describe("slug-family matching", () => {
     // "e-mail" used to return nothing; splitting it naively matched every item
     // with a word starting in "e" (174 of them, led by *-extract).
     expect(typeaheadScore(annualReport, "e-mail")).toBe(0);
+    // Nor may the rest stand in for the word: "mail" alone matches "mailing".
+    const contacts = catalogItem(
+      "domain-contact-extract",
+      "Domain Contact Extract",
+      "Extract mailing addresses and phone numbers from a domain.",
+    );
+    expect(typeaheadScore(contacts, "e-mail")).toBe(0);
   });
 
   it("reaches a joined spelling the catalog uses", () => {
