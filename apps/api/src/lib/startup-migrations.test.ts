@@ -3067,12 +3067,30 @@ describe("startup-migrations: block 0121 (Phase 0 catalogue repairs)", () => {
     expect(stub.renderedSql[stub.renderedSql.length - 1]).toMatch(/insert into startup_migration_ledger/i);
   });
 
-  it("skips the step reorder when there is no dead step to remove", async () => {
+  it("renumbers even when a retry finds the dead step already gone, never into an occupied slot", async () => {
     const queue = fullQueue();
-    queue.splice(3, 2, []); // DELETE returns nothing, and no reorder call follows
+    queue.splice(3, 1, []); // the DELETE already ran on an earlier, failed boot
     const stub = makeStub({ queue });
     await runMigration0121_phase0CatalogueRepairs(stub);
-    expect(stub.renderedSql.some((q) => /set step_order = 13/i.test(q))).toBe(false);
+    const renumber = stub.renderedSql.find((q) => /set step_order = 13/i.test(q));
+    expect(renumber).toBeDefined();
+    const where = renumber!.toLowerCase().replace(/\s+/g, " ");
+    expect(where).toContain("step_order = 14");
+    expect(where).toContain("capability_slug = 'risk-narrative-generate'");
+    expect(where).toContain("slug = 'kyb-complete-se'");
+    expect(where).toContain("not exists");
+    expect(where).toContain("s2.step_order = 13");
+  });
+
+  it("removes the dead step before relisting, so the relist guard sees the repaired bundle", async () => {
+    const stub = makeStub({ queue: fullQueue() });
+    await runMigration0121_phase0CatalogueRepairs(stub);
+    const deleteAt = stub.renderedSql.findIndex((q) => /delete from solution_steps/i.test(q));
+    const relistAt = stub.renderedSql.findIndex((q) => /update solutions/i.test(q) && /is_active = true,/i.test(q));
+    expect(deleteAt).toBeGreaterThan(-1);
+    expect(relistAt).toBeGreaterThan(deleteAt);
+    expect(stub.renderedSql[deleteAt]).toContain("'credit-report-summary'");
+    expect(stub.renderedSql[deleteAt]).toContain("'kyb-complete-se'");
   });
 
   it("binds no array, Date or Buffer parameter (the boot crash-loop class)", async () => {

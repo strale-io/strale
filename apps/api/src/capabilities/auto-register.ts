@@ -346,7 +346,7 @@ const DEACTIVATED = new Map<string, string>([
   ],
   [
     "us-court-search",
-    "CourtListener API token rejected (HTTP 403), deactivated per DQ-4 (block 0089); reactivate by restoring COURTLISTENER_API_TOKEN and removing this entry",
+    "CourtListener API token rejected (HTTP 403), deactivated per DQ-4 (block 0089); to reactivate, restore COURTLISTENER_API_TOKEN, remove this entry, and set is_active, visible and x402_enabled back in the database (the sync here only ever deactivates)",
   ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit

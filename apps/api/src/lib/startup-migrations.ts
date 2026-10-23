@@ -6182,13 +6182,15 @@ export async function runMigration0120_declareFearGreedAttribution(
 //    Delisting a bundle that cannot complete follows the quality-floor policy
 //    (DEC-20260812-A). Reactivate when the official CVR feed restores Denmark.
 //
-// 2. Repair kyb-complete-se. Inactive because step 14, credit-report-summary,
+// 2. Repair kyb-complete-se. Inactive because step 13, credit-report-summary,
 //    has been in the DEACTIVATED map since 2026-04-21 (no compliant source).
 //    The step row survived the April cleanup (kyb-wiring-audit S-5, 2026-08-12)
 //    and the long description still advertises "credit report summary". Remove
-//    the step, close the step_order gap (risk-narrative-generate 14 -> 13; it
-//    reads $all_results, and no step refers to the removed one), correct the
-//    copy and relist. Every remaining component passes the capability gate
+//    the step, close the step_order gap (risk-narrative-generate 14 -> 13; the
+//    executor sorts by step_order and resolves $steps[N] by position, every SE
+//    step refers only to $steps[0] or $input, and the narrative reads
+//    $all_results), correct the copy (as scripts/seed-kyb-solutions.ts now
+//    generates it) and relist. Every remaining component passes the capability gate
 //    with a 100% harness record over the last 7 days.
 //
 // 3. Put live bundles and tools on the x402 rail. New rows default to
@@ -6234,7 +6236,7 @@ export const PHASE0_X402_CAPABILITY_SLUGS = [
 export const KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION =
   "Performs 13 automated checks for Sweden companies: official registry lookup, VAT validation (registry-derived or caller-provided), LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation plus credit report summary. Produces a dual-output response with structured checks and a human-readable risk narrative.";
 export const KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION =
-  "Performs 12 automated checks for Swedish companies: official registry lookup, VAT validation (registry-derived or caller-provided), LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation. Produces a dual-output response with structured checks and a human-readable risk narrative.";
+  "Performs 12 automated checks for Sweden companies: official registry lookup, VAT validation (registry-derived or caller-provided), LEI check, GLEIF L2 UBO supplement (parent ownership for LEI-bearing entities), sanctions screening, PEP screening, adverse media search, domain reputation, WHOIS, SSL, DNS, and email validation. Produces a dual-output response with structured checks and a human-readable risk narrative.";
 
 /** slug -> [prefix the current description must start with, narrowed description]. */
 export const PHASE0_NARROWED_DESCRIPTIONS: Readonly<Record<string, readonly [string, string]>> = {
@@ -6310,15 +6312,20 @@ export async function runMigration0121_phase0CatalogueRepairs(
        AND solution_id = (SELECT id FROM solutions WHERE slug = 'kyb-complete-se')
      RETURNING id
   `)) as unknown as Array<{ id: string }>;
-  if (removedSteps.length > 0) {
-    await tx.execute(sql`
-      UPDATE solution_steps
-         SET step_order = 13
-       WHERE capability_slug = 'risk-narrative-generate'
-         AND step_order = 14
-         AND solution_id = (SELECT id FROM solutions WHERE slug = 'kyb-complete-se')
-    `);
-  }
+  // Not conditional on the DELETE: blocks are not one transaction, so after a
+  // boot that failed between the two statements the retry's DELETE matches
+  // nothing and the renumber must still run. Guarded on slot 13 being free so
+  // it can never collide with the unique (solution_id, step_order) index.
+  await tx.execute(sql`
+    UPDATE solution_steps
+       SET step_order = 13
+     WHERE capability_slug = 'risk-narrative-generate'
+       AND step_order = 14
+       AND solution_id = (SELECT id FROM solutions WHERE slug = 'kyb-complete-se')
+       AND NOT EXISTS (
+         SELECT 1 FROM solution_steps s2
+          WHERE s2.solution_id = solution_steps.solution_id AND s2.step_order = 13)
+  `);
   const relisted = (await tx.execute(sql`
     UPDATE solutions
        SET is_active = true,
