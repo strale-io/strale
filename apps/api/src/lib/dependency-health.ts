@@ -5,7 +5,8 @@
  * instead. This file is a generic probe runner.
  *
  * PRINCIPLE A: Health probes must NEVER consume billable API calls.
- * Probes run ~4×/day. For paid APIs, set `skipAuth: true` on the health probe
+ * Probes run at most every PROBE_REUSE_MS from the test scheduler, plus the
+ * 6-hourly and 2-hourly jobs. For paid APIs, set `skipAuth: true` on the health probe
  * in dependency-manifest.ts. An unauthenticated 401 proves the service is
  * reachable without consuming quota. Only network errors = unhealthy.
  */
@@ -184,9 +185,57 @@ async function probeProvider(
   return { healthy: false, latency_ms: 0, error: lastAttempt?.error ?? "probe exhausted retries" };
 }
 
+/**
+ * How long the test scheduler may reuse the last probe run instead of probing
+ * again. It asked on every one-minute poll, so each provider was probed
+ * ~1,000 times a day (32,153 probes/day across 31 providers, 14 days to
+ * 2026-10-23) while this file promised ~4×. That volume spent OpenAlex's daily
+ * budget on its own and looks like abuse to free public APIs. Over the same
+ * 14 days, 94 of 149 confirmed outages (2+ failed probes in a row) ended
+ * within 10 minutes and only 3 lasted an hour, so 10 minutes costs little:
+ * a real outage is confirmed in ~20 minutes instead of ~2, and tests behind a
+ * newly-down provider may run for up to 10 minutes before being skipped.
+ */
+export const PROBE_REUSE_MS = 10 * 60 * 1000;
+
+let lastRun: { finishedAt: number; results: Record<string, HealthCheckResult> } | null = null;
+let inFlight: Promise<Record<string, HealthCheckResult>> | null = null;
+
+/**
+ * The last probe run if it finished within `maxAgeMs`, otherwise a new one.
+ * For callers that only need a recent answer — the test scheduler's per-poll
+ * skip check. Jobs that run every few hours call runDependencyHealthChecks().
+ */
+export async function getRecentDependencyHealth(
+  maxAgeMs: number = PROBE_REUSE_MS,
+): Promise<Record<string, HealthCheckResult>> {
+  if (lastRun && Date.now() - lastRun.finishedAt < maxAgeMs) return lastRun.results;
+  return runDependencyHealthChecks();
+}
+
+/** Probe every active provider now. Concurrent callers share one run. */
 export async function runDependencyHealthChecks(): Promise<
   Record<string, HealthCheckResult>
 > {
+  if (inFlight) return inFlight;
+  inFlight = probeAllProviders()
+    .then((results) => {
+      lastRun = { finishedAt: Date.now(), results };
+      return results;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
+}
+
+/** Test-only: forget the last run so each test starts cold. */
+export function resetDependencyHealthCacheForTests(): void {
+  lastRun = null;
+  inFlight = null;
+}
+
+async function probeAllProviders(): Promise<Record<string, HealthCheckResult>> {
   const activeProviders = getActiveProviders();
   const results: Record<string, HealthCheckResult> = {};
 

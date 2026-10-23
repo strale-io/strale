@@ -781,9 +781,11 @@ async function pollCycle(): Promise<void> {
       let runnableSuites: OverdueSuite[] = overdue;
       let skippedSlugs: string[] = [];
       try {
-        const { runDependencyHealthChecks } = await import("../lib/dependency-health.js");
+        // A recent run (PROBE_REUSE_MS) is enough here; probing on every
+        // one-minute poll hit each provider ~1,000 times a day.
+        const { getRecentDependencyHealth } = await import("../lib/dependency-health.js");
         const { getActiveProviders } = await import("../lib/dependency-manifest.js");
-        const providerHealth = await runDependencyHealthChecks();
+        const providerHealth = await getRecentDependencyHealth();
         const unhealthySlugs = new Set<string>();
         for (const provider of getActiveProviders()) {
           const health = providerHealth[provider.name];
