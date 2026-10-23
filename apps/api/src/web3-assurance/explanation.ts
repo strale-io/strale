@@ -56,7 +56,7 @@ const EXPLAINERS: Record<string, ExplainerSpec> = {
     evidence_keys: ["is_verified", "contract_name"],
     severity: REVIEW,
     why: () =>
-      "Contract source code is not verified on Etherscan or Sourcify. Bytecode-only contracts cannot be audited; behaviour is opaque.",
+      "Contract source code is not verified on Sourcify. Bytecode-only contracts cannot be audited; behaviour is opaque.",
   },
   CONTRACT_PROXY_NO_IMPL: {
     source_evaluator: "contract-verification",

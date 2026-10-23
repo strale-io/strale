@@ -128,7 +128,7 @@ const REASON_CODE_GLOSSARY: Record<string, { severity: "critical" | "review"; de
     severity: "critical",
     description: "Counterparty matched against OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions lists.",
   },
-  CONTRACT_UNVERIFIED: { severity: "review", description: "Contract source code is not verified on Etherscan or Sourcify." },
+  CONTRACT_UNVERIFIED: { severity: "review", description: "Contract source code is not verified on Sourcify." },
   CONTRACT_PROXY_NO_IMPL: { severity: "review", description: "Contract is a proxy with no resolvable implementation address." },
   PROTOCOL_RECENT_EXPLOIT_30D: { severity: "critical", description: "Protocol exploited within the last 30 days." },
   PROTOCOL_RECENT_EXPLOIT_90D: { severity: "review", description: "Protocol exploited within the last 90 days." },
@@ -242,7 +242,7 @@ methodologyRoute.get("/", (c) => {
         evidence: "object — per-evaluator evidence map",
         source_quality: "array — per-source latency + ok",
         disagreements:
-          "array — explicit cross-vendor disagreements (e.g. Sourcify says verified but Etherscan disagrees). Surfaces conflicts single-source competitors cannot detect.",
+          "array — explicit cross-source disagreements between evaluators. Surfaces conflicts single-source competitors cannot detect.",
         explanation_chain:
           "array of {reason_code, severity, source_evaluator, evidence_excerpt, why} — structured causal chain. For each fired reason_code, walks back to the evaluator that produced it, the specific evidence values that triggered it, and a why-it-matters string. Workflow gates and human reviewers consume this directly.",
         audit_url: "string — sidecar URL to the audit record (HMAC-signed, 90-day TTL)",
@@ -277,7 +277,7 @@ methodologyRoute.get("/", (c) => {
           "Protocol and domain counterparties are screened by name against consolidated sanctions lists (Dilisense). Screening wallet addresses against OFAC's listed crypto addresses is not currently offered. Tornado Cash is treated as graded (delisted March 2025), not binary-blocked.",
         mica:
           "EU MiCA full enforcement July 1 2026. Counterparty wallet checks (age, mixer exposure, known scam clusters) are available; Travel Rule transmission is not offered.",
-        fatf: "caller_jurisdiction adjusts how mixer exposure is graded. Strale does not provide Travel Rule support.",
+        fatf: "caller_jurisdiction adds a jurisdiction-specific note to mixer findings; it does not change the verdict. Strale does not provide Travel Rule support.",
         gdpr_art_22: "Verdicts surface critical_flags + suggested_action so the agent can act on documented evidence.",
       },
       versioning_policy: {
