@@ -177,7 +177,7 @@ export const LIMITATIONS: LimitationDef[] = [
   // ── sanctions-check ──
   { capabilitySlug: "sanctions-check", category: "freshness", severity: "info",
     title: "Sanctions lists updated multiple times per day — newly sanctioned entities may lag up to 24 hours",
-    limitationText: "Sanctions lists updated multiple times per day from OFAC, EU, UN, UK OFSI, and 120+ other sources via dilisense — newly sanctioned entities may take up to 24 hours to appear",
+    limitationText: "Sanctions lists updated multiple times per day from OFAC, EU, UN, the UK Sanctions List and 120+ other sources via Dilisense — newly sanctioned entities may take up to 24 hours to appear",
     workaround: "For same-day compliance, subscribe to OFAC's RSS feed and cross-reference against today's additions" },
   { capabilitySlug: "sanctions-check", category: "accuracy", severity: "warning",
     title: "Name matching uses fuzzy logic and may produce false positives for common names",

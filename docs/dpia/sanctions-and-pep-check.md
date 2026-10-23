@@ -18,7 +18,7 @@ from upstream lists / databases.
 
 | Capability | What it returns | Upstream |
 |---|---|---|
-| `sanctions-check` | Matches against 130+ international sanctions, debarment, and restrictive-measure lists (OFAC SDN, EU Consolidated, UN SC, HM Treasury OFSI, SECO, BIS, World Bank, EBRD, ADB, plus 125 national lists) | Dilisense Consolidated Sanctions database |
+| `sanctions-check` | Matches against 130+ international sanctions, debarment, and restrictive-measure lists (OFAC SDN, EU Consolidated, UN SC, the UK Sanctions List, SECO, BIS, World Bank, EBRD, ADB, plus 125 national lists) | Dilisense Consolidated Sanctions database |
 | `pep-check` | Matches against the consolidated PEP database covering 230+ territories per EU Commission Implementing Decision (EU) 2023/724, including Relatives and Close Associates (RCAs) | Dilisense Consolidated PEP database |
 
 **Output (both)**: `match_count`, `total_results`, structured `matches`
@@ -51,7 +51,7 @@ manifest with `source_count` and `source_catalog_url`.
   applicable sanctions regimes. EU operators must screen against the
   EU consolidated list under Council Regulations (e.g. 833/2014,
   269/2014); US persons must screen against OFAC SDN under 31 CFR;
-  UK persons against OFSI under the Sanctions and Anti-Money
+  UK persons against the UK Sanctions List under the Sanctions and Anti-Money
   Laundering Act 2018.
 - **PEP screening**: Art. 6(1)(c) for AML-regulated entities (EU
   AMLD6, US BSA/AMLA, UK MLR 2017 §17), supplemented by Art. 9(2)(g)

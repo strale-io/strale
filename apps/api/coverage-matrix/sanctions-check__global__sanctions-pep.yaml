@@ -19,7 +19,7 @@ provider_tos_notes: >-
 doctrine_reference: DEC-20260427-A + DEC-20260429-A
 notes: >-
   Single-vendor sanctions for v1 per DEC-20260427-A. Dilisense consolidated sanctions database: 134
-  sources (OFAC SDN, EU FSF, UN SC, UK OFSI, Swiss SECO, BIS, World Bank, EBRD, ADB, plus
+  sources (OFAC SDN, EU FSF, UN SC, UK Sanctions List, Swiss SECO, BIS, World Bank, EBRD, ADB, plus
   per-jurisdiction national lists). Companion row for pep-check split out 2026-05-17 per migration
   prep (one slug per matrix row). Adverse media is a separate row (Dilisense primary + Strale
   Serper+Claude fallback). Reseller SA pending at Basic+ tier when volume triggers (see Vendor

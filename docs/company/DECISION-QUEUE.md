@@ -14,7 +14,34 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-36** · `your_call` · owner Petter · raised 2026-10-23 17:40 CEST · no deadline — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
+**DQ-37** · `your_call` · owner Petter · raised 2026-10-23 19:30 CEST · no deadline — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
+The independent review of DQ-36 found more lines in the public web3 methodology
+(`/v1/web3-assurance/methodology`, plus the explanation text) that credit
+sources we no longer use. They were outside the table you approved, so nothing
+is changed yet.
+*What was established (2026-10-23):*
+- GoPlus: both GoPlus tools have been switched off since 2026-09-10 over its
+  licence terms.
+- Etherscan: wallet data and contract checks moved to Alchemy and Sourcify on
+  2026-09-11. The remaining Etherscan calls refuse unless a commercial plan is
+  configured, which it is not.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| Source of `wallet-identity` | "Etherscan API" | "Alchemy (Ethereum mainnet)" |
+| Source of `wallet-history-risk` | "GoPlus address-security API" | "not currently offered (no licensed source)" |
+| Source of `contract-verification` | "Etherscan getsourcecode + Sourcify" | "Sourcify + Alchemy (Ethereum mainnet)" |
+| Sources of `sister-rug`, `wallet-velocity`, `stablecoin-issuer` | Etherscan | "not currently offered (needs a commercial Etherscan plan)" |
+| Reason code `WALLET_MALICIOUS` (methodology and explanation) | "GoPlus address-security flagged the wallet as malicious" | Remove the code from the published glossary while no source can produce it |
+| Reason codes `WALLET_HISTORY_CLEAN`, `TOKEN_SAFETY_OK` | credit GoPlus | Remove while no source can produce them |
+
+*Why it is yours:* methodology claims are yours to publish.
+*If you approve:* I make exactly these edits and verify them in production.
+*If you do nothing:* the methodology keeps crediting checks we cannot run.
+
+**DQ-36** · `answered` · owner Petter · raised 2026-10-23 17:40 CEST · answered 2026-10-23 — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
 Several public descriptions of how our sanctions and web3 checks work name
 sources that are out of date. Compliance and methodology claims are yours to
 publish, so here is the corrected wording for approval. Nothing below is changed
@@ -57,6 +84,7 @@ and yours to publish.
 catalogue and methodology afterwards.
 *If you do nothing:* the copy keeps naming a closed list and three sources we
 stopped using.
+**Answered 2026-10-23 by Petter, in session:** "I approve DQ-36 as drafted: correct the sanctions and web3 methodology copy and verify it in production." Done the same day: the code, manifest, package and DPIA edits, plus startup block 0122 for the production `sanctions-check` row.
 
 **DQ-35** · `your_call` · owner Petter · raised 2026-10-23 14:50 CEST · no deadline — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
 You asked whether our scraping rules are too strict compared with other

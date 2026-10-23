@@ -126,7 +126,7 @@ const API_VERSION = "0.1";
 const REASON_CODE_GLOSSARY: Record<string, { severity: "critical" | "review"; description: string }> = {
   SANCTIONS_MATCH: {
     severity: "critical",
-    description: "Counterparty matched against OFAC SDN, UN, EU, OFSI, or Swiss SECO sanctions lists.",
+    description: "Counterparty matched against OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions lists.",
   },
   WALLET_MALICIOUS: {
     severity: "critical",
@@ -327,12 +327,12 @@ function methodologySource(evaluatorName: string): { evaluator: string; primary_
   const sources: Record<string, { primary_source: string; license: string }> = {
     "wallet-identity": { primary_source: "Etherscan API", license: "Etherscan ToS" },
     "wallet-history-risk": { primary_source: "GoPlus address-security API", license: "GoPlus public API" },
-    "wallet-transactions": { primary_source: "Etherscan API", license: "Etherscan ToS" },
-    "wallet-balance": { primary_source: "Etherscan API", license: "Etherscan ToS" },
-    "token-safety": { primary_source: "GoPlus token-security API", license: "GoPlus public API" },
+    "wallet-transactions": { primary_source: "Alchemy (Ethereum mainnet)", license: "Alchemy terms" },
+    "wallet-balance": { primary_source: "Alchemy (Ethereum mainnet)", license: "Alchemy terms" },
+    "token-safety": { primary_source: "not currently offered (no licensed source)", license: "n/a" },
     "contract-verification": { primary_source: "Etherscan getsourcecode + Sourcify", license: "Etherscan ToS + Apache 2.0 (Sourcify)" },
-    "approval-inventory": { primary_source: "GoPlus token-approval-security API", license: "GoPlus public API" },
-    sanctions: { primary_source: "Dilisense (consolidated) + direct OFAC/UN/EU/OFSI lists", license: "Dilisense ToS" },
+    "approval-inventory": { primary_source: "not currently offered (no licensed source)", license: "n/a" },
+    sanctions: { primary_source: "Dilisense consolidated sanctions database", license: "Dilisense ToS" },
     "protocol-risk": { primary_source: "DefiLlama protocols + hacks DB", license: "DefiLlama public API" },
     "bridge-legitimacy": { primary_source: "DefiLlama bridges + L2Beat", license: "DefiLlama + L2Beat public" },
     "bridge-config-risk": {
