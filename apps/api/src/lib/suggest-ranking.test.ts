@@ -243,6 +243,11 @@ describe("slug-family matching", () => {
   const vatValidate = catalogItem("vat-validate", "VAT Validate", "Validate an EU VAT number.");
 
   const ibanValidate = catalogItem("iban-validate", "IBAN Validate", "Validate an IBAN and its checksum.");
+  const exchangeRate = catalogItem(
+    "exchange-rate",
+    "Exchange Rate",
+    "Current exchange rate between two currencies.",
+  );
   const ensResolve = catalogItem("ens-resolve", "ENS Resolve", "Resolve a web3 ENS name to an address.");
   const emailValidate = catalogItem(
     "email-validate",
@@ -256,7 +261,7 @@ describe("slug-family matching", () => {
   );
 
   const typeaheadScore = (it: KeywordScorable, query: string) =>
-    scoreTypeaheadItem(it, parseTypeaheadQuery(query), []).score;
+    scoreTypeaheadItem(it, parseTypeaheadQuery(query)).score;
   const keywordScore = (it: KeywordScorable, query: string) =>
     scoreKeywordMatch(
       it,
@@ -305,6 +310,18 @@ describe("slug-family matching", () => {
       expect(typeaheadScore(it, "web3-assurance")).toBe(0);
       expect(typeaheadScore(it, "eu-company-due-diligence")).toBe(0);
     }
+  });
+
+  it("does not let an alias carry an unknown slug", () => {
+    // "fx" aliases to exchange/forex/currency. As part of a slug nobody sells
+    // it must not surface every currency item on the alias alone.
+    expect(typeaheadScore(exchangeRate, "fx-zzzz")).toBe(0);
+    expect(typeaheadScore(exchangeRate, "travel-planner")).toBe(0);
+  });
+
+  it("lets a part match through its alias, as the spaced query does", () => {
+    expect(typeaheadScore(exchangeRate, "fx-rate")).toBeGreaterThan(0);
+    expect(typeaheadScore(exchangeRate, "fx-rate")).toBe(typeaheadScore(exchangeRate, "fx rate"));
   });
 
   it("keeps an exact hyphenated slug a precise lookup", () => {

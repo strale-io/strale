@@ -651,7 +651,7 @@ export function parseTypeaheadQuery(query: string): TypeaheadQuery {
   return { words, hyphenated };
 }
 
-/** Every word a query could match on — the input to the alias bridge. */
+/** Every word a query could match on directly. */
 export function typeaheadTerms(q: TypeaheadQuery): string[] {
   const hyphenTerms = q.hyphenated.flatMap((h) => (h.parts.length > 0 ? h.parts : [h.joined]));
   return [...new Set([...q.words, ...hyphenTerms])];
@@ -667,11 +667,15 @@ export function typeaheadTerms(q: TypeaheadQuery): string[] {
  * sells ("web3-assurance") into matches on whichever items mention "web3",
  * and an exact slug ("vat-validate") into a lookup trailed by every
  * *-validate item. The query names one thing; the parts must agree on it.
+ *
+ * Aliases follow the same rule. A part may match through its alias ("fx-rate"
+ * reaches exchange-rate as "fx rate" does), but a hyphenated word's aliases
+ * score only on items the word matched; otherwise "fx-zzzz" would still
+ * surface every currency item.
  */
 export function scoreTypeaheadItem(
   item: KeywordScorable,
   query: TypeaheadQuery,
-  aliasTerms: Iterable<string>,
 ): { score: number; snippet?: string } {
   let score = 0;
   let snippet: string | undefined;
@@ -682,10 +686,16 @@ export function scoreTypeaheadItem(
   const hits = (w: string) =>
     item.tokens.has(w) ||
     nameWords.some((nw) => nw.startsWith(w)) ||
-    descWords.some((dw) => dw.startsWith(w));
+    descWords.some((dw) => dw.startsWith(w)) ||
+    [...aliasTermsFor([w])].some((t) => item.tokens.has(t));
+
+  // Vocabulary bridge: "fx" should reach exchange-rate even though the catalog
+  // never uses the word. Scored below a direct hit so literal matches win.
+  const aliasTerms = aliasTermsFor(query.words);
 
   const qWords = [...query.words];
   for (const { word, parts, joined } of query.hyphenated) {
+    let matched = true;
     if (isSlugFamilyMatch(item.slug, word)) {
       // Exact slug or slug-family match: +2
       score += 2;
@@ -694,7 +704,10 @@ export function scoreTypeaheadItem(
       qWords.push(joined);
     } else if (parts.length > 0 && parts.every(hits)) {
       qWords.push(...parts);
+    } else {
+      matched = false;
     }
+    if (matched) for (const t of aliasTermsFor(parts)) aliasTerms.add(t);
   }
 
   // Exact one-word slug: +2
@@ -705,7 +718,10 @@ export function scoreTypeaheadItem(
     if (item.tokens.has(word)) score++;
   }
 
+  // A term the user typed anywhere already scored as a direct hit.
+  const typed = new Set(typeaheadTerms(query));
   for (const term of aliasTerms) {
+    if (typed.has(term)) continue;
     if (item.primaryTokens.has(term)) score += ALIAS_PRIMARY_WEIGHT;
     else if (item.tokens.has(term)) score += ALIAS_SECONDARY_WEIGHT;
   }
@@ -732,22 +748,17 @@ export async function typeahead(
 ): Promise<TypeaheadResponse> {
   const items = await loadCatalog();
   const parsed = parseTypeaheadQuery(query);
-  const qWords = typeaheadTerms(parsed);
 
-  if (qWords.length === 0) {
+  if (typeaheadTerms(parsed).length === 0) {
     return { results: [], total: 0 };
   }
-
-  // Vocabulary bridge: "fx" should reach exchange-rate even though the catalog
-  // never uses the word. Scored below a direct hit so literal matches win.
-  const aliasTerms = aliasTermsFor(qWords);
 
   const scored: Array<{ item: CatalogItem; score: number; snippet?: string; _alsoAvailable?: string[] }> = [];
 
   for (const item of items) {
     // Type filter: skip items that don't match the requested type
     if (typeFilter && item.type !== typeFilter) continue;
-    const base = scoreTypeaheadItem(item, parsed, aliasTerms);
+    const base = scoreTypeaheadItem(item, parsed);
     let score = base.score;
     const snippet = base.snippet;
 
