@@ -519,6 +519,9 @@ export const PROVIDERS: DependencyProvider[] = [
     // OpenAlex answered 429 to everything — the probe and every customer call
     // to the capabilities below — for the rest of the day. A singleton lookup
     // still reaches the live works database and costs nothing (Principle A).
+    // Blind spot: if the budget is ever spent by real traffic, this free probe
+    // may stay green while searches get 429; the capabilities' own failures
+    // surface that, not the probe.
     healthProbe: {
       path: "/works/W2144093431?select=id&mailto=support@strale.io",
       method: "GET",
