@@ -385,7 +385,7 @@
     {
       "slug": "sanctions-check",
       "name": "Sanctions Check",
-      "description": "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, UK OFSI, Swiss SECO, BIS, World Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade evidence: match results with named source attribution and country attribution.",
+      "description": "Check if a person or entity is on sanctions lists (EU, US OFAC, UN, the UK Sanctions List, Swiss SECO, BIS, World Bank, EBRD, ADB + 125 national lists). Uses Dilisense consolidated database. Returns audit-grade evidence: match results with named source attribution and country attribution.",
       "category": "compliance",
       "price_cents": 20,
       "input_schema": {

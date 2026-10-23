@@ -6,7 +6,7 @@ import { DILISENSE_SANCTIONS_LISTS_QUERIED } from "./lib/dilisense-sources.js";
 /**
  * Sanctions screening via Dilisense consolidated database.
  *
- * Covers OFAC SDN, EU FSF, UN Security Council, UK OFSI, Swiss SECO, BIS,
+ * Covers OFAC SDN, EU FSF, UN Security Council, the UK Sanctions List, Swiss SECO, BIS,
  * World Bank, EBRD, ADB, plus 125+ national sanctions / debarment lists.
  * See lib/dilisense-sources.ts for the full attributed list.
  */
