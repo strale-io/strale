@@ -3061,6 +3061,7 @@ describe("startup-migrations: block 0121 (Phase 0 catalogue repairs)", () => {
     const result = await runMigration0121_phase0CatalogueRepairs(stub);
     expect(result.rows_affected).toBe(4 + 1 + 1 + 15 + 3 + 5);
     expect(result.outcome).toContain("4 Danish bundle(s) delisted");
+    expect(result.outcome).toContain("1 description corrected (bundle stays inactive)");
     expect(result.outcome).toContain("15 bundle(s) and 3 capability(ies) put on x402");
     expect(result.outcome).toContain("5 description(s) narrowed");
     expect(stub.renderedSql.some((q) => /set step_order = 13/i.test(q))).toBe(true);
@@ -3082,15 +3083,20 @@ describe("startup-migrations: block 0121 (Phase 0 catalogue repairs)", () => {
     expect(where).toContain("s2.step_order = 13");
   });
 
-  it("removes the dead step before relisting, so the relist guard sees the repaired bundle", async () => {
+  it("removes the dead step and corrects the copy, but never switches a solution on itself", async () => {
     const stub = makeStub({ queue: fullQueue() });
     await runMigration0121_phase0CatalogueRepairs(stub);
     const deleteAt = stub.renderedSql.findIndex((q) => /delete from solution_steps/i.test(q));
-    const relistAt = stub.renderedSql.findIndex((q) => /update solutions/i.test(q) && /is_active = true,/i.test(q));
     expect(deleteAt).toBeGreaterThan(-1);
-    expect(relistAt).toBeGreaterThan(deleteAt);
     expect(stub.renderedSql[deleteAt]).toContain("'credit-report-summary'");
     expect(stub.renderedSql[deleteAt]).toContain("'kyb-complete-se'");
+    const recopy = stub.renderedSql.find((q) => /update solutions/i.test(q) && /long_description/i.test(q))!;
+    expect(recopy.toLowerCase().replace(/\s+/g, " ")).toContain("and long_description = $");
+    // Activation belongs to the shared predicate (solution-activation.ts), not to this block.
+    const setClauses = stub.renderedSql
+      .filter((q) => /update solutions/i.test(q))
+      .map((q) => q.slice(0, q.toLowerCase().indexOf("where")));
+    expect(setClauses.some((q) => /is_active\s*=\s*true/i.test(q))).toBe(false);
   });
 
   it("binds no array, Date or Buffer parameter (the boot crash-loop class)", async () => {
@@ -3112,9 +3118,6 @@ describe("startup-migrations: block 0121 (Phase 0 catalogue repairs)", () => {
     const sqls = stub.renderedSql.map((q) => q.toLowerCase().replace(/\s+/g, " "));
     const delist = sqls.find((q) => q.includes("update solutions") && q.includes("is_active = false,"))!;
     expect(delist).toContain("and is_active = true");
-    const relist = sqls.find((q) => q.includes("update solutions") && q.includes("is_active = true,"))!;
-    expect(relist).toContain("deactivation_reason is null");
-    expect(relist).toContain("not exists");
     const caps = sqls.find((q) => q.includes("update capabilities") && q.includes("x402_enabled = true"))!;
     expect(caps).toContain("visible = true");
     expect(caps).toContain("x402_enabled = false");

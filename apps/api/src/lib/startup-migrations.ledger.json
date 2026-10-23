@@ -884,7 +884,7 @@
         "startup_migration_ledger.block",
         "startup_migration_ledger.rows_affected"
       ],
-      "sha256": "25fa7432405bb9ca7e2adb85766fb795853b6198d3a7a35885a7b510ca03fdcf"
+      "sha256": "690b31a4e0fd329c4b62e1d3db6fa8fe94a80d93420c9797e861779cc37dee9b"
     }
   ],
   "known_overlaps": [

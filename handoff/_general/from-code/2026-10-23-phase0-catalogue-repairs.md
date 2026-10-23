@@ -12,9 +12,17 @@ on the next boot. It does four things:
    `invoice-verify-dk` and `kyc-denmark` depend on `danish-company-data`, which
    had 0 completed of 197 calls in 90 days. None of the four had an external
    call in that window.
-2. **Repairs `kyb-complete-se`.** It removes the dead `credit-report-summary`
-   step, moves `risk-narrative-generate` from position 14 to 13, removes the
-   credit-report claim from the long description, and relists the bundle.
+2. **Repairs `kyb-complete-se`, but does not relist it.** It removes the dead
+   `credit-report-summary` step, moves `risk-narrative-generate` from position
+   14 to 13, and removes the credit-report claim from the long description.
+   - The bundle stays inactive: activation must go through the shared
+     `mayAutoActivateSolution()` predicate, and it can never pass for a bundle
+     with paid steps.
+   - Sanctions, PEP, adverse media and risk narrative are never scheduled, so
+     they have no passing results in 30 days.
+   - **Follow-up (technical, Claude's):** decide how bundles with paid,
+     unscheduled steps qualify, e.g. piggyback results or a stated exemption.
+     Every kyb-complete bundle has this shape.
 3. **Puts 15 bundles and 3 tools on x402.** The bundles are the
    AT/GR/HR/IE/SG kyb-essentials, kyb-complete and invoice-verify families.
    The tools are `cz-unreliable-vat-payer`, `no-bankruptcy-check` and
@@ -75,8 +83,8 @@ Arbitrum, Optimism, Polygon and BNB.
 
 **Verify after deploy:**
 1. In the boot log, block 0121's outcome shows 4 delisted, 1 step removed, 1
-   relisted, 15 bundles and 3 capabilities on x402, and 5 descriptions narrowed.
+   SE description corrected (bundle stays inactive), 15 bundles and 3 capabilities on
+   x402, and 5 descriptions narrowed.
 2. `GET /x402/catalog` includes the new bundles and tools, and excludes
    `kyc-denmark`.
-3. `/v1/solutions` no longer lists the DK bundles, and does list
-   `kyb-complete-se`.
+3. `/v1/solutions` no longer lists the DK bundles.

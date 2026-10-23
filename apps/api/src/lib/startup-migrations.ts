@@ -6189,8 +6189,12 @@ export async function runMigration0120_declareFearGreedAttribution(
 //    the step, close the step_order gap (risk-narrative-generate 14 -> 13; the
 //    executor sorts by step_order and resolves $steps[N] by position, every SE
 //    step refers only to $steps[0] or $input, and the narrative reads
-//    $all_results), correct the copy (as scripts/seed-kyb-solutions.ts now
-//    generates it) and relist. Every remaining component passes the capability gate
+//    $all_results) and correct the copy (as scripts/seed-kyb-solutions.ts now
+//    generates it). The bundle is NOT relisted: activation belongs to the shared
+//    mayAutoActivateSolution() predicate, which needs a recent passing result
+//    for every step, and the paid steps (sanctions, PEP, adverse media, risk
+//    narrative) are never scheduled, so they have none. That gap is recorded
+//    as a follow-up rather than bypassed here. Every remaining component passes the capability gate
 //    with a 100% harness record over the last 7 days.
 //
 // 3. Put live bundles and tools on the x402 rail. New rows default to
@@ -6326,19 +6330,15 @@ export async function runMigration0121_phase0CatalogueRepairs(
          SELECT 1 FROM solution_steps s2
           WHERE s2.solution_id = solution_steps.solution_id AND s2.step_order = 13)
   `);
-  const relisted = (await tx.execute(sql`
+  // Copy only. The bundle is NOT switched on here: activation belongs to the
+  // shared mayAutoActivateSolution() predicate (solution-activation.test.ts
+  // fails the build on any other activator).
+  const recopied = (await tx.execute(sql`
     UPDATE solutions
-       SET is_active = true,
-           long_description = CASE
-             WHEN long_description = ${KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION} THEN ${KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION}
-             ELSE long_description END,
+       SET long_description = ${KYB_COMPLETE_SE_NEW_LONG_DESCRIPTION},
            updated_at = now()
      WHERE slug = 'kyb-complete-se'
-       AND is_active = false
-       AND deactivation_reason IS NULL
-       AND NOT EXISTS (
-         SELECT 1 FROM solution_steps st JOIN capabilities c ON c.slug = st.capability_slug
-          WHERE st.solution_id = solutions.id AND c.is_active = false)
+       AND long_description = ${KYB_COMPLETE_SE_OLD_LONG_DESCRIPTION}
      RETURNING slug
   `)) as unknown as Array<{ slug: string }>;
 
@@ -6379,7 +6379,7 @@ export async function runMigration0121_phase0CatalogueRepairs(
   }
 
   const total =
-    delisted.length + removedSteps.length + relisted.length + bundlesOnRail.length + capsOnRail.length + narrowed;
+    delisted.length + removedSteps.length + recopied.length + bundlesOnRail.length + capsOnRail.length + narrowed;
 
   // Written last: if anything above throws, boot aborts with nothing recorded and the next boot retries.
   await tx.execute(sql`
@@ -6392,7 +6392,7 @@ export async function runMigration0121_phase0CatalogueRepairs(
     block: BLOCK,
     outcome:
       `${delisted.length} Danish bundle(s) delisted; kyb-complete-se: ${removedSteps.length} dead step removed, ` +
-      `${relisted.length} relisted; ${bundlesOnRail.length} bundle(s) and ${capsOnRail.length} capability(ies) ` +
+      `${recopied.length} description corrected (bundle stays inactive); ${bundlesOnRail.length} bundle(s) and ${capsOnRail.length} capability(ies) ` +
       `put on x402; ${narrowed} description(s) narrowed`,
     rows_affected: total,
     duration_ms: Date.now() - startedAt,
