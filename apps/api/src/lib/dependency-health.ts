@@ -12,7 +12,7 @@
 
 import { getActiveProviders, type DependencyProvider } from "./dependency-manifest.js";
 import { fireAndForget } from "./fire-and-forget.js";
-import { logError } from "./log.js";
+import { logError, logWarn } from "./log.js";
 
 export interface HealthCheckResult {
   healthy: boolean;
@@ -47,7 +47,12 @@ async function probeSingleUrl(
     // Only the status matters. Release the body instead of leaving it unread:
     // an unread body keeps its connection checked out until garbage
     // collection, and probes run on every scheduler poll.
-    res.body?.cancel().catch(() => {});
+    res.body?.cancel().catch((err) =>
+      logWarn("dependency-probe-body-cancel-failed", "probe body cancel failed (connection may pin until GC)", {
+        provider: provider.name,
+        err: String(err),
+      }),
+    );
     if (probe.healthyStatuses.includes(res.status)) {
       return { healthy: true, latency_ms };
     }
