@@ -3168,6 +3168,16 @@ describe("startup-migrations: block 0122 (DQ-36 sanctions source copy)", () => {
     }
   });
 
+  it("the new copy is exactly what the manifest declares (the guard would otherwise match no row)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const yaml = (await import("js-yaml")).default;
+    const manifest = yaml.load(
+      readFileSync(new URL("../../../../manifests/sanctions-check.yaml", import.meta.url), "utf8"),
+    ) as { description: string; data_source: string };
+    expect(manifest.description).toBe(DQ36_NEW_SANCTIONS_DESCRIPTION);
+    expect(manifest.data_source).toBe(DQ36_NEW_SANCTIONS_DATA_SOURCE);
+  });
+
   it("the new copy no longer names OFSI and keeps everything else", () => {
     expect(DQ36_NEW_SANCTIONS_DESCRIPTION).not.toMatch(/OFSI/);
     expect(DQ36_NEW_SANCTIONS_DATA_SOURCE).not.toMatch(/OFSI/);
