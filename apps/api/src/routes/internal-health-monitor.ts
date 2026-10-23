@@ -29,6 +29,10 @@
  *
  * POST /v1/internal/health-monitor/send-digest
  *   Compile and send the weekly health digest immediately (admin-only).
+ *
+ * POST /v1/internal/health-monitor/send-external-outage-digest
+ *   Build and send the daily outside data-source outage summary now; body
+ *   { preview_only: true } returns it without sending (admin-only).
  */
 
 import { Hono } from "hono";
@@ -42,6 +46,7 @@ import { runWeeklyHealthSweep } from "../lib/health-sweep.js";
 import { compileWeeklyDigest } from "../lib/digest-compiler.js";
 import { formatDigestEmail } from "../lib/digest-formatter.js";
 import { sendDigestEmail, isEmailConfigured } from "../lib/digest-sender.js";
+import { sendExternalOutageDigest } from "../lib/external-outage-digest.js";
 import { apiError } from "../lib/errors.js";
 import type { AppEnv } from "../types.js";
 
@@ -247,6 +252,23 @@ internalHealthMonitorRoute.post("/health-monitor/send-digest", async (c) => {
       qualification_entries: data.qualification.length,
     },
   });
+});
+
+// ─── POST /v1/internal/health-monitor/send-external-outage-digest ─────────
+// Builds the daily outside data-source outage summary for the 24h before now
+// and sends it (no email when nothing went down). The scheduler sends it every
+// morning; this is for checking it by hand.
+// Optional body: { "preview_only": true } — returns the summary without sending.
+
+internalHealthMonitorRoute.post("/health-monitor/send-external-outage-digest", async (c) => {
+  const auth = c.req.header("Authorization");
+  if (!isValidAdminAuth(auth)) {
+    return c.json(apiError("unauthorized", "Admin credentials required."), 401);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const result = await sendExternalOutageDigest(new Date(), { previewOnly: body?.preview_only === true });
+  return c.json(result);
 });
 
 // ─── POST /v1/internal/capabilities/:slug/publish ──────────────────────────
