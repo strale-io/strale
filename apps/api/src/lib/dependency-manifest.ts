@@ -514,13 +514,24 @@ export const PROVIDERS: DependencyProvider[] = [
     description: "Open catalogue of scholarly works, authors and venues (OurResearch).",
     baseUrl: "https://api.openalex.org",
     authType: "none",
+    // OpenAlex meters every call against a daily budget: without an API key,
+    // $0.10/day shared by everyone on the caller's IP. A search costs $0.001
+    // (`X-RateLimit-Cost-USD`), a filtered list $0.0001, and a single-record
+    // lookup $0 (all checked 2026-10-23). The probe used to be a search; at
+    // ~1,000 probes a day it spent the whole budget by ~02:15 UTC, after which
+    // OpenAlex answered 429 to everything — the probe and every customer call
+    // to the capabilities below — for the rest of the day. A singleton lookup
+    // still reaches the live works database and costs nothing (Principle A).
+    // Blind spot: if the budget is ever spent by real traffic, this free probe
+    // may stay green while searches get 429; the capabilities' own failures
+    // surface that, not the probe.
     healthProbe: {
-      path: "/works?search=test&per-page=1&select=id&mailto=support@strale.io",
+      path: "/works/W2144093431?select=id&mailto=support@strale.io",
       method: "GET",
       healthyStatuses: [200],
       timeoutMs: 6000,
     },
-    capabilities: ["academic-paper-search", "paper-details"],
+    capabilities: ["academic-paper-search", "paper-details", "citation-graph"],
     tier: "free",
   },
   {
