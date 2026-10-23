@@ -63,7 +63,7 @@ Petter's starting list was: landing page, catalogue, use cases, About, and maybe
 1. **A company-data hub with a live coverage matrix, and one page per country.** The matrix is the single strongest proof the site can show for the recommended story. It lists which registers are live, what each returns, where the data comes from, the price and the last test. Country pages ("How an agent checks a Swedish company") are also what search engines and LLM search land on for that job. The report puts them in weeks 6–10.
 2. **Pricing.** Price is the second thing a developer checks after "does it do my job". The pay-per-call model, the free tools, and the wallet versus x402 choice need one plain page.
 3. **Docs / connect.** There are four ways in (MCP, REST API, SDKs, x402), and the first call is where interest turns into revenue.
-4. **Generated tool pages.** These are where search engines and agents arrive: 291 of today's 454 sitemap URLs are tool pages.
+4. **Generated tool pages.** These are where search engines and agents arrive: 290 of today's 454 sitemap URLs are tool detail pages.
 5. **Bundled checks** (today's "solutions"). These are the outcome-priced products the report wants to grow, such as company checks, supplier checks and invoice-issuer checks. They appear in the hub, in the catalogue and in use cases, without a header item of their own.
 6. **For platforms.** In the report, routers and marketplaces are the main channel, so this page matters more than it first appears. It is held because the current Terms forbid it as written (page 14).
 7. **Machine-readable surfaces,** treated as part of the site (see below).
@@ -150,7 +150,7 @@ Each page answers one reader question and has one primary call to action (CTA).
 
 ### 6. Bundled check detail `/solutions/:slug`
 
-Same shape as a tool page, plus the steps it runs and what the bundle adds (for example, a written risk summary, which is AI-generated and labelled so). URLs stay unchanged; 99 are indexed today. Data: `/v1/solutions/:slug`, `/v1/public/ops/limitations/solutions/:slug`, `/x402/catalog`, `/v1/public/ops/trust/solutions/batch`. CTA: copy the call.
+Same shape as a tool page, plus the steps it runs and what the bundle adds (for example, a written risk summary, which is AI-generated and labelled so). URLs stay unchanged; 98 are in the sitemap today. Data: `/v1/solutions/:slug`, `/v1/public/ops/limitations/solutions/:slug`, `/x402/catalog`, `/v1/public/ops/trust/solutions/batch`. CTA: copy the call.
 
 ### 7. Use cases `/use-cases`
 
@@ -172,11 +172,11 @@ One card per job, each with a one-line description and the tools it uses. Level 
 - **Sections:**
   1. Pay per call, with no subscription.
   2. Live price ranges for tools and for bundled checks.
-  3. Charged only when the call succeeds (claims.yaml `pay-per-successful-call`, allowed).
+  3. A single tool is charged only when the call succeeds (claims.yaml `pay-per-successful-call`, allowed). A bundled check is refunded only if every step fails (`solution-execute.ts`), and the page says so.
   4. Two ways to pay: a prepaid EUR wallet with an API key (card top-up via Stripe), or USDC per request over x402 for eligible items, with no account.
   5. Free tools.
   6. Trial credit, shown only as read from configuration.
-  7. A spend cap on every call (`max_price_cents`).
+  7. A price cap on each API call (`max_price_cents`; €20 hard limit per request). It is optional on bundles, and x402 has no cap, only the quoted price.
   8. FAQ.
 - **Primary CTA:** Get an API key. **Level:** L3.
 - **Data:** ranges computed from `/v1/capabilities` and `/x402/catalog`; free tools from facts.
@@ -199,7 +199,7 @@ One card per job, each with a one-line description and the tools it uses. Level 
 
 ### 11. Guides `/guides/:slug`
 
-- Merge today's 50 `/learn` and 7 `/guides` articles under `/guides`, with redirects.
+- Merge today's 49 `/learn` and 6 `/guides` articles under `/guides`, with redirects.
 - Remove or rewrite the six that name deprecated packages (`iban-validation-pydantic-ai`, `sanctions-check-pydantic-ai`, `google-adk-strale-agent`, `vat-validation-openai-agents`, `company-data-openai-agents`, `strale-openai-agents-sdk`) and `web-scraping-agent-anti-bot`, whose framing conflicts with the scraping doctrine.
 - Existing country-lookup guides fold into the country pages.
 - Level L3.
@@ -209,10 +209,10 @@ One card per job, each with a one-line description and the tools it uses. Level 
 - **Question:** *What happens to the data my agent sends, and how do you know a tool works?*
 - **Sections:**
   1. Where processing happens (facts `processing_jurisdiction`, US today).
-  2. What is kept and for how long: inputs redacted at 90 days and records kept for the default retention period, both read from facts.
+  2. What is kept and for how long: call content (input, output, error and audit body) is cleared at 90 days, and the remaining record is kept for the default retention period. Both are read from facts. Before publishing, confirm in production that the older backlog has drained.
   3. Keys and payments: keys stored hashed, cards via Stripe, x402 via the facilitator.
   4. Sub-processors (facts `static.vendors`).
-  5. Where data comes from: official registers and APIs, licensed vendors, per-call public-register access. Strale never runs scrapers (DEC-20260428-A, DEC-20260813-A).
+  5. Where data comes from: official registers and APIs, licensed vendors, and direct per-call access to public registers. No bulk crawling and no getting around logins or CAPTCHAs (DEC-20260428-A, DEC-20260813-A). Avoid a flat "never scrapes" sentence: the catalogue fetches web pages per call (for example, page to markdown), and claims.yaml has no row for it.
   6. How tools are checked, by mode and route, and what that does and does not establish. This absorbs `/trust/methodology`.
   7. Disputing a result (`POST /v1/transactions/:id/dispute`) and the GDPR Art. 22 classification per tool.
   8. Contact.
@@ -264,11 +264,11 @@ Agents and registries read these instead of the human pages. They must agree wit
 | Today | Fate | Why |
 | --- | --- | --- |
 | `/` hero "One API call. Verified data your agent can trust." + "The trust layer of the agent economy"; Problem, Quality scoring, Audit trail sections; "Three steps to production" | **Dies.** | Abstract trust adjectives; the report finds a router competitor already claims "trust". The quality-scoring section describes a deleted engine (DEC-20260503-B). The audit-trail idea survives as a concrete sample record. |
-| `/capabilities`, `/capabilities/:slug` (291 indexed) | **Carries over** as `/tools`, with 301 redirects. | Marketing noun is "tools". |
-| `/solutions`, `/solutions/:slug` (99) | **Carries over**; URLs unchanged. | Indexed; these are the outcome-priced products. |
+| `/capabilities`, `/capabilities/:slug` (290 detail pages in the sitemap) | **Carries over** as `/tools`, with 301 redirects. | Marketing noun is "tools". |
+| `/solutions`, `/solutions/:slug` (98 in the sitemap) | **Carries over**; URLs unchanged. | Indexed; these are the outcome-priced products. |
 | `/pricing` | **Carries over**, rewritten. | Static figures removed. |
 | `/docs`, `/integrations` | **Merge** into `/docs`. | Integrations is one choice within "connect". |
-| `/learn/*` (50), `/guides/*` (7) | **Merge** into `/guides/*`; prune seven; country guides fold into country pages. | Search value; some name deprecated packages. |
+| `/learn/*` (49), `/guides/*` (6) | **Merge** into `/guides/*`; prune seven; country guides fold into country pages. | Search value; some name deprecated packages. |
 | `/trust`, `/trust/methodology` | **Merge** into `/security` (301). | One page for data and checking. |
 | `/security`, `/privacy`, `/terms`, `/signup`, `/topup`, `/audit/:id` | **Carry over.** | — |
 | `/design-system`, `/logo-explorations` | **Die.** | Internal pages. |
