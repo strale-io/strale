@@ -682,7 +682,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "46ebc3fb378e84e2dc98bfb56fb889673a09b3bb0493758c99cf08d4f5922343",
+      "sha256": "9f7ab3e6d86435d15152cce45e6c9ce4fe0c9ac62add3595c339b5eb20bf8e46",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -745,6 +745,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-portfolio-plan.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "scripts/m2-closure-register-lib.mjs",
@@ -799,7 +800,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "afe27aae287eef58823fe5a7ce045f0aa46fbf3cda3c70c24c2943e14db977eb",
+      "sha256": "c17bac1dd445c3d361a21c2d37bfe77e67767c503cb43a5005c319791958d231",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
