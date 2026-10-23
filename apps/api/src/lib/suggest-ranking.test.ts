@@ -21,7 +21,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { applyConditionalSolutionBonus, scoreKeywordMatch, type KeywordScorable } from "./suggest.js";
+import {
+  applyConditionalSolutionBonus,
+  isSlugFamilyMatch,
+  scoreKeywordMatch,
+  parseTypeaheadQuery,
+  scoreTypeaheadItem,
+  type KeywordScorable,
+} from "./suggest.js";
 import { tokenize } from "./tokenize.js";
 
 type Row = { item: { type: "solution" | "capability"; slug: string }; score: number };
@@ -198,5 +205,172 @@ describe("keyword item scoring", () => {
   it("returns zero for a query sharing nothing with the item", () => {
     const dns = item("dns-lookup", "DNS Lookup", "Query DNS records.", ["dns", "lookup", "records"]);
     expect(score(dns, "sanctions screening")).toBe(0);
+  });
+});
+
+/**
+ * Slug-shaped queries. Website visitors typed "invoice-verify" and
+ * "company-data" into the typeahead box in October 2026 and got zero results,
+ * although 22 invoice-verify-{cc} solutions and 34 *-company-data capabilities
+ * exist. The query was split only on whitespace while the token index splits
+ * on hyphens, so a hyphenated word matched no token, no prefix, and no slug
+ * unless it was one slug exactly.
+ */
+describe("slug-family matching", () => {
+  const catalogItem = (slug: string, name: string, description: string): KeywordScorable => ({
+    slug,
+    name,
+    description,
+    tokens: tokenize(`${name} ${description} ${slug}`),
+    primaryTokens: tokenize(`${name} ${slug}`),
+  });
+
+  const invoiceVerifySe = catalogItem(
+    "invoice-verify-se",
+    "Invoice Verify — Sweden",
+    "Invoice fraud detection for Swedish suppliers.",
+  );
+  const belgianCompanyData = catalogItem(
+    "belgian-company-data",
+    "Belgian Company Data",
+    "Look up a Belgian company in the KBO registry.",
+  );
+  const ukCompanyData = catalogItem(
+    "uk-company-data",
+    "UK Company Data",
+    "Look up a UK company at Companies House.",
+  );
+  const vatValidate = catalogItem("vat-validate", "VAT Validate", "Validate an EU VAT number.");
+
+  const ibanValidate = catalogItem("iban-validate", "IBAN Validate", "Validate an IBAN and its checksum.");
+  const exchangeRate = catalogItem(
+    "exchange-rate",
+    "Exchange Rate",
+    "Current exchange rate between two currencies.",
+  );
+  const ensResolve = catalogItem("ens-resolve", "ENS Resolve", "Resolve a web3 ENS name to an address.");
+  const emailValidate = catalogItem(
+    "email-validate",
+    "Email Validate",
+    "Validate an email address for syntax and deliverability.",
+  );
+  const annualReport = catalogItem(
+    "annual-report-extract",
+    "Annual Report Extract",
+    "Extract figures from an annual report.",
+  );
+
+  const typeaheadScore = (it: KeywordScorable, query: string) =>
+    scoreTypeaheadItem(it, parseTypeaheadQuery(query)).score;
+  const keywordScore = (it: KeywordScorable, query: string) =>
+    scoreKeywordMatch(
+      it,
+      tokenize(query),
+      [],
+      parseTypeaheadQuery(query).hyphenated.map((h) => h.word),
+    );
+
+  it("names a family by a hyphenated run of whole slug segments", () => {
+    expect(isSlugFamilyMatch("invoice-verify-se", "invoice-verify")).toBe(true);
+    expect(isSlugFamilyMatch("belgian-company-data", "company-data")).toBe(true);
+    expect(isSlugFamilyMatch("uk-company-data", "company-data")).toBe(true);
+    expect(isSlugFamilyMatch("swedish-company-data", "swedish-company-data")).toBe(true);
+  });
+
+  it("does not treat partial segments or bare words as a family", () => {
+    expect(isSlugFamilyMatch("invoice-verify-se", "voice-ver")).toBe(false);
+    expect(isSlugFamilyMatch("invoice-verify-se", "invoice-")).toBe(false);
+    expect(isSlugFamilyMatch("vat-validate", "validate")).toBe(false);
+    expect(isSlugFamilyMatch("vat-validate", "web3-assurance")).toBe(false);
+  });
+
+  it("still matches a one-word slug exactly", () => {
+    expect(isSlugFamilyMatch("translate", "translate")).toBe(true);
+  });
+
+  it("finds the invoice-verify family from the typed slug", () => {
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(0);
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(
+      typeaheadScore(vatValidate, "invoice-verify"),
+    );
+  });
+
+  it("finds every *-company-data capability from \"company-data\"", () => {
+    for (const it of [belgianCompanyData, ukCompanyData]) {
+      expect(typeaheadScore(it, "company-data")).toBeGreaterThan(0);
+    }
+    expect(typeaheadScore(vatValidate, "company-data")).toBe(0);
+  });
+
+  it("matches nothing for a slug nobody sells", () => {
+    // "web3-assurance" and "eu-company-due-diligence" were typed in October
+    // 2026 and name no slug. Scoring their parts independently matched every
+    // item mentioning web3, or eu, or company; those are coverage gaps.
+    for (const it of [ensResolve, vatValidate, belgianCompanyData, invoiceVerifySe]) {
+      expect(typeaheadScore(it, "web3-assurance")).toBe(0);
+      expect(typeaheadScore(it, "eu-company-due-diligence")).toBe(0);
+    }
+  });
+
+  it("does not let an alias carry an unknown slug", () => {
+    // "fx" aliases to exchange/forex/currency. As part of a slug nobody sells
+    // it must not surface every currency item on the alias alone.
+    expect(typeaheadScore(exchangeRate, "fx-zzzz")).toBe(0);
+    expect(typeaheadScore(exchangeRate, "travel-planner")).toBe(0);
+  });
+
+  it("lets a part match through its alias, as the spaced query does", () => {
+    expect(typeaheadScore(exchangeRate, "fx-rate")).toBeGreaterThan(0);
+    expect(typeaheadScore(exchangeRate, "fx-rate")).toBe(typeaheadScore(exchangeRate, "fx rate"));
+  });
+
+  it("keeps an exact hyphenated slug a precise lookup", () => {
+    expect(typeaheadScore(vatValidate, "vat-validate")).toBeGreaterThan(0);
+    // shares "validate" only: no longer trails the exact hit
+    expect(typeaheadScore(ibanValidate, "vat-validate")).toBe(0);
+  });
+
+  it("does not let a one-letter part prefix-match everything", () => {
+    // "e-mail" used to return nothing; splitting it naively matched every item
+    // with a word starting in "e" (174 of them, led by *-extract).
+    expect(typeaheadScore(annualReport, "e-mail")).toBe(0);
+    // Nor may the rest stand in for the word: "mail" alone matches "mailing".
+    const contacts = catalogItem(
+      "domain-contact-extract",
+      "Domain Contact Extract",
+      "Extract mailing addresses and phone numbers from a domain.",
+    );
+    expect(typeaheadScore(contacts, "e-mail")).toBe(0);
+  });
+
+  it("reaches a joined spelling the catalog uses", () => {
+    expect(typeaheadScore(emailValidate, "e-mail")).toBeGreaterThan(0);
+  });
+
+  it("still names the family while the slug is half typed", () => {
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify-")).toBe(
+      typeaheadScore(invoiceVerifySe, "invoice-verify"),
+    );
+    expect(typeaheadScore(invoiceVerifySe, "invoice--verify")).toBe(
+      typeaheadScore(invoiceVerifySe, "invoice-verify"),
+    );
+  });
+
+  it("scores a hyphenated query at least as high as the spaced one", () => {
+    expect(typeaheadScore(invoiceVerifySe, "invoice-verify")).toBeGreaterThan(
+      typeaheadScore(invoiceVerifySe, "invoice verify"),
+    );
+  });
+
+  it("gives the keyword path the same family bonus, once", () => {
+    // belgian-company-data misses the identity bonus ("belgian" is not typed),
+    // so before the family match it trailed uk-company-data, whose two long
+    // slug words were both named.
+    expect(keywordScore(belgianCompanyData, "company-data")).toBe(
+      keywordScore(ukCompanyData, "company-data"),
+    );
+    // Slug hit and identity both mean "names this item": +2, not +4.
+    const spaced = scoreKeywordMatch(invoiceVerifySe, tokenize("invoice verify"), []);
+    expect(keywordScore(invoiceVerifySe, "invoice-verify")).toBe(spaced);
   });
 });
