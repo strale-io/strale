@@ -343,9 +343,7 @@ export function computeVerdict(compose: ComposeResult): VerdictResult {
   const reason_codes = allFlags.map(flagToReasonCode);
 
   if (verdict === "proceed" && reason_codes.length === 0) {
-    if (evaluatorOk(compose, "wallet-history-risk")) reason_codes.push("WALLET_HISTORY_CLEAN");
     if (evaluatorOk(compose, "wallet-identity")) reason_codes.push("WALLET_AGE_ESTABLISHED");
-    if (evaluatorOk(compose, "token-safety")) reason_codes.push("TOKEN_SAFETY_OK");
     if (evaluatorOk(compose, "contract-verification")) reason_codes.push("CONTRACT_VERIFIED");
     if (evaluatorOk(compose, "scam-cluster")) reason_codes.push("SCAM_CLUSTER_NO_MATCH");
     if (evaluatorOk(compose, "mixer-graded")) reason_codes.push("MIXER_NO_MATCH");

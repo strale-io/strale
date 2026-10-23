@@ -53,7 +53,7 @@ regulator could rely on.
 *If you approve:* I make exactly these edits and verify them in production.
 *If you do nothing:* the methodology keeps claiming OFAC wallet screening and
 Travel Rule support that do not exist.
-**Answered 2026-10-24 by Petter, in session:** "go with your recommendations on all quick decisions under #2". Implementation follows.
+**Answered 2026-10-24 by Petter, in session:** "go with your recommendations on all quick decisions under #2". Done the same day in `methodology.ts`, `explanation.ts`, `disagreement.ts` and `verdict.ts`; verified in production after deploy.
 
 **DQ-37** · `answered` · owner Petter · raised 2026-10-23 19:30 CEST · answered 2026-10-23 — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
 The independent review of DQ-36 found more lines in the public web3 methodology

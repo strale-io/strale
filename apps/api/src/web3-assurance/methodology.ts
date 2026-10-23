@@ -128,21 +128,6 @@ const REASON_CODE_GLOSSARY: Record<string, { severity: "critical" | "review"; de
     severity: "critical",
     description: "Counterparty matched against OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions lists.",
   },
-  WALLET_PHISHING: { severity: "critical", description: "Wallet linked to phishing activity." },
-  WALLET_MONEY_LAUNDERING: { severity: "critical", description: "Wallet associated with money-laundering activity." },
-  WALLET_FINANCIAL_CRIME: { severity: "critical", description: "Wallet associated with financial crime." },
-  WALLET_CYBERCRIME: { severity: "critical", description: "Wallet associated with cybercrime." },
-  WALLET_DARKWEB: { severity: "critical", description: "Wallet associated with darkweb transactions." },
-  WALLET_BLACKLIST: { severity: "review", description: "Wallet on a third-party blacklist." },
-  WALLET_FAKE_KYC: { severity: "review", description: "Wallet associated with fake-KYC patterns." },
-  WALLET_MALICIOUS_MINING: { severity: "review", description: "Wallet associated with malicious mining activity." },
-  TOKEN_HONEYPOT: { severity: "critical", description: "Token contract is a honeypot (cannot sell)." },
-  TOKEN_SELL_TAX_EXTREME: { severity: "critical", description: "Sell tax exceeds 50%." },
-  TOKEN_SELL_TAX_HIGH: { severity: "review", description: "Sell tax between 10% and 50%." },
-  TOKEN_HIDDEN_OWNER: { severity: "review", description: "Token has a hidden owner who can modify behaviour." },
-  TOKEN_RECLAIMABLE_OWNERSHIP: { severity: "review", description: "Token allows the original deployer to reclaim ownership." },
-  TOKEN_BLACKLISTED: { severity: "review", description: "Token is on a security blacklist." },
-  TOKEN_CLOSED_SOURCE: { severity: "review", description: "Token contract source is not verified / open." },
   CONTRACT_UNVERIFIED: { severity: "review", description: "Contract source code is not verified on Etherscan or Sourcify." },
   CONTRACT_PROXY_NO_IMPL: { severity: "review", description: "Contract is a proxy with no resolvable implementation address." },
   PROTOCOL_RECENT_EXPLOIT_30D: { severity: "critical", description: "Protocol exploited within the last 30 days." },
@@ -159,7 +144,6 @@ const REASON_CODE_GLOSSARY: Record<string, { severity: "critical" | "review"; de
   MIXER_DELISTED: { severity: "review", description: "Address is a delisted mixer." },
   MIXER_UNCLASSIFIED: { severity: "review", description: "Address is in the mixer corpus but unclassified." },
   SCAM_CLUSTER_MATCH: { severity: "critical", description: "Address matches ScamSniffer phishing-wallet cluster." },
-  APPROVALS_RISKY: { severity: "review", description: "Wallet has ≥1 risky token approvals." },
   BRIDGE_SINGLE_POINT_OF_FAILURE: {
     severity: "critical",
     description:
@@ -290,10 +274,10 @@ methodologyRoute.get("/", (c) => {
       sources,
       regulatory_posture: {
         ofac:
-          "OFAC SDN + crypto-specific addresses screened. Tornado Cash treated as graded (delisted March 2025) per Treasury 2026 guidance — not binary-blocked.",
+          "Protocol and domain counterparties are screened by name against consolidated sanctions lists (Dilisense). Screening wallet addresses against OFAC's listed crypto addresses is not currently offered. Tornado Cash is treated as graded (delisted March 2025), not binary-blocked.",
         mica:
-          "EU MiCA full enforcement July 1 2026. Counterparty wallet screening + Travel Rule transmission supported via reverse-call mode.",
-        fatf: "FATF Travel Rule jurisdiction-aware verdict surface available via caller_jurisdiction parameter.",
+          "EU MiCA full enforcement July 1 2026. Counterparty wallet checks (age, mixer exposure, known scam clusters) are available; Travel Rule transmission is not offered.",
+        fatf: "caller_jurisdiction adjusts how mixer exposure is graded. Strale does not provide Travel Rule support.",
         gdpr_art_22: "Verdicts surface critical_flags + suggested_action so the agent can act on documented evidence.",
       },
       versioning_policy: {
@@ -324,7 +308,7 @@ function methodologySource(evaluatorName: string): { evaluator: string; primary_
     "wallet-transactions": { primary_source: "Alchemy (Ethereum mainnet)", license: "Alchemy terms" },
     "wallet-balance": { primary_source: "Alchemy (Ethereum mainnet)", license: "Alchemy terms" },
     "token-safety": { primary_source: "not currently offered (no licensed source)", license: "n/a" },
-    "contract-verification": { primary_source: "Sourcify + Alchemy (Ethereum mainnet)", license: "Apache 2.0 (Sourcify) + Alchemy terms" },
+    "contract-verification": { primary_source: "Sourcify", license: "Apache 2.0 (Sourcify)" },
     "approval-inventory": { primary_source: "not currently offered (no licensed source)", license: "n/a" },
     sanctions: { primary_source: "Dilisense consolidated sanctions database", license: "Dilisense ToS" },
     "protocol-risk": { primary_source: "DefiLlama protocols + hacks DB", license: "DefiLlama public API" },
