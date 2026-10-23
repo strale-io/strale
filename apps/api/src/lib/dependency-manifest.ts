@@ -356,7 +356,10 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/taxation_customs/vies/rest-api/check-status",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 5000,
+      // No shorter than vat-validate's own VIES call (15s). A probe that gives
+      // up before the tool does reports a slow-but-working source as down;
+      // see PROBE_TIMEOUT_MATCHES_TOOL in dependency-manifest-probes.test.ts.
+      timeoutMs: 15000,
     },
     capabilities: ["vat-validate"],
     tier: "free",
@@ -403,7 +406,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/sudovi",
       method: "GET",
       healthyStatuses: [200, 401],
-      timeoutMs: 5000,
+      timeoutMs: 10000, // no shorter than croatian-company-data's own call (10s)
       skipAuth: true,
     },
     capabilities: ["croatian-company-data"],
@@ -530,7 +533,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/api/query?search_query=all:test&max_results=1",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 8000,
+      timeoutMs: 15000, // no shorter than arxiv-search's own call (15s)
     },
     capabilities: ["arxiv-search"],
     tier: "free",
@@ -560,7 +563,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/api/v1/search?query=test&hitsPerPage=1",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 5000,
+      timeoutMs: 8000, // no shorter than hacker-news-search's own call (8s)
     },
     capabilities: ["hacker-news-search"],
     tier: "free",
@@ -625,7 +628,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/fdsnws/event/1/query?format=geojson&limit=1&minmagnitude=6",
       method: "GET",
       healthyStatuses: [200],
-      timeoutMs: 6000,
+      timeoutMs: 12000, // no shorter than usgs-earthquake-search's own call (12s)
     },
     capabilities: ["usgs-earthquake-search"],
     tier: "free",

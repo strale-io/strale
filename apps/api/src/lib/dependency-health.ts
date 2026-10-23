@@ -44,6 +44,10 @@ async function probeSingleUrl(
       signal: AbortSignal.timeout(probe.timeoutMs),
     });
     const latency_ms = Date.now() - start;
+    // Only the status matters. Release the body instead of leaving it unread:
+    // an unread body keeps its connection checked out until garbage
+    // collection, and probes run on every scheduler poll.
+    res.body?.cancel().catch(() => {});
     if (probe.healthyStatuses.includes(res.status)) {
       return { healthy: true, latency_ms };
     }
