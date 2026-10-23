@@ -14,6 +14,46 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-38** · `your_call` · owner Petter · raised 2026-10-24 · no deadline — **the web3 methodology claims OFAC crypto-address screening and Travel Rule support that do not exist; a correction is drafted for you**
+The independent review of DQ-37 found claims in the public web3 methodology
+(`/v1/web3-assurance/methodology`) that are false, and they are more serious
+than the source names fixed so far: they describe regulatory capabilities we
+do not have. Nothing is changed yet.
+*What was established (code read, 2026-10-24):*
+- The sanctions evaluator runs only for protocol and domain targets, by name,
+  via Dilisense. Its own comment says the OFAC crypto-address list is "not yet
+  wired into Strale". No wallet address is screened against OFAC's listed
+  addresses.
+- No Travel Rule code exists. `caller_jurisdiction` is read only to grade
+  mixer exposure.
+- The glossary still lists codes that only the switched-off GoPlus tools could
+  produce: eight `WALLET_*` codes, seven `TOKEN_*` codes and `APPROVALS_RISKY`.
+- `contract-verification` now runs on Sourcify alone, so the published
+  "Sourcify vs Etherscan" disagreement compares Sourcify with itself, while
+  still labelling one side Etherscan.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| `regulatory_posture.ofac` | "OFAC SDN + crypto-specific addresses screened. Tornado Cash treated as graded …" | "Protocol and domain counterparties are screened by name against consolidated sanctions lists (Dilisense). Screening wallet addresses against OFAC's listed crypto addresses is not currently offered. Tornado Cash is treated as graded (delisted March 2025), not binary-blocked." |
+| `regulatory_posture.mica` | "… Counterparty wallet screening + Travel Rule transmission supported via reverse-call mode." | "EU MiCA full enforcement July 1 2026. Counterparty wallet checks (age, mixer exposure, known scam clusters) are available; Travel Rule transmission is not offered." |
+| `regulatory_posture.fatf` | "FATF Travel Rule jurisdiction-aware verdict surface available via caller_jurisdiction parameter." | "caller_jurisdiction adjusts how mixer exposure is graded. Strale does not provide Travel Rule support." |
+| Reason-code glossary and explanations | `WALLET_PHISHING`, `WALLET_MONEY_LAUNDERING`, `WALLET_FINANCIAL_CRIME`, `WALLET_CYBERCRIME`, `WALLET_DARKWEB`, `WALLET_BLACKLIST`, `WALLET_FAKE_KYC`, `WALLET_MALICIOUS_MINING`, the seven `TOKEN_*` codes, `APPROVALS_RISKY` | Remove while no source can produce them |
+| Source of `contract-verification` | "Sourcify + Alchemy (Ethereum mainnet)" (approved in DQ-37; Alchemy is only used to check the address format) | "Sourcify" (licence "Apache 2.0 (Sourcify)") |
+| The `contract_verification_mismatch` disagreement | "Sourcify says … Etherscan says …" (sources sourcify.dev, etherscan.io) | Remove until a second, independent verification source exists |
+
+Code hygiene that goes with it (technical, mine to do): `verdict.ts` still adds
+`WALLET_HISTORY_CLEAN` and `TOKEN_SAFETY_OK` when the GoPlus evaluators succeed.
+They cannot succeed today; the two lines go too, so the codes cannot come back
+without their glossary entries.
+
+*Why it is yours:* these are regulatory and methodology claims a customer or
+regulator could rely on.
+*If you approve:* I make exactly these edits and verify them in production.
+*If you do nothing:* the methodology keeps claiming OFAC wallet screening and
+Travel Rule support that do not exist.
+
 **DQ-37** · `answered` · owner Petter · raised 2026-10-23 19:30 CEST · answered 2026-10-23 — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
 The independent review of DQ-36 found more lines in the public web3 methodology
 (`/v1/web3-assurance/methodology`, plus the explanation text) that credit

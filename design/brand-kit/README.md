@@ -1,6 +1,8 @@
-# Strale brand kit — Quiet Material
+# Strale brand kit — Quiet Material (historical)
 
-**Start here for all current brand and design work.** The atmosphere, identity/type, controls, and form/icon/composition companions are accepted for continued design work. The latest acceptance is the founder’s 6 September selection of hero treatment B. Keep the current flowing-S logo, Instrument Sans, IBM Plex Mono and retained Quiet Material direction.
+> **Superseded as the visual direction on 23 October 2026.** The founder chose BrandKit Lab reference kit 06. Current work starts at the [Open Flow design system](open-flow/README.md). This index and everything under `quiet-material/` stay unchanged as history; their builds and checks still run. The statements below describe the Quiet Material period and are not current instructions.
+
+**Formerly the starting point for all brand and design work.** The atmosphere, identity/type, controls, and form/icon/composition companions are accepted for continued design work. The latest acceptance is the founder’s 6 September selection of hero treatment B. Keep the current flowing-S logo, Instrument Sans, IBM Plex Mono and retained Quiet Material direction.
 
 Design acceptance is distinct from production adoption. Existing specimen registries remain candidates, and [active.json](../tokens/active.json) still controls production. This index connects the accepted parts; it does not introduce another palette, rule register or design direction.
 

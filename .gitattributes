@@ -70,3 +70,8 @@ design/brand-kit/quiet-material/hero-comparison/assets/*.png -text
 design/brand-kit/quiet-material/hero-comparison/output/*.png -text
 design/brand-kit/quiet-material/hero-copy/*.png -text
 design/brand-kit/quiet-material/opening/output/*.png -text
+# Open Flow: generated outputs are compared byte-for-byte by build.mjs --check; copied assets/fonts are hash-bound.
+design/brand-kit/open-flow/** text eol=lf
+design/brand-kit/open-flow/assets/** -text
+design/brand-kit/open-flow/fonts/** -text
+design/brand-kit/open-flow/screenshots/** -text
