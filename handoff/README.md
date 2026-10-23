@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-327 files (300 with a recorded intent, 27 without).
+328 files (301 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -19,6 +19,7 @@
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-positioning-decision.md`](_general/from-code/2026-10-23-positioning-decision.md) | Record Petter's positioning decision (DEC-20261023-B) after the first-principles market analysis. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-portfolio-plan.md`](_general/from-code/2026-10-23-portfolio-plan.md) | Draft the portfolio-building plan that carries out DEC-20261023-B, for Petter's review. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-openalex-free-probe.md`](_general/from-code/2026-10-23-openalex-free-probe.md) | find why OpenAlex failed its health probe ~21 h/day and fix it. |
+| 2026-10-23 | [`handoff/_general/from-code/2026-10-23-flaky-source-probes.md`](_general/from-code/2026-10-23-flaky-source-probes.md) | find why USGS, sudreg, VIES, HN search, NVD and arXiv flap in the Health Monitor, and fix what is ours. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md`](_general/from-code/2026-10-23-data-access-rule-proposal.md) | Draft a risk-based replacement for the scraping doctrine for Petter's decision. |
 | 2026-10-19 | [`handoff/_general/from-code/2026-10-19-checkin-morning.md`](_general/from-code/2026-10-19-checkin-morning.md) | run the 2026-10-19 operating session under DAILY-RUN.md — close week |
 | 2026-10-18 | [`handoff/_general/from-code/2026-10-18-checkin-morning.md`](_general/from-code/2026-10-18-checkin-morning.md) | run the 2026-10-18 operating session under DAILY-RUN.md — on schedule |
