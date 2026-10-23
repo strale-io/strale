@@ -9,12 +9,13 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-332 files (305 with a recorded intent, 27 without).
+333 files (306 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-way-of-working-review.md`](_general/from-code/2026-10-23-way-of-working-review.md) | compare Strale's rules and processes with Petter's newer way of |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-typeahead-slug-family.md`](_general/from-code/2026-10-23-typeahead-slug-family.md) | make GET /v1/suggest/typeahead find slug-shaped queries such as |
+| 2026-10-23 | [`handoff/_general/from-code/2026-10-23-site-structure-and-messaging-levels.md`](_general/from-code/2026-10-23-site-structure-and-messaging-levels.md) | propose the new website's page set and navigation, and a three-level |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-probe-cadence.md`](_general/from-code/2026-10-23-probe-cadence.md) | cut outside-source health probes from ~1,000/day per source. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-positioning-decision.md`](_general/from-code/2026-10-23-positioning-decision.md) | Record Petter's positioning decision (DEC-20261023-B) after the first-principles market analysis. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-portfolio-plan.md`](_general/from-code/2026-10-23-portfolio-plan.md) | Draft the portfolio-building plan that carries out DEC-20261023-B, for Petter's review. |
