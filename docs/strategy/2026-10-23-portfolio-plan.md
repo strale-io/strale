@@ -1,12 +1,14 @@
 ---
 doc_type: plan
 authority_scope: none
-decision: DEC-20261023-B
+decision: DEC-20261024-B
 date: 2026-10-23
 status: active
 ---
 
 # Portfolio plan: what to add, fix and leave out before marketing
+
+> **Adopted 2026-10-24 by Petter (DEC-20261024-B).** Items marked "needs Petter" still need his separate decision.
 
 Proposed plan for Petter's review. It carries out
 [DEC-20261023-B](2026-10-23-positioning-adoption.md): build an attractive

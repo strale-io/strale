@@ -8,6 +8,8 @@ date: 2026-10-23
 
 # Website structure — proposed
 
+> **Adopted 2026-10-24 by Petter (DEC-20261024-B).** Where the text below says "proposed", read it as the historical review status.
+
 **Status: proposed, not adopted.** This is the page set, navigation and per-page plan for the `apps/web` site (DEC-20260902-A), written for Petter's review. It approves no copy, design or public claim; [claims.yaml](../../company/claims.yaml) keeps that authority. L1, L2 and L3 refer to the lines in [MESSAGING-LEVELS.md](MESSAGING-LEVELS.md). Visual design is out of scope: the design system is being built in a separate session.
 
 **Positioning basis: DEC-20261023-B** (Petter, 23 October; recorded in a separate PR):

@@ -1,3 +1,5 @@
+> **Approved for adoption 2026-10-24 by Petter (DEC-20261024-B).** The token promotion (candidate status and the `design/tokens/active.json` swap) lands with the `apps/web` build.
+
 # Open Flow — Strale website design system
 
 **Status: candidate 0.1, proposed for founder review.** Not adopted. Production still runs [`design/tokens/active.json`](../../tokens/active.json). The website will be built in `apps/web` (DEC-20260902-A) once a decision adopts this system.

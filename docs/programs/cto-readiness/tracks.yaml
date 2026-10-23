@@ -878,6 +878,7 @@ tracks:
     gate: post-m2
     depends_on: [T3, T6]
     owner: session
+    # 2026-10-24: re-scoped by DEC-20261024-A (way-of-working review step 2): ship the production readers from m4/cutover (#679-#681) with deploy verification; drop the parity, coverage and closure proofs. Petter to confirm the change to his 2026-09-11 merge delegation.
     next_action: >
       Per migration plan section 10 M4. The founder approved starting the
       preparation on 2026-09-11; the cutover merge itself stays his yes or
