@@ -406,7 +406,7 @@ export const PROVIDERS: DependencyProvider[] = [
       path: "/sudovi",
       method: "GET",
       healthyStatuses: [200, 401],
-      timeoutMs: 10000, // no shorter than croatian-company-data's own call (10s)
+      timeoutMs: 15000, // no shorter than croatian-company-data's data call (15s; its token call is 10s)
       skipAuth: true,
     },
     capabilities: ["croatian-company-data"],

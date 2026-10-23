@@ -36,11 +36,13 @@ function toolTimeoutsMs(slug: string): number[] {
  */
 describe("a probe does not give up sooner than the tool it guards", () => {
   const VIES_TOOL_TIMEOUT_MS = 15_000; // lib/vat-providers/vies.ts, not a capability file
+  // The longest call each tool makes to the source: croatian-company-data's
+  // token call is 10s but its data call — the one the probe resembles — is 15s.
   const cases: Array<[string, number]> = [
-    ["usgs-earthquake", Math.min(...toolTimeoutsMs("usgs-earthquake-search"))],
-    ["hn-algolia", Math.min(...toolTimeoutsMs("hacker-news-search"))],
-    ["sudreg", Math.min(...toolTimeoutsMs("croatian-company-data"))],
-    ["arxiv", Math.min(...toolTimeoutsMs("arxiv-search"))],
+    ["usgs-earthquake", Math.max(...toolTimeoutsMs("usgs-earthquake-search"))],
+    ["hn-algolia", Math.max(...toolTimeoutsMs("hacker-news-search"))],
+    ["sudreg", Math.max(...toolTimeoutsMs("croatian-company-data"))],
+    ["arxiv", Math.max(...toolTimeoutsMs("arxiv-search"))],
     ["vies", VIES_TOOL_TIMEOUT_MS],
   ];
 

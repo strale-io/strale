@@ -16,7 +16,7 @@ Intent: find why USGS, sudreg, VIES, HN search, NVD and arXiv flap in the Health
 |---|---|---|---|
 | USGS | 6s → 12s | 670 (~10%) | 6 of 1,384 |
 | VIES | 5s → 15s | 65 (45 "fetch failed", 20 timeout) | refusals only |
-| sudreg | 5s → 10s | 49 | 4 of 67 |
+| sudreg | 5s → 15s | 49 | 4 of 67 |
 | NVD | 15s → 20s | 28 (20 × HTTP 503) | 0 |
 | HN search | 5s → 8s | 19 | 0 of 58 |
 | arXiv | 8s → 15s | 8 | 10 of 58 (timeouts at 15s) |

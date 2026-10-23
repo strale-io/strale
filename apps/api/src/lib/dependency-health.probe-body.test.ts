@@ -44,7 +44,8 @@ afterEach(() => {
 });
 
 describe("dependency probes release the response body", () => {
-  it.each([200, 503])("cancels the body of a %i answer", async (status) => {
+  // 401 takes the unhealthy branch without the runner's 5s retry sleep.
+  it.each([200, 401])("cancels the body of a %i answer", async (status) => {
     vi.stubGlobal("fetch", vi.fn(async () => responseWithTrackedBody(status)));
     const { runDependencyHealthChecks } = await import("./dependency-health.js");
     const results = await runDependencyHealthChecks();
