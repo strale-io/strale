@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-37** · `your_call` · owner Petter · raised 2026-10-23 19:30 CEST · no deadline — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
+**DQ-37** · `answered` · owner Petter · raised 2026-10-23 19:30 CEST · answered 2026-10-23 — **the web3 methodology still credits sources we switched off; a second correction is drafted for you**
 The independent review of DQ-36 found more lines in the public web3 methodology
 (`/v1/web3-assurance/methodology`, plus the explanation text) that credit
 sources we no longer use. They were outside the table you approved, so nothing
@@ -40,6 +40,7 @@ is changed yet.
 *Why it is yours:* methodology claims are yours to publish.
 *If you approve:* I make exactly these edits and verify them in production.
 *If you do nothing:* the methodology keeps crediting checks we cannot run.
+**Answered 2026-10-23 by Petter, in session:** "I approve DQ-37 as drafted: correct the remaining web3 methodology claims and verify in production." Done the same day in `methodology.ts` and `explanation.ts`. Still naming Etherscan, outside the approved table: `CONTRACT_UNVERIFIED` ("not verified on Etherscan or Sourcify") and an illustrative example in the disagreements field description.
 
 **DQ-36** · `answered` · owner Petter · raised 2026-10-23 17:40 CEST · answered 2026-10-23 — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
 Several public descriptions of how our sanctions and web3 checks work name
