@@ -9,6 +9,8 @@ date: 2026-09-05
 
 # Strale positioning and creative brief
 
+> **Lead message superseded 2026-10-23 by DEC-20261023-B** ([adoption record](../../strategy/2026-10-23-positioning-adoption.md)): the global per-call tool library is the story, and official-source company and compliance data is the flagship. This brief's audience and claim boundaries still apply.
+
 **The adopted promise: give your agents useful external tools without building each provider integration yourself.**
 
 The founder approved this positioning and benefit hierarchy on 5 September under DEC-20260905-A. See the [adoption record](../../strategy/2026-09-05-brand-direction-adoption.md). Strategy and marketing terminology are adopted; sample copy, visual rules and artwork remain candidates subject to their existing proof and design review. [PROGRAM.md](PROGRAM.md) is the continuation entry point. The [discovery research](../../research/2026-09-05-brand-foundation-discovery.md) and [rendered redesign review](../../../archive/sessions/2026-09-05-quiet-material-review.md) supply the evidence and its limits.

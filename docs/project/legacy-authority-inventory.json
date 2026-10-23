@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "b32554e0902b482e75c56113c431d208618bc61990e339f1de21882b01028c1c",
+      "sha256": "ac90ead6722209f9502f4e84479c9c42f556efe5e8c888032d665fc8598104ee",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -107,6 +107,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-quote-fidelity.mjs",
@@ -116,7 +117,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "dc35ffbf917ccaf2521761a0b62c885cd928ecad445d7c9d7d8b420725bd483a",
+      "sha256": "c7f8ac48b88e3bc642d508abd5ce4ea37a789f1d1dc65956183c700e2e54a19a",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/PROTOCOL.md",
@@ -372,6 +373,7 @@
         "handoff/_general/from-code/2026-09-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-17-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
         "manifests/domain-contact-extract.yaml",
@@ -672,7 +674,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "6410b773f1a6c635078f8868b659c2bbd83cf9f6e73276420efc21b70aa23463",
+      "sha256": "43e2a4af6d53bb8ca52c96e390cceddcd2b4d3ed24e931f267f6de9b9338dc5e",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -735,6 +737,7 @@
         "handoff/_general/from-code/2026-09-06-t10-g9-closing-review-round-7.md",
         "handoff/_general/from-code/2026-09-11-t6-vendor-strand-complete.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
@@ -787,7 +790,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f247ae2453d5d34f7338ded640888bc375c4ccb0315759c2bccfa71cff97e60f",
+      "sha256": "e167070fab5e9ffb8977640711bf2f1f8d31c8b705364f535f8f82657aad592b",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
