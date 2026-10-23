@@ -9,13 +9,14 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-325 files (298 with a recorded intent, 27 without).
+326 files (299 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-way-of-working-review.md`](_general/from-code/2026-10-23-way-of-working-review.md) | compare Strale's rules and processes with Petter's newer way of |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-typeahead-slug-family.md`](_general/from-code/2026-10-23-typeahead-slug-family.md) | make GET /v1/suggest/typeahead find slug-shaped queries such as |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-positioning-decision.md`](_general/from-code/2026-10-23-positioning-decision.md) | Record Petter's positioning decision (DEC-20261023-B) after the first-principles market analysis. |
+| 2026-10-23 | [`handoff/_general/from-code/2026-10-23-portfolio-plan.md`](_general/from-code/2026-10-23-portfolio-plan.md) | Draft the portfolio-building plan that carries out DEC-20261023-B, for Petter's review. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md`](_general/from-code/2026-10-23-health-monitor-daily-outage-summary.md) | stop per-event Health Monitor emails for outside data sources; send one daily summary instead. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md`](_general/from-code/2026-10-23-data-access-rule-proposal.md) | Draft a risk-based replacement for the scraping doctrine for Petter's decision. |
 | 2026-10-19 | [`handoff/_general/from-code/2026-10-19-checkin-morning.md`](_general/from-code/2026-10-19-checkin-morning.md) | run the 2026-10-19 operating session under DAILY-RUN.md — close week |
