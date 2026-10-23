@@ -9,9 +9,10 @@
  * v0.1 detects four explicit disagreement classes:
  *   1. token_safety_vs_protocol_risk     — GoPlus says clean but DefiLlama
  *                                           hacks DB shows recent incident
- *   2. contract_verification_mismatch    — Sourcify says verified but
- *                                           Etherscan says unverified (or vice
- *                                           versa)
+ *   2. contract_verification_mismatch    — not produced since 2026-10-24
+ *                                           (DQ-38): both sides now come from
+ *                                           Sourcify, so there is nothing to
+ *                                           compare until a second verifier exists
  *   3. wallet_risk_vs_mixer              — wallet-history-risk says low_risk
  *                                           but mixer-graded says known mixer
  *   4. wallet_risk_vs_scam_cluster       — wallet-history-risk says low but
@@ -75,21 +76,9 @@ export function detectDisagreements(compose: ComposeResult): DisagreementEntry[]
     }
   }
 
-  const sourcify = evidence["sourcify-verification"];
-  const contractVerify = evidence["contract-verification"];
-  if (sourcify && contractVerify) {
-    const sourcifyVerified = sourcify.verified === true;
-    const etherscanVerified = contractVerify.is_verified === true;
-    if (sourcifyVerified !== etherscanVerified) {
-      out.push({
-        class: "contract_verification_mismatch",
-        sources: ["sourcify.dev", "etherscan.io"],
-        description: `Sourcify says verified=${sourcifyVerified}; Etherscan says verified=${etherscanVerified}. The two sources disagree on whether the deployed bytecode matches a known compile.`,
-        resolution_hint:
-          "Investigate. Sourcify verifies via embedded metadata hash; Etherscan via source recompile. Mismatch may indicate proxy upgrade, partial verification, or deployment skew.",
-      });
-    }
-  }
+  // contract_verification_mismatch removed 2026-10-24 (DQ-38): contract-verification
+  // now runs on Sourcify alone, so comparing it with sourcify-verification compared
+  // Sourcify with itself. Restore it when a second, independent verifier exists.
 
   const walletHistory = evidence["wallet-history-risk"];
   const mixer = evidence["mixer-graded"];

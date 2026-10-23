@@ -308,7 +308,7 @@ export const openApiSpec = {
                   amount_usd: { type: "number" as const },
                   mode: { type: "string" as const, enum: ["outbound", "reverse-call"], default: "outbound" },
                   agent_id: { type: "string" as const, description: "Optional ERC-8004 agent identifier." },
-                  caller_jurisdiction: { type: "string" as const, description: "Optional ISO country code for jurisdiction-aware verdict (US, EU, UK, etc.)." },
+                  caller_jurisdiction: { type: "string" as const, description: "Optional ISO country code (US, EU, UK, etc.). Adds a jurisdiction-specific note to mixer findings; it does not change the verdict." },
                 },
               },
             },
