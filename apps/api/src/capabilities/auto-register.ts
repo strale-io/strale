@@ -331,6 +331,23 @@ const DEACTIVATED = new Map<string, string>([
     "lithuanian-company-data",
     "deactivated 2026-09-25: get.data.gov.lt answers our production host with HTTP 500 and every other caller with 200. No call completed from 2026-08-21; the 2026-09-24 classifier-snapshot fix removed one failing read and exposed the next — the register query itself failed 5/5 after that deploy while the same URL answered 200 off-platform. Zero customer calls in the window. Reactivate once the register answers from where production runs (a different egress, or the portal lifting the block), proven by a production-side read, not a local one.",
   ],
+  // ─── State drift recorded 2026-10-23 (portfolio plan Phase 0) ─────────────
+  // These three were already switched off in the database, each with a
+  // deactivation_reason, but were missing here, so code and catalogue
+  // disagreed about whether they exist. Listing them changes nothing in
+  // production; it only keeps their executors from registering.
+  [
+    "officer-search",
+    "deactivated in the database 2026-06-11 (TTL expiry: suspended for 30 days without resolution); recorded here 2026-10-23",
+  ],
+  [
+    "website-to-company",
+    "deactivated in the database 2026-06-12 (TTL expiry: suspended for 30 days without resolution); recorded here 2026-10-23",
+  ],
+  [
+    "us-court-search",
+    "CourtListener API token rejected (HTTP 403), deactivated per DQ-4 (block 0089); to reactivate, restore COURTLISTENER_API_TOKEN, remove this entry, and set is_active, visible and x402_enabled back in the database (the sync here only ever deactivates)",
+  ],
   // ─── UK property vertical, parked 2026-04-28 ─────────────────────────────
   // Built on 2026-04-11 in a fast push to claim ground after a Reddit
   // competitor post (Journal 33f67c87...d9049b). Audit on 2026-04-21

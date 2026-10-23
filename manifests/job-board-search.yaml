@@ -3,7 +3,7 @@
 
 slug: job-board-search
 name: Job Board Search
-description: Search job listings from national public employment services — Sweden (Arbetsförmedlingen), France (France Travail), US federal jobs (USAJOBS). Returns title, company, location, salary, URL.
+description: "Search job listings from Sweden's public employment service (Arbetsförmedlingen). Returns title, company, location, salary and URL."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none

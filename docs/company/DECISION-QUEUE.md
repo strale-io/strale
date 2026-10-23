@@ -14,6 +14,50 @@ fill the expanded panel.
 
 ## OPEN
 
+**DQ-36** · `your_call` · owner Petter · raised 2026-10-23 17:40 CEST · no deadline — **our sanctions and web3 methodology copy names sources we no longer use; a corrected text is drafted for you to approve**
+Several public descriptions of how our sanctions and web3 checks work name
+sources that are out of date. Compliance and methodology claims are yours to
+publish, so here is the corrected wording for approval. Nothing below is changed
+yet.
+*What was established (2026-10-23):*
+- The UK's OFSI Consolidated List closed on 28 January 2026; the UK Sanctions
+  List replaced it (gov.uk).
+- Dilisense's public source page still lists two "HMT - OFSI" sources, and also
+  "The UK Sanctions List" (UK Government). So "UK OFSI" is not the operative UK
+  list any more.
+- The web3 methodology (served at `/v1/web3-assurance/methodology`) says:
+  - sanctions come from "Dilisense + direct OFAC/UN/EU/OFSI lists". No code
+    fetches those lists directly; everything comes from Dilisense.
+  - wallet data comes from Etherscan. The wallet tools moved to Alchemy on
+    2026-09-11, when Etherscan's free terms turned out to forbid commercial use.
+  - token-safety and approval data come from GoPlus. Both GoPlus tools were
+    switched off on 2026-09-10 over GoPlus's licence terms.
+
+*The proposed corrections:*
+
+| Where | Now says | Proposed |
+|---|---|---|
+| `sanctions-check` description (manifest, catalogue, npm package) | "(EU, US OFAC, UN, UK OFSI, Swiss SECO, …)" | "(EU, US OFAC, UN, the UK Sanctions List, Swiss SECO, …)" |
+| `sanctions-check` data source | "OFAC SDN, EU FSF, UN SC, UK OFSI, CH SECO, …" | "OFAC SDN, EU FSF, UN SC, UK Sanctions List, CH SECO, …" |
+| Limitation shown to customers (`seed-limitations.ts`) | "from OFAC, EU, UN, UK OFSI, and 120+ other sources via dilisense" | "from OFAC, EU, UN, the UK Sanctions List and 120+ other sources via Dilisense" |
+| Web3 reason code `SANCTIONS_MATCH` (methodology and explanation) | "OFAC SDN, UN, EU, OFSI, or Swiss SECO sanctions lists" | "OFAC SDN, UN, EU, UK Sanctions List or Swiss SECO sanctions lists" |
+| Web3 methodology, sanctions source | "Dilisense (consolidated) + direct OFAC/UN/EU/OFSI lists" | "Dilisense consolidated sanctions database" |
+| Web3 methodology, wallet transactions and balance sources | "Etherscan API" (licence "Etherscan ToS") | "Alchemy (Ethereum mainnet)" (licence "Alchemy terms") |
+| Web3 methodology, token safety and approvals | "GoPlus … API" | Remove the entries, or mark them "not currently offered" until a licensed source exists |
+| DPIA for sanctions and PEP (internal record) | "HM Treasury OFSI"; "UK persons against OFSI under … SAMLA" | "the UK Sanctions List"; "UK persons against the UK Sanctions List under … SAMLA" |
+
+The internal source mirror (`dilisense-sources.ts`) already lists "UK Government —
+Sanctions List" and keeps Dilisense's own "HMT OFSI" labels. It mirrors their
+page and is not a claim of ours, so it stays as is.
+
+*Why it is yours:* these are compliance and methodology statements a regulator or
+customer could rely on. The charter makes them mine to detect, measure and draft,
+and yours to publish.
+*If you approve:* I make exactly these edits in one PR and verify the served
+catalogue and methodology afterwards.
+*If you do nothing:* the copy keeps naming a closed list and three sources we
+stopped using.
+
 **DQ-35** · `your_call` · owner Petter · raised 2026-10-23 14:50 CEST · no deadline — **our scraping rule is stricter than recent court rulings suggest on public facts, and our own tools don't follow it; a replacement rule is drafted for you**
 You asked whether our scraping rules are too strict compared with other
 players. They are in places, and the catalogue also doesn't follow them. The
