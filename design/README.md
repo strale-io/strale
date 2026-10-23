@@ -1,6 +1,6 @@
 # Design tokens
 
-For the website brand, start at the [accepted Quiet Material kit index](brand-kit/README.md). It links all current companions, machine sources and remaining qualification.
+For the website brand, start at the [Open Flow design system](brand-kit/open-flow/README.md). It is the founder-chosen direction (BrandKit Lab kit 06, chosen 23 October 2026), candidate 0.1, awaiting founder review. The [Quiet Material kit index](brand-kit/README.md) is history: superseded as the visual direction, kept unchanged.
 
 Design values are data, not prose or hardcoded literals. This directory is
 the source of truth for what every Strale surface looks like, what is being
@@ -13,7 +13,8 @@ design/
     schema.json              JSON Schema 2020-12 for every token file below
     active.json               what production runs today, per surface
     candidates/
-      quiet-material-v0.7.json      status: proposed
+      open-flow.json                status: proposed (founder-chosen direction, 2026-10-23)
+      quiet-material-v0.7.json      status: proposed (historical; superseded as direction 2026-10-23)
       quiet-material-catalogue.json status: proposed (retained values; specimen geometry)
       codex-handoff-round-23.json   status: exploring
       quiet-material-refinement.json status: rejected (closed study)
@@ -23,16 +24,18 @@ design/
     README.md                 convention for exploration folders
     2026-09-01-quiet-material-v0.7/README.md
   PROVENANCE.md              every historical direction, one status each
-  brand-kit/quiet-material/  current consolidation register and specimen catalogue
+  brand-kit/open-flow/       website design system candidate: guide, generated tokens.css, contrast proof, specimen
+  brand-kit/quiet-material/  historical Quiet Material register and specimen catalogue
   lint-allowlist.json        today's off-token literals in consumer code, ratcheted down
 ```
 
 ## What is active
 
-For the retained Quiet Material redesign, the current system-completion proposal is
-[the atmosphere/surface register](brand-kit/quiet-material/README.md). It reconciles
-the preserved sources and produces human/PDF views from structured records. It is
-candidate; it does not change the production surfaces below.
+For the redesign, the current candidate is [Open Flow](brand-kit/open-flow/README.md)
+(`design/tokens/candidates/open-flow.json`). It generates `tokens.css`, the WCAG proof
+and its specimen from the token file, and `design:check` runs its checks. It is a
+candidate and does not change the production surfaces below. The earlier Quiet Material
+register ([atmosphere/surface register](brand-kit/quiet-material/README.md)) is history.
 
 `design/tokens/active.json` has one entry per production surface under
 `surfaces`. Today there are two:
