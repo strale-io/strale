@@ -3,7 +3,7 @@ doc_type: plan
 authority_scope: none
 decision: DEC-20261023-B
 date: 2026-10-23
-status: proposed
+status: active
 ---
 
 # Portfolio plan: what to add, fix and leave out before marketing

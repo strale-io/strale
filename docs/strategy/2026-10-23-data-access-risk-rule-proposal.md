@@ -3,7 +3,7 @@ doc_type: decision-proposal
 authority_scope: none
 decision: DEC-20261023-A
 date: 2026-10-23
-status: proposed
+status: active
 ---
 
 # Proposal: replace the scraping doctrine with one risk-based data-access rule

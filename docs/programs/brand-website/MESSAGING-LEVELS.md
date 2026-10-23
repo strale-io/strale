@@ -2,7 +2,7 @@
 doc_type: creative-brief
 authority_scope: none
 program: brand-website
-status: proposed-for-founder-review
+status: adopted
 date: 2026-10-23
 ---
 

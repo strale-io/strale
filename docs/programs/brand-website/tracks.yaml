@@ -52,7 +52,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: Founder reviews the Open Flow design system candidate 0.1 (specimen and screenshots in design/brand-kit/open-flow/) — colour and dark theme, type, components and states, section-pattern shells, imagery rules. On approval, file the adoption decision and promote it; the kit-06 STRALE wordmark stays a candidate and the flowing-S logo stays until he decides. Hero and homepage story follow the separate positioning session; no marketing copy goes into this kit.
+    next_action: "Open Flow adopted by Petter on 2026-10-24 (DEC-20261024-B), together with SITE-STRUCTURE.md and MESSAGING-LEVELS.md. Next: build the site in apps/web (T6) and promote the open-flow tokens into design/tokens/active.json as part of that build. The kit-06 STRALE wordmark stays a candidate; the flowing-S logo stays until Petter decides."
     resume_file: design/brand-kit/open-flow/README.md
     exit:
       - Founder-chosen kit-06 direction built out as a complete website system (tokens, contrast proof, components with states, section patterns, imagery rules) with lineage to the kit.
