@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { here, loadTokens, loadProvenance, validate, contrast, contrastResults, lintCss, definedVars, renderTokensCss, buildAll, fluid } from './build.mjs';
+import { here, loadTokens, loadProvenance, validate, contrast, contrastResults, lintCss, lintSpecimen, definedVars, renderTokensCss, buildAll, fluid } from './build.mjs';
 
 const tokens = loadTokens();
 const prov = loadProvenance();
@@ -71,6 +71,7 @@ test('lint rejects planted hex, px, raw font stacks, unknown tokens and off-scal
   assert.match(lintCss('.a { border: var(--border-width) solid red; }', tokens, defined).join(), /named colour red/);
   assert.match(lintCss('.a { background: color-mix(in srgb, var(--text) 8%, transparent); }', tokens, defined).join(), /colour function/);
   assert.match(lintCss('.a { color: oklch(60% 0.2 270); }', tokens, defined).join(), /colour function/);
+  assert.match(lintCss('.btn-x { --_bg: white; }', tokens, defined).join(), /named colour white/);
   assert.deepEqual(lintCss('.a { width: 53%; opacity: 0.45; transform: rotate(180deg); max-width: 62ch; }', tokens, defined), []);
 });
 
@@ -117,4 +118,12 @@ test('dark-theme state indicators and special focus rings are proven, not assume
     assert.equal(r.length, 2, `${fg} on ${bg} must be proven in both themes`);
     assert(r.every(x => x.pass));
   }
+});
+
+test('specimen.js may not set styles or carry colour/length literals', () => {
+  const lint = js => lintSpecimen('', '', tokens, tokensCss, js).join();
+  assert.match(lint("el.style.color = 'x';"), /sets inline style/);
+  assert.match(lint("const c = '#fff';"), /style literal #fff/);
+  assert.match(lint("const w = '2rem';"), /style literal 2rem/);
+  assert.equal(lint("el.classList.add('is-open');"), '');
 });

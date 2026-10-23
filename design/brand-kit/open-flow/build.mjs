@@ -306,7 +306,7 @@ export function lintCss(css, t, defined, where = 'specimen.css') {
     for (const m of l.matchAll(/#[0-9a-f]{3,8}\b/gi)) errors.push(`${where}: hex literal ${m[0]}`);
     for (const m of l.matchAll(/(?<![\w.])(-?\d*\.?\d+)(px|rem|em|pt|ms|s|vh|vw|vmin|vmax|cqi|cqw)\b/gi)) if (+m[1] !== 0) errors.push(`${where}: off-token length ${m[0]}`);
     if (/\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\(/i.test(l)) errors.push(`${where}: colour function literal`);
-    for (const d of l.matchAll(/(?:^|[;{\s])(color|background(?:-color)?|border(?:-[a-z]+)*|outline(?:-color)?|fill|stroke|box-shadow|accent-color|text-decoration(?:-color)?|caret-color)\s*:\s*([^;}]+)/gi)) {
+    for (const d of l.matchAll(/(?:^|[;{\s])(color|background(?:-color)?|border(?:-[a-z]+)*|outline(?:-color)?|fill|stroke|box-shadow|accent-color|text-decoration(?:-color)?|caret-color|--_[\w-]+)\s*:\s*([^;}]+)/gi)) {
       const words = d[2].replace(/var\([^)]*\)/g, '').toLowerCase().match(/[a-z]+/g) || [];
       for (const w of words) if (NAMED_COLOURS.has(w)) errors.push(`${where}: named colour ${w}`);
     }
@@ -321,7 +321,9 @@ export function lintSpecimen(html, css, t, tokensCss, js = '') {
   const errors = lintCss(css, t, defined);
   for (const m of html.matchAll(/style="([^"]*)"/g)) errors.push(...lintCss(m[1], t, defined, 'index.html inline style'));
   if (/<style[\s>]/.test(html)) errors.push('index.html: put styles in specimen.css, not a <style> block');
-  for (const m of js.matchAll(/#[0-9a-f]{6}\b|\b\d+px\b/gi)) errors.push(`specimen.js: style literal ${m[0]}`);
+  // Behaviour only: specimen.js may toggle classes and attributes, never set style values.
+  if (/\.style\b|setProperty\(|cssText/.test(js)) errors.push('specimen.js: sets inline style; toggle a class instead');
+  for (const m of js.matchAll(/#[0-9a-f]{3,8}\b|\b\d*\.?\d+(px|rem|em|vh|vw)\b/gi)) errors.push(`specimen.js: style literal ${m[0]}`);
   for (const m of html.matchAll(/(?:src|href)="(\.\.\/[^"#]+|[^":#?]+\.(?:css|js|png|svg))"/g)) {
     const p = resolve(here, 'specimen', m[1]);
     if (m[1] === '../tokens.css') continue; // generated alongside this check

@@ -174,7 +174,7 @@ node design/brand-kit/open-flow/build.mjs
 ```
 Run this after changing `design/tokens/candidates/open-flow.json`. It regenerates `tokens.css`, `CONTRAST.md` and the generated regions of `specimen/index.html`.
 
-`npm run design:check` runs `build.mjs --check`. It fails on stale output, any contrast pair below its minimum, or a copied asset or font whose hash changed. It also fails on an off-token literal in the specimen CSS or inline styles: hex, a px/rem/ms/vw length (negative or any case), a colour function or common named colour, a raw font stack, an unknown token, or a non-token breakpoint. It catches the same literals in `specimen.js`. Percentages, ch, deg and unitless numbers are allowed as proportions. `npm run design:test` runs `build.test.mjs`, which plants each of those failures and proves the check catches it.
+`npm run design:check` runs `build.mjs --check`. It fails on stale output, any contrast pair below its minimum, or a copied asset or font whose hash changed. It also fails on an off-token literal in the specimen CSS or inline styles: hex, a px/rem/ms/vw length (negative or any case), a colour function or common named colour, a raw font stack, an unknown token, or a non-token breakpoint. `specimen.js` may only toggle classes and attributes: it fails if the script sets inline styles or contains a hex colour or a px/rem/em/vh/vw length. Percentages, ch, deg and unitless numbers are allowed as proportions. `npm run design:test` runs `build.test.mjs`, which plants each of those failures and proves the check catches it.
 
 To regenerate the screenshots (needs Chrome and a Playwright install; not run in CI):
 ```bash
