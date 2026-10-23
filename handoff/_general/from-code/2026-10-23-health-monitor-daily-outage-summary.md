@@ -67,10 +67,19 @@ fail against the old file.
 No new env vars. Uses existing `RESEND_API_KEY`, `HEALTH_DIGEST_EMAIL`,
 `HEALTH_DIGEST_FROM`. Schedule is in-process (no Railway cron).
 
+## Merged and verified (2026-10-23)
+
+Merged as #704 (`acb6ec3d`) after #710, #712 and #714; live per `GET /health`.
+In production: no per-event alert email after the deploy, and the
+`preview_only` endpoint returned a 5-source summary while recording nothing.
+The first scheduled summary is due from 08:00 Swedish time on 2026-10-24.
+Follow-up fix in its own PR: a preview on a quiet day recorded a run and
+would have cut short the next morning's window.
+
 ## Follow-ups (not done)
 
-- OpenAlex probe/source has been failing ~21 h/day for a month — the daily
-  summary will list it every day until investigated.
+- ~~OpenAlex probe/source has been failing ~21 h/day for a month~~ — fixed
+  in #710 (the probe was spending OpenAlex's daily budget).
 - Both older digests are dead in production: the business "Strale Daily
   Digest" (Railway `strale-digest-cron`, last snapshot 2026-04-14) and the
   weekly HM-2 digest (no schedule).
