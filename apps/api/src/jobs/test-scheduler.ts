@@ -725,6 +725,20 @@ async function runAuxiliaryTasks(): Promise<void> {
       logError("test-scheduler-retention-cleanup-failed", err);
     }
   }
+
+  // Daily summary of outside data-source outages, from 08:00 Swedish time.
+  // The hour check comes first so the due slot is only consumed in the window.
+  {
+    const { isDigestSendHour, sendExternalOutageDigest, DIGEST_DUE_INTERVAL_MS } =
+      await import("../lib/external-outage-digest.js");
+    if (isDigestSendHour(new Date()) && await shouldRun("external-outage-digest", DIGEST_DUE_INTERVAL_MS)) {
+      try {
+        await sendExternalOutageDigest();
+      } catch (err) {
+        logError("test-scheduler-external-outage-digest-failed", err);
+      }
+    }
+  }
 }
 
 // ─── Poll cycle ─────────────────────────────────────────────────────────────
