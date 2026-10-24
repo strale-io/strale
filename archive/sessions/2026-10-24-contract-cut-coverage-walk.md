@@ -6,7 +6,9 @@ Way-of-working review §4 step 3, under DEC-20261024-A (items 2 and 5 wait for
 Petter's confirmation; this walk belongs to the draft PR that waits on them).
 The text before the cut is preserved verbatim in
 `archive/sessions/2026-10-24-entrypoints-before-contract-cut/` (`CLAUDE.md`,
-`AGENTS.md`).
+`AGENTS.md`). Those copies are the branch's entrypoints just before the cut:
+`origin/main` at 4fa1f6a1 plus #665's three added lines (the Contradiction
+Protocol steps and the Conventional Commits line), not `origin/main` alone.
 
 Legend: **moved** = verbatim text now authoritative at the destination;
 **summarised** = one or more lines in `AGENTS.md`, full text at the
@@ -54,6 +56,7 @@ Every row's `enforced_by` code is unchanged; only the text's home moved.
 | Active Decisions | moved: `docs/decisions/ACTIVE.md`; reading map |
 | Capabilities & Quality | moved: `docs/governance/protocols/CAPABILITIES_AND_QUALITY.md`; reading map |
 | Quick / Full Session Checklist | retired: replaced by the session contract (orient, commit and review by tier, ship, gate). Kept from them: the handoff file (gate) and review before merge (`REVIEW.md`). Retired: connectivity check, Notion To-do archive, Journal entry |
+| Code-review gate before `/end-session` (checklist step 5/8: "never end a session over unreviewed code; run `/go`") | **retired as a session-end gate, on purpose** (review §3 A, "review belongs at merge, by tier"): review is now required before merge (session contract 2, `REVIEW.md` tiers). A session may end with unreviewed code pushed to its branch; that code cannot reach `main` unreviewed |
 | Report Filing Convention | moved: `REPORT_FILING.md`; root list summarised in AGENTS.md "Where things live" |
 | Workflow Invariants | `SUPERSEDING_DECISIONS.md` (conflict duty, append-only decisions, the five supersession steps) and non-negotiable 6; Notion wording retired |
 | Degraded Mode | non-negotiable 8 (Git down → stop); the Notion half retired |
@@ -66,7 +69,7 @@ Every row's `enforced_by` code is unchanged; only the text's home moved.
 | Deploys (DEC-20260504-C, -B) | reading map | protocol files | `REVIEW.md` always-check |
 | Migrations (append-only ledger) | reading map | `EVIDENCE_RECEIPTS_MIGRATION_LEDGER.md` | always-check; tier-2 row |
 | Money paths (DEC-20260504-A) | reading map | `AUDIT_FOLLOWUP_TEST_COVERAGE.md` | always-check; tier-2 wallet/x402 rows |
-| Scraping / data access (DEC-20261023-A) | non-negotiable 4 | `docs/strategy/2026-10-23-data-access-risk-rule-proposal.md` | always-check |
+| Scraping / data access (DEC-20261023-A) | non-negotiable 4 (all three lanes in full, the site bans) and a reading-map row | `docs/strategy/2026-10-23-data-access-risk-rule-proposal.md` (linked from non-negotiable 4), `docs/decisions/ACTIVE.md` | always-check |
 | Shared checkout | non-negotiable 5 (+ CLAUDE.md Agents) | `SHARED_CHECKOUT_RULE.md` | always-check |
 | Published packages (DEC-20260422-A) | reading map | `DISTRIBUTION_PR_INTEGRITY.md` | always-check; tier-2 row |
 | Production authority, customer-data boundary | non-negotiables 2, 3 | `docs/company/CHARTER.md` | always-check |
@@ -88,6 +91,13 @@ Every row's `enforced_by` code is unchanged; only the text's home moved.
 - Carved out and kept, blocking: `decisions:check` / `decisions:test`
   (decision-record schema, id collisions, immutability of active decisions,
   generated decision index), previously reachable only through `context:test`.
+- **Not carried over: the Notion anti-regression check** from PR #682 / the
+  b7 rescue branch (`check-no-notion-regression.mjs`). The T7 exit "no active
+  state read from or written to Notion" therefore holds today (no code calls
+  the Notion API) but has no mechanical guard; PR review is the guard. This is
+  a consequence of the item-2 re-scope for Petter to confirm. The rescue
+  branch's three document fixes (`railway-config.md` `NOTION_TOKEN`, the
+  vendor-switch DPA template note, the end-session wording) are carried over.
 - **Not deleted here, on purpose:** the rest of group G (`context:*`, the M2
   closure register, the inventory). `scripts/project-context-lib.mjs` also
   validates `docs/operations/operator-actions.yaml` — approval-gated

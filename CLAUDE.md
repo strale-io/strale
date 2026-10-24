@@ -40,5 +40,7 @@ This file adds only what is specific to Claude Code. If the two ever disagree,
 | `/activity` | summarise recent external platform activity |
 | `/end-session` | close a session: close-check, handoff file, loose threads |
 
-Codex reads the same skills from `.agents/skills/`. A skill changed in one
-folder is changed in the other in the same commit.
+Codex reads the same skills (`go`, `onboard-capability`, `vendor-switch`, and
+`/end-session` as `source-command-end-session`) from `.agents/skills/`; a skill
+changed in one folder is changed in the other in the same commit. `/ceo-brief`
+and `/activity` are Claude-only commands.

@@ -8,9 +8,10 @@ moved_at: 2026-10-24
 
 # Superseding decisions: the Contradiction Protocol and decision invariants
 
-> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
-> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
-> routes to this file from its reading map.
+> **Authoritative text.** Rewritten from `CLAUDE.md`'s Workflow Invariants (and the
+> Contradiction Protocol steps kept in M4 batch 1) in the contract cut
+> (DEC-20261024-A). Same rules, Notion wording dropped; the original is archived.
+> Change it here; `AGENTS.md` routes to this file from its reading map.
 
 **Conflict duty.** If a request would contradict an active decision, say so
 before acting: quote the decision, say exactly what conflicts, and ask whether

@@ -1,11 +1,8 @@
 # Strale — agent contract (Claude Code and Codex)
 
-**This file is canonical for both tools.** `CLAUDE.md` imports it and adds
-Claude-only notes. The detail lives in the files the reading map names; read
-them when a task needs them. This contract was cut under DEC-20261024-A. The
-text it replaced is preserved verbatim in
-`archive/sessions/2026-10-24-entrypoints-before-contract-cut/`, and the
-coverage walk is `archive/sessions/2026-10-24-contract-cut-coverage-walk.md`.
+**Canonical for both tools.** `CLAUDE.md` imports it and adds Claude-only
+notes; read the files the reading map names when a task needs them. Cut under
+DEC-20261024-A: the replaced text and the coverage walk are in `archive/sessions/2026-10-24-*`.
 
 **Times for Petter:** give every time in Swedish local time (Europe/Stockholm,
 CET or CEST in summer), never UTC. UTC stays in machine artifacts only: logs,
@@ -18,13 +15,11 @@ One connection gives access, paid with an API key or with a wallet over x402.
 Official-source company and compliance data is the flagship (DEC-20261023-B).
 
 Stack: Node.js and TypeScript, Hono, PostgreSQL with Drizzle, Stripe Checkout
-wallet top-ups, x402 USDC on Base, Railway (US East), Browserless.io.
-
-Layout: `apps/api` (API, capabilities, db, lib), `apps/web` (website),
-`packages/*` (published SDKs, MCP server, framework packages),
-`manifests/*.yaml` (one per capability), `docs/`, `archive/`.
-
-Live counts come from `GET /v1/platform/facts`, never from prose.
+wallet top-ups, x402 USDC on Base, Railway (US East), Browserless.io. Layout:
+`apps/api` (API, capabilities, db, lib), `apps/web` (website), `packages/*`
+(published SDKs, MCP server, framework packages), `manifests/*.yaml` (one per
+capability), `docs/`, `archive/`. Live counts come from
+`GET /v1/platform/facts`, never from prose.
 
 ## Non-negotiables (always in force)
 
@@ -41,13 +36,18 @@ Live counts come from `GET /v1/platform/facts`, never from prose.
 3. **Customer-data boundary.** No outreach derived from transaction evidence.
    Telemetry gives anonymous product insight only. Content is redacted at 90
    days. Widening any of this is Petter's call (DEC-20260815-A).
-4. **Data access** (DEC-20261023-A).
+4. **Data access** (DEC-20261023-A; full text in
+   `docs/strategy/2026-10-23-data-access-risk-rule-proposal.md`).
    - **Never:** logins or fake accounts; getting around blocks; harvesting
-     people data for resale (AML/KYB screening excepted); commercial
-     aggregators; resale against vendor terms.
-   - **Allowed with checks:** a customer-directed single fetch that stops at
-     blocks, uses an honest user agent and honours robots.txt; per-call public
-     reads whose terms permit them.
+     people data for resale (AML/KYB screening excepted); litigating platforms
+     accessed by Strale; commercial aggregators (allabolag, northdata), even per
+     call; resale against vendor terms; media as content. The DEC-20260427-H/I
+     site bans stay (`apps/api/src/lib/tos-blocklist.ts`).
+   - **Allowed with checks:** a customer-directed single public fetch that stops
+     at blocks, with an honest user agent and robots.txt honoured; per-call
+     reads of public, non-personal sources whose terms permit it, with
+     attribution (court- or registry-published personal data returned as
+     published); vendor data whose terms permit resale, SERP data included.
    - **Preferred:** official APIs, licensed data, statutory registries.
 5. **Shared checkout.**
    - An agent that edits files runs in its own worktree.
@@ -70,6 +70,7 @@ Live counts come from `GET /v1/platform/facts`, never from prose.
 |---|---|
 | review a change, or prepare one for review | `REVIEW.md` |
 | add, change or onboard a capability | the `onboard-capability` skill; `CAPABILITY_ONBOARDING.md` and `CAPABILITY_ONBOARDING_PIPELINE.md` (DEC-20260320-B) |
+| add or change an upstream source or fetch | non-negotiable 4's full text; `tos-blocklist.ts`, `vendor-terms.ts` |
 | fix a cert-audit finding, or touch a wallet, audit-trail, chain, spend-cap or idempotency path | `AUDIT_FOLLOWUP_TEST_COVERAGE.md` (DEC-20260504-A) |
 | fix a long-silent bulk operation (retention, archival, reconciliation) | `BULK_OPERATION_DEPLOY.md` (DEC-20260504-B) |
 | add code that depends on a migration, env var, build step, startup hook or cron | `DEPLOY_MECHANISM_VERIFICATION.md` (DEC-20260504-C) |
@@ -120,11 +121,13 @@ which holds their authoritative text.
      `handoff/_general/from-code/YYYY-MM-DD-<topic>.md` starting with
      `Intent:`.
 
-   Full text: `docs/governance/protocols/SESSION_CONTRACT.md`.
-5. **Hooks** come with `npm ci` (`core.hooksPath=.githooks`):
-   - pre-commit regenerates the archive and handoff index, and refuses
-     commits on `main`;
-   - pre-push refuses pushes to `main`.
+   Worktrees and branches recorded in `scripts/handoff/baseline.json` wait for
+   a founder decision and are never deleted by a session. Codex has no
+   reliable Stop hook, so a Codex session runs the check itself before its
+   final turn. Full text: `docs/governance/protocols/SESSION_CONTRACT.md`.
+5. **Hooks** come with `npm ci` (`core.hooksPath=.githooks`): pre-commit
+   regenerates the archive and handoff index and refuses commits on `main`;
+   pre-push refuses pushes to `main`.
 
 ## Where things live
 
@@ -141,10 +144,7 @@ which holds their authoritative text.
 | Reports and dated evidence | `archive/sessions/`, `archive/receipts/` |
 | Handoffs | `handoff/` |
 
-The repo root holds only:
-- `README.md`, `AGENTS.md`, `CLAUDE.md`, `REVIEW.md`, `WORKTREES.md`,
-  `LICENSE`, `Dockerfile`;
-- the monorepo build files: `package.json`, `package-lock.json`,
-  `tsconfig.json`;
-- four registry manifests that must stay at the root: `context7.json`,
-  `glama.json`, `server.json`, `smithery.yaml`.
+The repo root holds only what `REPORT_FILING.md` lists: the entrypoints and
+`REVIEW.md`, `WORKTREES.md`, `LICENSE`, `Dockerfile`, the monorepo build files
+and four registry manifests (`context7.json`, `glama.json`, `server.json`,
+`smithery.yaml`).

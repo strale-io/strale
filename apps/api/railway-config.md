@@ -185,13 +185,15 @@ as the `strale` service — only the start command and schedule differ.
    - `DATABASE_URL`
    - `RESEND_API_KEY`
    - `ANTHROPIC_API_KEY` (used by `analyzeDigest`)
-   - `NOTION_TOKEN` (for ship-log / Notion activity)
    - `GITHUB_TOKEN` (for shiplog commit fetching, if configured)
    Any missing variable causes that section to fall back to its default;
    the email still sends.
 
 ### Notes
 
+- No Notion variable is needed: the digest reads the repository since the
+  T7 close (M4 batch 5, #680); `gatherDigestData()` no longer reads Notion
+  (`apps/api/src/lib/daily-digest/index.ts`).
 - No `ADMIN_SECRET` is needed — this service runs the digest directly, it
   does not call `POST /v1/admin/digest`.
 - DST drift: the email arrives at 07:30 CEST in summer and 06:30 CET in

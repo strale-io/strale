@@ -6,7 +6,7 @@
     {
       "path": "AGENTS.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "e74d7a689bd9d0ebbcc0fe5e3596fbab208a62441cdaeacb69fa56192be9972d",
+      "sha256": "2b42256095b1f5b9ca2561d96e09731553fed7dfdd1fd5508fe95fb177b5d43b",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -16,6 +16,7 @@
         "CLAUDE.md",
         "README.md",
         "REVIEW.md",
+        "apps/api/scripts/session-close-check.ts",
         "apps/api/src/lib/claude-md-protocols.test.ts",
         "archive/sessions/2026-08-31-m1-clean-extraction-review-claude.md",
         "archive/sessions/2026-08-31-m1-parallel-sequencing-review-claude.md",
@@ -129,7 +130,7 @@
     {
       "path": "CLAUDE.md",
       "owner_area": "root-agent-entrypoint",
-      "sha256": "10789eb9f4342b70b33eb8c6ab745d1d6932e52a6236f698f709520b2b19d50c",
+      "sha256": "55f26b6fb9446e4a45e9852db9945b0809cad3bc2d194f34d028a19491ade19d",
       "detected_references": [
         ".github/workflows/ci.yml",
         ".gitignore",
@@ -470,7 +471,7 @@
     {
       "path": ".claude/commands",
       "owner_area": "claude-commands",
-      "sha256": "1c832dc04ee9a9fb27a39639b6f49126e7db08a3de5828874ff60c724676eb29",
+      "sha256": "f4489952db56427a8b37e66b54c8493f0814b9442bf71ac4a3d750a1df8df3bb",
       "detected_references": [
         "apps/api/scripts/archive/README.md",
         "archive/sessions/2026-09-11-m3-remaining-scope-inventory.md",
@@ -491,7 +492,7 @@
     {
       "path": ".agents/skills",
       "owner_area": "shared-agent-skills",
-      "sha256": "0c00263578ed621e7afd27c92544b0e63fcdd12d0ed59e809f08d8788516e907",
+      "sha256": "acf43769852ff5001840f855c53d58c79c4153369702d59426c967d27e914585",
       "detected_references": [
         "CLAUDE.md",
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
@@ -679,6 +680,7 @@
       "owner_area": "strategy-evidence",
       "sha256": "f206bf74d05f0183ca957e148302e3b6bae318d65438bbb81b3bdd0015b92722",
       "detected_references": [
+        "AGENTS.md",
         "REVIEW.md",
         "apps/api/scripts/attribution-rollup.ts",
         "apps/api/scripts/check-vendor-roster-drift.ts",
