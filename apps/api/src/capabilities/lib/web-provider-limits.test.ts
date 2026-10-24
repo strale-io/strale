@@ -40,9 +40,16 @@ const browserlessFetchMock = vi.fn();
 // a stand-in. (A factory returning just `{ safeFetch }` silently made
 // `discardBody` undefined, which is how the cancellation tests started
 // throwing instead of asserting.)
+// The rendered routes' plain preflight (web-provider, DEC-20261023-A) is its
+// own suite's concern (web-provider-access.test.ts). It asks for a byte range,
+// so it is answered with an ordinary page and never reaches this suite's mock.
+const isPreflight = (init: unknown) =>
+  new Headers((init as RequestInit | undefined)?.headers).get("range") === "bytes=0-8191";
+const preflightPage = () =>
+  new Response("<html><body>ordinary page</body></html>", { status: 200, headers: { "content-type": "text/html" } });
 vi.mock("../../lib/safe-fetch.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  safeFetch: (...args: unknown[]) => safeFetchMock(...args),
+  safeFetch: (...args: unknown[]) => (isPreflight(args[1]) ? preflightPage() : safeFetchMock(...args)),
 }));
 
 vi.mock("../../lib/metered-vendor-fetch.js", () => ({

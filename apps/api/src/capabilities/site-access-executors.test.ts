@@ -342,6 +342,24 @@ describe("screenshots and PDFs of a block page are refused, not billed", () => {
     const err = await run("html-to-pdf", { url: "https://site.test" });
     expect(err).toBeInstanceOf(SiteAccessRefusedError);
   });
+
+  // Chrome can run a JavaScript challenge to completion before the capture,
+  // so the challenge must be seen in a plain look first.
+  const CHALLENGE_PAGE = `<html><body>${"x".repeat(2500)} Checking your browser before accessing site.test</body></html>`;
+  for (const slug of ["screenshot-url", "html-to-pdf"]) {
+    it(`REGRESSION: ${slug} stops at a challenge page before Browserless is asked`, async () => {
+      pageResponse = () => html(CHALLENGE_PAGE, 503);
+      const err = await run(slug, { url: "https://site.test" });
+      expect(err).toBeInstanceOf(SiteAccessRefusedError);
+      expect(browserlessFetchMock).not.toHaveBeenCalled();
+    });
+  }
+
+  it("html-to-pdf with caller markup makes no preflight (there is no target)", async () => {
+    browserlessFetchMock.mockResolvedValue(new Response(Buffer.from("%PDF-1.4"), { status: 200, headers: { "content-type": "application/pdf" } }));
+    await run("html-to-pdf", { html: "<p>hello</p>" });
+    expect(pageCalls()).toHaveLength(0);
+  });
 });
 
 describe("youtube-summarize", () => {

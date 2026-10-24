@@ -24,7 +24,7 @@ vi.mock("../../lib/metered-vendor-fetch.js", () => ({
 }));
 vi.mock("../../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
 
-import { __resetWebProviderCacheForTests, fetchCompanyPage, fetchPage } from "./web-provider.js";
+import { __resetWebProviderCacheForTests, assertPlainPreflightAllowed, assertRenderedTargetAllowed, fetchCompanyPage, fetchPage } from "./web-provider.js";
 import { __resetRobotsCacheForTests } from "../../lib/robots-txt.js";
 import { STRALE_USER_AGENT, SiteAccessRefusedError, SourceBlockedError } from "../../lib/site-access.js";
 import { isCapabilityRefusal } from "../../lib/capability-refusal.js";
@@ -290,5 +290,71 @@ describe("a block on a source STRALE chose is a capability fault, not a refusal"
   it("fetchCompanyPage (registries) is always a Strale-chosen source", async () => {
     browserlessFetchMock.mockImplementation(async () => html(REAL_PAGE, 200, { "x-response-code": "403" }));
     await expect(fetchCompanyPage(PAGE)).rejects.toBeInstanceOf(SourceBlockedError);
+  });
+});
+
+describe("a rendered route with no plain tier looks at the site plainly first", () => {
+  // Chrome can run a JavaScript challenge to completion before the page is
+  // read, so a route without tier 1 (skipFallback, /screenshot, /pdf) must see
+  // the site's first answer before Browserless is asked.
+  it("REGRESSION: a challenge served to the plain look stops skipFallback before Browserless", async () => {
+    pageResponse = () => html(CHALLENGE);
+    const err = await refusalFrom(fetchPage(PAGE, { skipFallback: true }));
+    expect(err.block.kind).toBe("challenge");
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: a non-default waitUntil (no tier 1) gets the same plain look", async () => {
+    pageResponse = () => html("blocked", 403);
+    const err = await refusalFrom(fetchPage(PAGE, { waitUntil: "domcontentloaded" }));
+    expect(err.block).toEqual({ kind: "http", status: 403 });
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a challenge served with a 503 is refused too", async () => {
+    pageResponse = () => html(CHALLENGE, 503);
+    const err = await refusalFrom(assertPlainPreflightAllowed(PAGE));
+    expect(err.block.kind).toBe("challenge");
+  });
+
+  it("a redirect robots.txt disallows is refused", async () => {
+    pageResponse = () => {
+      const r = html(REAL_PAGE);
+      Object.defineProperty(r, "url", { value: "https://elsewhere.test/private/x" });
+      return r;
+    };
+    await refusalFrom(assertPlainPreflightAllowed(PAGE));
+  });
+
+  it("an ordinary page passes, and so does a plain 5xx (the render may still work)", async () => {
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBeUndefined();
+    pageResponse = () => html("server error", 502);
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBeUndefined();
+  });
+
+  it("a transport failure is left to the rendered route", async () => {
+    pageResponse = () => {
+      throw new Error("The operation was aborted due to timeout");
+    };
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBeUndefined();
+  });
+
+  it("a blocklist refusal on a redirect hop is not mistaken for a transport failure", async () => {
+    pageResponse = () => {
+      throw new Error("Reddit is not a supported source: its Terms of Service prohibit automated access, so Strale does not fetch it.");
+    };
+    await expect(assertPlainPreflightAllowed(PAGE)).rejects.toThrow(/Terms of Service prohibit automated access/);
+  });
+});
+
+describe("a Browserless redirect is held to the blocklist", () => {
+  it("REGRESSION: landing on a blocklisted host (X-Response-URL) is refused", async () => {
+    const res = html(REAL_PAGE, 200, { "x-response-code": "200", "x-response-url": "https://www.trustpilot.com/review/x" });
+    await expect(assertRenderedTargetAllowed(PAGE, res)).rejects.toThrow(/Terms of Service prohibit automated access/);
+  });
+
+  it("an ordinary final URL passes", async () => {
+    const res = html(REAL_PAGE, 200, { "x-response-code": "200", "x-response-url": PAGE });
+    await expect(assertRenderedTargetAllowed(PAGE, res)).resolves.toBeUndefined();
   });
 });

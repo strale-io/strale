@@ -95,7 +95,7 @@
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { discardBody, safeFetch } from "../../lib/safe-fetch.js";
-import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
+import { assertTargetAllowed, isAccessPolicyRefusal } from "../../lib/tos-blocklist.js";
 import { assertRedirectAllowed, assertRobotsAllowed } from "../../lib/robots-txt.js";
 import {
   STRALE_USER_AGENT,
@@ -660,6 +660,12 @@ async function fetchPageOnce(
     }
   }
 
+  // When tier 1 did not run, nothing has seen the site's first answer before
+  // Chrome runs its scripts, so look at it plainly first (DEC-20261023-A).
+  if (skipFallback || (options?.waitUntil && options.waitUntil !== "networkidle0")) {
+    await assertPlainPreflightAllowed(targetUrl);
+  }
+
   // ── Browserless path (paid, full headless Chrome — last resort) ──────────
   // Acquire a browser concurrency slot to prevent OOM on Railway (1GB limit)
   return withBrowserLimit(async () => {
@@ -808,12 +814,59 @@ export async function assertRenderedTargetAllowed(targetUrl: string, response: R
     await discardBody(response, `browserless target HTTP ${targetStatus} (site block)`);
     throw siteAccessRefusal(targetUrl, { kind: "http", status: targetStatus });
   }
+  const finalUrl = response.headers.get("x-response-url");
   try {
-    await assertRedirectAllowed(targetUrl, response.headers.get("x-response-url"));
+    // Chrome followed the redirects itself, so the blocklist safeFetch applies
+    // to every hop has not seen where it landed.
+    if (finalUrl) assertTargetAllowed(finalUrl);
+    await assertRedirectAllowed(targetUrl, finalUrl);
   } catch (err) {
-    await discardBody(response, "browserless redirect target disallowed by robots.txt");
+    await discardBody(response, "browserless redirect target refused");
     throw err;
   }
+}
+
+/** The bytes the preflight reads: looksLikeJsChallenge looks at the first 6000 characters. */
+export const PREFLIGHT_RANGE = "bytes=0-8191";
+
+/** Transport failures the preflight leaves to the rendered route to report. */
+const PREFLIGHT_TRANSPORT_ERROR = /timeout|abort|fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ERR_TLS|getaddrinfo|socket/i;
+
+/**
+ * A plain look at `targetUrl` before a rendered route that has no plain tier
+ * (web-provider with skipFallback, /screenshot, /pdf). Chrome can run a
+ * JavaScript challenge to completion before the page is read, which the rule
+ * forbids (DEC-20261023-A: getting around blocks); the plain response shows
+ * the block or the challenge before any script runs. Refuses a block status,
+ * a challenge page (on any status), and a redirect robots.txt disallows;
+ * safeFetch refuses a blocklisted host on every hop. A transport failure is
+ * left to the rendered route, which reports it in its own terms.
+ */
+export async function assertPlainPreflightAllowed(targetUrl: string): Promise<void> {
+  let res: Response;
+  try {
+    res = await safeFetch(targetUrl, {
+      // Only the start of the body is read, so ask for only that.
+      headers: { "User-Agent": STRALE_USER_AGENT, "Accept": "text/html,application/xhtml+xml", "Range": PREFLIGHT_RANGE },
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (PREFLIGHT_TRANSPORT_ERROR.test(msg) && !isAccessPolicyRefusal(msg)) return;
+    throw err;
+  }
+  try {
+    await assertRedirectAllowed(targetUrl, res.url);
+  } catch (err) {
+    await discardBody(res, "preflight redirect target disallowed by robots.txt");
+    throw err;
+  }
+  if (isBlockStatus(res.status)) {
+    await discardBody(res, `preflight HTTP ${res.status} (site block)`);
+    throw siteAccessRefusal(targetUrl, { kind: "http", status: res.status });
+  }
+  const head = await readErrorTextTruncated(res, 8192);
+  if (looksLikeJsChallenge(head)) throw siteAccessRefusal(targetUrl, { kind: "challenge" });
 }
 
 // ─── Convenience wrappers (drop-in replacements for browserless-extract) ────
