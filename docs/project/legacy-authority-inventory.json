@@ -111,6 +111,7 @@
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
+        "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
         "scripts/candidates.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
@@ -385,6 +386,7 @@
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
+        "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -551,7 +553,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "fee980a964079f7e17f9fa815bebfa8a2bdd9e2a33de8b1bf45fdc044ad6bd02",
+      "sha256": "d282b933db133010a029b7a780970b297ee9663faaefae2a30f952145b21e4ef",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -816,7 +818,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "81b4440511ac2e771ce3465112b1359fc4ea1e48703f3f56ceb8ddd2bcaad975",
+      "sha256": "93f076cac16ba563985e31bd3698c6693bc4263580cd6e3df1668c78baa216a2",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

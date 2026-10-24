@@ -28,7 +28,8 @@ import { checkMx, ROLE_PREFIXES } from "./email-validate.js";
  *   - Sources are limited to DNS MX records and the company's own public
  *     homepage/contact page fetched over plain HTTP via safeFetch
  *     (F-0-006 SSRF guard). No social network, people-directory, or
- *     aggregator scraping — Strale doctrine DEC-20260428-A Tier 1 is
+ *     aggregator scraping — Strale doctrine DEC-20260428-A Tier 1 (now
+ *     DEC-20261023-A never lane items 3 and 5: people data, aggregators) is
  *     absolute: Strale never operates scrapers against third-party
  *     platforms.
  *

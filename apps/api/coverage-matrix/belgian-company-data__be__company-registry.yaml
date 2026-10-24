@@ -20,7 +20,7 @@ provider_tos_notes: >-
   Data ingest is queued and will replace this dependency entirely; the underlying KBO Open Data ToU
   permits commercial reuse with no direct-marketing on personal-name data.
 doctrine_reference: >-
-  DEC-20260428-A Tier 2 (vendor-mediated public records); planned migration to Tier 3
+  DEC-20261023-A vendor lane (formerly DEC-20260428-A Tier 2, vendor-mediated public records); planned migration to Tier 3
   (licensed-bulk) via FPS Economy KBO Open Data
 notes: >-
   2026-05-15 identity audit Batch 2 confirmed BE functional via CBEAPI.be Tier-2 wrapper. CBEAPI

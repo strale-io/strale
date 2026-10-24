@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-339 files (312 with a recorded intent, 27 without).
+340 files (313 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -19,6 +19,7 @@
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md`](_general/from-code/2026-10-24-data-access-vendor-terms.md) | DEC-20261023-A adoption, work item 3. Record Serper.dev's and Jina |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-people-data.md`](_general/from-code/2026-10-24-data-access-people-data.md) | DEC-20261023-A adoption, work items 4 and 5, plus the |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-fetch-path.md`](_general/from-code/2026-10-24-data-access-fetch-path.md) | DEC-20261023-A adoption, work item 1. The shared fetch path and the |
+| 2026-10-24 | [`handoff/_general/from-code/2026-10-24-data-access-citations.md`](_general/from-code/2026-10-24-data-access-citations.md) | DEC-20261023-A adoption, work item 6. Update every code and doc |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-way-of-working-review.md`](_general/from-code/2026-10-23-way-of-working-review.md) | compare Strale's rules and processes with Petter's newer way of |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-typeahead-slug-family.md`](_general/from-code/2026-10-23-typeahead-slug-family.md) | make GET /v1/suggest/typeahead find slug-shaped queries such as |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-site-structure-and-messaging-levels.md`](_general/from-code/2026-10-23-site-structure-and-messaging-levels.md) | propose the new website's page set and navigation, and a three-level |

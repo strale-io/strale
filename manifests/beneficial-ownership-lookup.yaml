@@ -102,7 +102,7 @@ limitations:
     text: >-
       This capability calls Companies House Persons of Significant Control. Non-GB jurisdictions return a structured
       coverage notice rather than a result. Adding non-UK coverage requires a separate real UBO source (OpenOwnership
-      integration or aggregator wrap per DEC-20260428-A).
+      integration or aggregator wrap per DEC-20260428-A, now DEC-20261023-A).
     category: coverage
     severity: warning
   - title: PSC data may lag real ownership changes
