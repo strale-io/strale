@@ -4,23 +4,53 @@
 import type { Capability, Limitation, PlatformFacts, Solution, SolutionDetail, Trust, X402Catalog } from "./types.ts";
 
 const TIMEOUT_MS = 30_000;
-const RETRIES = 3;
+const RETRIES = 4;
+
+/**
+ * /v1/public/ops/* allows 120 requests a minute per IP (apps/api/src/app.ts).
+ * The build makes several hundred of them, so it paces itself below that:
+ * one request start every OPS_INTERVAL_MS, shared across all concurrent calls.
+ * The interval is a parameter so tests against a local API need not wait.
+ */
+export const OPS_INTERVAL_MS = Number(process.env.STRALE_OPS_INTERVAL_MS ?? 650);
+let nextOpsSlot = 0;
+async function paceOps(path: string) {
+  if (!path.startsWith("/v1/public/ops/") || OPS_INTERVAL_MS <= 0) return;
+  const now = Date.now();
+  const at = Math.max(now, nextOpsSlot);
+  nextOpsSlot = at + OPS_INTERVAL_MS;
+  if (at > now) await new Promise((r) => setTimeout(r, at - now));
+}
+
+export class HttpError extends Error {
+  status: number;
+  constructor(url: string, status: number) {
+    super(`${url} answered ${status}`);
+    this.status = status;
+  }
+}
 
 export async function getJson<T>(base: string, path: string): Promise<T> {
   const url = `${base}${path}`;
   let lastError: unknown;
   for (let attempt = 1; attempt <= RETRIES; attempt++) {
+    await paceOps(path);
+    let wait = 1000 * attempt;
     try {
       const res = await fetch(url, { headers: { accept: "application/json", "user-agent": "strale-web-build" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
       if (res.ok) return (await res.json()) as T;
-      lastError = new Error(`${url} answered ${res.status}`);
-      if (res.status < 500 && res.status !== 429) break;
+      lastError = new HttpError(url, res.status);
+      if (res.status === 429) wait = Math.min(Number(res.headers.get("retry-after") ?? 60), 90) * 1000;
+      else if (res.status < 500) break;
     } catch (err) {
       lastError = err;
     }
-    await new Promise((r) => setTimeout(r, 1000 * attempt));
+    if (attempt < RETRIES) await new Promise((r) => setTimeout(r, wait));
   }
-  throw new Error(`Site build could not read ${url}: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+  const detail = lastError instanceof Error ? lastError.message : String(lastError);
+  const err = new Error(`Site build could not read ${url}: ${detail}`);
+  (err as Error & { status?: number }).status = lastError instanceof HttpError ? lastError.status : undefined;
+  throw err;
 }
 
 /** Runs fn over items with at most `limit` in flight, keeping order. */
@@ -76,8 +106,12 @@ export async function loadLive(base: string) {
   );
   caps.capabilities.forEach((c, i) => limitations.set(c.slug, capLimits[i].limitations ?? []));
   const solutionLimitations = new Map<string, Limitation[]>();
+  // The solutions route answers 404 for a bundle with no visible steps: that, and only that, means "none".
   const solLimits = await mapLimit(sols.solutions, 6, (s) =>
-    getJson<{ steps: { capability_slug: string; limitations: Limitation[] }[] }>(base, `/v1/public/ops/limitations/solutions/${encodeURIComponent(s.slug)}`).catch(() => ({ steps: [] })),
+    getJson<{ steps: { capability_slug: string; limitations: Limitation[] }[] }>(base, `/v1/public/ops/limitations/solutions/${encodeURIComponent(s.slug)}`).catch((e: Error & { status?: number }) => {
+      if (e.status === 404) return { steps: [] };
+      throw e;
+    }),
   );
   sols.solutions.forEach((s, i) => solutionLimitations.set(s.slug, solLimits[i].steps.flatMap((st) => st.limitations.map((l) => ({ ...l, step: st.capability_slug })))));
 

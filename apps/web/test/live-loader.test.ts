@@ -1,4 +1,5 @@
 // The live loader against a local API with the real wire shapes (test/mock-api.ts).
+process.env.STRALE_OPS_INTERVAL_MS = "0";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { loadLive, getJson } from "../src/lib/load-live.ts";

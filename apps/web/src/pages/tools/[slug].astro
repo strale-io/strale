@@ -62,11 +62,11 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
             <CodeBlock id="ex-in" title="Example input" wrap panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
             {output ? <CodeBlock id="ex-out" title="Example output" wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} /> : <p class="muted">This tool publishes no example output. Its fields are listed below.</p>}
           </div>
-          <p class="small muted">Published examples, not a live call. The input and the output are recorded separately and may not come from the same call.</p>
+          <p class="small muted">Published examples, not a live call. The input and the output are recorded separately and may not come from the same call.{!extras?.example_input && " This tool publishes no example input; fill in the fields listed under Inputs before calling it."}</p>
           {tool.free && (
             <form class="try card" data-try data-api={API_BASE} data-slug={slug}>
               <h3 class="t-subhead">Try it</h3>
-              <p class="t-compact muted">Runs the real tool from your browser, with no key: up to {FREE_TIER_DAILY_LIMIT} free calls a day from one address.</p>
+              <p class="t-compact muted">Runs the real tool from your browser, with no key. Free calls are limited to {FREE_TIER_DAILY_LIMIT} a day across all free tools.</p>
               <div class="field">
                 <label class="field-label" for="try-inputs">Inputs (JSON)</label>
                 <textarea class="textarea code-input" id="try-inputs" name="inputs" spellcheck="false" aria-describedby="try-help">{json(inputs)}</textarea>
@@ -133,7 +133,8 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
           {tool.free ? (
             <>
               <p class="t-stat">Free</p>
-              <p class="t-compact muted">Up to {FREE_TIER_DAILY_LIMIT} calls a day without a key. With an API key, normal rate limits apply and nothing is charged.</p>
+              <p class="t-compact muted">Without a key: up to {FREE_TIER_DAILY_LIMIT} calls a day across all free tools. With an API key, normal rate limits apply and nothing is charged.</p>
+              {tool.x402 && tool.x402.price_usd > 0 && <p class="t-compact">Over x402 it is a paid call: <span class="num">{formatUsd(tool.x402.price_usd)}</span> USDC per request.</p>}
             </>
           ) : (
             <>
@@ -150,11 +151,11 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
           {transparency && <p class="t-compact muted">{transparency}</p>}
         </section>
         <section class="card stack-tight" aria-labelledby="test-title">
-          <h2 id="test-title" class="label">Last scheduled test</h2>
+          <h2 id="test-title" class="label">Last recorded test</h2>
           {trust?.tested && trust.last_tested_at ? (
-            <p class="t-compact">{formatDate(trust.last_tested_at)}</p>
+            <p class="t-compact">{formatDate(trust.last_tested_at)}{trust.pass_rate !== null && <span class="muted">. {trust.pass_rate}% of recent test runs passed.</span>}</p>
           ) : (
-            <p class="t-compact muted">No scheduled test recorded{data.mode !== "live" ? " in this preview build" : ""}. Tools that cost money upstream are not run on a schedule.</p>
+            <p class="t-compact muted">No test result is recorded for this tool{data.mode !== "live" ? " in this preview build" : ""}.</p>
           )}
         </section>
       </aside>
