@@ -9,12 +9,13 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-336 files (309 with a recorded intent, 27 without).
+337 files (310 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step4-review-md.md`](_general/from-code/2026-10-24-wow-step4-review-md.md) | Apply step 4 of the way-of-working review (DEC-20261024-A): one reviewer brief and a capability-onboarding skill. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md`](_general/from-code/2026-10-24-wow-step1-quick-wins.md) | Apply step 1 of the way-of-working review (DEC-20261024-A): fewer paperwork failures in CI, same product checks. |
+| 2026-10-24 | [`handoff/_general/from-code/2026-10-24-platform-facts-country-count.md`](_general/from-code/2026-10-24-platform-facts-country-count.md) | fix the platform-facts country undercount, as Petter asked in session on 2026-10-24. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md`](_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md) | Carry out DQ-38 — remove false web3 regulatory claims from the public methodology. |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-way-of-working-review.md`](_general/from-code/2026-10-23-way-of-working-review.md) | compare Strale's rules and processes with Petter's newer way of |
 | 2026-10-23 | [`handoff/_general/from-code/2026-10-23-typeahead-slug-family.md`](_general/from-code/2026-10-23-typeahead-slug-family.md) | make GET /v1/suggest/typeahead find slug-shaped queries such as |
