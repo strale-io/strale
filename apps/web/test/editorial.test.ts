@@ -40,6 +40,11 @@ test("every company-registry tool maps to a country", () => {
   assert.equal(companyDataPrefix("company-enrich"), null);
 });
 
+test("every company-registry tool names its data source (evidence for claims.yaml official-records-company-data)", () => {
+  const registries = manifests.filter((m) => companyDataPrefix(m.slug) !== null) as { slug: string; data_source?: string }[];
+  assert.deepEqual(registries.filter((m) => !m.data_source || m.data_source.trim().length < 3).map((m) => m.slug), []);
+});
+
 test("the preview loader reads the API's deactivation list", () => {
   const off = deactivatedSlugs(readFileSync(resolve(repo, "apps/api/src/capabilities/auto-register.ts"), "utf8"));
   for (const s of ["keyword-suggest", "token-security-check", "wallet-risk-score"]) assert.ok(off.has(s), s);

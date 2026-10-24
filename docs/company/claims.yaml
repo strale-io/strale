@@ -258,7 +258,7 @@
   claim: /\bofficial[- ](records|sources?|registers?)\b/
   is_regex: true
   status: needs_evidence
-  evidence: manifests
+  evidence: apps/web/test/editorial.test.ts
   surfaces: [homepage company-data section, company-data hub, country pages, llms.txt]
   decided_by: DEC-20261024-B
   note: >
@@ -266,8 +266,9 @@
     company-registry tools only, and each country page must name that
     tool's actual data_source: US is SEC filers (EDGAR), and ES, DE, BE
     and BR come through vendors that wrap the register. Never "national
-    register" as a blanket term, and never for tools outside company
-    and compliance data.
+    register" as a blanket term, and never for any other tool. The
+    evidence is the build test that fails when a company-registry tool
+    shown under the phrase has no data_source to name.
 
 - id: sqs-quality-score-trust-layer
   claim: /\b(SQS score|SQS 0|Strale Quality Score|min_sqs|(?<!no )per-call quality score|quality scores? for every capability)\b/

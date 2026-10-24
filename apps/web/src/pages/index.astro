@@ -17,11 +17,13 @@ import { L1, SHORT_DESCRIPTION } from "../content/positioning";
 const data = await getSiteData();
 const tools = allTools(data);
 const bySlug = new Map(tools.map((t) => [t.slug, t]));
-const libraryCount = data.facts.capability_counts.active_visible;
+// The count a visitor can browse: the catalogue itself, so the hero, the job groups and /tools agree.
+const libraryCount = tools.length;
 
 // §2 examples: one priced call per job, and one x402 quote. Editorial picks, skipped when not live.
 const priced = ["url-to-markdown", "invoice-extract", "vat-validate", "sanctions-check"].map((s) => bySlug.get(s)).filter((t) => t && t.price_cents > 0).slice(0, 3);
-const quoteTool = ["vat-validate", "invoice-extract", "sanctions-check"].map((s) => bySlug.get(s)).find((t) => t?.x402) ?? tools.find((t) => t.x402);
+const quoted = (t?: (typeof tools)[number]) => !!t?.x402 && t.x402.price_usd > 0;
+const quoteTool = ["vat-validate", "invoice-extract", "sanctions-check"].map((s) => bySlug.get(s)).find(quoted) ?? tools.find(quoted);
 
 // §3 breadth: the four non-flagship job groups, with live counts and visible examples.
 const breadth = JOB_GROUPS.filter((g) => ["web", "documents", "check", "developer"].includes(g.id)).map((g) => ({
@@ -155,7 +157,7 @@ const freeCount = tools.filter((t) => t.free).length;
         <div class="stack">
           <h2 id="call-title" class="t-section">One call, start to finish</h2>
           <ol class="steps">
-            <li><strong>Your agent names the tool and its inputs.</strong> Here, <a class="link" href={`/tools/${demo.slug}`}>{demo.name}</a>, whose only input is <code>{Object.keys(demoInput).join(", ")}</code>.</li>
+            <li><strong>Your agent names the tool and its inputs.</strong> Here, <a class="link" href={`/tools/${demo.slug}`}>{demo.name}</a>, {Object.keys(demoInput).length === 1 ? "with one input" : "with the inputs"}: <code>{Object.keys(demoInput).join(", ")}</code>.</li>
             <li><strong>Strale runs it and answers.</strong> The result comes back as structured fields, with the source it came from and the price charged.</li>
             <li><strong>No key needed to try it.</strong> {demo.name} is one of {plural(freeCount, "free tool")}; run this request as it is.</li>
           </ol>
@@ -177,7 +179,7 @@ const freeCount = tools.filter((t) => t.free).length;
         <h2 id="company-title" class="t-section">Look up companies in official records in {plural(countries.length, "country", "countries")}</h2>
         <p class="t-lead">Name and registration number, plus status, address and directors where the source provides them. What comes back differs by country, and each country’s page names the source.</p>
       </div>
-      <div class="coverage" aria-label="Countries with a company-records tool">
+      <div class="coverage" role="group" aria-label="Countries with a company-records tool">
         {byRegion.map((r) => (
           <div class="coverage-region">
             <h3 class="t-detail">{r.region}</h3>
@@ -195,7 +197,7 @@ const freeCount = tools.filter((t) => t.free).length;
         </div>
         <div class="stack-tight">
           <h3 class="t-subhead">Run a whole check in one call</h3>
-          <p class="t-compact muted">A company check or an invoice-issuer check runs every step at one price and returns each step’s result, plus an AI-written summary for a person to review.</p>
+          <p class="t-compact muted">A company check or an invoice-issuer check runs every step at one price and returns each step’s result. The fuller checks add an AI-written summary for a person to review.</p>
           {bundles > 0 && <p class="small muted">{plural(bundles, "bundled check")} in the catalogue.</p>}
         </div>
       </div>
