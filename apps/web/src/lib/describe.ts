@@ -8,7 +8,7 @@ export function firstSentence(text: string): string {
 
 export const TRANSPARENCY: Record<string, string> = {
   algorithmic: "Computed by fixed rules and lookups; no AI model writes the answer.",
-  ai_generated: "Written by an AI model. Check it before acting on it.",
+  ai_generated: "An AI model takes part in producing the answer. Check it before acting on it.",
   mixed: "Partly AI: some fields are written by an AI model, the rest come from lookups or rules.",
 };
 
