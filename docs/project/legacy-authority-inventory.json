@@ -395,8 +395,6 @@
         "scripts/candidates.test.mjs",
         "scripts/check-protocol-coverage.mjs",
         "scripts/check-protocol-extraction.mjs",
-        "scripts/codex-backlog-lib.mjs",
-        "scripts/codex-backlog.test.mjs",
         "scripts/guard-tree-integrity.mjs",
         "scripts/guard-worktree-isolation.mjs",
         "scripts/handoff/handoff-check.test.mjs",
@@ -516,7 +514,7 @@
     {
       "path": ".agents/skills",
       "owner_area": "shared-agent-skills",
-      "sha256": "d2c6afcaed1b6686438f4b89e95b9c057d766e7dedf4985dbf8018b3c571c2e5",
+      "sha256": "59fdccc15ab0505c10d18e6fcb7c5ad623c837608a10601c17ea46b97e55752e",
       "detected_references": [
         ".github/workflows/ci.yml",
         "AGENTS.md",
@@ -759,6 +757,7 @@
         "handoff/_general/from-code/2026-10-23-portfolio-plan.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
+        "handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
         "scripts/research-lib.mjs",
@@ -811,7 +810,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "67c54e5490a0404fa356bcebe061afd515fcb6ed3118d93c1c4f49de1f90369e",
+      "sha256": "3f1ceb0d836e34dbb35f0814a00c59b8bc74f3ec79e1d158fbbdb8f0794dd759",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
@@ -828,6 +827,7 @@
         ".claude/skills/go/SKILL.md",
         ".codex/hooks.json",
         ".githooks/pre-commit",
+        ".githooks/pre-merge-commit",
         ".githooks/pre-push",
         ".github/workflows/ci.yml",
         ".github/workflows/m3-digest-shadow.yml",
@@ -994,6 +994,8 @@
         "scripts/handoff/handoff-check.test.mjs",
         "scripts/handoff/install-hooks.mjs",
         "scripts/handoff/orient.mjs",
+        "scripts/handoff/regenerate-indexes.mjs",
+        "scripts/handoff/regenerate-indexes.test.mjs",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/m2-closure-register.test.mjs",
         "scripts/program-tracks.test.mjs",
