@@ -551,7 +551,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "842bb81b4ce1fd5b12810d7dc066e176b5f11ec4673012634d833d8e853aeb72",
+      "sha256": "8c4eb5b290d4fa9e86b6626b09d6ad467c6be977d666e723d6350d1c5d785f4f",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -572,6 +572,8 @@
         "apps/api/src/lib/models.ts",
         "apps/api/src/lib/seller-rank.ts",
         "apps/api/src/lib/startup-migrations.ts",
+        "apps/api/src/lib/vendor-terms.test.ts",
+        "apps/api/src/lib/vendor-terms.ts",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
         "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-direction-applications.json",
@@ -671,6 +673,7 @@
         "handoff/_general/from-code/2026-10-18-checkin-morning.md",
         "handoff/_general/from-code/2026-10-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
         "scripts/claims-lib.mjs",
@@ -813,7 +816,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "cf8c9d74fed614377a59dbad12178f43f519a9a69c55839a6ef959e7d5c2ffb9",
+      "sha256": "81b4440511ac2e771ce3465112b1359fc4ea1e48703f3f56ceb8ddd2bcaad975",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

@@ -36,6 +36,8 @@ export const PROHIBITED_UPSTREAM_HOSTS: ReadonlyMap<string, string> = new Map([
   ["rpc.ankr.com", "Ankr bars commercial exploitation of the Service without written consent"],
   ["eth.llamarpc.com", "terms unreadable and the endpoint answered HTTP 525 when checked"],
   ["cloudflare-eth.com", "Cloudflare's anonymous Ethereum gateway is discontinued"],
+  // 2026-10-24 (DEC-20261023-A; see VENDOR_TERMS_RECORDS below)
+  ["r.jina.ai", "Jina Reader retries a blocked fetch through its own proxy pool by default and was used on an anonymous tier whose commercial terms were never recorded"],
 ]);
 
 /** Every prohibited host named in `text` as a URL (scheme://host). */
@@ -47,3 +49,83 @@ export function prohibitedHostsIn(text: string): string[] {
   }
   return found;
 }
+
+/**
+ * What a vendor's terms say about Strale reselling its data, as read, with the
+ * evidence (DEC-20261023-A: vendor data is allowed only when "the vendor's
+ * terms permit resale, verified and recorded").
+ *
+ * `resale` is what the terms SAY, not what Strale would like: "unverified"
+ * means nobody has read a current copy that settles it. An unverified vendor
+ * is not prohibited by this file — `PROHIBITED_UPSTREAM_HOSTS` is — but it is
+ * an open decision, and the entry names where that decision is queued.
+ *
+ * `vendor-terms.test.ts` holds `capabilities` to the source tree: every
+ * executor that calls one of `hosts` must be listed, so the record cannot
+ * silently understate who depends on a vendor.
+ */
+export interface VendorTermsRecord {
+  vendor: string;
+  hosts: readonly string[];
+  /** Executors that call one of `hosts`. */
+  capabilities: readonly string[];
+  resale: "permitted" | "prohibited" | "unverified";
+  terms_url: string;
+  /** ISO date the terms were read (or the read was attempted). */
+  accessed: string;
+  /** How the text was obtained, and its limits. */
+  how_read: string;
+  findings: readonly string[];
+  /** Where the open question or the decision lives. */
+  decision_ref: string;
+}
+
+export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
+  {
+    vendor: "Serper.dev",
+    hosts: ["google.serper.dev"],
+    capabilities: [
+      "adverse-media-check",
+      "backlink-check",
+      "brand-mention-search",
+      "google-news-search",
+      "google-search",
+      "keyword-rank-check",
+      "serp-analyze",
+      "serp-related-questions",
+    ],
+    resale: "unverified",
+    terms_url: "https://serper.dev/terms",
+    accessed: "2026-10-24",
+    how_read:
+      "serper.dev was unreachable from the 2026-10-24 session (environment network policy). Read instead: a " +
+      "search engine's cached copy, about 878 days old per the search tool — not a current, dated copy.",
+    findings: [
+      "Licence is a B2B use licence ('Permission is granted to download the materials … for as long as your use case " +
+        "requires'), not a transfer of title; no clause grants resale or sublicensing of results.",
+      "Prohibits 'Mirror the materials on any other server as-is with no-value-added' — close to returning raw results.",
+      "States 'Serper provides web-scraped data collected from public domain sources' and no affiliation with Google.",
+      "Termination at any time, with or without cause.",
+    ],
+    decision_ref: "docs/company/DECISION-QUEUE.md DQ-39",
+  },
+  {
+    vendor: "Jina AI (Reader)",
+    hosts: ["r.jina.ai"],
+    capabilities: [],
+    resale: "unverified",
+    terms_url: "https://jina.ai/legal/",
+    accessed: "2026-10-24",
+    how_read:
+      "jina.ai was unreachable from the 2026-10-24 session. Read instead: the reader's open-source code " +
+      "(github.com/jina-ai/reader, src/api/crawler.ts, src/dto/crawler-options.ts) and search summaries of jina.ai pages.",
+    findings: [
+      "Jina's sales FAQ (per search summary) says hosted-API commercial use is covered by its service terms for " +
+        "signed-up, paying users; Strale called it keyless, on the anonymous tier, whose terms were never recorded.",
+      "The hosted reader retries a non-200 fetch through its own rotating proxy pool unless X-Proxy: none is sent, " +
+        "and does not report the target's status — DEC-20261023-A never lane item 2.",
+      "Removed from every fetch path on 2026-10-24 (PR #723); listed in PROHIBITED_UPSTREAM_HOSTS so it cannot return.",
+    ],
+    decision_ref: "DEC-20261023-A (removed; no open decision)",
+  },
+];

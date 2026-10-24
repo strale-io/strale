@@ -11,7 +11,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { PROHIBITED_UPSTREAM_HOSTS, prohibitedHostsIn } from "./vendor-terms.js";
+import { PROHIBITED_UPSTREAM_HOSTS, VENDOR_TERMS_RECORDS, prohibitedHostsIn } from "./vendor-terms.js";
 import { getDeactivatedCapabilities } from "../capabilities/auto-register.js";
 import { getEthRpcEndpoints } from "./eth-rpc-endpoints.js";
 import { PROVIDERS } from "./dependency-manifest.js";
@@ -173,5 +173,47 @@ describe("the licensed paths", () => {
     const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ status: "1", result: [] })));
     await expect(etherscanFetch({ module: "account" })).resolves.toEqual({ status: "1", result: [] });
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recorded)", () => {
+  const CAPS = resolve(SRC, "capabilities");
+  const executors = readdirSync(CAPS)
+    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+    .map((f) => readFileSync(join(CAPS, f), "utf8"))
+    .map((src) => ({ slug: src.match(/registerCapability\(\s*"([^"]+)"/)?.[1], code: codeOnly(src) }))
+    .filter((e): e is { slug: string; code: string } => typeof e.slug === "string");
+
+  for (const record of VENDOR_TERMS_RECORDS) {
+    it(`${record.vendor}: lists exactly the executors that call it`, () => {
+      const callers = executors
+        .filter((e) => record.hosts.some((h) => e.code.includes(h)))
+        .map((e) => e.slug)
+        .sort();
+      expect([...record.capabilities].sort()).toEqual(callers);
+    });
+
+    it(`${record.vendor}: carries its evidence`, () => {
+      expect(record.terms_url).toMatch(/^https:\/\//);
+      expect(record.accessed).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(record.how_read.length).toBeGreaterThan(20);
+      expect(record.findings.length).toBeGreaterThan(0);
+      expect(record.decision_ref.length).toBeGreaterThan(0);
+    });
+  }
+
+  it("an unverified vendor still in use names an open decision-queue entry that exists", () => {
+    const queue = readFileSync(resolve(SRC, "../../../docs/company/DECISION-QUEUE.md"), "utf8");
+    for (const r of VENDOR_TERMS_RECORDS.filter((x) => x.resale === "unverified" && x.capabilities.length > 0)) {
+      const dq = r.decision_ref.match(/DQ-\d+/)?.[0];
+      expect(dq, `${r.vendor} has no DQ reference`).toBeDefined();
+      expect(queue).toContain(`**${dq}**`);
+    }
+  });
+
+  it("a vendor recorded as removed is also a prohibited host, so it cannot quietly return", () => {
+    for (const r of VENDOR_TERMS_RECORDS.filter((x) => x.capabilities.length === 0)) {
+      for (const h of r.hosts) expect(PROHIBITED_UPSTREAM_HOSTS.has(h), h).toBe(true);
+    }
   });
 });
