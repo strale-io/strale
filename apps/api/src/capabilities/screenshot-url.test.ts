@@ -14,7 +14,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
 // the robots request does not consume this suite's queued fetch responses.
-vi.mock("../lib/robots-txt.js", () => ({ assertRobotsAllowed: vi.fn(async () => {}) }));
+vi.mock("../lib/robots-txt.js", () => ({
+  assertRobotsAllowed: vi.fn(async () => {}),
+  assertRedirectAllowed: vi.fn(async () => {}),
+}));
 vi.mock("../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
 
 import {

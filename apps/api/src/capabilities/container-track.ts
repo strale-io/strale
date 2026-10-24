@@ -269,7 +269,7 @@ registerCapability("container-track", async (input: CapabilityInput) => {
       scrapeUrl = trackingUrls.searates;
     }
 
-    const html = await fetchRenderedHtml(scrapeUrl);
+    const html = await fetchRenderedHtml(scrapeUrl, { source: "strale" });
     const text = htmlToText(html);
 
     if (text.length >= 200) {

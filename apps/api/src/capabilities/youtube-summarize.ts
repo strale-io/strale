@@ -6,7 +6,8 @@ import {
   readPageHtml,
   readTextWithLimit,
 } from "../lib/resource-limits.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
+import { STRALE_USER_AGENT, isBlockStatus } from "../lib/site-access.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
@@ -101,24 +102,32 @@ function extractVideoId(url: string): string | null {
 async function fetchTranscript(videoId: string): Promise<string | null> {
   const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-  // Try direct fetch first (works from residential IPs), then Browserless
+  // Try direct fetch first, then Browserless for a page that needs rendering.
+  // DEC-20261023-A: if YouTube REFUSES the direct fetch (401/403/407/429),
+  // rendering the same page in a real browser is retrying a blocked request
+  // through another route, so the fallback is skipped.
   let pageHtml: string | null = null;
+  let blocked = false;
 
   try {
     const pageRes = await safeFetch(ytUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)", "Accept-Language": "en-US,en;q=0.9" },
+      headers: { "User-Agent": STRALE_USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
       signal: AbortSignal.timeout(10000),
     });
     if (pageRes.ok) {
       const html = await readPageHtml(pageRes);
       if (html.includes('"captions"')) pageHtml = html;
+    } else {
+      await discardBody(pageRes, `youtube watch page HTTP ${pageRes.status}`);
+      blocked = isBlockStatus(pageRes.status);
     }
   } catch { /* fall through to Browserless */ }
 
-  // Fallback: use Browserless (EU West) which renders full JS and gets captions
-  if (!pageHtml) {
+  // Fallback: Browserless renders full JS and gets captions — only when the
+  // direct fetch was not refused.
+  if (!pageHtml && !blocked) {
     try {
-      const html = await fetchRenderedHtml(ytUrl);
+      const html = await fetchRenderedHtml(ytUrl, { source: "strale" });
       if (html.includes('"captions"') || html.includes('captionTracks')) pageHtml = html;
     } catch { /* both failed */ }
   }

@@ -5,6 +5,7 @@ import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { MAX_RENDERED_PDF_BYTES, readBodyWithLimit, readErrorTextTruncated } from "../lib/resource-limits.js";
 
@@ -63,6 +64,9 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
     const err = await readErrorTextTruncated(response);
     throw new Error(`Browserless PDF returned HTTP ${response.status}: ${err.slice(0, 200)}`);
   }
+  // DEC-20261023-A: a PDF of a 403 page is not the page (URL mode only —
+  // caller markup has no target status).
+  if (url) await assertRenderedTargetAllowed(bodyObj.url as string, response);
 
   // #426: streamed with a cap. Browserless is our vendor, but the PDF's size
   // is caller-shaped (it renders the caller's page/markup), so an unbounded

@@ -51,6 +51,48 @@ as Strale on every route. (Adoption list: `docs/strategy/2026-10-23-data-access-
   registry's 403 "to bypass geo-restriction" (never lane, item 2). A block is
   now a refusal. The tool is out of the Browserless hard-require list.
 
+## Independent review (fresh same-provider context, 2026-10-24) and what changed
+
+- **Blocking: ReDoS in robots.txt matching.** Patterns were compiled to
+  backtracking RegExps, and `/*a*a*a*b` took about 17 s on a 500-character
+  path. Replaced with a linear wildcard walk; the regression test hangs on
+  the old code.
+- **Production Browserless is v1 (`browserless/chrome:1.61.1`), not v2.**
+  Checked against the v1.61.1 source: `schemas.ts` accepts `userAgent` on
+  `/content`, `/screenshot` and `/pdf`. `functions/content.js`,
+  `screenshot.js` and `pdf.js` all return `x-response-code` and
+  `x-response-url`, and `puppeteer-provider.ts` sets them on the response. The
+  comments are corrected; no behaviour change was needed.
+- **Redirects.** robots.txt is now checked again against the final URL:
+  `response.url` for the plain fetch, `X-Response-URL` for Browserless.
+- **Screenshots and PDFs of a block page** are now refused via
+  `X-Response-Code` instead of being returned and billed. The shared helper is
+  `assertRenderedTargetAllowed` in `web-provider.ts`.
+- **Strale-chosen sources.**
+  - A block on a source Strale chose is a `SourceBlockedError`. Its wording
+    makes it count as `upstream` and lets it open the breaker, so a dead
+    source cannot stay listed unnoticed.
+  - `fetchCompanyPage` always uses it.
+  - Marked with `source: "strale"`: `australian-company-data`,
+    `container-track`, `customs-duty-lookup`, `eu-trademark-search`,
+    `gdpr-fine-lookup`, `japanese-company-data`, `price-compare` and
+    `youtube-summarize`.
+- **Latency.** A robots.txt transport failure is cached for 5 min, and
+  concurrent checks for one origin share one request.
+- **RFC 9309 fixes:** `Sitemap:` lines no longer split groups; matching
+  percent-decodes both sides (the RFC's own example now matches); a BOM is
+  stripped.
+- **Missed fetchers.**
+  - `page-speed-test` now checks robots.txt before directing Google's
+    Lighthouse fetch.
+  - `email-pattern-discover` checks robots.txt.
+  - `domain-contact-extract` detects challenge pages.
+  - `youtube-summarize` no longer falls back to Browserless after YouTube
+    refuses the direct fetch.
+- **Every non-block 4xx is terminal.** This is deliberate and now stated in
+  `site-access.ts`. A 400 stays an ordinary "URL returned HTTP 400" failure,
+  not a refusal (tested).
+
 ## Tests
 
 - New: `lib/robots-txt.test.ts`, `capabilities/lib/web-provider-access.test.ts`
@@ -66,6 +108,14 @@ as Strale on every route. (Adoption list: `docs/strategy/2026-10-23-data-access-
   bounds, not robots.
 
 ## Open / follow-up
+
+- **`youtube-summarize` needs a decision.** The proposal says "official API, or
+  off" for YouTube. It still reads the public watch page, now with an honest
+  user agent and no fallback after a refusal. Deactivating a live tool is a
+  catalogue decision. The YouTube Data API's `captions.download` works only
+  for a video's owner, so arbitrary videos have no official-API route.
+  Recommendation: switch it off, or limit it to transcripts the caller
+  supplies.
 
 - **Not measured: which Strale-chosen sources now refuse.** EUR-Lex used to
   be rescued by Browserless after a 400 or challenge to datacenter IPs

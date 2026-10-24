@@ -24,9 +24,9 @@ vi.mock("../../lib/metered-vendor-fetch.js", () => ({
 }));
 vi.mock("../../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
 
-import { __resetWebProviderCacheForTests, fetchPage } from "./web-provider.js";
+import { __resetWebProviderCacheForTests, fetchCompanyPage, fetchPage } from "./web-provider.js";
 import { __resetRobotsCacheForTests } from "../../lib/robots-txt.js";
-import { STRALE_USER_AGENT, SiteAccessRefusedError } from "../../lib/site-access.js";
+import { STRALE_USER_AGENT, SiteAccessRefusedError, SourceBlockedError } from "../../lib/site-access.js";
 import { isCapabilityRefusal } from "../../lib/capability-refusal.js";
 import { isUserInputError } from "../../lib/circuit-breaker.js";
 import { categorizeError } from "../../lib/quality-capture.js";
@@ -62,6 +62,9 @@ beforeEach(() => {
   pageResponse = () => html(REAL_PAGE);
   safeFetchMock.mockImplementation(async (url: string) => {
     if (String(url).endsWith("/robots.txt")) {
+      if (String(url).startsWith("https://elsewhere.test")) {
+        return new Response("User-agent: *\nDisallow: /private\n", { status: 200, headers: { "content-type": "text/plain" } });
+      }
       return robotsBody === null
         ? new Response("", { status: 404 })
         : new Response(robotsBody, { status: 200, headers: { "content-type": "text/plain" } });
@@ -218,5 +221,68 @@ describe("a site block is a refusal to every health consumer", () => {
   it("NEGATIVE CONTROL: a genuine upstream failure still counts", () => {
     const cls = classifyTransactionFailure("The target site (site.test) returned a server error (HTTP 503).");
     expect(cls).not.toBe("tos_policy");
+  });
+});
+
+function redirectedTo(resp: Response, finalUrl: string): Response {
+  Object.defineProperty(resp, "url", { value: finalUrl });
+  return resp;
+}
+
+describe("redirects are held to the final URL's robots.txt", () => {
+  it("REGRESSION: an allowed URL that redirects to a disallowed one is refused", async () => {
+    pageResponse = () => redirectedTo(html(REAL_PAGE), "https://elsewhere.test/private/page");
+    const err = await refusalFrom(fetchPage(PAGE));
+    expect(err.block.kind).toBe("robots_disallow");
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a redirect to an allowed URL is fine", async () => {
+    pageResponse = () => redirectedTo(html(REAL_PAGE), "https://elsewhere.test/public");
+    const r = await fetchPage(PAGE);
+    expect(r.html).toBe(REAL_PAGE);
+  });
+
+  it("REGRESSION: Browserless landing on a disallowed URL (X-Response-URL) is refused", async () => {
+    browserlessFetchMock.mockImplementation(async () =>
+      html(REAL_PAGE, 200, { "x-response-code": "200", "x-response-url": "https://elsewhere.test/private/x" }),
+    );
+    await refusalFrom(fetchPage(PAGE, { skipFallback: true }));
+  });
+});
+
+describe("a non-block 4xx is terminal but stays an ordinary failure", () => {
+  it("a 400 is not a site-access refusal", async () => {
+    pageResponse = () => html("bad", 400);
+    const err = (await fetchPage(PAGE).catch((e: unknown) => e)) as Error;
+    expect(err).not.toBeInstanceOf(SiteAccessRefusedError);
+    expect(classifyTransactionFailure(err.message)).not.toBe("tos_policy");
+  });
+});
+
+describe("a block on a source STRALE chose is a capability fault, not a refusal", () => {
+  it("REGRESSION: source: \"strale\" turns the block into SourceBlockedError, which counts", async () => {
+    pageResponse = () => html("denied", 403);
+    const err = (await fetchPage(PAGE, { source: "strale" }).catch((e: unknown) => e)) as Error;
+    expect(err).toBeInstanceOf(SourceBlockedError);
+    expect(browserlessFetchMock, "still no other route").not.toHaveBeenCalled();
+    expect(isCapabilityRefusal(err)).toBe(false);
+    expect(isUserInputError(err.message), "a dead source must be able to open the breaker").toBe(false);
+    const cls = classifyTransactionFailure(err.message);
+    expect(cls).toBe("upstream");
+    expect(countsAgainstCapability(cls)).toBe(true);
+    expect(err.message).not.toMatch(/Use a page the site serves publicly/);
+  });
+
+  it("a robots.txt disallow on a Strale-chosen source counts too", async () => {
+    robotsBody = "User-agent: *\nDisallow: /\n";
+    const err = (await fetchPage(PAGE, { source: "strale" }).catch((e: unknown) => e)) as Error;
+    expect(err).toBeInstanceOf(SourceBlockedError);
+    expect(countsAgainstCapability(classifyTransactionFailure(err.message))).toBe(true);
+  });
+
+  it("fetchCompanyPage (registries) is always a Strale-chosen source", async () => {
+    browserlessFetchMock.mockImplementation(async () => html(REAL_PAGE, 200, { "x-response-code": "403" }));
+    await expect(fetchCompanyPage(PAGE)).rejects.toBeInstanceOf(SourceBlockedError);
   });
 });

@@ -20,6 +20,13 @@
  * fault. The capability did what the rule requires, so the circuit breaker, the
  * quality floor and the trust surfaces must not count it — every one of them
  * recognises {@link SITE_BLOCK_MARKER} through `isRefusalMessage`.
+ *
+ * That holds when the CALLER chose the page. When Strale chose the source (a
+ * registry, a carrier's tracking page, a price index) and that source blocks
+ * Strale, the capability cannot do what it is sold to do — exempting the
+ * failure would keep a dead capability listed and billed. Those fetches pass
+ * `source: "strale"` and get {@link SourceBlockedError} instead: the same
+ * stop, but a fault the health machinery counts.
  */
 
 import { CapabilityRefusalError } from "./capability-refusal.js";
@@ -51,8 +58,11 @@ export const STRALE_PAGE_HEADERS: Readonly<Record<string, string>> = {
  * tried after one.
  *
  * Deliberately not 400: a 400 is far more often a malformed URL than a block,
- * and it is already terminal on every path (no fallthrough), so it keeps its
- * ordinary "could not be loaded" wording.
+ * so it keeps its ordinary "URL returned HTTP 400" wording. It is terminal on
+ * the fetch path all the same — since 2026-10-24 every 4xx from the target
+ * ends the chain (web-provider.ts), because each is the site's own answer
+ * about that URL and some (EUR-Lex's 400 to datacenter IPs, 451) are blocks
+ * in all but name.
  */
 const BLOCK_STATUSES: ReadonlySet<number> = new Set([401, 403, 407, 429]);
 
@@ -148,4 +158,31 @@ export function assertNotBlockStatus(targetUrl: string, status: number): void {
  */
 export function isSiteWideBlock(err: unknown): boolean {
   return err instanceof SiteAccessRefusedError && err.block.kind !== "robots_disallow";
+}
+
+/**
+ * A source STRALE chose refused Strale (see the module header). Same stop as a
+ * site-access refusal — nothing is retried through another route — but a
+ * capability fault, not the caller's choice: the wording carries
+ * "unavailable", which the failure taxonomy classifies `upstream`, and none of
+ * the refusal or user-input markers.
+ */
+export class SourceBlockedError extends Error {
+  readonly block: SiteBlock;
+
+  constructor(message: string, block: SiteBlock) {
+    super(message);
+    this.name = "SourceBlockedError";
+    this.block = block;
+  }
+}
+
+/** Re-issue a site-access refusal as a source block, for a Strale-chosen source. */
+export function asSourceBlocked(refusal: SiteAccessRefusedError, targetUrl: string): SourceBlockedError {
+  return new SourceBlockedError(
+    `Source unavailable to Strale: ${describeBlock(hostOf(targetUrl), refusal.block)} ` +
+      `This is the source this capability reads; Strale does not route around a source's block, ` +
+      `so the capability cannot answer until the source allows access or an official API replaces it.`,
+    refusal.block,
+  );
 }

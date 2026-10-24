@@ -6,10 +6,9 @@ import { validateUrl } from "../lib/url-validator.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
-import { discardBody } from "../lib/safe-fetch.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
-import { STRALE_USER_AGENT, isBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
-import { looksLikeJsChallenge } from "./lib/web-provider.js";
+import { STRALE_USER_AGENT, siteAccessRefusal } from "../lib/site-access.js";
+import { assertRenderedTargetAllowed, looksLikeJsChallenge } from "./lib/web-provider.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 
@@ -100,13 +99,9 @@ async function scrapeUrl(url: string): Promise<string> {
 
   if (!response.ok) return "";
 
-  // Browserless reports the target's own status in X-Response-Code; a block
-  // there is the site's answer and ends the call (see lib/site-access.ts).
-  const targetStatus = Number(response.headers.get("x-response-code"));
-  if (isBlockStatus(targetStatus)) {
-    await discardBody(response, `company-enrich target HTTP ${targetStatus} (site block)`);
-    throw siteAccessRefusal(url, { kind: "http", status: targetStatus });
-  }
+  // Browserless reports the target's own status and final URL; a block or a
+  // robots-disallowed redirect ends the call (see lib/site-access.ts).
+  await assertRenderedTargetAllowed(url, response);
 
   // #428 round-1 review: this POSTs Browserless /content directly instead of
   // going through the shared web-provider, so it bypassed that layer's bound

@@ -32,7 +32,10 @@ vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
 
 // robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
 // the robots request does not consume this suite's queued fetch responses.
-vi.mock("../lib/robots-txt.js", () => ({ assertRobotsAllowed: vi.fn(async () => {}) }));
+vi.mock("../lib/robots-txt.js", () => ({
+  assertRobotsAllowed: vi.fn(async () => {}),
+  assertRedirectAllowed: vi.fn(async () => {}),
+}));
 vi.mock("../lib/url-validator.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../lib/url-validator.js")>()),
   validateUrl: vi.fn().mockResolvedValue(undefined),

@@ -33,7 +33,15 @@
  *     not report the target's status back, so Strale could neither see a block
  *     on that route nor promise not to route around one (checked against the
  *     reader's source, jina-ai/reader `src/api/crawler.ts`, 2026-10-24).
- *     Browserless reports the target's status in `X-Response-Code`.
+ *     Browserless reports the target's status in `X-Response-Code` — both
+ *     the production image (`browserless/chrome:1.61.1`, `functions/content.js`)
+ *     and v2 set it, and both accept `userAgent` in the request body.
+ *   - A redirect is checked again: if the fetch ended on another URL, that
+ *     URL's robots.txt must allow it too.
+ *   - Who chose the page decides who the block belongs to. A caller's URL
+ *     blocking Strale is a refusal (exempt from health accounting); a source
+ *     Strale chose blocking Strale (`source: "strale"`) is a capability fault
+ *     (`SourceBlockedError`), so a dead source cannot stay listed unnoticed.
  *
  * All 47+ capability files call fetchRenderedHtml() and get the resilience
  * upgrade without any code changes.
@@ -88,10 +96,11 @@ import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { discardBody, safeFetch } from "../../lib/safe-fetch.js";
 import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
-import { assertRobotsAllowed } from "../../lib/robots-txt.js";
+import { assertRedirectAllowed, assertRobotsAllowed } from "../../lib/robots-txt.js";
 import {
   STRALE_USER_AGENT,
   SiteAccessRefusedError,
+  asSourceBlocked,
   isBlockStatus,
   siteAccessRefusal,
 } from "../../lib/site-access.js";
@@ -150,6 +159,13 @@ export interface WebProviderOptions {
    * shared default.
    */
   minHtmlLength?: number;
+  /**
+   * Who chose this URL (default "caller"). Pass "strale" when the capability
+   * reads a source Strale selected — a registry, a carrier, a price index —
+   * so a block there is reported as a capability fault (`SourceBlockedError`)
+   * rather than as the caller's refusal. See "Data-access rule" above.
+   */
+  source?: "caller" | "strale";
 }
 
 export interface WebProviderResult {
@@ -455,6 +471,20 @@ export async function fetchPage(
   targetUrl: string,
   options?: WebProviderOptions,
 ): Promise<WebProviderResult> {
+  try {
+    return await fetchPageOnce(targetUrl, options);
+  } catch (err) {
+    if (options?.source === "strale" && err instanceof SiteAccessRefusedError) {
+      throw asSourceBlocked(err, targetUrl);
+    }
+    throw err;
+  }
+}
+
+async function fetchPageOnce(
+  targetUrl: string,
+  options?: WebProviderOptions,
+): Promise<WebProviderResult> {
   const {
     waitUntil = "networkidle0",
     pageTimeout = 25000,
@@ -520,6 +550,15 @@ export async function fetchPage(
         },
         signal: AbortSignal.timeout(8000),
       });
+
+      // safeFetch followed any redirects; the page it landed on needs the
+      // same robots.txt permission as the one that was asked for.
+      try {
+        await assertRedirectAllowed(targetUrl, plainResp.url);
+      } catch (err) {
+        await discardBody(plainResp, "plain-fetch redirect target disallowed by robots.txt");
+        throw err;
+      }
 
       if (plainResp.ok) {
         const contentType = plainResp.headers.get("content-type") ?? "";
@@ -650,7 +689,8 @@ export async function fetchPage(
           body: JSON.stringify({
             url: targetUrl,
             // DEC-20261023-A: identify as Strale on this route too. Browserless
-            // v2 applies it with page.setUserAgent before navigating.
+            // (v1.61.1 in production, and v2) applies it with
+            // page.setUserAgent before navigating.
             userAgent: STRALE_USER_AGENT,
             gotoOptions: { waitUntil, timeout: pageTimeout },
           }),
@@ -697,11 +737,7 @@ export async function fetchPage(
         // the target said, and reports the target's own status in
         // X-Response-Code. A block there ends the chain — no retry, no other
         // route.
-        const targetStatus = Number(response.headers.get("x-response-code"));
-        if (isBlockStatus(targetStatus)) {
-          await discardBody(response, `browserless target HTTP ${targetStatus} (site block)`);
-          throw siteAccessRefusal(targetUrl, { kind: "http", status: targetStatus });
-        }
+        await assertRenderedTargetAllowed(targetUrl, response);
 
         // #428: bounded read, then decode — same cap as tier 1, so a
         // page too large to fetch plainly is not silently accepted when a
@@ -757,6 +793,29 @@ export async function fetchPage(
   });
 }
 
+/**
+ * Apply the data-access rule to a Browserless response for `targetUrl`, on any
+ * route (/content, /screenshot, /pdf). Browserless answers 200 whatever the
+ * target said and reports the target's own status in `X-Response-Code` and
+ * its final URL in `X-Response-URL` (browserless/chrome 1.61.1, the
+ * production image, and v2 alike). A block status is a site-access refusal;
+ * a redirect to a URL robots.txt disallows is one too. The body is released
+ * before throwing. A missing header passes: there is nothing to read.
+ */
+export async function assertRenderedTargetAllowed(targetUrl: string, response: Response): Promise<void> {
+  const targetStatus = Number(response.headers.get("x-response-code"));
+  if (isBlockStatus(targetStatus)) {
+    await discardBody(response, `browserless target HTTP ${targetStatus} (site block)`);
+    throw siteAccessRefusal(targetUrl, { kind: "http", status: targetStatus });
+  }
+  try {
+    await assertRedirectAllowed(targetUrl, response.headers.get("x-response-url"));
+  } catch (err) {
+    await discardBody(response, "browserless redirect target disallowed by robots.txt");
+    throw err;
+  }
+}
+
 // ─── Convenience wrappers (drop-in replacements for browserless-extract) ────
 
 /**
@@ -787,6 +846,8 @@ export async function fetchCompanyPage(targetUrl: string): Promise<string> {
   const result = await fetchPage(targetUrl, {
     waitUntil: "domcontentloaded",
     maxRetries: 3,
+    // Registries are always sources Strale chose.
+    source: "strale",
   });
   return result.html;
 }

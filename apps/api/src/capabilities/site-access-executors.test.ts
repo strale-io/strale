@@ -55,6 +55,7 @@ import "./company-enrich.js";
 import "./privacy-policy-analyze.js";
 import "./screenshot-url.js";
 import "./html-to-pdf.js";
+import "./youtube-summarize.js";
 
 const PAGE_HTML = `<html><head><title>t</title></head><body><p>${"Real words here. ".repeat(300)}</p></body></html>`;
 
@@ -261,6 +262,38 @@ describe("Browserless screenshot and PDF routes identify as Strale", () => {
     await run("html-to-pdf", { url: "https://site.test" });
     const [, init] = browserlessFetchMock.mock.calls[0] as [string, { body: string }];
     expect(JSON.parse(init.body).userAgent).toBe(STRALE_USER_AGENT);
+  });
+});
+
+describe("screenshots and PDFs of a block page are refused, not billed", () => {
+  it("REGRESSION: screenshot-url refuses when Browserless reports the target's 403", async () => {
+    browserlessFetchMock.mockResolvedValue(
+      new Response(Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
+        status: 200,
+        headers: { "content-type": "image/png", "x-response-code": "403" },
+      }),
+    );
+    const err = await run("screenshot-url", { url: "https://site.test" });
+    expect(err).toBeInstanceOf(SiteAccessRefusedError);
+  });
+
+  it("REGRESSION: html-to-pdf refuses when Browserless reports the target's 429", async () => {
+    browserlessFetchMock.mockResolvedValue(
+      new Response(Buffer.from("%PDF-1.4"), {
+        status: 200,
+        headers: { "content-type": "application/pdf", "x-response-code": "429" },
+      }),
+    );
+    const err = await run("html-to-pdf", { url: "https://site.test" });
+    expect(err).toBeInstanceOf(SiteAccessRefusedError);
+  });
+});
+
+describe("youtube-summarize", () => {
+  it("REGRESSION: a refused watch page is not re-fetched through Browserless", async () => {
+    pageResponse = () => html("no", 429);
+    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    expect(fetchRenderedHtml).not.toHaveBeenCalled();
   });
 });
 

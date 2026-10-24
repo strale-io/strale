@@ -11,7 +11,12 @@
  *     Several groups for the same agent are merged.
  *   - Matching (§2.2.2): the longest matching `allow`/`disallow` pattern wins,
  *     and `allow` wins a tie. `*` matches any sequence and a trailing `$`
- *     anchors the end. `/robots.txt` itself is always allowed.
+ *     anchors the end. `/robots.txt` itself is always allowed. Both sides are
+ *     percent-decoded before comparing, so `%3A%2F%2F` matches `://` as the
+ *     RFC's own example requires. Matching is a linear-time wildcard walk,
+ *     NOT a RegExp: robots.txt is written by whoever owns the site, and a
+ *     pattern such as `/*a*a*a*b` compiled to `.*` backtracks exponentially —
+ *     measured at 17 s on a 500-character path, blocking the event loop.
  *   - Access results (§2.3.1): 2xx is parsed; any other 4xx means "no
  *     robots.txt", so everything is allowed; 5xx means unreachable, which the
  *     RFC says MUST be treated as complete disallow. 429 is grouped with 5xx
@@ -19,7 +24,8 @@
  *     to stay away, not saying it has no rules.
  *   - Caching (§2.4): at most 24 hours. Used here: one hour for a parsed file
  *     or a 4xx, five minutes for an unreachable one, so a brief outage of the
- *     site does not refuse it for an hour afterwards.
+ *     site does not refuse it for an hour afterwards. Concurrent checks for one
+ *     origin share a single request.
  *
  * One deliberate departure: a TRANSPORT failure (DNS, refused connection,
  * timeout) allows the fetch rather than refusing it. The page fetch that
@@ -27,7 +33,13 @@
  * needs ("domain does not resolve"), and a slow robots.txt on a healthy site
  * would otherwise refuse a page nobody asked us to stay away from. This is
  * recorded so it is a decision, not an accident; the RFC's "unreachable"
- * clause is applied to every case where the server answered.
+ * clause is applied to every case where the server answered. The allow is
+ * cached for five minutes, so a robots.txt that hangs costs its timeout once
+ * per origin per five minutes, not on every call.
+ *
+ * Redirects: a fetch that ends on a different URL is checked again against
+ * the final URL's robots.txt (`assertRedirectAllowed`), so an allowed URL
+ * cannot be used to reach a disallowed one.
  *
  * Not a crawler: Strale fetches one page per call, so Crawl-delay is not
  * consulted.
@@ -62,7 +74,7 @@ export function parseRobotsTxt(text: string): RobotsGroup[] {
   // after a rule line starts a new group (§2.1).
   let lastWasAgent = false;
 
-  for (const rawLine of text.split(/\r\n|\r|\n/)) {
+  for (const rawLine of text.replace(/^\uFEFF/, "").split(/\r\n|\r|\n/)) {
     const line = rawLine.replace(/#.*$/, "").trim();
     if (!line) continue;
     const colon = line.indexOf(":");
@@ -79,12 +91,14 @@ export function parseRobotsTxt(text: string): RobotsGroup[] {
       lastWasAgent = true;
       continue;
     }
+    // Only a rule line ends a run of user-agent lines. Sitemap, Crawl-delay
+    // and unknown records are not group members (§2.2.4), so a `Sitemap:`
+    // between two user-agent lines must not split them into two groups.
+    if (key !== "allow" && key !== "disallow") continue;
     lastWasAgent = false;
     if (!current) continue; // rules before any user-agent line belong to no group
-    if (key === "allow" || key === "disallow") {
-      // An empty `disallow:` is "nothing disallowed" — it adds no rule.
-      if (value) current.rules.push({ allow: key === "allow", pattern: value });
-    }
+    // An empty `disallow:` is "nothing disallowed" — it adds no rule.
+    if (value) current.rules.push({ allow: key === "allow", pattern: value });
   }
   return groups;
 }
@@ -106,24 +120,53 @@ export function rulesFor(groups: RobotsGroup[], token: string): RobotsRule[] {
 }
 
 /**
- * Percent-encode the characters a pattern may legally contain unencoded, so a
- * pattern `/café` and a request path `/caf%C3%A9` compare equal (§2.2.2).
- * Already-encoded octets are upper-cased, not double-encoded.
+ * Percent-decode for comparison (§2.2.2), so `/caf%C3%A9`, `/café`,
+ * `https%3A%2F%2F` and `https://` compare equal. A malformed escape is left
+ * as written rather than refusing the whole file.
  */
-function normalizeForMatch(s: string): string {
-  return s
-    .replace(/%[0-9a-f]{2}/gi, (m) => m.toUpperCase())
-    .replace(/[^\x21-\x7e]/g, (c) => encodeURIComponent(c));
+function decodeForMatch(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s.replace(/%[0-9a-f]{2}/gi, (m) => m.toUpperCase());
+  }
 }
 
-function patternToRegExp(pattern: string): RegExp {
+interface CompiledPattern {
+  /** Literal pieces between `*`s, each percent-decoded. */
+  segments: string[];
+  /** Pattern ended in `$`: the last segment must end the path. */
+  anchored: boolean;
+  /** Decoded length, the "longest match" measure. */
+  length: number;
+}
+
+function compilePattern(pattern: string): CompiledPattern {
   const anchored = pattern.endsWith("$");
   const body = anchored ? pattern.slice(0, -1) : pattern;
-  const escaped = normalizeForMatch(body)
-    .split("*")
-    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
-    .join(".*");
-  return new RegExp(`^${escaped}${anchored ? "$" : ""}`);
+  const segments = body.split("*").map(decodeForMatch);
+  return { segments, anchored, length: segments.join("*").length + (anchored ? 1 : 0) };
+}
+
+/**
+ * Linear-time wildcard match. The first segment is a prefix; each later
+ * segment is found at its leftmost position after the previous one (greedy
+ * leftmost is exact for `*`-only globs: an earlier match never leaves less
+ * room for what follows); an anchored last segment must sit at the very end.
+ */
+function matches(p: CompiledPattern, target: string): boolean {
+  const { segments, anchored } = p;
+  if (!target.startsWith(segments[0])) return false;
+  if (segments.length === 1) return anchored ? target.length === segments[0].length : true;
+  let pos = segments[0].length;
+  for (let i = 1; i < segments.length - 1; i++) {
+    const at = target.indexOf(segments[i], pos);
+    if (at === -1) return false;
+    pos = at + segments[i].length;
+  }
+  const last = segments[segments.length - 1];
+  if (anchored) return target.length - last.length >= pos && target.endsWith(last);
+  return target.indexOf(last, pos) !== -1;
 }
 
 /**
@@ -132,16 +175,17 @@ function patternToRegExp(pattern: string): RegExp {
  */
 export function isPathAllowed(rules: RobotsRule[], pathAndQuery: string): boolean {
   if (pathAndQuery === "/robots.txt") return true;
-  const target = normalizeForMatch(pathAndQuery);
-  let best: RobotsRule | null = null;
+  const target = decodeForMatch(pathAndQuery);
+  let best: { allow: boolean; length: number } | null = null;
   for (const rule of rules) {
-    if (!patternToRegExp(rule.pattern).test(target)) continue;
+    const compiled = compilePattern(rule.pattern);
+    if (!matches(compiled, target)) continue;
     if (
       !best ||
-      rule.pattern.length > best.pattern.length ||
-      (rule.pattern.length === best.pattern.length && rule.allow && !best.allow)
+      compiled.length > best.length ||
+      (compiled.length === best.length && rule.allow && !best.allow)
     ) {
-      best = rule;
+      best = { allow: rule.allow, length: compiled.length };
     }
   }
   return best ? best.allow : true;
@@ -153,6 +197,7 @@ export function isPathAllowed(rules: RobotsRule[], pathAndQuery: string): boolea
 type RobotsVerdict =
   | { kind: "rules"; rules: RobotsRule[] }
   | { kind: "allow_all" }
+  | { kind: "transport_failed" }
   | { kind: "unreachable"; status: number };
 
 interface CacheEntry {
@@ -168,14 +213,18 @@ const ROBOTS_TIMEOUT_MS = 5000;
 const ROBOTS_MAX_REDIRECTS = 5;
 
 const cache = new Map<string, CacheEntry>();
+/** One request per origin at a time; concurrent callers await the same one. */
+const inFlight = new Map<string, Promise<RobotsVerdict>>();
 
 /** Reset the cache. Test seam only (`__…ForTests` convention). */
 export function __resetRobotsCacheForTests(): void {
   cache.clear();
+  inFlight.clear();
 }
 
 function remember(origin: string, verdict: RobotsVerdict): RobotsVerdict {
-  const ttl = verdict.kind === "unreachable" ? UNREACHABLE_TTL_MS : OK_TTL_MS;
+  const ttl =
+    verdict.kind === "unreachable" || verdict.kind === "transport_failed" ? UNREACHABLE_TTL_MS : OK_TTL_MS;
   cache.delete(origin);
   while (cache.size >= MAX_CACHE_ENTRIES) {
     const oldest = cache.keys().next().value;
@@ -186,10 +235,17 @@ function remember(origin: string, verdict: RobotsVerdict): RobotsVerdict {
   return verdict;
 }
 
-async function loadVerdict(origin: string): Promise<RobotsVerdict | null> {
+function loadVerdict(origin: string): Promise<RobotsVerdict> {
   const hit = cache.get(origin);
-  if (hit && hit.expiresAt > Date.now()) return hit.verdict;
+  if (hit && hit.expiresAt > Date.now()) return Promise.resolve(hit.verdict);
+  const pending = inFlight.get(origin);
+  if (pending) return pending;
+  const request = fetchVerdict(origin).finally(() => inFlight.delete(origin));
+  inFlight.set(origin, request);
+  return request;
+}
 
+async function fetchVerdict(origin: string): Promise<RobotsVerdict> {
   let response: Response;
   try {
     response = await safeFetch(`${origin}/robots.txt`, {
@@ -198,9 +254,8 @@ async function loadVerdict(origin: string): Promise<RobotsVerdict | null> {
       timeoutMs: ROBOTS_TIMEOUT_MS,
     });
   } catch {
-    // Transport failure: see the module header. Not cached, so the next call
-    // asks again rather than inheriting a guess.
-    return null;
+    // Transport failure: see the module header. Allowed, and cached briefly.
+    return remember(origin, { kind: "transport_failed" });
   }
 
   if (response.ok) {
@@ -231,11 +286,21 @@ export async function assertRobotsAllowed(targetUrl: string): Promise<void> {
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return;
 
   const verdict = await loadVerdict(parsed.origin);
-  if (!verdict || verdict.kind === "allow_all") return;
+  if (verdict.kind === "allow_all" || verdict.kind === "transport_failed") return;
   if (verdict.kind === "unreachable") {
     throw siteAccessRefusal(targetUrl, { kind: "robots_unavailable", status: verdict.status });
   }
   if (!isPathAllowed(verdict.rules, `${parsed.pathname}${parsed.search}`)) {
     throw siteAccessRefusal(targetUrl, { kind: "robots_disallow" });
   }
+}
+
+/**
+ * Re-check robots.txt when a fetch ended somewhere other than where it was
+ * asked to go. Redirects are followed by the transport (safeFetch, or the
+ * browser), so the first check only covered the URL the caller named.
+ */
+export async function assertRedirectAllowed(requestedUrl: string, finalUrl: string | null | undefined): Promise<void> {
+  if (!finalUrl || finalUrl === requestedUrl) return;
+  await assertRobotsAllowed(finalUrl);
 }

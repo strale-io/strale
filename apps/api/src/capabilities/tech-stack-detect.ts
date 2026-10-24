@@ -2,7 +2,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
-import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
 import { STRALE_USER_AGENT, assertNotBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
 import { looksLikeJsChallenge } from "./lib/web-provider.js";
 
@@ -123,6 +123,12 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
     throw new Error(`Could not fetch ${target} (HTTP ${resp.status}). Check the URL is correct and publicly accessible.`);
   }
 
+  try {
+    await assertRedirectAllowed(target, resp.url);
+  } catch (err) {
+    await discardBody(resp, "tech-stack-detect: redirect target disallowed by robots.txt");
+    throw err;
+  }
   const html = await readPageHtml(resp);
   if (looksLikeJsChallenge(html)) throw siteAccessRefusal(target, { kind: "challenge" });
   const technologies: TechMatch[] = [];

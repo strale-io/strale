@@ -7,6 +7,7 @@ import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
 import { MAX_DECODED_IMAGE_BYTES, readBodyWithLimit } from "../lib/resource-limits.js";
 
 registerCapability("landing-page-roast", async (input: CapabilityInput) => {
@@ -40,6 +41,7 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   });
 
   if (!screenshotRes.ok) throw new Error(`Browserless screenshot failed: HTTP ${screenshotRes.status}`);
+  await assertRenderedTargetAllowed(fullUrl, screenshotRes);
   // #426: streamed with a cap. This is a viewport-only screenshot (fullPage:
   // false at a fixed viewport), so it is naturally small — and it is sent to
   // Anthropic as a base64 image block, whose effective limit is ~3.75 MiB

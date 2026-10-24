@@ -4,7 +4,7 @@ import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
-import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import {
   STRALE_USER_AGENT,
@@ -68,6 +68,14 @@ async function tryPlainFetch(url: string): Promise<string | null> {
       },
       signal: AbortSignal.timeout(5000),
     });
+
+    try {
+      // A redirect target needs robots.txt permission too.
+      await assertRedirectAllowed(url, resp.url);
+    } catch (err) {
+      await discardBody(resp, "url-to-markdown: redirect target disallowed by robots.txt");
+      throw err;
+    }
 
     if (!resp.ok) {
       // Nothing below reads the body — cancel it rather than leaving it to

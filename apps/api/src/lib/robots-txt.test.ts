@@ -15,6 +15,7 @@ vi.mock("./safe-fetch.js", async (importOriginal) => ({
 
 import {
   __resetRobotsCacheForTests,
+  assertRedirectAllowed,
   assertRobotsAllowed,
   isPathAllowed,
   parseRobotsTxt,
@@ -89,6 +90,41 @@ describe("parse and match (RFC 9309 §2.1–2.2)", () => {
   it("percent-encoding is normalised on both sides", () => {
     expect(allowed("User-agent: *\nDisallow: /café\n", "/caf%c3%a9")).toBe(false);
   });
+
+  it("RFC 9309's own example: an encoded URL in the query matches the unencoded pattern", () => {
+    const robots = "User-agent: *\nDisallow: /foo/bar?baz=https://foo.bar\n";
+    expect(allowed(robots, "/foo/bar?baz=https%3A%2F%2Ffoo.bar")).toBe(false);
+  });
+
+  it("a Sitemap line between user-agent lines does not split the group", () => {
+    const robots = "User-agent: StraleBot\nSitemap: https://s.test/sitemap.xml\nUser-agent: *\nDisallow: /\n";
+    expect(allowed(robots, "/page")).toBe(false);
+  });
+
+  it("a UTF-8 BOM does not hide the first user-agent line", () => {
+    expect(allowed("\uFEFFUser-agent: *\nDisallow: /\n", "/x")).toBe(false);
+  });
+
+  it("REGRESSION: a pathological wildcard pattern matches in linear time (no ReDoS)", () => {
+    // Compiled to a backtracking RegExp, the first case took ~17 s and the
+    // second ~37 s (review of 2026-10-24) — long enough to stall every
+    // request in the process. The site owner writes robots.txt.
+    const start = Date.now();
+    expect(allowed("User-agent: *\nDisallow: /*a*a*a*b\n", "/" + "a".repeat(5000))).toBe(true);
+    expect(allowed(`User-agent: *\nDisallow: /${"*a".repeat(10)}*b\n`, "/" + "a".repeat(5000))).toBe(true);
+    expect(allowed("User-agent: *\nDisallow: /*a*a*a*b\n", "/" + "a".repeat(5000) + "b")).toBe(false);
+    expect(Date.now() - start).toBeLessThan(500);
+  });
+
+  it("wildcard matching is exact, not just fast", () => {
+    const robots = "User-agent: *\nDisallow: /a*b*c$\n";
+    expect(allowed(robots, "/axxbyyc")).toBe(false);
+    expect(allowed(robots, "/axxbyycd")).toBe(true);
+    expect(allowed(robots, "/acb")).toBe(true);
+    expect(allowed("User-agent: *\nDisallow: /*\n", "/anything")).toBe(false);
+    expect(allowed("User-agent: *\nDisallow: /exact$\n", "/exact")).toBe(false);
+    expect(allowed("User-agent: *\nDisallow: /exact$\n", "/exact/more")).toBe(true);
+  });
 });
 
 function text(body: string, status = 200): Response {
@@ -148,12 +184,32 @@ describe("assertRobotsAllowed (access results, RFC 9309 §2.3.1)", () => {
     await expect(assertRobotsAllowed("https://site.test/x")).rejects.toThrow(SiteAccessRefusedError);
   });
 
-  it("a transport failure allows the fetch and is not cached", async () => {
-    safeFetchMock.mockRejectedValueOnce(new Error("getaddrinfo ENOTFOUND site.test"));
+  it("a transport failure allows the fetch, and the allow is cached briefly", async () => {
+    // Cached so a robots.txt that hangs costs its timeout once per origin per
+    // five minutes, not on every call (review of 2026-10-24).
+    safeFetchMock.mockRejectedValueOnce(new Error("The operation was aborted due to timeout"));
     await expect(assertRobotsAllowed("https://site.test/x")).resolves.toBeUndefined();
-    safeFetchMock.mockResolvedValueOnce(text("User-agent: *\nDisallow: /\n"));
-    await expect(assertRobotsAllowed("https://site.test/x")).rejects.toThrow(SiteAccessRefusedError);
-    expect(safeFetchMock).toHaveBeenCalledTimes(2);
+    await expect(assertRobotsAllowed("https://site.test/y")).resolves.toBeUndefined();
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("concurrent checks for one origin share a single robots.txt request", async () => {
+    let release: (r: Response) => void = () => {};
+    safeFetchMock.mockReturnValueOnce(new Promise<Response>((r) => (release = r)));
+    const checks = [1, 2, 3].map((i) => assertRobotsAllowed(`https://site.test/p${i}`));
+    release(text("User-agent: *\nAllow: /\n"));
+    await Promise.all(checks);
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("assertRedirectAllowed checks the final URL only when it differs", async () => {
+    safeFetchMock.mockResolvedValue(text("User-agent: *\nDisallow: /private\n"));
+    await expect(assertRedirectAllowed("https://a.test/x", "https://a.test/x")).resolves.toBeUndefined();
+    await expect(assertRedirectAllowed("https://a.test/x", "")).resolves.toBeUndefined();
+    expect(safeFetchMock).not.toHaveBeenCalled();
+    await expect(assertRedirectAllowed("https://a.test/x", "https://b.test/private/y")).rejects.toThrow(
+      SiteAccessRefusedError,
+    );
   });
 
   it("caches the verdict per origin", async () => {

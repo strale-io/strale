@@ -2,8 +2,9 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
-import { assertRobotsAllowed } from "../lib/robots-txt.js";
-import { assertNotBlockStatus } from "../lib/site-access.js";
+import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
+import { assertNotBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
+import { looksLikeJsChallenge } from "./lib/web-provider.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { ROLE_PREFIXES } from "./email-validate.js";
 
@@ -325,7 +326,9 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
     }
     // Decode at the boundary so every extractor below sees one canonical
     // form, whichever variant the origin served this region.
+    await assertRedirectAllowed(homepageUrl, resp.url);
     homepageHtml = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
+    if (looksLikeJsChallenge(homepageHtml)) throw siteAccessRefusal(homepageUrl, { kind: "challenge" });
     fetchedUrls.push(homepageUrl);
   } catch (err) {
     if (isCapabilityRefusal(err)) throw err;
