@@ -14,9 +14,12 @@ export interface Country {
   region: Region;
   /** URL segment for /company-data/:country. */
   path: string;
+  /** The name as it reads mid-sentence ("the United States"). */
+  inSentence: string;
 }
 
-const C = (iso: string, name: string, region: Region): Country => ({ iso, name, region, path: name.toLowerCase().replace(/[^a-z]+/g, "-") });
+const THE = new Set(["United States", "United Kingdom", "Netherlands"]);
+const C = (iso: string, name: string, region: Region): Country => ({ iso, name, region, path: name.toLowerCase().replace(/[^a-z]+/g, "-"), inSentence: THE.has(name) ? `the ${name}` : name });
 
 export const COUNTRY_BY_PREFIX: Record<string, Country> = {
   au: C("AU", "Australia", "Asia-Pacific"),

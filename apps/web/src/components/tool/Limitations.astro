@@ -1,0 +1,24 @@
+---
+// Limitations as the API serves them, shown as written.
+import type { Limitation } from "../../lib/types.ts";
+interface Props { items: Limitation[]; stepName?: (slug: string) => string; empty?: string }
+const { items, stepName, empty = "No limitations are recorded." } = Astro.props;
+---
+{items.length ? (
+  <ul class="limits" role="list">
+    {items.map((l) => (
+      <li class="limit">
+        <p class="limit-title">{l.title ?? l.text}</p>
+        {l.title && l.text !== l.title && <p class="t-compact muted">{l.text}</p>}
+        {l.step && stepName && <p class="small muted">From step: {stepName(l.step)}</p>}
+        {l.workaround && <p class="t-compact"><span class="muted">What to do instead: </span>{l.workaround}</p>}
+      </li>
+    ))}
+  </ul>
+) : <p class="muted">{empty}</p>}
+
+<style>
+  .limits { display: grid; gap: var(--space-16); margin: 0; padding: 0; }
+  .limit { display: grid; gap: var(--space-4); padding-left: var(--space-16); border-left: var(--focus-width) solid var(--border-strong); }
+  .limit-title { font-weight: var(--type-detail-weight); }
+</style>
