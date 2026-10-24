@@ -81,10 +81,14 @@ function stagedBlob(git, path) {
   }
 }
 
-/** True when the working copy differs from the index, by git's own rules. */
+/**
+ * True when the working copy differs from the index, by git's own rules. Any
+ * exit other than 0 counts as edits, so a git error refuses instead of
+ * overwriting.
+ */
 function hasUnstagedEdits(root, path) {
   const run = spawnSync("git", ["diff", "--quiet", "--", path], { cwd: root, stdio: "ignore" });
-  return run.status === 1;
+  return run.status !== 0;
 }
 
 function isPathspecCommit(env) {
