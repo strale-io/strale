@@ -346,10 +346,15 @@ describe("screenshots and PDFs of a block page are refused, not billed", () => {
   // Chrome can run a JavaScript challenge to completion before the capture,
   // so the challenge must be seen in a plain look first.
   const CHALLENGE_PAGE = `<html><body>${"x".repeat(2500)} Checking your browser before accessing site.test</body></html>`;
-  for (const slug of ["screenshot-url", "html-to-pdf"]) {
+  const inputs: Record<string, Record<string, unknown>> = {
+    "screenshot-url": { url: "https://site.test" },
+    "html-to-pdf": { url: "https://site.test" },
+    "company-enrich": { domain: "site.test" },
+  };
+  for (const [slug, input] of Object.entries(inputs)) {
     it(`REGRESSION: ${slug} stops at a challenge page before Browserless is asked`, async () => {
       pageResponse = () => html(CHALLENGE_PAGE, 503);
-      const err = await run(slug, { url: "https://site.test" });
+      const err = await run(slug, input);
       expect(err).toBeInstanceOf(SiteAccessRefusedError);
       expect(browserlessFetchMock).not.toHaveBeenCalled();
     });

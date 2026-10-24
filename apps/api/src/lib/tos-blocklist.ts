@@ -164,7 +164,8 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
     site: "Reddit",
     decision: "DEC-20261023-A",
     alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
-  },  // DEC-20261023-A never lane, item 5: commercial aggregators of registry
+  },
+  // DEC-20261023-A never lane, item 5: commercial aggregators of registry
   // data, "even per call". Strale stopped calling both itself under
   // DEC-20260427-I; this closes the customer-URL route to them too.
   {

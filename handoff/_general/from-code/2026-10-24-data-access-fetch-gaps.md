@@ -19,8 +19,14 @@ Intent: close three fetch-path gaps of DEC-20261023-A adoption item 1 that the t
     a challenge (on any status) and a robots-disallowed redirect, and leaves
     transport failures to the render.
   - It runs before Browserless when tier 1 did not: `skipFallback`
-    (web-extract) or a non-default `waitUntil`. `screenshot-url` and
-    `html-to-pdf` (URL mode) call it too.
+    (web-extract) or a non-default `waitUntil`. `screenshot-url`,
+    `html-to-pdf` (URL mode) and `company-enrich` call it too.
+  - Non-block 4xx answers are terminal, as in tier 1. The exceptions are
+    405, 406 and 416, which a ranged GET can cause by itself.
+  - Errors are classified on name and code, never on message text, which
+    carries the caller's URL. A connection-time SSRF refusal (ESSRFBLOCKED)
+    is passed on. A long redirect chain passes through to the render, as
+    in tier 1.
   - Cost: one plain request per call on those routes, no vendor cost.
 - **Tests.** Six regression tests, each failing with its fix reverted. Two
   suites that queue Browserless responses on the global `fetch` mock

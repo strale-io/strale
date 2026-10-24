@@ -95,7 +95,7 @@
 import { buildBrowserlessRequestUrl } from "../../lib/browserless-launch.js";
 import { browserlessFetch } from "../../lib/metered-vendor-fetch.js";
 import { discardBody, safeFetch } from "../../lib/safe-fetch.js";
-import { assertTargetAllowed, isAccessPolicyRefusal } from "../../lib/tos-blocklist.js";
+import { assertTargetAllowed } from "../../lib/tos-blocklist.js";
 import { assertRedirectAllowed, assertRobotsAllowed } from "../../lib/robots-txt.js";
 import {
   STRALE_USER_AGENT,
@@ -829,8 +829,33 @@ export async function assertRenderedTargetAllowed(targetUrl: string, response: R
 /** The bytes the preflight reads: looksLikeJsChallenge looks at the first 6000 characters. */
 export const PREFLIGHT_RANGE = "bytes=0-8191";
 
-/** Transport failures the preflight leaves to the rendered route to report. */
-const PREFLIGHT_TRANSPORT_ERROR = /timeout|abort|fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ERR_TLS|getaddrinfo|socket/i;
+/** Connection-level error codes the preflight leaves to the rendered route to report. */
+const PREFLIGHT_TRANSPORT_CODE = /^(ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EPIPE|EHOSTUNREACH|ENETUNREACH|UND_ERR_|ERR_TLS|CERT_|DEPTH_ZERO|UNABLE_TO_|SELF_SIGNED)/;
+
+/**
+ * Whether a preflight error is a transport failure the render may still get
+ * past (and will report in its own terms). Decided on the error's name and
+ * code, never its message, which carries the caller's URL. A connection-time
+ * SSRF refusal (ESSRFBLOCKED) is not one.
+ */
+function isPreflightTransportFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.name === "AbortError" || err.name === "TimeoutError") return true;
+  const code =
+    (err as { code?: unknown }).code ?? (err as { cause?: { code?: unknown } }).cause?.code;
+  if (code === "ESSRFBLOCKED") return false;
+  if (typeof code === "string" && PREFLIGHT_TRANSPORT_CODE.test(code)) return true;
+  // Tier 1 falls through to the render on a long redirect chain; so does the
+  // preflight (Chrome follows the chain, and assertRenderedTargetAllowed
+  // checks where it lands).
+  return err.message.startsWith("Too many redirects");
+}
+
+/**
+ * Statuses a ranged GET can draw from a server that would serve the page
+ * normally: Range not satisfiable, and method or content negotiation quirks.
+ */
+const PREFLIGHT_BENIGN_4XX = new Set([405, 406, 416]);
 
 /**
  * A plain look at `targetUrl` before a rendered route that has no plain tier
@@ -839,8 +864,10 @@ const PREFLIGHT_TRANSPORT_ERROR = /timeout|abort|fetch failed|ENOTFOUND|ECONNREF
  * forbids (DEC-20261023-A: getting around blocks); the plain response shows
  * the block or the challenge before any script runs. Refuses a block status,
  * a challenge page (on any status), and a redirect robots.txt disallows;
- * safeFetch refuses a blocklisted host on every hop. A transport failure is
- * left to the rendered route, which reports it in its own terms.
+ * safeFetch refuses a blocklisted host on every hop. Every other 4xx is the
+ * target's final answer, terminal as in tier 1, except the few a ranged GET
+ * can cause by itself. A transport failure is left to the rendered route,
+ * which reports it in its own terms.
  */
 export async function assertPlainPreflightAllowed(targetUrl: string): Promise<void> {
   let res: Response;
@@ -851,8 +878,7 @@ export async function assertPlainPreflightAllowed(targetUrl: string): Promise<vo
       signal: AbortSignal.timeout(8000),
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (PREFLIGHT_TRANSPORT_ERROR.test(msg) && !isAccessPolicyRefusal(msg)) return;
+    if (isPreflightTransportFailure(err)) return;
     throw err;
   }
   try {
@@ -864,6 +890,10 @@ export async function assertPlainPreflightAllowed(targetUrl: string): Promise<vo
   if (isBlockStatus(res.status)) {
     await discardBody(res, `preflight HTTP ${res.status} (site block)`);
     throw siteAccessRefusal(targetUrl, { kind: "http", status: res.status });
+  }
+  if (res.status >= 400 && res.status < 500 && !PREFLIGHT_BENIGN_4XX.has(res.status)) {
+    await discardBody(res, `preflight HTTP ${res.status}`);
+    throw new Error(`URL returned HTTP ${res.status}. ${humanizeBrowserlessStatus(res.status, targetUrl)}`);
   }
   const head = await readErrorTextTruncated(res, 8192);
   if (looksLikeJsChallenge(head)) throw siteAccessRefusal(targetUrl, { kind: "challenge" });

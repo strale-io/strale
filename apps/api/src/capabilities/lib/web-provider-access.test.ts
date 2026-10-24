@@ -111,9 +111,10 @@ describe("robots.txt is honoured before the first request", () => {
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
-  it("applies to the Browserless-only path too", async () => {
+  it("applies to the Browserless-only path too, before the preflight", async () => {
     robotsBody = "User-agent: StraleBot\nDisallow: /\n";
     await refusalFrom(fetchPage(PAGE, { skipFallback: true }));
+    expect(pageCalls()).toHaveLength(0);
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
@@ -332,18 +333,79 @@ describe("a rendered route with no plain tier looks at the site plainly first", 
     await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBeUndefined();
   });
 
-  it("a transport failure is left to the rendered route", async () => {
-    pageResponse = () => {
-      throw new Error("The operation was aborted due to timeout");
-    };
-    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBeUndefined();
+  it("a transport failure is left to the rendered route (timeout, DNS, a long redirect chain)", async () => {
+    const failures = [
+      Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" }),
+      Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } }),
+      new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://site.test/page."),
+    ];
+    for (const failure of failures) {
+      pageResponse = () => {
+        throw failure;
+      };
+      await expect(assertPlainPreflightAllowed(PAGE), failure.message).resolves.toBeUndefined();
+    }
   });
 
-  it("a blocklist refusal on a redirect hop is not mistaken for a transport failure", async () => {
+  it("REGRESSION: a connection-time SSRF refusal is not swallowed as a transport failure", async () => {
     pageResponse = () => {
-      throw new Error("Reddit is not a supported source: its Terms of Service prohibit automated access, so Strale does not fetch it.");
+      throw Object.assign(new TypeError("fetch failed"), { cause: { code: "ESSRFBLOCKED" } });
+    };
+    await expect(assertPlainPreflightAllowed(PAGE)).rejects.toThrow("fetch failed");
+  });
+
+  it("REGRESSION: a refusal is decided on its code, not on words in the caller's URL", async () => {
+    pageResponse = () => {
+      throw new Error("Reddit is not a supported source: its Terms of Service prohibit automated access (https://socket.abort.test/timeout).");
     };
     await expect(assertPlainPreflightAllowed(PAGE)).rejects.toThrow(/Terms of Service prohibit automated access/);
+  });
+
+  it("REGRESSION: a non-block 4xx is the target's final answer, as in tier 1 (no render)", async () => {
+    pageResponse = () => html("bad request", 400);
+    await expect(fetchPage(PAGE, { skipFallback: true })).rejects.toThrow(/URL returned HTTP 400/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a 416 (or 405, 406) that a ranged GET can cause by itself is not a refusal", async () => {
+    for (const status of [405, 406, 416]) {
+      pageResponse = () => html("", status);
+      await expect(assertPlainPreflightAllowed(PAGE), String(status)).resolves.toBeUndefined();
+    }
+  });
+
+  it("a cached render is served without a new preflight", async () => {
+    await fetchPage(PAGE, { skipFallback: true });
+    const before = pageCalls().length;
+    await fetchPage(PAGE, { skipFallback: true });
+    expect(pageCalls().length).toBe(before);
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a page that ignores Range is read only to the cap", async () => {
+    let pulled = 0;
+    const chunk = new Uint8Array(64 * 1024).fill(0x61);
+    pageResponse = () =>
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            pulled += chunk.length;
+            if (pulled > 64 * 1024 * 1024) controller.close();
+            else controller.enqueue(chunk);
+          },
+        }),
+        { status: 200, headers: { "content-type": "text/html" } },
+      );
+    await assertPlainPreflightAllowed(PAGE);
+    expect(pulled).toBeLessThan(1024 * 1024);
+  });
+
+  it("a block's body is released before the refusal", async () => {
+    const cancel = vi.fn();
+    pageResponse = () =>
+      new Response(new ReadableStream({ pull() {}, cancel }), { status: 403, headers: { "content-type": "text/html" } });
+    await refusalFrom(assertPlainPreflightAllowed(PAGE));
+    expect(cancel).toHaveBeenCalled();
   });
 });
 

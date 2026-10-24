@@ -224,7 +224,8 @@ describe("tier 1 (plain fetch) HTML is stream-bounded", () => {
 // ─── Tier 3: Browserless ─────────────────────────────────────────────────────
 
 describe("tier 3 (Browserless) HTML is stream-bounded", () => {
-  // skipFallback goes straight to Browserless, isolating the tier.
+  // skipFallback skips the plain tier (its ranged preflight is stubbed above),
+  // isolating the Browserless tier.
   const render = () => fetchPage(URL_UNDER_TEST, { skipFallback: true });
 
   it("accepts a body of exactly the limit", async () => {
