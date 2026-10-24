@@ -261,7 +261,8 @@ fields generally — see CLAUDE.md for both.
 **Code-review gate:** if any code was modified this session, run the `go`
 skill (`.agents/skills/go/SKILL.md`) before ending the session — never end a
 session over unreviewed code. Docs-only / AGENTS.md / Notion-only sessions
-are exempt.
+are exempt. Every reviewer reads the root `REVIEW.md` first (tiers, tier-2
+surfaces, always-check lines; DEC-20261024-A).
 
 ## Active Decisions
 
@@ -353,7 +354,8 @@ Full new-capability pipeline (write executor → manifest → `onboard.ts
 --discover` → review field reliability → `smoke-test.ts`), flags, and the
 manifest template: CLAUDE.md → "Adding New Capabilities (MANDATORY
 PIPELINE)". The pipeline (`apps/api/scripts/onboard.ts`) is the only
-sanctioned path for capability creation.
+sanctioned path for capability creation; the `onboard-capability` skill
+(`.agents/skills/onboard-capability/SKILL.md`) walks it step by step.
 
 ## Drift-Prevention Surfaces
 
