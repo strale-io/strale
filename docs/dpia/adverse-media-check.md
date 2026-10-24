@@ -2,7 +2,8 @@
 
 **Last reviewed:** 2026-04-30
 **Owner:** Strale (controller for Strale-side processing; processor for customer-supplied search inputs)
-**Re-review trigger:** vendor change (Dilisense or Serper.dev), DEC-20260428-A or DEC-20260428-B amendment, addition of an AI-synthesis step
+**Re-review trigger:** vendor change (Dilisense or Serper.dev), a change to the data-access rule (DEC-20261023-A, which superseded DEC-20260428-A) or a DEC-20260428-B amendment, addition of an AI-synthesis step
+**Re-review note (2026-10-24, engineering, not legal):** triggered by DEC-20261023-A superseding DEC-20260428-A. Processing is unchanged. Under the new rule, PEP and adverse-media screening for AML/KYB stays allowed (its never lane excepts it), and Dilisense remains the primary vendor. The Serper.dev fallback is now conditional: the rule allows vendor data only where the vendor's terms permit resale, and Serper's terms are not yet recorded as doing so (`apps/api/src/lib/vendor-terms.ts`, decision-queue DQ-39). The mitigation in section 4 that names DEC-20260428-A Tier 2 describes the basis on which Dilisense was chosen; it remains true of Dilisense and does not cover Serper.
 
 ## 1. Description of processing
 

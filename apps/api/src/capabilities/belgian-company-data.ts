@@ -200,7 +200,7 @@ registerCapability("belgian-company-data", async (input: CapabilityInput) => {
       attribution:
         "Data sourced from CBEAPI.be, a third-party JSON wrapper of the Belgian KBO/BCE Crossroads Bank for Enterprises. Underlying records are public-register data published by FPS Economy under Belgian re-use law.",
       source_note:
-        "Vendor-mediated public records (vendor lane of Strale's data-access rule, DEC-20261023-A). Migration to first-party ingest of FPS Economy KBO Open Data is queued.",
+        "Vendor-mediated public records. CBEAPI.be's resale terms are not yet recorded by Strale. Migration to first-party ingest of FPS Economy KBO Open Data is queued.",
     },
   };
 });

@@ -14,7 +14,7 @@ products:
   - Counterparty Assurance
 vendor_roster_url: null
 provider_tos_notes: null
-doctrine_reference: DEC-20261023-A vendor lane, allowed with checks (formerly DEC-20260428-A Tier 2)
+doctrine_reference: Vendor-mediated public records (formerly DEC-20260428-A Tier 2); DEC-20261023-A allows vendor data only where the vendor's terms permit resale, and Cobalt's are not yet recorded
 notes: >-
   Recommended primary US registry vendor for v1.1. $1/call at 1k/mo tier; $2 PAYG. Founder-confirmed
   clean redistribution. Vendor Roster: Cobalt Intelligence.

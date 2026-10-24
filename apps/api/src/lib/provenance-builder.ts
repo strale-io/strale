@@ -27,7 +27,7 @@ export type AcquisitionMethod =
   | "direct_api"        // direct call to authoritative API (e.g. SEC EDGAR, GLEIF, VIES)
   | "licensed_bulk"     // bulk feed under licence (e.g. FL Sunbiz download, vendor-licensed snapshot)
   | "vendor_aggregation" // multi-source aggregator with mixed methods
-  | "vendor_scraping"   // vendor scrapes public-records portal (vendor lane of DEC-20261023-A, formerly DEC-20260428-A Tier 2)
+  | "vendor_scraping"   // vendor scrapes public-records portal (formerly DEC-20260428-A Tier 2; DEC-20261023-A allows vendor data only where the vendor's terms permit resale)
   | "primary_source";    // direct primary-source document retrieval (e.g. court filing, registry doc)
 
 export interface RichProvenance {
@@ -91,8 +91,9 @@ export function buildProvenance(
 //
 // Pre-fix: RichProvenance had an open index signature and was never
 // validated at runtime. A capability that returned provenance: null,
-// provenance: {}, or provenance lacking DEC-20260428-A Tier-2 fields (now the
-// DEC-20261023-A vendor-lane disclosure)
+// provenance: {}, or provenance lacking the DEC-20260428-A Tier-2 disclosure
+// fields (DEC-20261023-A keeps the vendor and method; the per-fact
+// primary-source field is Strale's own disclosure)
 // (upstream_vendor / acquisition_method / primary_source_reference)
 // silently produced a "compliance-grade" audit with no provenance. With
 // 290+ capabilities including Tier-2 vendor-mediated sources, this was
@@ -154,7 +155,7 @@ const _shapeWarnedSlugs = new Set<string>();
 export interface ProvenanceValidationContext {
   /** Capability slug. Used to deduplicate "shape warning" logs per-slug. */
   slug: string;
-  /** From capabilities.data_source_type — "scrape" requires the vendor-lane disclosure fields (DEC-20261023-A). */
+  /** From capabilities.data_source_type — "scrape" requires the vendor sourcing disclosure fields. */
   dataSourceType: string | null;
 }
 
@@ -203,8 +204,9 @@ export function validateProvenanceAtBoundary(
     return { ok: false, tier2Incomplete: false, provenance };
   }
 
-  // Vendor-lane disclosure completeness check (DEC-20261023-A; formerly
-  // DEC-20260428-A Tier 2).
+  // Vendor sourcing disclosure completeness check (introduced under
+  // DEC-20260428-A Tier 2). DEC-20261023-A requires the vendor and method;
+  // primary_source_reference is Strale's own disclosure, kept as a warning.
   const p = parsed.data;
   let tier2Incomplete = false;
   if (p.acquisition_method === "vendor_scraping") {
@@ -212,7 +214,7 @@ export function validateProvenanceAtBoundary(
       tier2Incomplete = true;
       logWarn(
         "provenance-tier2-incomplete",
-        `Capability ${ctx.slug}: vendor_scraping requires upstream_vendor + primary_source_reference (vendor-lane disclosure, DEC-20261023-A)`,
+        `Capability ${ctx.slug}: vendor_scraping requires upstream_vendor + primary_source_reference (vendor sourcing disclosure)`,
         { slug: ctx.slug, has_upstream_vendor: !!p.upstream_vendor, has_primary_source_reference: !!p.primary_source_reference },
       );
     }

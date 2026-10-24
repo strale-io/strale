@@ -196,7 +196,7 @@ registerCapability("danish-company-data", async (input: CapabilityInput) => {
       attribution:
         "Data sourced from cvrapi.dk, a third-party JSON wrapper of the Danish Central Business Register (CVR). Underlying records are public-register data from Erhvervsstyrelsen (Danish Business Authority).",
       source_note:
-        "Vendor-mediated public records (vendor lane of Strale's data-access rule, DEC-20261023-A). cvrapi.dk's redistribution terms are not formally published; CVR basic company data is on the EU High-Value Datasets list (Reg. (EU) 2023/138). Migration to direct datacvr.virk.dk system-to-system access is queued.",
+        "Vendor-mediated public records. cvrapi.dk's redistribution terms are not formally published; CVR basic company data is on the EU High-Value Datasets list (Reg. (EU) 2023/138). Migration to direct datacvr.virk.dk system-to-system access is queued.",
     },
   };
 });

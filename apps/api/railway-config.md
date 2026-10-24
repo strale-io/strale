@@ -99,6 +99,9 @@ finite useful lifetime, plausibly months. The revisit outcome should
 pick one of three explicit paths, not implicitly extend the pin:
 
 1. **Migrate scraping caps off Browserless** per DEC-20260421-C
+   (the Notion record `--notion-34967c87082c81bd8c6bf8e92e901711`, superseded
+   on 2026-10-24 by DEC-20261023-A; the bare id collides with an unrelated
+   decision)
    (preferred if scraping volume is shrinking organically by then).
 2. **Upgrade to Browserless v2 paid tier** (if scraping is still
    load-bearing and v2's flag allowlist is documented to include the

@@ -965,7 +965,8 @@ PROVENANCE
 Every successful call includes:
   source — the external service that provided the data
   fetched_at — ISO 8601 timestamp
-  upstream_vendor / acquisition_method / primary_source_reference — where applicable, per the data-access rule (DEC-20261023-A)
+  upstream_vendor / acquisition_method — where a vendor sits between Strale and the source (DEC-20261023-A)
+  primary_source_reference — where the primary record has a citable location
 
 LIFECYCLE
 Capabilities transition through states (draft → validating → probation → active → degraded → suspended) via human-driven admin flips. Automatic state transitions retired with the SQS engine in DEC-20260503-B.

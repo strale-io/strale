@@ -157,8 +157,7 @@ const DEACTIVATED = new Map<string, string>([
   // Registered with ACRA" dataset (~2.1M records, monthly refresh,
   // Singapore Open Data Licence v1.0 — commercial reuse permitted with
   // attribution). acquisition_method: direct_api (DEC-20261023-A preferred lane;
-  // formerly DEC-20260428-A
-  // Tier 2.
+  // formerly DEC-20260428-A Tier 2).
   [
     "annual-report-extract",
     // DEC-20260421-SE-B: Previous runtime fetched allabolag.se/{orgnr}/arsredovisning and
@@ -294,7 +293,9 @@ const DEACTIVATED = new Map<string, string>([
   // DEC-20261023-A, which allows per-call public-source reads with checks) was "Strale itself never
   // operates scrapers" without exceptions, and a self-operated scraper against a
   // government UI is still a self-operated scraper. No third-party ToS violation
-  // identified, but the doctrine is absolute.
+  // identified, but that doctrine allowed no exception. Under DEC-20261023-A
+  // each could reopen per call once the authority's terms are recorded as
+  // permitting it and the executor stops at blocks; until then they stay off.
   //
   // Reactivation per cap: licensed registry/source contract with the named
   // authority. The IE/IT-style transport-divergence pattern in irish-company-data
@@ -302,8 +303,8 @@ const DEACTIVATED = new Map<string, string>([
   // workstream, not a pre-emptive deactivation.
   // italian-company-data REACTIVATED 2026-05-16 (Phase 2c): migrated from
   // registroimprese.it Browserless scrape (Tier 1 violation per
-  // DEC-20260428-A) to Openapi.com IT-Advanced (Tier 3 vendor aggregator;
-  // the vendor lane of DEC-20261023-A).
+  // DEC-20260428-A) to Openapi.com IT-Advanced (Tier 3 vendor aggregator
+  // under that doctrine).
   // Satisfies the "licensed multi-country aggregator" reactivation trigger.
   // Final EU30 country to reach code parity — Phase 2c completes 30/30.
   // Double-gated: OPENAPI_ENABLED env flag + DB is_active. v1.1 deferrals:
@@ -319,7 +320,7 @@ const DEACTIVATED = new Map<string, string>([
     // personal data included, once their terms are recorded as permitting it.
     // Reactivation: licensed CJEU / ECHR data feed, or migrate to bulk dataset
     // download where the source publishes one.
-    "CURIA / HUDOC: off since DEC-20260428-A Tier 1; reopenable under DEC-20261023-A per-call lane once CURIA's and HUDOC's terms are recorded as permitting per-call access",
+    "CURIA / HUDOC: off since DEC-20260428-A Tier 1; reopenable under DEC-20261023-A per-call lane once CURIA's and HUDOC's terms are recorded as permitting per-call access and the executor is reviewed against the rule's checks",
   ],
   // irish-company-data REACTIVATED 2026-04-29: migrated from Browserless +
   // Claude scrape of core.cro.ie to direct CRO Open Data Portal CKAN API

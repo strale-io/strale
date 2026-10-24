@@ -694,7 +694,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "f206bf74d05f0183ca957e148302e3b6bae318d65438bbb81b3bdd0015b92722",
+      "sha256": "616a30c3329875bfb9c3b487345d03f1fc4c066014796943697475a16e7611ca",
       "detected_references": [
         "AGENTS.md",
         "CLAUDE.md",
@@ -818,7 +818,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "93f076cac16ba563985e31bd3698c6693bc4263580cd6e3df1668c78baa216a2",
+      "sha256": "0a2f2234befc1e9534667160983fef183eba8659ec6ff644af688124d2e0e0b7",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
