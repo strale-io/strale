@@ -25,7 +25,7 @@ console.log(result.output);     // the tool's structured fields
 console.log(result.provenance); // { source, fetched_at }
 ```
 
-`max_price_cents` caps what one call may cost. The call is refused if the tool costs more. Each tool's inputs, output fields and price are on its page at [strale.dev/tools](https://strale.dev/tools) and in `strale.capability(slug)`.
+`max_price_cents` caps what one call may cost: the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.dev/capabilities](https://strale.dev/capabilities) and in `strale.capability(slug)`.
 
 ## Describe the task instead of naming the tool
 
@@ -77,7 +77,7 @@ const res = await fetch("https://api.strale.io/v1/solutions/kyb-essentials-se/ex
 });
 ```
 
-Each bundle's inputs and price are on its page at [strale.dev/tools#bundled](https://strale.dev/tools#bundled).
+Each bundle's inputs and price are on its page at [strale.dev/solutions](https://strale.dev/solutions).
 
 ## Free tools
 
@@ -98,7 +98,7 @@ const strale = new Strale({
   apiKey: "sk_live_...",               // required
   baseUrl: "https://api.strale.io",    // default
   timeout: 60_000,                     // ms per HTTP request, default 60 s
-  defaultMaxPriceCents: 100,           // used when a call omits max_price_cents; no default
+  defaultMaxPriceCents: 100,           // fallback only if max_price_cents is undefined at runtime (the typings require it); no default
   pollInterval: 2_000,                 // ms between polls for long-running calls
   maxPollWait: 120_000,                // ms to keep polling before giving up
 });
@@ -120,7 +120,7 @@ try {
 }
 ```
 
-`errorCode` is one of `insufficient_balance`, `no_matching_capability`, `capability_unavailable`, `execution_failed`, `timeout_exceeded`, `invalid_request`, `rate_limited`, `unauthorized` or `not_found`.
+Common `errorCode` values include `insufficient_balance`, `budget_exceeded` (the tool costs more than `max_price_cents`), `spend_cap_exceeded`, `no_matching_capability`, `capability_unavailable`, `execution_failed`, `timeout_exceeded`, `invalid_request`, `rate_limited`, `unauthorized` and `not_found`. Codes without their own error class arrive as a plain `StraleError`.
 
 ## Resources
 
@@ -130,4 +130,4 @@ try {
 
 ## License
 
-MIT — see [LICENSE](../../LICENSE)
+MIT — see [LICENSE](https://github.com/strale-io/strale/blob/main/LICENSE)

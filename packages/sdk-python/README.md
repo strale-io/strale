@@ -26,7 +26,7 @@ print(result.output)      # the tool's structured fields
 print(result.provenance)  # Provenance(source=..., fetched_at=...)
 ```
 
-`do()` takes a `DoRequest`. `max_price_cents` is required: it caps what one call may cost, and the call is refused if the tool costs more. Each tool's inputs, output fields and price are on its page at [strale.dev/tools](https://strale.dev/tools) and in `strale.capability(slug)`.
+`do()` takes a `DoRequest` and returns a `DoResponse`, or a `DryRunResponse` when `dry_run=True` (the return type is the union of the two). `max_price_cents` is required: it caps what one call may cost, and the call is refused with `budget_exceeded` if the tool costs more. The API also has a hard ceiling per request. Each tool's inputs, output fields and price are on its page at [strale.dev/capabilities](https://strale.dev/capabilities) and in `strale.capability(slug)`.
 
 ## Describe the task instead of naming the tool
 
@@ -81,7 +81,7 @@ res = httpx.post(
 )
 ```
 
-Each bundle's inputs and price are on its page at [strale.dev/tools#bundled](https://strale.dev/tools#bundled).
+Each bundle's inputs and price are on its page at [strale.dev/solutions](https://strale.dev/solutions).
 
 ## Free tools
 
@@ -121,7 +121,7 @@ except StraleError as e:
     print(e.error_code, e.status_code, e)
 ```
 
-`error_code` is one of `insufficient_balance`, `no_matching_capability`, `capability_unavailable`, `execution_failed`, `timeout_exceeded`, `invalid_request`, `rate_limited`, `unauthorized` or `not_found`.
+Common `error_code` values include `insufficient_balance`, `budget_exceeded` (the tool costs more than `max_price_cents`), `spend_cap_exceeded`, `no_matching_capability`, `capability_unavailable`, `execution_failed`, `timeout_exceeded`, `invalid_request`, `rate_limited`, `unauthorized` and `not_found`. Codes without their own error class arrive as a plain `StraleError`.
 
 ## Resources
 
@@ -131,4 +131,4 @@ except StraleError as e:
 
 ## License
 
-MIT — see [LICENSE](../../LICENSE)
+MIT — see [LICENSE](https://github.com/strale-io/strale/blob/main/LICENSE)
