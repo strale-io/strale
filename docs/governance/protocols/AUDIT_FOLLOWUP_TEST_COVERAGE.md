@@ -1,23 +1,16 @@
 ---
-status: candidate
-authority_active: false
-source: CLAUDE.md
-source_heading: "Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
+status: active
+authority_active: true
+adopted_by: DEC-20261024-A
+moved_from: "CLAUDE.md heading: Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
+moved_at: 2026-10-24
 ---
 
 # Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)
 
-> [!CAUTION]
-> **INACTIVE MIRROR: CLAUDE.md REMAINS THE AUTHORITY UNTIL M4.**
-> This file is a byte-identical copy of the protocol's section in `CLAUDE.md`,
-> extracted so the coverage manifest and future protocol router can reference
-> a full-body path (T6 M3 batch 6b). It carries no authority of its own and
-> must never be edited on its own: any change belongs in `CLAUDE.md` first,
-> then re-extracted here. `npm run protocols:check` fails if the two copies
-> diverge.
-
-<!-- BEGIN VERBATIM FROM CLAUDE.md -->
-### Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)
+> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
+> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
+> routes to this file from its reading map.
 
 **MANDATORY — applies to ANY commit that introduces or substantially modifies a code path in response to a cert-audit finding (Y-, A-, B-, RED-, MED-, CRIT-, F-AUDIT- numbered findings).**
 
@@ -43,4 +36,3 @@ source_heading: "Audit-Follow-up Test Coverage Protocol (DEC-20260504-A)"
 - The Distribution PR Integrity Protocol (DEC-20260422-A).
 
 **Test-harness exemption:** if the relevant test harness doesn't exist in the repo (e.g. route-level integration testing for `/v1/do` requires a Postgres-backed harness that hasn't been built), the commit may ship with a unit-level regression test that captures the structural shape of the bug, plus an explicit reference to the missing harness in the PR description and Journal entry. The exemption does not apply to cases where the harness exists and the author skipped writing a test.
-<!-- END VERBATIM FROM CLAUDE.md -->

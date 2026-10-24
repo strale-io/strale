@@ -250,7 +250,10 @@ export function publicIdentities(root, baseRef = "origin/main") {
  */
 export function gitNativeClaims(root) {
   const ids = new Set();
-  for (const file of ["CLAUDE.md", "AGENTS.md"]) {
+  // Since the contract cut (DEC-20261024-A) the protocol headings live in
+  // docs/governance/protocols/, so those files are read as well.
+  const protocolFiles = (gitQuiet(root, ["ls-files", "--", "docs/governance/protocols/*.md"]) ?? "").split(/\r?\n/).filter(Boolean);
+  for (const file of ["CLAUDE.md", "AGENTS.md", ...protocolFiles]) {
     const text = gitQuiet(root, ["show", `:${file}`]) ?? "";
     for (const line of text.split(/\r?\n/)) {
       if (!/^#{1,6}\s/.test(line)) continue;

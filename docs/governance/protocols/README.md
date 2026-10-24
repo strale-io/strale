@@ -1,67 +1,34 @@
----
-doc_type: protocol-library-navigation
-authority_scope: none
-status: skeleton
-complete: false
-phase: M1
-m1_template: true
----
+# Protocol library
 
-# Protocol Library
+The authoritative text of Strale's mandatory protocols and rules. They moved
+here verbatim from `CLAUDE.md` in the contract cut (DEC-20261024-A); each file's
+front matter names the heading it came from. `AGENTS.md`'s reading map says
+which one to read before which task, and `REVIEW.md` turns them into review
+checks. Change a protocol here, in a reviewed PR; a protocol tied to a decision
+changes only with that decision (`SUPERSEDING_DECISIONS.md`).
 
-> [!CAUTION]
-> **M1 NON-AUTHORITATIVE SKELETON — DO NOT USE AS PROJECT TRUTH.**
-> Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force.
+| File | Rule |
+|---|---|
+| `AUDIT_FOLLOWUP_TEST_COVERAGE.md` | fail-before tests on money and compliance paths (DEC-20260504-A) |
+| `BULK_OPERATION_DEPLOY.md` | resuming a long-silent bulk operation (DEC-20260504-B) |
+| `DEPLOY_MECHANISM_VERIFICATION.md` | prove the deploy runs the new path, query prod for the effect (DEC-20260504-C) |
+| `DISTRIBUTION_PR_INTEGRITY.md`, `DISTRIBUTION_PR_PREFLIGHT.md` | distribution PRs and published packages (DEC-20260422-A) |
+| `CAPABILITY_ONBOARDING.md`, `CAPABILITY_ONBOARDING_PIPELINE.md` | capability onboarding (DEC-20260320-B) |
+| `TEST_INFRASTRUCTURE_COST_PRINCIPLES.md` | zero-cost probes, validate before paid calls, piggyback never scheduled |
+| `WIRE_SHAPE_TRUST_ENDPOINTS.md` | canonical wire values on trust and public endpoints |
+| `DRIFT_PREVENTION_SURFACES.md`, `CROSS_REPO_UPDATES.md` | one source per fact; the frontend files that follow a backend change |
+| `CAPABILITIES_AND_QUALITY.md` | capability, x402, free-tier and test-mode facts and gotchas |
+| `SHARED_CHECKOUT_RULE.md`, `WORKTREE_NODE_MODULES_HAZARD.md` | concurrency safety in a shared clone |
+| `SESSION_CONTRACT.md` | orient, gate before stopping, git hooks |
+| `PROGRAM_REGISTER.md` | where multi-batch work resumes |
+| `RESEARCH_AND_IDEAS.md` | research files and the ideas list |
+| `DESIGN_TOKENS.md` | design values as data |
+| `CHEAP_EXTRAS_REGISTERS.md` | env manifest, model registry, claims register |
+| `EVIDENCE_RECEIPTS_MIGRATION_LEDGER.md` | evidence receipts and the append-only migration ledger |
+| `SCORING_INTEGRITY_RETIRED.md` | the retired SQS rule and the root-cause principle it leaves |
+| `REPORT_FILING.md` | where reports go; what the repo root may hold |
+| `SUPERSEDING_DECISIONS.md` | conflict duty, append-only decisions, superseding a decision |
+| `REVIEW_TEMPLATE.md` | the finding format for a review-findings file |
 
-<!-- M1-TEMPLATE: no project truth -->
-
-No M1/M2 protocol-router body has moved here yet — this file stays the
-inert future destination for that extraction.
-
-Two standalone checklists were relocated here from the repo root on
-2026-09-02 (T5, CTO-readable structure): `DISTRIBUTION_PR_PREFLIGHT.md` and
-`REVIEW_TEMPLATE.md`. They are read directly at their new path (CLAUDE.md's
-Distribution PR Integrity Protocol links the first; sessions writing a
-review-findings file follow the second) and are unaffected by the M1/M2
-candidate status of this README — they were already live governance
-documents before the move, just filed at the repo root.
-
-## Extracted protocol mirrors (inactive, T6 M3 batch 6)
-
-The files below are byte-identical, inactive mirrors of a mandatory
-protocol's full text in `CLAUDE.md`, marked with `authority_active: false`
-front matter and a `<!-- BEGIN/END VERBATIM FROM CLAUDE.md -->` block.
-`CLAUDE.md` remains the sole authority for all of them until the
-founder-gated M4 cutover; `npm run protocols:check` fails if a mirror ever
-diverges from the `CLAUDE.md` section it copies.
-
-- `DEPLOY_MECHANISM_VERIFICATION.md`: Deploy Mechanism Verification
-  Protocol (DEC-20260504-C).
-- `SESSION_CONTRACT.md`: Session contract, both tools, every session.
-- `DISTRIBUTION_PR_INTEGRITY.md`: Distribution PR Integrity Protocol
-  (DEC-20260422-A). `DISTRIBUTION_PR_PREFLIGHT.md` above stays the separate
-  checklist it already was; this mirror is the full protocol text.
-- `CAPABILITY_ONBOARDING.md`: Capability Onboarding Protocol
-  (DEC-20260320-B). The "Adding New Capabilities (MANDATORY PIPELINE)"
-  section of `CLAUDE.md` is the how-to this protocol governs and is a
-  separate section, not part of this mirror.
-- `AUDIT_FOLLOWUP_TEST_COVERAGE.md`: Audit-Follow-up Test Coverage
-  Protocol (DEC-20260504-A).
-- `BULK_OPERATION_DEPLOY.md`: Bulk-Operation Deploy Protocol
-  (DEC-20260504-B).
-- `SHARED_CHECKOUT_RULE.md`: Shared-Checkout Rule (concurrency safety).
-  The "Worktree node_modules Hazard" section that follows it in
-  `CLAUDE.md` is a separate rule, not part of this mirror.
-- `WORKTREE_NODE_MODULES_HAZARD.md`: Worktree node_modules Hazard, the
-  rule that follows `SHARED_CHECKOUT_RULE.md` above in `CLAUDE.md`.
-- `TEST_INFRASTRUCTURE_COST_PRINCIPLES.md`: Test Infrastructure Cost
-  Principles (always enforce).
-- `WIRE_SHAPE_TRUST_ENDPOINTS.md`: Wire-shape rule for
-  `/v1/public/ops/trust/*` endpoints.
-
-All ten mandatory protocols/rules now have inactive, checked mirrors (M3
-batches 6a, 6b and 7). Each one, its governing decision (or the reason it
-has none), and its enforcing code/tests are recorded in
-`docs/project/protocol-coverage.yaml`, checked by `npm run
-protocols:coverage`; `docs/project/PROTOCOL-ROUTER.md` is generated from
-that manifest and stays inactive until the founder-gated M4 cutover.
+The production-authority rule lives in `docs/company/CHARTER.md` and
+`apps/api/src/lib/production-authority.ts`, not here.

@@ -182,7 +182,8 @@ test("pre-cutover entrypoint guard covers every authored M2 candidate", () => {
     assert.equal(checkPrecutoverEntrypoint("AGENTS.md", `Read ${file}.`).length, 1);
   }
   assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.").length, 1);
-  assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/decisions/*.md.").length, 1);
+  // docs/decisions/ records and ACTIVE.md are authoritative since the contract cut.
+  assert.deepEqual(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/decisions/ACTIVE.md and docs/decisions/records/."), []);
   assert.deepEqual(checkPrecutoverEntrypoint("AGENTS.md", "No inactive context links."), []);
 });
 

@@ -55,7 +55,7 @@ Every row's `enforced_by` code is unchanged; only the text's home moved.
 | Capabilities & Quality | moved: `docs/governance/protocols/CAPABILITIES_AND_QUALITY.md`; reading map |
 | Quick / Full Session Checklist | retired: replaced by the session contract (orient, commit and review by tier, ship, gate). Kept from them: the handoff file (gate) and review before merge (`REVIEW.md`). Retired: connectivity check, Notion To-do archive, Journal entry |
 | Report Filing Convention | moved: `REPORT_FILING.md`; root list summarised in AGENTS.md "Where things live" |
-| Workflow Invariants | `CONTRADICTION_PROTOCOL.md` (conflict duty, append-only decisions, the five supersession steps) and non-negotiable 6; Notion wording retired |
+| Workflow Invariants | `SUPERSEDING_DECISIONS.md` (conflict duty, append-only decisions, the five supersession steps) and non-negotiable 6; Notion wording retired |
 | Degraded Mode | non-negotiable 8 (Git down → stop); the Notion half retired |
 | Cross-Repo Updates | moved: `CROSS_REPO_UPDATES.md`; reading map |
 
@@ -79,6 +79,12 @@ Every row's `enforced_by` code is unchanged; only the text's home moved.
   the generated `docs/project/PROTOCOL-ROUTER.md`). The manifest
   `docs/project/protocol-coverage.yaml` was used once, as this checklist, and
   is deleted with them; the reading map in AGENTS.md replaces the router.
+  `docs/project/PROTOCOL-ROUTER.md` stays at its path as a frozen copy (no
+  longer generated or checked) because the closed M2 closure register cites
+  it as evidence.
+- The pre-cutover entrypoint guard in `check-project-context.mjs` is narrowed:
+  the entrypoints may now link `docs/decisions/` (authoritative), and still may
+  not link `docs/project/` or an authored M2 candidate.
 - Carved out and kept, blocking: `decisions:check` / `decisions:test`
   (decision-record schema, id collisions, immutability of active decisions,
   generated decision index), previously reachable only through `context:test`.

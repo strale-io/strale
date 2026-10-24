@@ -1,23 +1,16 @@
 ---
-status: candidate
-authority_active: false
-source: CLAUDE.md
-source_heading: "Scoring Integrity (retired with the SQS engine — DEC-20260503-B)"
+status: active
+authority_active: true
+adopted_by: DEC-20261024-A
+moved_from: "CLAUDE.md heading: Scoring Integrity (retired with the SQS engine — DEC-20260503-B)"
+moved_at: 2026-10-24
 ---
 
 # Scoring Integrity (retired with the SQS engine — DEC-20260503-B)
 
-> [!CAUTION]
-> **INACTIVE MIRROR: CLAUDE.md REMAINS THE AUTHORITY UNTIL M4.**
-> This file is a byte-identical copy of the protocol's section in `CLAUDE.md`,
-> extracted so the coverage manifest and future protocol router can reference
-> a full-body path (T6 M3 batch 7, review round 1). It carries no authority of its own and
-> must never be edited on its own: any change belongs in `CLAUDE.md` first,
-> then re-extracted here. `npm run protocols:check` fails if the two copies
-> diverge.
-
-<!-- BEGIN VERBATIM FROM CLAUDE.md -->
-### Scoring Integrity (retired with the SQS engine — DEC-20260503-B)
+> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
+> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
+> routes to this file from its reading map.
 
 The Scoring Integrity Protocol has been retired. The SQS engine, `sqs.ts`,
 `EXTERNAL_SERVICE_PATTERNS`, `isExternalServiceFailure`, and `computeFromRows`
@@ -27,4 +20,3 @@ diagnose the underlying issue (missing credential, bad fixture, real bug) and
 fix it; never bend the substrate to mask a specific capability's behaviour.
 
 See also: Capability Onboarding Protocol (DEC-20260320-B).
-<!-- END VERBATIM FROM CLAUDE.md -->

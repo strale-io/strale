@@ -1,28 +1,16 @@
 ---
-status: candidate
-authority_active: false
-source: CLAUDE.md
-source_heading: "Adding New Capabilities (MANDATORY PIPELINE)"
+status: active
+authority_active: true
+adopted_by: DEC-20261024-A
+moved_from: "CLAUDE.md heading: Adding New Capabilities (MANDATORY PIPELINE)"
+moved_at: 2026-10-24
 ---
 
 # Adding New Capabilities (MANDATORY PIPELINE)
 
-> [!CAUTION]
-> **INACTIVE MIRROR: CLAUDE.md REMAINS THE AUTHORITY UNTIL M4.**
-> This file is a byte-identical copy of the protocol's section in `CLAUDE.md`,
-> extracted so the coverage manifest and future protocol router can reference
-> a full-body path (T6 M3 batch 7, review round 1). It carries no authority of its own and
-> must never be edited on its own: any change belongs in `CLAUDE.md` first,
-> then re-extracted here. `npm run protocols:check` fails if the two copies
-> diverge.
-
-> [!NOTE]
-> The "Capability Onboarding Protocol (DEC-20260320-B)" section further
-> down in `CLAUDE.md` is a separate mirror (`CAPABILITY_ONBOARDING.md`)
-> and is not part of this one.
-
-<!-- BEGIN VERBATIM FROM CLAUDE.md -->
-### Adding New Capabilities (MANDATORY PIPELINE)
+> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
+> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
+> routes to this file from its reading map.
 
 **All new capabilities MUST go through the manifest-driven pipeline.** (The historical seed.ts file was deleted in PR #79; it duplicated manifest content and only generated 2 of 5 required test types via its onboarding hook. The canonical pipeline is `apps/api/scripts/onboard.ts` — it generates all 5 test types and is the only sanctioned path for capability creation.)
 
@@ -104,4 +92,3 @@ data_source: "Example API"
 data_source_type: "api"  # api | scrape | computed | reference
 transparency_tag: "algorithmic"  # algorithmic | ai_generated | mixed
 freshness_category: "live-fetch"  # live-fetch | reference-data | computed
-<!-- END VERBATIM FROM CLAUDE.md -->

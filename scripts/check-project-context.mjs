@@ -31,7 +31,6 @@ function finding(code, path, detail) {
 
 const GENERATED_CONTEXT_FILES = [
   "docs/project/DECISIONS.md",
-  "docs/project/PROTOCOL-ROUTER.md",
   "docs/project/RECENT.md",
   "docs/project/legacy-authority-inventory.json",
   "docs/project/schemas/project-document.schema.json",
@@ -80,8 +79,13 @@ export function checkPrivateArchiveStatus(root) {
   }
 }
 
+// At the contract cut (DEC-20261024-A) docs/decisions/ (records, ACTIVE.md)
+// became authoritative, so the entrypoints may route to it. The files that
+// are still inactive candidates — everything under docs/project/ and the
+// authored M2 candidates (M2_CANDIDATE_DOCUMENTS) — stay unlinkable.
 export function checkPrecutoverEntrypoint(entrypoint, content) {
-  return /docs[\\/](?:project|decisions)(?:[\\/]|\b)/.test(content)
+  const candidates = Object.keys(M2_CANDIDATE_DOCUMENTS);
+  return /docs[\\/]project(?:[\\/]|\b)/.test(content) || candidates.some((file) => content.includes(file))
     ? [finding("M1_ENTRYPOINT_ACTIVATED", entrypoint)]
     : [];
 }

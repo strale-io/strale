@@ -7,15 +7,15 @@ description: Use when creating, modifying or onboarding a capability (a new exec
 
 The prompt says **what** the capability does. This skill is **how** it enters
 the system, and that part is not optional because the prompt left it out.
-Authority: `CLAUDE.md` → "Capability Onboarding Protocol (DEC-20260320-B)" and
-"Adding New Capabilities (MANDATORY PIPELINE)". If this file and `CLAUDE.md`
-disagree, `CLAUDE.md` wins; fix this file. The reviewer's checklist is in the
+Authority: `docs/governance/protocols/CAPABILITY_ONBOARDING.md`
+(DEC-20260320-B) and `CAPABILITY_ONBOARDING_PIPELINE.md` beside it. If this
+file and those disagree, they win; fix this file. The reviewer's checklist is in the
 root `REVIEW.md`.
 
 ## 0. Before writing code
 
 - Read the onboarding spec: Notion page `32467c87-082c-819a-a731-d8a5f7237b33`
-  if Notion is reachable, otherwise the two `CLAUDE.md` sections above.
+  if Notion is reachable, otherwise the two protocol files above.
 - **Data access** (DEC-20261023-A). Name the lane the upstream source is in:
   preferred (official API, licensed data, statutory registry), allowed with
   checks, or never. A "never" source stops here. Check that the host is **not**
@@ -48,7 +48,7 @@ root `REVIEW.md`.
 
 ## 2. Manifest — `manifests/<slug>.yaml`
 
-Start from the template in `CLAUDE.md`. Required:
+Start from the template in `CAPABILITY_ONBOARDING_PIPELINE.md`. Required:
 
 - `slug`, `name`, `description` (50–160 chars), `category`
 - `input_schema`, `output_schema`
