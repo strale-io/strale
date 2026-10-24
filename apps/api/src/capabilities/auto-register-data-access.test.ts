@@ -15,10 +15,11 @@ beforeAll(async () => {
 
 describe("auto-register loads manifest data_access", () => {
   it("registers the declaration for a vendor-backed capability", () => {
-    expect(getDataAccess("google-search")).toEqual({
+    expect(getDataAccess("google-search")).toMatchObject({
       lane: "allowed_with_checks",
       acquisition_method: "vendor_api",
       upstream_vendor: "serper",
+      checks: "pending",
     });
   });
 

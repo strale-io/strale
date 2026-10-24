@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { getExecutor } from "./index.js";
+import { registerDataAccess, __resetDataAccessForTests } from "../lib/data-access.js";
 import "./adverse-media-check.js";
 
 const saved = { d: process.env.DILISENSE_API_KEY, s: process.env.SERPER_API_KEY };
@@ -18,9 +19,19 @@ function json(body: unknown, status = 200): Response {
 
 beforeEach(() => {
   process.env.SERPER_API_KEY = "test-serper";
+  // The manifest default is active, as at runtime, so the test proves the
+  // Serper path does not inherit Dilisense's labels.
+  registerDataAccess("adverse-media-check", {
+    lane: "allowed_with_checks",
+    acquisition_method: "vendor_api",
+    upstream_vendor: "dilisense",
+    checks: "recorded",
+    checks_note: "test default: recorded, so a fallback that inherited it would show",
+  });
 });
 
 afterEach(() => {
+  __resetDataAccessForTests();
   vi.unstubAllGlobals();
   if (saved.d === undefined) delete process.env.DILISENSE_API_KEY;
   else process.env.DILISENSE_API_KEY = saved.d;
@@ -40,6 +51,8 @@ describe("adverse-media-check provenance names the answering vendor", () => {
       source: "dilisense.com",
       acquisition_method: "vendor_api",
       upstream_vendor: "dilisense",
+      data_access_lane: "allowed_with_checks",
+      data_access_checks: "recorded",
     });
   });
 
@@ -55,6 +68,8 @@ describe("adverse-media-check provenance names the answering vendor", () => {
       source: "google-serper",
       acquisition_method: "vendor_api",
       upstream_vendor: "serper",
+      data_access_lane: "allowed_with_checks",
+      data_access_checks: "pending",
     });
   });
 });

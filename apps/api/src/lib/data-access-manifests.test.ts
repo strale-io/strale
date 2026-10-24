@@ -20,6 +20,10 @@ const manifests = readdirSync(manifestsDir)
   .map((f) => yaml.load(readFileSync(resolve(manifestsDir, f), "utf8")) as Record<string, unknown> & { slug: string })
   .filter((m) => m && typeof m.slug === "string");
 const deactivated = getDeactivatedCapabilities();
+const capabilitiesDir = resolve(import.meta.dirname, "..", "capabilities");
+
+/** The shared fetch path that checks robots.txt and stops at a block (PR #723). */
+const CHECKED_FETCH = /fetchRenderedHtml(Fresh)?\(|fetchPage\(|fetchCompanyPage\(|assertRobotsAllowed\(/;
 
 describe("manifest data_access blocks (DEC-20261023-A)", () => {
   it("reads the catalogue", () => {
@@ -64,7 +68,23 @@ describe("manifest data_access blocks (DEC-20261023-A)", () => {
         } else if (!r.value.upstream_vendor) {
           problems.push(`${slug}: calls ${record.vendor} but names no upstream_vendor`);
         }
+        // Terms not recorded as permitting resale cannot back a "recorded" claim.
+        if (record.resale !== "permitted" && r.value.checks === "recorded") {
+          problems.push(`${slug}: checks recorded, but ${record.vendor}'s resale is ${record.resale} in vendor-terms.ts`);
+        }
       }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it("claims recorded checks for a customer-directed fetch only on the checked fetch path", () => {
+    const problems: string[] = [];
+    for (const m of manifests) {
+      if (deactivated.has(m.slug)) continue;
+      const r = parseDataAccess(m.data_access);
+      if (!r.ok || r.value.acquisition_method !== "customer_directed_fetch" || r.value.checks !== "recorded") continue;
+      const src = readFileSync(resolve(capabilitiesDir, `${m.slug}.ts`), "utf8");
+      if (!CHECKED_FETCH.test(src)) problems.push(`${m.slug}: checks recorded but never fetches through web-provider or assertRobotsAllowed`);
     }
     expect(problems).toEqual([]);
   });

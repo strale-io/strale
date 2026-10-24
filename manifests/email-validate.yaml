@@ -102,5 +102,5 @@ limitations:
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
-  lane: not_applicable
-  acquisition_method: computed
+  lane: preferred
+  acquisition_method: primary_source

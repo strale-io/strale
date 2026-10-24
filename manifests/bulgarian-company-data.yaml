@@ -114,3 +114,4 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_aggregation
   upstream_vendor: openapi
+  checks: pending

@@ -17,11 +17,29 @@ describe("parseDataAccess (DEC-20261023-A manifest block)", () => {
       value: { lane: "preferred", acquisition_method: "direct_api" },
     });
     expect(
-      parseDataAccess({ lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "serper" }),
+      parseDataAccess({ lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "serper", checks: "pending" }),
     ).toEqual({
       ok: true,
-      value: { lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "serper" },
+      value: { lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "serper", checks: "pending" },
     });
+  });
+
+  it("requires checks on the allowed_with_checks lane, and only there", () => {
+    expect(parseDataAccess({ lane: "allowed_with_checks", acquisition_method: "vendor_api" }).ok).toBe(false);
+    expect(parseDataAccess({ lane: "allowed_with_checks", acquisition_method: "vendor_api", checks: "done" }).ok).toBe(false);
+    expect(parseDataAccess({ lane: "preferred", acquisition_method: "direct_api", checks: "pending" }).ok).toBe(false);
+    expect(
+      parseDataAccess({ lane: "preferred", acquisition_method: "direct_api", checks_note: "a note on a lane without checks" }).ok,
+    ).toBe(false);
+  });
+
+  it("requires a real note when checks are recorded", () => {
+    const base = { lane: "allowed_with_checks", acquisition_method: "vendor_api", checks: "recorded" };
+    expect(parseDataAccess(base).ok).toBe(false);
+    expect(parseDataAccess({ ...base, checks_note: "ok" }).ok).toBe(false);
+    expect(
+      parseDataAccess({ ...base, checks_note: "Vendor terms permit resale; recorded in docs/security/x.md." }).ok,
+    ).toBe(true);
   });
 
   it("refuses an unknown lane, an unknown method and an unknown key", () => {
@@ -50,26 +68,48 @@ describe("parseDataAccess (DEC-20261023-A manifest block)", () => {
 });
 
 describe("stampDataAccess", () => {
-  const vendorDefault = { lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "serper" } as const;
+  const vendorDefault = { lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "serper", checks: "pending" } as const;
 
-  it("fills method, lane and vendor when the executor set none", () => {
+  it("fills method, lane, vendor and checks when the executor set none", () => {
     expect(stampDataAccess({ source: "google-serper", fetched_at: "t" }, vendorDefault)).toEqual({
       source: "google-serper",
       fetched_at: "t",
       acquisition_method: "vendor_api",
       data_access_lane: "allowed_with_checks",
       upstream_vendor: "serper",
+      data_access_checks: "pending",
     });
   });
 
   it("never overwrites the executor's values", () => {
     const p = { source: "dilisense.com", fetched_at: "t", acquisition_method: "vendor_api", upstream_vendor: "dilisense" };
-    expect(stampDataAccess(p, vendorDefault)).toEqual({ ...p, data_access_lane: "allowed_with_checks" });
+    expect(stampDataAccess(p, vendorDefault)).toEqual({ ...p, data_access_lane: "allowed_with_checks", data_access_checks: "pending" });
   });
 
   it("does not hand the manifest's vendor to a call the executor labelled with another method", () => {
     const p = { source: "commoncrawl.org", fetched_at: "t", acquisition_method: "primary_source" };
     expect(stampDataAccess(p, vendorDefault)).not.toHaveProperty("upstream_vendor");
+  });
+
+  it("stamps the manifest's checks on its own path, and lowers them to pending on another vendor's path", () => {
+    const recorded = { lane: "allowed_with_checks", acquisition_method: "vendor_api", upstream_vendor: "sslmate", checks: "recorded" } as const;
+    expect(stampDataAccess({ source: "s", fetched_at: "t" }, recorded)).toMatchObject({ data_access_checks: "recorded" });
+    expect(
+      stampDataAccess({ source: "s", fetched_at: "t", acquisition_method: "vendor_api", upstream_vendor: "sslmate" }, recorded),
+    ).toMatchObject({ data_access_checks: "recorded" });
+    expect(
+      stampDataAccess({ source: "s", fetched_at: "t", acquisition_method: "vendor_api", upstream_vendor: "other" }, recorded),
+    ).toMatchObject({ data_access_checks: "pending" });
+    // An executor's own statement stands.
+    expect(
+      stampDataAccess({ source: "s", fetched_at: "t", upstream_vendor: "other", data_access_checks: "recorded" }, recorded),
+    ).toMatchObject({ data_access_checks: "recorded" });
+  });
+
+  it("stamps no checks on lanes without them", () => {
+    expect(stampDataAccess({ source: "s", fetched_at: "t" }, { lane: "preferred", acquisition_method: "direct_api" })).not.toHaveProperty(
+      "data_access_checks",
+    );
   });
 
   it("leaves provenance unchanged without a declaration", () => {
@@ -78,12 +118,26 @@ describe("stampDataAccess", () => {
   });
 });
 
+describe("provenance schema rejects undeclared values", () => {
+  it.each([
+    ["data_access_lane", "never"],
+    ["data_access_checks", "done"],
+    ["acquisition_method", "official_api"],
+  ])("%s: %s is a shape error", (field, value) => {
+    const r = validateProvenanceAtBoundary(
+      { source: "s", fetched_at: new Date().toISOString(), [field]: value },
+      { slug: `data-access-reject-${field}`, dataSourceType: "api" },
+    );
+    expect(r.ok).toBe(false);
+  });
+});
+
 describe("provenance schema accepts every declared value", () => {
   it.each(ACQUISITION_METHODS.flatMap((m) => DATA_ACCESS_LANES.map((l) => [m, l] as const)))(
     "%s / %s passes validateProvenanceAtBoundary without a shape warning",
     (method, lane) => {
       const r = validateProvenanceAtBoundary(
-        { source: "s", fetched_at: new Date().toISOString(), acquisition_method: method, data_access_lane: lane, upstream_vendor: "v", primary_source_reference: "r" },
+        { source: "s", fetched_at: new Date().toISOString(), acquisition_method: method, data_access_lane: lane, data_access_checks: "pending", upstream_vendor: "v", primary_source_reference: "r" },
         { slug: `data-access-test-${method}-${lane}`, dataSourceType: "api" },
       );
       expect(r.ok).toBe(true);
@@ -104,6 +158,7 @@ describe("getExecutor stamps the manifest's data_access onto provenance", () => 
       lane: "allowed_with_checks",
       acquisition_method: "vendor_api",
       upstream_vendor: "serper",
+      checks: "pending",
     });
     const result = await getExecutor("data-access-stamp-test")!({});
     expect(result.output).toEqual({ ok: true });
@@ -111,6 +166,7 @@ describe("getExecutor stamps the manifest's data_access onto provenance", () => 
       acquisition_method: "vendor_api",
       data_access_lane: "allowed_with_checks",
       upstream_vendor: "serper",
+      data_access_checks: "pending",
     });
   });
 

@@ -233,4 +233,5 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_aggregation
-  upstream_vendor: openmercantil
+  upstream_vendor: OpenMercantil.es
+  checks: pending

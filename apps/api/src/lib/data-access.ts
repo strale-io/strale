@@ -8,10 +8,20 @@
  *     lane: preferred | allowed_with_checks | not_applicable
  *     acquisition_method: <AcquisitionMethod>
  *     upstream_vendor: "serper"     # optional; set when a vendor sits between Strale and the source
+ *     checks: recorded | pending    # required on allowed_with_checks, forbidden elsewhere
+ *     checks_note: "…"              # required when checks is recorded
  *
  * `not_applicable` is for capabilities that fetch nothing (computation over
  * the caller's input, or an LLM transformation of it). The rule's third lane,
  * "never", has no value here: a capability in it is deactivated, not labelled.
+ *
+ * "Allowed with checks" is conditional: the rule allows the source only once
+ * its checks are recorded (vendor terms that permit resale; a source's terms
+ * permitting per-call access; a fetch that honours robots.txt and stops at a
+ * block). `checks: pending` says the lane applies but the checks are not yet
+ * recorded, so an answer never claims more than has been verified.
+ * `checks_note` is the rule's one-paragraph note ("Recording the lane"): what
+ * is fetched, why it may be, whose terms were checked, how blocks are honoured.
  *
  * auto-register reads the block once at startup and `getExecutor` stamps it
  * onto provenance. The executor's own value wins, because only the executor
@@ -37,10 +47,20 @@ export const ACQUISITION_METHODS = [
 ] as const;
 export type AcquisitionMethod = (typeof ACQUISITION_METHODS)[number];
 
+export const DATA_ACCESS_CHECKS = ["recorded", "pending"] as const;
+export type DataAccessChecks = (typeof DATA_ACCESS_CHECKS)[number];
+
+/** Shortest checks_note accepted: a sentence, not a placeholder. */
+const MIN_CHECKS_NOTE_CHARS = 40;
+
+const KNOWN_KEYS = new Set(["lane", "acquisition_method", "upstream_vendor", "checks", "checks_note"]);
+
 export interface DataAccess {
   lane: DataAccessLane;
   acquisition_method: AcquisitionMethod;
   upstream_vendor?: string;
+  checks?: DataAccessChecks;
+  checks_note?: string;
 }
 
 /**
@@ -54,7 +74,7 @@ export function parseDataAccess(raw: unknown): { ok: true; value: DataAccess } |
   const r = raw as Record<string, unknown>;
   const errors: string[] = [];
   for (const key of Object.keys(r)) {
-    if (key !== "lane" && key !== "acquisition_method" && key !== "upstream_vendor") {
+    if (!KNOWN_KEYS.has(key)) {
       errors.push(`data_access.${key} is not a known field`);
     }
   }
@@ -74,12 +94,29 @@ export function parseDataAccess(raw: unknown): { ok: true; value: DataAccess } |
   if (r.acquisition_method === "computed" && r.upstream_vendor !== undefined) {
     errors.push("data_access.upstream_vendor cannot be set when acquisition_method is computed");
   }
+  if (r.lane === "allowed_with_checks") {
+    if (!DATA_ACCESS_CHECKS.includes(r.checks as DataAccessChecks)) {
+      errors.push(`data_access.checks must be one of ${DATA_ACCESS_CHECKS.join(", ")} on the allowed_with_checks lane`);
+    }
+  } else if (r.checks !== undefined || r.checks_note !== undefined) {
+    errors.push("data_access.checks and checks_note apply only to the allowed_with_checks lane");
+  }
+  if (r.checks_note !== undefined && typeof r.checks_note !== "string") {
+    errors.push("data_access.checks_note must be a string");
+  }
+  if (r.checks === "recorded" && (typeof r.checks_note !== "string" || r.checks_note.trim().length < MIN_CHECKS_NOTE_CHARS)) {
+    errors.push(
+      `data_access.checks_note is required when checks is recorded (at least ${MIN_CHECKS_NOTE_CHARS} characters: what is fetched, whose terms were checked, how blocks are honoured)`,
+    );
+  }
   if (errors.length > 0) return { ok: false, errors };
   const value: DataAccess = {
     lane: r.lane as DataAccessLane,
     acquisition_method: r.acquisition_method as AcquisitionMethod,
   };
   if (typeof r.upstream_vendor === "string") value.upstream_vendor = r.upstream_vendor;
+  if (r.checks !== undefined) value.checks = r.checks as DataAccessChecks;
+  if (typeof r.checks_note === "string") value.checks_note = r.checks_note;
   return { ok: true, value };
 }
 
@@ -99,12 +136,16 @@ export function __resetDataAccessForTests(): void {
 }
 
 /**
- * Fill `acquisition_method`, `data_access_lane` and `upstream_vendor` from the
- * manifest where the executor left them unset. Never overwrites an executor
- * value: the executor knows which path the call took. `upstream_vendor` is
- * filled only when the executor also left `acquisition_method` unset, so a
- * call the executor labelled as taking another path never inherits the
- * manifest's vendor.
+ * Fill `acquisition_method`, `data_access_lane`, `upstream_vendor` and
+ * `data_access_checks` from the manifest where the executor left them unset.
+ * Never overwrites an executor value: the executor knows which path the call
+ * took. `upstream_vendor` is filled only when the executor also left
+ * `acquisition_method` unset, so a call the executor labelled as taking
+ * another path never inherits the manifest's vendor.
+ *
+ * `data_access_checks` can only be lowered: a call whose executor names a
+ * vendor other than the manifest's took a path the manifest's record does not
+ * cover, so it is stamped "pending" rather than inheriting "recorded".
  */
 export function stampDataAccess<P extends Record<string, unknown>>(provenance: P, access: DataAccess | undefined): P {
   if (!access || provenance === null || typeof provenance !== "object") return provenance;
@@ -114,6 +155,10 @@ export function stampDataAccess<P extends Record<string, unknown>>(provenance: P
   if (out.data_access_lane === undefined) out.data_access_lane = access.lane;
   if (!executorSetMethod && out.upstream_vendor === undefined && access.upstream_vendor) {
     out.upstream_vendor = access.upstream_vendor;
+  }
+  if (access.checks && out.data_access_checks === undefined) {
+    const otherVendor = out.upstream_vendor !== undefined && out.upstream_vendor !== access.upstream_vendor;
+    out.data_access_checks = otherVendor ? "pending" : access.checks;
   }
   return out as P;
 }

@@ -129,3 +129,4 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: customer_directed_fetch
+  checks: pending

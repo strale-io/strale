@@ -167,4 +167,6 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_aggregation
-  upstream_vendor: cobalt-intelligence
+  upstream_vendor: cobaltintelligence.com
+  checks: recorded
+  checks_note: "Cobalt Intelligence live Secretary of State lookups, per call. Petter confirmed Cobalt's redistribution rights (DEC-20260430-A, cited in capabilities/us-company-data-cobalt.ts); the data is statutory public business-registry records."

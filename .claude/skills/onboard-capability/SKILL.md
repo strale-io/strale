@@ -62,9 +62,12 @@ Start from the template in `CLAUDE.md`. Required:
 - at least one honest `limitations` entry
 - `data_access`: `lane` (`preferred`, `allowed_with_checks`, or
   `not_applicable` when nothing is fetched), `acquisition_method`, and
-  `upstream_vendor` when a vendor sits in the path. Values and meanings are in
-  `apps/api/src/lib/data-access.ts`; `data-access-manifests.test.ts` fails
-  without it. The executor still sets its own method and vendor on any path
+  `upstream_vendor` when a vendor sits in the path. On `allowed_with_checks`,
+  also `checks: recorded | pending`. `recorded` needs a `checks_note` with
+  the evidence: what is fetched, whose terms were checked (a file or decision
+  id), and how blocks are honoured. Without that evidence, write `pending`.
+  Values and meanings are in `apps/api/src/lib/data-access.ts`, and
+  `data-access-manifests.test.ts` fails without the block. The executor still sets its own method and vendor on any path
   that differs from this default, such as a fallback vendor.
 
 Set `gdpr_art_22_classification` for screening or risk-synthesis output. The

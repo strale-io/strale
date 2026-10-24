@@ -124,3 +124,5 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: public_page_read
+  checks: pending
+  checks_note: "Pending: the rule allows YouTube only through its official API; this reads YouTube pages."

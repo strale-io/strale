@@ -15,14 +15,14 @@
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { ACQUISITION_METHODS, DATA_ACCESS_LANES, type AcquisitionMethod, type DataAccessLane } from "./data-access.js";
+import { ACQUISITION_METHODS, DATA_ACCESS_CHECKS, DATA_ACCESS_LANES, type AcquisitionMethod, type DataAccessChecks, type DataAccessLane } from "./data-access.js";
 import { getStraleJurisdiction } from "./processing-location.js";
 import { logError, logWarn } from "./log.js";
 
 // Acquisition method: how the data reached Strale (introduced under
 // DEC-20260428-A; DEC-20261023-A requires it, with the rule's lane, on every
 // answer). The list and its meanings live in ./data-access.ts.
-export type { AcquisitionMethod, DataAccessLane };
+export type { AcquisitionMethod, DataAccessChecks, DataAccessLane };
 
 export interface RichProvenance {
   source: string;
@@ -48,6 +48,7 @@ export interface RichProvenance {
   upstream_vendor?: string;            // e.g. "cobalt-intelligence", "govlink", "brightquery"
   acquisition_method?: AcquisitionMethod;
   data_access_lane?: DataAccessLane;
+  data_access_checks?: DataAccessChecks;
   primary_source_reference?: string;   // URL, filing ID, screenshot handle, document hash
 
   // AI-specific fields
@@ -113,6 +114,7 @@ export function buildProvenance(
 
 const acquisitionMethodSchema = z.enum(ACQUISITION_METHODS);
 const dataAccessLaneSchema = z.enum(DATA_ACCESS_LANES);
+const dataAccessChecksSchema = z.enum(DATA_ACCESS_CHECKS);
 
 const richProvenanceSchema = z
   .object({
@@ -126,6 +128,7 @@ const richProvenanceSchema = z
     upstream_vendor: z.string().optional(),
     acquisition_method: acquisitionMethodSchema.optional(),
     data_access_lane: dataAccessLaneSchema.optional(),
+    data_access_checks: dataAccessChecksSchema.optional(),
     primary_source_reference: z.string().optional(),
     ai_model: z.string().optional(),
     ai_prompt_hash: z.string().optional(),

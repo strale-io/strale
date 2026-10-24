@@ -91,3 +91,5 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: customer_directed_fetch
+  checks: recorded
+  checks_note: "Fetches the URL the caller supplies, once per call. The shared fetch path (capabilities/lib/web-provider.ts) checks robots.txt for StraleBot, sends an honest Strale user agent, and stops with a refusal at HTTP 401, 403, 407 or 429 or a challenge page instead of retrying another route (PR #723, 2026-10-24)."

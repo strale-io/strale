@@ -245,6 +245,7 @@ limitations:
 
 # Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
 data_access:
-  lane: preferred
+  lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: esortcode
+  checks: pending
