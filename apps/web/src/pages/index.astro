@@ -1,0 +1,321 @@
+---
+// Home (SITE-STRUCTURE.md page 1). Sections in the order the structure sets:
+// hero, benefits, what agents use it for, one call, company and compliance data,
+// two ways to pay, ways in, start. Every number on this page is computed from
+// build-time data; none is typed.
+import { Image } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import CodeBlock from "../components/CodeBlock.astro";
+import wide from "@design/brand-kit/open-flow/assets/imagery/wide.png";
+import { getSiteData, tools as allTools, coverage, API_BASE } from "../lib/site-data";
+import { formatEur, formatUsd, formatDate, json, plural, usdcAtomic } from "../lib/format";
+import { executorSource } from "../lib/code-facts";
+import { JOB_GROUPS } from "../content/jobs";
+import { REGIONS } from "../content/countries";
+import { L1, SHORT_DESCRIPTION } from "../content/positioning";
+
+const data = await getSiteData();
+const tools = allTools(data);
+const bySlug = new Map(tools.map((t) => [t.slug, t]));
+// The count a visitor can browse: the catalogue itself, so the hero, the job groups and /tools agree.
+const libraryCount = tools.length;
+
+// §2 examples: one priced call per job, and one x402 quote. Editorial picks, skipped when not live.
+const priced = ["url-to-markdown", "invoice-extract", "vat-validate", "sanctions-check"].map((s) => bySlug.get(s)).filter((t) => t && t.price_cents > 0).slice(0, 3);
+const quoted = (t?: (typeof tools)[number]) => !!t?.x402 && t.x402.price_usd > 0;
+const quoteTool = ["vat-validate", "invoice-extract", "sanctions-check"].map((s) => bySlug.get(s)).find(quoted) ?? tools.find(quoted);
+
+// §3 breadth: the four non-flagship job groups, with live counts and visible examples.
+const breadth = JOB_GROUPS.filter((g) => ["web", "documents", "check", "developer"].includes(g.id)).map((g) => ({
+  ...g,
+  count: tools.filter((t) => t.job === g.id).length,
+  picks: g.examples.map((s) => bySlug.get(s)).filter((t) => t !== undefined),
+}));
+
+// §4 one call: a free tool, so a reader can repeat it with no key.
+const demo = ["iban-validate", "email-validate", "dns-lookup"].map((s) => bySlug.get(s)).find((t) => t?.free);
+const demoInput = demo ? data.manifests.get(demo.slug)?.example_input ?? {} : {};
+const demoOutput = demo?.output_schema?.example ?? {};
+const demoRequest = demo
+  ? `curl -X POST ${API_BASE}/v1/do \\\n  -H 'Content-Type: application/json' \\\n  -d '${JSON.stringify({ capability_slug: demo.slug, inputs: demoInput }, null, 2).replace(/\n/g, "\n  ")}'`
+  : "";
+const sentence = (t?: string) => (t ? (/[.!?]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`) : "");
+const demoResponse = demo
+  ? json({
+      result: {
+        transaction_id: "…",
+        status: "completed",
+        capability_used: demo.slug,
+        price_cents: 0,
+        output: demoOutput,
+        provenance: { source: executorSource(demo.slug) ?? demo.data_source, fetched_at: "…" },
+      },
+      free_tier: true,
+    })
+  : "";
+
+// §5 flagship: countries with a live registry tool, grouped by region; screening tools by name.
+const countries = coverage(data);
+const byRegion = REGIONS.map((r) => ({ region: r, list: countries.filter((c) => c.region === r) })).filter((r) => r.list.length > 0);
+const screening = ["sanctions-check", "pep-check", "adverse-media-check"].map((s) => bySlug.get(s)).filter((t) => t !== undefined);
+const bundles = data.facts.solution_count_active;
+
+// §6 payment routes.
+const x402Tools = data.x402.capabilities.length;
+const x402Bundles = data.x402.solutions.length;
+const freeCount = tools.filter((t) => t.free).length;
+---
+<Base title="Strale — tools your agent can use and pay for per call" description={SHORT_DESCRIPTION}>
+  <!-- §1 Hero. The headline outgrows wide.png's reading region at every width, so the copy sits beside the artwork, never on it (Open Flow imagery rule). -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="container hero-grid">
+      <div class="hero-copy">
+        <h1 id="hero-title" class="t-hero">{L1.headline}</h1>
+        <p class="t-lead">{L1.support}</p>
+        <form class="hero-search" action="/tools" method="get" role="search">
+          <label class="field-label" for="hero-q">Find a tool for a job</label>
+          <div class="hero-search-row">
+            <div class="input-wrap">
+              <svg class="icon lead-icon" aria-hidden="true"><use href="#i-search" /></svg>
+              <input class="input has-lead" id="hero-q" name="q" type="search" placeholder="Read a PDF invoice, check a VAT number…" autocomplete="off" />
+            </div>
+            <button class="btn btn-primary" type="submit">Search</button>
+          </div>
+          <p class="field-help">{plural(libraryCount, "tool")} in the library on {formatDate(data.loaded_at)}.</p>
+        </form>
+        <div class="row">
+          <a class="btn btn-secondary btn-lg" href="/tools">Browse tools</a>
+          <a class="link-standalone" href="/docs">Read the docs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <Image class="hero-raster" src={wide} alt="" widths={[640, 960, 1280, 1600]} sizes="(min-width: 1024px) 50vw, 100vw" loading="eager" />
+        <img class="hero-bands" src="/brand/bands.svg" alt="" width="800" height="380" />
+      </div>
+    </div>
+  </section>
+
+  <!-- §2 Benefits, each beside a concrete example. -->
+  <section class="section" aria-labelledby="benefits-title">
+    <div class="container stack-loose">
+      <h2 id="benefits-title" class="visually-hidden">How paying works</h2>
+      <div class="grid-2 benefits">
+        <article class="card">
+          <h3 class="card-title">{L1.perCall}</h3>
+          <p class="card-body">Each tool has one price per call. A single tool is charged only when the call succeeds.</p>
+          <ul class="price-list" role="list">
+            {priced.map((t) => (
+              <li class="price-row">
+                <span class="tool"><a class="link-quiet" href={`/tools/${t!.slug}`}><strong>{t!.name}</strong></a><span class="desc">{t!.slug}</span></span>
+                <span class="cell-price price"><span class="num">{formatEur(t!.price_cents)}</span><span class="unit">per call</span></span>
+              </li>
+            ))}
+          </ul>
+        </article>
+        <article class="card">
+          <h3 class="card-title">{L1.x402}</h3>
+          {quoteTool?.x402 ? (
+            <>
+              <p class="card-body">Call an eligible tool with no key and the answer is a price quote. The agent’s wallet pays it in USDC and repeats the request.</p>
+              <CodeBlock id="quote" wrap title={`402 quote · ${quoteTool.name}`} panels={[{ label: "Request and quote", lang: "plain", code: `POST ${quoteTool.x402.endpoint}\n\nHTTP/1.1 402 Payment Required\n{\n  "x402Version": 1,\n  "error": "Payment required. ${quoteTool.name} costs $${quoteTool.x402.price_usd.toFixed(4)} USDC per call.",\n  "accepts": [{\n    "scheme": "exact",\n    "network": "${data.x402.network}",\n    "maxAmountRequired": "${usdcAtomic(quoteTool.x402.price_usd)}",\n    …\n  }]\n}` }]} />
+              <p class="small muted">Abridged response. The amount is in USDC’s smallest unit (six decimals): {formatUsd(quoteTool.x402.price_usd)}.</p>
+            </>
+          ) : (
+            <p class="card-body">x402 eligibility is read from the live catalogue; none was available for this build.</p>
+          )}
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- §3 What agents use it for: breadth first. -->
+  <section class="section section-sunken" aria-labelledby="jobs-title">
+    <div class="container stack-loose">
+      <div class="section-head">
+        <h2 id="jobs-title" class="t-section">One connection, many kinds of work</h2>
+        <p class="t-lead muted">The jobs an agent runs into once it has to act: find something, read it, check it, then do the next thing.</p>
+      </div>
+      <div class="grid-2 jobs">
+        {breadth.map((g) => (
+          <article class="job">
+            <h3 class="t-subhead">{g.label}</h3>
+            <p class="t-compact muted">{g.line}</p>
+            <ul class="chip-row" role="list" aria-label={`Example tools: ${g.label}`}>
+              {g.picks.map((t) => <li><a class="tool-chip" href={`/tools/${t!.slug}`}>{t!.name}</a></li>)}
+            </ul>
+            <a class="link-standalone" href={`/tools?job=${g.id}`}>All {plural(g.count, "tool")} for this job <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- §4 One call, start to finish, with a free tool. -->
+  {demo && (
+    <section class="section" aria-labelledby="call-title">
+      <div class="container split">
+        <div class="stack">
+          <h2 id="call-title" class="t-section">One call, start to finish</h2>
+          <ol class="steps">
+            <li><strong>Your agent names the tool and its inputs.</strong> Here, <a class="link" href={`/tools/${demo.slug}`}>{demo.name}</a>, {Object.keys(demoInput).length === 1 ? "with one input" : "with the inputs"}: <code>{Object.keys(demoInput).join(", ")}</code>.</li>
+            <li><strong>Strale runs it and answers.</strong> The result comes back as structured fields, with the source it came from and the price charged.</li>
+            <li><strong>No key needed to try it.</strong> {demo.name} is one of {plural(freeCount, "free tool")}; run this request as it is.</li>
+          </ol>
+          <p class="small muted">Example. The output values are the tool’s published example; your call returns live values. {sentence(data.manifests.get(demo.slug)?.limitations[0]?.text)}</p>
+        </div>
+        <div class="stack">
+          <CodeBlock id="call-req" title="Request" panels={[{ label: "Request", lang: "shell", code: demoRequest }]} />
+          <CodeBlock id="call-res" title="Response (example)" panels={[{ label: "Response", lang: "json", code: demoResponse }]} />
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- §5 Company and compliance data: the flagship, below the breadth. -->
+  <section class="section section-flagship" aria-labelledby="company-title">
+    <div class="container stack-loose">
+      <div class="section-head">
+        <p class="label">Company and compliance data</p>
+        <h2 id="company-title" class="t-section">Look up companies in official records in {plural(countries.length, "country", "countries")}</h2>
+        <p class="t-lead">Name and registration number, plus status, address and directors where the source provides them. What comes back differs by country, and each country’s page names the source.</p>
+      </div>
+      <div class="coverage" role="group" aria-label="Countries with a company-records tool">
+        {byRegion.map((r) => (
+          <div class="coverage-region">
+            <h3 class="t-detail">{r.region}</h3>
+            <ul class="chip-row" role="list">
+              {r.list.map((c) => <li><a class="tool-chip" href={`/company-data/${c.path}`}><abbr title={c.name}>{c.iso}</abbr> <span>{c.name}</span></a></li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div class="grid-2">
+        <div class="stack-tight">
+          <h3 class="t-subhead">Screen companies and people</h3>
+          <p class="t-compact muted">Sanctions and politically exposed person lists, adverse media, and ownership where it is published.</p>
+          <ul class="chip-row" role="list">{screening.map((t) => <li><a class="tool-chip" href={`/tools/${t!.slug}`}>{t!.name}</a></li>)}</ul>
+        </div>
+        <div class="stack-tight">
+          <h3 class="t-subhead">Run a whole check in one call</h3>
+          <p class="t-compact muted">A company check or an invoice-issuer check runs every step at one price and returns each step’s result. The fuller checks add an AI-written summary for a person to review.</p>
+          {bundles > 0 && <p class="small muted">{plural(bundles, "bundled check")} in the catalogue.</p>}
+        </div>
+      </div>
+      <div class="row">
+        <a class="btn btn-primary" href="/company-data">See coverage by country</a>
+        <a class="link-standalone" href="/tools#bundled">Bundled checks <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- §6 Two ways to pay. -->
+  <section class="section" aria-labelledby="pay-title">
+    <div class="container stack-loose">
+      <h2 id="pay-title" class="t-section">Two ways to pay</h2>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Two ways to pay, compared">
+        <table class="table pay-table">
+          <caption class="visually-hidden">API key with a prepaid balance compared with an x402 wallet</caption>
+          <thead><tr><th scope="col"><span class="visually-hidden">Question</span></th><th scope="col">API key and balance</th><th scope="col">x402 wallet</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Account</th><td>A Strale account and one API key</td><td>None: the payment authorises the call</td></tr>
+            <tr><th scope="row">How you pay</th><td>A prepaid EUR balance, topped up by card</td><td>USDC per request, on {data.x402.network === "base" ? "Base" : data.x402.network}</td></tr>
+            <tr><th scope="row">Which tools</th><td>Every tool and bundled check</td><td>{plural(x402Tools, "tool")}{x402Bundles > 0 ? ` and ${plural(x402Bundles, "bundled check")}` : ""}, listed in the x402 catalogue</td></tr>
+            <tr><th scope="row">Price control</th><td>Set a price cap on each call; a tool that costs more is refused</td><td>The 402 response quotes the price before anything is paid</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <a class="link-standalone" href="/pricing">Pricing in full <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+    </div>
+  </section>
+
+  <!-- §7 Ways in. -->
+  <section class="section section-sunken" aria-labelledby="ways-title">
+    <div class="container stack-loose">
+      <h2 id="ways-title" class="t-section">Ways in</h2>
+      <ul class="grid-4 ways" role="list">
+        <li><a class="card card-link" href="/docs/mcp"><span class="card-title">MCP</span><span class="card-body">Add Strale’s MCP server to Claude, Cursor or any MCP client; the tools appear in the agent’s tool list.</span></a></li>
+        <li><a class="card card-link" href="/docs/api"><span class="card-title">REST API</span><span class="card-body">POST /v1/do with a tool name and inputs, using one API key for every tool.</span></a></li>
+        <li><a class="card card-link" href="/docs/sdks"><span class="card-title">SDKs</span><span class="card-body">TypeScript and Python clients for the same calls.</span></a></li>
+        <li><a class="card card-link" href="/docs/x402"><span class="card-title">x402</span><span class="card-body">Pay per request from a wallet, with no account, on eligible tools.</span></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- §8 Start. Colour band: deep violet with the vector bands, the same in both themes. -->
+  <section class="cta-band" aria-labelledby="start-title">
+    <div class="container">
+      <div class="cta-copy">
+        <h2 id="start-title" class="t-section">Make your agent’s first call</h2>
+        <p class="t-lead">Get an API key for every tool, or start with a free tool and no key at all.</p>
+        <div class="row">
+          <a class="btn btn-inverse btn-lg" href="/signup">Get an API key</a>
+          <a class="btn btn-inverse-outline btn-lg" href="/tools?free=1">Try a free tool</a>
+        </div>
+      </div>
+    </div>
+    <img class="cta-bands" src="/brand/bands.svg" alt="" width="800" height="380" />
+  </section>
+</Base>
+
+<style>
+  .section { padding-block: var(--section-space); }
+  .section-sunken { background: var(--surface-sunken); }
+  .section-head { display: grid; gap: var(--space-12); }
+  .section-head .t-lead { max-width: var(--measure-lead); }
+
+  /* Hero: copy beside the artwork from 1024px; stacked above it below. */
+  .hero { background: var(--brand-image-ground); color: var(--brand-ink); overflow: hidden; }
+  .hero-grid { display: grid; gap: var(--space-32); padding-block: var(--space-48) 0; }
+  .hero + .section { padding-top: var(--space-64); }
+  .hero-copy { display: grid; gap: var(--space-24); align-content: center; }
+  .hero-copy .t-lead { color: var(--brand-ink); }
+  .hero-search { display: grid; gap: var(--space-8); max-width: var(--measure-lead); }
+  .hero-search .field-label { color: var(--brand-ink); }
+  .hero-search-row { display: grid; gap: var(--space-8); grid-template-columns: minmax(0, 1fr) auto; }
+  .hero-search .input { min-height: var(--control-h-lg); }
+  .hero-search .btn { min-height: var(--control-h-lg); }
+  .hero-art { position: relative; }
+  .hero-raster { width: 100%; height: auto; }
+  @media (min-width: 1024px) { .hero-raster { mask-image: linear-gradient(to right, transparent, black 12%); } }
+  .hero-bands { display: none; width: 100%; height: auto; }
+  @media (min-width: 1024px) {
+    /* Copy aligns with the content container; the artwork runs to the page edge. */
+    .hero-grid { max-width: none; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); padding-block: var(--space-80); padding-left: max(var(--gutter), calc((100% - var(--container-content)) / 2)); padding-right: 0; align-items: center; }
+  }
+  /* Dark: the rasters have a light ground, so dark shows the transparent bands on the dark canvas. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .hero { background: var(--canvas); color: var(--text); }
+    :root:not([data-theme="light"]) .hero-copy .t-lead, :root:not([data-theme="light"]) .hero-search .field-label { color: var(--text-muted); }
+    :root:not([data-theme="light"]) .hero-raster { display: none; }
+    :root:not([data-theme="light"]) .hero-bands { display: block; }
+  }
+  :root[data-theme="dark"] .hero { background: var(--canvas); color: var(--text); }
+  :root[data-theme="dark"] .hero-copy .t-lead, :root[data-theme="dark"] .hero-search .field-label { color: var(--text-muted); }
+  :root[data-theme="dark"] .hero-raster { display: none; }
+  :root[data-theme="dark"] .hero-bands { display: block; }
+
+  .benefits { align-items: start; }
+  .benefits .price-row { grid-template-columns: minmax(0, 1fr) auto; }
+
+  .jobs { gap: var(--space-48) var(--column-gap); }
+  .job { display: grid; gap: var(--space-12); align-content: start; padding-top: var(--space-24); border-top: var(--border-width) solid var(--border-strong); }
+  .chip-row { margin: 0; padding: 0; list-style: none; }
+  .tool-chip { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
+  .tool-chip:hover { background: var(--action-subtle); border-color: var(--link); }
+  .tool-chip abbr { text-decoration: none; font-family: var(--type-code-family); color: var(--text-muted); }
+
+  .split { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) { .split { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-64); align-items: start; } }
+  .steps { display: grid; gap: var(--space-16); padding-left: var(--space-20); margin: 0; }
+  .steps li { padding-left: var(--space-4); }
+
+  .section-flagship { background: var(--surface-blue); }
+  .coverage { display: grid; gap: var(--space-24); }
+  .coverage-region { display: grid; gap: var(--space-12); }
+
+  .pay-table tbody th { font-weight: var(--type-ui-weight); white-space: nowrap; }
+  .pay-table td { min-width: calc(var(--space-160) + var(--space-64)); }
+  .ways { margin: 0; padding: 0; list-style: none; }
+  .ways .card { height: 100%; }
+  .cta-band .row { margin-top: var(--space-8); }
+</style>

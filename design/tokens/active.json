@@ -57,83 +57,808 @@
     },
     "website": {
       "palette": {
-        "--background": "220 5% 4%",
-        "--foreground": "220 2% 95%",
-        "--card": "220 5% 7%",
-        "--card-foreground": "220 2% 95%",
-        "--popover": "220 5% 7%",
-        "--popover-foreground": "220 2% 95%",
-        "--primary": "213 67% 65%",
-        "--primary-foreground": "220 5% 4%",
-        "--secondary": "220 5% 10%",
-        "--secondary-foreground": "220 2% 95%",
-        "--muted": "220 5% 12%",
-        "--muted-foreground": "218 6% 62%",
-        "--destructive": "0 65% 68%",
-        "--destructive-foreground": "220 2% 95%",
-        "--border": "220 5% 12%",
-        "--input": "220 5% 12%",
-        "--ring": "213 67% 65%",
-        "--code-highlight": "43 53% 64%",
-        "--success": "149 39% 62%",
-        "--success-foreground": "220 5% 4%",
-        "--warning": "36 73% 57%",
-        "--warning-foreground": "220 5% 4%",
-        "--info": "262 42% 70%",
-        "--info-foreground": "220 5% 4%",
-        "--teal": "149 39% 62%",
-        "--teal-foreground": "220 5% 4%",
-        "--pink": "330 59% 69%",
-        "--pink-foreground": "220 5% 4%",
-        "--purple": "262 42% 70%",
-        "--purple-foreground": "220 5% 4%",
-        "--accent": "220 5% 14%",
-        "--accent-foreground": "220 2% 95%",
-        "--sidebar-background": "220 5% 5%",
-        "--sidebar-foreground": "220 2% 95%",
-        "--sidebar-primary": "213 67% 65%",
-        "--sidebar-primary-foreground": "220 5% 4%",
-        "--sidebar-accent": "220 5% 10%",
-        "--sidebar-accent-foreground": "220 2% 95%",
-        "--sidebar-border": "220 5% 12%",
-        "--sidebar-ring": "213 67% 65%"
+        "brand.blue": "#3027ff",
+        "brand.violet": "#7222ff",
+        "brand.teal": "#008c87",
+        "brand.soft": "#eecff2",
+        "brand.ink": "#17151c",
+        "brand.paper": "#ffffff",
+        "brand.border": "#d2cfd8",
+        "brand.mist-blue": "#e4e8ff",
+        "brand.mist-teal": "#d7efeb",
+        "brand.deep-violet": "#29164b",
+        "brand.logo-black": "#000000",
+        "brand.image-ground": "#fdf7fe",
+        "light.canvas": "#fdf7fe",
+        "light.surface": "#ffffff",
+        "light.surface-sunken": "#f6ecf8",
+        "light.surface-soft": "#eecff2",
+        "light.surface-blue": "#e4e8ff",
+        "light.surface-teal": "#d7efeb",
+        "light.surface-inverse": "#29164b",
+        "light.text": "#17151c",
+        "light.text-muted": "#5c5468",
+        "light.text-inverse": "#ffffff",
+        "light.text-on-action": "#ffffff",
+        "light.border": "#d2cfd8",
+        "light.border-strong": "#7a7287",
+        "light.action": "#3027ff",
+        "light.action-hover": "#2118d6",
+        "light.action-active": "#1a10b0",
+        "light.action-subtle": "#e4e8ff",
+        "light.link": "#3027ff",
+        "light.link-hover": "#2118d6",
+        "light.focus": "#3027ff",
+        "light.focus-inverse": "#ffffff",
+        "light.focus-code": "#b9b5ff",
+        "light.indicator": "#3027ff",
+        "light.success": "#16703f",
+        "light.success-bg": "#e6f4ea",
+        "light.warning": "#8a5300",
+        "light.warning-bg": "#fdf0d9",
+        "light.danger": "#b3261e",
+        "light.danger-bg": "#fde8e7",
+        "light.info": "#3027ff",
+        "light.info-bg": "#e4e8ff",
+        "light.code-bg": "#1a1427",
+        "light.code-border": "#2a2142",
+        "light.code-text": "#ece8f3",
+        "light.code-muted": "#a59db5",
+        "light.code-keyword": "#b9b5ff",
+        "light.code-string": "#7fe0c9",
+        "light.code-number": "#ffb86b",
+        "light.code-property": "#f0a0d8",
+        "light.skeleton": "#efe4f2",
+        "dark.canvas": "#130d21",
+        "dark.surface": "#1c1530",
+        "dark.surface-sunken": "#0f0a1b",
+        "dark.surface-soft": "#2a1d40",
+        "dark.surface-blue": "#1f1a4a",
+        "dark.surface-teal": "#0f2a2a",
+        "dark.surface-inverse": "#29164b",
+        "dark.text": "#f7f3fb",
+        "dark.text-muted": "#bdb4cc",
+        "dark.text-inverse": "#ffffff",
+        "dark.text-on-action": "#ffffff",
+        "dark.border": "#3a3050",
+        "dark.border-strong": "#857a9c",
+        "dark.action": "#3027ff",
+        "dark.action-hover": "#4f47ff",
+        "dark.action-active": "#2118d6",
+        "dark.action-subtle": "#241f5c",
+        "dark.link": "#b9b5ff",
+        "dark.link-hover": "#d6d3ff",
+        "dark.focus": "#b9b5ff",
+        "dark.focus-inverse": "#ffffff",
+        "dark.focus-code": "#b9b5ff",
+        "dark.indicator": "#b9b5ff",
+        "dark.success": "#5fd08f",
+        "dark.success-bg": "#10301f",
+        "dark.warning": "#f0b44d",
+        "dark.warning-bg": "#33240a",
+        "dark.danger": "#ff8a80",
+        "dark.danger-bg": "#3a1518",
+        "dark.info": "#b9b5ff",
+        "dark.info-bg": "#1f1a4a",
+        "dark.code-bg": "#0d0918",
+        "dark.code-border": "#3a3050",
+        "dark.code-text": "#ece8f3",
+        "dark.code-muted": "#a59db5",
+        "dark.code-keyword": "#b9b5ff",
+        "dark.code-string": "#7fe0c9",
+        "dark.code-number": "#ffb86b",
+        "dark.code-property": "#f0a0d8",
+        "dark.skeleton": "#2a2142",
+        "chart.light.1": "#3027ff",
+        "chart.light.2": "#0a9a8f",
+        "chart.light.3": "#7a3cff",
+        "chart.light.4": "#b87400",
+        "chart.light.5": "#c2188f",
+        "chart.light.6": "#2f86e0",
+        "chart.dark.1": "#5d57ff",
+        "chart.dark.2": "#169c90",
+        "chart.dark.3": "#9566ff",
+        "chart.dark.4": "#c4861c",
+        "chart.dark.5": "#db4a95",
+        "chart.dark.6": "#3a8fe0",
+        "chart.seq.1": "#e4e8ff",
+        "chart.seq.2": "#c3c8ff",
+        "chart.seq.3": "#9b9fff",
+        "chart.seq.4": "#7570ff",
+        "chart.seq.5": "#3027ff",
+        "chart.seq.6": "#2219c4",
+        "chart.seq.7": "#170f8a",
+        "chart.div.neg-3": "#06635d",
+        "chart.div.neg-2": "#0a9a8f",
+        "chart.div.neg-1": "#8fd3cc",
+        "chart.div.mid": "#e7e2ea",
+        "chart.div.pos-1": "#efa3d3",
+        "chart.div.pos-2": "#c2188f",
+        "chart.div.pos-3": "#86105f"
       },
       "type": {
         "families": {
-          "sans": "Inter, system-ui, sans-serif",
-          "mono": "'JetBrains Mono', monospace"
+          "display": "\"Space Grotesk\", \"Instrument Sans\", Arial, sans-serif",
+          "body": "\"Instrument Sans\", Arial, sans-serif",
+          "mono": "\"IBM Plex Mono\", ui-monospace, Consolas, monospace"
         },
         "scale": {
-          "display": { "base": "2.25rem/2.5rem", "md": "3rem/1", "lg": "3.75rem/1" },
-          "pageTitle": { "base": "1.875rem/2.25rem", "md": "2.25rem" },
-          "sectionTitle": { "base": "1.875rem" },
-          "lead": { "base": "1.125rem" },
-          "body": { "base": "0.875rem" },
-          "small": { "base": "0.75rem" },
-          "caption": { "base": "0.6875rem" },
-          "micro": { "base": "0.625rem" }
+          "hero": {
+            "source": "kit-06",
+            "family": "display",
+            "weight": 600,
+            "min": 36,
+            "max": 76,
+            "line": 1.04,
+            "tracking": -0.045,
+            "measure": "16ch",
+            "use": "One hero statement per page. Placement follows the hero shell; never inside cards."
+          },
+          "campaign": {
+            "source": "kit-06",
+            "family": "display",
+            "weight": 600,
+            "min": 30,
+            "max": 52,
+            "line": 1.08,
+            "tracking": -0.04,
+            "measure": "20ch",
+            "use": "Page title (h1) on inner pages; major section statement."
+          },
+          "section": {
+            "source": "kit-06",
+            "family": "display",
+            "weight": 600,
+            "min": 26,
+            "max": 36,
+            "line": 1.15,
+            "tracking": -0.03,
+            "measure": "28ch",
+            "use": "Section heading (h2)."
+          },
+          "subhead": {
+            "source": "derived",
+            "family": "display",
+            "weight": 600,
+            "min": 20,
+            "max": 24,
+            "line": 1.25,
+            "tracking": -0.02,
+            "measure": "32ch",
+            "use": "Card and sub-section heading (h3)."
+          },
+          "detail": {
+            "source": "kit-06",
+            "family": "body",
+            "weight": 600,
+            "min": 17,
+            "max": 20,
+            "line": 1.35,
+            "tracking": 0,
+            "measure": "42ch",
+            "use": "Detail heading (h4) inside grouped explanation."
+          },
+          "lead": {
+            "source": "derived",
+            "family": "body",
+            "weight": 400,
+            "min": 18,
+            "max": 21,
+            "line": 1.5,
+            "tracking": 0,
+            "measure": "52ch",
+            "use": "Introductory paragraph under a page or section heading."
+          },
+          "body": {
+            "source": "kit-06",
+            "family": "body",
+            "weight": 400,
+            "min": 16,
+            "max": 19,
+            "line": 1.6,
+            "tracking": 0,
+            "measure": "62ch",
+            "use": "Reading text. Never below 16px."
+          },
+          "compact": {
+            "source": "kit-06",
+            "family": "body",
+            "weight": 400,
+            "min": 16,
+            "max": 17,
+            "line": 1.5,
+            "tracking": 0,
+            "measure": "58ch",
+            "use": "Card bodies, table cells, dense reference."
+          },
+          "ui": {
+            "source": "derived",
+            "family": "body",
+            "weight": 500,
+            "min": 16,
+            "max": 16,
+            "line": 1.25,
+            "tracking": 0,
+            "measure": "none",
+            "use": "Buttons, navigation, tabs, form labels."
+          },
+          "small": {
+            "source": "derived",
+            "family": "body",
+            "weight": 400,
+            "min": 14,
+            "max": 14,
+            "line": 1.45,
+            "tracking": 0,
+            "measure": "60ch",
+            "use": "Helper text, metadata, captions, legal. Never the only carrier of essential content."
+          },
+          "label": {
+            "source": "kit-06",
+            "family": "body",
+            "weight": 600,
+            "min": 12,
+            "max": 13,
+            "line": 1.5,
+            "tracking": 0.06,
+            "measure": "40ch",
+            "use": "Eyebrow label, badge text. Sentence case; supports hierarchy, never replaces body copy."
+          },
+          "code": {
+            "source": "derived",
+            "family": "mono",
+            "weight": 400,
+            "min": 14,
+            "max": 15,
+            "line": 1.6,
+            "tracking": 0,
+            "measure": "none",
+            "use": "Code blocks, inline code, request/response bodies, identifiers."
+          },
+          "stat": {
+            "source": "derived",
+            "family": "display",
+            "weight": 600,
+            "min": 36,
+            "max": 56,
+            "line": 1,
+            "tracking": -0.03,
+            "measure": "none",
+            "features": "\"tnum\" 1",
+            "use": "Single headline number. Tabular figures."
+          },
+          "numeric": {
+            "source": "derived",
+            "family": "body",
+            "weight": 500,
+            "min": 16,
+            "max": 16,
+            "line": 1.5,
+            "tracking": 0,
+            "measure": "none",
+            "features": "\"tnum\" 1",
+            "use": "Prices, counts and latencies in tables and rows. Tabular figures, right-aligned in columns."
+          }
         }
       },
-      "spacing": [0.5, 1, 1.5, 2, 3, 4, 6, 8],
-      "radii": [
-        "var(--radius)",
-        "calc(var(--radius) - 2px)",
-        "calc(var(--radius) - 4px)"
+      "spacing": [
+        0,
+        2,
+        4,
+        8,
+        12,
+        16,
+        20,
+        24,
+        32,
+        40,
+        48,
+        64,
+        80,
+        96,
+        128,
+        160
       ],
-      "shadows": [],
+      "radii": [
+        4,
+        8,
+        12,
+        20,
+        "full"
+      ],
+      "shadows": [
+        "none",
+        "0 1px 2px #17151c0f, 0 1px 1px #17151c0a",
+        "0 6px 16px -4px #29164b1f, 0 2px 4px #29164b0f",
+        "0 20px 48px -12px #29164b2e, 0 6px 14px #29164b14",
+        "0 1px 2px #0000004d",
+        "0 8px 20px -6px #00000080",
+        "0 24px 56px -12px #000000a6"
+      ],
       "motion": {
-        "note": "tailwindcss-animate plugin (accordion-down/up keyframes); no other custom motion tokens in tailwind.config.ts as of capture."
+        "duration": {
+          "instant": 0,
+          "fast": 120,
+          "base": 200,
+          "slow": 320,
+          "reveal-signature": 1600,
+          "reveal-atmosphere": 2200
+        },
+        "easing": {
+          "standard": "cubic-bezier(0.2, 0, 0, 1)",
+          "enter": "cubic-bezier(0, 0, 0, 1)",
+          "exit": "cubic-bezier(0.4, 0, 1, 1)",
+          "reveal": "cubic-bezier(0.65, 0, 0.35, 1)"
+        },
+        "rules": {
+          "reading_surface_moves": false,
+          "loop": false,
+          "reduced_motion": "All transitions become instant; reveals render their settled final frame.",
+          "source": "reveal durations, no-loop and settled-still reduced motion from kit-06 rule motion-reveal; other durations and easings derived"
+        }
+      },
+      "layout": {
+        "fluid_range_px": [
+          360,
+          1440
+        ],
+        "breakpoints_px": {
+          "sm": 640,
+          "md": 768,
+          "lg": 1024,
+          "xl": 1280
+        },
+        "container_px": {
+          "content": 1200,
+          "wide": 1320,
+          "prose": 720
+        },
+        "gutter_px": {
+          "base": 16,
+          "md": 24,
+          "lg": 32
+        },
+        "grid": {
+          "columns": {
+            "base": 4,
+            "md": 8,
+            "lg": 12
+          },
+          "column_gap_px": {
+            "base": 16,
+            "md": 24,
+            "lg": 24
+          }
+        },
+        "measure": {
+          "body": "62ch",
+          "lead": "52ch",
+          "hero": "16ch",
+          "section": "28ch"
+        },
+        "section_rhythm_px": {
+          "base": 64,
+          "md": 96,
+          "lg": 128
+        },
+        "stack_px": {
+          "tight": 8,
+          "base": 16,
+          "loose": 24,
+          "group": 32,
+          "block": 48
+        },
+        "control": {
+          "height_sm_px": 36,
+          "height_px": 44,
+          "height_lg_px": 52,
+          "min_target_px": 44,
+          "border_px": 1,
+          "focus_ring_px": 2,
+          "focus_offset_px": 2
+        },
+        "nav": {
+          "height_px": 64,
+          "height_mobile_px": 56
+        },
+        "radius_roles": {
+          "tag": 4,
+          "control": 8,
+          "card": 12,
+          "media": 20,
+          "pill": "full"
+        },
+        "elevation": {
+          "light": {
+            "0": 0,
+            "1": 1,
+            "2": 2,
+            "3": 3
+          },
+          "dark": {
+            "0": 0,
+            "1": 4,
+            "2": 5,
+            "3": 6
+          },
+          "note": "Indexes into shadows[]. Dark elevation also lifts the surface colour one step (canvas → surface → surface-soft); shadow alone is not visible on dark."
+        },
+        "z": {
+          "base": 0,
+          "sticky": 10,
+          "nav": 20,
+          "dropdown": 30,
+          "overlay": 40,
+          "toast": 50
+        },
+        "contrast": [
+          {
+            "fg": "text",
+            "bg": "canvas",
+            "min": 4.5,
+            "use": "Body text on page"
+          },
+          {
+            "fg": "text",
+            "bg": "surface",
+            "min": 4.5,
+            "use": "Body text on cards"
+          },
+          {
+            "fg": "text",
+            "bg": "surface-sunken",
+            "min": 4.5,
+            "use": "Body text on alternate sections"
+          },
+          {
+            "fg": "text",
+            "bg": "surface-soft",
+            "min": 4.5,
+            "use": "Editorial text on soft lilac"
+          },
+          {
+            "fg": "text",
+            "bg": "surface-blue",
+            "min": 4.5,
+            "use": "Text on blue mist"
+          },
+          {
+            "fg": "text",
+            "bg": "surface-teal",
+            "min": 4.5,
+            "use": "Text on teal mist"
+          },
+          {
+            "fg": "text-muted",
+            "bg": "canvas",
+            "min": 4.5,
+            "use": "Secondary text on page"
+          },
+          {
+            "fg": "text-muted",
+            "bg": "surface",
+            "min": 4.5,
+            "use": "Secondary text on cards"
+          },
+          {
+            "fg": "text-muted",
+            "bg": "surface-sunken",
+            "min": 4.5,
+            "use": "Secondary text on alternate sections"
+          },
+          {
+            "fg": "text-muted",
+            "bg": "surface-soft",
+            "min": 4.5,
+            "use": "Secondary text on soft lilac"
+          },
+          {
+            "fg": "text-muted",
+            "bg": "surface-blue",
+            "min": 4.5,
+            "use": "Secondary text on blue mist"
+          },
+          {
+            "fg": "text-muted",
+            "bg": "surface-teal",
+            "min": 4.5,
+            "use": "Secondary text on teal mist"
+          },
+          {
+            "fg": "text-inverse",
+            "bg": "surface-inverse",
+            "min": 4.5,
+            "use": "Text in CTA band / deep violet field"
+          },
+          {
+            "fg": "text-on-action",
+            "bg": "action",
+            "min": 4.5,
+            "use": "Primary button label"
+          },
+          {
+            "fg": "text-on-action",
+            "bg": "action-hover",
+            "min": 4.5,
+            "use": "Primary button label, hover"
+          },
+          {
+            "fg": "text-on-action",
+            "bg": "action-active",
+            "min": 4.5,
+            "use": "Primary button label, pressed"
+          },
+          {
+            "fg": "text",
+            "bg": "action-subtle",
+            "min": 4.5,
+            "use": "Selected row / secondary hover"
+          },
+          {
+            "fg": "link",
+            "bg": "canvas",
+            "min": 4.5,
+            "use": "Inline link on page"
+          },
+          {
+            "fg": "link",
+            "bg": "surface",
+            "min": 4.5,
+            "use": "Inline link on cards"
+          },
+          {
+            "fg": "link",
+            "bg": "surface-sunken",
+            "min": 4.5,
+            "use": "Inline link on alternate sections"
+          },
+          {
+            "fg": "link-hover",
+            "bg": "canvas",
+            "min": 4.5,
+            "use": "Inline link hover"
+          },
+          {
+            "fg": "focus",
+            "bg": "canvas",
+            "min": 3,
+            "use": "Focus ring on page (non-text)"
+          },
+          {
+            "fg": "focus",
+            "bg": "surface",
+            "min": 3,
+            "use": "Focus ring on cards (non-text)"
+          },
+          {
+            "fg": "focus",
+            "bg": "surface-sunken",
+            "min": 3,
+            "use": "Focus ring on alternate sections (non-text)"
+          },
+          {
+            "fg": "border-strong",
+            "bg": "canvas",
+            "min": 3,
+            "use": "Form field boundary on page (non-text)"
+          },
+          {
+            "fg": "border-strong",
+            "bg": "surface",
+            "min": 3,
+            "use": "Form field boundary on cards (non-text)"
+          },
+          {
+            "fg": "border-strong",
+            "bg": "surface-sunken",
+            "min": 3,
+            "use": "Form field boundary on alternate sections (non-text)"
+          },
+          {
+            "fg": "border-strong",
+            "bg": "surface-soft",
+            "min": 3,
+            "use": "Form field boundary on surface-soft (non-text)"
+          },
+          {
+            "fg": "link",
+            "bg": "surface-soft",
+            "min": 4.5,
+            "use": "Inline link on surface-soft"
+          },
+          {
+            "fg": "focus",
+            "bg": "surface-soft",
+            "min": 3,
+            "use": "Focus ring on surface-soft (non-text)"
+          },
+          {
+            "fg": "border-strong",
+            "bg": "surface-blue",
+            "min": 3,
+            "use": "Form field boundary on surface-blue (non-text)"
+          },
+          {
+            "fg": "link",
+            "bg": "surface-blue",
+            "min": 4.5,
+            "use": "Inline link on surface-blue"
+          },
+          {
+            "fg": "focus",
+            "bg": "surface-blue",
+            "min": 3,
+            "use": "Focus ring on surface-blue (non-text)"
+          },
+          {
+            "fg": "border-strong",
+            "bg": "surface-teal",
+            "min": 3,
+            "use": "Form field boundary on surface-teal (non-text)"
+          },
+          {
+            "fg": "link",
+            "bg": "surface-teal",
+            "min": 4.5,
+            "use": "Inline link on surface-teal"
+          },
+          {
+            "fg": "focus",
+            "bg": "surface-teal",
+            "min": 3,
+            "use": "Focus ring on surface-teal (non-text)"
+          },
+          {
+            "fg": "focus-inverse",
+            "bg": "surface-inverse",
+            "min": 3,
+            "use": "Focus ring on the deep-violet band (non-text)"
+          },
+          {
+            "fg": "focus-code",
+            "bg": "code-bg",
+            "min": 3,
+            "use": "Focus ring inside code blocks (non-text)"
+          },
+          {
+            "fg": "indicator",
+            "bg": "canvas",
+            "min": 3,
+            "use": "Selected tab / current page underline, checkbox and radio fill on canvas (non-text)"
+          },
+          {
+            "fg": "indicator",
+            "bg": "surface",
+            "min": 3,
+            "use": "Selected tab / current page underline, checkbox and radio fill on surface (non-text)"
+          },
+          {
+            "fg": "indicator",
+            "bg": "surface-sunken",
+            "min": 3,
+            "use": "Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text)"
+          },
+          {
+            "fg": "success",
+            "bg": "success-bg",
+            "min": 4.5,
+            "use": "Success notice text"
+          },
+          {
+            "fg": "success",
+            "bg": "surface",
+            "min": 4.5,
+            "use": "Success inline text"
+          },
+          {
+            "fg": "warning",
+            "bg": "warning-bg",
+            "min": 4.5,
+            "use": "Warning notice text"
+          },
+          {
+            "fg": "warning",
+            "bg": "surface",
+            "min": 4.5,
+            "use": "Warning inline text"
+          },
+          {
+            "fg": "danger",
+            "bg": "danger-bg",
+            "min": 4.5,
+            "use": "Error notice text"
+          },
+          {
+            "fg": "danger",
+            "bg": "surface",
+            "min": 4.5,
+            "use": "Field error message"
+          },
+          {
+            "fg": "danger",
+            "bg": "canvas",
+            "min": 4.5,
+            "use": "Field error message on page"
+          },
+          {
+            "fg": "info",
+            "bg": "info-bg",
+            "min": 4.5,
+            "use": "Info notice text"
+          },
+          {
+            "fg": "code-text",
+            "bg": "code-bg",
+            "min": 4.5,
+            "use": "Code"
+          },
+          {
+            "fg": "code-muted",
+            "bg": "code-bg",
+            "min": 4.5,
+            "use": "Code comments, line numbers"
+          },
+          {
+            "fg": "code-keyword",
+            "bg": "code-bg",
+            "min": 4.5,
+            "use": "Code keywords"
+          },
+          {
+            "fg": "code-string",
+            "bg": "code-bg",
+            "min": 4.5,
+            "use": "Code strings"
+          },
+          {
+            "fg": "code-number",
+            "bg": "code-bg",
+            "min": 4.5,
+            "use": "Code numbers"
+          },
+          {
+            "fg": "code-property",
+            "bg": "code-bg",
+            "min": 4.5,
+            "use": "Code keys"
+          }
+        ],
+        "contrast_avoid": [
+          {
+            "fg": "brand.ink",
+            "bg": "brand.blue",
+            "use": "Dark lettering on saturated blue (kit-06 colourPairs: avoid)"
+          },
+          {
+            "fg": "brand.teal",
+            "bg": "brand.paper",
+            "use": "Teal as text colour; use only for graphics and charts"
+          },
+          {
+            "fg": "brand.violet",
+            "bg": "brand.soft",
+            "use": "Violet text on soft lilac"
+          },
+          {
+            "fg": "light.border",
+            "bg": "light.surface",
+            "use": "Decorative border as the only boundary of an input"
+          }
+        ],
+        "icon_px": {
+          "sm": 16,
+          "md": 20,
+          "lg": 24
+        }
       },
       "provenance": {
-        "repo": "strale-frontend",
-        "source": "src/index.css, tailwind.config.ts, index.html",
-        "commit": "04c9fca970d82b2c98145973816d52086b3b91d7",
-        "captured_at": "2026-09-02",
-        "note": "Dark theme, HSL CSS custom properties in src/index.css; Inter + JetBrains Mono and the radius/font-family Tailwind extensions in tailwind.config.ts; page <title> and meta description read from index.html. This is a faithful capture of what strale-frontend main serves today, not a redesign — it becomes the build input when apps/web exists (ROADMAP section 7)."
+        "source": "design/tokens/candidates/open-flow.json",
+        "captured_at": "2026-10-24",
+        "note": "Open Flow website system 0.1 (BrandKit Lab strale-reference-kit-06, built out in design/brand-kit/open-flow/). Values are the adopted candidate verbatim; design:check fails if the two ever differ. Builds into apps/web/src/styles/tokens.generated.css via apps/web/scripts/generate-tokens.mjs. Supersedes the strale-frontend dark Inter snapshot (captured from strale-frontend commit 04c9fca970d82b2c98145973816d52086b3b91d7 on 2026-09-02; see design/PROVENANCE.md and git history of this file)."
       },
-      "adopted_by": "unrecorded",
-      "adopted_at": "unrecorded",
-      "note": "No decision record ever adopted this theme — it accreted through ordinary frontend commits before the design-tokens-as-data discipline existed. Recorded 'unrecorded' rather than backfilling a decision id, per design/PROVENANCE.md."
+      "adopted_by": "DEC-20261024-B",
+      "adopted_at": "2026-10-24",
+      "note": "The website surface is the apps/web build input (DEC-20260902-A). strale.dev itself still serves strale-frontend and its dark Inter theme until the founder-reserved public cutover (FD-20260901-PUBLIC-DOMAIN); this block records the adopted system, not what strale.dev serves today."
     }
   }
 }

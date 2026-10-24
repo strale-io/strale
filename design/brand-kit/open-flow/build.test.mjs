@@ -75,6 +75,24 @@ test('lint rejects planted hex, px, raw font stacks, unknown tokens and off-scal
   assert.deepEqual(lintCss('.a { width: 53%; opacity: 0.45; transform: rotate(180deg); max-width: 62ch; }', tokens, defined), []);
 });
 
+test('the candidate must stay adopted and identical to the active.json website surface', () => {
+  assert.equal(validate(tokens, prov, { checkFiles: false }), true);
+  const proposed = structuredClone(tokens);
+  proposed.status = 'proposed';
+  assert.throws(() => validate(proposed, prov, { checkFiles: false }), /status is adopted/);
+  const drifted = structuredClone(tokens);
+  drifted.palette['light.canvas'] = '#fdf7ff';
+  assert.throws(() => validate(drifted, prov, { checkFiles: false }), /website\.palette differs/);
+  const website = { ...structuredClone(tokens), adopted_by: 'DEC-OTHER' };
+  assert.throws(() => validate(tokens, prov, { checkFiles: false, website }), /adopted by DEC-20261024-B/);
+});
+
+test('renderTokensCss can point fonts at a web path', () => {
+  const css = renderTokensCss(tokens, prov, { fontBase: '/fonts/', header: '/* x */' });
+  assert.match(css, /url\("\/fonts\/SpaceGrotesk\.ttf"\)/);
+  assert(css.startsWith('/* x */'));
+});
+
 test('a changed asset fails the provenance hash check', () => {
   const p = structuredClone(prov);
   p.imagery[0].sha256 = '0'.repeat(64);

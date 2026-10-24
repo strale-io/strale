@@ -286,6 +286,46 @@ test("source files under apps/web join the lint scope as soon as the tree exists
   });
 });
 
+function withWebsite(files, spacing = [0, 8, 16, 24]) {
+  const active = files["design/tokens/active.json"];
+  return {
+    ...files,
+    "design/tokens/active.json": {
+      surfaces: {
+        ...active.surfaces,
+        website: { ...SURFACE, spacing, radii: [4, 12, "full"], adopted_by: "DEC-TEST-W", adopted_at: "2026-10-24" },
+      },
+    },
+  };
+}
+
+test("apps/web files are judged against the website surface's scale, consumers against internal-reports'", () => {
+  // 24 is on the website scale only; 12 is on internal-reports' only.
+  const files = withWebsite({ ...baseFiles(), "apps/web/src/a.css": ".a { padding: 24px; margin: 12px; }\n", [CONSUMER]: 'const s = "margin:12px;padding:24px;";\n' });
+  withFixture(files, files, (root) => {
+    const { unique } = scanAllLintTargets(root);
+    assert.deepEqual(unique.map((e) => `${e.file}:${e.value}`).sort(), ["apps/api/scripts/ceo-dashboard.ts:24px", "apps/web/src/a.css:12px"]);
+  });
+});
+
+test(".astro files are linted and the generated web token file is exempt", () => {
+  const files = withWebsite({
+    ...baseFiles(),
+    "apps/web/src/pages/index.astro": '<style>.a { color: #123456; }</style>\n',
+    "apps/web/src/styles/tokens.generated.css": ":root { --x: #654321; }\n",
+  });
+  withFixture(files, files, (root) => {
+    const web = scanAllLintTargets(root).unique.filter((e) => e.file.startsWith("apps/web/"));
+    assert.deepEqual(web.map((e) => `${e.file}:${e.value}`), ["apps/web/src/pages/index.astro:#123456"]);
+  });
+});
+
+test("font-family set to a single token reference is on-token; a raw stack is not", () => {
+  assert.deepEqual(scanFileForLiterals(".a { font-family: var(--font-body); }", { spacing: new Set(), radii: new Set() }).map((f) => f.kind), []);
+  assert.deepEqual(scanFileForLiterals(".a { font-family: var(--font-body), Arial; }", { spacing: new Set(), radii: new Set() }).map((f) => f.kind), ["font-family"]);
+  assert.deepEqual(scanFileForLiterals(".a { font-family: Arial; }", { spacing: new Set(), radii: new Set() }).map((f) => f.kind), ["font-family"]);
+});
+
 test("active.json absent on origin/main (this PR creates it) is a pass", () => {
   const local = baseFiles();
   const mainWithoutActive = baseFiles();

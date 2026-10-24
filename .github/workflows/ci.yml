@@ -614,3 +614,46 @@ jobs:
       # CODE — the full apps/api suite. Skipped on a documentation-only PR.
       - if: needs.classify.outputs.docs_only == 'false'
         run: npm test
+
+  # ─── Website (apps/web, DEC-20260902-A) ─────────────────────────────────
+  #
+  # apps/web is a standalone package (its own lockfile, not an npm
+  # workspace), so it installs and checks separately. Gated like the other
+  # CODE steps. The blocking steps use the preview data mode (repository
+  # manifests), so a production API outage cannot redden a PR. The live
+  # build then proves the real data path and uploads screenshots and an
+  # accessibility report as the `web-review` artifact; it reads only public
+  # endpoints and deploys nothing. This workflow never publishes the site.
+  web:
+    needs: classify
+    if: needs.classify.outputs.docs_only == 'false'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run check
+      - run: npm run build:preview-data
+      - name: Live build and review (non-blocking; reads the production API)
+        id: live
+        continue-on-error: true
+        env:
+          STRALE_SITE_DATA: live
+        run: |
+          npm run build
+          npx playwright install --with-deps chromium
+          node scripts/review.mjs --pages "$(node scripts/review-pages.mjs)" --out review/live
+      - if: always() && steps.live.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-review
+          path: apps/web/review/live
+          if-no-files-found: ignore
