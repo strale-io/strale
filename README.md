@@ -101,8 +101,8 @@ you need the rest of the catalog.
 
 Each package's own README is the reference for that integration; this file
 only points at them. Every distribution PR against an external framework
-repo, and every publish of one of these packages, follows CLAUDE.md's
-Distribution PR Integrity Protocol — a package claiming framework-native
+repo, and every publish of one of these packages, follows the
+Distribution PR Integrity Protocol (`docs/governance/protocols/`) — a package claiming framework-native
 integration is verified against the published artefact, not the source
 tree, before the claim ships.
 
@@ -185,7 +185,7 @@ strale/
 │                       fixtures. The onboarding pipeline
 │                       (apps/api/scripts/onboard.ts) is the only
 │                       sanctioned way a capability enters the system —
-│                       see CLAUDE.md's Capability Onboarding Protocol.
+│                       see the onboard-capability skill.
 ├── design/             Design tokens as data (colors, type, spacing) —
 │                       one active file per surface, candidates carry a
 │                       status, promotion is a decision plus a file swap.
@@ -198,18 +198,18 @@ strale/
 ```
 
 `apps/api/scripts/` and `apps/api/src/capabilities/` carry the same idea at
-capability-authoring scope — read `CLAUDE.md`'s "Adding New Capabilities"
-section before writing a new executor.
+capability-authoring scope — read `docs/governance/protocols/CAPABILITY_ONBOARDING_PIPELINE.md`
+(or run the `onboard-capability` skill) before writing a new executor.
 
 ## How the company runs the repository
 
-**Where truth lives.** Product, state, and roadmap truth is migrating from
-Notion into this repository (`docs/project/`), but the migration is not
-complete: `docs/project/START-HERE.md` and the rest of `docs/project/` are
-explicitly **candidates** (`authority_active: false`) until a founder-
-confirmed cutover. Until then, Notion (Project Home, the To-do & Build
-Plan, the Decisions DB) is authoritative, and `CLAUDE.md` / `AGENTS.md` say
-so at the top of every session. `docs/README.md` indexes every `docs/`
+**Where truth lives.** In this repository. Decisions are in
+`docs/decisions/` (summary: `docs/decisions/ACTIVE.md`), the operating
+charter and company documents in `docs/company/`, and the mandatory
+protocols in `docs/governance/protocols/`. Notion retired as an authority at
+the T7 close (DEC-20261024-A). The files under `docs/project/` are still
+marked candidates (`authority_active: false`) until they are reviewed for
+activation. `docs/README.md` indexes every `docs/`
 subtree with its current authority status; `docs/project/STRUCTURE.md`
 records exactly where the repo's layout still deviates from the migration's
 target and why.
@@ -220,10 +220,10 @@ target and why.
 `tracks.yaml`. A session resuming a program reads only those two files and
 follows their pointers — chat history is never required.
 
-**How sessions work.** `CLAUDE.md` is the canonical operating manual for
-Claude Code sessions; `AGENTS.md` is its condensed derivative for Codex-CLI
-sessions and points back at `CLAUDE.md` for anything that can drift rather
-than restating it. Every session ends through a handoff gate
+**How sessions work.** `AGENTS.md` is the one contract for both Claude Code
+and Codex: non-negotiables, a reading map that says which protocol file to
+read before which task, and the session contract. `CLAUDE.md` imports it and
+adds Claude-only notes. Reviewers read `REVIEW.md`. Every session ends through a handoff gate
 (`scripts/handoff/handoff-check.mjs`, installed as a git hook) that refuses
 to let a session leave uncommitted work, an unpushed branch, a stale
 worktree, or code changes with no resume surface for the next session.

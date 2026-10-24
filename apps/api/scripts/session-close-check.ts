@@ -210,7 +210,7 @@ function checkTodaysHandoff(): void {
     findings.push({
       level: "yellow",
       section: "Handoff file for today",
-      detail: `Handoff dir ${HANDOFF_DIR} doesn't exist. Per CLAUDE.md Quick Session Checklist step 6, every session ends with a handoff file.`,
+      detail: `Handoff dir ${HANDOFF_DIR} doesn't exist. Per the AGENTS.md session contract (step 4), a session that changed code ends with a handoff file or an updated next_action.`,
     });
     return;
   }
@@ -221,7 +221,7 @@ function checkTodaysHandoff(): void {
   findings.push({
     level: "yellow",
     section: "Handoff file for today",
-    detail: `No handoff file matching ${today}-*.md in ${HANDOFF_DIR}. CLAUDE.md step 6 expects one (even a one-liner starting with 'Intent:'). If intentionally skipped, confirm to yourself before closing.`,
+    detail: `No handoff file matching ${today}-*.md in ${HANDOFF_DIR}. The AGENTS.md session contract (step 4) expects one (even a one-liner starting with 'Intent:'). If intentionally skipped, confirm to yourself before closing.`,
   });
 }
 

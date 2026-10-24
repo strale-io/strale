@@ -11,7 +11,6 @@ import { dirname, extname, resolve, sep } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
 import { decisionGeneratedFiles } from "./decision-records-lib.mjs";
-import { protocolRouterGeneratedFiles } from "./protocol-coverage-lib.mjs";
 
 export const M1_BANNER =
   "> [!CAUTION]\n" +
@@ -69,71 +68,11 @@ No authoritative recent-work feed is published during M1.`,
     `This template will define document contracts, promotion from evidence to
 truth, update duties, and session-close behavior after cutover review.`,
   ),
-  // "docs/project/PROTOCOL-ROUTER.md" moved out of the M1 skeleton set in
-  // T6 M3 batch 7: it is now a generated M2 candidate document (see
-  // M2_GENERATED_DOCUMENTS and protocolRouterGeneratedFiles below),
-  // produced from docs/project/protocol-coverage.yaml rather than a
-  // hand-authored placeholder. It stays inactive (authority_active: false)
-  // until the founder-gated M4 cutover.
-  "docs/governance/README.md": skeleton(
-    "governance-navigation",
-    "Governance",
-    "Existing governance documents remain at their current paths and retain their current authority.",
-  ),
-  "docs/governance/protocols/README.md": skeleton(
-    "protocol-library-navigation",
-    "Protocol Library",
-    `No M1/M2 protocol-router body has moved here yet — this file stays the
-inert future destination for that extraction.
-
-Two standalone checklists were relocated here from the repo root on
-2026-09-02 (T5, CTO-readable structure): \`DISTRIBUTION_PR_PREFLIGHT.md\` and
-\`REVIEW_TEMPLATE.md\`. They are read directly at their new path (CLAUDE.md's
-Distribution PR Integrity Protocol links the first; sessions writing a
-review-findings file follow the second) and are unaffected by the M1/M2
-candidate status of this README — they were already live governance
-documents before the move, just filed at the repo root.
-
-## Extracted protocol mirrors (inactive, T6 M3 batch 6)
-
-The files below are byte-identical, inactive mirrors of a mandatory
-protocol's full text in \`CLAUDE.md\`, marked with \`authority_active: false\`
-front matter and a \`<!-- BEGIN/END VERBATIM FROM CLAUDE.md -->\` block.
-\`CLAUDE.md\` remains the sole authority for all of them until the
-founder-gated M4 cutover; \`npm run protocols:check\` fails if a mirror ever
-diverges from the \`CLAUDE.md\` section it copies.
-
-- \`DEPLOY_MECHANISM_VERIFICATION.md\`: Deploy Mechanism Verification
-  Protocol (DEC-20260504-C).
-- \`SESSION_CONTRACT.md\`: Session contract, both tools, every session.
-- \`DISTRIBUTION_PR_INTEGRITY.md\`: Distribution PR Integrity Protocol
-  (DEC-20260422-A). \`DISTRIBUTION_PR_PREFLIGHT.md\` above stays the separate
-  checklist it already was; this mirror is the full protocol text.
-- \`CAPABILITY_ONBOARDING.md\`: Capability Onboarding Protocol
-  (DEC-20260320-B). The "Adding New Capabilities (MANDATORY PIPELINE)"
-  section of \`CLAUDE.md\` is the how-to this protocol governs and is a
-  separate section, not part of this mirror.
-- \`AUDIT_FOLLOWUP_TEST_COVERAGE.md\`: Audit-Follow-up Test Coverage
-  Protocol (DEC-20260504-A).
-- \`BULK_OPERATION_DEPLOY.md\`: Bulk-Operation Deploy Protocol
-  (DEC-20260504-B).
-- \`SHARED_CHECKOUT_RULE.md\`: Shared-Checkout Rule (concurrency safety).
-  The "Worktree node_modules Hazard" section that follows it in
-  \`CLAUDE.md\` is a separate rule, not part of this mirror.
-- \`WORKTREE_NODE_MODULES_HAZARD.md\`: Worktree node_modules Hazard, the
-  rule that follows \`SHARED_CHECKOUT_RULE.md\` above in \`CLAUDE.md\`.
-- \`TEST_INFRASTRUCTURE_COST_PRINCIPLES.md\`: Test Infrastructure Cost
-  Principles (always enforce).
-- \`WIRE_SHAPE_TRUST_ENDPOINTS.md\`: Wire-shape rule for
-  \`/v1/public/ops/trust/*\` endpoints.
-
-All ten mandatory protocols/rules now have inactive, checked mirrors (M3
-batches 6a, 6b and 7). Each one, its governing decision (or the reason it
-has none), and its enforcing code/tests are recorded in
-\`docs/project/protocol-coverage.yaml\`, checked by \`npm run
-protocols:coverage\`; \`docs/project/PROTOCOL-ROUTER.md\` is generated from
-that manifest and stays inactive until the founder-gated M4 cutover.`,
-  ),
+  // docs/governance/README.md and docs/governance/protocols/README.md left
+  // the M1 skeleton set at the contract cut (DEC-20261024-A): the protocol
+  // files they index became authoritative, so the two READMEs are ordinary
+  // hand-written navigation now. docs/project/PROTOCOL-ROUTER.md retired with
+  // protocol-coverage.yaml; AGENTS.md's reading map replaces it.
 });
 
 // These files become authored candidates during M2. They are deliberately not
@@ -149,7 +88,6 @@ export const M2_CANDIDATE_DOCUMENTS = Object.freeze({
 
 export const M2_GENERATED_DOCUMENTS = Object.freeze({
   "docs/project/DECISIONS.md": "generated-decision-index",
-  "docs/project/PROTOCOL-ROUTER.md": "protocol-router",
 });
 
 export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
@@ -169,12 +107,18 @@ export const M2_CANDIDATE_WORD_LIMITS = Object.freeze({
 export const INVENTORY_TARGETS = Object.freeze([
   { path: "AGENTS.md", owner_area: "root-agent-entrypoint" },
   { path: "CLAUDE.md", owner_area: "root-agent-entrypoint" },
-  { path: ".claude/PROTOCOL.md", owner_area: "claude-workflow" },
-  { path: ".claude/RUNBOOK.md", owner_area: "claude-workflow" },
-  { path: ".claude/WORKFLOW.md", owner_area: "claude-workflow" },
-  { path: ".claude/BUILD.md", owner_area: "claude-workflow" },
-  { path: ".claude/NOTION.md", owner_area: "claude-workflow" },
-  { path: ".claude/DISPATCH.yaml", owner_area: "claude-workflow" },
+  // M4 batch 1 (2026-09-11) archived these six starter-kit files to
+  // archive/sessions/claude-starter-kit/ after extracting their one unique
+  // live rule; see archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md.
+  // Paths updated in place (not removed) so this inventory and the
+  // generated docs/project/legacy-authority-inventory.json keep resolving
+  // to real files rather than reading as a silent disappearance.
+  { path: "archive/sessions/claude-starter-kit/PROTOCOL.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/RUNBOOK.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/WORKFLOW.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/BUILD.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/NOTION.md", owner_area: "claude-workflow" },
+  { path: "archive/sessions/claude-starter-kit/DISPATCH.yaml", owner_area: "claude-workflow" },
   { path: ".claude/commands", owner_area: "claude-commands" },
   { path: ".agents/skills", owner_area: "shared-agent-skills" },
   { path: ".codex/hooks.json", owner_area: "codex-workflow" },
@@ -611,7 +555,6 @@ export function generatedFiles(root) {
   return {
     ...SKELETON_DOCUMENTS,
     ...decisionGeneratedFiles(root),
-    ...protocolRouterGeneratedFiles(root),
     "docs/project/schemas/project-document.schema.json":
       `${JSON.stringify(PROJECT_DOCUMENT_SCHEMA, null, 2)}\n`,
     "docs/project/schemas/operator-actions.schema.json":

@@ -756,26 +756,6 @@
     - .env
     - workflow
   example_value: development
-- name: NOTION_API_KEY
-  purpose: "Notion integration token used by the daily digest to fetch Journal-entry activity. NOTE: a second, differently-named variable (NOTION_TOKEN) is used elsewhere for what appears to be the same integration — worth consolidating to one name."
-  provider: Notion
-  holder: petter
-  cost_class: free
-  required_in:
-    - production
-  set_in:
-    - railway
-- name: NOTION_TOKEN
-  purpose: Notion integration token used by check-vendor-roster-drift.ts and the weekly-drift workflow to query the Vendor Roster / Decisions databases. See NOTION_API_KEY note — likely the same underlying integration under a second name.
-  provider: Notion
-  holder: petter
-  cost_class: free
-  required_in:
-    - local
-    - ci
-  set_in:
-    - .env
-    - workflow
 - name: NULL_RATIO_RULE_ENABLED
   purpose: Feature flag (DEC-20260409-A) enabling the null-output correctness tier in test-runner.ts. Defaults to disabled.
   provider: internal

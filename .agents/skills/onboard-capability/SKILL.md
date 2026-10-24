@@ -7,22 +7,23 @@ description: Use when creating, modifying or onboarding a capability (a new exec
 
 The prompt says **what** the capability does. This skill is **how** it enters
 the system, and that part is not optional because the prompt left it out.
-Authority: `CLAUDE.md` → "Capability Onboarding Protocol (DEC-20260320-B)" and
-"Adding New Capabilities (MANDATORY PIPELINE)". If this file and `CLAUDE.md`
-disagree, `CLAUDE.md` wins; fix this file. The reviewer's checklist is in the
+Authority: `docs/governance/protocols/CAPABILITY_ONBOARDING.md`
+(DEC-20260320-B) and `CAPABILITY_ONBOARDING_PIPELINE.md` beside it. If this
+file and those disagree, they win; fix this file. The reviewer's checklist is in the
 root `REVIEW.md`.
 
 ## 0. Before writing code
 
 - Read the onboarding spec: Notion page `32467c87-082c-819a-a731-d8a5f7237b33`
-  if Notion is reachable, otherwise the two `CLAUDE.md` sections above.
+  if Notion is reachable, otherwise the two protocol files above.
 - **Data access** (DEC-20261023-A). Name the lane the upstream source is in:
   preferred (official API, licensed data, statutory registry), allowed with
   checks, or never. A "never" source stops here. Check that the host is **not**
   in `PROHIBITED_UPSTREAM_HOSTS` (`apps/api/src/lib/vendor-terms.ts`, the list
   of banned hosts) or `tos-blocklist.ts`. Record the terms verdict, meaning what
-  permits per-call access or resale, with a link. The manifest has no field for
-  it yet, so put it in a `limitations` entry (category `coverage`).
+  permits per-call access or resale, with a link, in a `limitations` entry
+  (category `coverage`). Declare the lane and method in the manifest's
+  `data_access` block (step 2).
   For a new vendor, also add it to `config/vendors.yaml`. That register is a
   shadow only until M4; the Notion Vendor Roster is still the authority.
 - If the slug is in `DEACTIVATED` in `apps/api/src/capabilities/auto-register.ts`,
@@ -48,7 +49,7 @@ root `REVIEW.md`.
 
 ## 2. Manifest — `manifests/<slug>.yaml`
 
-Start from the template in `CLAUDE.md`. Required:
+Start from the template in `CAPABILITY_ONBOARDING_PIPELINE.md`. Required:
 
 - `slug`, `name`, `description` (50–160 chars), `category`
 - `input_schema`, `output_schema`
@@ -59,6 +60,15 @@ Start from the template in `CLAUDE.md`. Required:
   names the allowed values (`VALID_MAINTENANCE_CLASSES`)
 - `test_fixtures.health_check_input`
 - at least one honest `limitations` entry
+- `data_access`: `lane` (`preferred`, `allowed_with_checks`, or
+  `not_applicable` when nothing is fetched), `acquisition_method`, and
+  `upstream_vendor` when a vendor sits in the path. On `allowed_with_checks`,
+  also `checks: recorded | pending`. `recorded` needs a `checks_note` with
+  the evidence: what is fetched, whose terms were checked (a file or decision
+  id), and how blocks are honoured. Without that evidence, write `pending`.
+  Values and meanings are in `apps/api/src/lib/data-access.ts`, and
+  `data-access-manifests.test.ts` fails without the block. The executor still sets its own method and vendor on any path
+  that differs from this default, such as a fallback vendor.
 
 Set `gdpr_art_22_classification` for screening or risk-synthesis output. The
 description is a public claim: it must pass `npm run claims:check` and contain

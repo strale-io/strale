@@ -1,23 +1,16 @@
 ---
-status: candidate
-authority_active: false
-source: CLAUDE.md
-source_heading: "Evidence receipts and the migration ledger (T15)"
+status: active
+authority_active: true
+adopted_by: DEC-20261024-A
+moved_from: "CLAUDE.md heading: Evidence receipts and the migration ledger (T15)"
+moved_at: 2026-10-24
 ---
 
 # Evidence receipts and the migration ledger (T15)
 
-> [!CAUTION]
-> **INACTIVE MIRROR: CLAUDE.md REMAINS THE AUTHORITY UNTIL M4.**
-> This file is a byte-identical copy of the protocol's section in `CLAUDE.md`,
-> extracted so the coverage manifest and future protocol router can reference
-> a full-body path (T6 M3 batch 7, review round 1). It carries no authority of its own and
-> must never be edited on its own: any change belongs in `CLAUDE.md` first,
-> then re-extracted here. `npm run protocols:check` fails if the two copies
-> diverge.
-
-<!-- BEGIN VERBATIM FROM CLAUDE.md -->
-### Evidence receipts and the migration ledger (T15)
+> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
+> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
+> routes to this file from its reading map.
 
 Evidence is a receipt file under `archive/receipts/`, cited by path — never a
 bare test count in prose. A receipt (`archive/receipts/receipt.schema.json`;
@@ -37,4 +30,3 @@ an in-place edit), an unledgered block, or two blocks writing the same
 column unless it's allowlisted in `known_overlaps` — the 2026-08-21
 incident class, where two blocks derived one column and fought every boot.
 Both wired into CI after `docs:test` / `archive:index:test`.
-<!-- END VERBATIM FROM CLAUDE.md -->

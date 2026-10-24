@@ -1,38 +1,49 @@
 /**
- * Sanity check: CLAUDE.md must list every always-enforce protocol DEC by ID.
+ * Sanity check: the always-loaded agent contract must route to every
+ * always-enforce protocol, by decision ID, and each protocol's authoritative
+ * text must exist.
  *
- * Per DEC-20260504-A this file is documentation-only (no new code path), so
- * no behavioural regression test is required. But the protocols are only
- * enforced if Claude Code can find them in CLAUDE.md at session start. If a
- * future edit drops a DEC ID by accident (rebase conflict, file rewrite),
- * this test fails and forces the author to notice.
+ * Since the contract cut (DEC-20261024-A) the contract both tools load is
+ * AGENTS.md: CLAUDE.md imports it with `@AGENTS.md`, and the protocol bodies
+ * live in docs/governance/protocols/. The protocols are only enforced if a
+ * session can find them from the contract at session start. If a future edit
+ * drops a DEC ID from the reading map, breaks the import, or deletes a
+ * protocol file, this test fails and forces the author to notice.
  *
  * Add the new DEC ID here when a new always-enforce protocol lands.
  */
 
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const CLAUDE_MD_PATH = resolve(__dirname, "../../../../CLAUDE.md");
+const ROOT = resolve(__dirname, "../../../..");
+const AGENTS_MD = readFileSync(resolve(ROOT, "AGENTS.md"), "utf-8");
+const CLAUDE_MD = readFileSync(resolve(ROOT, "CLAUDE.md"), "utf-8");
 
-const REQUIRED_DEC_IDS = [
-  "DEC-20260320-B", // Capability Onboarding Protocol
-  "DEC-20260422-A", // Distribution PR Integrity Protocol
-  "DEC-20260504-A", // Audit-Follow-up Test Coverage Protocol
-  "DEC-20260504-B", // Bulk-Operation Deploy Protocol
-  "DEC-20260504-C", // Deploy Mechanism Verification Protocol
+const REQUIRED_PROTOCOLS: Array<[string, string]> = [
+  ["DEC-20260320-B", "CAPABILITY_ONBOARDING.md"], // Capability Onboarding Protocol
+  ["DEC-20260422-A", "DISTRIBUTION_PR_INTEGRITY.md"], // Distribution PR Integrity Protocol
+  ["DEC-20260504-A", "AUDIT_FOLLOWUP_TEST_COVERAGE.md"], // Audit-Follow-up Test Coverage Protocol
+  ["DEC-20260504-B", "BULK_OPERATION_DEPLOY.md"], // Bulk-Operation Deploy Protocol
+  ["DEC-20260504-C", "DEPLOY_MECHANISM_VERIFICATION.md"], // Deploy Mechanism Verification Protocol
 ];
 
-describe("CLAUDE.md — always-enforce protocol DEC IDs", () => {
-  const contents = readFileSync(CLAUDE_MD_PATH, "utf-8");
+describe("agent contract — always-enforce protocols", () => {
+  it("CLAUDE.md imports AGENTS.md on its first line", () => {
+    expect(CLAUDE_MD.split("\n")[0].trim()).toBe("@AGENTS.md");
+  });
 
-  for (const decId of REQUIRED_DEC_IDS) {
-    it(`contains ${decId}`, () => {
-      expect(contents).toContain(decId);
+  for (const [decId, file] of REQUIRED_PROTOCOLS) {
+    it(`AGENTS.md routes to ${decId} (${file}), and the file exists and names it`, () => {
+      expect(AGENTS_MD).toContain(decId);
+      expect(AGENTS_MD).toContain(file);
+      const path = resolve(ROOT, "docs/governance/protocols", file);
+      expect(existsSync(path)).toBe(true);
+      expect(readFileSync(path, "utf-8")).toContain(decId);
     });
   }
 });

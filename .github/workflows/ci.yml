@@ -510,42 +510,35 @@ jobs:
       # the future) the same way the other cheap-extras registers are.
       - run: npm run distribution:check
       - run: npm run distribution:test
-      # Repo-native digest priority readers (M3 batch 2, T6). Pure-function
-      # tests only here (parser, 14-day split, handoff window, comparison,
-      # workflow reachability) -- the shadow comparison itself runs daily
-      # in .github/workflows/m3-digest-shadow.yml, report only, and is not
-      # part of this PR gate.
-      - run: npm run digest:shadow:test
-      # Inactive project-document candidates (T6 M3 batch 4,
-      # docs/project/candidates/end-session.md): the /end-session
-      # repo-native replacement draft. Structural only - the candidate
-      # exists with inactive front matter and its M4 caution block, names
-      # both tools' identities, and neither live end-session file
-      # (.claude/commands/, .agents/skills/source-command-end-session/)
-      # references the candidates directory. Nothing here is executed by
-      # either tool; the check only proves the draft stays inert and
-      # findable.
+      # Repo-native digest priority readers (M3 batch 2, T6; wired into the
+      # production digest in M4 batch 5). Pure-function tests here (parser,
+      # 14-day split, handoff window, comparison). The shadow comparison
+      # workflow (.github/workflows/m3-digest-shadow.yml) and its
+      # NOTION_API_KEY-reading script were retired in M4 batch 5: the
+      # production digest now reads these files directly, so there is
+      # nothing left to shadow-compare against.
+      - run: npm run digest:repo-native:test
+      # Activated end-session and vendor-switch flows (M4 batch 4, T7).
+      # The design draft this batch activated is archived at
+      # archive/sessions/2026-09-13-m4-b4-end-session-candidate-draft.md.
+      # Asserts both live end-session files carry the repo-native
+      # front-matter/tracks.yaml/DECISION-QUEUE.md steps, each with its own
+      # tool's actor value (claude-code versus Codex), and no Notion
+      # Journal write or To-do read; and both live vendor-switch files
+      # carry the drafted Step 5 (docs/decisions/records/) and no Notion
+      # Decisions DB step.
       - run: npm run candidates:test
-      # Protocol-extraction check (T6 M3 batch 6a,
-      # docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md): the
-      # first mandatory protocol extracted, byte-identical, from its
-      # CLAUDE.md section, located by heading text (never by line number).
-      # CLAUDE.md stays the sole authority until the founder-gated M4
-      # cutover; this only proves the two copies have not silently diverged.
-      - run: npm run protocols:check
-      - run: npm run protocols:test
-      # Protocol coverage manifest (T6 M3 batch 7,
-      # docs/project/protocol-coverage.yaml): maps every mandatory
-      # protocol/rule to its trigger, full-body path, governing decision,
-      # decision record, and enforcing code/tests, proves every referenced
-      # path exists, proves every mirror file and every protocol-shaped or
-      # already-mirrored CLAUDE.md heading has a row, and proves the
-      # generated docs/project/PROTOCOL-ROUTER.md is up to date. A single
-      # additional check (a decision id named next to "protocol" with no
-      # manifest row) is report-only until the M4 cutover. authority_active
-      # stays false.
-      - run: npm run protocols:coverage
-      - run: npm run protocols:coverage:test
+      # Decision records (docs/decisions/): schema, id collisions,
+      # collision-resolution evidence, immutability of an active decision's
+      # protected sections against the merge-base on main, and freshness of
+      # the generated docs/project/DECISIONS.md. Carved out of context:test at
+      # the contract cut (DEC-20261024-A) so it survives the context layer's
+      # retirement. The protocols:check / protocols:coverage steps that stood
+      # here compared mirrors against CLAUDE.md text that has moved; they
+      # retired with it (archive/sessions/2026-10-24-contract-cut-coverage-walk.md).
+      # REGISTER (decisions:*) — always runs.
+      - run: npm run decisions:check
+      - run: npm run decisions:test
       # Scheduled mechanism reachability (T6 M3 batch 5,
       # config/scheduled-mechanisms.yaml): parses every
       # .github/workflows/*.yml with the yaml package and proves, for every

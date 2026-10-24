@@ -158,7 +158,9 @@ test("the real workflows and register together yield every scheduled workflow", 
   assert.deepEqual(unreadable, [], "every committed workflow must parse");
   const paths = workflows.map((w) => w.workflow);
   assert.ok(paths.includes(".github/workflows/weekly-drift.yml"));
-  assert.ok(paths.includes(".github/workflows/m3-digest-shadow.yml"));
+  // m3-digest-shadow.yml retired when the digest went repo-native in
+  // production (M4 batch 5, #680, brought to main at the T7 close).
+  assert.ok(!paths.includes(".github/workflows/m3-digest-shadow.yml"));
   // The scope is wider than the register on purpose: stale-branches.yml is
   // scheduled but every step is an inline `gh` command, so it has no register
   // entry and a register-scoped version would have left it unwatched.

@@ -9,10 +9,11 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-342 files (315 with a recorded intent, 27 without).
+346 files (319 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
+| 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-t7-close-and-contract-cut-draft.md`](_general/from-code/2026-10-24-wow-t7-close-and-contract-cut-draft.md) | Prepare, as a DRAFT that waits for Petter, the way-of-working review's step 2 (close T7 small) and step 3 (the AGENTS... |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step4-review-md.md`](_general/from-code/2026-10-24-wow-step4-review-md.md) | Apply step 4 of the way-of-working review (DEC-20261024-A): one reviewer brief and a capability-onboarding skill. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md`](_general/from-code/2026-10-24-wow-step1-quick-wins.md) | Apply step 1 of the way-of-working review (DEC-20261024-A): fewer paperwork failures in CI, same product checks. |
 | 2026-10-24 | [`handoff/_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md`](_general/from-code/2026-10-24-dq38-web3-regulatory-claims.md) | Carry out DQ-38 — remove false web3 regulatory claims from the public methodology. |
@@ -49,6 +50,9 @@
 | 2026-09-19 | [`handoff/_general/from-code/2026-09-19-checkin-morning.md`](_general/from-code/2026-09-19-checkin-morning.md) | run the 2026-09-19 morning operating session under DAILY-RUN.md — |
 | 2026-09-18 | [`handoff/_general/from-code/2026-09-18-checkin-morning.md`](_general/from-code/2026-09-18-checkin-morning.md) | run the 2026-09-18 morning operating session under DAILY-RUN.md — |
 | 2026-09-17 | [`handoff/_general/from-code/2026-09-17-checkin-morning.md`](_general/from-code/2026-09-17-checkin-morning.md) | run the 2026-09-17 morning operating session under DAILY-RUN.md — |
+| 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b6-vendor-roster-drift-retarget.md`](_general/from-code/2026-09-13-m4-b6-vendor-roster-drift-retarget.md) | M4 batch 6 -- retarget the weekly vendor-roster drift check off |
+| 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b5-digest-production.md`](_general/from-code/2026-09-13-m4-b5-digest-production.md) | M4 batch 5 -- wire the daily digest's repo-native readers into |
+| 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md`](_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md) | M4 batch 4 (T7, cto-readiness): activate the repo-native end-session |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-wider-input-drift-sweep.md`](_general/from-code/2026-09-12-wider-input-drift-sweep.md) | close the wider stored-input drift PR #677's own sweep flagged (34 |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-test-input-manifest-drift.md`](_general/from-code/2026-09-12-test-input-manifest-drift.md) | confirm and fix the fixture-input-drift gap flagged as follow-up in |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-checkin-morning.md`](_general/from-code/2026-09-12-checkin-morning.md) | run the 2026-09-12 morning operating session under DAILY-RUN.md — |

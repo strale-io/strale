@@ -79,7 +79,7 @@ Checkbox:
 
 ## The AI-agent-session corollary
 
-When an AI agent (Claude Code session, Cursor, etc.) edits a PR that already exists — trimming prose per a bot finding, rebasing, rewording — the agent MUST run verification (1) above before touching the PR body. Polishing the language while leaving a fabricated import in place makes the PR **more dangerous** (cleaner-looking, harder to spot the gap). See the CLAUDE.md rule under Governance.
+When an AI agent (Claude Code session, Cursor, etc.) edits a PR that already exists — trimming prose per a bot finding, rebasing, rewording — the agent MUST run verification (1) above before touching the PR body. Polishing the language while leaving a fabricated import in place makes the PR **more dangerous** (cleaner-looking, harder to spot the gap). See `DISTRIBUTION_PR_INTEGRITY.md` in this folder (DEC-20260422-A).
 
 ---
 

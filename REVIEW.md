@@ -6,10 +6,10 @@ says what failure looks like here, what to check on every change, what to check
 harder on the surfaces where a mistake costs money, trust or legal exposure, and
 what to skip.
 
-**Authority.** `CLAUDE.md` is canon. The protocols named below are defined
-there, and their mirrors in `docs/governance/protocols/` are inactive copies.
-This file routes a reviewer to them and does not replace them. If this page
-and `CLAUDE.md` disagree, `CLAUDE.md` wins; fix this page in the same PR.
+**Authority.** The protocols named below have their authoritative text in
+`docs/governance/protocols/`, and `AGENTS.md` routes to them. This file
+routes a reviewer to them and does not replace them. If this page and a
+protocol file disagree, the protocol file wins; fix this page in the same PR.
 Adopted under DEC-20261024-A (way-of-working review
 `docs/strategy/2026-10-23-way-of-working-review.md`, rank 6 and §4 step 4).
 
@@ -25,8 +25,8 @@ Adopted under DEC-20261024-A (way-of-working review
 - **Tier 1** (any other code, config or script change): one independent
   review before merge.
 - **Tier 0** (docs only, with no gate, doctrine, public claim or published
-  text): no independent review is required. `CLAUDE.md` already exempts
-  docs-only sessions from the code-review gate.
+  text): no independent review is required, as docs-only sessions were
+  already exempt from the code-review gate.
 - **Rounds.** At most two review rounds. After the second, the author fixes
   what remains and says so in the PR; the review does not loop. On tier 2, a
   high-severity fix made after round 2 gets one confirmation read from the
@@ -54,8 +54,8 @@ The incidents behind the rules, so a reviewer knows what to look for:
 
 ## Always check (every reviewed change)
 
-Each line names its rule. The full text is in `CLAUDE.md`, under the heading
-given.
+Each line names its rule. The full text is in the protocol file with that
+title in `docs/governance/protocols/`.
 
 - [ ] **Fail-before tests on money and compliance paths** (DEC-20260504-A,
       "Audit-Follow-up Test Coverage Protocol"). A fix on a wallet, audit-trail,

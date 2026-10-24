@@ -1,23 +1,16 @@
 ---
-status: candidate
-authority_active: false
-source: CLAUDE.md
-source_heading: "Cheap extras — env manifest, model registry, claims register (T14)"
+status: active
+authority_active: true
+adopted_by: DEC-20261024-A
+moved_from: "CLAUDE.md heading: Cheap extras — env manifest, model registry, claims register (T14)"
+moved_at: 2026-10-24
 ---
 
 # Cheap extras — env manifest, model registry, claims register (T14)
 
-> [!CAUTION]
-> **INACTIVE MIRROR: CLAUDE.md REMAINS THE AUTHORITY UNTIL M4.**
-> This file is a byte-identical copy of the protocol's section in `CLAUDE.md`,
-> extracted so the coverage manifest and future protocol router can reference
-> a full-body path (T6 M3 batch 7, review round 1). It carries no authority of its own and
-> must never be edited on its own: any change belongs in `CLAUDE.md` first,
-> then re-extracted here. `npm run protocols:check` fails if the two copies
-> diverge.
-
-<!-- BEGIN VERBATIM FROM CLAUDE.md -->
-### Cheap extras — env manifest, model registry, claims register (T14)
+> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
+> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
+> routes to this file from its reading map.
 
 Three more small "values are data" registers, same shape as tokens/research/
 programs. `config/env-manifest.yaml` (schema `config/env-manifest.schema.json`)
@@ -37,4 +30,3 @@ README.md, package READMEs, manifest descriptions, and `platform-facts.ts`
 (plus, read-only, the sibling frontend's `llms.txt` when present) and fails
 on a forbidden claim. All three are wired into CI after `design:check` /
 `design:test`.
-<!-- END VERBATIM FROM CLAUDE.md -->

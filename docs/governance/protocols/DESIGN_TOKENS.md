@@ -1,23 +1,16 @@
 ---
-status: candidate
-authority_active: false
-source: CLAUDE.md
-source_heading: "Design tokens — where design values live"
+status: active
+authority_active: true
+adopted_by: DEC-20261024-A
+moved_from: "CLAUDE.md heading: Design tokens — where design values live"
+moved_at: 2026-10-24
 ---
 
 # Design tokens — where design values live
 
-> [!CAUTION]
-> **INACTIVE MIRROR: CLAUDE.md REMAINS THE AUTHORITY UNTIL M4.**
-> This file is a byte-identical copy of the protocol's section in `CLAUDE.md`,
-> extracted so the coverage manifest and future protocol router can reference
-> a full-body path (T6 M3 batch 7, review round 1). It carries no authority of its own and
-> must never be edited on its own: any change belongs in `CLAUDE.md` first,
-> then re-extracted here. `npm run protocols:check` fails if the two copies
-> diverge.
-
-<!-- BEGIN VERBATIM FROM CLAUDE.md -->
-### Design tokens — where design values live
+> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
+> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
+> routes to this file from its reading map.
 
 Design values are data, in `design/tokens/`, not prose or hardcoded literals
 in code. `design/tokens/active.json` is what production runs, per surface,
@@ -30,4 +23,3 @@ anywhere a surface's design is consumed, add the token first — never reach
 for a literal. `npm run design:check` refuses off-token colours, fonts, and
 off-scale spacing/radii in the surfaces it covers. See `design/README.md`
 and `design/PROVENANCE.md`.
-<!-- END VERBATIM FROM CLAUDE.md -->

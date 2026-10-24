@@ -1,23 +1,16 @@
 ---
-status: candidate
-authority_active: false
-source: CLAUDE.md
-source_heading: "Session contract — both tools, every session"
+status: active
+authority_active: true
+adopted_by: DEC-20261024-A
+moved_from: "CLAUDE.md heading: Session contract — both tools, every session"
+moved_at: 2026-10-24
 ---
 
-# Session contract, both tools, every session
+# Session contract — both tools, every session
 
-> [!CAUTION]
-> **INACTIVE MIRROR: CLAUDE.md REMAINS THE AUTHORITY UNTIL M4.**
-> This file is a byte-identical copy of the protocol's section in `CLAUDE.md`,
-> extracted so the coverage manifest and future protocol router can reference
-> a full-body path (T6 M3 batch 6b). It carries no authority of its own and
-> must never be edited on its own: any change belongs in `CLAUDE.md` first,
-> then re-extracted here. `npm run protocols:check` fails if the two copies
-> diverge.
-
-<!-- BEGIN VERBATIM FROM CLAUDE.md -->
-### Session contract — both tools, every session
+> **Authoritative text.** Moved verbatim from `CLAUDE.md` in the contract cut
+> (DEC-20261024-A, way-of-working review §4 step 3). Change it here; `AGENTS.md`
+> routes to this file from its reading map.
 
 1. **Orient first.** Read `docs/programs/README.md`, then the active track's
    `next_action` and `resume_file` in `docs/programs/<program>/tracks.yaml`.
@@ -54,4 +47,3 @@ source_heading: "Session contract — both tools, every session"
    working branch is routine backup and needs no approval. Worktrees and
    branches recorded in `scripts/handoff/baseline.json` wait for a founder
    decision and are never deleted by a session.
-<!-- END VERBATIM FROM CLAUDE.md -->

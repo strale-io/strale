@@ -12,6 +12,11 @@ generated: true
 
 # Protocol Router (Candidate)
 
+> **FROZEN 2026-10-24 — no longer generated or checked.** The contract cut (DEC-20261024-A) retired
+> `protocol-coverage.yaml`, its generator and `protocols:coverage`. This file is kept unchanged below
+> only because the closed M2 closure register cites it as evidence. Current routing: `AGENTS.md`'s
+> reading map; protocol text: `docs/governance/protocols/`.
+
 > [!CAUTION]
 > **M2 CANDIDATE — NOT ACTIVE PROJECT AUTHORITY.**
 > Review this candidate in place. Existing `AGENTS.md`, `CLAUDE.md`, and Notion-backed workflows remain in force until M4 cutover.

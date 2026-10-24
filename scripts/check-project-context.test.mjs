@@ -182,7 +182,8 @@ test("pre-cutover entrypoint guard covers every authored M2 candidate", () => {
     assert.equal(checkPrecutoverEntrypoint("AGENTS.md", `Read ${file}.`).length, 1);
   }
   assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/project/*.md.").length, 1);
-  assert.equal(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/decisions/*.md.").length, 1);
+  // docs/decisions/ records and ACTIVE.md are authoritative since the contract cut.
+  assert.deepEqual(checkPrecutoverEntrypoint("CLAUDE.md", "Read docs/decisions/ACTIVE.md and docs/decisions/records/."), []);
   assert.deepEqual(checkPrecutoverEntrypoint("AGENTS.md", "No inactive context links."), []);
 });
 
@@ -554,5 +555,68 @@ test("a missing generated decision schema is reported", () => {
     ]);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// M4 batch 1 (2026-09-11) archived the six .claude/ starter-kit files
+// (PROTOCOL.md, WORKFLOW.md, RUNBOOK.md, BUILD.md, DISPATCH.yaml, NOTION.md)
+// to archive/sessions/claude-starter-kit/ after extracting their one unique
+// live rule -- see archive/sessions/2026-09-11-m4-b1-starter-kit-rules.md.
+// This guards against a live entrypoint, command, skill, or hook silently
+// growing a new pointer back to one of them by name.
+const STARTER_KIT_FILE_NAMES = [
+  "PROTOCOL.md",
+  "WORKFLOW.md",
+  "RUNBOOK.md",
+  "BUILD.md",
+  "DISPATCH.yaml",
+  "NOTION.md",
+];
+
+const STARTER_KIT_LIVE_SCAN_TARGETS = [
+  "CLAUDE.md",
+  "AGENTS.md",
+  ".claude/settings.json",
+  ".claude/commands",
+  ".claude/skills",
+  ".claude/hooks",
+  ".agents",
+  ".codex",
+];
+
+function findStarterKitFileNameHits(root) {
+  const tracked = execFileSync("git", ["ls-files", "-z", ...STARTER_KIT_LIVE_SCAN_TARGETS], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .split("\0")
+    .filter(Boolean);
+  const hits = [];
+  for (const file of tracked) {
+    const content = readFileSync(join(root, file), "utf8");
+    for (const name of STARTER_KIT_FILE_NAMES) {
+      if (content.includes(name)) hits.push(`${file}: ${name}`);
+    }
+  }
+  return hits.sort();
+}
+
+test("no live entrypoint, command, skill, or hook names an archived .claude/ starter-kit file", () => {
+  assert.deepEqual(findStarterKitFileNameHits(process.cwd()), []);
+});
+
+test("the starter-kit-file-name scan actually detects a planted link (control)", () => {
+  const claudeMdPath = join(process.cwd(), "CLAUDE.md");
+  const original = readFileSync(claudeMdPath, "utf8");
+  try {
+    writeFileSync(
+      claudeMdPath,
+      `${original}\nSee .claude/PROTOCOL.md for full criteria and protocol definitions.\n`,
+      "utf8",
+    );
+    assert.deepEqual(findStarterKitFileNameHits(process.cwd()), ["CLAUDE.md: PROTOCOL.md"]);
+  } finally {
+    writeFileSync(claudeMdPath, original, "utf8");
+    assert.deepEqual(findStarterKitFileNameHits(process.cwd()), []);
   }
 });

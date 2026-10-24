@@ -1,15 +1,22 @@
 // Tests for the repo-native digest priority readers (T6 M3 batch 2,
-// scripts/digest-repo-native-lib.mjs, scripts/digest-shadow.mjs,
-// .github/workflows/m3-digest-shadow.yml). Every failure mode is planted
-// in its own throwaway directory fixture and must fail there; the fixed
-// counterpart must pass. Shadow mode: none of this changes what the
-// production digest reads or renders.
+// scripts/digest-repo-native-lib.mjs). Every failure mode is planted in its
+// own throwaway directory fixture and must fail there; the fixed
+// counterpart must pass.
+//
+// As of M4 batch 5 this grammar and mapping are also what the production
+// digest runs (ported into apps/api/src/lib/daily-digest/fetch-decision-queue.ts
+// and fetch-handoff-activity.ts, which the Docker image can carry --
+// scripts/ is not copied into it). This file keeps testing the pure
+// functions here directly; the shadow comparison that used to run these
+// against live Notion data (scripts/digest-shadow.mjs,
+// .github/workflows/m3-digest-shadow.yml) was retired in the same batch --
+// once the digest stopped reading Notion there was nothing left to compare
+// against.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { parse as parseYaml } from "yaml";
 import {
   parseDecisionQueue,
   repoNativePriorities,
@@ -242,31 +249,15 @@ test("comparePriorities: counts, and titles present on only one side, matched ca
 
 // ── Reachability test (M3 change item 4) ────────────────────────────────────
 
-// T6 M3 batch 5 replaced the bespoke workflow-parsing assertion that used to
-// live here with the generic scheduled-mechanism reachability check
+// T6 M3 batch 5 added the generic scheduled-mechanism reachability check
 // (config/scheduled-mechanisms.yaml, scripts/scheduled-reachability-lib.mjs,
-// npm run scheduled:check). That check already parses every
-// .github/workflows/*.yml with the `yaml` package and proves the
-// m3-digest-shadow-comparison entry's workflow, schedule, step, script and
-// secret all resolve correctly (scripts/scheduled-reachability.test.mjs has
-// the planted-failure coverage). This test only needs to confirm the entry
-// exists in the register, since the generic check now proves the wiring.
-//
-// Review round 1 (this PR) found the original MECHANISM_SECRET_MISMATCH
-// compared bare secret-name lists, which could not catch a step reading the
-// same secret into a renamed environment variable -- exactly the shape this
-// entry has (NOTION_TOKEN read into the digest code's own NOTION_API_KEY
-// variable name). `secrets` is now a map of environment variable name to
-// secret name and the check compares both, so this entry's own wiring is
-// what proves the fix restores that coverage.
-test("config/scheduled-mechanisms.yaml declares the m3-digest-shadow-comparison entry", () => {
-  const registerPath = join(realRoot, "config/scheduled-mechanisms.yaml");
-  const register = parseYaml(readFileSync(registerPath, "utf8"));
-  const entry = (register.mechanisms ?? []).find((m) => m.id === "m3-digest-shadow-comparison");
-  assert.ok(entry, "expected an entry named m3-digest-shadow-comparison in config/scheduled-mechanisms.yaml");
-  assert.equal(entry.workflow, ".github/workflows/m3-digest-shadow.yml");
-  assert.equal(entry.runs, "scripts/digest-shadow.mjs");
-});
+// npm run scheduled:check) and this file used to assert the
+// m3-digest-shadow-comparison entry it declared. M4 batch 5 retired that
+// workflow, its script, and its entry along with the digest's last Notion
+// reads -- there is no longer an entry to assert here. This section is a
+// placeholder rather than deleted silently, so a future reader looking for
+// the reachability assertion this comment used to describe finds an
+// explanation instead of nothing.
 
 // ── Real-repo test ───────────────────────────────────────────────────────────
 

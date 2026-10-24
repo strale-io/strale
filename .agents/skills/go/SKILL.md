@@ -16,7 +16,7 @@ Run `git diff --name-only main...HEAD` and (if dirty) `git status --porcelain`. 
 - **db** — `apps/api/src/db/**` or `apps/api/drizzle/**`
 - **sdk** — `packages/sdk-typescript/**`, `packages/mcp-server/**`, `packages/langchain-strale/**`, `packages/crewai-strale/**`, `packages/semantic-kernel-strale/**`
 - **frontend** — anything in `strale-frontend` (separate repo — skip unless user says so)
-- **docs-only** — `*.md`, `AGENTS.md`, `.codex/**` (no code verification, just PR)
+- **docs-only** — `*.md` (no code verification, just PR; `REVIEW.md` tier 0). Gate, hook, CI and doctrine edits are tier 2 even in markdown
 
 A change can span categories. Run verification for every category touched.
 
@@ -54,7 +54,7 @@ npm run build --workspace=<package>
 If types are published surface, also run the consumer-side typecheck (e.g., `npx tsc --noEmit` in the package dir).
 
 ### Cross-repo check
-If capability categories, endpoints, auth flow, or pricing model changed, flag that `strale-frontend/public/llms.txt` may need updating (per AGENTS.md). Do not edit it from here — flag it in the PR body.
+If capability categories, endpoints, auth flow, or pricing model changed, flag that `strale-frontend/public/llms.txt` may need updating (per `docs/governance/protocols/CROSS_REPO_UPDATES.md`). Do not edit it from here — flag it in the PR body.
 
 ## 3. /simplify pass
 
@@ -73,7 +73,7 @@ Prompt the reviewer to apply four overlapping technical lenses on the diff:
 - **Senior developer (correctness)**: bugs, logic errors, off-by-one, null handling, race conditions, leaks. Are tests present and meaningful? Does the code adhere to existing idiom in nearby files?
 - **Security reviewer**: SSRF (any user-controlled URL → must use `safeFetch`), SQL injection (any string-built query → must use parameterised drizzle), secrets exposure (any `console.log` or `log.info` of `process.env.*`?), missing auth (new route without `authMiddleware`?), missing input validation, side-effect imports of files this PR deletes (TypeScript with NodeNext does NOT flag missing `.js` targets — grep manually).
 - **System architect**: coupling and layering. Does this introduce a dependency in the wrong direction (db → routes? capabilities → app?)? Does it duplicate logic that already exists in `lib/`? Does it introduce a new abstraction where copy-paste would have been simpler, or copy-paste where an abstraction is needed (third instance of the same pattern)? Are cross-cutting concerns (logging, errors, auth) handled consistently with neighbours?
-- **CTO (strategic / debt)**: does this conflict with an active Decision in `AGENTS.md` or the Decisions DB (DEC-20261023-A data-access rule, which replaced the DEC-20260428-A scraping doctrine; DEC-20260428-B engineering bar; DEC-20260420-H direct connections, etc.)? Does it create technical debt the team hasn't budgeted for? Is the change scoped to one concern, or does it bundle three unrelated things? Is there a "this is the third one-off integration with vendor X — should we abstract?" pattern?
+- **CTO (strategic / debt)**: does this conflict with an active decision (`docs/decisions/ACTIVE.md`, `docs/decisions/records/`) (DEC-20261023-A data-access rule, which replaced the DEC-20260428-A scraping doctrine; DEC-20260428-B engineering bar; DEC-20260420-H direct connections, etc.)? Does it create technical debt the team hasn't budgeted for? Is the change scoped to one concern, or does it bundle three unrelated things? Is there a "this is the third one-off integration with vendor X — should we abstract?" pattern?
 
 Pass it: the branch name, target `main`, and a one-paragraph summary of intent.
 
@@ -122,7 +122,7 @@ End the session with:
 - Reviewer findings: HIGH count (should be 0 if you got here), MEDIUM count
 - Anything deferred (copy from step 3)
 - PR URL
-- Whether a handoff file + Journal entry still need writing (per AGENTS.md full-mode checklist)
+- Whether a handoff file still needs writing (AGENTS.md session contract)
 
 ## Hard refusals
 
