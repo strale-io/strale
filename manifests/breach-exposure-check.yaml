@@ -154,5 +154,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: haveibeenpwned
-  checks: recorded
-  checks_note: "Have I Been Pwned public API, licensed CC BY 4.0; its author permits charging for it within a broader offering on condition of attribution, which the provenance carries. Recorded in docs/security/2026-09-06-vendor-terms-audit.md."
+  checks: pending
+  checks_note: "Pending: resale is recorded as permitted in vendor-terms.ts (CC BY 4.0, attribution); the rule's other vendor conditions (no logins, vendor not sued over circumvention) are not yet recorded."

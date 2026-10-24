@@ -12,14 +12,18 @@ Intent: DEC-20261023-A adoption, item 2: acquisition method and the rule's lane 
 - On `allowed_with_checks`, each block also says `checks: recorded | pending`.
   The rule allows that lane only once its checks are recorded, so an answer
   never claims more than has been verified. `recorded` needs a `checks_note`
-  with evidence. 20 rows are recorded:
-  - 18 customer-URL tools whose every fetch is robots-checked and stops at a
-    block (#723);
-  - HIBP and Alternative.me. Their terms permit resale and are now recorded
-    as `permitted` in `vendor-terms.ts`.
-  The other 95 are pending. A call is `recorded` only when it took the path
-  the record covers; an executor that names another method or vendor
-  lowers it to `pending`, and no executor can raise it.
+  with evidence. **All 115 rows on this lane are `pending`.**
+  - Three review rounds each found `recorded` claims that the tool's own code
+    did not support (redirect targets, challenge pages on rendered routes,
+    links followed off-host, the rule's other vendor conditions).
+  - A tool moves to `recorded` only in a PR that reviews every fetch it
+    makes and tests it. Each pending row's `checks_note` says what is
+    missing.
+  - HIBP's and Alternative.me's resale terms are now `permitted` records in
+    `vendor-terms.ts`; the rule's other vendor conditions remain open.
+  - A call is `recorded` only when it took the path the record covers.
+    Another method or vendor lowers it to `pending`, and an executor's own
+    claim cannot raise it; on a lane without checks it is removed.
 - Guards:
   - a vendor-backed `recorded` claim needs a `permitted` record in
     `vendor-terms.ts` for that tool (an allowlist);
@@ -79,6 +83,21 @@ sanctions-check, pep-check and adverse-media-check are `checks: pending`.
 Signing the reseller agreement is a vendor-contract decision for Petter.
 
 ## Follow-ups found (not acted on)
+
+From the third review, all in the fetch path (adoption item 1):
+- `allabolag.se` and `northdata.com` are not in `tos-blocklist.ts`, although
+  never lane item 5 names them.
+- Browserless redirects are re-checked for robots.txt
+  (`assertRenderedTargetAllowed`) but not against the blocklist; `safeFetch`
+  checks every hop.
+- `screenshot-url`, `html-to-pdf` and `web-extract` read only the status
+  Browserless reports, so a challenge page served with 200 is rendered.
+- `domain-contact-extract`'s contact-page fetch skips the redirect and
+  challenge checks its homepage fetch has; it returns phone numbers and
+  social links unfiltered (check against never item 3).
+- `privacy-policy-analyze` and `terms-of-service-extract` follow links to
+  other hosts, with no cap.
+- `html-to-pdf` with caller markup renders whatever the markup loads.
 
 - `email-pattern-discover` returns same-domain addresses found on a homepage
   and name-based address patterns (`processes_personal_data`). Check it

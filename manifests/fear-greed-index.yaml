@@ -83,5 +83,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: alternative-me
-  checks: recorded
-  checks_note: "Alternative.me permits commercial use as long as attribution sits next to the data, which the output carries. Recorded in docs/security/2026-09-10-vendor-terms-audit-batch-2.md."
+  checks: pending
+  checks_note: "Pending: resale is recorded as permitted in vendor-terms.ts (attribution beside the data); the rule's other vendor conditions (no logins, vendor not sued over circumvention) are not yet recorded."

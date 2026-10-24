@@ -113,10 +113,16 @@ describe("stampDataAccess", () => {
     ).toMatchObject({ data_access_checks: "pending" });
   });
 
-  it("stamps no checks on lanes without them", () => {
+  it("stamps no checks on lanes without them, and drops an executor's claim there", () => {
     expect(stampDataAccess({ source: "s", fetched_at: "t" }, { lane: "preferred", acquisition_method: "direct_api" })).not.toHaveProperty(
       "data_access_checks",
     );
+    expect(
+      stampDataAccess(
+        { source: "s", fetched_at: "t", data_access_checks: "recorded" },
+        { lane: "preferred", acquisition_method: "direct_api" },
+      ),
+    ).not.toHaveProperty("data_access_checks");
   });
 
   it("leaves provenance unchanged without a declaration", () => {

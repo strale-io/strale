@@ -144,5 +144,5 @@ limitations:
 data_access:
   lane: allowed_with_checks
   acquisition_method: customer_directed_fetch
-  checks: recorded
-  checks_note: "Fetches pages on the site the caller names. Every fetch checks robots.txt for StraleBot, sends an honest Strale user agent, and stops with a refusal at HTTP 401, 403, 407 or 429 or a challenge page instead of retrying another route, through the shared fetch path (capabilities/lib/web-provider.ts) or the same checks in the executor (PR #723, 2026-10-24)."
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."
