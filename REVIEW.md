@@ -28,7 +28,9 @@ Adopted under DEC-20261024-A (way-of-working review
   text): no independent review is required. `CLAUDE.md` already exempts
   docs-only sessions from the code-review gate.
 - **Rounds.** At most two review rounds. After the second, the author fixes
-  what remains and says so in the PR; the review does not loop. Record the
+  what remains and says so in the PR; the review does not loop. On tier 2, a
+  high-severity fix made after round 2 gets one confirmation read from the
+  reviewer, or goes to Petter as an open item. Record the
   outcome in the PR body as `GO at <sha>, rounds: <n>`, with the open findings
   and what was done about each.
 
@@ -73,7 +75,8 @@ given.
       step, startup hook or cron is reachable from `Dockerfile` `CMD`,
       `package.json` scripts, `apps/api/src/index.ts` or the workflow. Check by
       file path, not by "it always has". The PR names the production query that
-      will prove the effect after deploy.
+      will prove the effect, and the result is reported after deploy. A clean log
+      line is not that proof.
 - [ ] **Distribution integrity** (DEC-20260422-A, "Distribution PR Integrity
       Protocol", plus `docs/governance/protocols/DISTRIBUTION_PR_PREFLIGHT.md`).
       On a PR outside `strale-io/*`, a `packages/*-strale/` change or a
@@ -110,7 +113,8 @@ given.
       names, retention and free-tier lists come from `platform-facts.ts` or the
       DB, never a new hard-coded copy.
 - [ ] **Shared checkout and destructive git** ("Shared-Checkout Rule",
-      "Worktree node_modules Hazard"). Scripts and instructions never use
+      "Worktree node_modules Hazard"). Agents that edit files run in their own
+      worktree (`isolation: "worktree"`). Scripts and instructions never use
       `git stash`, `git checkout` of a branch in the main tree, or `rm -rf`
       on a worktree. Fail-before checks go through
       `apps/api/scripts/mutation-test.mjs` (F11).
@@ -132,10 +136,10 @@ given.
 | **Wallet and settlement** | `apps/api/src/lib/wallet-service.ts`, `wallet-reservations.ts`, `stripe.ts`, `stripe-settlement.ts`, `routes/wallet.ts`, the debit path in `routes/do.ts` | Lock, then execute, then deduct on success only (DEC-14). Row lock on debits (DEC-8). Idempotency keys honoured (DEC-9). Spend cap and rate limit on every paid path (DEC-21). No double credit on a Stripe retry. The integration suites (`*.integration.test.ts`) cover the change. |
 | **x402** | `apps/api/src/lib/x402-*.ts`, `routes/x402-gateway-v2.ts` | Settlement order (verify, execute, settle) is unchanged or tested. Payment amount matches the catalogue price. Input is validated before anything paid runs. Eligibility and visibility follow DEC-20260812-A: invisible and non-x402 until the first green week. |
 | **Auth and API keys** | `lib/auth.ts`, `lib/admin-auth.ts`, `routes/auth.ts`, `lib/key-recovery.ts`, `lib/audit-token.ts` | Keys stay hashed and are looked up by prefix (DEC-20). Every new route has the right middleware. No key, token or `process.env` value in a log. Timing-safe comparisons. |
-| **Migrations on live data** | `lib/startup-migrations.ts` and its ledger, `apps/api/drizzle/`, `src/db/schema.ts`, `lib/data-retention.ts` | Ledger entry and no edited blocks. A boot-time rewrite is idempotent. Bulk work is bounded per tick (DEC-20260504-B). Remember that `scheduled_testing_eligible` is rewritten from `external_cost_cents` on every boot. |
+| **Migrations on live data** | `lib/startup-migrations.ts` and its ledger, `src/db/schema.ts`, `lib/data-retention.ts` | Ledger entry and no edited blocks. A boot-time rewrite is idempotent. Bulk work is bounded per tick (DEC-20260504-B). Remember that `scheduled_testing_eligible` is rewritten from `external_cost_cents` on every boot. |
 | **Screening outputs** | `capabilities/sanctions-check.ts`, `pep-check.ts`, `adverse-media-check.ts`, `risk-narrative-generate.ts`, UBO lookups, `routes/dispute.ts`, `routes/audit.ts` | DEC-20260428-B engineering bar: source list per response, match explainability, confidence buckets, the dispute path, GDPR Art. 22 classification in the manifest. An AI synthesis cites a source for every flag, uses "screening checks found" framing and never asserts a fact that is not in its input. A vendor change uses the `vendor-switch` skill. |
 | **Public claims** | `README.md`, `packages/*/README.md`, manifest `description`, `lib/platform-facts.ts`, methodology and trust routes, `docs/company/claims.yaml` | Every claim is `allowed` in `claims.yaml` and `npm run claims:check` passes. A stronger claim needs Petter (DEC-20260822-A; narrowing an inaccurate one does not). Voice follows `docs/company/VOICE.md`. Consider whether the frontend `llms.txt` needs the same change. |
-| **Published packages** | `packages/**`, `server.json`, `smithery.yaml`, `glama.json`, `context7.json`, `.github/workflows/release-npm.yml` | DEC-20260422-A in full. A version bump matches the changelog. The post-publish smoke test against production follows `docs/release/npm-publishing.md`. |
+| **Published packages** | `packages/**`, `server.json`, `smithery.yaml`, `glama.json`, `context7.json`, `.github/workflows/release-npm.yml` | DEC-20260422-A in full. The release follows `docs/release/npm-publishing.md`, including the post-publish smoke test against production and the per-package contract it lists. |
 | **Gates, hooks, CI, doctrine** | `.github/workflows/`, `.githooks/`, `scripts/handoff/`, `.claude/settings.json`, `CLAUDE.md`, `AGENTS.md`, decision records | Every check that ran before still runs, unless the PR says which one was retired and under what decision. A changed gate is proven with a planted failure. No ⚠ rule (review §3) is removed without its protection moving somewhere stronger. |
 
 ## Skip

@@ -516,7 +516,7 @@
     {
       "path": ".agents/skills",
       "owner_area": "shared-agent-skills",
-      "sha256": "218052fe560fcc7a98031941283442a9a9208a2c4868323f328e61d45a682f7d",
+      "sha256": "46cb6a0d2f5d5e2760337848a6be74e8eb90480d2eba295485885ba9cf37cf59",
       "detected_references": [
         ".github/workflows/ci.yml",
         "AGENTS.md",

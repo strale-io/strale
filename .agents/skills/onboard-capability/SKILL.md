@@ -18,8 +18,12 @@ root `REVIEW.md`.
   if Notion is reachable, otherwise the two `CLAUDE.md` sections above.
 - **Data access** (DEC-20261023-A). Name the lane the upstream source is in:
   preferred (official API, licensed data, statutory registry), allowed with
-  checks, or never. A "never" source stops here. Record the vendor's terms in
-  `apps/api/src/lib/vendor-terms.ts` and check `tos-blocklist.ts`.
+  checks, or never. A "never" source stops here. Check that the host is **not**
+  in `PROHIBITED_UPSTREAM_HOSTS` (`apps/api/src/lib/vendor-terms.ts`, the list
+  of banned hosts) or `tos-blocklist.ts`. Record the terms verdict, meaning what
+  permits per-call access or resale with a link, as a note in the manifest.
+  For a new vendor, also add it to `config/vendors.yaml`. That register is a
+  shadow only until M4; the Notion Vendor Roster is still the authority.
 - If the slug is in `DEACTIVATED` in `apps/api/src/capabilities/auto-register.ts`,
   stop and find out why before you reverse it.
 - A compliance data service (sanctions, PEP, UBO, adverse media, registry
@@ -44,7 +48,7 @@ root `REVIEW.md`.
 ## 2. Manifest — `manifests/<slug>.yaml`
 
 Start from the template in `CLAUDE.md`. Required: `slug`, `name`, `description`
-(50–160 chars), `category`, `price_cents` (inside the €0.02–€1.00 band of
+(50–160 chars), `input_schema`, `output_schema`, `category`, `price_cents` (inside the €0.02–€1.00 band of
 DEC-20260302-A; outside it is Petter's call), `data_source`,
 `data_source_type`, `transparency_tag`, `freshness_category`,
 `test_fixtures.health_check_input`, and at least one honest `limitations`
@@ -59,11 +63,13 @@ a placeholder.
 
 ```bash
 cd apps/api
-npx tsx scripts/onboard.ts --discover --manifest ../../manifests/<slug>.yaml --dry-run   # preview
-npx tsx scripts/onboard.ts --discover --manifest ../../manifests/<slug>.yaml             # write
+npx tsx scripts/onboard.ts --manifest ../../manifests/<slug>.yaml --dry-run   # preview, no writes
+npx tsx scripts/onboard.ts --discover --manifest ../../manifests/<slug>.yaml   # live: calls upstream, writes
 ```
 
-`--discover` executes the health-check input, writes `expected_fields` and
+`--discover` cannot be combined with `--dry-run`: the pipeline refuses the
+pair, because `--discover` makes real (possibly paid) upstream calls and
+rewrites the manifest. `--discover` executes the health-check input, writes `expected_fields` and
 `output_field_reliability` back into the manifest, generates all five test
 types (known_answer, schema_check, negative, edge_case, dependency_health) and
 verifies the known answer. For an existing capability, use
@@ -74,8 +80,10 @@ under `autonomousAuthority("capability_onboarding", "DEC-20260812-A")`. The new
 row starts invisible (`lifecycle_state='validating'`). If this session does not
 hold the credential, the status is `AUTHORIZATION_UNAVAILABLE`: stop and
 report. A missing permission is a stop, not something to work around.
-Never pass `--force-override-authority` or `--skip-gates` without recording
-why in the PR.
+Do not pass `--force-override-authority`: it resets admin-set fields such as
+`price_cents` and `freshness_category`, which is a pricing change. Do not pass
+`--skip-gates` either: it skips validation. If a gate blocks you, fix the
+cause, or stop and report it.
 
 ## 4. Field reliability (review the generated manifest)
 
@@ -104,7 +112,8 @@ curl -s -H "Authorization: Bearer $ADMIN_SECRET" "$STRALE_API_URL/v1/internal/on
 
 The readiness response must be `ready: true` with zero issues. Use the internal
 route: the public-ops route hides invisible capabilities, so a new one never
-appears there. Then run the repo checks the manifest feeds:
+appears there. Then, from the repo root, run the repo checks the manifest
+feeds:
 
 ```bash
 node apps/api/scripts/check-manifest-guaranteed-consistency.mjs --strict
