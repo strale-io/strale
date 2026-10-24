@@ -256,7 +256,7 @@ describe("class C — shared fetch layers are ledgered exactly", () => {
    *
    * Ledgered rather than banned, because none of these is caller-shaped: each
    * talks to a fixed vendor host on an account we control (Etherscan,
-   * NorthData, Openapi.it, VIES, HMRC, Brreg, SDDA, Zefix, Notion, GitHub,
+   * Openapi.it, VIES, HMRC, Brreg, SDDA, Zefix, Notion, GitHub,
    * Voyage, SEC). Adding a line here is a review prompt, not a refusal —
    * state that the host is fixed and the response bounded by the vendor's
    * product, or bound the read.
@@ -270,7 +270,6 @@ describe("class C — shared fetch layers are ledgered exactly", () => {
   const LEDGER: Record<string, number> = {
     // capability-facing vendor clients
     "capabilities/lib/etherscan-client.ts": 1,
-    "capabilities/lib/northdata.ts": 2,
     "capabilities/lib/openapi-resolver.ts": 3,
     "capabilities/lib/vasp-data.ts": 1,
     "capabilities/lib/vat-providers/brreg.ts": 1,

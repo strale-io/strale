@@ -146,12 +146,14 @@ describe("dependency-manifest.ts browserless.capabilities — drift detector", (
   // redundant). Update this alongside dependency-manifest.ts's
   // browserless.capabilities with a reason in the commit message if the
   // set legitimately changes.
+  // estonian-company-data left the set 2026-10-24: its Browserless "EU proxy"
+  // fallback retried the registry's 403 through another route, which
+  // DEC-20261023-A forbids, so it now calls the registry API directly only.
   it("matches the audited 2026-08-18 hard-require set exactly", () => {
     expect([...CURATED_BROWSERLESS_SLUGS].sort()).toEqual(
       [
         "annual-report-extract",
         "company-enrich",
-        "estonian-company-data",
         "html-to-pdf",
         "landing-page-roast",
         "screenshot-url",

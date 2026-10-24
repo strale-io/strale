@@ -1,3 +1,5 @@
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { promises as dns } from "node:dns";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
@@ -124,9 +126,13 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
   // Step 4: Check website for publicly listed emails
   let publicEmails: string[] = [];
   try {
+    // DEC-20261023-A: robots.txt first; a disallow skips this best-effort
+    // step (the catch below), as any failed fetch does.
+    await assertRobotsAllowed(`https://${targetDomain}`);
     // F-0-006: user-supplied domain → safeFetch guards SSRF.
     const resp = await safeFetch(`https://${targetDomain}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+      // DEC-20261023-A: honest identification (was a spoofed browser UA).
+      headers: { "User-Agent": STRALE_USER_AGENT },
       signal: AbortSignal.timeout(10000),
     });
     if (resp.ok) {

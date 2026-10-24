@@ -1,4 +1,5 @@
 import { MODELS } from "../lib/models.js";
+import { isSiteWideBlock } from "../lib/site-access.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
@@ -72,7 +73,9 @@ registerCapability("return-policy-extract", async (input: CapabilityInput) => {
           found = true;
           break;
         }
-      } catch {
+      } catch (err) {
+        // DEC-20261023-A: a site-wide block ends the visit; see isSiteWideBlock.
+        if (isSiteWideBlock(err)) throw err;
         // Continue trying other paths
       }
     }

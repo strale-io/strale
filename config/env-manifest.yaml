@@ -709,15 +709,6 @@
     - local
   set_in:
     - .env
-- name: JINA_API_KEY
-  purpose: Jina AI Reader API key, an alternate readability/markdown extraction backend (lib/jina-reader.ts).
-  provider: Jina AI
-  holder: unknown
-  cost_class: metered
-  required_in: []
-  set_in:
-    - none
-  cost_note: "Not set in production on 2026-09-02 (Railway audit): the code path falls back or the feature is off. Setting it is a vendor/spend decision, not a deploy fix."
 - name: JUSTIZONLINE_API_KEY
   purpose: JustizOnline IWG token for austrian-company-data (Firmenbuch HVD API). Passed as X-API-KEY; the WSDL 401s without it.
   provider: JustizOnline / BRZ (Austria)

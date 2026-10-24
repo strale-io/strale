@@ -6,6 +6,8 @@ import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
 import { MAX_DECODED_IMAGE_BYTES, readBodyWithLimit } from "../lib/resource-limits.js";
 
 registerCapability("landing-page-roast", async (input: CapabilityInput) => {
@@ -17,6 +19,11 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   // path (legal audit 2026-08-12).
   assertTargetAllowed(fullUrl);
 
+  // Page text first (DEC-20261023-A): fetchRenderedHtml checks robots.txt and
+  // stops at a site's block, so a refused page is never screenshotted.
+  const html = await fetchRenderedHtml(fullUrl);
+  const pageText = htmlToText(html).slice(0, 6000);
+
   // Get screenshot via Browserless
   const { url: blessUrl, key } = getBrowserlessConfig();
   // unguarded-fetch-ok: our Browserless /screenshot endpoint; caller URL gated by assertTargetAllowed above
@@ -25,6 +32,8 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       url: fullUrl,
+      // DEC-20261023-A: honest identification on the Browserless route.
+      userAgent: STRALE_USER_AGENT,
       gotoOptions: { waitUntil: "networkidle0", timeout: 20000 },
       options: { fullPage: false, type: "png" },
     }),
@@ -32,6 +41,7 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   });
 
   if (!screenshotRes.ok) throw new Error(`Browserless screenshot failed: HTTP ${screenshotRes.status}`);
+  await assertRenderedTargetAllowed(fullUrl, screenshotRes);
   // #426: streamed with a cap. This is a viewport-only screenshot (fullPage:
   // false at a fixed viewport), so it is naturally small — and it is sent to
   // Anthropic as a base64 image block, whose effective limit is ~3.75 MiB
@@ -47,9 +57,6 @@ registerCapability("landing-page-roast", async (input: CapabilityInput) => {
   );
   const screenshotB64 = screenshotBuf.toString("base64");
 
-  // Also get HTML text for additional context
-  const html = await fetchRenderedHtml(fullUrl);
-  const pageText = htmlToText(html).slice(0, 6000);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required.");

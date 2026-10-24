@@ -42,14 +42,14 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
   let sourceUrl = taricUrl;
 
   try {
-    const html = await fetchRenderedHtml(taricUrl);
+    const html = await fetchRenderedHtml(taricUrl, { source: "strale" });
     pageText = htmlToText(html);
 
     if (pageText.length < 200) {
       // Fallback: try Access2Markets
       const a2mUrl = `https://trade.ec.europa.eu/access-to-markets/en/search?product=${cleanHsCode}${originCountry ? `&origin=${originCountry}` : ""}&destination=${destinationCountry}`;
       sourceUrl = a2mUrl;
-      const a2mHtml = await fetchRenderedHtml(a2mUrl);
+      const a2mHtml = await fetchRenderedHtml(a2mUrl, { source: "strale" });
       pageText = htmlToText(a2mHtml);
     }
   } catch (e: any) {
@@ -57,7 +57,7 @@ registerCapability("customs-duty-lookup", async (input: CapabilityInput) => {
     try {
       const a2mUrl = `https://trade.ec.europa.eu/access-to-markets/en/search?product=${cleanHsCode}${originCountry ? `&origin=${originCountry}` : ""}&destination=${destinationCountry}`;
       sourceUrl = a2mUrl;
-      const a2mHtml = await fetchRenderedHtml(a2mUrl);
+      const a2mHtml = await fetchRenderedHtml(a2mUrl, { source: "strale" });
       pageText = htmlToText(a2mHtml);
     } catch {
       throw new Error(

@@ -3,6 +3,9 @@ import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
 import { logWarn } from "../lib/log.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit, readErrorTextTruncated } from "../lib/resource-limits.js";
@@ -128,6 +131,8 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
   assertTargetAllowed(fullUrl);
   await validateUrl(fullUrl);
+  // DEC-20261023-A: robots.txt before Browserless is asked for the page.
+  await assertRobotsAllowed(fullUrl);
 
   const { url: blessUrl, key } = getBrowserlessConfig();
   // buildBrowserlessRequestUrl appends ?launch= per-request, required by
@@ -138,6 +143,8 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
 
   const bodyObj: Record<string, unknown> = {
     url: fullUrl,
+    // DEC-20261023-A: honest identification on the Browserless route.
+    userAgent: STRALE_USER_AGENT,
     gotoOptions,
     options: {
       fullPage,
@@ -204,6 +211,10 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
     const err = await readErrorTextTruncated(response);
     throwBrowserlessError(response.status, err);
   }
+  // DEC-20261023-A: a picture of a 403 page is not the page. Browserless
+  // reports the target's status; a block (or a robots-disallowed redirect)
+  // is a refusal, not a billed screenshot.
+  await assertRenderedTargetAllowed(fullUrl, response);
 
   // #426: streamed with a cap. The PNG comes from our Browserless, but its
   // size is caller-shaped — full_page defaults to true and the viewport is
