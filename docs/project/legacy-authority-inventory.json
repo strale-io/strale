@@ -759,6 +759,7 @@
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-10-24-data-access-fetch-path.md",
+        "handoff/_general/from-code/2026-10-24-data-access-people-data.md",
         "handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
@@ -812,7 +813,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "1134942fed30d197d36453d3a6e953d385ca1fa00b68a251ac72b693270bdbbf",
+      "sha256": "cf8c9d74fed614377a59dbad12178f43f519a9a69c55839a6ef959e7d5c2ffb9",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",
