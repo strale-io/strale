@@ -188,6 +188,22 @@ describe("domain-contact-extract", () => {
     expect(err).toBeInstanceOf(SiteAccessRefusedError);
   });
 
+  it("REGRESSION: a named person's address is withheld and counted, never returned (never lane, item 3)", async () => {
+    pageResponse = () =>
+      html(
+        `<html><body>${"Contact us. ".repeat(30)} Write to info@site.test or jane.doe@site.test, ` +
+          `sales@site.test, john.smith@site.test.</body></html>`,
+      );
+    const exec = getDirectExecutor("domain-contact-extract")!;
+    const r = await exec({ domain: "site.test" });
+    const text = JSON.stringify(r.output);
+    expect(text).not.toContain("jane.doe@");
+    expect(text).not.toContain("john.smith@");
+    expect(r.output.personal_addresses_withheld).toBe(2);
+    expect(r.output.role_emails).toEqual(expect.arrayContaining(["info@site.test", "sales@site.test"]));
+    expect(r.output).not.toHaveProperty("published_personal_addresses");
+  });
+
   it("robots.txt Disallow refuses before the homepage is requested", async () => {
     robotsBody = "User-agent: StraleBot\nDisallow: /\n";
     const err = await run("domain-contact-extract", { domain: "site.test" });

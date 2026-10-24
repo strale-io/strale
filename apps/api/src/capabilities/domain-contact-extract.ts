@@ -24,9 +24,12 @@ import { ROLE_PREFIXES } from "./email-validate.js";
  *     permuted. Only addresses literally present in the fetched HTML
  *     are ever returned.
  *   - No employee enumeration is attempted.
- *   - Personal-looking addresses (firstname.lastname@) that the company
- *     itself published are reported ONLY in `published_personal_addresses`,
- *     never ranked, expanded, or used to infer a pattern.
+ *   - Personal-looking addresses (firstname.lastname@) are NOT returned,
+ *     even when the company itself published them — only their count, in
+ *     `personal_addresses_withheld`. Until 2026-10-24 they were returned in
+ *     `published_personal_addresses`; DEC-20261023-A puts reselling contact
+ *     details about identifiable people in the never lane (item 3), and its
+ *     exception covers officer facts published by statute, not contact pages.
  *
  * Zero external API cost — plain HTTP fetch + regex/JSON-LD parsing, no
  * vendor, no LLM. Every fetch goes through `safeFetch` (F-0-006 SSRF guard)
@@ -389,16 +392,16 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
   );
 
   const roleEmails: string[] = [];
-  const publishedPersonalAddresses: string[] = [];
+  let personalAddressesWithheld = 0;
   for (const email of foundEmails) {
     const localPart = email.split("@")[0];
     const basePrefix = localPart.split("+")[0];
     if (ROLE_PREFIXES.has(basePrefix)) {
       roleEmails.push(email);
     } else if (PERSONAL_NAME_LOCAL_PART_RE.test(localPart)) {
-      // Published by the site owner, reported as-is. Never ranked, expanded,
-      // or used to infer a pattern — see SCOPE BOUNDARY above.
-      publishedPersonalAddresses.push(email);
+      // A named person's address: counted, never returned — see SCOPE
+      // BOUNDARY above.
+      personalAddressesWithheld++;
     } else {
       // Not a recognised role prefix and not a name-shaped local part
       // (e.g. a department alias like "orders@" or "press-team@") — treat
@@ -422,7 +425,7 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
       domain: hostname,
       fetched_urls: fetchedUrls,
       role_emails: roleEmails.slice(0, 20),
-      published_personal_addresses: publishedPersonalAddresses.slice(0, 20),
+      personal_addresses_withheld: personalAddressesWithheld,
       phones,
       social_links: socialLinks,
       contact_page_url: contactPageUrl,

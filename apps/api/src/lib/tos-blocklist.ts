@@ -20,10 +20,13 @@
  * platform was serving, for money, the precise automated access that
  * `linkedin-url-validate` had been deactivated for performing.
  *
- * Per DEC-20260428-A Tier 1 ("Strale itself never operates scrapers" — stated
- * as absolute) and DEC-20260420-H (direct connections, full ToS compliance),
- * the check belongs on the fetch path, not on the capability name. This module
- * is that single source of truth.
+ * The check belongs on the fetch path, not on the capability name. This module
+ * is that single source of truth. It was written under DEC-20260428-A Tier 1
+ * and DEC-20260420-H; since 2026-10-24 it implements DEC-20261023-A, the
+ * risk-based data-access rule that superseded the three-tier doctrine. These
+ * hosts are that rule's never lane, items 4 (platforms that forbid automated
+ * access and actively enforce it) and 5 (commercial aggregators), and the
+ * rule keeps this list as the only terms gate for customer-named pages.
  *
  * ## What it is not
  *
@@ -132,6 +135,22 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
     site: "X (Twitter)",
     decision: "DEC-20260420-H",
     alternatives: "Use the organisation's own website instead.",
+  },
+  // DEC-20261023-A never lane, item 4: Reddit forbids automated access and is
+  // litigating it (Reddit v. SerpApi / Perplexity, S.D.N.Y., 2026). Added once
+  // social-profile-check stopped probing reddit.com, so this refusal cannot
+  // be read there as "profile does not exist". redd.it is Reddit's link host.
+  {
+    host: "reddit.com",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
+  },
+  {
+    host: "redd.it",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
   },
 ];
 
