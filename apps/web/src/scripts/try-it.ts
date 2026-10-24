@@ -29,8 +29,14 @@ if (form) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ capability_slug: form.dataset.slug, inputs }),
       });
-      const body = await res.json();
-      out.textContent = JSON.stringify(body, null, 2);
+      const raw = await res.text();
+      let body: { message?: string } | null = null;
+      try {
+        body = JSON.parse(raw);
+      } catch {
+        /* not JSON: show it as text */
+      }
+      out.textContent = body ? JSON.stringify(body, null, 2) : raw.slice(0, 2000);
       out.hidden = false;
       status.textContent = res.ok ? "Done. Nothing was charged." : `The API answered ${res.status}: ${body?.message ?? "see the response below"}. Nothing was charged.`;
     } catch {
@@ -41,3 +47,5 @@ if (form) {
     }
   });
 }
+
+export {};

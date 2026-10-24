@@ -1,9 +1,16 @@
 // Plain-language labels for API values (VOICE.md: say what it means, not the field name).
 
+/** The first sentence, not cut at common abbreviations ("e.g.", "i.e.", "etc.", "vs.", "Inc."). */
 export function firstSentence(text: string): string {
   const t = text.replace(/\s+/g, " ").trim();
-  const m = t.match(/^(.+?[.!?])(\s|$)/);
-  return m ? m[1] : t;
+  const re = /[.!?](?=\s|$)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(t))) {
+    const before = t.slice(0, m.index + 1);
+    if (/\b(e\.g|i\.e|etc|vs|Inc|Ltd|No|approx)\.$/i.test(before)) continue;
+    return before;
+  }
+  return t;
 }
 
 export const TRANSPARENCY: Record<string, string> = {

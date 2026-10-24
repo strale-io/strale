@@ -54,14 +54,13 @@ const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).jo
           <label class="choice"><input type="checkbox" name="x402" value="1" /> <span>Keyless (x402)</span></label>
         </div>
       </fieldset>
-      <noscript><button class="btn btn-secondary" type="submit">Search</button></noscript>
     </form>
 
     <p class="catalogue-count" role="status" aria-live="polite" data-count>{plural(tools.length, "tool")}</p>
 
     <ul class="tool-list" role="list" data-list>
       {tools.map((t) => (
-        <li class="tool-row" data-job={t.job} data-free={t.free ? "1" : undefined} data-x402={t.x402 ? "1" : undefined} data-country={t.country?.iso} data-search={index([t.name, t.slug, t.description, t.category, ...(t.search_tags ?? []), t.country?.name, ...Object.keys(t.input_schema?.properties ?? {})])}>
+        <li class="tool-row" data-job={t.job} data-free={t.free ? "1" : undefined} data-x402={t.x402 ? "1" : undefined} data-country={t.country?.iso} data-search={index([t.name, t.slug, firstSentence(t.description), t.category, ...(t.search_tags ?? []), t.country?.name, ...Object.keys(t.input_schema?.properties ?? {})])}>
           <a class="tool-link" href={`/tools/${t.slug}`}>
             <span class="tool-name">{t.name}</span>
             <span class="tool-desc">{firstSentence(t.description)}</span>
@@ -88,7 +87,7 @@ const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).jo
     <div class="container stack-loose">
       <div class="section-head">
         <h2 id="bundled-title" class="t-section">Bundled checks</h2>
-        <p class="t-lead muted">Several tools run as one call at one price, such as a company check or an invoice-issuer check. Each returns every step’s result. A bundled check is refunded only if every step fails.</p>
+        <p class="t-lead muted">Several tools run as one call at one price, such as a company check or an invoice-issuer check. Each returns every step’s result. A bundled check is charged in full when its steps return results, and refunded when every step fails or Strale withholds a step.</p>
       </div>
       {data.solutions.length > 0 ? (
         <ul class="tool-list" role="list">

@@ -50,7 +50,11 @@ if (root) {
 
   chips.forEach((c) => c.addEventListener("click", () => { job = c.dataset.job ?? ""; apply(); }));
   [free, x402, country].forEach((el) => el.addEventListener("change", apply));
-  q.addEventListener("input", apply);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  q.addEventListener("input", () => {
+    clearTimeout(timer);
+    timer = setTimeout(apply, 250);
+  });
   form.addEventListener("submit", (e) => { e.preventDefault(); apply(); });
   root.querySelector("[data-clear]")?.addEventListener("click", () => {
     q.value = ""; job = ""; free.checked = false; x402.checked = false; country.value = "";
@@ -59,3 +63,5 @@ if (root) {
   });
   apply();
 }
+
+export {};

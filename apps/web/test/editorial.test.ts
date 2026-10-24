@@ -71,3 +71,10 @@ test("money formatting follows the wire-shape rule (cents in, display out)", () 
   assert.equal(formatUsd(0.0216), "$0.0216");
   assert.equal(usdcAtomic(0.0216), "21600");
 });
+
+test("snippet and description helpers handle the edge cases the review found", async () => {
+  const { pyValue } = await import("../src/lib/snippets.ts");
+  const { firstSentence } = await import("../src/lib/describe.ts");
+  assert.equal(pyValue({ email: "null@example.com", ok: true, n: null }), '{\n    "email": "null@example.com",\n    "ok": True,\n    "n": None,\n}');
+  assert.equal(firstSentence("Checks a VAT number, e.g. DE123. Then more."), "Checks a VAT number, e.g. DE123.");
+});

@@ -55,7 +55,7 @@ const transparency = solution.transparency_tag ? TRANSPARENCY[solution.transpare
               <li class="step">
                 <span class="step-n num" aria-hidden="true">{i + 1}</span>
                 <div class="stack-tight">
-                  <a class="link-quiet step-name" href={`/tools/${s.slug}`}>{s.name}</a>
+                  {bySlug.has(s.slug) ? <a class="link-quiet step-name" href={`/tools/${s.slug}`}>{s.name}</a> : <span class="step-name">{s.name}</span>}
                   {s.data_source && <p class="small muted">Source: {s.data_source}</p>}
                   {s.slug === "risk-narrative-generate" && <p class="small">Written by an AI model from the other steps’ results, for a person to review. It does not make the decision.</p>}
                 </div>
@@ -103,7 +103,7 @@ const transparency = solution.transparency_tag ? TRANSPARENCY[solution.transpare
         <section class="card stack-tight" aria-labelledby="price-title">
           <h2 id="price-title" class="label">Price per check</h2>
           <p class="t-stat">{formatEur(solution.price_cents)}</p>
-          <p class="t-compact muted">One price for every step. Refunded only if every step fails; a check where some steps fail is charged in full.</p>
+          <p class="t-compact muted">One price for every step. Charged in full when the steps return results, even if some fail; refunded when every step fails or Strale withholds a step.</p>
           {x402 && <p class="t-compact">Over x402: <span class="num">{formatUsd(x402.price_usd)}</span> USDC per request, no account.</p>}
           <a class="btn btn-primary" href="#call-title">Copy the call</a>
         </section>

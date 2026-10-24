@@ -25,7 +25,19 @@ export const PACKAGES = {
 export interface Snippet { label: string; lang: "shell" | "json" | "plain"; code: string }
 
 const indent = (text: string, by: string) => text.replace(/\n/g, `\n${by}`);
-const pyValue = (v: unknown): string => JSON.stringify(v, null, 4).replace(/\btrue\b/g, "True").replace(/\bfalse\b/g, "False").replace(/\bnull\b/g, "None");
+/** A Python literal for JSON-shaped data (strings keep their JSON escaping, which Python accepts). */
+export function pyValue(v: unknown, depth = 0): string {
+  const pad = "    ".repeat(depth + 1), end = "    ".repeat(depth);
+  if (v === null || v === undefined) return "None";
+  if (v === true) return "True";
+  if (v === false) return "False";
+  if (Array.isArray(v)) return v.length ? `[\n${v.map((x) => pad + pyValue(x, depth + 1)).join(",\n")},\n${end}]` : "[]";
+  if (typeof v === "object") {
+    const entries = Object.entries(v as Record<string, unknown>);
+    return entries.length ? `{\n${entries.map(([k, x]) => `${pad}${JSON.stringify(k)}: ${pyValue(x, depth + 1)}`).join(",\n")},\n${end}}` : "{}";
+  }
+  return JSON.stringify(v);
+}
 
 /** The price cap the examples send: exactly the listed price, so the cap is visible and never generous. */
 const cap = (priceCents: number) => Math.max(priceCents, 1);
@@ -86,7 +98,8 @@ export function solutionSnippets(opts: { slug: string; inputs: Record<string, un
 }
 
 function x402Snippet(x: X402Item, inputs: Record<string, unknown>): Snippet {
-  const get = x.method.toUpperCase() === "GET";
+  // GET carries inputs in the query string, which only holds scalars; anything else goes as a JSON POST.
+  const get = x.method.toUpperCase() === "GET" && Object.values(inputs).every((v) => v === null || typeof v !== "object");
   const url = get ? `${x.endpoint}?${new URLSearchParams(Object.entries(inputs).map(([k, v]) => [k, String(v)])).toString()}` : x.endpoint;
   return {
     label: "x402",
