@@ -21,7 +21,8 @@ root `REVIEW.md`.
   checks, or never. A "never" source stops here. Check that the host is **not**
   in `PROHIBITED_UPSTREAM_HOSTS` (`apps/api/src/lib/vendor-terms.ts`, the list
   of banned hosts) or `tos-blocklist.ts`. Record the terms verdict, meaning what
-  permits per-call access or resale with a link, as a note in the manifest.
+  permits per-call access or resale, with a link. The manifest has no field for
+  it yet, so put it in a `limitations` entry (category `coverage`).
   For a new vendor, also add it to `config/vendors.yaml`. That register is a
   shadow only until M4; the Notion Vendor Roster is still the authority.
 - If the slug is in `DEACTIVATED` in `apps/api/src/capabilities/auto-register.ts`,
@@ -47,14 +48,21 @@ root `REVIEW.md`.
 
 ## 2. Manifest — `manifests/<slug>.yaml`
 
-Start from the template in `CLAUDE.md`. Required: `slug`, `name`, `description`
-(50–160 chars), `input_schema`, `output_schema`, `category`, `price_cents` (inside the €0.02–€1.00 band of
-DEC-20260302-A; outside it is Petter's call), `data_source`,
-`data_source_type`, `transparency_tag`, `freshness_category`,
-`test_fixtures.health_check_input`, and at least one honest `limitations`
-entry. Set `gdpr_art_22_classification` for screening or risk-synthesis
-output. The description is a public claim: it must pass `npm run claims:check`
-and contain no real person's data (`check-pii`).
+Start from the template in `CLAUDE.md`. Required:
+
+- `slug`, `name`, `description` (50–160 chars), `category`
+- `input_schema`, `output_schema`
+- `price_cents`, inside the €0.02–€1.00 band of DEC-20260302-A (outside it is
+  Petter's call)
+- `data_source`, `data_source_type`, `transparency_tag`, `freshness_category`
+- `maintenance_class`: the gate refuses a manifest without it, and its error
+  names the allowed values (`VALID_MAINTENANCE_CLASSES`)
+- `test_fixtures.health_check_input`
+- at least one honest `limitations` entry
+
+Set `gdpr_art_22_classification` for screening or risk-synthesis output. The
+description is a public claim: it must pass `npm run claims:check` and contain
+no real person's data (`check-pii`).
 
 You supply the known-answer input: a real entity you have verified works, not
 a placeholder.
