@@ -488,15 +488,15 @@ jobs:
       # in .github/workflows/m3-digest-shadow.yml, report only, and is not
       # part of this PR gate.
       - run: npm run digest:shadow:test
-      # Inactive project-document candidates (T6 M3 batch 4,
-      # docs/project/candidates/end-session.md): the /end-session
-      # repo-native replacement draft. Structural only - the candidate
-      # exists with inactive front matter and its M4 caution block, names
-      # both tools' identities, and neither live end-session file
-      # (.claude/commands/, .agents/skills/source-command-end-session/)
-      # references the candidates directory. Nothing here is executed by
-      # either tool; the check only proves the draft stays inert and
-      # findable.
+      # Activated end-session and vendor-switch flows (M4 batch 4, T7).
+      # The design draft this batch activated is archived at
+      # archive/sessions/2026-09-13-m4-b4-end-session-candidate-draft.md.
+      # Asserts both live end-session files carry the repo-native
+      # front-matter/tracks.yaml/DECISION-QUEUE.md steps, each with its own
+      # tool's actor value (claude-code versus Codex), and no Notion
+      # Journal write or To-do read; and both live vendor-switch files
+      # carry the drafted Step 5 (docs/decisions/records/) and no Notion
+      # Decisions DB step.
       - run: npm run candidates:test
       # Protocol-extraction check (T6 M3 batch 6a,
       # docs/governance/protocols/DEPLOY_MECHANISM_VERIFICATION.md): the

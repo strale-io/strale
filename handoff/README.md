@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-334 files (307 with a recorded intent, 27 without).
+335 files (308 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -41,6 +41,7 @@
 | 2026-09-19 | [`handoff/_general/from-code/2026-09-19-checkin-morning.md`](_general/from-code/2026-09-19-checkin-morning.md) | run the 2026-09-19 morning operating session under DAILY-RUN.md — |
 | 2026-09-18 | [`handoff/_general/from-code/2026-09-18-checkin-morning.md`](_general/from-code/2026-09-18-checkin-morning.md) | run the 2026-09-18 morning operating session under DAILY-RUN.md — |
 | 2026-09-17 | [`handoff/_general/from-code/2026-09-17-checkin-morning.md`](_general/from-code/2026-09-17-checkin-morning.md) | run the 2026-09-17 morning operating session under DAILY-RUN.md — |
+| 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md`](_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md) | M4 batch 4 (T7, cto-readiness): activate the repo-native end-session |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-wider-input-drift-sweep.md`](_general/from-code/2026-09-12-wider-input-drift-sweep.md) | close the wider stored-input drift PR #677's own sweep flagged (34 |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-test-input-manifest-drift.md`](_general/from-code/2026-09-12-test-input-manifest-drift.md) | confirm and fix the fixture-input-drift gap flagged as follow-up in |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-checkin-morning.md`](_general/from-code/2026-09-12-checkin-morning.md) | run the 2026-09-12 morning operating session under DAILY-RUN.md — |

@@ -96,18 +96,29 @@ sweep to catch the next switch.
 
 Re-run the drift sweep — must report **0 findings** before you commit.
 
-## Step 5 — Log the decision
+## Step 5 - Log the decision
 
-Vendor switches always need a DEC entry in Notion (Decisions DB —
-`ea57671f-7167-44e4-a254-c0a1de79e7f9`). The DEC must:
+Vendor switches always need a decision record under
+`docs/decisions/records/` (`DEC-YYYYMMDD-<suffix>.md`), created through the
+repository's decision process. The record must:
 
-- Reference the previous DEC being superseded (Contradiction Protocol)
+- Reference the previous decision record being superseded (Contradiction
+  Protocol)
 - Cite the trigger (e.g. cost change, vendor outage, licensing change,
   regulatory finding)
 - Document the engineering checklist this skill enforces
 
-Drafting the DEC is Petter's call (governance authority). Surface a
-draft in the PR description; do not create the entry on his behalf.
+The vendor's state change is then a new lifecycle entry appended to its
+entry in `config/vendors.yaml`, citing the new record's key in the
+`decision` field. History is append-only: the prior lifecycle entries are
+never edited, only a new one appended after them. `npm run vendors:check`
+must pass (schema-valid, every cross-reference resolves, the decision key
+resolves to a file under `docs/decisions/records/`, and the append-only
+history rule holds against the base branch).
+
+Drafting the decision record is Petter's call (governance authority).
+Surface a draft in the PR description; do not create the record on his
+behalf.
 
 ## Step 6 — Verify no marketing claims have rotted
 
