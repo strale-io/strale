@@ -94,6 +94,8 @@ describe("Reddit (DEC-20261023-A never lane, item 4)", () => {
       "reddit.com/r/x",
       "https://redd.it/abc123",
       "https://i.redd.it/x.png",
+      "https://external-preview.redditmedia.com/x.jpg",
+      "https://www.redditstatic.com/x.js",
     ]) {
       expect(findProhibitedTarget(url)?.site, url).toBe("Reddit");
     }

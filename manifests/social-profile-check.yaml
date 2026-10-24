@@ -16,7 +16,7 @@ input_schema:
   properties:
     username:
       type: string
-      description: "Package, project or organisation name to check (e.g. 'react', 'strale'). Spaces become '-'; a leading '@' is dropped. The same name is checked on every registry."
+      description: "Package, project or organisation name to check (e.g. 'react', 'strale'). Company names are normalised: accents stripped, '&' becomes 'and', other punctuation and spaces become '-'. The same name is checked on every registry."
 output_schema:
   type: object
   example:
@@ -43,6 +43,8 @@ output_schema:
     available_platforms:
       - PyPI
   properties:
+    username:
+      type: string
     profiles:
       type: array
     found_count:
@@ -60,8 +62,11 @@ freshness_category: live-fetch
 maintenance_class: free-stable-api
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
 # DEC-20261023-A (2026-10-24): package, project and organisation names only —
-# personal profiles are no longer probed.
-processes_personal_data: false
+# personal profiles are no longer probed. Still true: callers may send a
+# person's handle as input, and inputs are logged.
+processes_personal_data: true
+personal_data_categories:
+  - name
 geography: global
 test_fixtures:
   known_answer:
@@ -74,8 +79,11 @@ test_fixtures:
   health_check_input:
     username: octocat
 output_field_reliability:
+  username: guaranteed
   profiles: guaranteed
   found_count: guaranteed
+  not_found_count: guaranteed
+  unknown_count: guaranteed
   available_platforms: guaranteed
 limitations:
   - title: Developer registries only — no social platforms or personal profiles
@@ -106,6 +114,14 @@ limitations:
     category: accuracy
     severity: info
     workaround: Try registering the organisation on GitHub to confirm availability.
+  - title: "\"Available\" means not found, not guaranteed registrable"
+    text: >-
+      A 404 means the registry has no package, project or organisation by that name. Registration can still be refused:
+      npm rejects names that differ from an existing package only by punctuation or case, and PyPI blocks prohibited
+      names and names too similar to an existing project, and returns 404 for some registered projects with no releases.
+    category: accuracy
+    severity: info
+    workaround: Confirm by attempting the registration before relying on the name.
   - title: Rate limits and refusals are reported as unknown
     text: >-
       When a registry rate-limits or refuses the request (HTTP 401/403/429) or cannot be reached, that registry's

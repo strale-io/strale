@@ -18,6 +18,7 @@ vi.mock("../lib/safe-fetch.js", async (importOriginal) => ({
 
 import { getDirectExecutor } from "./index.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import "./social-profile-check.js";
 
 type Profile = { platform: string; kind: string; exists: boolean | null; status_code: number | null; url: string };
@@ -62,10 +63,9 @@ describe("what is asked, and of whom", () => {
     }
   });
 
-  it("records the official-API acquisition method and the preferred lane", async () => {
+  it("records the direct-API acquisition method", async () => {
     const r = await check("acme");
     expect(r.provenance.acquisition_method).toBe("direct_api");
-    expect(r.provenance.data_access_lane).toBe("preferred");
   });
 });
 
@@ -121,8 +121,24 @@ describe("names", () => {
     expect(requestedUrls().some((u) => u.includes("api.github.com"))).toBe(false);
   });
 
-  it("refuses an unusable name in the house style", async () => {
-    await expect(check("!!!")).rejects.toThrow(/^'username' must be /);
+  it("REGRESSION: real company names are normalised, not refused (they arrive from solutions)", async () => {
+    // A first version refused anything with punctuation, which failed the
+    // vendor-risk solution step for "Stripe, Inc." (independent review).
+    for (const [input, expected] of [
+      ["Stripe, Inc.", "Stripe-Inc"],
+      ["AT&T", "AT-and-T"],
+      ["H&M", "H-and-M"],
+      ["Nestlé", "Nestle"],
+      ["Klarna Bank AB (publ)", "Klarna-Bank-AB-publ"],
+    ] as const) {
+      const r = await check(input);
+      expect(r.output.username, input).toBe(expected);
+    }
+  });
+
+  it("refuses input with no letter or digit, as a recognised refusal", async () => {
+    const err = await check("!!!").catch((e: unknown) => e);
+    expect(isCapabilityRefusal(err)).toBe(true);
     await expect(getDirectExecutor("social-profile-check")!({})).rejects.toThrow(/'username' is required/);
   });
 });

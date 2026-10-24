@@ -30,6 +30,24 @@ asked for. (Adoption list: `docs/strategy/2026-10-23-data-access-risk-rule-propo
   addresses (info@, sales@) are still returned. This is never lane item 3:
   the statutory exception covers registry officer facts, not contact pages.
 
+## Independent review (fresh same-provider context)
+
+- **Blocking, fixed:** `domain-contact-extract` withheld only `first.last@`
+  shapes, so `petter@`, `jdoe@` and `j.doe@` were still returned as "role"
+  addresses. It is now an allowlist: an address is returned only if every
+  token of its local part is a role or organisational word. Everything else
+  is withheld. `social_links` now takes LinkedIn company, school and
+  showcase pages only, never `/in/<person>`.
+- **Fixed:** company names arriving from the solutions ("Stripe, Inc.",
+  "H&M", "Nestlé") are normalised instead of refused.
+- **Fixed:** a limitation now states that "available" means not found, not
+  guaranteed registrable.
+- **Fixed:** every output field is declared, and `processes_personal_data`
+  is back to true (callers may send a person's handle as input).
+- **Fixed:** the premature `data_access_lane` provenance key is dropped.
+  That field belongs to the provenance work item.
+- **Fixed:** Reddit's media and asset hosts are blocklisted.
+
 ## Not done here (needs production access this session lacks)
 
 - **The manifests' new name, description and output schema reach the

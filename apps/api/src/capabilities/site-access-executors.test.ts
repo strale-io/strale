@@ -204,6 +204,38 @@ describe("domain-contact-extract", () => {
     expect(r.output).not.toHaveProperty("published_personal_addresses");
   });
 
+  it("REGRESSION: every shape of personal address is withheld — an allowlist, not a name detector", async () => {
+    // The first version withheld only first.last@ and returned these as
+    // "role" addresses (independent review, 2026-10-24).
+    const personal = ["petter", "jdoe", "j.doe", "jane.m.doe", "anna-karin.svensson", "petter.lindstrom2"];
+    const organisational = ["orders", "press-team", "customer.service", "support+eu"];
+    pageResponse = () =>
+      html(
+        `<html><body>${"Contact us. ".repeat(30)} ` +
+          [...personal, ...organisational].map((l) => `${l}@site.test`).join(" ") +
+          `</body></html>`,
+      );
+    const r = await getDirectExecutor("domain-contact-extract")!({ domain: "site.test" });
+    const text = JSON.stringify(r.output);
+    for (const l of personal) expect(text, l).not.toContain(`${l}@`);
+    expect(r.output.personal_addresses_withheld).toBe(personal.length);
+    expect(r.output.role_emails).toEqual(
+      expect.arrayContaining(organisational.map((l) => `${l}@site.test`)),
+    );
+  });
+
+  it("REGRESSION: a personal LinkedIn profile is not returned as the company's social link", async () => {
+    pageResponse = () =>
+      html(
+        `<html><body>${"About us. ".repeat(30)} <a href="https://www.linkedin.com/in/jane-doe">Jane</a> ` +
+          `<a href="https://www.linkedin.com/company/site-test">Company</a></body></html>`,
+      );
+    const r = await getDirectExecutor("domain-contact-extract")!({ domain: "site.test" });
+    const links = r.output.social_links as Record<string, string>;
+    expect(links.linkedin).toBe("https://www.linkedin.com/company/site-test");
+    expect(JSON.stringify(r.output)).not.toContain("/in/jane-doe");
+  });
+
   it("robots.txt Disallow refuses before the homepage is requested", async () => {
     robotsBody = "User-agent: StraleBot\nDisallow: /\n";
     const err = await run("domain-contact-extract", { domain: "site.test" });

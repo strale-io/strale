@@ -146,6 +146,25 @@ async function checkRegistry(registry: Registry, name: string): Promise<Registry
   }
 }
 
+/**
+ * Normalise free text to the shape every registry below accepts. Two
+ * solutions pass a company name here ("Stripe, Inc.", "H&M", "Nestlé",
+ * "Klarna Bank AB (publ)"), so this rewrites rather than refuses: accents
+ * are stripped, "&" becomes "and", any other run of characters a registry
+ * name cannot hold becomes "-", and the ends are trimmed. Exported for tests.
+ */
+export function toRegistryName(raw: string): string {
+  return raw
+    .trim()
+    .replace(/^@/, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^[._-]+|[._-]+$/g, "")
+    .slice(0, 214);
+}
+
 registerCapability("social-profile-check", async (input: CapabilityInput) => {
   const raw = (
     (input.username as string) ??
@@ -155,14 +174,9 @@ registerCapability("social-profile-check", async (input: CapabilityInput) => {
   ).trim();
   if (!raw) throw new Error("'username' is required. Provide a package, project or organisation name to check.");
 
-  // "@acme" and "Acme Corp" (a company name, as two solutions pass it) become
-  // "acme" and "Acme-Corp": the shape every registry below accepts.
-  const name = raw.replace(/^@/, "").trim().replace(/\s+/g, "-");
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,213}$/.test(name)) {
-    throw new Error(
-      "'username' must be a name of letters, digits, '.', '_' or '-' (spaces become '-'), " +
-        "starting with a letter or digit.",
-    );
+  const name = toRegistryName(raw);
+  if (!name) {
+    throw new Error("'username' must be a name with at least one letter or digit.");
   }
 
   const profiles = await Promise.all(REGISTRIES.map((r) => checkRegistry(r, name)));
@@ -185,7 +199,6 @@ registerCapability("social-profile-check", async (input: CapabilityInput) => {
     provenance: {
       source: "npm registry API, PyPI JSON API, GitHub REST API",
       acquisition_method: "direct_api",
-      data_access_lane: "preferred",
       fetched_at: new Date().toISOString(),
     },
   };

@@ -139,7 +139,8 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
   // DEC-20261023-A never lane, item 4: Reddit forbids automated access and is
   // litigating it (Reddit v. SerpApi / Perplexity, S.D.N.Y., 2026). Added once
   // social-profile-check stopped probing reddit.com, so this refusal cannot
-  // be read there as "profile does not exist". redd.it is Reddit's link host.
+  // be read there as "profile does not exist". redd.it, redditmedia.com and
+  // redditstatic.com are Reddit's link, media and asset hosts.
   {
     host: "reddit.com",
     site: "Reddit",
@@ -148,6 +149,18 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
   },
   {
     host: "redd.it",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
+  },
+  {
+    host: "redditmedia.com",
+    site: "Reddit",
+    decision: "DEC-20261023-A",
+    alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
+  },
+  {
+    host: "redditstatic.com",
     site: "Reddit",
     decision: "DEC-20261023-A",
     alternatives: "Reddit's licensed Data API is the only route; Strale does not hold a licence for it.",
