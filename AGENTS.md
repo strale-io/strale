@@ -70,7 +70,7 @@ capability), `docs/`, `archive/`. Live counts come from
 |---|---|
 | review a change, or prepare one for review | `REVIEW.md` |
 | add, change or onboard a capability | the `onboard-capability` skill; `CAPABILITY_ONBOARDING.md` and `CAPABILITY_ONBOARDING_PIPELINE.md` (DEC-20260320-B) |
-| add or change an upstream source or fetch | non-negotiable 4's full text; `tos-blocklist.ts`, `vendor-terms.ts` |
+| add or change an upstream source or fetch | non-negotiable 4's full text; `apps/api/src/lib/tos-blocklist.ts`, `apps/api/src/lib/vendor-terms.ts` |
 | fix a cert-audit finding, or touch a wallet, audit-trail, chain, spend-cap or idempotency path | `AUDIT_FOLLOWUP_TEST_COVERAGE.md` (DEC-20260504-A) |
 | fix a long-silent bulk operation (retention, archival, reconciliation) | `BULK_OPERATION_DEPLOY.md` (DEC-20260504-B) |
 | add code that depends on a migration, env var, build step, startup hook or cron | `DEPLOY_MECHANISM_VERIFICATION.md` (DEC-20260504-C) |

@@ -27,7 +27,7 @@ moved_at: 2026-10-24
 
 **At session end, report:**
 - Every cert-audit-finding-numbered commit landed in this session, with the test name(s) covering it.
-- Anything that landed without a test, and the explicit reason (e.g. "no test harness for /v1/do route-level integration; deferred per CLAUDE.md test-harness exemption").
+- Anything that landed without a test, and the explicit reason (e.g. "no test harness for /v1/do route-level integration; deferred per this file's test-harness exemption").
 
 **Do NOT mark a cert-audit follow-up as done if the regression test gap is open.** Report what's missing.
 
