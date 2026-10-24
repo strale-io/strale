@@ -100,3 +100,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Always include the country code or specify the default_country parameter to avoid ambiguous normalization
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

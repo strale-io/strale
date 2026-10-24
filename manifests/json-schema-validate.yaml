@@ -100,3 +100,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Specify your target draft version and test edge cases with draft-specific keywords like $dynamicRef
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

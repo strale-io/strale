@@ -453,3 +453,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Retry with a smaller or more focused request — a shorter project_description
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -3,6 +3,7 @@
 // and returns structured output + provenance.
 
 import { getChain, executeWithFallback } from "../lib/data-provider.js";
+import { getDataAccess, stampDataAccess } from "../lib/data-access.js";
 
 export interface CapabilityInput {
   [key: string]: unknown;
@@ -39,13 +40,24 @@ export function registerCapability(
  *
  * All call sites (do.ts, test-runner, recalibrate) get chain behavior
  * transparently — no per-site changes needed.
+ *
+ * The same holds for the manifest's `data_access` block (DEC-20261023-A):
+ * the returned executor fills the acquisition method, lane and vendor into
+ * provenance wherever the executor left them unset (see lib/data-access.ts).
  */
 export function getExecutor(slug: string): CapabilityExecutor | undefined {
   const chain = getChain(slug);
-  if (chain) {
-    return (input) => executeWithFallback(chain, input);
-  }
-  return executors.get(slug);
+  const base: CapabilityExecutor | undefined = chain
+    ? (input) => executeWithFallback(chain, input)
+    : executors.get(slug);
+  if (!base) return undefined;
+  const access = getDataAccess(slug);
+  if (!access) return base;
+  return async (input) => {
+    const result = await base(input);
+    if (!result || typeof result.provenance !== "object" || result.provenance === null) return result;
+    return { ...result, provenance: stampDataAccess(result.provenance, access) };
+  };
 }
 
 /**

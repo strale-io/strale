@@ -188,3 +188,8 @@ limitations:
     workaround: >-
       Pin action versions to SHAs for security and replace runner references with your organization's self-hosted
       runners if applicable
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -136,4 +136,37 @@ export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
     ],
     decision_ref: "DEC-20261023-A (removed; no open decision)",
   },
+  {
+    vendor: "Have I Been Pwned",
+    hosts: ["haveibeenpwned.com"],
+    capabilities: ["breach-exposure-check"],
+    resale: "permitted",
+    terms_url: "https://haveibeenpwned.com/API/v3",
+    accessed: "2026-09-06",
+    how_read:
+      "Read in the 2026-09-06 vendor-terms audit (docs/security/2026-09-06-vendor-terms-audit.md), which quotes the " +
+      "licence; not re-read on 2026-10-24 (the session's network policy blocked the site).",
+    findings: [
+      "The public API is licensed CC BY 4.0, and its author says charging for it as part of a broader offering is fine.",
+      "Condition: 'clear and visible attribution with a link to haveibeenpwned.com ... anywhere data from the service is " +
+        "used'. The provenance carries source_url and licence since 2026-09-06.",
+    ],
+    decision_ref: "docs/security/2026-09-06-vendor-terms-audit.md",
+  },
+  {
+    vendor: "Alternative.me",
+    hosts: ["api.alternative.me"],
+    capabilities: ["fear-greed-index"],
+    resale: "permitted",
+    terms_url: "https://alternative.me/crypto/fear-and-greed-index/",
+    accessed: "2026-09-10",
+    how_read:
+      "Read in the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md), which quotes " +
+      "the clause; not re-read on 2026-10-24 (the session's network policy blocked the site).",
+    findings: [
+      "'Commercial use is allowed as long as the attribution is given right next to the display of the data.' The " +
+        "output carries the attribution beside the values.",
+    ],
+    decision_ref: "docs/security/2026-09-10-vendor-terms-audit-batch-2.md",
+  },
 ];

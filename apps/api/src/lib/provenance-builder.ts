@@ -15,20 +15,14 @@
 
 import { createHash } from "node:crypto";
 import { z } from "zod";
+import { ACQUISITION_METHODS, DATA_ACCESS_CHECKS, DATA_ACCESS_LANES, type AcquisitionMethod, type DataAccessChecks, type DataAccessLane } from "./data-access.js";
 import { getStraleJurisdiction } from "./processing-location.js";
 import { logError, logWarn } from "./log.js";
 
-// Acquisition method. Introduced under DEC-20260428-A (third-party scraping
-// doctrine); since 2026-10-24 DEC-20261023-A requires the vendor and the
-// acquisition method on every answer.
-// Identifies how the upstream vendor obtained the data, so customers can
-// reason about provenance under EU AMLR / US BSA enhanced-due-diligence.
-export type AcquisitionMethod =
-  | "direct_api"        // direct call to authoritative API (e.g. SEC EDGAR, GLEIF, VIES)
-  | "licensed_bulk"     // bulk feed under licence (e.g. FL Sunbiz download, vendor-licensed snapshot)
-  | "vendor_aggregation" // multi-source aggregator with mixed methods
-  | "vendor_scraping"   // vendor scrapes public-records portal (formerly DEC-20260428-A Tier 2; DEC-20261023-A allows vendor data only where the vendor's terms permit resale)
-  | "primary_source";    // direct primary-source document retrieval (e.g. court filing, registry doc)
+// Acquisition method: how the data reached Strale (introduced under
+// DEC-20260428-A; DEC-20261023-A requires it, with the rule's lane, on every
+// answer). The list and its meanings live in ./data-access.ts.
+export type { AcquisitionMethod, DataAccessChecks, DataAccessLane };
 
 export interface RichProvenance {
   source: string;
@@ -53,6 +47,8 @@ export interface RichProvenance {
   // Required for vendor_scraping; recommended for licensed_bulk and vendor_aggregation.
   upstream_vendor?: string;            // e.g. "cobalt-intelligence", "govlink", "brightquery"
   acquisition_method?: AcquisitionMethod;
+  data_access_lane?: DataAccessLane;
+  data_access_checks?: DataAccessChecks;
   primary_source_reference?: string;   // URL, filing ID, screenshot handle, document hash
 
   // AI-specific fields
@@ -116,13 +112,9 @@ export function buildProvenance(
 // looking at audit_trail.provenance need to see what's missing instead of
 // finding silently empty fields.
 
-const acquisitionMethodSchema = z.enum([
-  "direct_api",
-  "licensed_bulk",
-  "vendor_aggregation",
-  "vendor_scraping",
-  "primary_source",
-]);
+const acquisitionMethodSchema = z.enum(ACQUISITION_METHODS);
+const dataAccessLaneSchema = z.enum(DATA_ACCESS_LANES);
+const dataAccessChecksSchema = z.enum(DATA_ACCESS_CHECKS);
 
 const richProvenanceSchema = z
   .object({
@@ -135,6 +127,8 @@ const richProvenanceSchema = z
     source_note: z.string().optional(),
     upstream_vendor: z.string().optional(),
     acquisition_method: acquisitionMethodSchema.optional(),
+    data_access_lane: dataAccessLaneSchema.optional(),
+    data_access_checks: dataAccessChecksSchema.optional(),
     primary_source_reference: z.string().optional(),
     ai_model: z.string().optional(),
     ai_prompt_hash: z.string().optional(),

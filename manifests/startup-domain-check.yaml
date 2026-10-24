@@ -152,3 +152,9 @@ limitations:
     category: coverage
     severity: info
     workaround: Supplement with whois-lookup for specific TLDs and social-profile-check for additional platform availability
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

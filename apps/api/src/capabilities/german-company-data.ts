@@ -448,7 +448,8 @@ registerCapability("german-company-data", async (input: CapabilityInput) => {
       fetched_at: fetchedAt,
       sources: buildSources(company.sources, fetchedAt),
       attribution: "Source: Handelsregister / Bundesanzeiger via OpenRegister",
-      acquisition_method: "direct_api",
+      acquisition_method: "vendor_aggregation",
+      upstream_vendor: "openregister",
     },
   };
 });

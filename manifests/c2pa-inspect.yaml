@@ -144,3 +144,9 @@ limitations:
     workaround: >-
       For high-stakes decisions, also inspect the assertions array for vendor-specific generative-AI labels not in the
       built-in list.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending

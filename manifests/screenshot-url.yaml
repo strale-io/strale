@@ -116,3 +116,10 @@ limitations:
       The refusal is caller_input and no charge is taken.
     category: coverage
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
+  checks: pending
+  checks_note: "Pending: fetches go through robots.txt and block checks (PR #723), but a per-tool review of every fetch (redirect targets, challenge pages on rendered routes, links followed to other hosts) is not yet recorded."

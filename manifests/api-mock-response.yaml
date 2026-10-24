@@ -114,3 +114,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide example responses in the input to guide mock generation for fields with specific value constraints
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -114,3 +114,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide the full trace including timestamps and tool outputs for the most actionable analysis
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -77,3 +77,8 @@ limitations:
     text: Closely related languages (e.g., Norwegian/Danish/Swedish, Serbian/Croatian) may be confused
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

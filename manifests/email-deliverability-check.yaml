@@ -97,3 +97,11 @@ limitations:
     workaround: >-
       Treat SMTP-verified results as 'likely deliverable' and implement bounce handling in your email pipeline for
       definitive status
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: spamhaus
+  checks: pending
+  checks_note: "Pending: queries the Spamhaus ZEN, SpamCop and Barracuda DNS blocklists; their terms for commercial use are not recorded."

@@ -111,3 +111,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Use a Tron full node or TronGrid API for on-chain state.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

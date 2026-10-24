@@ -27,6 +27,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { log, logError } from "../lib/log.js";
 import { getExecutor } from "./index.js";
+import { parseDataAccess, registerDataAccess } from "../lib/data-access.js";
 
 const DEACTIVATED = new Map<string, string>([
   ["amazon-price", "Amazon CAPTCHA blocks datacenter IPs"],
@@ -410,7 +411,7 @@ function readManifestSlugs(manifestsDir: string): string[] {
     const filenameSlug = file.replace(/\.(yaml|yml)$/, "");
     try {
       const raw = readFileSync(resolve(manifestsDir, file), "utf8");
-      const parsed = yaml.load(raw) as { slug?: string } | null;
+      const parsed = yaml.load(raw) as { slug?: string; data_access?: unknown } | null;
       const slug = parsed?.slug;
       if (typeof slug !== "string" || slug.length === 0) {
         logError("auto-register-manifest-no-slug", new Error("manifest missing top-level slug field"), { file });
@@ -426,6 +427,17 @@ function readManifestSlugs(manifestsDir: string): string[] {
         continue;
       }
       slugs.push(slug);
+      // DEC-20261023-A: the manifest's data_access block is the default the
+      // executor wrapper stamps onto provenance (lib/data-access.ts). An
+      // invalid block is logged and skipped; it never blocks registration.
+      if (parsed?.data_access !== undefined) {
+        const access = parseDataAccess(parsed.data_access);
+        if (access.ok) {
+          registerDataAccess(slug, access.value);
+        } else {
+          logError("auto-register-manifest-data-access-invalid", new Error(access.errors.join("; ")), { file, slug });
+        }
+      }
     } catch (err) {
       logError("auto-register-manifest-parse-failed", err, { file });
     }

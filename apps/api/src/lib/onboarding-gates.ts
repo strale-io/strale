@@ -11,6 +11,7 @@
  * no production-env blast radius from an accidentally-set var.
  */
 
+import { parseDataAccess } from "./data-access.js";
 import { sql as sqlTag } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { capabilities, solutions, solutionSteps } from "../db/schema.js";
@@ -478,6 +479,14 @@ export function validateManifest(m: Manifest, discover: boolean): string[] {
   // maintenance_class is required for new capabilities
   if (!m.maintenance_class || !VALID_MAINTENANCE_CLASSES.includes(m.maintenance_class)) {
     errors.push(`maintenance_class is required. Choose from: ${VALID_MAINTENANCE_CLASSES.join(", ")}`);
+  }
+
+  // Data-access lane and acquisition method (DEC-20261023-A). Presence on
+  // every active manifest is enforced by data-access-manifests.test.ts; here
+  // the block is checked whenever it is present.
+  if (m.data_access !== undefined) {
+    const access = parseDataAccess(m.data_access);
+    if (!access.ok) errors.push(...access.errors);
   }
 
   // Slug pattern
