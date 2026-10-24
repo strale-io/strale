@@ -77,3 +77,8 @@ limitations:
     text: Country prefix is auto-detected for EU VAT numbers — non-EU TINs require explicit country_code
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

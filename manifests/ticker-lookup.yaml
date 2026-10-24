@@ -107,3 +107,10 @@ limitations:
     category: coverage
     severity: info
     workaround: For OTC securities, try searching by ISIN or check the specific exchange's website directly
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: yahoo-finance
+  checks: pending

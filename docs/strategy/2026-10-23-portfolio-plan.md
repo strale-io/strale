@@ -48,7 +48,8 @@ Three filters apply to every candidate:
    search, web fetch, PDF reading, code execution and vision OCR.
 2. **Lawful under the sourcing rules in force today:** DEC-20260428-A and
    DEC-20260813-A. Items that become possible only if DQ-35 is adopted are
-   marked as conditional.
+   marked as conditional. (Pointer, 2026-10-24: DQ-35 was adopted as
+   DEC-20261023-A, which supersedes both; the plan text is kept as written.)
 3. **Shippable by a small team with agents maintaining the connections.**
 
 The market and positioning research is in the private context archive

@@ -580,7 +580,7 @@
     - .env
     - workflow
 - name: GEMI_API_KEY
-  purpose: Greek GEMI company-registry key for greek-company-data — the per-call parsing path opened by DEC-20260813-A.
+  purpose: Greek GEMI company-registry key for greek-company-data — the per-call parsing path opened by DEC-20260813-A (now the per-call lane of DEC-20261023-A).
   provider: GEMI (Greece)
   holder: railway
   cost_class: free

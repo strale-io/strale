@@ -92,3 +92,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide locale or cultural context in the input to improve parsing accuracy for non-Western name formats
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -102,3 +102,8 @@ limitations:
     text: Phone type is determined by number range allocation data — ported numbers may show the original type
     category: accuracy
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

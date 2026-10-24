@@ -5,7 +5,7 @@ import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { STRALE_USER_AGENT } from "../lib/site-access.js";
-import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
+import { assertPlainPreflightAllowed, assertRenderedTargetAllowed } from "./lib/web-provider.js";
 import { logWarn } from "../lib/log.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit, readErrorTextTruncated } from "../lib/resource-limits.js";
@@ -133,6 +133,9 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   await validateUrl(fullUrl);
   // DEC-20261023-A: robots.txt before Browserless is asked for the page.
   await assertRobotsAllowed(fullUrl);
+  // Chrome can get through a JavaScript challenge before the screenshot is
+  // taken; a plain look first stops at the block instead (DEC-20261023-A).
+  await assertPlainPreflightAllowed(fullUrl);
 
   const { url: blessUrl, key } = getBrowserlessConfig();
   // buildBrowserlessRequestUrl appends ?launch= per-request, required by

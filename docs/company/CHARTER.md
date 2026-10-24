@@ -321,7 +321,8 @@ never on *whether someone presses the button*. Therefore:
 pricing changes, deactivating revenue earners, DEC-20260428-B-grade builds, new
 external claims, anything outward-facing (publishing packages, directory
 submissions, vendor contact, social), legal/grey-zone judgment. Lawful-only is
-absolute; the scraping doctrine (DEC-20260428-A / DEC-20260813-A) stands.
+absolute; the data-access rule (DEC-20261023-A, which superseded DEC-20260428-A /
+DEC-20260813-A on 2026-10-24) stands.
 
 **The decision queue** ([DECISION-QUEUE.md](DECISION-QUEUE.md)) keeps gated
 items from blocking. Two classes, and the distinction is authority — not

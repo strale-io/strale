@@ -116,3 +116,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For private packages, query your organization's registry endpoint directly
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

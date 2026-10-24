@@ -111,3 +111,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If no LEI is found, search by company name and jurisdiction; consider that smaller entities may not have an LEI
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

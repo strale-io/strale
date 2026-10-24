@@ -112,7 +112,7 @@ registerCapability("uk-disqualified-director-check", async (input: CapabilityInp
         source: "companies-house-uk",
         fetched_at: new Date().toISOString(),
         upstream_vendor: "UK Companies House (Insolvency Service disqualification data)",
-        acquisition_method: "official_api",
+        acquisition_method: "direct_api",
         primary_source_reference: "https://www.gov.uk/government/publications/disqualified-director-searches",
       },
     };
@@ -149,7 +149,7 @@ registerCapability("uk-disqualified-director-check", async (input: CapabilityInp
       source: "companies-house-uk",
       fetched_at: new Date().toISOString(),
       upstream_vendor: "UK Companies House (Insolvency Service disqualification data)",
-      acquisition_method: "official_api",
+      acquisition_method: "direct_api",
       primary_source_reference: "https://www.gov.uk/government/publications/disqualified-director-searches",
     },
   };

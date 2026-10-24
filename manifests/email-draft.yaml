@@ -136,3 +136,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Include relevant context from prior correspondence in the input to improve tone and content relevance
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

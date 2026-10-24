@@ -22,7 +22,7 @@
  */
 export const PROHIBITED_UPSTREAM_HOSTS: ReadonlyMap<string, string> = new Map([
   // 2026-09-06
-  ["suggestqueries.google.com", "Google — an absolute prohibited target under DEC-20260813-A"],
+  ["suggestqueries.google.com", "Google — direct Google access is never lane item 4 under DEC-20261023-A (formerly an absolute prohibited target under DEC-20260813-A)"],
   ["api.coingecko.com", "CoinGecko free Demo plan excludes commercial use"],
   ["ip-api.com", "ip-api.com free endpoint is non-commercial only"],
   ["internetdb.shodan.io", "Shodan InternetDB is licensed for non-commercial use only"],
@@ -36,6 +36,10 @@ export const PROHIBITED_UPSTREAM_HOSTS: ReadonlyMap<string, string> = new Map([
   ["rpc.ankr.com", "Ankr bars commercial exploitation of the Service without written consent"],
   ["eth.llamarpc.com", "terms unreadable and the endpoint answered HTTP 525 when checked"],
   ["cloudflare-eth.com", "Cloudflare's anonymous Ethereum gateway is discontinued"],
+  // 2026-10-24 (DEC-20261023-A; see VENDOR_TERMS_RECORDS below). Listed for the
+  // rule's never lane item 2 (getting around blocks) as much as for its terms,
+  // which are unrecorded: this list also holds hosts barred for HOW they fetch.
+  ["r.jina.ai", "Jina Reader retries a blocked fetch through its own proxy pool by default and was used on an anonymous tier whose commercial terms were never recorded"],
 ]);
 
 /** Every prohibited host named in `text` as a URL (scheme://host). */
@@ -47,3 +51,122 @@ export function prohibitedHostsIn(text: string): string[] {
   }
   return found;
 }
+
+/**
+ * What a vendor's terms say about Strale reselling its data, as read, with the
+ * evidence (DEC-20261023-A: vendor data is allowed only when "the vendor's
+ * terms permit resale, verified and recorded").
+ *
+ * `resale` is what the terms SAY, not what Strale would like: "unverified"
+ * means nobody has read a current copy that settles it. Being unverified does
+ * not by itself put a vendor on `PROHIBITED_UPSTREAM_HOSTS` (Jina is there
+ * for how it fetches, see above); a vendor still in use with unverified terms
+ * is an open decision, and the entry names where that decision is queued.
+ *
+ * `vendor-terms.test.ts` holds `capabilities` to the source tree: every
+ * executor that calls one of `hosts` must be listed, so the record cannot
+ * silently understate who depends on a vendor.
+ */
+export interface VendorTermsRecord {
+  vendor: string;
+  hosts: readonly string[];
+  /** Vendor id passed to meteredVendorFetch, when calls go through it. */
+  metered_id?: string;
+  /** Executors that call one of `hosts`. */
+  capabilities: readonly string[];
+  resale: "permitted" | "prohibited" | "unverified";
+  terms_url: string;
+  /** ISO date the terms were read (or the read was attempted). */
+  accessed: string;
+  /** How the text was obtained, and its limits. */
+  how_read: string;
+  findings: readonly string[];
+  /** Where the open question or the decision lives. */
+  decision_ref: string;
+}
+
+export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
+  {
+    vendor: "Serper.dev",
+    hosts: ["google.serper.dev"],
+    metered_id: "serper",
+    capabilities: [
+      "adverse-media-check",
+      "backlink-check",
+      "brand-mention-search",
+      "google-news-search",
+      "google-search",
+      "keyword-rank-check",
+      "serp-analyze",
+      "serp-related-questions",
+    ],
+    resale: "unverified",
+    terms_url: "https://serper.dev/terms",
+    accessed: "2026-10-24",
+    how_read:
+      "serper.dev was unreachable from the 2026-10-24 session (environment network policy). Read instead: a " +
+      "web-search tool's summary of, and excerpts from, a cached copy about 878 days old per that tool. The " +
+      "quotations below are the tool's excerpts, not verified word-for-word against the page, and an ellipsis may " +
+      "hide qualifying words.",
+    findings: [
+      "Licence is a B2B use licence ('Permission is granted to download the materials … for as long as your use case " +
+        "requires'), not a transfer of title; no clause grants resale or sublicensing of results.",
+      "Prohibits 'Mirror the materials on any other server as-is with no-value-added' — close to returning raw results.",
+      "States 'Serper provides web-scraped data collected from public domain sources' and no affiliation with Google.",
+      "Termination at any time, with or without cause.",
+    ],
+    decision_ref: "docs/company/DECISION-QUEUE.md DQ-39",
+  },
+  {
+    vendor: "Jina AI (Reader)",
+    hosts: ["r.jina.ai"],
+    capabilities: [],
+    resale: "unverified",
+    terms_url: "https://jina.ai/legal/",
+    accessed: "2026-10-24",
+    how_read:
+      "jina.ai was unreachable from the 2026-10-24 session. Read instead: the reader's open-source code " +
+      "(github.com/jina-ai/reader, src/api/crawler.ts, src/dto/crawler-options.ts) and search summaries of jina.ai pages.",
+    findings: [
+      "Jina's sales FAQ (per search summary) says hosted-API commercial use is covered by its service terms for " +
+        "signed-up, paying users; Strale called it keyless, on the anonymous tier, whose terms were never recorded.",
+      "The hosted reader retries a non-200 fetch through its own rotating proxy pool unless X-Proxy: none is sent, " +
+        "and does not report the target's status — DEC-20261023-A never lane item 2.",
+      "Removed from every fetch path on 2026-10-24 (PR #723); listed in PROHIBITED_UPSTREAM_HOSTS so it cannot return.",
+    ],
+    decision_ref: "DEC-20261023-A (removed; no open decision)",
+  },
+  {
+    vendor: "Have I Been Pwned",
+    hosts: ["haveibeenpwned.com"],
+    capabilities: ["breach-exposure-check"],
+    resale: "permitted",
+    terms_url: "https://haveibeenpwned.com/API/v3",
+    accessed: "2026-09-06",
+    how_read:
+      "Read in the 2026-09-06 vendor-terms audit (docs/security/2026-09-06-vendor-terms-audit.md), which quotes the " +
+      "licence; not re-read on 2026-10-24 (the session's network policy blocked the site).",
+    findings: [
+      "The public API is licensed CC BY 4.0, and its author says charging for it as part of a broader offering is fine.",
+      "Condition: 'clear and visible attribution with a link to haveibeenpwned.com ... anywhere data from the service is " +
+        "used'. The provenance carries source_url and licence since 2026-09-06.",
+    ],
+    decision_ref: "docs/security/2026-09-06-vendor-terms-audit.md",
+  },
+  {
+    vendor: "Alternative.me",
+    hosts: ["api.alternative.me"],
+    capabilities: ["fear-greed-index"],
+    resale: "permitted",
+    terms_url: "https://alternative.me/crypto/fear-and-greed-index/",
+    accessed: "2026-09-10",
+    how_read:
+      "Read in the 2026-09-10 vendor-terms audit (docs/security/2026-09-10-vendor-terms-audit-batch-2.md), which quotes " +
+      "the clause; not re-read on 2026-10-24 (the session's network policy blocked the site).",
+    findings: [
+      "'Commercial use is allowed as long as the attribution is given right next to the display of the data.' The " +
+        "output carries the attribution beside the values.",
+    ],
+    decision_ref: "docs/security/2026-09-10-vendor-terms-audit-batch-2.md",
+  },
+];

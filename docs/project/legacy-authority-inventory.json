@@ -121,6 +121,7 @@
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
+        "handoff/_general/from-code/2026-10-24-data-access-citations.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
         "handoff/_general/from-code/2026-10-24-wow-t7-close-and-contract-cut-draft.md",
         "scripts/m2-closure-register-lib.mjs",
@@ -395,6 +396,8 @@
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
+        "handoff/_general/from-code/2026-10-24-data-access-citations.md",
+        "handoff/_general/from-code/2026-10-24-data-access-provenance.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
         "handoff/_general/from-code/2026-10-24-wow-t7-close-and-contract-cut-draft.md",
         "handoff/_general/from-code/security-audit-api.md",
@@ -493,7 +496,7 @@
     {
       "path": ".agents/skills",
       "owner_area": "shared-agent-skills",
-      "sha256": "acf43769852ff5001840f855c53d58c79c4153369702d59426c967d27e914585",
+      "sha256": "45ae1e175fa6c8702e86a88682a3ed6dc47d74376b3ff480f292bb9621997c62",
       "detected_references": [
         "CLAUDE.md",
         "archive/sessions/2026-09-10-m3-vendor-state-inventory.md",
@@ -531,7 +534,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "842bb81b4ce1fd5b12810d7dc066e176b5f11ec4673012634d833d8e853aeb72",
+      "sha256": "d282b933db133010a029b7a780970b297ee9663faaefae2a30f952145b21e4ef",
       "detected_references": [
         ".agents/skills/source-command-end-session/SKILL.md",
         ".claude/commands/ceo-brief.md",
@@ -555,6 +558,8 @@
         "apps/api/src/lib/models.ts",
         "apps/api/src/lib/seller-rank.ts",
         "apps/api/src/lib/startup-migrations.ts",
+        "apps/api/src/lib/vendor-terms.test.ts",
+        "apps/api/src/lib/vendor-terms.ts",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
         "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-direction-applications.json",
@@ -662,6 +667,7 @@
         "handoff/_general/from-code/2026-10-18-checkin-morning.md",
         "handoff/_general/from-code/2026-10-19-checkin-morning.md",
         "handoff/_general/from-code/2026-10-23-data-access-rule-proposal.md",
+        "handoff/_general/from-code/2026-10-24-data-access-vendor-terms.md",
         "scripts/candidates.test.mjs",
         "scripts/check-claims.mjs",
         "scripts/check-docs-index.test.mjs",
@@ -679,7 +685,7 @@
     {
       "path": "docs/strategy",
       "owner_area": "strategy-evidence",
-      "sha256": "f206bf74d05f0183ca957e148302e3b6bae318d65438bbb81b3bdd0015b92722",
+      "sha256": "616a30c3329875bfb9c3b487345d03f1fc4c066014796943697475a16e7611ca",
       "detected_references": [
         "AGENTS.md",
         "REVIEW.md",
@@ -807,7 +813,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "f28ab2c8d5f0c2cbf5c6016506ec377fd6b209ef76b1ccbe6a22455cb1b3770e",
+      "sha256": "fb5c4df8067c78eddd7775a1677ef8c6930bc28c5eddcff0803ae0688b3ffedc",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

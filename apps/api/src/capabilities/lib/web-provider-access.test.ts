@@ -24,7 +24,7 @@ vi.mock("../../lib/metered-vendor-fetch.js", () => ({
 }));
 vi.mock("../../lib/url-validator.js", () => ({ validateUrl: vi.fn(async () => {}) }));
 
-import { __resetWebProviderCacheForTests, fetchCompanyPage, fetchPage } from "./web-provider.js";
+import { __resetWebProviderCacheForTests, assertPlainPreflightAllowed, assertRenderedTargetAllowed, fetchCompanyPage, fetchPage } from "./web-provider.js";
 import { __resetRobotsCacheForTests } from "../../lib/robots-txt.js";
 import { STRALE_USER_AGENT, SiteAccessRefusedError, SourceBlockedError } from "../../lib/site-access.js";
 import { isCapabilityRefusal } from "../../lib/capability-refusal.js";
@@ -111,9 +111,10 @@ describe("robots.txt is honoured before the first request", () => {
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
-  it("applies to the Browserless-only path too", async () => {
+  it("applies to the Browserless-only path too, before the preflight", async () => {
     robotsBody = "User-agent: StraleBot\nDisallow: /\n";
     await refusalFrom(fetchPage(PAGE, { skipFallback: true }));
+    expect(pageCalls()).toHaveLength(0);
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
@@ -290,5 +291,252 @@ describe("a block on a source STRALE chose is a capability fault, not a refusal"
   it("fetchCompanyPage (registries) is always a Strale-chosen source", async () => {
     browserlessFetchMock.mockImplementation(async () => html(REAL_PAGE, 200, { "x-response-code": "403" }));
     await expect(fetchCompanyPage(PAGE)).rejects.toBeInstanceOf(SourceBlockedError);
+  });
+});
+
+describe("a rendered route with no plain tier looks at the site plainly first", () => {
+  // Chrome can run a JavaScript challenge to completion before the page is
+  // read, so a route without tier 1 (skipFallback, /screenshot, /pdf) must see
+  // the site's first answer before Browserless is asked.
+  it("REGRESSION: a challenge served to the plain look stops skipFallback before Browserless", async () => {
+    pageResponse = () => html(CHALLENGE);
+    const err = await refusalFrom(fetchPage(PAGE, { skipFallback: true }));
+    expect(err.block.kind).toBe("challenge");
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: a non-default waitUntil (no tier 1) gets the same plain look", async () => {
+    pageResponse = () => html("blocked", 403);
+    const err = await refusalFrom(fetchPage(PAGE, { waitUntil: "domcontentloaded" }));
+    expect(err.block).toEqual({ kind: "http", status: 403 });
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a challenge served with a 503 is refused too", async () => {
+    pageResponse = () => html(CHALLENGE, 503);
+    const err = await refusalFrom(assertPlainPreflightAllowed(PAGE));
+    expect(err.block.kind).toBe("challenge");
+  });
+
+  it("a redirect robots.txt disallows is refused", async () => {
+    pageResponse = () => {
+      const r = html(REAL_PAGE);
+      Object.defineProperty(r, "url", { value: "https://elsewhere.test/private/x" });
+      return r;
+    };
+    await refusalFrom(assertPlainPreflightAllowed(PAGE));
+  });
+
+  it("an ordinary page passes, and so does a plain 5xx (the render may still work)", async () => {
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBe(200);
+    pageResponse = () => html("server error", 502);
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBe(502);
+  });
+
+  it("a transport failure is left to the rendered route (timeout, DNS, TLS, parser, dual-stack, a long chain)", async () => {
+    const fetchFailed = (cause: unknown) => Object.assign(new TypeError("fetch failed"), { cause });
+    const failures = [
+      // AbortSignal.timeout rejects with a DOMException named TimeoutError, numeric code 23.
+      Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError", code: 23 }),
+      fetchFailed(Object.assign(new Error("getaddrinfo ENOTFOUND site.test"), { code: "ENOTFOUND" })),
+      // Node's OpenSSL refuses legacy TLS that Chrome still opens.
+      fetchFailed(Object.assign(new Error("packet length too long"), { code: "ERR_SSL_PACKET_LENGTH_TOO_LONG" })),
+      fetchFailed(Object.assign(new Error("Response does not match the HTTP/1.1 protocol"), { name: "HTTPParserError" })),
+      fetchFailed(new AggregateError([Object.assign(new Error("connect EAFNOSUPPORT"), { code: "EAFNOSUPPORT" })])),
+      new Error("Too many redirects (>20) — refusing to follow further. Starting URL: https://site.test/page."),
+    ];
+    for (const failure of failures) {
+      pageResponse = () => {
+        throw failure;
+      };
+      await expect(assertPlainPreflightAllowed(PAGE), failure.message).resolves.toBeUndefined();
+    }
+  });
+
+  it("REGRESSION: a connection-time SSRF refusal is passed on as itself, not swallowed or left as 'fetch failed'", async () => {
+    const refusal = Object.assign(new Error("Resolved host targets a restricted address."), { code: "ESSRFBLOCKED" });
+    pageResponse = () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: refusal });
+    };
+    await expect(assertPlainPreflightAllowed(PAGE)).rejects.toBe(refusal);
+  });
+
+  it("REGRESSION: a refusal is decided on its code, not on words in the caller's URL", async () => {
+    pageResponse = () => {
+      throw new Error("Reddit is not a supported source: its Terms of Service prohibit automated access (https://socket.abort.test/timeout).");
+    };
+    await expect(assertPlainPreflightAllowed(PAGE)).rejects.toThrow(/Terms of Service prohibit automated access/);
+  });
+
+  it("REGRESSION: a non-block 4xx is the target's final answer, as in tier 1 (no render)", async () => {
+    pageResponse = () => html("bad request", 400);
+    await expect(fetchPage(PAGE, { skipFallback: true })).rejects.toThrow(/URL returned HTTP 400/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a 416, which a ranged GET can draw by itself, still renders on the fetchPage route", async () => {
+    pageResponse = () => html("", 416);
+    await expect(fetchPage(PAGE, { skipFallback: true })).resolves.toBeDefined();
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("the preflight itself refuses only blocks and challenges; a 404 is the caller's to judge", async () => {
+    // A screenshot or PDF of a 404 page (or a single-page app that serves its
+    // routes with 404) behaves as before this check existed.
+    pageResponse = () => html("not found", 404);
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBe(404);
+  });
+
+  it("follows a redirect chain as long as Chrome would (20 hops)", async () => {
+    await assertPlainPreflightAllowed(PAGE);
+    const [, init] = pageCalls().at(-1) as [string, { maxRedirects?: number }];
+    expect(init.maxRedirects).toBe(20);
+  });
+
+  it("a cached render is served without a new preflight", async () => {
+    await fetchPage(PAGE, { skipFallback: true });
+    const before = pageCalls().length;
+    await fetchPage(PAGE, { skipFallback: true });
+    expect(pageCalls().length).toBe(before);
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a page that ignores Range is read only to the cap", async () => {
+    let pulled = 0;
+    const chunk = new Uint8Array(64 * 1024).fill(0x61);
+    pageResponse = () =>
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            pulled += chunk.length;
+            if (pulled > 64 * 1024 * 1024) controller.close();
+            else controller.enqueue(chunk);
+          },
+        }),
+        { status: 200, headers: { "content-type": "text/html" } },
+      );
+    await assertPlainPreflightAllowed(PAGE);
+    expect(pulled).toBeLessThan(1024 * 1024);
+  });
+
+  it("a block's body is released before the refusal", async () => {
+    const cancel = vi.fn();
+    pageResponse = () =>
+      new Response(new ReadableStream({ pull() {}, cancel }), { status: 403, headers: { "content-type": "text/html" } });
+    await refusalFrom(assertPlainPreflightAllowed(PAGE));
+    expect(cancel).toHaveBeenCalled();
+  });
+});
+
+describe("a Browserless redirect is held to the blocklist", () => {
+  it("REGRESSION: landing on a blocklisted host (X-Response-URL) is refused", async () => {
+    const res = html(REAL_PAGE, 200, { "x-response-code": "200", "x-response-url": "https://www.trustpilot.com/review/x" });
+    await expect(assertRenderedTargetAllowed(PAGE, res)).rejects.toThrow(/Terms of Service prohibit automated access/);
+  });
+
+  it("an ordinary final URL passes", async () => {
+    const res = html(REAL_PAGE, 200, { "x-response-code": "200", "x-response-url": PAGE });
+    await expect(assertRenderedTargetAllowed(PAGE, res)).resolves.toBeUndefined();
+  });
+});
+
+describe("tier 1 never hands Strale's own refusals to Chrome", () => {
+  // Before this, any tier-1 error the catch did not recognise fell through to
+  // Browserless — including a blocklist refusal on a redirect hop and the
+  // connection-time SSRF block — so Chrome visited the place Strale refused.
+  it("REGRESSION: a blocklisted host on a redirect hop is refused, and Chrome is not asked", async () => {
+    pageResponse = () => {
+      throw new Error("LinkedIn is not a supported source: its Terms of Service prohibit automated access, so Strale does not fetch it.");
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/Terms of Service prohibit automated access/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: a connection-time SSRF block is refused as itself, and Chrome is not asked", async () => {
+    const refusal = Object.assign(new Error("Resolved host targets a restricted address."), { code: "ESSRFBLOCKED" });
+    pageResponse = () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: refusal });
+    };
+    await expect(fetchPage(PAGE)).rejects.toBe(refusal);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: a name that does not resolve is reported, not rendered (undici's message is only 'fetch failed')", async () => {
+    pageResponse = () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("getaddrinfo ENOTFOUND site.test"), { code: "ENOTFOUND" }) });
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/Could not reach site\.test/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: after a tier-1 transport failure, a challenge seen by the plain look stops the call", async () => {
+    let calls = 0;
+    pageResponse = () => {
+      calls += 1;
+      if (calls === 1) throw new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://site.test/page.");
+      return html(CHALLENGE);
+    };
+    const err = await refusalFrom(fetchPage(PAGE));
+    expect(err.block.kind).toBe("challenge");
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a tier-1 timeout still reaches Chrome once the plain look also fails in transport", async () => {
+    pageResponse = () => {
+      throw Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError", code: 23 });
+    };
+    await expect(fetchPage(PAGE)).resolves.toBeDefined();
+    expect(pageCalls()).toHaveLength(2);
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("REGRESSION: a body that breaks off mid-read ('terminated': a reset, a bad encoding) still renders, after a plain look", async () => {
+    for (const code of ["UND_ERR_SOCKET", "Z_DATA_ERROR"]) {
+      safeFetchMock.mockClear();
+      browserlessFetchMock.mockClear();
+      __resetWebProviderCacheForTests();
+      let calls = 0;
+      pageResponse = () => {
+        calls += 1;
+        if (calls > 1) return html(REAL_PAGE);
+        const broken = Object.assign(new TypeError("terminated"), { cause: Object.assign(new Error("other side closed"), { code }) });
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("<html><body>"));
+              controller.error(broken);
+            },
+          }),
+          { status: 200, headers: { "content-type": "text/html" } },
+        );
+      };
+      await expect(fetchPage(PAGE), code).resolves.toBeDefined();
+      // The first answer was never fully seen, so a plain look came before Chrome.
+      expect(pageCalls(), code).toHaveLength(2);
+      expect(browserlessFetchMock, code).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("a refused connection is reported, not rendered", async () => {
+    pageResponse = () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }) });
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/connection was refused/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a redirect to an invalid URL ends the call with a readable sentence", async () => {
+    pageResponse = () => {
+      throw Object.assign(new TypeError("Invalid URL"), { code: "ERR_INVALID_URL" });
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/redirected to an address that is not a valid URL/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a page tier 1 saw (a JavaScript shell) is rendered without a second plain look", async () => {
+    pageResponse = () => html("<html><body><div id=root></div></body></html>");
+    await fetchPage(PAGE);
+    expect(pageCalls()).toHaveLength(1);
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
   });
 });

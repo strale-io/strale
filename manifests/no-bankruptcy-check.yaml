@@ -130,3 +130,8 @@ limitations:
       Lysingsblad and is not free machine-readable.
     category: coverage
     severity: warning
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

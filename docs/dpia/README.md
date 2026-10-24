@@ -37,4 +37,5 @@ copy-paste drift the cert-audit found across other surfaces.
 
 Last reviewed: 2026-04-30. Re-review trigger: any change to the upstream
 vendor (sanctions/PEP/adverse-media), the AI model used by
-`risk-narrative-generate`, or DEC-20260428-A/B engineering bar.
+`risk-narrative-generate`, the data-access rule (DEC-20261023-A, which
+superseded DEC-20260428-A on 2026-10-24), or the DEC-20260428-B engineering bar.

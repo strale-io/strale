@@ -12,7 +12,7 @@
  *
  * v0.2: extend to top-50 stablecoins + non-EVM chains (Solana SPL stables).
  *
- * Per DEC-20260428-A, Strale itself does not scrape; the issuer registry
+ * Per DEC-20260428-A (now DEC-20261023-A), Strale does not bulk-collect; the issuer registry
  * is hand-curated from public regulator filings + issuer disclosures.
  */
 
