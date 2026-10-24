@@ -144,6 +144,49 @@ test("unstaged hand edits to a generated file are never overwritten: it refuses 
   }
 });
 
+test("a CRLF checkout (Git for Windows, autocrlf) is not mistaken for unstaged edits", async () => {
+  const root = makeRepo();
+  try {
+    git(root, "config", "core.autocrlf", "true");
+    // Re-check-out every file so the working tree carries CRLF line endings.
+    for (const f of ["archive/README.md", "handoff/README.md"]) rmSync(join(root, f));
+    git(root, "checkout", "--", ".");
+    assert.match(readFileSync(join(root, "handoff/README.md"), "utf8"), /\r\n/);
+    write(root, "handoff/_general/from-code/2026-10-24-b.md", "Intent: crlf\r\n");
+    git(root, "add", "handoff/_general/from-code/2026-10-24-b.md");
+    const result = await regenerateIndexes({ root, contextLib: { INVENTORY_TARGETS: [] } });
+    assert.deepEqual(result.refused, []);
+    assert.deepEqual(result.staged, ["handoff/README.md"]);
+    assert.match(git(root, "show", ":handoff/README.md"), /\| crlf \|/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a commit with a pathspec (temporary next-index) refuses rather than desync the real index", async () => {
+  const root = makeRepo();
+  try {
+    write(root, "handoff/_general/from-code/2026-10-24-b.md", "Intent: second\n");
+    git(root, "add", "handoff/_general/from-code/2026-10-24-b.md");
+    const env = { ...process.env, GIT_INDEX_FILE: join(root, ".git", "next-index-123.lock") };
+    const result = await regenerateIndexes({ root, env, contextLib: { INVENTORY_TARGETS: [] } });
+    assert.deepEqual(result.staged, []);
+    assert.equal(result.refused.length, 1);
+    assert.match(result.refused[0].fix, /without paths/);
+    // Nothing to regenerate: a pathspec commit is not refused.
+    const clean = makeRepo();
+    try {
+      write(clean, "apps/x.ts", "export {};\n");
+      git(clean, "add", "apps/x.ts");
+      assert.deepEqual(await regenerateIndexes({ root: clean, env, contextLib: { INVENTORY_TARGETS: [] } }), { staged: [], refused: [] });
+    } finally {
+      rmSync(clean, { recursive: true, force: true });
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("wired as hooks: a commit and a clean merge both land a fresh index (planted failure: the forgotten archive:index)", () => {
   const root = makeRepo();
   try {
@@ -186,6 +229,7 @@ test("wired as hooks: a commit and a clean merge both land a fresh index (plante
     git(root, "commit", "-q", "-m", "mine");
     const merge = spawnSync("git", ["merge", "-q", "--no-edit", "other"], { cwd: root, encoding: "utf8" });
     assert.equal(merge.status, 1, "pre-merge-commit stops the merge once it has staged a fresh index");
+    assert.match(merge.stderr, /PAUSED, not failed/);
     assert.match(merge.stderr, /finish the merge with git commit --no-edit/);
     git(root, "commit", "-q", "--no-edit");
     assert.equal(git(root, "rev-list", "--parents", "-n", "1", "HEAD").split(" ").length, 3, "HEAD is the merge commit");

@@ -16,7 +16,15 @@
 // one file is written; the rest of `npm run context:generate` is untouched.
 //
 // It never overwrites a generated file that has unstaged edits in the
-// working tree: it refuses instead, so hand edits are never lost.
+// working tree: it refuses instead, so hand edits are never lost. "Unstaged
+// edits" is git's verdict (`git diff --quiet`), never a byte comparison, so a
+// CRLF checkout (Git for Windows, `* text=auto`) is not mistaken for an edit.
+//
+// `git commit <pathspec>` runs hooks against a temporary index
+// (GIT_INDEX_FILE=.git/next-index-*.lock); a file staged there reaches the
+// commit but not the real index, which then holds a stale copy. When it would
+// have to stage something in that case, it refuses and asks for a commit
+// without a pathspec.
 //
 // A clean `git merge` skips pre-commit and runs pre-merge-commit, but git
 // (2.43 measured) commits the merge from the tree it had BEFORE that hook, so
@@ -31,7 +39,7 @@
 // staged for this commit; exit 1 with a fix line when it refused, or (with
 // --merge) when it staged anything.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -73,12 +81,15 @@ function stagedBlob(git, path) {
   }
 }
 
-function workingCopy(root, path) {
-  try {
-    return readFileSync(resolve(root, path), "utf8");
-  } catch {
-    return null;
-  }
+/** True when the working copy differs from the index, by git's own rules. */
+function hasUnstagedEdits(root, path) {
+  const run = spawnSync("git", ["diff", "--quiet", "--", path], { cwd: root, stdio: "ignore" });
+  return run.status === 1;
+}
+
+function isPathspecCommit(env) {
+  const index = env.GIT_INDEX_FILE ?? "";
+  return /(^|[\\/])next-index[^\\/]*$/.test(index);
 }
 
 const under = (path, dir) => path === dir || path.startsWith(`${dir}/`);
@@ -87,11 +98,17 @@ const under = (path, dir) => path === dir || path.startsWith(`${dir}/`);
  * Writes `content` to `path` and stages it, unless the working copy carries
  * unstaged edits (then it records a refusal and leaves the file alone).
  */
-function stageGenerated(root, git, path, content, result) {
+function stageGenerated(root, git, path, content, result, env) {
   const staged = stagedBlob(git, path);
   if (staged === content) return;
-  const working = workingCopy(root, path);
-  if (working !== null && staged !== null && working !== staged) {
+  if (isPathspecCommit(env)) {
+    result.refused.push({
+      path,
+      fix: `${path} needs regenerating, which a commit with a pathspec cannot carry into the index. Stage the files instead (git add <paths>) and run git commit without paths`,
+    });
+    return;
+  }
+  if (staged !== null && hasUnstagedEdits(root, path)) {
     result.refused.push({
       path,
       fix: `${path} has unstaged edits; it is generated. Stage or discard them (git add ${path}, or git checkout -- ${path}) and commit again`,
@@ -105,14 +122,14 @@ function stageGenerated(root, git, path, content, result) {
 }
 
 /** Regenerates archive/README.md and handoff/README.md from the staged tree. */
-function regenerateArchiveIndex(root, git, result) {
+function regenerateArchiveIndex(root, git, result, env) {
   const listed = git(["ls-files", "-z", "--", ARCHIVE_DIR, HANDOFF_DIR]);
   const snapshot = mkdtempSync(join(tmpdir(), "strale-index-"));
   try {
     if (listed) git(["checkout-index", "-z", "--stdin", `--prefix=${snapshot}/`], listed);
     generateAll(snapshot);
     for (const path of [ARCHIVE_README_PATH, HANDOFF_README_PATH]) {
-      stageGenerated(root, git, path, readFileSync(join(snapshot, path), "utf8"), result);
+      stageGenerated(root, git, path, readFileSync(join(snapshot, path), "utf8"), result, env);
     }
   } finally {
     rmSync(snapshot, { recursive: true, force: true });
@@ -120,25 +137,26 @@ function regenerateArchiveIndex(root, git, result) {
 }
 
 /** Regenerates the legacy-authority inventory from the (now updated) index. */
-async function regenerateInventory(root, git, result, staged, options) {
+async function regenerateInventory(root, git, result, staged, options, env) {
   const lib = options.contextLib ?? (await import("../project-context-lib.mjs"));
   const targets = (lib.INVENTORY_TARGETS ?? []).map((t) => t.path);
   if (!staged.some((f) => targets.some((t) => under(f, t)))) return;
   const content = `${JSON.stringify(lib.buildInventory(root), null, 2)}\n`;
-  stageGenerated(root, git, INVENTORY_PATH, content, result);
+  stageGenerated(root, git, INVENTORY_PATH, content, result, env);
 }
 
 export async function regenerateIndexes(options = {}) {
   const root = resolve(options.root ?? process.cwd());
   const git = makeGit(root);
+  const env = options.env ?? process.env;
   const result = { staged: [], refused: [] };
 
   const staged = stagedPaths(git);
   if (staged.some((f) => under(f, ARCHIVE_DIR) || under(f, HANDOFF_DIR))) {
-    regenerateArchiveIndex(root, git, result);
+    regenerateArchiveIndex(root, git, result, env);
   }
   // Re-read: the archive step may have staged handoff/README.md.
-  await regenerateInventory(root, git, result, stagedPaths(git), options);
+  await regenerateInventory(root, git, result, stagedPaths(git), options, env);
   return result;
 }
 
@@ -162,8 +180,8 @@ if (invokedDirectly) {
     process.exit(1);
   }
   if (process.argv.includes("--merge") && result.staged.length) {
-    console.error("regenerate-indexes: the merge brought in archive/ or handoff/ files, so the generated indexes above were regenerated and staged.");
-    console.error("fix: finish the merge with git commit --no-edit");
+    console.error("regenerate-indexes: the merge is PAUSED, not failed. It brought in archive/ or handoff/ files, so the generated indexes above were regenerated and staged.");
+    console.error("fix: finish the merge with git commit --no-edit (do not run git merge --abort)");
     process.exit(1);
   }
 }

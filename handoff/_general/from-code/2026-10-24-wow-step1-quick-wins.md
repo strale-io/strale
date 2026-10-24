@@ -20,7 +20,11 @@ What changed:
   the inventory rule). `.githooks/pre-merge-commit` does the same for a clean
   merge, then stops it so `git commit --no-edit` lands the fresh index (git
   2.43 ignores index changes made in that hook). CI's `--check` is now a
-  warning.
+  warning (exit 2); any other exit still fails. Review round 1 fixes: unstaged
+  edits are detected with `git diff --quiet` (a CRLF checkout on Windows is
+  not an edit), and a `git commit <pathspec>` that would need regeneration is
+  refused instead of desyncing the real index. `WORKTREES.md` says how to
+  finish a paused merge.
 - **`/go` skill**: the deleted `sqs.ts` rule is replaced with the root-cause
   rule, and the scraping-doctrine pointer names DEC-20261023-A.
 - **CEO-brief lint** runs on a PR only when a brief, the linter or `ci.yml`
