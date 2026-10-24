@@ -1,0 +1,88 @@
+Intent: DEC-20261023-A adoption, work item 1. The shared fetch path and the
+customer-URL fetchers stop at a site's block, honour robots.txt and identify
+as Strale on every route. (Adoption list: `docs/strategy/2026-10-23-data-access-risk-rule-proposal.md`, "On adoption" items 3 and 7.)
+
+## What changed
+
+- `apps/api/src/lib/site-access.ts` (new): `STRALE_USER_AGENT`, the block
+  statuses (401/403/407/429), `SiteAccessRefusedError` (a
+  `CapabilityRefusalError`) and `siteAccessRefusal()`. The message carries
+  `SITE_BLOCK_MARKER` ("Strale stops at a site's block").
+- `apps/api/src/lib/robots-txt.ts` (new): RFC 9309 parser and matcher,
+  `assertRobotsAllowed()`, cached per origin (1 h; 5 min for an unreachable
+  robots.txt). 4xx means allow; 5xx and 429 mean refuse. A transport failure
+  allows the fetch and is not cached; that departure is recorded in the module
+  header.
+- Health accounting: `isAccessPolicyRefusal()` in `tos-blocklist.ts` is
+  checked by `isRefusalMessage()`. The circuit breaker, `quality-capture`
+  and `execution-outcome` therefore treat a site block as a refusal, and the
+  taxonomy classifies it `tos_policy`, which does not count against the
+  quality floor.
+- `web-provider.ts`:
+  - Robots.txt is checked before the first request.
+  - Honest user agent on the plain fetch and on Browserless (`userAgent` in
+    the body).
+  - A 401/403/407/429 or a challenge page on the plain fetch is a refusal; it
+    is no longer passed to the next tier.
+  - A 400 is terminal.
+  - Browserless's `X-Response-Code` is read, and a block there is refused
+    without a retry.
+  - **Jina Reader is removed from the chain**, here and in `url-to-markdown`.
+    By default the hosted reader retries a non-200 fetch through its own
+    rotating proxy pool, and it does not report the target's status. Checked
+    in jina-ai/reader `src/api/crawler.ts` on 2026-10-24. It also ran keyless,
+    so on the anonymous free tier. It is retired in `dependency-manifest.ts`
+    and `config/vendors.yaml`; `jina-reader.ts` and `JINA_API_KEY` are gone.
+- Executors:
+  - Spoofed Chrome user agents removed: `tech-stack-detect`, `cookie-scan`,
+    `email-pattern-discover` (suspended) and `linkedin-url-validate`
+    (deactivated). The dead `lib/northdata.ts` was deleted; North Data is a
+    never-lane aggregator.
+  - Robots.txt and block refusals added to `url-to-markdown`,
+    `tech-stack-detect`, `cookie-scan`, `domain-contact-extract`,
+    `screenshot-url`, `html-to-pdf` and `company-enrich`.
+  - Strale user agent added on the Browserless screenshot and PDF routes, and
+    on `company-tech-stack`'s HEAD and `seo-audit`'s robots fetch.
+  - `landing-page-roast` reads the page before taking the screenshot, so a
+    refused page is never screenshotted.
+  - The privacy, terms and return-policy finders stop on a site-wide block
+    (`isSiteWideBlock`).
+- `estonian-company-data`: removed the Browserless "EU proxy" that retried the
+  registry's 403 "to bypass geo-restriction" (never lane, item 2). A block is
+  now a refusal. The tool is out of the Browserless hard-require list.
+
+## Tests
+
+- New: `lib/robots-txt.test.ts`, `capabilities/lib/web-provider-access.test.ts`
+  and `capabilities/site-access-executors.test.ts`. The last includes a guard
+  against any browser-engine user-agent literal under `capabilities/` or
+  `lib/`.
+- Fail-before check: against `origin/main` source, 35 of the 42 new
+  fetch-path and executor tests fail. The 7 that pass both ways are positive
+  and negative controls.
+- Updated: `web-provider-limits`, `caller-url-read-limits`,
+  `browserless-dependency-drift` (Jina tier gone, Estonian out of the
+  hard-require set). Five suites stub `robots-txt.js`, because they test byte
+  bounds, not robots.
+
+## Open / follow-up
+
+- **Not measured: which Strale-chosen sources now refuse.** EUR-Lex used to
+  be rescued by Browserless after a 400 or challenge to datacenter IPs
+  (`eu-regulation-search`); it now fails with the honest answer. The
+  compliant route is the EUR-Lex web service or CELLAR SPARQL. The Estonian
+  registry may refuse Railway's US egress; the compliant routes are an
+  EU-hosted deployment or RIK open data. This sandbox could not reach
+  production or the sites, so after deploy, read `tos_policy` failures per
+  capability over 7 days.
+- `domain-contact-extract` still returns `published_personal_addresses`. That
+  needs checking against never lane item 3; it is in the social-profile-check
+  PR's scope.
+- Other caller-URL fetchers outside the proposal's table (meta-extract,
+  link-extract, url-to-text, og-image-check, redirect-trace, page-exists and
+  more) send honest Strale user agents. They do not yet check robots.txt or
+  refuse on a block. Next batch.
+- Screenshots and PDFs: Browserless's /screenshot and /pdf do not report the
+  target's status, so a blocked page comes back as an image of the block page.
+  This is one request on one route, so nothing is retried, and robots.txt is
+  checked first.

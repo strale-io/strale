@@ -1,3 +1,4 @@
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { promises as dns } from "node:dns";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
@@ -126,7 +127,8 @@ registerCapability("email-pattern-discover", async (input: CapabilityInput) => {
   try {
     // F-0-006: user-supplied domain → safeFetch guards SSRF.
     const resp = await safeFetch(`https://${targetDomain}`, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" },
+      // DEC-20261023-A: honest identification (was a spoofed browser UA).
+      headers: { "User-Agent": STRALE_USER_AGENT },
       signal: AbortSignal.timeout(10000),
     });
     if (resp.ok) {

@@ -2,6 +2,9 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { STRALE_USER_AGENT, assertNotBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
+import { looksLikeJsChallenge } from "./lib/web-provider.js";
 
 /**
  * Tech Stack Detection — identify technologies used by a website.
@@ -98,11 +101,15 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
   // while linkedin-url-validate sat deactivated for that access. Every
   // arbitrary-URL fetch path carries the same blocklist.
   assertTargetAllowed(target);
+  // DEC-20261023-A: robots.txt first, and an honest user agent. This
+  // capability used to send a spoofed desktop-Chrome user agent, which the
+  // data-access rule puts in the never lane (spoofing browser fingerprints).
+  await assertRobotsAllowed(target);
 
   // F-0-006: safeFetch validates + re-validates redirects.
   const resp = await safeFetch(target, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "User-Agent": STRALE_USER_AGENT,
       Accept: "text/html,application/xhtml+xml",
     },
     signal: AbortSignal.timeout(15000),
@@ -112,10 +119,12 @@ registerCapability("tech-stack-detect", async (input: CapabilityInput) => {
     // Nothing below reads the body (#434). Cancel it rather than leaving
     // it to pin the keep-alive connection until GC.
     await discardBody(resp, "tech-stack-detect: non-2xx");
+    assertNotBlockStatus(target, resp.status);
     throw new Error(`Could not fetch ${target} (HTTP ${resp.status}). Check the URL is correct and publicly accessible.`);
   }
 
   const html = await readPageHtml(resp);
+  if (looksLikeJsChallenge(html)) throw siteAccessRefusal(target, { kind: "challenge" });
   const technologies: TechMatch[] = [];
   const seen = new Set<string>();
 

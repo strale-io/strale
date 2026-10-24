@@ -56,6 +56,9 @@ vi.mock("../lib/metered-vendor-fetch.js", () => ({
 
 // validateUrl resolves DNS for real; its SSRF behaviour is covered by its own
 // suite. Everything else in the module stays real.
+// robots.txt is its own suite's concern (lib/robots-txt.test.ts). Stubbed so
+// the robots request does not consume this suite's queued fetch responses.
+vi.mock("../lib/robots-txt.js", () => ({ assertRobotsAllowed: vi.fn(async () => {}) }));
 vi.mock("../lib/url-validator.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   validateUrl: async () => {},

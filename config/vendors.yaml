@@ -794,13 +794,16 @@ vendors:
       status: unknown
   - id: jina-reader
     name: Jina Reader
-    aliases:
-      - Jina AI
+    aliases: []
     lifecycle:
       - state: active
         date: 2026-09-10
         decision: unknown
         reason: Initial population from apps/api/src/lib/dependency-manifest.ts PROVIDERS, not retired, non-empty capabilities.
+      - state: retired
+        date: 2026-10-24
+        decision: unknown
+        reason: "DEC-20261023-A (recorded in CLAUDE.md Active Decisions; no record file under the closed M2 register). Removed from the web-provider and url-to-markdown fetch chains: its hosted reader retries a blocked fetch through its own proxy pool by default and does not report the target's status, so the rule's stop-at-block condition could not be met on that route."
     reevaluation_triggers: []
     verification:
       terms:

@@ -1,12 +1,19 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { htmlToCleanMarkdown } from "./lib/readability-convert.js";
-import { fetchViaJina } from "./lib/jina-reader.js";
 import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { readPageHtml, ResourceLimitError } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
+import {
+  STRALE_USER_AGENT,
+  isBlockStatus,
+  siteAccessRefusal,
+} from "../lib/site-access.js";
+import { looksLikeJsChallenge } from "./lib/web-provider.js";
 
-/** Thrown when the target responded definitively — no point trying Jina/Browserless. */
+/** Thrown when the target responded definitively — no point trying Browserless. */
 class DefinitiveFetchError extends Error {
   constructor(message: string) {
     super(message);
@@ -14,15 +21,15 @@ class DefinitiveFetchError extends Error {
   }
 }
 
-/** Sites known to block server-side fetches with specific guidance. */
+/**
+ * Better advice than the generic closing line, for sites known to block
+ * server-side fetches. Appended to the site-access refusal. (LinkedIn, X,
+ * Instagram and Facebook are not here: the ToS blocklist refuses them before
+ * any request, with its own alternatives.)
+ */
 const BLOCKED_SITE_HINTS: Record<string, string> = {
   "npmjs.com": "npmjs.com blocks automated access. Use the 'npm-package-info' capability instead to get package metadata.",
   "pypi.org": "pypi.org blocks automated scraping. Use the 'pypi-package-info' capability instead.",
-  "linkedin.com": "LinkedIn blocks all automated access. Try 'linkedin-url-validate' to verify a LinkedIn profile URL exists.",
-  "twitter.com": "Twitter/X blocks automated access. No workaround available.",
-  "x.com": "Twitter/X blocks automated access. No workaround available.",
-  "instagram.com": "Instagram blocks automated access. No workaround available.",
-  "facebook.com": "Facebook blocks automated access. No workaround available.",
   "coindesk.com": "CoinDesk blocks automated scraping. Try searching for the article title via 'google-search' instead.",
   "bloomberg.com": "Bloomberg blocks automated access. Financial data may be available via other capabilities.",
   "wsj.com": "Wall Street Journal blocks automated access (paywall + bot protection).",
@@ -43,9 +50,11 @@ function getBlockedSiteHint(url: string): string | null {
 /**
  * Try a plain HTTP GET before heavier providers. Returns the raw HTML if the
  * page has enough text content (>500 chars after stripping tags), or null to
- * fall through to Jina/Browserless for JS-rendered SPAs.
+ * fall through to Browserless for JS-rendered SPAs.
  *
- * Throws for definitive failures (non-HTML content types, SSRF, 4xx).
+ * Throws for definitive failures (non-HTML content types, SSRF, 4xx), and a
+ * site-access refusal for a block (401/403/407/429 or a challenge page,
+ * DEC-20261023-A) — a blocked page is never retried through Browserless.
  */
 async function tryPlainFetch(url: string): Promise<string | null> {
   try {
@@ -54,7 +63,7 @@ async function tryPlainFetch(url: string): Promise<string | null> {
     // `validateUrl` pattern was the classic SSRF bypass.
     const resp = await safeFetch(url, {
       headers: {
-        "User-Agent": "Strale/1.0 (url-to-markdown; https://strale.dev)",
+        "User-Agent": STRALE_USER_AGENT,
         Accept: "text/html,application/xhtml+xml",
       },
       signal: AbortSignal.timeout(5000),
@@ -64,19 +73,16 @@ async function tryPlainFetch(url: string): Promise<string | null> {
       // Nothing below reads the body — cancel it rather than leaving it to
       // pin the keep-alive connection until GC (#428's discardBody).
       await discardBody(resp, "url-to-markdown: non-2xx response");
+      if (isBlockStatus(resp.status)) {
+        throw siteAccessRefusal(
+          url,
+          { kind: "http", status: resp.status },
+          getBlockedSiteHint(url) ??
+            "Alternatives: 'dns-lookup' or 'domain-reputation' for structured data about this domain, " +
+              "or a different page on the same site (e.g. /about, /blog).",
+        );
+      }
       if (resp.status >= 400 && resp.status < 500) {
-        const hint = getBlockedSiteHint(url);
-        if (hint) {
-          throw new DefinitiveFetchError(hint);
-        }
-        if (resp.status === 403) {
-          throw new DefinitiveFetchError(
-            "This site blocks automated access (HTTP 403 Forbidden). " +
-            "This is bot protection on the target site, not a Strale issue. " +
-            "Alternatives: try 'dns-lookup' or 'domain-reputation' for structured data about this domain, " +
-            "or try a different page on the same site (e.g. /about, /blog).",
-          );
-        }
         if (resp.status === 404) {
           let hostname = "";
           try { hostname = new URL(resp.url || url).hostname; } catch { /* ignore */ }
@@ -88,18 +94,6 @@ async function tryPlainFetch(url: string): Promise<string | null> {
             `This page does not exist (HTTP 404). The server at ${hostname || "this domain"} is reachable, ` +
             "but this specific URL returned 'not found'." + redirectNote + " " +
             "Check for typos in the path, or try the site's homepage instead.",
-          );
-        }
-        if (resp.status === 401 || resp.status === 407) {
-          throw new DefinitiveFetchError(
-            `This page requires authentication (HTTP ${resp.status}). ` +
-            "url-to-markdown can only access publicly available pages.",
-          );
-        }
-        if (resp.status === 429) {
-          throw new DefinitiveFetchError(
-            "This site is rate-limiting requests (HTTP 429). " +
-            "The target site has throttled access. Try again in a few minutes.",
           );
         }
         throw new DefinitiveFetchError(
@@ -127,6 +121,9 @@ async function tryPlainFetch(url: string): Promise<string | null> {
     }
 
     const html = await readPageHtml(resp);
+    if (looksLikeJsChallenge(html)) {
+      throw siteAccessRefusal(url, { kind: "challenge" }, getBlockedSiteHint(url) ?? undefined);
+    }
 
     let stripped = html;
     stripped = stripped.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
@@ -142,11 +139,12 @@ async function tryPlainFetch(url: string): Promise<string | null> {
     return null;
   } catch (err) {
     if (err instanceof DefinitiveFetchError) throw err;
+    // A block or a policy refusal is the answer, not a reason to try Browserless.
+    if (isCapabilityRefusal(err)) throw err;
     // Oversize is TERMINAL, not a reason to fall through (#432). Layer 1 has
     // already established the page is bigger than the platform will hold;
-    // Jina reformats the same document and Browserless renders a DOM that is
-    // typically larger still, so cascading would fetch the refused page two
-    // more times to reach the same refusal. Without this re-throw the
+    // Browserless renders a DOM that is typically larger still, so cascading
+    // would fetch the refused page again to reach the same refusal. Without this re-throw the
     // function-wide `return null` below would swallow it — the exact
     // amplification #428 made terminal inside web-provider.
     if (err instanceof ResourceLimitError) throw err;
@@ -257,6 +255,9 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
   // made it the cheapest bypass around refusals on the purpose-built
   // extractors. Same blocklist, same compliant-alternative hints.
   assertTargetAllowed(fullUrl);
+  // DEC-20261023-A: robots.txt before the first request. (fetchRenderedHtml
+  // checks it too, from the same cache, if layer 1 falls through.)
+  await assertRobotsAllowed(fullUrl);
 
   // ── Layer 1: Plain fetch + Readability/Turndown (~200ms for static sites) ──
   const plainHtml = await tryPlainFetch(fullUrl);
@@ -283,28 +284,16 @@ registerCapability("url-to-markdown", async (input: CapabilityInput) => {
     };
   }
 
-  // ── Layer 2: Jina Reader (handles JS-rendered sites — ~1-3s, free) ──
-  const jinaResult = await fetchViaJina(fullUrl);
-
-  if (jinaResult) {
-    const jinaMarkdown = postProcess(jinaResult.markdown, includeLinks, includeImages);
-    const wordCount = jinaMarkdown.split(/\s+/).filter(Boolean).length;
-
-    return {
-      output: { markdown: jinaMarkdown, title: jinaResult.title, word_count: wordCount, url: fullUrl },
-      provenance: {
-        source: "jina-reader",
-        fetch_time_ms: jinaResult.fetchTimeMs,
-        fetched_at: new Date().toISOString(),
-      },
-    };
-  }
-
-  // ── Layer 3: Browserless (last resort — ~3-15s) ──
+  // ── Layer 2: Browserless (last resort — ~3-15s) ──
+  // Jina Reader used to sit between the layers; it was removed under
+  // DEC-20261023-A (see the data-access note in lib/web-provider.ts).
   let browserlessHtml: string;
   try {
     browserlessHtml = await fetchRenderedHtml(fullUrl);
   } catch (err) {
+    // Refusals carry their own caller-facing wording and the marker the
+    // health accounting reads; remapping "HTTP 403" here would strip both.
+    if (isCapabilityRefusal(err)) throw err;
     throw mapBrowserlessError(err instanceof Error ? err.message : String(err), fullUrl);
   }
 

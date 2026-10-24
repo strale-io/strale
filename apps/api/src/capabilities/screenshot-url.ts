@@ -3,6 +3,8 @@ import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { logWarn } from "../lib/log.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { MAX_RENDERED_SCREENSHOT_BYTES, readBodyWithLimit, readErrorTextTruncated } from "../lib/resource-limits.js";
@@ -128,6 +130,8 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
   // Per-source ToS policy gates every arbitrary-URL fetch path (P1 review, 2026-08-12).
   assertTargetAllowed(fullUrl);
   await validateUrl(fullUrl);
+  // DEC-20261023-A: robots.txt before Browserless is asked for the page.
+  await assertRobotsAllowed(fullUrl);
 
   const { url: blessUrl, key } = getBrowserlessConfig();
   // buildBrowserlessRequestUrl appends ?launch= per-request, required by
@@ -138,6 +142,10 @@ registerCapability("screenshot-url", async (input: CapabilityInput) => {
 
   const bodyObj: Record<string, unknown> = {
     url: fullUrl,
+    // DEC-20261023-A: honest identification on the Browserless route.
+    // (A screenshot is one request on one route: a block page comes back as
+    // an image of the block page, and nothing is retried elsewhere.)
+    userAgent: STRALE_USER_AGENT,
     gotoOptions,
     options: {
       fullPage,

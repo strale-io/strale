@@ -1,5 +1,6 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { readRobotsTxt } from "../lib/resource-limits.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 
@@ -89,7 +90,10 @@ registerCapability("seo-audit", async (input: CapabilityInput) => {
   let robotsTxt: string | null = null;
   let sitemapFound = false;
   try {
-    const robotsRes = await safeFetch(`${baseUrl}/robots.txt`, { signal: AbortSignal.timeout(5000) });
+    const robotsRes = await safeFetch(`${baseUrl}/robots.txt`, {
+      headers: { "User-Agent": STRALE_USER_AGENT },
+      signal: AbortSignal.timeout(5000),
+    });
     if (robotsRes.ok) {
       robotsTxt = await readRobotsTxt(robotsRes);
       sitemapFound = robotsTxt.toLowerCase().includes("sitemap:");
