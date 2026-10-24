@@ -56,6 +56,11 @@ Creating a worktree:
     git worktree add -b <type>/<name> C:\Users\pette\Projects\strale-wt-<track> origin/main
     cd C:\Users\pette\Projects\strale-wt-<track> && npm ci
 
+Merging `main` into a batch branch: when the merge brings in `archive/` or
+`handoff/` files, the `pre-merge-commit` hook regenerates their index, stages
+it and **pauses** the merge (exit 1, merge still in progress). Finish it with
+`git commit --no-edit`; do not abort it.
+
 Never link `node_modules` between checkouts. Removing a worktree:
 
     git worktree remove C:\Users\pette\Projects\strale-wt-<track>
