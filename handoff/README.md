@@ -9,7 +9,7 @@
 > relocated. Session-start reading order is `docs/README.md` →
 > `docs/programs/README.md`, never a sweep through this table.
 
-336 files (309 with a recorded intent, 27 without).
+337 files (310 with a recorded intent, 27 without).
 
 | date | file | intent |
 | --- | --- | --- |
@@ -41,6 +41,7 @@
 | 2026-09-19 | [`handoff/_general/from-code/2026-09-19-checkin-morning.md`](_general/from-code/2026-09-19-checkin-morning.md) | run the 2026-09-19 morning operating session under DAILY-RUN.md — |
 | 2026-09-18 | [`handoff/_general/from-code/2026-09-18-checkin-morning.md`](_general/from-code/2026-09-18-checkin-morning.md) | run the 2026-09-18 morning operating session under DAILY-RUN.md — |
 | 2026-09-17 | [`handoff/_general/from-code/2026-09-17-checkin-morning.md`](_general/from-code/2026-09-17-checkin-morning.md) | run the 2026-09-17 morning operating session under DAILY-RUN.md — |
+| 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b6-vendor-roster-drift-retarget.md`](_general/from-code/2026-09-13-m4-b6-vendor-roster-drift-retarget.md) | M4 batch 6 -- retarget the weekly vendor-roster drift check off |
 | 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b5-digest-production.md`](_general/from-code/2026-09-13-m4-b5-digest-production.md) | M4 batch 5 -- wire the daily digest's repo-native readers into |
 | 2026-09-13 | [`handoff/_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md`](_general/from-code/2026-09-13-m4-b4-activate-end-session-vendor-switch-flows.md) | M4 batch 4 (T7, cto-readiness): activate the repo-native end-session |
 | 2026-09-12 | [`handoff/_general/from-code/2026-09-12-wider-input-drift-sweep.md`](_general/from-code/2026-09-12-wider-input-drift-sweep.md) | close the wider stored-input drift PR #677's own sweep flagged (34 |

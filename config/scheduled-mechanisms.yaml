@@ -89,15 +89,14 @@ mechanisms:
       match: id
       value: vendor-roster
     runs: apps/api/scripts/check-vendor-roster-drift.ts
-    secrets:
-      NOTION_TOKEN: NOTION_TOKEN
+    secrets: {}
     purpose: >
-      Flags vendor rows in the Notion Vendor Roster whose "Last evaluated"
-      date is older than a Decisions DB entry in the window that mentions
-      that vendor -- the 2026-04-30 failure mode where DEC-20260429-A
-      deferred OpenSanctions but the Roster row stayed stale for a day.
-      Since T6 batch 4b this step also prints (never fails on) the shadow
-      comparison against config/vendors.yaml.
+      M4 batch 6: retargeted off Notion. Runs config/vendors.yaml's own
+      self-consistency and cross-surface contract (the same checkAllVendors
+      logic npm run vendors:check enforces on every PR, via
+      scripts/vendors-lib.mjs) on a schedule, so drift on `main` that
+      bypassed a PR gate is still caught. Reads no secret; the register is
+      the sole source and the check depends only on the committed tree.
 
   - id: weekly-drift-audit-record-shape
     workflow: .github/workflows/weekly-drift.yml
