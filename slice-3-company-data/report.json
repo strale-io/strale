@@ -1,0 +1,528 @@
+{
+  "built_from": "dist",
+  "generated_at": "2026-10-24T10:15:53.503Z",
+  "pages": [
+    {
+      "path": "/",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "home--desktop-1440-light.jpg",
+      "page_height_px": 6872,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "home--desktop-1440-dark.jpg",
+      "page_height_px": 6872,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 54,
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ]
+      },
+      "screenshot": "home--mobile-390-light.jpg",
+      "page_height_px": 9474,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 54,
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 3
+          }
+        ]
+      },
+      "screenshot": "home--mobile-390-dark.jpg",
+      "page_height_px": 9443,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/tools",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 47,
+        "incomplete": []
+      },
+      "screenshot": "tools--desktop-1440-light.jpg",
+      "page_height_px": 31396,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/tools",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 47,
+        "incomplete": []
+      },
+      "screenshot": "tools--desktop-1440-dark.jpg",
+      "page_height_px": 31396,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/tools",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 47,
+        "incomplete": []
+      },
+      "screenshot": "tools--mobile-390-light.jpg",
+      "page_height_px": 47250,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/tools",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 47,
+        "incomplete": []
+      },
+      "screenshot": "tools--mobile-390-dark.jpg",
+      "page_height_px": 47250,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/tools/iban-validate",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "tools-iban-validate--desktop-1440-light.jpg",
+      "page_height_px": 3854,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/tools/iban-validate",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "tools-iban-validate--desktop-1440-dark.jpg",
+      "page_height_px": 3854,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/tools/iban-validate",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "tools-iban-validate--mobile-390-light.jpg",
+      "page_height_px": 5921,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/tools/iban-validate",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "tools-iban-validate--mobile-390-dark.jpg",
+      "page_height_px": 5921,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/tools/swedish-company-data",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 49,
+        "incomplete": []
+      },
+      "screenshot": "tools-swedish-company-data--desktop-1440-light.jpg",
+      "page_height_px": 5587,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/tools/swedish-company-data",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 49,
+        "incomplete": []
+      },
+      "screenshot": "tools-swedish-company-data--desktop-1440-dark.jpg",
+      "page_height_px": 5587,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/tools/swedish-company-data",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 50,
+        "incomplete": []
+      },
+      "screenshot": "tools-swedish-company-data--mobile-390-light.jpg",
+      "page_height_px": 10053,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/tools/swedish-company-data",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 50,
+        "incomplete": []
+      },
+      "screenshot": "tools-swedish-company-data--mobile-390-dark.jpg",
+      "page_height_px": 10053,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 47,
+        "incomplete": []
+      },
+      "screenshot": "company-data--desktop-1440-light.jpg",
+      "page_height_px": 7693,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 47,
+        "incomplete": []
+      },
+      "screenshot": "company-data--desktop-1440-dark.jpg",
+      "page_height_px": 7693,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 44,
+        "incomplete": []
+      },
+      "screenshot": "company-data--mobile-390-light.jpg",
+      "page_height_px": 17867,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 44,
+        "incomplete": []
+      },
+      "screenshot": "company-data--mobile-390-dark.jpg",
+      "page_height_px": 17867,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data/sweden",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "company-data-sweden--desktop-1440-light.jpg",
+      "page_height_px": 5100,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/company-data/sweden",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "company-data-sweden--desktop-1440-dark.jpg",
+      "page_height_px": 5100,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/company-data/sweden",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "company-data-sweden--mobile-390-light.jpg",
+      "page_height_px": 9270,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data/sweden",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "company-data-sweden--mobile-390-dark.jpg",
+      "page_height_px": 9270,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data/united-states",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "company-data-united-states--desktop-1440-light.jpg",
+      "page_height_px": 7782,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data/united-states",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "company-data-united-states--desktop-1440-dark.jpg",
+      "page_height_px": 7782,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data/united-states",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "company-data-united-states--mobile-390-light.jpg",
+      "page_height_px": 15635,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data/united-states",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "company-data-united-states--mobile-390-dark.jpg",
+      "page_height_px": 15635,
+      "screenshot_clipped_at_px": 7000
+    },
+    {
+      "path": "/company-data/japan",
+      "viewport": "desktop-1440",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "company-data-japan--desktop-1440-light.jpg",
+      "page_height_px": 3157,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/company-data/japan",
+      "viewport": "desktop-1440",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 52,
+        "incomplete": []
+      },
+      "screenshot": "company-data-japan--desktop-1440-dark.jpg",
+      "page_height_px": 3157,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/company-data/japan",
+      "viewport": "mobile-390",
+      "theme": "light",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "company-data-japan--mobile-390-light.jpg",
+      "page_height_px": 4666,
+      "screenshot_clipped_at_px": null
+    },
+    {
+      "path": "/company-data/japan",
+      "viewport": "mobile-390",
+      "theme": "dark",
+      "status": 200,
+      "overflow_px": 0,
+      "console_errors": [],
+      "axe": {
+        "violations": [],
+        "passes": 53,
+        "incomplete": []
+      },
+      "screenshot": "company-data-japan--mobile-390-dark.jpg",
+      "page_height_px": 4666,
+      "screenshot_clipped_at_px": null
+    }
+  ]
+}

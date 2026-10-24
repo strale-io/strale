@@ -1,6 +1,6 @@
 {
   "built_from": "dist",
-  "generated_at": "2026-10-24T10:02:20.275Z",
+  "generated_at": "2026-10-24T10:10:04.909Z",
   "pages": [
     {
       "path": "/",
@@ -89,7 +89,7 @@
         "incomplete": []
       },
       "screenshot": "tools--desktop-1440-light.jpg",
-      "page_height_px": 31365,
+      "page_height_px": 31396,
       "screenshot_clipped_at_px": 7000
     },
     {
@@ -105,7 +105,7 @@
         "incomplete": []
       },
       "screenshot": "tools--desktop-1440-dark.jpg",
-      "page_height_px": 31365,
+      "page_height_px": 31396,
       "screenshot_clipped_at_px": 7000
     },
     {
@@ -121,7 +121,7 @@
         "incomplete": []
       },
       "screenshot": "tools--mobile-390-light.jpg",
-      "page_height_px": 47196,
+      "page_height_px": 47250,
       "screenshot_clipped_at_px": 7000
     },
     {
@@ -137,7 +137,7 @@
         "incomplete": []
       },
       "screenshot": "tools--mobile-390-dark.jpg",
-      "page_height_px": 47196,
+      "page_height_px": 47250,
       "screenshot_clipped_at_px": 7000
     },
     {
@@ -185,7 +185,7 @@
         "incomplete": []
       },
       "screenshot": "tools-iban-validate--mobile-390-light.jpg",
-      "page_height_px": 5705,
+      "page_height_px": 5681,
       "screenshot_clipped_at_px": null
     },
     {
@@ -201,7 +201,7 @@
         "incomplete": []
       },
       "screenshot": "tools-iban-validate--mobile-390-dark.jpg",
-      "page_height_px": 5705,
+      "page_height_px": 5681,
       "screenshot_clipped_at_px": null
     },
     {
@@ -249,7 +249,7 @@
         "incomplete": []
       },
       "screenshot": "tools-invoice-extract--mobile-390-light.jpg",
-      "page_height_px": 6748,
+      "page_height_px": 6724,
       "screenshot_clipped_at_px": null
     },
     {
@@ -265,7 +265,7 @@
         "incomplete": []
       },
       "screenshot": "tools-invoice-extract--mobile-390-dark.jpg",
-      "page_height_px": 6748,
+      "page_height_px": 6724,
       "screenshot_clipped_at_px": null
     },
     {
@@ -313,7 +313,7 @@
         "incomplete": []
       },
       "screenshot": "tools-swedish-company-data--mobile-390-light.jpg",
-      "page_height_px": 8733,
+      "page_height_px": 8709,
       "screenshot_clipped_at_px": 7000
     },
     {
@@ -329,7 +329,7 @@
         "incomplete": []
       },
       "screenshot": "tools-swedish-company-data--mobile-390-dark.jpg",
-      "page_height_px": 8733,
+      "page_height_px": 8709,
       "screenshot_clipped_at_px": 7000
     }
   ]
