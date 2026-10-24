@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "manifest_sha256": "2e85b670f9e4f7730e32f7c2cf8a6f7378dd3040c9e3b89c92ce30590c1a7e55",
+  "manifest_sha256": "d3457015f05a8bd5cfa72a00314b095599fa8e494679b15b8291eb749a46a76a",
   "verifier_sha256": "e9d921a2528a7e47662f4082363398caee58d93fede8756c85f95060c19ebfd1",
   "widths": [
     320,
@@ -198,8 +198,8 @@
     }
   ],
   "screenshots": {
-    "output/mobile.png": "a738771c81c80ebdbdb367b7b7bb218589ccf4bf4a64b728f455ed05566395c3",
-    "output/desktop.png": "c68cee1a8ecf8e8904e8463dc879d39c60c5906208979b382364768038632073"
+    "output/mobile.png": "f1119e5c447d8d52b8ac69aa03dabccd9f1982044c394b1a31b8cc2ecd06d1dc",
+    "output/desktop.png": "6d3c2d256a7d68c4759790e39a96e6651c9db56b95b2a796bcd43ac6c8c0b38d"
   },
   "limits": [
     "Illustrative static design study, not live product responses or production navigation.",
