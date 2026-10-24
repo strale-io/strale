@@ -33,7 +33,6 @@ function extras(m: Record<string, any> | null): ManifestExtras {
   return {
     output_field_reliability: m?.output_field_reliability ?? {},
     example_input: m?.test_fixtures?.known_answer?.input ?? m?.test_fixtures?.health_check_input ?? null,
-    limitations: Array.isArray(m?.limitations) ? m.limitations : [],
     gdpr_art_22_classification: m?.gdpr_art_22_classification,
   };
 }
@@ -58,6 +57,8 @@ export function getSiteData(): Promise<SiteData> {
       x402: base.x402,
       trust: base.trust,
       manifests,
+      limitations: base.limitations,
+      solutionLimitations: base.solutionLimitations,
     };
   })();
   return cached;

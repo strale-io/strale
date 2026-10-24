@@ -8,7 +8,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parse } from "yaml";
-import type { Capability, PlatformFacts, X402Catalog } from "./types.ts";
+import type { Capability, Limitation, PlatformFacts, X402Catalog } from "./types.ts";
 import { companyDataPrefix } from "../content/countries.ts";
 
 /** The API's default EUR→USD rate for x402 prices (apps/api/src/lib/x402-gateway.ts). */
@@ -91,5 +91,6 @@ export function loadPreview(root: string) {
       .map((c) => ({ slug: c.slug, name: c.name, price_usd: Math.round(c.price_cents * DEFAULT_EUR_USD_RATE * 1e4) / 1e6, method: "POST", endpoint: `https://api.strale.io/x402/${c.slug}` })),
     solutions: [],
   };
-  return { facts, capabilities, solutions: [], x402, trust: new Map(), raw };
+  const limitations = new Map(capabilities.map((c) => [c.slug, (raw.get(c.slug)?.limitations as Limitation[] | undefined) ?? []]));
+  return { facts, capabilities, solutions: [], x402, trust: new Map(), raw, limitations, solutionLimitations: new Map() };
 }

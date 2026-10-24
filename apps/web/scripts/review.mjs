@@ -2,7 +2,7 @@
 // in light and dark, an axe-core accessibility scan of each, and a check that
 // nothing scrolls sideways. Writes review/<out>/report.json and the screenshots.
 //
-//   node scripts/review.mjs [--pages /,/tools] [--out review/latest] [--playwright path/to/playwright]
+//   node scripts/review.mjs [--pages /,/tools] [--out review/latest] [--dist dist] [--playwright path/to/playwright]
 //
 // Needs a Playwright with Chromium (not a dependency of the site; CI and the
 // cloud sandbox provide one). Exits 1 if any page has an axe violation or
@@ -14,11 +14,11 @@ import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const web = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const dist = join(web, "dist");
 const arg = (name, fallback) => {
   const i = process.argv.indexOf(`--${name}`);
   return i > 0 ? process.argv[i + 1] : fallback;
 };
+const dist = resolve(web, arg("dist", "dist"));
 const require = createRequire(import.meta.url);
 const pwPath = arg("playwright", process.env.PLAYWRIGHT_PATH);
 const { chromium } = pwPath ? require(resolve(pwPath)) : require("playwright");

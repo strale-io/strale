@@ -1,7 +1,7 @@
 // Live data: everything the site shows about the catalogue comes from the
 // production API at build time. A failure here fails the build; the site is
 // never published from stale or partial data.
-import type { Capability, PlatformFacts, Solution, Trust, X402Catalog } from "./types.ts";
+import type { Capability, Limitation, PlatformFacts, Solution, Trust, X402Catalog } from "./types.ts";
 
 const TIMEOUT_MS = 30_000;
 const RETRIES = 3;
@@ -62,5 +62,17 @@ export async function loadLive(base: string) {
   );
   for (const r of results) for (const [slug, t] of Object.entries(r)) trust.set(slug, { tested: t.tested, last_tested_at: t.last_tested_at, pass_rate: t.pass_rate });
 
-  return { facts, capabilities: caps.capabilities, solutions: sols.solutions, x402, trust };
+  // Limitations are shown as written (SITE-STRUCTURE tool page §7), from the same table the API serves.
+  const limitations = new Map<string, Limitation[]>();
+  const capLimits = await mapLimit(caps.capabilities, 6, (c) =>
+    getJson<{ limitations: Limitation[] }>(base, `/v1/public/ops/limitations/capabilities/${encodeURIComponent(c.slug)}`),
+  );
+  caps.capabilities.forEach((c, i) => limitations.set(c.slug, capLimits[i].limitations ?? []));
+  const solutionLimitations = new Map<string, Limitation[]>();
+  const solLimits = await mapLimit(sols.solutions, 6, (s) =>
+    getJson<{ steps: { capability_slug: string; limitations: Limitation[] }[] }>(base, `/v1/public/ops/limitations/solutions/${encodeURIComponent(s.slug)}`).catch(() => ({ steps: [] })),
+  );
+  sols.solutions.forEach((s, i) => solutionLimitations.set(s.slug, solLimits[i].steps.flatMap((st) => st.limitations.map((l) => ({ ...l, step: st.capability_slug })))));
+
+  return { facts, capabilities: caps.capabilities, solutions: sols.solutions, x402, trust, limitations, solutionLimitations };
 }

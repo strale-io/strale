@@ -1,0 +1,203 @@
+---
+// Tool detail (SITE-STRUCTURE.md page 3): everything needed to make the first call.
+// Sections: job, example, inputs, output fields, price, how to call, limitations,
+// source and method, last test, related. Never a quality score; a test date only
+// with the test it came from (claims.yaml sqs-quality-score-trust-layer,
+// every-tool-continuously-tested).
+import Base from "../../layouts/Base.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData, tools as allTools, solutionsFor, API_BASE, type Tool } from "../../lib/site-data.ts";
+import { formatEur, formatUsd, formatDate, json, plural } from "../../lib/format.ts";
+import { FREE_TIER_DAILY_LIMIT } from "../../lib/code-facts.ts";
+import { toolSnippets } from "../../lib/snippets.ts";
+import { TRANSPARENCY, RELIABILITY, schemaType } from "../../lib/describe.ts";
+import { JOB_GROUPS } from "../../content/jobs.ts";
+
+export async function getStaticPaths() {
+  const data = await getSiteData();
+  return allTools(data).map((tool) => ({ params: { slug: tool.slug }, props: { slug: tool.slug } }));
+}
+
+const { slug } = Astro.props as { slug: string };
+const data = await getSiteData();
+const tools = allTools(data);
+const tool = tools.find((t) => t.slug === slug) as Tool;
+const extras = data.manifests.get(slug);
+const job = JOB_GROUPS.find((g) => g.id === tool.job)!;
+const inputs = extras?.example_input ?? {};
+const output = tool.output_schema?.example ?? null;
+const inputProps = Object.entries(tool.input_schema?.properties ?? {});
+const required = new Set(tool.input_schema?.required ?? []);
+const reliability = extras?.output_field_reliability ?? {};
+const outputFields = [...new Set([...Object.keys(tool.output_schema?.properties ?? {}), ...Object.keys(reliability)])];
+const limitations = data.limitations.get(slug) ?? [];
+const trust = data.trust.get(slug);
+const bundles = solutionsFor(data, slug);
+const related = tools.filter((t) => t.job === tool.job && t.slug !== slug && (t.category === tool.category || t.country !== null && tool.country !== null)).slice(0, 6);
+const snippets = toolSnippets({ slug, inputs, priceCents: tool.price_cents, free: tool.free, x402: tool.x402 });
+const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag] : undefined;
+---
+<Base title={tool.name} current="tools" description={tool.description.slice(0, 160)}>
+  <article>
+    <header class="tool-head">
+      <div class="container stack">
+        <nav aria-label="Breadcrumb" class="small"><a class="link" href="/tools">Tools</a> <span aria-hidden="true">/</span> <a class="link" href={`/tools?job=${job.id}`}>{job.label}</a></nav>
+        <h1 class="t-campaign">{tool.name}</h1>
+        <p class="t-lead">{tool.description}</p>
+        <div class="row">
+          {tool.free && <span class="tag tag-teal">Free to try</span>}
+          {tool.x402 && <span class="tag tag-kit">x402 eligible</span>}
+          {tool.transparency_tag === "ai_generated" && <span class="tag tag-soft">AI-generated</span>}
+          {tool.country && <span class="tag">{tool.country.name}</span>}
+          <code class="slug">{tool.slug}</code>
+        </div>
+      </div>
+    </header>
+
+    <div class="container tool-layout">
+      <div class="tool-main">
+        <section aria-labelledby="example-title" class="stack">
+          <h2 id="example-title" class="t-section">Example</h2>
+          <div class="grid-2 example-grid">
+            <CodeBlock id="ex-in" title="Input" panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
+            {output ? <CodeBlock id="ex-out" title="Output (example)" panels={[{ label: "Output", lang: "json", code: json(output) }]} /> : <p class="muted">This tool publishes no example output. Its fields are listed below.</p>}
+          </div>
+          <p class="small muted">Example values from the tool’s published schema and test input, not a live call.</p>
+          {tool.free && (
+            <form class="try card" data-try data-api={API_BASE} data-slug={slug}>
+              <h3 class="t-subhead">Try it</h3>
+              <p class="t-compact muted">Runs the real tool from your browser, with no key: up to {FREE_TIER_DAILY_LIMIT} free calls a day from one address.</p>
+              <div class="field">
+                <label class="field-label" for="try-inputs">Inputs (JSON)</label>
+                <textarea class="textarea code-input" id="try-inputs" name="inputs" spellcheck="false" aria-describedby="try-help">{json(inputs)}</textarea>
+                <p class="field-help" id="try-help">Edit the values, then run.</p>
+              </div>
+              <div class="row"><button class="btn btn-primary" type="submit">Run {tool.name}</button></div>
+              <div role="status" aria-live="polite" data-try-status class="small"></div>
+              <pre class="try-output" data-try-output hidden tabindex="0"></pre>
+            </form>
+          )}
+        </section>
+
+        <section aria-labelledby="inputs-title" class="stack">
+          <h2 id="inputs-title" class="t-section">Inputs</h2>
+          {inputProps.length ? (
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Input fields table">
+              <table class="table">
+                <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Required</th><th scope="col">What it is</th></tr></thead>
+                <tbody>{inputProps.map(([name, p]) => <tr><th scope="row"><code>{name}</code></th><td>{schemaType(p)}</td><td>{required.has(name) ? "Yes" : "No"}</td><td>{p.description ?? "—"}</td></tr>)}</tbody>
+              </table>
+            </div>
+          ) : <p class="muted">No inputs.</p>}
+        </section>
+
+        <section aria-labelledby="outputs-title" class="stack">
+          <h2 id="outputs-title" class="t-section">Output fields</h2>
+          <p class="t-compact muted">How reliably each field appears in a successful answer.</p>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Output fields table">
+            <table class="table">
+              <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Appears</th></tr></thead>
+              <tbody>{outputFields.map((f) => {
+                const r = RELIABILITY[reliability[f]];
+                return <tr><th scope="row"><code>{f}</code></th><td>{schemaType(tool.output_schema?.properties?.[f])}</td><td>{r ? <>{r.label} <span class="muted">({r.note})</span></> : <span class="muted">Not stated</span>}</td></tr>;
+              })}</tbody>
+            </table>
+          </div>
+        </section>
+
+        <section aria-labelledby="call-title" class="stack">
+          <h2 id="call-title" class="t-section">How to call it</h2>
+          <p class="t-compact muted">The same tool through each route. MCP clients reach it through Strale’s server at <code>{API_BASE}/mcp</code>; the call below is what the agent sends.</p>
+          <CodeBlock id="calls" title="How to call it" panels={snippets} />
+        </section>
+
+        <section aria-labelledby="limits-title" class="stack">
+          <h2 id="limits-title" class="t-section">Limitations</h2>
+          {limitations.length ? (
+            <ul class="limits" role="list">
+              {limitations.map((l) => (
+                <li class="limit">
+                  <p class="limit-title">{l.title ?? l.text}</p>
+                  {l.title && l.text !== l.title && <p class="t-compact muted">{l.text}</p>}
+                  {l.workaround && <p class="t-compact"><span class="muted">What to do instead: </span>{l.workaround}</p>}
+                </li>
+              ))}
+            </ul>
+          ) : <p class="muted">No limitations are recorded for this tool.</p>}
+        </section>
+      </div>
+
+      <aside class="tool-side stack-loose" aria-label="Price, source and tests">
+        <section class="card stack-tight" aria-labelledby="price-title">
+          <h2 id="price-title" class="label">Price per call</h2>
+          {tool.free ? (
+            <>
+              <p class="t-stat">Free</p>
+              <p class="t-compact muted">Up to {FREE_TIER_DAILY_LIMIT} calls a day without a key. With an API key, normal rate limits apply and nothing is charged.</p>
+            </>
+          ) : (
+            <>
+              <p class="t-stat">{formatEur(tool.price_cents)}</p>
+              <p class="t-compact muted">Charged only when the call succeeds.</p>
+            </>
+          )}
+          {tool.x402 && !tool.free && <p class="t-compact">Over x402: <span class="num">{formatUsd(tool.x402.price_usd)}</span> USDC per request, no account.</p>}
+          <a class="btn btn-primary" href="#call-title">Copy the call</a>
+        </section>
+        <section class="card stack-tight" aria-labelledby="source-title">
+          <h2 id="source-title" class="label">Source and method</h2>
+          <p class="t-compact">{tool.data_source ?? "Not stated"}</p>
+          {transparency && <p class="t-compact muted">{transparency}</p>}
+        </section>
+        <section class="card stack-tight" aria-labelledby="test-title">
+          <h2 id="test-title" class="label">Last scheduled test</h2>
+          {trust?.tested && trust.last_tested_at ? (
+            <p class="t-compact">{formatDate(trust.last_tested_at)}</p>
+          ) : (
+            <p class="t-compact muted">No scheduled test recorded{data.mode !== "live" ? " in this preview build" : ""}. Tools that cost money upstream are not run on a schedule.</p>
+          )}
+        </section>
+      </aside>
+    </div>
+
+    {(bundles.length > 0 || related.length > 0) && (
+      <section class="section section-sunken" aria-label="Related">
+        <div class="container grid-2">
+          {bundles.length > 0 && (
+            <div class="stack">
+              <h2 class="t-subhead">Bundled checks that include it</h2>
+              <ul class="plain-list stack-tight">{bundles.map((b) => <li><a class="link" href={`/solutions/${b.slug}`}>{b.name}</a> <span class="muted num">{formatEur(b.price_cents)}</span></li>)}</ul>
+            </div>
+          )}
+          {related.length > 0 && (
+            <div class="stack">
+              <h2 class="t-subhead">Related tools</h2>
+              <ul class="plain-list stack-tight">{related.map((r) => <li><a class="link" href={`/tools/${r.slug}`}>{r.name}</a> <span class="muted num">{r.free ? "Free" : formatEur(r.price_cents)}</span></li>)}</ul>
+            </div>
+          )}
+        </div>
+      </section>
+    )}
+  </article>
+</Base>
+
+<script>import "../../scripts/try-it.ts";</script>
+
+<style>
+  .tool-head { padding-block: var(--space-48) var(--space-32); border-bottom: var(--border-width) solid var(--border); }
+  .tool-head .t-lead { max-width: var(--measure-body); }
+  .slug { font-size: var(--type-small-size); }
+  .tool-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-48); padding-block: var(--space-48) var(--space-64); }
+  .tool-main { display: grid; gap: var(--space-64); min-width: 0; }
+  @media (min-width: 1024px) { .tool-layout { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); } .tool-side { position: sticky; top: calc(var(--nav-h) + var(--space-24)); align-self: start; } }
+  .example-grid { align-items: start; }
+  .try { margin-top: var(--space-8); }
+  .code-input { font-family: var(--type-code-family); font-size: var(--type-code-size); min-height: calc(var(--space-128) + var(--space-32)); }
+  .try-output { margin: 0; padding: var(--space-16); background: var(--code-bg); color: var(--code-text); border-radius: var(--radius-card); overflow-x: auto; max-height: calc(var(--space-160) * 3); }
+  .limits { display: grid; gap: var(--space-16); margin: 0; padding: 0; }
+  .limit { display: grid; gap: var(--space-4); padding-left: var(--space-16); border-left: var(--focus-width) solid var(--border-strong); }
+  .limit-title { font-weight: var(--type-detail-weight); }
+  .tool-side .card { box-shadow: none; }
+  .section { padding-block: var(--space-64); }
+  .section-sunken { background: var(--surface-sunken); }
+</style>

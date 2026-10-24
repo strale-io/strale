@@ -159,7 +159,7 @@ const freeCount = tools.filter((t) => t.free).length;
             <li><strong>Strale runs it and answers.</strong> The result comes back as structured fields, with the source it came from and the price charged.</li>
             <li><strong>No key needed to try it.</strong> {demo.name} is one of {plural(freeCount, "free tool")}; run this request as it is.</li>
           </ol>
-          <p class="small muted">Example. The output values are the tool’s published example; your call returns live values. {sentence(data.manifests.get(demo.slug)?.limitations[0]?.text)}</p>
+          <p class="small muted">Example. The output values are the tool’s published example; your call returns live values. {sentence(data.limitations.get(demo.slug)?.[0]?.text)}</p>
         </div>
         <div class="stack">
           <CodeBlock id="call-req" title="Request" panels={[{ label: "Request", lang: "shell", code: demoRequest }]} />

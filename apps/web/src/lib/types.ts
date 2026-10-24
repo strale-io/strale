@@ -75,6 +75,8 @@ export interface Trust {
 
 export interface Limitation {
   title?: string;
+  /** Set on bundled-check limitations: the step the limitation belongs to. */
+  step?: string;
   text: string;
   category: string;
   severity: string;
@@ -85,7 +87,6 @@ export interface Limitation {
 export interface ManifestExtras {
   output_field_reliability: Record<string, "guaranteed" | "common" | "rare">;
   example_input: Record<string, unknown> | null;
-  limitations: Limitation[];
   gdpr_art_22_classification?: string;
 }
 
@@ -102,4 +103,8 @@ export interface SiteData {
   x402: X402Catalog;
   trust: Map<string, Trust>;
   manifests: Map<string, ManifestExtras>;
+  /** Per tool, as the public limitations endpoint serves them (manifests in preview). */
+  limitations: Map<string, Limitation[]>;
+  /** Per bundled check, flattened across its steps. */
+  solutionLimitations: Map<string, Limitation[]>;
 }

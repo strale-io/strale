@@ -1,0 +1,159 @@
+---
+// Tools catalogue (SITE-STRUCTURE.md page 2). Every visible tool is in the HTML,
+// so the page works and is indexable without script; the script only filters.
+// Filters use the job-group vocabulary (src/content/jobs.ts), not API categories.
+import Base from "../../layouts/Base.astro";
+import { getSiteData, tools as allTools, coverage } from "../../lib/site-data.ts";
+import { formatEur, formatUsd, plural } from "../../lib/format.ts";
+import { firstSentence } from "../../lib/describe.ts";
+import { JOB_GROUPS } from "../../content/jobs.ts";
+
+const data = await getSiteData();
+const tools = allTools(data);
+const countries = coverage(data);
+const x402Solutions = new Map(data.x402.solutions.map((x) => [x.slug, x]));
+const contact = data.facts.static.controller?.contact_email;
+const jobCount = (id: string) => tools.filter((t) => t.job === id).length;
+const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).join(" ").toLowerCase();
+---
+<Base title="Tools" current="tools" description="Search every tool AI agents can call through Strale: price per call, how to call it, and its limits.">
+  <section class="page-head">
+    <div class="container stack">
+      <h1 class="t-campaign">Tools</h1>
+      <p class="t-lead">One API key and one balance for every tool, or no account at all with an x402 wallet on eligible tools. Connect over MCP, the REST API or the SDKs, and try the free tools without signing up.</p>
+    </div>
+  </section>
+
+  <section class="container catalogue" id="catalogue" aria-label="Tool catalogue" data-catalogue>
+    <form class="catalogue-controls" role="search" action="/tools" method="get" data-catalogue-form>
+      <div class="field catalogue-search">
+        <label class="field-label" for="q">Search tools</label>
+        <div class="input-wrap">
+          <svg class="icon lead-icon" aria-hidden="true"><use href="#i-search" /></svg>
+          <input class="input has-lead" id="q" name="q" type="search" placeholder="Name, job or input, e.g. invoice, VAT, DNS" autocomplete="off" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="country">Company records for</label>
+        <select class="select" id="country" name="country">
+          <option value="">Any country</option>
+          {countries.map((c) => <option value={c.iso}>{c.name}</option>)}
+        </select>
+      </div>
+      <fieldset class="catalogue-filters">
+        <legend class="field-label">Job</legend>
+        <div class="chip-row">
+          <button class="chip" type="button" data-job="" aria-pressed="true">All jobs</button>
+          {JOB_GROUPS.map((g) => <button class="chip" type="button" data-job={g.id} aria-pressed="false">{g.label} <span class="chip-count">{jobCount(g.id)}</span></button>)}
+        </div>
+      </fieldset>
+      <fieldset class="catalogue-filters">
+        <legend class="field-label">Access</legend>
+        <div class="chip-row">
+          <label class="choice"><input type="checkbox" name="free" value="1" /> <span>Free to try</span></label>
+          <label class="choice"><input type="checkbox" name="x402" value="1" /> <span>Keyless (x402)</span></label>
+        </div>
+      </fieldset>
+      <noscript><button class="btn btn-secondary" type="submit">Search</button></noscript>
+    </form>
+
+    <p class="catalogue-count" role="status" aria-live="polite" data-count>{plural(tools.length, "tool")}</p>
+
+    <ul class="tool-list" role="list" data-list>
+      {tools.map((t) => (
+        <li class="tool-row" data-job={t.job} data-free={t.free ? "1" : undefined} data-x402={t.x402 ? "1" : undefined} data-country={t.country?.iso} data-search={index([t.name, t.slug, t.description, t.category, ...(t.search_tags ?? []), t.country?.name, ...Object.keys(t.input_schema?.properties ?? {})])}>
+          <a class="tool-link" href={`/tools/${t.slug}`}>
+            <span class="tool-name">{t.name}</span>
+            <span class="tool-desc">{firstSentence(t.description)}</span>
+          </a>
+          <span class="tool-badges">
+            {t.free && <span class="tag tag-teal">Free to try</span>}
+            {t.x402 && <span class="tag tag-kit">x402</span>}
+            {t.country && <span class="tag"><abbr title={t.country.name}>{t.country.iso}</abbr></span>}
+          </span>
+          <span class="tool-price num">{t.free ? "Free" : formatEur(t.price_cents)}</span>
+        </li>
+      ))}
+    </ul>
+
+    <div class="empty-state" data-empty hidden>
+      <svg class="icon icon-lg" aria-hidden="true"><use href="#i-empty" /></svg>
+      <p><strong>No tool matches these filters.</strong></p>
+      <p>Try another word, or clear the filters. If the tool does not exist yet, tell us the job (below).</p>
+      <button class="btn btn-secondary" type="button" data-clear>Clear filters</button>
+    </div>
+  </section>
+
+  <section class="section" id="bundled" aria-labelledby="bundled-title">
+    <div class="container stack-loose">
+      <div class="section-head">
+        <h2 id="bundled-title" class="t-section">Bundled checks</h2>
+        <p class="t-lead muted">Several tools run as one call at one price, such as a company check or an invoice-issuer check. Each returns every step’s result. A bundled check is refunded only if every step fails.</p>
+      </div>
+      {data.solutions.length > 0 ? (
+        <ul class="tool-list" role="list">
+          {data.solutions.map((s) => (
+            <li class="tool-row">
+              <a class="tool-link" href={`/solutions/${s.slug}`}>
+                <span class="tool-name">{s.name}</span>
+                <span class="tool-desc">{firstSentence(s.description)}</span>
+              </a>
+              <span class="tool-badges">
+                <span class="tag">{plural(s.capabilities.length || s.step_count, "step")}</span>
+                {x402Solutions.has(s.slug) && <span class="tag tag-kit">x402 {formatUsd(x402Solutions.get(s.slug)!.price_usd)}</span>}
+              </span>
+              <span class="tool-price num">{formatEur(s.price_cents)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div class="empty-state">
+          <p><strong>No bundled checks in this build.</strong></p>
+          <p>Bundled checks are read from the live API.{data.mode !== "live" && " This preview build is made from repository files, which do not hold them."}</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="missing-title">
+    <div class="container stack">
+      <h2 id="missing-title" class="t-subhead">Can’t find the tool your agent needs?</h2>
+      <p class="t-body muted">Tell us the job. The catalogue grows from what agents ask for and do not find.</p>
+      {contact && <a class="link-standalone" href={`mailto:${contact}?subject=${encodeURIComponent("Tool request")}`}>Email {contact} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>}
+    </div>
+  </section>
+</Base>
+
+<script>import "../../scripts/catalogue.ts";</script>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-32); }
+  .section { padding-block: var(--section-space); }
+  .section-sunken { background: var(--surface-sunken); }
+  .section-head { display: grid; gap: var(--space-12); }
+  .catalogue { display: grid; gap: var(--space-24); padding-bottom: var(--space-48); }
+  .catalogue-controls { display: grid; gap: var(--space-16); padding: var(--space-24); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); }
+  @media (min-width: 1024px) { .catalogue-controls { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } .catalogue-filters { grid-column: 1 / -1; } }
+  .catalogue-filters { border: 0; margin: 0; padding: 0; display: grid; gap: var(--space-8); }
+  .catalogue-filters legend { padding: 0; margin-bottom: var(--space-8); }
+  .chip-count { color: inherit; opacity: 0.75; font-feature-settings: var(--type-numeric-features); }
+  .choice { min-height: var(--control-h-sm); padding-block: 0; align-items: center; margin-right: var(--space-16); }
+  .choice input { margin: 0; }
+  .tool-list { display: grid; margin: 0; padding: 0; list-style: none; border: var(--border-width) solid var(--border); border-radius: var(--radius-card); background: var(--surface); overflow: hidden; }
+  .tool-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-4) var(--space-16); align-items: center; padding: var(--space-16); border-bottom: var(--border-width) solid var(--border); }
+  .tool-row:last-child { border-bottom: 0; }
+  .tool-row[hidden] { display: none; }
+  .tool-row:hover { background: var(--surface-sunken); }
+  .tool-link { display: grid; gap: var(--space-4); grid-column: 1; text-decoration: none; color: var(--text); }
+  .tool-link:hover .tool-name { color: var(--link); text-decoration: underline; text-underline-offset: var(--space-4); }
+  .tool-name { font-family: var(--type-detail-family); font-weight: var(--type-detail-weight); font-size: var(--type-compact-size); }
+  .tool-desc { color: var(--text-muted); font-size: var(--type-small-size); line-height: var(--type-small-line); max-width: var(--measure-body); }
+  .tool-badges { display: flex; flex-wrap: wrap; gap: var(--space-4); grid-column: 1; }
+  .tool-badges abbr { text-decoration: none; }
+  .tool-price { grid-column: 2; grid-row: 1; text-align: right; white-space: nowrap; }
+  @media (min-width: 768px) {
+    .tool-row { grid-template-columns: minmax(0, 1fr) auto calc(var(--space-80) + var(--space-8)); }
+    .tool-badges { grid-column: 2; grid-row: 1; justify-content: flex-end; }
+    .tool-price { grid-column: 3; }
+  }
+</style>
