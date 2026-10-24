@@ -35,8 +35,8 @@ const testOf = (slug: string) => {
       <h1 class="t-campaign">Company records in {country.inSentence}</h1>
       <p class="t-lead">
         {country.tools.length === 1
-          ? <>Your agent looks up companies in {country.inSentence} through <a class="link" href={`/tools/${country.tools[0].slug}`}>{country.tools[0].name}</a>. The data comes from {country.tools[0].data_source ?? "the source named below"}.</>
-          : <>{country.tools.length} tools look up companies in {country.inSentence}, each from a different source: {country.tools.map((t, i) => <>{i > 0 && (i === country.tools.length - 1 ? " and " : ", ")}<a class="link" href={`/tools/${t.slug}`}>{t.name}</a></>)}.</>}
+          ? <>Your agent looks up companies in {country.inSentence} through <a class="link" href={`/tools/${country.tools[0].slug}`}>{country.tools[0].name}</a>.{country.tools[0].data_source && ` The data comes from ${country.tools[0].data_source}.`}</>
+          : <>{country.tools.length} tools look up companies in {country.inSentence}{new Set(country.tools.map((t) => t.data_source)).size === country.tools.length && ", each from a different source"}: {country.tools.map((t, i) => <>{i > 0 && (i === country.tools.length - 1 ? " and " : ", ")}<a class="link" href={`/tools/${t.slug}`}>{t.name}</a></>)}.</>}
       </p>
     </div>
   </header>
@@ -57,8 +57,8 @@ const testOf = (slug: string) => {
             <dl class="facts">
               <div><dt>Source</dt><dd>{t.data_source ?? "Not stated"}</dd></div>
               <div><dt>Price per call</dt><dd class="num">{formatEur(t.price_cents)}{t.x402 && <span class="muted"> · x402 {formatUsd(t.x402.price_usd)}</span>}</dd></div>
-              <div><dt>Returns</dt><dd>{returns(t).join(", ")}</dd></div>
-              <div><dt>Last recorded test</dt><dd>{tested ?? <span class="muted">No test recorded</span>}</dd></div>
+              <div><dt>Returns</dt><dd>{returns(t, extras?.output_field_reliability ?? {}).join(", ")}</dd></div>
+              <div><dt>Last recorded test</dt><dd>{tested ?? <span class="muted">{data.mode === "live" ? "No test recorded" : "Not in this preview build"}</span>}</dd></div>
               {transparency && <div><dt>Method</dt><dd>{transparency}</dd></div>}
             </dl>
           </div>
@@ -102,6 +102,7 @@ const testOf = (slug: string) => {
       </div>
       <div class="stack">
         <h2 class="t-subhead">Screen the company or its people</h2>
+        <p class="t-compact muted">Results are matches for a person to review, not a verdict.</p>
         <ul class="plain-list stack-tight">{screening.map((t) => <li><a class="link" href={`/tools/${t.slug}`}>{t.name}</a> <span class="num">{formatEur(t.price_cents)}</span></li>)}</ul>
       </div>
     </div>

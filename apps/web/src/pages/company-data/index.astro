@@ -5,7 +5,8 @@
 // never hidden or given a badge it has not earned (MESSAGING-LEVELS L3.10).
 import Base from "../../layouts/Base.astro";
 import { getSiteData, tools as allTools } from "../../lib/site-data.ts";
-import { countryRows, returns, accepts, screeningTools, SCREENING, OWNERSHIP, BUNDLE_LABEL, type BundleKind } from "../../lib/company-data.ts";
+import { countryRows, returns, accepts, screeningTools, bundlesWithoutRegister, SCREENING, OWNERSHIP, BUNDLE_LABEL, type BundleKind } from "../../lib/company-data.ts";
+import { COUNTRY_BY_PREFIX } from "../../content/countries.ts";
 import { formatEur, formatDate, plural } from "../../lib/format.ts";
 import { REGIONS } from "../../content/countries.ts";
 
@@ -20,17 +21,26 @@ const aiAssisted = registryTools.filter((t) => t.transparency_tag && t.transpare
 const kinds: BundleKind[] = ["company-check", "full-check", "invoice-check"];
 const withBundles = rows.filter((r) => r.bundles.length);
 const missingRegistry = withBundles.flatMap((r) => r.bundles.filter((b) => !b.hasRegistryStep).map((b) => ({ country: r.name, ...b })));
+// Bundles for countries with no register tool (the Denmark case in SITE-STRUCTURE): named, never silently dropped.
+const isoName = new Map(Object.values(COUNTRY_BY_PREFIX).map((c) => [c.iso, c.name]));
+const orphanBundles = bundlesWithoutRegister(data).map((o) => ({ name: isoName.get(o.iso) ?? o.iso, ...o }));
+const summaryKinds = kinds.filter((k) => rows.some((r) => r.bundles.some((b) => b.kind === k && b.hasAiSummary)));
+const noTest = data.mode === "live" ? "No test recorded" : "Not in this preview build";
+const ret = (t: (typeof registryTools)[number]) => returns(t, data.manifests.get(t.slug)?.output_field_reliability ?? {}).join(", ");
 const lastTest = (slug: string) => {
   const t = data.trust.get(slug);
   return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% passed` : ""}` : null;
 };
+const regions = byRegion.map((r) => (r.region === "Americas" ? "the Americas" : r.region)).join(", ").replace(/, ([^,]*)$/, " and $1");
+const hasPsc = ownership.some((t) => t.slug === "beneficial-ownership-lookup");
+const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
 ---
 <Base title="Company and compliance data" current="company-data" description="Company records from official sources in many countries, plus sanctions, PEP and adverse-media screening, with the source, price and last test for each.">
   <section class="page-head">
     <div class="container stack">
       <p class="label">Company and compliance data</p>
       <h1 class="t-campaign">Look up companies in official records in {plural(rows.length, "country", "countries")}</h1>
-      <p class="t-lead">Across {byRegion.map((r) => (r.region === "Americas" ? "the Americas" : r.region)).join(", ").replace(/, ([^,]*)$/, " and $1")}. Your agent gets the name and registration number, plus status, address and directors where the source provides them. It can screen companies and people against sanctions and politically exposed person lists and adverse media, and run a whole company or invoice-issuer check in one call at one price.</p>
+      <p class="t-lead">Across {regions}. Your agent gets the name and registration number, plus status, address and directors where the source provides them.{screening.length > 0 && " It can screen companies and people against sanctions and politically exposed person lists and adverse media."}{withBundles.length > 0 && " It can also run a whole company or invoice-issuer check in one call at one price."}</p>
     </div>
   </section>
 
@@ -38,7 +48,7 @@ const lastTest = (slug: string) => {
     <div class="container stack-loose">
       <div class="section-head">
         <h2 id="matrix-title" class="t-section">Coverage by country</h2>
-        <p class="t-compact muted">One row per register. “Returns” is read from each tool’s published output fields; what a given company’s record contains depends on what its register publishes. Test dates come from Strale’s recorded tests; a register without one says so.</p>
+        <p class="t-compact muted">One row per register. “Returns” lists what the tool’s answers contain; a given company’s record has what its register publishes. Test dates come from Strale’s recorded tests; a register without one says so.</p>
       </div>
       {byRegion.map((r) => (
         <div class="stack-tight">
@@ -50,9 +60,9 @@ const lastTest = (slug: string) => {
                 <dl>
                   <div><dt>Source</dt><dd><a class="link-quiet" href={`/tools/${t.slug}`}>{t.data_source ?? t.name}</a></dd></div>
                   <div><dt>Accepts</dt><dd>{accepts(t)}</dd></div>
-                  <div><dt>Returns</dt><dd>{returns(t).join(", ")}</dd></div>
+                  <div><dt>Returns</dt><dd>{ret(t)}</dd></div>
                   <div><dt>Routes</dt><dd>API, MCP{t.x402 ? ", x402" : ""}</dd></div>
-                  <div><dt>Last recorded test</dt><dd>{lastTest(t.slug) ?? <span class="muted">No test recorded</span>}</dd></div>
+                  <div><dt>Last recorded test</dt><dd>{lastTest(t.slug) ?? <span class="muted">{noTest}</span>}</dd></div>
                 </dl>
               </li>
             )))}
@@ -60,19 +70,21 @@ const lastTest = (slug: string) => {
           <div class="table-wrap matrix-wide" tabindex="0" role="region" aria-label={`Coverage table, ${r.region}`}>
             <table class="table matrix">
               <thead><tr><th scope="col">Country</th><th scope="col">Source</th><th scope="col">Accepts</th><th scope="col">Returns</th><th scope="col" class="num">Price per call</th><th scope="col">Routes</th><th scope="col">Last recorded test</th></tr></thead>
-              <tbody>
-                {r.rows.flatMap((c) => c.tools.map((t, i) => (
+              {r.rows.map((c) => (
+                <tbody>
+                {c.tools.map((t, i) => (
                   <tr>
-                    {i === 0 && <th scope="row" rowspan={c.tools.length}><a class="link" href={`/company-data/${c.path}`}>{c.name}</a></th>}
+                    {i === 0 && <th scope={c.tools.length > 1 ? "rowgroup" : "row"} rowspan={c.tools.length}><a class="link" href={`/company-data/${c.path}`}>{c.name}</a></th>}
                     <td><a class="link-quiet" href={`/tools/${t.slug}`}>{t.data_source ?? t.name}</a></td>
                     <td>{accepts(t)}</td>
-                    <td>{returns(t).join(", ")}</td>
+                    <td>{ret(t)}</td>
                     <td class="num">{formatEur(t.price_cents)}</td>
                     <td>API, MCP{t.x402 ? ", x402" : ""}</td>
-                    <td>{lastTest(t.slug) ?? <span class="muted">No test recorded</span>}</td>
+                    <td>{lastTest(t.slug) ?? <span class="muted">{noTest}</span>}</td>
                   </tr>
-                )))}
-              </tbody>
+                ))}
+                </tbody>
+              ))}
             </table>
           </div>
         </div>
@@ -86,14 +98,20 @@ const lastTest = (slug: string) => {
         <h2 id="screening-title" class="t-section">Screening</h2>
         <p class="t-compact muted">Check a company or a person against sanctions and politically exposed person lists, and search adverse media. Results are matches for a person to review, not a verdict.</p>
         <ul class="plain-list stack-tight">
-          {screening.map((t) => <li class="screen-item"><a class="link" href={`/tools/${t.slug}`}>{t.name}</a> <span class="num">{formatEur(t.price_cents)}</span><p class="small muted">Source: {t.data_source}</p></li>)}
+          {screening.map((t) => <li class="screen-item"><a class="link" href={`/tools/${t.slug}`}>{t.name}</a> <span class="num">{formatEur(t.price_cents)}</span>{t.data_source && <p class="small muted">Source: {t.data_source}</p>}</li>)}
         </ul>
       </div>
       <div class="stack">
         <h2 id="ownership-title" class="t-section">Ownership</h2>
-        <p class="t-compact muted">Ownership only where a register publishes it{ownership.some((t) => t.slug === "beneficial-ownership-lookup") && ": persons with significant control from the UK register"}{ownership.some((t) => t.slug.startsWith("gleif-")) && ", and parent and subsidiary links between legal entities from the global LEI system"}. There is no general beneficial-owner lookup for other countries.</p>
+        <p class="t-compact muted">
+          Ownership only where a register publishes it.
+          {hasPsc && hasLei && " Today that is persons with significant control from the UK register, and parent and subsidiary links between legal entities from the global LEI system."}
+          {hasPsc && !hasLei && " Today that is persons with significant control from the UK register."}
+          {!hasPsc && hasLei && " Today that is parent and subsidiary links between legal entities from the global LEI system."}
+          {" "}There is no general beneficial-owner lookup.
+        </p>
         <ul class="plain-list stack-tight">
-          {ownership.map((t) => <li class="screen-item"><a class="link" href={`/tools/${t.slug}`}>{t.name}</a> <span class="num">{formatEur(t.price_cents)}</span><p class="small muted">Source: {t.data_source}</p></li>)}
+          {ownership.map((t) => <li class="screen-item"><a class="link" href={`/tools/${t.slug}`}>{t.name}</a> <span class="num">{formatEur(t.price_cents)}</span>{t.data_source && <p class="small muted">Source: {t.data_source}</p>}</li>)}
         </ul>
       </div>
     </div>
@@ -103,7 +121,7 @@ const lastTest = (slug: string) => {
     <div class="container stack-loose">
       <div class="section-head">
         <h2 id="bundles-title" class="t-section">Bundled checks by country</h2>
-        <p class="t-compact muted">Each runs several tools in one call at one price and returns every step’s result. The full check and the invoice-issuer check add an AI-written summary for a person to review. A bundle is refunded only if every step fails.</p>
+        <p class="t-compact muted">Each runs several tools in one call at one price and returns every step’s result.{summaryKinds.length > 0 && ` The ${summaryKinds.map((k) => BUNDLE_LABEL[k].toLowerCase()).join(" and ")} add${summaryKinds.length === 1 ? "s" : ""} an AI-written summary for a person to review.`} A bundle is charged in full when its steps return results, and refunded when every step fails or Strale withholds a step.</p>
       </div>
       {withBundles.length ? (
         <div class="table-wrap" tabindex="0" role="region" aria-label="Bundled checks by country">
@@ -112,7 +130,7 @@ const lastTest = (slug: string) => {
             <tbody>{withBundles.map((r) => (
               <tr><th scope="row">{r.name}</th>{kinds.map((k) => {
                 const b = r.bundles.find((x) => x.kind === k);
-                return <td class="num">{b ? <><a class="link" href={`/solutions/${b.solution.slug}`}>{formatEur(b.solution.price_cents)}</a>{!b.hasRegistryStep && <span class="small muted"> · no registry step</span>}</> : <span class="muted">—</span>}</td>;
+                return <td class="num">{b ? <><a class="link" href={`/solutions/${b.solution.slug}`}>{formatEur(b.solution.price_cents)}</a><span class="small muted"> · {plural(b.steps, "step")}</span>{!b.hasRegistryStep && <span class="small muted"> · no registry step</span>}</> : <span class="muted">—</span>}</td>;
               })}</tr>
             ))}</tbody>
           </table>
@@ -120,10 +138,14 @@ const lastTest = (slug: string) => {
       ) : (
         <p class="muted">Bundled checks are read from the live API.{data.mode !== "live" && " This preview build has none."}</p>
       )}
-      {missingRegistry.length > 0 && (
+      {(missingRegistry.length > 0 || orphanBundles.length > 0) && (
         <div class="notice notice-warning" role="note">
           <svg class="icon" aria-hidden="true"><use href="#i-alert" /></svg>
-          <div><p class="notice-title">Some bundles have no registry step</p><p>{missingRegistry.map((m) => `${m.country} (${BUNDLE_LABEL[m.kind].toLowerCase()})`).join(", ")}: these bundles do not look the company up in a register, whatever their description says. Use a register tool directly where one is listed above.</p></div>
+          <div>
+            <p class="notice-title">Some bundled checks do not include a register lookup</p>
+            {missingRegistry.length > 0 && <p>{missingRegistry.map((m) => `${m.country} (${BUNDLE_LABEL[m.kind].toLowerCase()})`).join(", ")}: no step looks the company up in a register.</p>}
+            {orphanBundles.length > 0 && <p>{orphanBundles.map((o) => o.name).join(", ")}: bundled checks exist, but there is no company-records tool for {orphanBundles.length === 1 ? "this country" : "these countries"}, so they cannot confirm the company in a register. {orphanBundles.flatMap((o) => o.bundles).map((b, i, all) => <><a class="link" href={`/solutions/${b.solution.slug}`}>{b.solution.name}</a>{i < all.length - 1 ? ", " : ""}</>)}.</p>}
+          </div>
         </div>
       )}
     </div>
@@ -136,7 +158,7 @@ const lastTest = (slug: string) => {
         <li>Countries not listed above have no company-records tool yet. New countries appear here as their registers go live.</li>
         <li>Some sources are vendors that wrap the official register rather than the register itself; each row names the actual source.</li>
         <li>Looking a company up by name works only in some countries; elsewhere it needs the registration number. The “Accepts” column shows which.</li>
-        {aiAssisted.length > 0 && <li>{plural(aiAssisted.length, "register tool")} use an AI step, for example to match a name or read a document: {aiAssisted.map((t) => t.name).join(", ")}. Their pages say which parts.</li>}
+        {aiAssisted.length > 0 && <li>{plural(aiAssisted.length, "register tool")} {aiAssisted.length === 1 ? "uses" : "use"} an AI model somewhere in producing the answer: {aiAssisted.map((t) => t.name).join(", ")}.</li>}
       </ul>
     </div>
   </section>

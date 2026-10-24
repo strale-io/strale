@@ -80,10 +80,22 @@ test("snippet and description helpers handle the edge cases the review found", a
 });
 
 test("company-data views describe registers in words", async () => {
-  const { accepts, returns } = await import("../src/lib/company-data.ts");
+  const { accepts } = await import("../src/lib/company-data.ts");
   const tool = (input_schema: object, output_schema: object = {}) => ({ input_schema, output_schema }) as never;
   assert.equal(accepts(tool({ properties: { vat_number: {} }, required: ["vat_number"] })), "VAT number");
   assert.equal(accepts(tool({ properties: { registration_number: {}, company_name: {}, task: {} } })), "registration number or company name");
   assert.equal(accepts(tool({ properties: { org_number: {}, country: {} }, required: ["org_number", "country"] })), "org number and country");
-  assert.deepEqual(returns(tool({}, { properties: { status: {} }, example: { registered_address: "x", directors: [] } })), ["Name and number", "Status", "Address", "Officers"]);
+  assert.equal(accepts(tool({ properties: { state: {}, company_name: {}, company_id: {}, deep: { type: "boolean" } }, required: ["state"] })), "state, plus company name or company ID");
+});
+
+test("Returns uses fields tools actually return, never availability flags", async () => {
+  const { returns } = await import("../src/lib/company-data.ts");
+  const t = { output_schema: { properties: { directors: {}, ubo_availability: {} } } } as never;
+  // UK-like: ubo_availability says ownership is NOT available; it must not read as "Ownership".
+  assert.deepEqual(returns(t, { company_name: "guaranteed", status: "guaranteed", registered_address: "common", ubo_availability: "guaranteed", ubo_availability_reason: "guaranteed" }), ["Name and number", "Status", "Address"]);
+  // Canada-like: director_limits is not a list of officers.
+  assert.deepEqual(returns(t, { company_name: "guaranteed", director_limits: "guaranteed" }), ["Name and number"]);
+  // AU-like: state and postcode, not an address.
+  assert.deepEqual(returns(t, { abn: "guaranteed", state: "common", postcode: "common" }), ["Name and number", "State and postcode"]);
+  assert.deepEqual(returns(t, { name: "guaranteed", directors: "common", beneficial_owners: "rare" }), ["Name and number", "Officers"]);
 });
