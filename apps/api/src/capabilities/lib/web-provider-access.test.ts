@@ -328,16 +328,22 @@ describe("a rendered route with no plain tier looks at the site plainly first", 
   });
 
   it("an ordinary page passes, and so does a plain 5xx (the render may still work)", async () => {
-    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBeUndefined();
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBe(200);
     pageResponse = () => html("server error", 502);
-    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBeUndefined();
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBe(502);
   });
 
-  it("a transport failure is left to the rendered route (timeout, DNS, a long redirect chain)", async () => {
+  it("a transport failure is left to the rendered route (timeout, DNS, TLS, parser, dual-stack, a long chain)", async () => {
+    const fetchFailed = (cause: unknown) => Object.assign(new TypeError("fetch failed"), { cause });
     const failures = [
-      Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" }),
-      Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } }),
-      new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://site.test/page."),
+      // AbortSignal.timeout rejects with a DOMException named TimeoutError, numeric code 23.
+      Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError", code: 23 }),
+      fetchFailed(Object.assign(new Error("getaddrinfo ENOTFOUND site.test"), { code: "ENOTFOUND" })),
+      // Node's OpenSSL refuses legacy TLS that Chrome still opens.
+      fetchFailed(Object.assign(new Error("packet length too long"), { code: "ERR_SSL_PACKET_LENGTH_TOO_LONG" })),
+      fetchFailed(Object.assign(new Error("Response does not match the HTTP/1.1 protocol"), { name: "HTTPParserError" })),
+      fetchFailed(new AggregateError([Object.assign(new Error("connect EAFNOSUPPORT"), { code: "EAFNOSUPPORT" })])),
+      new Error("Too many redirects (>20) — refusing to follow further. Starting URL: https://site.test/page."),
     ];
     for (const failure of failures) {
       pageResponse = () => {
@@ -347,11 +353,12 @@ describe("a rendered route with no plain tier looks at the site plainly first", 
     }
   });
 
-  it("REGRESSION: a connection-time SSRF refusal is not swallowed as a transport failure", async () => {
+  it("REGRESSION: a connection-time SSRF refusal is passed on as itself, not swallowed or left as 'fetch failed'", async () => {
+    const refusal = Object.assign(new Error("Resolved host targets a restricted address."), { code: "ESSRFBLOCKED" });
     pageResponse = () => {
-      throw Object.assign(new TypeError("fetch failed"), { cause: { code: "ESSRFBLOCKED" } });
+      throw Object.assign(new TypeError("fetch failed"), { cause: refusal });
     };
-    await expect(assertPlainPreflightAllowed(PAGE)).rejects.toThrow("fetch failed");
+    await expect(assertPlainPreflightAllowed(PAGE)).rejects.toBe(refusal);
   });
 
   it("REGRESSION: a refusal is decided on its code, not on words in the caller's URL", async () => {
@@ -367,11 +374,23 @@ describe("a rendered route with no plain tier looks at the site plainly first", 
     expect(browserlessFetchMock).not.toHaveBeenCalled();
   });
 
-  it("a 416 (or 405, 406) that a ranged GET can cause by itself is not a refusal", async () => {
-    for (const status of [405, 406, 416]) {
-      pageResponse = () => html("", status);
-      await expect(assertPlainPreflightAllowed(PAGE), String(status)).resolves.toBeUndefined();
-    }
+  it("a 416, which a ranged GET can draw by itself, still renders on the fetchPage route", async () => {
+    pageResponse = () => html("", 416);
+    await expect(fetchPage(PAGE, { skipFallback: true })).resolves.toBeDefined();
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("the preflight itself refuses only blocks and challenges; a 404 is the caller's to judge", async () => {
+    // A screenshot or PDF of a 404 page (or a single-page app that serves its
+    // routes with 404) behaves as before this check existed.
+    pageResponse = () => html("not found", 404);
+    await expect(assertPlainPreflightAllowed(PAGE)).resolves.toBe(404);
+  });
+
+  it("follows a redirect chain as long as Chrome would (20 hops)", async () => {
+    await assertPlainPreflightAllowed(PAGE);
+    const [, init] = pageCalls().at(-1) as [string, { maxRedirects?: number }];
+    expect(init.maxRedirects).toBe(20);
   });
 
   it("a cached render is served without a new preflight", async () => {

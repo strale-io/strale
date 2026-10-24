@@ -663,7 +663,12 @@ async function fetchPageOnce(
   // When tier 1 did not run, nothing has seen the site's first answer before
   // Chrome runs its scripts, so look at it plainly first (DEC-20261023-A).
   if (skipFallback || (options?.waitUntil && options.waitUntil !== "networkidle0")) {
-    await assertPlainPreflightAllowed(targetUrl);
+    const status = await assertPlainPreflightAllowed(targetUrl);
+    // As in tier 1, any other 4xx is the target's final answer about this
+    // URL; 416 is the one a ranged GET can draw by itself.
+    if (status !== undefined && status >= 400 && status < 500 && status !== 416) {
+      throw new Error(`URL returned HTTP ${status}. ${humanizeBrowserlessStatus(status, targetUrl)}`);
+    }
   }
 
   // ── Browserless path (paid, full headless Chrome — last resort) ──────────
@@ -829,33 +834,34 @@ export async function assertRenderedTargetAllowed(targetUrl: string, response: R
 /** The bytes the preflight reads: looksLikeJsChallenge looks at the first 6000 characters. */
 export const PREFLIGHT_RANGE = "bytes=0-8191";
 
-/** Connection-level error codes the preflight leaves to the rendered route to report. */
-const PREFLIGHT_TRANSPORT_CODE = /^(ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EPIPE|EHOSTUNREACH|ENETUNREACH|UND_ERR_|ERR_TLS|CERT_|DEPTH_ZERO|UNABLE_TO_|SELF_SIGNED)/;
+/** Chrome follows up to 20 redirects; the preflight follows the same chain. */
+const PREFLIGHT_MAX_REDIRECTS = 20;
+
+/**
+ * The connection-time SSRF refusal inside an undici "fetch failed", if that is
+ * what `err` is. Rethrown as itself so its own message ("restricted address")
+ * reaches the failure taxonomy, which excuses it as caller input.
+ */
+function ssrfRefusalIn(err: unknown): Error | null {
+  const cause = (err as { cause?: unknown } | null)?.cause;
+  return cause instanceof Error && (cause as { code?: unknown }).code === "ESSRFBLOCKED" ? cause : null;
+}
 
 /**
  * Whether a preflight error is a transport failure the render may still get
- * past (and will report in its own terms). Decided on the error's name and
- * code, never its message, which carries the caller's URL. A connection-time
- * SSRF refusal (ESSRFBLOCKED) is not one.
+ * past, and will report in its own terms. undici reports every transport
+ * failure (DNS, connect, TLS, a malformed response) as a TypeError "fetch
+ * failed" with the reason in `cause`; a timeout is a TimeoutError. A refusal
+ * Strale makes itself (validateUrl, the blocklist on a redirect hop) is a
+ * plain Error and is never one; the SSRF refusal is handled before this.
  */
 function isPreflightTransportFailure(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   if (err.name === "AbortError" || err.name === "TimeoutError") return true;
-  const code =
-    (err as { code?: unknown }).code ?? (err as { cause?: { code?: unknown } }).cause?.code;
-  if (code === "ESSRFBLOCKED") return false;
-  if (typeof code === "string" && PREFLIGHT_TRANSPORT_CODE.test(code)) return true;
-  // Tier 1 falls through to the render on a long redirect chain; so does the
-  // preflight (Chrome follows the chain, and assertRenderedTargetAllowed
-  // checks where it lands).
+  if (err instanceof TypeError && err.message === "fetch failed") return true;
+  // safeFetch's own message names the cap first and the caller's URL last.
   return err.message.startsWith("Too many redirects");
 }
-
-/**
- * Statuses a ranged GET can draw from a server that would serve the page
- * normally: Range not satisfiable, and method or content negotiation quirks.
- */
-const PREFLIGHT_BENIGN_4XX = new Set([405, 406, 416]);
 
 /**
  * A plain look at `targetUrl` before a rendered route that has no plain tier
@@ -864,21 +870,23 @@ const PREFLIGHT_BENIGN_4XX = new Set([405, 406, 416]);
  * forbids (DEC-20261023-A: getting around blocks); the plain response shows
  * the block or the challenge before any script runs. Refuses a block status,
  * a challenge page (on any status), and a redirect robots.txt disallows;
- * safeFetch refuses a blocklisted host on every hop. Every other 4xx is the
- * target's final answer, terminal as in tier 1, except the few a ranged GET
- * can cause by itself. A transport failure is left to the rendered route,
- * which reports it in its own terms.
+ * safeFetch refuses a blocklisted host on every hop. Returns the status, so a
+ * caller that ends on other 4xx answers (fetchPage, as in tier 1) can. A
+ * transport failure is left to the rendered route and returns undefined.
  */
-export async function assertPlainPreflightAllowed(targetUrl: string): Promise<void> {
+export async function assertPlainPreflightAllowed(targetUrl: string): Promise<number | undefined> {
   let res: Response;
   try {
     res = await safeFetch(targetUrl, {
       // Only the start of the body is read, so ask for only that.
       headers: { "User-Agent": STRALE_USER_AGENT, "Accept": "text/html,application/xhtml+xml", "Range": PREFLIGHT_RANGE },
+      maxRedirects: PREFLIGHT_MAX_REDIRECTS,
       signal: AbortSignal.timeout(8000),
     });
   } catch (err) {
-    if (isPreflightTransportFailure(err)) return;
+    const ssrf = ssrfRefusalIn(err);
+    if (ssrf) throw ssrf;
+    if (isPreflightTransportFailure(err)) return undefined;
     throw err;
   }
   try {
@@ -891,12 +899,9 @@ export async function assertPlainPreflightAllowed(targetUrl: string): Promise<vo
     await discardBody(res, `preflight HTTP ${res.status} (site block)`);
     throw siteAccessRefusal(targetUrl, { kind: "http", status: res.status });
   }
-  if (res.status >= 400 && res.status < 500 && !PREFLIGHT_BENIGN_4XX.has(res.status)) {
-    await discardBody(res, `preflight HTTP ${res.status}`);
-    throw new Error(`URL returned HTTP ${res.status}. ${humanizeBrowserlessStatus(res.status, targetUrl)}`);
-  }
   const head = await readErrorTextTruncated(res, 8192);
   if (looksLikeJsChallenge(head)) throw siteAccessRefusal(targetUrl, { kind: "challenge" });
+  return res.status;
 }
 
 // ─── Convenience wrappers (drop-in replacements for browserless-extract) ────

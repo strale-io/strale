@@ -21,12 +21,17 @@ Intent: close three fetch-path gaps of DEC-20261023-A adoption item 1 that the t
   - It runs before Browserless when tier 1 did not: `skipFallback`
     (web-extract) or a non-default `waitUntil`. `screenshot-url`,
     `html-to-pdf` (URL mode) and `company-enrich` call it too.
-  - Non-block 4xx answers are terminal, as in tier 1. The exceptions are
-    405, 406 and 416, which a ranged GET can cause by itself.
-  - Errors are classified on name and code, never on message text, which
-    carries the caller's URL. A connection-time SSRF refusal (ESSRFBLOCKED)
-    is passed on. A long redirect chain passes through to the render, as
-    in tier 1.
+  - It follows redirects as Chrome does (up to 20), so a long chain ending
+    on a challenge is seen.
+  - On the `fetchPage` route a non-block 4xx is terminal, as in tier 1,
+    except 416, which a ranged GET can draw by itself. The preflight itself
+    refuses only blocks and challenges, so a screenshot or PDF of a 404 page
+    behaves as before.
+  - Any undici transport failure ("fetch failed": DNS, connect, TLS, a
+    malformed response) and any timeout is left to the render. Strale's
+    own refusals are plain Errors and are passed on. A connection-time
+    SSRF refusal is rethrown as its cause, so its "restricted address"
+    message reaches the failure taxonomy.
   - Cost: one plain request per call on those routes, no vendor cost.
 - **Tests.** Six regression tests, each failing with its fix reverted. Two
   suites that queue Browserless responses on the global `fetch` mock
