@@ -25,7 +25,7 @@ const country = countryRows(data).find((c) => c.iso === iso)!;
 const screening = screeningTools(data).filter((t) => SCREENING.includes(t.slug));
 const testOf = (slug: string) => {
   const t = data.trust.get(slug);
-  return t?.tested && t.last_tested_at ? formatDate(t.last_tested_at) : null;
+  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of recent runs passed` : ""}` : null;
 };
 ---
 <Base title={`Company records in ${country.inSentence}`} current="company-data" description={`How an AI agent looks up a company in ${country.inSentence}: accepted input, the fields that come back, the source, the price and how to call it.`}>
@@ -58,7 +58,7 @@ const testOf = (slug: string) => {
               <div><dt>Source</dt><dd>{t.data_source ?? "Not stated"}</dd></div>
               <div><dt>Price per call</dt><dd class="num">{formatEur(t.price_cents)}{t.x402 && <span class="muted"> · x402 {formatUsd(t.x402.price_usd)}</span>}</dd></div>
               <div><dt>Returns</dt><dd>{returns(t).join(", ")}</dd></div>
-              <div><dt>Last scheduled test</dt><dd>{tested ?? <span class="muted">Not scheduled</span>}</dd></div>
+              <div><dt>Last recorded test</dt><dd>{tested ?? <span class="muted">No test recorded</span>}</dd></div>
               {transparency && <div><dt>Method</dt><dd>{transparency}</dd></div>}
             </dl>
           </div>

@@ -22,9 +22,8 @@ const withBundles = rows.filter((r) => r.bundles.length);
 const missingRegistry = withBundles.flatMap((r) => r.bundles.filter((b) => !b.hasRegistryStep).map((b) => ({ country: r.name, ...b })));
 const lastTest = (slug: string) => {
   const t = data.trust.get(slug);
-  return t?.tested && t.last_tested_at ? formatDate(t.last_tested_at) : null;
+  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% passed` : ""}` : null;
 };
-const minPrice = (r: (typeof rows)[number]) => Math.min(...r.tools.map((t) => t.price_cents));
 ---
 <Base title="Company and compliance data" current="company-data" description="Company records from official sources in many countries, plus sanctions, PEP and adverse-media screening, with the source, price and last test for each.">
   <section class="page-head">
@@ -39,14 +38,28 @@ const minPrice = (r: (typeof rows)[number]) => Math.min(...r.tools.map((t) => t.
     <div class="container stack-loose">
       <div class="section-head">
         <h2 id="matrix-title" class="t-section">Coverage by country</h2>
-        <p class="t-compact muted">One row per register. “Returns” is read from each tool’s published output fields; what a given company’s record contains depends on what its register publishes. Test dates come from Strale’s scheduled tests; a register without one says so.</p>
+        <p class="t-compact muted">One row per register. “Returns” is read from each tool’s published output fields; what a given company’s record contains depends on what its register publishes. Test dates come from Strale’s recorded tests; a register without one says so.</p>
       </div>
       {byRegion.map((r) => (
         <div class="stack-tight">
           <h3 class="t-subhead">{r.region}</h3>
-          <div class="table-wrap" tabindex="0" role="region" aria-label={`Coverage table, ${r.region}`}>
+          <ul class="matrix-cards" role="list">
+            {r.rows.flatMap((c) => c.tools.map((t) => (
+              <li class="matrix-card">
+                <p class="matrix-card-head"><a class="link" href={`/company-data/${c.path}`}>{c.name}</a><span class="num">{formatEur(t.price_cents)}</span></p>
+                <dl>
+                  <div><dt>Source</dt><dd><a class="link-quiet" href={`/tools/${t.slug}`}>{t.data_source ?? t.name}</a></dd></div>
+                  <div><dt>Accepts</dt><dd>{accepts(t)}</dd></div>
+                  <div><dt>Returns</dt><dd>{returns(t).join(", ")}</dd></div>
+                  <div><dt>Routes</dt><dd>API, MCP{t.x402 ? ", x402" : ""}</dd></div>
+                  <div><dt>Last recorded test</dt><dd>{lastTest(t.slug) ?? <span class="muted">No test recorded</span>}</dd></div>
+                </dl>
+              </li>
+            )))}
+          </ul>
+          <div class="table-wrap matrix-wide" tabindex="0" role="region" aria-label={`Coverage table, ${r.region}`}>
             <table class="table matrix">
-              <thead><tr><th scope="col">Country</th><th scope="col">Source</th><th scope="col">Accepts</th><th scope="col">Returns</th><th scope="col" class="num">Price per call</th><th scope="col">Routes</th><th scope="col">Last scheduled test</th></tr></thead>
+              <thead><tr><th scope="col">Country</th><th scope="col">Source</th><th scope="col">Accepts</th><th scope="col">Returns</th><th scope="col" class="num">Price per call</th><th scope="col">Routes</th><th scope="col">Last recorded test</th></tr></thead>
               <tbody>
                 {r.rows.flatMap((c) => c.tools.map((t, i) => (
                   <tr>
@@ -56,7 +69,7 @@ const minPrice = (r: (typeof rows)[number]) => Math.min(...r.tools.map((t) => t.
                     <td>{returns(t).join(", ")}</td>
                     <td class="num">{formatEur(t.price_cents)}</td>
                     <td>API, MCP{t.x402 ? ", x402" : ""}</td>
-                    <td>{lastTest(t.slug) ?? <span class="muted">Not scheduled</span>}</td>
+                    <td>{lastTest(t.slug) ?? <span class="muted">No test recorded</span>}</td>
                   </tr>
                 )))}
               </tbody>
@@ -138,6 +151,15 @@ const minPrice = (r: (typeof rows)[number]) => Math.min(...r.tools.map((t) => t.
   .section-head { display: grid; gap: var(--space-12); }
   .section-head .t-compact { max-width: var(--measure-body); }
   .matrix th[scope="row"] { white-space: nowrap; }
+  /* Below 768px the matrix becomes cards (Open Flow comparison pattern). */
+  .matrix-wide { display: none; }
+  .matrix-cards { display: grid; gap: var(--space-12); margin: 0; padding: 0; list-style: none; }
+  .matrix-card { padding: var(--space-16); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); display: grid; gap: var(--space-12); }
+  .matrix-card-head { display: flex; justify-content: space-between; gap: var(--space-12); font-weight: var(--type-detail-weight); }
+  .matrix-card dl { display: grid; gap: var(--space-8); margin: 0; }
+  .matrix-card dt { font-size: var(--type-small-size); color: var(--text-muted); }
+  .matrix-card dd { margin: 0; font-size: var(--type-compact-size); overflow-wrap: anywhere; }
+  @media (min-width: 768px) { .matrix-wide { display: block; } .matrix-cards { display: none; } }
   .matrix td { min-width: calc(var(--space-96) + var(--space-24)); }
   .screen-item p { margin-top: var(--space-4); }
   .limits-list { display: grid; gap: var(--space-12); margin: 0; padding-left: var(--space-20); max-width: var(--measure-body); }

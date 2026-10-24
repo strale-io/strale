@@ -78,3 +78,12 @@ test("snippet and description helpers handle the edge cases the review found", a
   assert.equal(pyValue({ email: "null@example.com", ok: true, n: null }), '{\n    "email": "null@example.com",\n    "ok": True,\n    "n": None,\n}');
   assert.equal(firstSentence("Checks a VAT number, e.g. DE123. Then more."), "Checks a VAT number, e.g. DE123.");
 });
+
+test("company-data views describe registers in words", async () => {
+  const { accepts, returns } = await import("../src/lib/company-data.ts");
+  const tool = (input_schema: object, output_schema: object = {}) => ({ input_schema, output_schema }) as never;
+  assert.equal(accepts(tool({ properties: { vat_number: {} }, required: ["vat_number"] })), "VAT number");
+  assert.equal(accepts(tool({ properties: { registration_number: {}, company_name: {}, task: {} } })), "registration number or company name");
+  assert.equal(accepts(tool({ properties: { org_number: {}, country: {} }, required: ["org_number", "country"] })), "org number and country");
+  assert.deepEqual(returns(tool({}, { properties: { status: {} }, example: { registered_address: "x", directors: [] } })), ["Name and number", "Status", "Address", "Officers"]);
+});

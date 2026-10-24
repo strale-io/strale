@@ -17,6 +17,8 @@ export function returns(t: Tool): string[] {
 
 /** Generic free-text fields many tools accept alongside their real identifiers. */
 const GENERIC_INPUTS = new Set(["task", "query", "name", "input", "text"]);
+/** Register identifiers written in capitals ("VAT number", "CVR number"). */
+const ACRONYMS = new Set(["vat", "oib", "ico", "cik", "ein", "abn", "acn", "kvk", "krs", "siren", "siret", "cvr", "lei", "gemi", "nipc", "uid", "cro", "nif", "cif", "cnpj", "uen", "kbo", "id"]);
 
 /**
  * What a registry tool accepts, in words: "registration number or company name".
@@ -28,7 +30,7 @@ export function accepts(t: Tool): string {
   const req = (t.input_schema?.required ?? []).filter((k) => keys.includes(k));
   const specific = keys.filter((k) => !GENERIC_INPUTS.has(k));
   const shown = req.length ? req : specific.length ? specific : keys;
-  const words = shown.map((k) => k.replace(/_/g, " "));
+  const words = shown.map((k) => k.split("_").map((w) => (ACRONYMS.has(w) ? w.toUpperCase() : w)).join(" "));
   if (words.length <= 1) return words[0] ?? "—";
   return `${words.slice(0, -1).join(", ")} ${req.length ? "and" : "or"} ${words[words.length - 1]}`;
 }
