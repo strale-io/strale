@@ -36,7 +36,7 @@ npx tsx scripts/smoke-test.ts --slug <slug>
 ```
 Also verify `checkReadiness(slug)` returns `ready: true` (see `src/lib/capability-readiness.ts`). If the capability is new, confirm a manifest exists at `manifests/<slug>.yaml` — if not, STOP and report. This enforces the Capability Onboarding Protocol (DEC-20260320-B).
 
-Never edit `src/lib/sqs.ts` to "fix" a score — that's the Scoring Integrity rule. Fix the root cause.
+If a capability's tests or quality signals look wrong, fix the root cause (missing credential, bad fixture, real bug). Never bend a test, a fixture or a scorer to mask one capability's behaviour. (The SQS engine and `src/lib/sqs.ts` were deleted under DEC-20260503-B.)
 
 ### api-route touched
 ```bash
@@ -73,7 +73,7 @@ Prompt the reviewer to apply four overlapping technical lenses on the diff:
 - **Senior developer (correctness)**: bugs, logic errors, off-by-one, null handling, race conditions, leaks. Are tests present and meaningful? Does the code adhere to existing idiom in nearby files?
 - **Security reviewer**: SSRF (any user-controlled URL → must use `safeFetch`), SQL injection (any string-built query → must use parameterised drizzle), secrets exposure (any `console.log` or `log.info` of `process.env.*`?), missing auth (new route without `authMiddleware`?), missing input validation, side-effect imports of files this PR deletes (TypeScript with NodeNext does NOT flag missing `.js` targets — grep manually).
 - **System architect**: coupling and layering. Does this introduce a dependency in the wrong direction (db → routes? capabilities → app?)? Does it duplicate logic that already exists in `lib/`? Does it introduce a new abstraction where copy-paste would have been simpler, or copy-paste where an abstraction is needed (third instance of the same pattern)? Are cross-cutting concerns (logging, errors, auth) handled consistently with neighbours?
-- **CTO (strategic / debt)**: does this conflict with an active Decision in `AGENTS.md` or the Decisions DB (DEC-20260428-A scraping doctrine, DEC-20260428-B engineering bar, DEC-20260420-H direct connections, etc.)? Does it create technical debt the team hasn't budgeted for? Is the change scoped to one concern, or does it bundle three unrelated things? Is there a "this is the third one-off integration with vendor X — should we abstract?" pattern?
+- **CTO (strategic / debt)**: does this conflict with an active Decision in `AGENTS.md` or the Decisions DB (DEC-20261023-A data-access rule, which replaced the DEC-20260428-A scraping doctrine; DEC-20260428-B engineering bar; DEC-20260420-H direct connections, etc.)? Does it create technical debt the team hasn't budgeted for? Is the change scoped to one concern, or does it bundle three unrelated things? Is there a "this is the third one-off integration with vendor X — should we abstract?" pattern?
 
 Pass it: the branch name, target `main`, and a one-paragraph summary of intent.
 
@@ -131,7 +131,7 @@ Stop and report — do **not** PR — if any of the following:
 - Typecheck fails
 - A touched capability has no manifest
 - Schema changed without a migration
-- SQS scoring logic was edited (Scoring Integrity rule)
+- A test, fixture or quality signal was bent to hide a capability's real behaviour instead of fixing the cause
 - Tests fail and the failure isn't a pre-existing flake on `main`
 - Step 4 produced any HIGH-severity finding from either reviewer lens
 
