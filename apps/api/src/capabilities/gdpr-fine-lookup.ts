@@ -28,7 +28,7 @@ registerCapability("gdpr-fine-lookup", async (input: CapabilityInput) => {
     url = `https://www.enforcementtracker.com/?query=${encodeURIComponent(task)}`;
   }
 
-  const html = await fetchRenderedHtml(url);
+  const html = await fetchRenderedHtml(url, { source: "strale" });
   const text = htmlToText(html);
 
   if (text.length < 200) {

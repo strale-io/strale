@@ -145,6 +145,32 @@ export const PROHIBITED_TARGETS: readonly ProhibitedTarget[] = [
  */
 export const TOS_REFUSAL_MARKER = "Terms of Service prohibit automated access";
 
+/**
+ * Stable substring of every refusal `lib/site-access.ts` issues when a site
+ * itself refuses the fetch: HTTP 401/403/407/429, an anti-bot challenge page,
+ * or robots.txt. DEC-20261023-A ("allowed with checks" lane) requires the fetch
+ * path to stop there rather than retry through another route.
+ *
+ * Lives here, beside {@link TOS_REFUSAL_MARKER}, because this module imports
+ * nothing: `capability-refusal.ts` and the failure taxonomy can read both
+ * markers without an import cycle.
+ */
+export const SITE_BLOCK_MARKER = "Strale stops at a site's block";
+
+/**
+ * Is this message an access-policy refusal — the blocklist declining a host,
+ * or the target site declining Strale? Either way the executor worked and the
+ * answer is a policy answer, not a capability fault.
+ *
+ * Substring rather than prefix match, like {@link TOS_REFUSAL_MARKER} always
+ * was: several executors wrap fetch errors in their own sentence, and both
+ * markers are Strale's own wording, which no caller-quoted text produces by
+ * accident.
+ */
+export function isAccessPolicyRefusal(message: string): boolean {
+  return message.includes(TOS_REFUSAL_MARKER) || message.includes(SITE_BLOCK_MARKER);
+}
+
 /** Normalize a possibly scheme-less input the way the executors do. */
 function toUrl(rawUrl: string): URL | null {
   const trimmed = rawUrl.trim();

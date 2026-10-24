@@ -160,7 +160,10 @@ export function categorizeError(
     /\bhttp[ _-]?5\d\d\b/.test(msg) ||
     /\b5\d\d\b.*\b(?:server error|bad gateway|unavailable|gateway timeout)\b/.test(msg) ||
     msg.includes("upstream") ||
-    msg.includes("fetch failed")
+    msg.includes("fetch failed") ||
+    // site-access.ts SourceBlockedError: a source Strale chose refused it.
+    // The source's doing, not a Strale defect — and still counted.
+    msg.includes("source unavailable to strale")
   ) {
     return "upstream_error";
   }

@@ -24,7 +24,7 @@ async function lookupCompany(query: string, isNumber: boolean): Promise<Record<s
     ? `https://abr.business.gov.au/ABN/View?abn=${query}`
     : `https://abr.business.gov.au/Search/ResultsActive?SearchText=${encodeURIComponent(query)}`;
 
-  const html = await fetchRenderedHtml(searchUrl);
+  const html = await fetchRenderedHtml(searchUrl, { source: "strale" });
   const text = htmlToText(html);
 
   if (text.includes("No records found") || text.includes("not found") || text.length < 200) {

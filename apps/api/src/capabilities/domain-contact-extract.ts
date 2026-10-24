@@ -1,7 +1,11 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
+import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
+import { assertNotBlockStatus, siteAccessRefusal } from "../lib/site-access.js";
+import { looksLikeJsChallenge } from "./lib/web-provider.js";
+import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { ROLE_PREFIXES } from "./email-validate.js";
 
 /**
@@ -305,6 +309,11 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
   assertTargetAllowed(homepageUrl);
 
   try {
+    // DEC-20261023-A: robots.txt before the request, and a block (401/403/
+    // 407/429) is a refusal rather than an error. The user agent above is
+    // already an honest StraleBot one; its product token is what robots.txt
+    // groups are matched on.
+    await assertRobotsAllowed(homepageUrl);
     // F-0-006: user-supplied domain → safeFetch guards SSRF (validates URL,
     // re-checks resolved IP at connect time, re-validates every redirect hop).
     const resp = await safeFetch(homepageUrl, {
@@ -312,13 +321,22 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
       timeoutMs: FETCH_TIMEOUT_MS,
     });
     if (!resp.ok) {
+      assertNotBlockStatus(homepageUrl, resp.status);
       throw new Error(`domain-contact-extract: ${hostname} returned HTTP ${resp.status}`);
     }
     // Decode at the boundary so every extractor below sees one canonical
     // form, whichever variant the origin served this region.
+    try {
+      await assertRedirectAllowed(homepageUrl, resp.url);
+    } catch (err) {
+      await discardBody(resp, "domain-contact-extract: redirect target disallowed by robots.txt");
+      throw err;
+    }
     homepageHtml = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
+    if (looksLikeJsChallenge(homepageHtml)) throw siteAccessRefusal(homepageUrl, { kind: "challenge" });
     fetchedUrls.push(homepageUrl);
   } catch (err) {
+    if (isCapabilityRefusal(err)) throw err;
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Could not fetch ${hostname}: ${message}`);
   }
@@ -343,6 +361,9 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
 
   if (contactPageUrl) {
     try {
+      // Same origin, so this reads the verdict cached a moment ago. A
+      // disallowed contact page is skipped like any other failed fetch.
+      await assertRobotsAllowed(contactPageUrl);
       const resp = await safeFetch(contactPageUrl, {
         headers: { "User-Agent": USER_AGENT },
         timeoutMs: FETCH_TIMEOUT_MS,

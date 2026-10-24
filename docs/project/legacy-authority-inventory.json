@@ -270,6 +270,7 @@
         "archive/sessions/stranded-research-2026-05/rate-limit-and-ca-orchestration-concurrency-2026-05-15.md",
         "archive/superseded/manifests-drafts/README.md",
         "config/scheduled-mechanisms.yaml",
+        "config/vendors.yaml",
         "context7.json",
         "docs/README.md",
         "docs/company/CHARTER.md",
@@ -757,6 +758,7 @@
         "handoff/_general/from-code/2026-10-23-portfolio-plan.md",
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
+        "handoff/_general/from-code/2026-10-24-data-access-fetch-path.md",
         "handoff/_general/from-code/2026-10-24-wow-step1-quick-wins.md",
         "scripts/m2-closure-register-lib.mjs",
         "scripts/protocol-coverage-lib.mjs",
@@ -810,7 +812,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "3f1ceb0d836e34dbb35f0814a00c59b8bc74f3ec79e1d158fbbdb8f0794dd759",
+      "sha256": "1134942fed30d197d36453d3a6e953d385ca1fa00b68a251ac72b693270bdbbf",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

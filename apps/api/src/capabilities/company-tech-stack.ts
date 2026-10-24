@@ -1,6 +1,7 @@
 import { MODELS } from "../lib/models.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import * as dns from "node:dns/promises";
 import Anthropic from "@anthropic-ai/sdk";
@@ -19,10 +20,17 @@ registerCapability("company-tech-stack", async (input: CapabilityInput) => {
     resolveDns(cleanDomain),
   ]);
 
-  // Extract HTTP headers by doing a HEAD request
+  // Extract HTTP headers by doing a HEAD request. Runs only after
+  // fetchRenderedHtml succeeded, i.e. after its robots.txt and block checks
+  // passed (DEC-20261023-A); identifies as Strale like every other route.
   let headers: Record<string, string> = {};
   try {
-    const headRes = await safeFetch(fullUrl, { method: "HEAD", signal: AbortSignal.timeout(10000) });
+    const headRes = await safeFetch(fullUrl, {
+      method: "HEAD",
+      headers: { "User-Agent": STRALE_USER_AGENT },
+      signal: AbortSignal.timeout(10000),
+    });
+    await discardBody(headRes, "company-tech-stack: HEAD");
     headRes.headers.forEach((v, k) => { headers[k] = v; });
   } catch { /* ignore */ }
 

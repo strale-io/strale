@@ -98,13 +98,12 @@ export const PROVIDERS: DependencyProvider[] = [
     // listing a cap here means "test fails when Browserless is down."
     //
     // Capabilities that go through web-provider.ts / browserless-extract.ts
-    // have a 3-tier fallback (plain HTTP → Jina Reader → Browserless) and
+    // have a 2-tier fallback (plain HTTP → Browserless) and
     // continue to work even when Browserless is down. Those caps are NOT
     // listed here — they should still be tested when Browserless is unhealthy.
     capabilities: [
       "annual-report-extract",   // direct Browserless call for PDF retrieval
       "company-enrich",          // direct Browserless call
-      "estonian-company-data",   // direct Browserless call (EU IP proxy)
       "html-to-pdf",             // requires real Chromium PDF rendering
       "landing-page-roast",      // direct Browserless screenshot
       "screenshot-url",          // requires real Chromium screenshots
@@ -666,6 +665,31 @@ export const PROVIDERS: DependencyProvider[] = [
     retired: true,
     migratedAt: "2026-04-17",
   },
+  // ─── Jina Reader (retired 2026-10-24) ──────────────────────────────────────
+  // Was tier 2 of web-provider.ts and layer 2 of url-to-markdown. Removed under
+  // DEC-20261023-A: the hosted reader retries a non-200 fetch through its own
+  // rotating proxy pool unless told not to, and does not report the target's
+  // status, so a block on that route could be neither seen nor honoured. It
+  // also ran keyless (JINA_API_KEY was never set in production), i.e. on the
+  // anonymous free tier, whose commercial-use terms were never recorded.
+  {
+    name: "jina-reader",
+    displayName: "Jina Reader (retired)",
+    description: "Retired 2026-10-24 under DEC-20261023-A — no capability fetches through r.jina.ai.",
+    baseUrl: "https://r.jina.ai",
+    authType: "none",
+    healthProbe: {
+      path: "/https://example.com",
+      method: "GET",
+      healthyStatuses: [200],
+      timeoutMs: 10000,
+      skipAuth: true,
+    },
+    capabilities: [],
+    tier: "free",
+    retired: true,
+    migratedAt: "2026-10-24",
+  },
   {
     // Alchemy Ethereum mainnet — authenticated RPC with known CU quota.
     //
@@ -721,24 +745,6 @@ export const PROVIDERS: DependencyProvider[] = [
       timeoutMs: 5000,
     },
     capabilities: ["contract-verify-check"],
-    tier: "free",
-  },
-
-  // ─── Jina Reader (free markdown extraction for url-to-markdown) ────────────
-  {
-    name: "jina-reader",
-    displayName: "Jina Reader",
-    description: "Free URL-to-markdown extraction via r.jina.ai. Handles JS rendering. 20 RPM free, 200 RPM with key.",
-    baseUrl: "https://r.jina.ai",
-    authType: "none",
-    healthProbe: {
-      path: "/https://example.com",
-      method: "GET",
-      healthyStatuses: [200],
-      timeoutMs: 10000,
-      skipAuth: true,
-    },
-    capabilities: ["url-to-markdown"],
     tier: "free",
   },
 

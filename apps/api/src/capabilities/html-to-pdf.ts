@@ -3,6 +3,9 @@ import { assertTargetAllowed } from "../lib/tos-blocklist.js";
 import { getBrowserlessConfig } from "./lib/browserless-extract.js";
 import { buildBrowserlessRequestUrl } from "../lib/browserless-launch.js";
 import { validateUrl } from "../lib/url-validator.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
+import { assertRenderedTargetAllowed } from "./lib/web-provider.js";
 import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { MAX_RENDERED_PDF_BYTES, readBodyWithLimit, readErrorTextTruncated } from "../lib/resource-limits.js";
 
@@ -22,6 +25,9 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
   const endpoint = buildBrowserlessRequestUrl(blessUrl, "/pdf", key);
 
   const bodyObj: Record<string, unknown> = {
+    // DEC-20261023-A: honest identification on the Browserless route, for a
+    // URL and for any resource caller-supplied markup pulls in.
+    userAgent: STRALE_USER_AGENT,
     options: {
       format: paperSize,
       landscape,
@@ -38,6 +44,8 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
     // ToS gate before forwarding to Browserless /pdf (it fetches from its own
     // network — safeFetch cannot cover this path; legal audit 2026-08-12).
     assertTargetAllowed(fullUrl);
+    // DEC-20261023-A: robots.txt before Browserless is asked for the page.
+    await assertRobotsAllowed(fullUrl);
     bodyObj.url = fullUrl;
     bodyObj.gotoOptions = { waitUntil: "networkidle0", timeout: 25000 };
   } else {
@@ -56,6 +64,9 @@ registerCapability("html-to-pdf", async (input: CapabilityInput) => {
     const err = await readErrorTextTruncated(response);
     throw new Error(`Browserless PDF returned HTTP ${response.status}: ${err.slice(0, 200)}`);
   }
+  // DEC-20261023-A: a PDF of a 403 page is not the page (URL mode only —
+  // caller markup has no target status).
+  if (url) await assertRenderedTargetAllowed(bodyObj.url as string, response);
 
   // #426: streamed with a cap. Browserless is our vendor, but the PDF's size
   // is caller-shaped (it renders the caller's page/markup), so an unbounded
