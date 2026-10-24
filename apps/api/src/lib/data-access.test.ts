@@ -100,10 +100,17 @@ describe("stampDataAccess", () => {
     expect(
       stampDataAccess({ source: "s", fetched_at: "t", acquisition_method: "vendor_api", upstream_vendor: "other" }, recorded),
     ).toMatchObject({ data_access_checks: "pending" });
-    // An executor's own statement stands.
+    // Another method, with no vendor named, is also another path.
     expect(
-      stampDataAccess({ source: "s", fetched_at: "t", upstream_vendor: "other", data_access_checks: "recorded" }, recorded),
-    ).toMatchObject({ data_access_checks: "recorded" });
+      stampDataAccess({ source: "s", fetched_at: "t", acquisition_method: "public_page_read" }, recorded),
+    ).toMatchObject({ data_access_checks: "pending" });
+    // An executor can lower the claim, never raise it.
+    expect(
+      stampDataAccess({ source: "s", fetched_at: "t", data_access_checks: "pending" }, recorded),
+    ).toMatchObject({ data_access_checks: "pending" });
+    expect(
+      stampDataAccess({ source: "s", fetched_at: "t", data_access_checks: "recorded" }, { ...recorded, checks: "pending" }),
+    ).toMatchObject({ data_access_checks: "pending" });
   });
 
   it("stamps no checks on lanes without them", () => {

@@ -195,8 +195,6 @@ registerCapability("cert-transparency-search", async (input: CapabilityInput) =>
       fetched_at: new Date().toISOString(),
       acquisition_method: "vendor_api",
       upstream_vendor: upstreamVendor,
-      // Both upstreams' terms are recorded in docs/security/2026-09-06-vendor-terms-audit.md.
-      data_access_checks: "recorded",
     },
   };
 });

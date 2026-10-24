@@ -68,11 +68,23 @@ describe("manifest data_access blocks (DEC-20261023-A)", () => {
         } else if (!r.value.upstream_vendor) {
           problems.push(`${slug}: calls ${record.vendor} but names no upstream_vendor`);
         }
-        // Terms not recorded as permitting resale cannot back a "recorded" claim.
-        if (record.resale !== "permitted" && r.value.checks === "recorded") {
-          problems.push(`${slug}: checks recorded, but ${record.vendor}'s resale is ${record.resale} in vendor-terms.ts`);
-        }
       }
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it("claims recorded checks for vendor data only where vendor-terms.ts records resale as permitted for that tool", () => {
+    // An allowlist, not a denylist: a vendor nobody has recorded cannot back a
+    // "recorded" claim, whatever its manifest says.
+    const permitted = new Set(
+      VENDOR_TERMS_RECORDS.filter((rec) => rec.resale === "permitted").flatMap((rec) => [...rec.capabilities]),
+    );
+    const problems: string[] = [];
+    for (const m of manifests) {
+      if (deactivated.has(m.slug)) continue;
+      const r = parseDataAccess(m.data_access);
+      if (!r.ok || r.value.checks !== "recorded" || r.value.acquisition_method === "customer_directed_fetch") continue;
+      if (!permitted.has(m.slug)) problems.push(`${m.slug}: checks recorded, but no vendor-terms.ts record permits resale for it`);
     }
     expect(problems).toEqual([]);
   });
@@ -83,7 +95,7 @@ describe("manifest data_access blocks (DEC-20261023-A)", () => {
       if (deactivated.has(m.slug)) continue;
       const r = parseDataAccess(m.data_access);
       if (!r.ok || r.value.acquisition_method !== "customer_directed_fetch" || r.value.checks !== "recorded") continue;
-      const src = readFileSync(resolve(capabilitiesDir, `${m.slug}.ts`), "utf8");
+      const src = readFileSync(resolve(capabilitiesDir, `${m.slug}.ts`), "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "");
       if (!CHECKED_FETCH.test(src)) problems.push(`${m.slug}: checks recorded but never fetches through web-provider or assertRobotsAllowed`);
     }
     expect(problems).toEqual([]);

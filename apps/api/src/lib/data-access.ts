@@ -143,9 +143,11 @@ export function __resetDataAccessForTests(): void {
  * `acquisition_method` unset, so a call the executor labelled as taking
  * another path never inherits the manifest's vendor.
  *
- * `data_access_checks` can only be lowered: a call whose executor names a
- * vendor other than the manifest's took a path the manifest's record does not
- * cover, so it is stamped "pending" rather than inheriting "recorded".
+ * `data_access_checks` can only be lowered, never raised. It is "recorded"
+ * only when the manifest records the checks AND the call took the path the
+ * record covers: an executor that names another method or vendor took a path
+ * the record does not cover, so the call is stamped "pending". An executor's
+ * own value can lower the claim but not raise it above the manifest's.
  */
 export function stampDataAccess<P extends Record<string, unknown>>(provenance: P, access: DataAccess | undefined): P {
   if (!access || provenance === null || typeof provenance !== "object") return provenance;
@@ -156,9 +158,11 @@ export function stampDataAccess<P extends Record<string, unknown>>(provenance: P
   if (!executorSetMethod && out.upstream_vendor === undefined && access.upstream_vendor) {
     out.upstream_vendor = access.upstream_vendor;
   }
-  if (access.checks && out.data_access_checks === undefined) {
+  if (access.checks) {
+    const otherMethod = out.acquisition_method !== access.acquisition_method;
     const otherVendor = out.upstream_vendor !== undefined && out.upstream_vendor !== access.upstream_vendor;
-    out.data_access_checks = otherVendor ? "pending" : access.checks;
+    const covered = access.checks === "recorded" && !otherMethod && !otherVendor;
+    out.data_access_checks = covered && out.data_access_checks !== "pending" ? "recorded" : "pending";
   }
   return out as P;
 }

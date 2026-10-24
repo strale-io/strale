@@ -115,5 +115,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: alchemy
-  checks: recorded
-  checks_note: "Alchemy JSON-RPC. Alchemy's terms bar reselling access to Alchemy itself, not using it as the backend of a product; recorded in docs/security/2026-09-10-vendor-terms-audit-batch-2.md."
+  checks: pending
+  checks_note: "Pending: Alchemy's terms (quoted in capabilities/lib/alchemy-client.ts and the 2026-09-10 audit) permit use as a product backend integrated with additional functionality; that judgement is not recorded per tool in vendor-terms.ts."

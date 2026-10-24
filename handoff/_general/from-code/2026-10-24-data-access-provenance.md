@@ -12,13 +12,19 @@ Intent: DEC-20261023-A adoption, item 2: acquisition method and the rule's lane 
 - On `allowed_with_checks`, each block also says `checks: recorded | pending`.
   The rule allows that lane only once its checks are recorded, so an answer
   never claims more than has been verified. `recorded` needs a `checks_note`
-  with evidence. 31 rows are recorded:
-  - 21 customer-URL tools on the checked fetch path (#723);
-  - HIBP, Cert Spotter/crt.sh, Alternative.me and Alchemy, from the
-    September terms audits;
-  - Cobalt (DEC-20260430-A).
-  The other 84 are pending. Stamping can lower a manifest's `recorded` to
-  `pending` when the executor names another vendor, and never raises it.
+  with evidence. 20 rows are recorded:
+  - 18 customer-URL tools whose every fetch is robots-checked and stops at a
+    block (#723);
+  - HIBP and Alternative.me. Their terms permit resale and are now recorded
+    as `permitted` in `vendor-terms.ts`.
+  The other 95 are pending. A call is `recorded` only when it took the path
+  the record covers; an executor that names another method or vendor
+  lowers it to `pending`, and no executor can raise it.
+- Guards:
+  - a vendor-backed `recorded` claim needs a `permitted` record in
+    `vendor-terms.ts` for that tool (an allowlist);
+  - a customer-URL `recorded` claim needs the checked fetch path in the
+    executor's code, ignoring comments.
 - Each active manifest (321) carries a `data_access` block. The 29
   deactivated manifests carry none: a capability in the never lane is
   switched off, not labelled.
@@ -73,6 +79,20 @@ sanctions-check, pep-check and adverse-media-check are `checks: pending`.
 Signing the reseller agreement is a vendor-contract decision for Petter.
 
 ## Follow-ups found (not acted on)
+
+- `email-pattern-discover` returns same-domain addresses found on a homepage
+  and name-based address patterns (`processes_personal_data`). Check it
+  against never lane item 3; `domain-contact-extract`'s manifest calls it
+  "currently suspended", but it is not in `DEACTIVATED`.
+- Recordable with work:
+  - Cert Spotter/crt.sh (the audit says "OK" without a clause);
+  - Alchemy (the per-tool "additional functionality" judgement;
+    `wallet-transactions-lookup` is closest to a pass-through);
+  - Cobalt: founder email, plus the rule's no-login and no-litigation
+    conditions;
+  - Google PageSpeed Insights.
+- `cookie-scan`'s direct fetch follows redirects without a robots check on
+  the target.
 
 - `email-deliverability-check` treats any blocklist answer as "listed",
   including Spamhaus's 127.255.255.x error codes for public-resolver

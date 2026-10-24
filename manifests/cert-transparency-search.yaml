@@ -152,5 +152,5 @@ data_access:
   lane: allowed_with_checks
   acquisition_method: vendor_api
   upstream_vendor: sslmate
-  checks: recorded
-  checks_note: "Cert Spotter (SSLMate) API with a crt.sh fallback, both public Certificate Transparency data; checked and found to permit this use within the declared free quota. Recorded in docs/security/2026-09-06-vendor-terms-audit.md."
+  checks: pending
+  checks_note: "Pending: the 2026-09-06 audit marks Cert Spotter and crt.sh 'OK' without quoting a clause that permits resale."
