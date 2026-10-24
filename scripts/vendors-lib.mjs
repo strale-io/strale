@@ -8,7 +8,8 @@
  * names: apps/api/src/lib/dependency-manifest.ts PROVIDERS,
  * apps/api/coverage-matrix/*.yaml, and config/env-manifest.yaml. History
  * rules protect the register against the base branch the same way
- * codex-backlog-lib.mjs protects docs/programs/codex-review-backlog.yaml:
+ * the retired codex-backlog-lib.mjs (removed under DEC-20261024-A) protected
+ * docs/programs/codex-review-backlog.yaml:
  * no vendor removed, no id changed, no existing lifecycle entry rewritten
  * only appending is allowed.
  *
@@ -923,7 +924,7 @@ function git(root, args) {
 /**
  * The register as it stood at the merge-base with the base branch, or
  * `null` when there is no base to compare against. Mirrors
- * codex-backlog-lib.mjs's loadBaseBacklog, same git-fact discipline.
+ * the retired codex-backlog-lib.mjs loadBaseBacklog, same git-fact discipline.
  */
 export function loadBaseRegister(root, baseRef) {
   const candidates = baseRef ? [baseRef] : ["origin/main", "main"];
