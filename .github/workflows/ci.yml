@@ -482,12 +482,14 @@ jobs:
       # the future) the same way the other cheap-extras registers are.
       - run: npm run distribution:check
       - run: npm run distribution:test
-      # Repo-native digest priority readers (M3 batch 2, T6). Pure-function
-      # tests only here (parser, 14-day split, handoff window, comparison,
-      # workflow reachability) -- the shadow comparison itself runs daily
-      # in .github/workflows/m3-digest-shadow.yml, report only, and is not
-      # part of this PR gate.
-      - run: npm run digest:shadow:test
+      # Repo-native digest priority readers (M3 batch 2, T6; wired into the
+      # production digest in M4 batch 5). Pure-function tests here (parser,
+      # 14-day split, handoff window, comparison). The shadow comparison
+      # workflow (.github/workflows/m3-digest-shadow.yml) and its
+      # NOTION_API_KEY-reading script were retired in M4 batch 5: the
+      # production digest now reads these files directly, so there is
+      # nothing left to shadow-compare against.
+      - run: npm run digest:repo-native:test
       # Activated end-session and vendor-switch flows (M4 batch 4, T7).
       # The design draft this batch activated is archived at
       # archive/sessions/2026-09-13-m4-b4-end-session-candidate-draft.md.

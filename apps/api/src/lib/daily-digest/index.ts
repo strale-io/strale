@@ -16,9 +16,11 @@ import { getBeaconActivity } from "./fetch-beacon.js";
 import { logWarn } from "../log.js";
 import { getEcosystemMetrics } from "./fetch-ecosystem.js";
 import { getWebsiteTraffic } from "./fetch-traffic.js";
-import { getDistributionSurfaces, getPriorities } from "./fetch-notion.js";
+import { getDistributionSurfaces } from "./fetch-distribution-registry.js";
+import { getPriorities } from "./fetch-decision-queue.js";
 import { getScoreboard } from "./fetch-scoreboard.js";
 import { getYesterdaySnapshot, saveSnapshot } from "./snapshots.js";
+import { deployCommitOrNull } from "../receipt/deploy-identity.js";
 
 // ── Defaults for failed fetches ───────────────────────────────────────────────
 
@@ -118,13 +120,19 @@ export async function gatherDigestData(): Promise<DigestData> {
     getShipLog(),
     getEcosystemMetrics(yesterday),
     getWebsiteTraffic(),
-    getDistributionSurfaces(),
-    getPriorities(),
+    // Wrapped rather than called directly: both readers are synchronous file
+    // reads and can throw (missing file, malformed content). Wrapping keeps
+    // that a rejected promise for Promise.allSettled/unwrap() to catch,
+    // instead of a synchronous throw that would abort gatherDigestData()
+    // before the array is even built.
+    Promise.resolve().then(() => getDistributionSurfaces()),
+    Promise.resolve().then(() => getPriorities()),
     getScoreboard(beaconResult.totalScans),
   ]);
 
   const data: DigestData = {
     generatedAt: new Date().toISOString(),
+    imageCommit: deployCommitOrNull(),
     platformActivity: unwrap(platformActivityResult, defaultPlatformActivity, "platformActivity"),
     platformHealth: unwrap(platformHealthResult, defaultPlatformHealth, "platformHealth"),
     shipLog: unwrap(shipLogResult, defaultShipLog, "shipLog"),

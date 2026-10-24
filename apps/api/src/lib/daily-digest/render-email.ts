@@ -352,6 +352,7 @@ export function renderDigestEmail(data: DigestData, analysis: DigestAnalysis): s
   <tr><td style="padding: 16px 32px; background: #f9fafb; border-top: 1px solid ${BORDER};">
     <div style="font-size: 11px; color: ${MUTED}; text-align: center;">
       Generated at ${data.generatedAt.slice(0, 16).replace("T", " ")} UTC&nbsp;&nbsp;·&nbsp;&nbsp;
+      ${data.imageCommit ? `Image ${escHtml(data.imageCommit.slice(0, 12))}&nbsp;&nbsp;·&nbsp;&nbsp;` : ""}
       ${link("Dashboard", "https://strale.dev")}&nbsp;&nbsp;·&nbsp;&nbsp;
       ${link("Railway", "https://railway.app")}&nbsp;&nbsp;·&nbsp;&nbsp;
       ${link("GitHub", "https://github.com/strale-io/strale")}

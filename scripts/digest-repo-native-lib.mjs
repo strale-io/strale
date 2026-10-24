@@ -1,23 +1,30 @@
 /**
  * Repo-native readers for the daily-digest priorities (T6 M3 batch 2).
  *
- * Shadow mode only. Nothing here is wired into the digest email
- * (apps/api/src/lib/daily-digest/*) or any runtime path. It is compared,
- * report only, against the live Notion readers by scripts/digest-shadow.mjs
- * and the scheduled GitHub Actions workflow
- * .github/workflows/m3-digest-shadow.yml. Notion remains the authority
- * until the founder-gated M4 cutover.
+ * Originally shadow mode only: nothing here was wired into the digest
+ * email, and it was report-only compared against the live Notion readers
+ * by scripts/digest-shadow.mjs and the scheduled GitHub Actions workflow
+ * .github/workflows/m3-digest-shadow.yml.
  *
- * Why this exists: the production digest runs as the Railway
- * strale-digest-cron service, built from the API Docker image, which copies
- * only apps/api, packages/sdk-typescript, packages/mcp-server and
- * manifests. docs/decisions/records, handoff/ and archive/ do not exist at
- * runtime there, so a reader wired straight into gatherDigestData() would
- * read nothing and its shadow log would be silently hollow (see T6's
- * next_action in docs/programs/cto-readiness/tracks.yaml and
- * archive/sessions/2026-09-11-m3-remaining-scope-inventory.md, section 1b).
- * These are instead pure functions over a repository checkout, exercised
- * here and shadow-run by a scheduled workflow that has one.
+ * M4 batch 5 wired this mapping into production and retired both the
+ * Notion readers it used to be compared against and the shadow comparison
+ * itself -- once the digest stopped reading Notion there was nothing left
+ * to compare. The production code path is a TypeScript port of this same
+ * grammar and mapping (apps/api/src/lib/daily-digest/fetch-decision-queue.ts,
+ * fetch-handoff-activity.ts), not an import of this file: the Docker image
+ * that runs the production digest does not carry `scripts/`. This file
+ * remains the tested reference implementation, exercised by its own test
+ * file (scripts/digest-repo-native.test.mjs) rather than by a runtime
+ * importer.
+ *
+ * Why the port instead of a shared import: the production digest runs as
+ * the Railway strale-digest-cron service, built from the API Docker image,
+ * which (as of M4 batch 5) copies apps/api, packages/sdk-typescript,
+ * packages/mcp-server, manifests, docs/company/DECISION-QUEUE.md,
+ * handoff/_general/from-code/, docs/operations/distribution-registry.yaml,
+ * and config/vendors.yaml -- but not `scripts/` itself, so a runtime import
+ * of this file would fail; see the Dockerfile's build-time verification
+ * step for the paths that must be present in the built image.
  *
  * ── Mapping (no new convention; the repo-native source already exists) ──
  *
