@@ -36,6 +36,7 @@ import { sql } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { TRANSACTION_RETENTION_DAYS, PII_RETENTION_DAYS } from "./data-retention.js";
 import { getStraleJurisdiction, getProcessingLocation } from "./processing-location.js";
+import { logWarn } from "./log.js";
 
 // ─── Static facts (compile-time constants) ──────────────────────────────────
 
@@ -233,16 +234,19 @@ export const COMPANY_DATA_PREFIX_ISO: Record<string, string> = {
   australian: "AU", austrian: "AT", belgian: "BE", brazilian: "BR", bulgarian: "BG",
   canadian: "CA", croatian: "HR", cypriot: "CY", danish: "DK", dutch: "NL",
   estonian: "EE", finnish: "FI", french: "FR", german: "DE", greek: "GR",
-  hungarian: "HU", irish: "IE", italian: "IT", japanese: "JP", latvian: "LV",
-  lithuanian: "LT", luxembourgish: "LU", maltese: "MT", norwegian: "NO", polish: "PL",
+  hungarian: "HU", indian: "IN", irish: "IE", italian: "IT", japanese: "JP", latvian: "LV",
+  lithuanian: "LT", luxembourgish: "LU", maltese: "MT", mexican: "MX", norwegian: "NO", polish: "PL",
   portuguese: "PT", romanian: "RO", singapore: "SG", slovak: "SK", slovenian: "SI",
   spanish: "ES", swedish: "SE", swiss: "CH", uk: "GB",
 };
 
+/** Two-letter prefixes that are not countries. */
+const NOT_A_COUNTRY = new Set(["eu"]);
+
 /** ISO code for a company-data slug prefix, or null when the prefix is not a known country. */
 export function prefixToIso(prefix: string): string | null {
   if (prefix in COMPANY_DATA_PREFIX_ISO) return COMPANY_DATA_PREFIX_ISO[prefix];
-  return /^[a-z]{2}$/.test(prefix) ? prefix.toUpperCase() : null;
+  return /^[a-z]{2}$/.test(prefix) && !NOT_A_COUNTRY.has(prefix) ? prefix.toUpperCase() : null;
 }
 
 export async function computePlatformFacts(): Promise<PlatformFacts> {
@@ -319,6 +323,9 @@ export function countriesToIso(prefixes: string[]): string[] {
   for (const p of prefixes) {
     const iso = prefixToIso(p);
     if (iso) out.add(iso);
+    // A live registry with no mapping would silently drop out of every public
+    // country count; say so where operators look.
+    else logWarn("platform-facts-unmapped-country-prefix", `company-data prefix "${p}" has no ISO mapping in COMPANY_DATA_PREFIX_ISO`, { prefix: p });
   }
   return [...out].sort();
 }

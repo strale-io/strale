@@ -195,7 +195,11 @@ describe("countriesToIso", () => {
   });
 
   it("drops a prefix that is not a known country rather than guessing", () => {
-    expect(countriesToIso(["martian"])).toEqual([]);
+    expect(countriesToIso(["martian", "eu"])).toEqual([]);
+  });
+
+  it("maps prefixes of registries that exist only in the database today", () => {
+    expect(countriesToIso(["indian", "mexican"])).toEqual(["IN", "MX"]);
   });
 
   it("every company-data manifest prefix maps to a country", () => {
