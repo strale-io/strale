@@ -2,8 +2,8 @@
 # Review and adjust before using as onboarding template
 
 slug: social-profile-check
-name: Social Profile Check
-description: "Check username availability across 7 platforms: GitHub, YouTube, TikTok, Reddit, Pinterest, npm, PyPI."
+name: Developer Registry Name Check
+description: "Check whether a name is taken as an npm package, a PyPI project or a GitHub organisation, via each registry's official API."
 category: data-extraction
 cost_class: free_unlimited
 quota_window: none
@@ -16,65 +16,62 @@ input_schema:
   properties:
     username:
       type: string
-      description: "Username/handle to check across platforms (e.g. 'google', 'octocat'). Same string is used for every platform — no per-platform overrides."
+      description: "Package, project or organisation name to check (e.g. 'react', 'strale'). Company names are normalised: accents stripped, '&' becomes 'and', other punctuation and spaces become '-'. The same name is checked on every registry."
 output_schema:
   type: object
   example:
+    username: react
     profiles:
-      - url: https://github.com/Google
+      - platform: npm
+        kind: npm_package
+        url: https://www.npmjs.com/package/react
         exists: true
-        platform: GitHub
         status_code: 200
-      - url: https://www.youtube.com/@Google
-        exists: true
-        platform: YouTube
-        status_code: 200
-      - url: https://www.tiktok.com/@Google
-        exists: true
-        platform: TikTok
-        status_code: 200
-      - url: https://www.reddit.com/user/Google/
+      - platform: PyPI
+        kind: pypi_project
+        url: https://pypi.org/project/react/
         exists: false
-        platform: Reddit
-        status_code: 403
-      - url: https://www.pinterest.com/Google/
-        exists: true
-        platform: Pinterest
-        status_code: 200
-      - url: https://www.npmjs.com/~Google
+        status_code: 404
+      - platform: GitHub
+        kind: github_organization
+        url: https://github.com/react
         exists: false
-        platform: npm
-        status_code: 403
-      - url: https://pypi.org/user/Google/
-        exists: true
-        platform: PyPI
-        status_code: 200
-    username: Google
-    found_count: 5
+        status_code: 404
+    found_count: 1
     not_found_count: 2
-    available_platforms: []
+    unknown_count: 0
+    available_platforms:
+      - PyPI
   properties:
+    username:
+      type: string
     profiles:
       type: array
     found_count:
       type: number
+    not_found_count:
+      type: number
+    unknown_count:
+      type: number
     available_platforms:
       type: array
-data_source: HTTP fetch (public social media profile pages)
+data_source: npm registry API, PyPI JSON API, GitHub REST API (organisations)
 data_source_type: api
 transparency_tag: algorithmic
 freshness_category: live-fetch
 maintenance_class: free-stable-api
 # SA.2b: per-capability PII classification (F-A-003, F-A-009)
+# DEC-20261023-A (2026-10-24): package, project and organisation names only —
+# personal profiles are no longer probed. Still true: callers may send a
+# person's handle as input, and inputs are logged.
 processes_personal_data: true
 personal_data_categories:
   - name
-  - professional
 geography: global
 test_fixtures:
   known_answer:
     input:
-      username: Google
+      username: react
     expected_fields:
       - field: profiles
         operator: not_null
@@ -82,28 +79,53 @@ test_fixtures:
   health_check_input:
     username: octocat
 output_field_reliability:
+  username: guaranteed
   profiles: guaranteed
   found_count: guaranteed
+  not_found_count: guaranteed
+  unknown_count: guaranteed
   available_platforms: guaranteed
 limitations:
-  - title: Profile matching may return incorrect results for very common or generic company names
-    text: Profile matching uses name and domain signals — may return incorrect matches for very common company names
+  - title: Developer registries only — no social platforms or personal profiles
+    text: >-
+      Checks npm packages, PyPI projects and GitHub organisations through their official APIs. Social platforms and
+      personal profiles (TikTok, Reddit, YouTube, Pinterest, personal GitHub, npm or PyPI accounts) are not probed:
+      Strale's data-access rule rules out harvesting profiles of people, and those platforms restrict automated access
+      outside their own APIs.
+    category: coverage
+    severity: info
+    workaround: >-
+      To check a social handle, use that platform's official API, or ask the account owner to confirm it.
+  - title: "Data access: preferred lane (official registry APIs)"
+    text: >-
+      DEC-20261023-A lane: preferred. Each registry is read through its own documented public API — the npm registry
+      (registry.npmjs.org), PyPI's JSON API (pypi.org/pypi/<name>/json) and the GitHub REST API (api.github.com/orgs) —
+      one request per registry per call, with an honest StraleBot user agent, reading only the HTTP status. No page is
+      scraped and no personal account is looked up. Terms of each API (docs.npmjs.com/policies/open-source-terms,
+      pypi.org/policy/terms-of-use, docs.github.com/site-policy/github-terms) were not re-read in the 2026-10-24
+      session, whose network policy blocked them; re-verify before any change of use.
+    category: coverage
+    severity: info
+  - title: A missing GitHub organisation does not mean the name is free
+    text: >-
+      GitHub organisations and personal accounts share one namespace. A 404 from the organisations API means no
+      organisation has the name; a personal account may still hold it, so GitHub is never listed in
+      available_platforms.
     category: accuracy
     severity: info
-    workaround: >-
-      Cross-reference matched profile URLs against the company's official website for link verification before trusting
-      the match
-  - title: LinkedIn, Twitter/X, Instagram, and Facebook deliberately not checked
+    workaround: Try registering the organisation on GitHub to confirm availability.
+  - title: "\"Available\" means not found, not guaranteed registrable"
     text: >-
-      LinkedIn, Twitter/X, Instagram, and Facebook are not probed because their ToS forbids automated access (including
-      HEAD-style existence checks). Coverage is limited to GitHub, YouTube, TikTok, Reddit, Pinterest, npm, and PyPI.
-    category: coverage
+      A 404 means the registry has no package, project or organisation by that name. Registration can still be refused:
+      npm rejects names that differ from an existing package only by punctuation or case, and PyPI blocks prohibited
+      names and names too similar to an existing project, and returns 404 for some registered projects with no releases.
+    category: accuracy
     severity: info
-    workaround: >-
-      To verify presence on a restricted platform, use that platform's official API (e.g. LinkedIn Marketing Developer
-      Program, X API) or ask the end-user to confirm manually.
-  - title: Niche or regional platforms not covered
-    text: Niche or regional platforms (e.g. Mastodon instances, Xing, Weibo) are not in the platform list.
-    category: coverage
+    workaround: Confirm by attempting the registration before relying on the name.
+  - title: Rate limits and refusals are reported as unknown
+    text: >-
+      When a registry rate-limits or refuses the request (HTTP 401/403/429) or cannot be reached, that registry's
+      entry has exists null and a note, and is counted in unknown_count rather than treated as available.
+    category: availability
     severity: info
-    workaround: For regional coverage, supplement with a google-search query scoped to the target platform domain.
+    workaround: Retry later for the registries reported as unknown.
