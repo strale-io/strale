@@ -249,3 +249,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If you use a private CA, compare the returned issuer fingerprint against your internal CA's known fingerprint
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

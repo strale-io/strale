@@ -21,8 +21,9 @@ root `REVIEW.md`.
   checks, or never. A "never" source stops here. Check that the host is **not**
   in `PROHIBITED_UPSTREAM_HOSTS` (`apps/api/src/lib/vendor-terms.ts`, the list
   of banned hosts) or `tos-blocklist.ts`. Record the terms verdict, meaning what
-  permits per-call access or resale, with a link. The manifest has no field for
-  it yet, so put it in a `limitations` entry (category `coverage`).
+  permits per-call access or resale, with a link, in a `limitations` entry
+  (category `coverage`). Declare the lane and method in the manifest's
+  `data_access` block (step 2).
   For a new vendor, also add it to `config/vendors.yaml`. That register is a
   shadow only until M4; the Notion Vendor Roster is still the authority.
 - If the slug is in `DEACTIVATED` in `apps/api/src/capabilities/auto-register.ts`,
@@ -59,6 +60,12 @@ Start from the template in `CLAUDE.md`. Required:
   names the allowed values (`VALID_MAINTENANCE_CLASSES`)
 - `test_fixtures.health_check_input`
 - at least one honest `limitations` entry
+- `data_access`: `lane` (`preferred`, `allowed_with_checks`, or
+  `not_applicable` when nothing is fetched), `acquisition_method`, and
+  `upstream_vendor` when a vendor sits in the path. Values and meanings are in
+  `apps/api/src/lib/data-access.ts`; `data-access-manifests.test.ts` fails
+  without it. The executor still sets its own method and vendor on any path
+  that differs from this default, such as a fallback vendor.
 
 Set `gdpr_art_22_classification` for screening or risk-synthesis output. The
 description is a public claim: it must pass `npm run claims:check` and contain

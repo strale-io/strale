@@ -86,3 +86,8 @@ limitations:
     category: coverage
     severity: info
     workaround: This retailer's policy page produced more content than fits in one call — no direct workaround
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

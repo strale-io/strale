@@ -139,3 +139,9 @@ limitations:
     category: coverage
     severity: info
     workaround: Increase the depth parameter (up to 100) if the domain is expected to rank beyond position 10.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: serper

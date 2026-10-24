@@ -228,3 +228,9 @@ limitations:
     category: throughput
     severity: info
     workaround: Vendor's Profesional tier (5,000/day, €57/mo) is the upgrade path if ES volume materializes
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_aggregation
+  upstream_vendor: openmercantil

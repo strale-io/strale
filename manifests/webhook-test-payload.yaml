@@ -118,3 +118,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Compare generated payloads against the provider's webhook documentation and adjust field names as needed
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

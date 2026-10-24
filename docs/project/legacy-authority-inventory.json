@@ -387,6 +387,7 @@
         "handoff/_general/from-code/2026-10-23-positioning-decision.md",
         "handoff/_general/from-code/2026-10-23-way-of-working-review.md",
         "handoff/_general/from-code/2026-10-24-data-access-citations.md",
+        "handoff/_general/from-code/2026-10-24-data-access-provenance.md",
         "handoff/_general/from-code/2026-10-24-wow-step4-review-md.md",
         "handoff/_general/from-code/security-audit-api.md",
         "manifests/c2pa-inspect.yaml",
@@ -818,7 +819,7 @@
     {
       "path": "handoff",
       "owner_area": "session-handoffs",
-      "sha256": "0a2f2234befc1e9534667160983fef183eba8659ec6ff644af688124d2e0e0b7",
+      "sha256": "7473ed6e844182e39b80bdbdb6af794c17dcf8c5b8b8937d19c5df8dffecb0c3",
       "detected_references": [
         ".agents/skills/go/SKILL.md",
         ".agents/skills/source-command-end-session/SKILL.md",

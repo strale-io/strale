@@ -102,3 +102,8 @@ limitations:
     workaround: >-
       Submit the smallest span that needs redacting rather than a whole document, or run redaction in your own
       environment where the input is never transmitted.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

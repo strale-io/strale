@@ -114,3 +114,8 @@ limitations:
     category: coverage
     severity: info
     workaround: If a port shows as closed, verify from your own network before concluding the service is down
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

@@ -169,3 +169,8 @@ limitations:
     category: performance
     severity: info
     workaround: "Treat facilitator_reachable: false as a caution signal, not a hard block."
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

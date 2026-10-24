@@ -96,3 +96,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Use page-exists to check whether a specific page still resolves to real content.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

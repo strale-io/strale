@@ -123,3 +123,8 @@ limitations:
     workaround: >-
       Check the data_sources field in the response and independently verify critical data points against the listed
       sources
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

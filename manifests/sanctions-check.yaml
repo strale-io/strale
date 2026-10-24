@@ -191,3 +191,9 @@ limitations:
     category: accuracy
     severity: warning
     workaround: Provide birth_date for individuals and an ISO country code for companies.
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: dilisense

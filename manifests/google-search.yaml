@@ -174,3 +174,9 @@ limitations:
     category: coverage
     severity: info
     workaround: For deep web or database content, use specialized search capabilities (ted-procurement, patent-search) instead
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: serper

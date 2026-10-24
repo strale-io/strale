@@ -113,3 +113,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Run separate scans on high-traffic sub-pages (e.g., /checkout, /login) and merge the cookie inventories
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

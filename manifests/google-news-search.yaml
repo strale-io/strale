@@ -106,3 +106,9 @@ limitations:
       same query can return different results. This is a discovery surface, not an archive.
     category: freshness
     severity: info
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: serper

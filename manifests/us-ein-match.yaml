@@ -123,3 +123,9 @@ limitations:
       appear active. Cross-reference with state SOS data via us-company-data-cobalt for active status.
     category: freshness
     severity: warning
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: vendor_api
+  upstream_vendor: liberty-data

@@ -161,3 +161,8 @@ output_field_reliability:
   tier_2_available_reason: guaranteed
   ubo_availability: guaranteed
   ubo_availability_reason: guaranteed
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

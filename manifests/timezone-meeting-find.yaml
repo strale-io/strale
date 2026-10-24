@@ -103,3 +103,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use the suggested time window as a starting range and verify with participants' calendar availability
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

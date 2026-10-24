@@ -95,3 +95,8 @@ limitations:
     category: coverage
     severity: info
     workaround: For larger files, download locally and use a native base64 encoder instead of fetching through the API
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch

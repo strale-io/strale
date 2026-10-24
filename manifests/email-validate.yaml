@@ -99,3 +99,8 @@ limitations:
     workaround: >-
       Check the is_catchall field in the response and require email confirmation via a verification link for catch-all
       domains
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

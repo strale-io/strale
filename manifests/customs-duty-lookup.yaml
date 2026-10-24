@@ -93,3 +93,8 @@ limitations:
     category: coverage
     severity: info
     workaround: This HS code's duty page produced more preferential-rate entries than fit in one call — no direct workaround
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: public_page_read

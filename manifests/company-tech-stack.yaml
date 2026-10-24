@@ -120,3 +120,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Cross-reference with job postings (job-board-search) to infer backend technologies from required skills
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: allowed_with_checks
+  acquisition_method: customer_directed_fetch
