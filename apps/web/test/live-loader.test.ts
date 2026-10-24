@@ -10,6 +10,8 @@ test("loadLive reads every endpoint the site needs and keys them by slug", async
     const d = await loadLive(base);
     assert.ok(d.capabilities.length > 10);
     assert.equal(d.solutions[0].slug, "fixture-company-check");
+    assert.deepEqual(d.solutions[0].detail?.example_input, { company_number: "00445790" });
+    assert.equal(d.solutions[0].detail?.steps.length, 3);
     assert.equal(d.x402.network, "base");
     assert.equal(d.trust.size, d.capabilities.length);
     assert.equal(d.limitations.size, d.capabilities.length);

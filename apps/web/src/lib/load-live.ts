@@ -1,7 +1,7 @@
 // Live data: everything the site shows about the catalogue comes from the
 // production API at build time. A failure here fails the build; the site is
 // never published from stale or partial data.
-import type { Capability, Limitation, PlatformFacts, Solution, Trust, X402Catalog } from "./types.ts";
+import type { Capability, Limitation, PlatformFacts, Solution, SolutionDetail, Trust, X402Catalog } from "./types.ts";
 
 const TIMEOUT_MS = 30_000;
 const RETRIES = 3;
@@ -61,6 +61,13 @@ export async function loadLive(base: string) {
     getJson<Record<string, Trust>>(base, `/v1/public/ops/trust/capabilities/batch?slugs=${slugs.map(encodeURIComponent).join(",")}`),
   );
   for (const r of results) for (const [slug, t] of Object.entries(r)) trust.set(slug, { tested: t.tested, last_tested_at: t.last_tested_at, pass_rate: t.pass_rate });
+
+  // The bundle's own input schema, example input and step order exist only on the detail route.
+  const details = await mapLimit(sols.solutions, 6, (s) => getJson<SolutionDetail>(base, `/v1/solutions/${encodeURIComponent(s.slug)}`));
+  sols.solutions.forEach((s, i) => {
+    const d = details[i];
+    s.detail = { long_description: d.long_description ?? null, input_schema: d.input_schema ?? null, example_input: d.example_input ?? null, steps: d.steps ?? [] };
+  });
 
   // Limitations are shown as written (SITE-STRUCTURE tool page §7), from the same table the API serves.
   const limitations = new Map<string, Limitation[]>();

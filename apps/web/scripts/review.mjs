@@ -52,6 +52,7 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
 
+const MAX_SHOT_PX = Number(arg("max-height", "7000"));
 const VIEWPORTS = [{ name: "desktop-1440", width: 1440, height: 900 }, { name: "mobile-390", width: 390, height: 844 }];
 const THEMES = ["light", "dark"];
 mkdirSync(out, { recursive: true });
@@ -78,8 +79,11 @@ for (const path of pages) {
         return { violations: r.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.slice(0, 5).map((n) => ({ target: n.target.join(" "), summary: n.failureSummary })) })), passes: r.passes.length, incomplete: r.incomplete.map((v) => ({ id: v.id, nodes: v.nodes.length })) };
       });
       const shot = `${slug}--${vp.name}-${theme}.jpg`;
-      await page.screenshot({ path: join(out, shot), fullPage: true, type: "jpeg", quality: 72 });
-      const entry = { path, viewport: vp.name, theme, status: resp?.status(), overflow_px: overflow, console_errors: consoleErrors, axe, screenshot: shot };
+      // Very long pages (the full catalogue) are cut at MAX_SHOT_PX; the axe scan above still covers the whole page.
+      const height = await page.evaluate(() => document.documentElement.scrollHeight);
+      const clipped = height > MAX_SHOT_PX;
+      await page.screenshot({ path: join(out, shot), fullPage: true, type: "jpeg", quality: 72, ...(clipped ? { clip: { x: 0, y: 0, width: vp.width, height: MAX_SHOT_PX } } : {}) });
+      const entry = { path, viewport: vp.name, theme, status: resp?.status(), overflow_px: overflow, console_errors: consoleErrors, axe, screenshot: shot, page_height_px: height, screenshot_clipped_at_px: clipped ? MAX_SHOT_PX : null };
       if (axe.violations.length || overflow > 0 || consoleErrors.length || resp?.status() !== 200) failures++;
       report.pages.push(entry);
       console.log(`${axe.violations.length || overflow > 0 || consoleErrors.length ? "FAIL" : "ok  "} ${path} ${vp.name} ${theme}: ${axe.violations.length} axe violations (${axe.violations.map((v) => v.id).join(", ")}), ${axe.passes} rule passes, overflow ${overflow}px, ${consoleErrors.length} console errors`);

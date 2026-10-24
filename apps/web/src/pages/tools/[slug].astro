@@ -59,10 +59,10 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
         <section aria-labelledby="example-title" class="stack">
           <h2 id="example-title" class="t-section">Example</h2>
           <div class="grid-2 example-grid">
-            <CodeBlock id="ex-in" title="Input" panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
-            {output ? <CodeBlock id="ex-out" title="Output (example)" panels={[{ label: "Output", lang: "json", code: json(output) }]} /> : <p class="muted">This tool publishes no example output. Its fields are listed below.</p>}
+            <CodeBlock id="ex-in" title="Example input" wrap panels={[{ label: "Input", lang: "json", code: json(inputs) }]} />
+            {output ? <CodeBlock id="ex-out" title="Example output" wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} /> : <p class="muted">This tool publishes no example output. Its fields are listed below.</p>}
           </div>
-          <p class="small muted">Example values from the tool’s published schema and test input, not a live call.</p>
+          <p class="small muted">Published examples, not a live call. The input and the output are recorded separately and may not come from the same call.</p>
           {tool.free && (
             <form class="try card" data-try data-api={API_BASE} data-slug={slug}>
               <h3 class="t-subhead">Try it</h3>
@@ -99,7 +99,7 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
               <thead><tr><th scope="col">Field</th><th scope="col">Type</th><th scope="col">Appears</th></tr></thead>
               <tbody>{outputFields.map((f) => {
                 const r = RELIABILITY[reliability[f]];
-                return <tr><th scope="row"><code>{f}</code></th><td>{schemaType(tool.output_schema?.properties?.[f])}</td><td>{r ? <>{r.label} <span class="muted">({r.note})</span></> : <span class="muted">Not stated</span>}</td></tr>;
+                return <tr><th scope="row"><code>{f}</code></th><td>{schemaType(tool.output_schema?.properties?.[f])}</td><td>{r ? <>{r.label}{" "}<span class="muted">({r.note})</span></> : <span class="muted">Not stated</span>}</td></tr>;
               })}</tbody>
             </table>
           </div>
@@ -188,7 +188,7 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
   .tool-head .t-lead { max-width: var(--measure-body); }
   .slug { font-size: var(--type-small-size); }
   .tool-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-48); padding-block: var(--space-48) var(--space-64); }
-  .tool-main { display: grid; gap: var(--space-64); min-width: 0; }
+  .tool-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-64); min-width: 0; }
   @media (min-width: 1024px) { .tool-layout { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); } .tool-side { position: sticky; top: calc(var(--nav-h) + var(--space-24)); align-self: start; } }
   .example-grid { align-items: start; }
   .try { margin-top: var(--space-8); }

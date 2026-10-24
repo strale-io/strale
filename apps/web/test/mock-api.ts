@@ -55,6 +55,13 @@ export function startMockApi(): Promise<{ server: Server; base: string; requests
     requests.push(url.pathname);
     const send = (status: number, body: unknown) => { res.writeHead(status, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
     if (url.pathname in data) return send(200, (data as Record<string, unknown>)[url.pathname]);
+    if (url.pathname === `/v1/solutions/${data.solution.slug}`) {
+      return send(200, { ...data.solution, marketing_name: data.solution.name, long_description: null, agent_description: null, component_sum_cents: 160, value_tier: null, target_audience: null,
+        input_schema: { type: "object", required: ["company_number"], properties: { company_number: { type: "string", description: "Companies House number" } } },
+        example_input: { company_number: "00445790" }, example_output: null, compliance_coverage: [],
+        steps: data.solution.capabilities.map((s, i) => ({ step_order: i + 1, capability_slug: s, capability_name: s, capability_price_cents: 5, can_parallel: i > 0, parallel_group: i > 0 ? 1 : null, input_map: {}, data_source: null })),
+        extends_with: [], related_solutions: [] });
+    }
     if (url.pathname === "/v1/public/ops/trust/capabilities/batch") {
       const slugs = (url.searchParams.get("slugs") ?? "").split(",");
       return send(200, Object.fromEntries(slugs.map((s, i) => [s, i % 2 ? { badge: null, badge_label: null, tested: false, last_tested_at: null, pass_rate: null } : { badge: "strale_tested", badge_label: "Strale tested", tested: true, last_tested_at: "2026-10-20T06:00:00.000Z", pass_rate: 100 }])));

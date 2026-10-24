@@ -38,6 +38,7 @@ test("every company-registry tool maps to a country", () => {
   assert.deepEqual(prefixes.filter((p) => !COUNTRY_BY_PREFIX[p]), []);
   assert.equal(companyDataPrefix("us-company-data-cobalt"), "us");
   assert.equal(companyDataPrefix("company-enrich"), null);
+  for (const m of manifests) if (companyDataPrefix(m.slug)) assert.equal(jobFor(m.slug, m.category), "company", m.slug);
 });
 
 test("every company-registry tool names its data source (evidence for claims.yaml official-records-company-data)", () => {

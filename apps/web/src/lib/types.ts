@@ -36,6 +36,15 @@ export interface Solution {
   transparency_tag: string | null;
   capabilities: string[];
   data_sources?: string[];
+  /** From GET /v1/solutions/:slug (live builds only). */
+  detail?: SolutionDetail;
+}
+
+export interface SolutionDetail {
+  long_description: string | null;
+  input_schema: JsonSchema | null;
+  example_input: Record<string, unknown> | null;
+  steps: { step_order: number; capability_slug: string; capability_name: string; can_parallel: boolean; parallel_group: number | null }[];
 }
 
 export interface PlatformFacts {
