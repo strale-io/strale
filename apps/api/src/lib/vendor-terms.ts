@@ -22,7 +22,7 @@
  */
 export const PROHIBITED_UPSTREAM_HOSTS: ReadonlyMap<string, string> = new Map([
   // 2026-09-06
-  ["suggestqueries.google.com", "Google — an absolute prohibited target under DEC-20260813-A"],
+  ["suggestqueries.google.com", "Google — direct Google access is never lane item 4 under DEC-20261023-A (formerly an absolute prohibited target under DEC-20260813-A)"],
   ["api.coingecko.com", "CoinGecko free Demo plan excludes commercial use"],
   ["ip-api.com", "ip-api.com free endpoint is non-commercial only"],
   ["internetdb.shodan.io", "Shodan InternetDB is licensed for non-commercial use only"],

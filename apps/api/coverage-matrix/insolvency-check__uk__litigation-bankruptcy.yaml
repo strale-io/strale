@@ -14,6 +14,6 @@ products:
   - Counterparty Assurance
 vendor_roster_url: null
 provider_tos_notes: null
-doctrine_reference: DEC-20260428-A Tier 2
+doctrine_reference: DEC-20261023-A preferred lane (official register API; formerly DEC-20260428-A Tier 2)
 notes: Free /company/{n}/insolvency endpoint. Already integrated for Companies House.
 _source_notion_page_id: 35067c87-082c-81b0-ad7e-c0b3391a0dba

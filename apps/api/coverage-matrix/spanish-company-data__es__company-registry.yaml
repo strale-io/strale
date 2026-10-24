@@ -23,7 +23,7 @@ provider_tos_notes: >-
   docs/security/2026-09-10-vendor-terms-audit-batch-2.md), so whether its terms permit Strale to
   resell what it returns is unknown.
 doctrine_reference: >-
-  DEC-20260428-A Tier 2 (vendor aggregation of an official gazette). The Tier 2 conditions
+  DEC-20261023-A vendor lane, formerly DEC-20260428-A Tier 2 (vendor aggregation of an official gazette). The Tier 2 conditions
   (documented redistribution rights, indemnification, per-fact primary-source provenance) are not
   yet verified for openmercantil.es; the executor records BORME provenance per call.
 notes: >-
@@ -31,7 +31,7 @@ notes: >-
   apps/api/src/capabilities/spanish-company-data.ts's header comment records as replaced 2026-08-12
   by openmercantil.es. The executor now calls openmercantil.es (OM_API =
   "https://openmercantil.es/api/v1"), a Tier-2 vendor aggregation of the official BORME gazette
-  published by the Agencia Estatal Boletín Oficial del Estado at www.boe.es (DEC-20260428-A Tier 2;
+  published by the Agencia Estatal Boletín Oficial del Estado at www.boe.es (DEC-20260428-A Tier 2, now the DEC-20261023-A vendor lane;
   provenance.upstream_vendor = "OpenMercantil.es", primary_source_reference =
   "https://www.boe.es/diario_borme/"). Free tier: 200 req/day, no auth key required. Officers
   ("cargos") are included, unlike the retired Openapi ES-Advanced path. Verified 2026-09-11 by

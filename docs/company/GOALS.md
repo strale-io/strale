@@ -299,7 +299,7 @@ conversion.
   earned. And on inspection **not one of these is a defect**:
   `german-company-data` refuses ambiguous entity matches (above);
   `product-reviews-extract` refuses Trustpilot **14 times** because its Terms of
-  Service prohibit automated access, which is DEC-20260428-A working exactly as
+  Service prohibit automated access, which is DEC-20260428-A (now DEC-20261023-A) working exactly as
   written, plus 404s and 403s that are the caller's URLs and someone else's bot
   protection. Nothing here is owed a bug fix.
 
@@ -1138,7 +1138,7 @@ conversion.
   charged and the quality floor correctly did not count them (156 evaluated,
   no proposal). This is unmet demand from the one buyer who matters most:
   private-company basics for US software firms. Logged in IDEAS.md; a source
-  must fit DEC-20260428-A, and buying one is spend, so it is research first.
+  must fit DEC-20261023-A (formerly DEC-20260428-A), and buying one is spend, so it is research first.
 
 - **The largest buyer has nearly stopped buying from us, while it still has
   money and still buys from others** (measured 2026-09-27; `payerFacts` per
@@ -1323,6 +1323,7 @@ New experiments enter here with a kill criterion or they don't run.
 
 ## Standing constraints
 
-Lawful only, no grey zones (scraping doctrine DEC-20260428-A/DEC-20260813-A).
+Lawful only, no grey zones (data-access rule DEC-20261023-A, which superseded
+DEC-20260428-A/DEC-20260813-A on 2026-10-24).
 €50/week external spend. Quality floor and refusal semantics are not trading
 material — trust is the product.

@@ -12,7 +12,8 @@
  * and (c) the seed-based approach catches the common cases (Aave, Uniswap,
  * Compound, Curve, etc.) without scraping.
  *
- * Per DEC-20260428-A, Strale itself never scrapes. Live aggregator path
+ * Per DEC-20260428-A (now DEC-20261023-A: commercial aggregators are never
+ * lane item 5), Strale does not scrape aggregators. Live aggregator path
  * (when shipped) will consume Solodit / Cyfrin's open feed under their
  * documented redistribution rights.
  */

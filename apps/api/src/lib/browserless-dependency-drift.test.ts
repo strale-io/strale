@@ -10,7 +10,7 @@
  * credential-health.ts used to carry its OWN hand-maintained 52-slug array.
  * By the time this was audited, at least 15 of those 52 slugs had migrated
  * off Browserless entirely (irish/latvian/lithuanian/swiss-company-data per
- * DEC-20260428-A, plus austrian/belgian/danish/dutch/eu-regulation-search/
+ * DEC-20260428-A, since superseded by DEC-20261023-A, plus austrian/belgian/danish/dutch/eu-regulation-search/
  * german/italian/portuguese/spanish/swedish-company-data/tech-stack-detect —
  * never reconciled after their own migrations) and 4 more had no executor at
  * all (credit-report-summary deactivated, custom-scrape never built,

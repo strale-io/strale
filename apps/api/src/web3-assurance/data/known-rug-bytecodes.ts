@@ -13,7 +13,7 @@
  *   - Lowercase
  *   - SHA-256 the resulting bytes
  *
- * Per DEC-20260428-A, all entries verified manually from public on-chain
+ * Per DEC-20260428-A (now DEC-20261023-A), all entries verified manually from public on-chain
  * reads; no scraping.
  *
  * v0.1 seed is intentionally small. The infrastructure (hashing,
@@ -30,7 +30,7 @@
  *     Curve pools) are EXPLICITLY NOT in scope: their bytecode
  *     re-appearing in a fork is normal, not a rug signal.
  *   - Each entry needs a public postmortem URL we can republish under
- *     `provenance.primary_source_reference` per DEC-20260428-A.
+ *     `provenance.primary_source_reference` (a DEC-20260428-A requirement, which Strale keeps under DEC-20261023-A).
  *
  * 2026-05-01 curation pass: rejected 7 exploit-target candidates
  * (PAID, Nomad, Euler eUSDC/eDAI, Curve CRV/ETH, Harvest fUSDC,

@@ -40,7 +40,7 @@ const DEACTIVATED = new Map<string, string>([
   ],
   [
     "keyword-suggest",
-    "deactivated 2026-09-06 (vendor-terms audit): it calls suggestqueries.google.com, an undocumented Google endpoint. This is not merely a terms question — DEC-20260813-A lists \"ToS-prohibited targets (DEC-20260420-H social platforms, DEC-20260427-H-4 Google)\" as STILL ABSOLUTE, so it violated an active Strale decision for its whole life. The largest earner in the audit at 477 customer calls / EUR 14.38, and the one that most needed stopping. Took solution keyword-scout down with it. There is no compliant reactivation without a licensed keyword-data vendor.",
+    "deactivated 2026-09-06 (vendor-terms audit): it calls suggestqueries.google.com, an undocumented Google endpoint. This is not merely a terms question — DEC-20260813-A (superseded 2026-10-24 by DEC-20261023-A, where direct Google access is never lane item 4) lists \"ToS-prohibited targets (DEC-20260420-H social platforms, DEC-20260427-H-4 Google)\" as STILL ABSOLUTE, so it violated an active Strale decision for its whole life. The largest earner in the audit at 477 customer calls / EUR 14.38, and the one that most needed stopping. Took solution keyword-scout down with it. There is no compliant reactivation without a licensed keyword-data vendor.",
   ],
   [
     "host-exposure-lookup",
@@ -121,12 +121,13 @@ const DEACTIVATED = new Map<string, string>([
   // (au-company-data.ts) calls the official ABR XML SOAP API directly (requires
   // ABN_LOOKUP_GUID, which is set). australian-company-data
   // (australian-company-data.ts) scrapes the abr.business.gov.au public web UI
-  // via Browserless+Claude — Tier-1 violation per DEC-20260428-A. Since the
+  // via Browserless+Claude — Tier-1 violation per DEC-20260428-A (superseded
+  // 2026-10-24 by DEC-20261023-A, under which it stays off as redundant). Since the
   // clean direct-API path is already live as au-company-data, this duplicate
   // is deactivated rather than migrated.
   [
     "australian-company-data",
-    "duplicate of au-company-data which is the clean direct-API path; this Browserless scrape of abr.business.gov.au violates Tier 1 per DEC-20260428-A",
+    "duplicate of au-company-data which is the clean direct-API path; this Browserless scrape of abr.business.gov.au violated Tier 1 of DEC-20260428-A; stays off under DEC-20261023-A as redundant",
   ],
   // hong-kong-company-data: probed 2026-04-29. The public
   // data.cr.gov.hk/cr/api/api/v1/api_builder/json/local/search endpoint is
@@ -155,8 +156,8 @@ const DEACTIVATED = new Map<string, string>([
   // data.gov.sg CKAN datastore_search API against the ACRA "Entities
   // Registered with ACRA" dataset (~2.1M records, monthly refresh,
   // Singapore Open Data Licence v1.0 — commercial reuse permitted with
-  // attribution). acquisition_method: direct_api per DEC-20260428-A
-  // Tier 2.
+  // attribution). acquisition_method: direct_api (DEC-20261023-A preferred lane;
+  // formerly DEC-20260428-A Tier 2).
   [
     "annual-report-extract",
     // DEC-20260421-SE-B: Previous runtime fetched allabolag.se/{orgnr}/arsredovisning and
@@ -221,7 +222,7 @@ const DEACTIVATED = new Map<string, string>([
   // northdata.com aggregator scrape to direct data.gov.lt Spinta JSON API
   // (Registrų centras / JAR — Juridinių asmenų registras). Free, real-time
   // JSON, no signup, CC-BY 4.0 (commercial reuse permitted with attribution).
-  // acquisition_method: direct_api per DEC-20260428-A Tier 2.
+  // acquisition_method: direct_api (DEC-20261023-A preferred lane; formerly DEC-20260428-A Tier 2).
   // spanish-company-data REACTIVATED 2026-05-16 (Phase 2b): migrated from
   // empresia.es + infocif.es Browserless scraping (Tier 1 violation per
   // DEC-20260427-I-4) to Openapi.com ES-Advanced (Tier 3 vendor aggregator).
@@ -235,7 +236,7 @@ const DEACTIVATED = new Map<string, string>([
   // lookup consumes 11 credits. Account state is monitored by the Vendor
   // Control Tower and restored only after a provider-confirmed reset.
   // DEC-20260506-G; auth via OPENREGISTER_API_KEY. acquisition_method:
-  // direct_api per DEC-20260428-A Tier 2.
+  // direct_api (DEC-20261023-A preferred lane; formerly DEC-20260428-A Tier 2).
   // austrian-company-data MIGRATED 2026-08-27: from Openapi.com WW-Top
   // (Tier 3 aggregator, never activated — stayed gated behind OPENAPI_ENABLED
   // pending the case-151296 countersignature) to the official Firmenbuch via
@@ -243,7 +244,7 @@ const DEACTIVATED = new Map<string, string>([
   // CC BY 4.0). This is the exact reactivation trigger named in
   // DEC-20260427-I-6 ("licensed contract with the Austrian Justizministerium
   // for direct Firmenbuch API access"); acquisition_method: direct_api per
-  // DEC-20260428-A Tier 2. IWG token issued to Moonlighter AB 2026-08-27.
+  // DEC-20260428-A Tier 2; DEC-20261023-A preferred lane. IWG token issued to Moonlighter AB 2026-08-27.
   // DB activation remains a separate operator action post-deploy.
   [
     "trustpilot-score",
@@ -288,10 +289,13 @@ const DEACTIVATED = new Map<string, string>([
   // the government's public web UI rather than an API. DEC-20260427-I deactivated
   // the worse "full divergence" cases (third-party aggregators); transport-
   // divergence was left for migration. Today we tightened the posture and pulled
-  // these too — Strale's Tier 1 doctrine (DEC-20260428-A) is "Strale itself never
+  // these too — Strale's Tier 1 doctrine (DEC-20260428-A, superseded 2026-10-24 by
+  // DEC-20261023-A, which allows per-call public-source reads with checks) was "Strale itself never
   // operates scrapers" without exceptions, and a self-operated scraper against a
   // government UI is still a self-operated scraper. No third-party ToS violation
-  // identified, but the doctrine is absolute.
+  // identified, but that doctrine allowed no exception. Under DEC-20261023-A
+  // each could reopen per call once the authority's terms are recorded as
+  // permitting it and the executor stops at blocks; until then they stay off.
   //
   // Reactivation per cap: licensed registry/source contract with the named
   // authority. The IE/IT-style transport-divergence pattern in irish-company-data
@@ -299,7 +303,8 @@ const DEACTIVATED = new Map<string, string>([
   // workstream, not a pre-emptive deactivation.
   // italian-company-data REACTIVATED 2026-05-16 (Phase 2c): migrated from
   // registroimprese.it Browserless scrape (Tier 1 violation per
-  // DEC-20260428-A) to Openapi.com IT-Advanced (Tier 3 vendor aggregator).
+  // DEC-20260428-A) to Openapi.com IT-Advanced (Tier 3 vendor aggregator
+  // under that doctrine).
   // Satisfies the "licensed multi-country aggregator" reactivation trigger.
   // Final EU30 country to reach code parity — Phase 2c completes 30/30.
   // Double-gated: OPENAPI_ENABLED env flag + DB is_active. v1.1 deferrals:
@@ -310,23 +315,25 @@ const DEACTIVATED = new Map<string, string>([
     // Runtime scrapes curia.europa.eu/juris (CJEU) and hudoc.echr.coe.int (ECHR).
     // Both are EU public court records and access is generally permitted, so
     // there is no clear third-party ToS violation. But Strale's Tier 1 doctrine
-    // (DEC-20260428-A) prohibits Strale-operated scrapers categorically.
+    // (DEC-20260428-A) prohibited Strale-operated scrapers categorically.
+    // DEC-20261023-A (2026-10-24) allows CURIA/HUDOC per call, court-published
+    // personal data included, once their terms are recorded as permitting it.
     // Reactivation: licensed CJEU / ECHR data feed, or migrate to bulk dataset
     // download where the source publishes one.
-    "CURIA / HUDOC scraping violates Strale Tier 1 (DEC-20260428-A); pending licensed feed or bulk-dataset migration",
+    "CURIA / HUDOC: off since DEC-20260428-A Tier 1; reopenable under DEC-20261023-A per-call lane once CURIA's and HUDOC's terms are recorded as permitting per-call access and the executor is reviewed against the rule's checks",
   ],
   // irish-company-data REACTIVATED 2026-04-29: migrated from Browserless +
   // Claude scrape of core.cro.ie to direct CRO Open Data Portal CKAN API
   // (opendata.cro.ie/api/3/action/datastore_search). Free, real-time JSON,
   // no signup, CC-BY 4.0 (commercial redistribution permitted with
-  // attribution). acquisition_method: direct_api per DEC-20260428-A Tier 2.
+  // attribution). acquisition_method: direct_api (DEC-20261023-A preferred lane; formerly DEC-20260428-A Tier 2).
   //
   // latvian-company-data REACTIVATED 2026-04-29: migrated from Browserless +
   // Claude scrape of info.ur.gov.lv to direct Latvian Open Data Portal CKAN
   // API (data.gov.lv/dati/api/3/action/datastore_search) against the
   // Uzņēmumu reģistra atvērtie dati resource. Free, real-time JSON, no
   // signup, CC0 1.0 (public domain — unrestricted commercial use).
-  // acquisition_method: direct_api per DEC-20260428-A Tier 2.
+  // acquisition_method: direct_api (DEC-20261023-A preferred lane; formerly DEC-20260428-A Tier 2).
   [
     "lithuanian-company-data",
     "deactivated 2026-09-25: get.data.gov.lt answers our production host with HTTP 500 and every other caller with 200. No call completed from 2026-08-21; the 2026-09-24 classifier-snapshot fix removed one failing read and exposed the next — the register query itself failed 5/5 after that deploy while the same URL answered 200 off-platform. Zero customer calls in the window. Reactivate once the register answers from where production runs (a different egress, or the portal lifting the block), proven by a production-side read, not a local one.",

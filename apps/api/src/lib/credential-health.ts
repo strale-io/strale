@@ -91,7 +91,7 @@ const CREDENTIAL_REGISTRY: CredentialEntry[] = [
     // The stub provider is scaffolded but NOT primary: latvian-company-data's
     // live executor (apps/api/src/capabilities/latvian-company-data.ts) calls
     // the data.gov.lv CKAN datastore API directly (acquisition_method:
-    // direct_api per DEC-20260428-A) — it migrated off the prior
+    // direct_api; preferred lane under DEC-20261023-A) — it migrated off the prior
     // Browserless+Claude scrape of info.ur.gov.lv (Tier 1 violation) and does
     // NOT touch Browserless at all today. SDDA remains an unwired stub for a
     // future path pending credentials and a follow-up session to wire
