@@ -155,6 +155,7 @@
         "apps/api/src/lib/startup-migrations.test.ts",
         "apps/api/src/lib/startup-migrations.ts",
         "apps/api/src/web3-assurance/evaluators/erc-8004-reputation.ts",
+        "apps/web/src/lib/site-data.ts",
         "archive/growth-ops/devto-sqs-methodology.md",
         "archive/growth-ops/fact-check-audit.md",
         "archive/receipts/2026-09-02-audit-wp13-dependency-reachability.json",
@@ -546,7 +547,7 @@
     {
       "path": "docs/company",
       "owner_area": "company-governance",
-      "sha256": "842bb81b4ce1fd5b12810d7dc066e176b5f11ec4673012634d833d8e853aeb72",
+      "sha256": "e6b54e51705351dfa3bf936a61b408401431a66562fa7a94c8714c272cf19f1a",
       "detected_references": [
         ".claude/commands/ceo-brief.md",
         ".github/workflows/ci.yml",
@@ -566,6 +567,7 @@
         "apps/api/src/lib/models.ts",
         "apps/api/src/lib/seller-rank.ts",
         "apps/api/src/lib/startup-migrations.ts",
+        "apps/web/README.md",
         "archive/receipts/2026-09-03-audit-wp13-hono-upgrade.json",
         "archive/receipts/2026-09-05-audit-quiet-material-system.json",
         "archive/receipts/2026-09-05-check-brand-direction-applications.json",

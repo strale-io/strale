@@ -129,6 +129,16 @@ test("FORBIDDEN_CLAIM_FOUND: platform-facts.ts matches", () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
+test("FORBIDDEN_CLAIM_FOUND: website source under apps/web/src matches", () => {
+  const dir = makeFixture(
+    [{ id: "x", claim: "/\\bsign in\\b/", is_regex: true, status: "forbidden", surfaces: ["homepage"], decided_by: "founder-2026-09-02" }],
+    { "apps/web/src/components/Nav.astro": "<a href=\"/login\">Sign in</a>\n", "apps/web/src/pages/index.astro": "<h1>Hello</h1>\n" },
+  );
+  const { findings } = checkAllClaims(dir);
+  assert.deepEqual(findings.filter((f) => f.code === "FORBIDDEN_CLAIM_FOUND").map((f) => f.file), ["apps/web/src/components/Nav.astro"]);
+  rmSync(dir, { recursive: true, force: true });
+});
+
 test("a status:retired row is never scanned for, even if the phrase is present", () => {
   const dir = makeFixture(
     [{ id: "x", claim: "old retired phrase", status: "retired", surfaces: ["homepage"], decided_by: "founder-2026-09-02" }],

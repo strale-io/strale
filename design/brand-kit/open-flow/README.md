@@ -1,4 +1,4 @@
-> **Approved for adoption 2026-10-24 by Petter (DEC-20261024-B).** The token promotion (candidate status and the `design/tokens/active.json` swap) lands with the `apps/web` build.
+> **Adopted 2026-10-24 by Petter (DEC-20261024-B).** The candidate's status is `adopted` and its values are the `website` surface of `design/tokens/active.json`; `apps/web` builds from that surface. Where the text below says "candidate" or "not adopted", read it as the status before 24 October.
 
 # Open Flow — Strale website design system
 

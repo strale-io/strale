@@ -254,6 +254,21 @@
   decided_by: "strale-frontend/docs/handoffs/2026-08-23-codex-website-handoff-v2/04_FINAL_CLAIM_AUDIT.md#10"
   note: True only for the x402 payment path. Do not generalize to the wallet/API-key path.
 
+- id: official-records-company-data
+  claim: /\bofficial[- ](records|sources?|registers?)\b/
+  is_regex: true
+  status: needs_evidence
+  evidence: manifests
+  surfaces: [homepage company-data section, company-data hub, country pages, llms.txt]
+  decided_by: DEC-20261024-B
+  note: >
+    MESSAGING-LEVELS.md proof gap 4. "Official records" describes the
+    company-registry tools only, and each country page must name that
+    tool's actual data_source: US is SEC filers (EDGAR), and ES, DE, BE
+    and BR come through vendors that wrap the register. Never "national
+    register" as a blanket term, and never for tools outside company
+    and compliance data.
+
 - id: sqs-quality-score-trust-layer
   claim: /\b(SQS score|SQS 0|Strale Quality Score|min_sqs|(?<!no )per-call quality score|quality scores? for every capability)\b/
   is_regex: true

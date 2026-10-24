@@ -1,0 +1,33 @@
+---
+// Footer columns from SITE-STRUCTURE.md. "For platforms" is held until the Terms allow it.
+import { getSiteData } from "../lib/site-data";
+import { SENTENCE } from "../content/positioning";
+const data = await getSiteData();
+const contact = data.facts.static.controller?.contact_email;
+const cols = [
+  { title: "Product", links: [["Tools", "/tools"], ["Bundled checks", "/tools#bundled"], ["Company data", "/company-data"], ["Use cases", "/use-cases"], ["Pricing", "/pricing"]] },
+  { title: "Developers", links: [["Docs", "/docs"], ["MCP", "/docs/mcp"], ["API reference", "https://api.strale.io/openapi.json"], ["x402", "/docs/x402"], ["SDKs", "/docs/sdks"], ["Guides", "/guides"], ["llms.txt", "https://api.strale.io/llms.txt"]] },
+  { title: "Company", links: [["About", "/about"], ["Security and data", "/security"], ["Terms", "/terms"], ["Privacy", "/privacy"], ["Top up wallet", "/topup"], ...(contact ? [["Contact", `mailto:${contact}`]] : [])] },
+];
+---
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img class="logo-ink" src="/brand/lockup-ink.svg" alt="Strale" width="82" height="24" />
+        <img class="logo-inverse" src="/brand/lockup-inverse.svg" alt="Strale" width="82" height="24" />
+        <p class="small muted">{SENTENCE}</p>
+      </div>
+      {cols.map((c) => (
+        <nav class="footer-col" aria-label={c.title}>
+          <h2>{c.title}</h2>
+          <ul>{c.links.map(([label, href]) => <li><a href={href}>{label}</a></li>)}</ul>
+        </nav>
+      ))}
+    </div>
+    <div class="footer-base">
+      <span>Strale is run by Moonlighter AB, Sweden.</span>
+      <span>Prices in EUR unless marked USD (x402).</span>
+    </div>
+  </div>
+</footer>

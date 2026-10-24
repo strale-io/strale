@@ -1,0 +1,27 @@
+{
+  "name": "@strale/web",
+  "private": true,
+  "type": "module",
+  "description": "strale.dev redesign (DEC-20260902-A). Static site generated from the live Strale API at build time.",
+  "scripts": {
+    "prebuild": "node scripts/prepare-assets.mjs",
+    "predev": "node scripts/prepare-assets.mjs",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "node --test --experimental-strip-types test/*.test.ts",
+    "build:preview-data": "STRALE_SITE_DATA=manifests astro build",
+    "review": "node scripts/review.mjs"
+  },
+  "dependencies": {
+    "astro": "5.18.2",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "axe-core": "4.14.0",
+    "playwright": "1.64.1",
+    "typescript": "5.7.3"
+  }
+}

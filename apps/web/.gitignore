@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.astro/
+# Copied from design/ by scripts/prepare-assets.mjs; design/ is the only source.
+public/fonts/
+public/brand/
+public/favicon.ico
+public/favicon.svg
+public/favicon-32.png
+review/

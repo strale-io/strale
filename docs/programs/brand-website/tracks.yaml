@@ -1,7 +1,7 @@
 schema_version: 1
 program: brand-website
 program_status: active
-updated: "2026-10-23"
+updated: "2026-10-24"
 tracks:
   - id: T1
     title: Product and brand discovery
@@ -52,7 +52,7 @@ tracks:
     gate: none
     depends_on: [T2]
     owner: session
-    next_action: "Open Flow adopted by Petter on 2026-10-24 (DEC-20261024-B), together with SITE-STRUCTURE.md and MESSAGING-LEVELS.md. Next: build the site in apps/web (T6) and promote the open-flow tokens into design/tokens/active.json as part of that build. The kit-06 STRALE wordmark stays a candidate; the flowing-S logo stays until Petter decides."
+    next_action: "Open Flow adopted (DEC-20261024-B) and promoted: the candidate is status adopted and is the website surface of design/tokens/active.json, which apps/web builds from (branch claude/loving-newton-mxoo9l, PR open for Petter's review). This track closes when that PR merges; the remaining website work is T6. Open items that stay here: imagery rights and copy-fit record before any public use, and the kit-06 STRALE wordmark, which stays a candidate."
     resume_file: design/brand-kit/open-flow/README.md
     exit:
       - Founder-chosen kit-06 direction built out as a complete website system (tokens, contrast proof, components with states, section patterns, imagery rules) with lineage to the kit.
@@ -89,8 +89,8 @@ tracks:
     gate: none
     depends_on: [T5]
     owner: session
-    next_action: Build the agreed narrative and developer conversion paths in apps/web using the adopted assets and components.
-    resume_file: docs/programs/brand-website/PROGRAM.md
+    next_action: "apps/web is being built in stacked PRs held open for Petter's review (no merge publishes it; strale.dev cutover is FD-20260901-PUBLIC-DOMAIN). Slice 1 (tokens, app, homepage) is on claude/loving-newton-mxoo9l. Next slices, in SITE-STRUCTURE order: tools catalogue and tool/bundle pages; company-data hub and country pages; use cases, pricing, docs, security, about; machine-readable surfaces. Live-data screenshots come from the CI web job's web-review artifact; the cloud sandbox can only build preview data."
+    resume_file: apps/web/README.md
     exit:
       - Responsive, accessible and performant benefit-first website with truthful demonstrations.
       - Visitor-to-first-execution paths and machine discovery surfaces verified.
