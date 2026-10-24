@@ -14,7 +14,15 @@ import type { Capability, DataMode, ManifestExtras, SiteData, Solution, X402Item
 import { COUNTRY_BY_PREFIX, companyDataPrefix, type Country } from "../content/countries.ts";
 import { jobFor, type JobId } from "../content/jobs.ts";
 
-export const REPO_ROOT = resolve(process.cwd(), "../..");
+/** The repository root: the nearest ancestor of the working directory that holds manifests/ and apps/web/. */
+export const REPO_ROOT = (() => {
+  let dir = process.cwd();
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(resolve(dir, "manifests")) && existsSync(resolve(dir, "apps/web"))) return dir;
+    dir = resolve(dir, "..");
+  }
+  throw new Error(`apps/web must build inside the strale repository; no manifests/ above ${process.cwd()}`);
+})();
 export const API_BASE = (process.env.STRALE_API_BASE ?? "https://api.strale.io").replace(/\/$/, "");
 
 function dataMode(): DataMode {

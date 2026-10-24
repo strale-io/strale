@@ -11,7 +11,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "test": "node --test --experimental-strip-types test/*.test.ts",
-    "build:preview-data": "STRALE_SITE_DATA=manifests astro build",
+    "build:preview-data": "node scripts/prepare-assets.mjs && node scripts/build-preview.mjs",
     "review": "node scripts/review.mjs"
   },
   "dependencies": {
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
+    "@types/node": "22.20.5",
     "axe-core": "4.14.0",
     "playwright": "1.64.1",
     "typescript": "5.7.3"
