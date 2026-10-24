@@ -191,9 +191,16 @@ export interface CapabilityCounts {
  * bloc (AT/DE/IT/NL/PT/ES) being absent.
  */
 export interface CountryCoverage {
+  /** Slug prefixes ("swedish", "uk", "au"), as before. Two prefixes can name one country. */
   company_data_active: string[];
   /** Includes deactivated caps — useful for "countries we've ever supported". */
   company_data_ever: string[];
+  /**
+   * ISO 3166-1 alpha-2 codes of the countries in company_data_active, one per
+   * country (au- and australian-company-data are both "AU"). Use this for a
+   * country COUNT; the prefix list double-counts aliases. Added 2026-10-24.
+   */
+  company_data_active_iso: string[];
 }
 
 export interface PlatformFacts {
@@ -208,7 +215,35 @@ export interface PlatformFacts {
   as_of: string;
 }
 
-const COMPANY_DATA_SLUG_PATTERN = /^([a-z]{2,12})-company-data$/;
+/**
+ * `<prefix>-company-data`, optionally with a vendor suffix
+ * (`us-company-data-cobalt`). The prefix is a country code ("uk", "cz") or an
+ * adjective ("swedish", "luxembourgish"); the earlier `{2,12}` bound dropped
+ * "luxembourgish" (13 letters), and the `$` anchor dropped suffixed slugs.
+ */
+const COMPANY_DATA_SLUG_PATTERN = /^([a-z]{2,})-company-data(?:-[a-z0-9-]+)?$/;
+
+/**
+ * Prefix → ISO code for every company-data prefix in use. Two-letter prefixes
+ * not listed here are taken as ISO codes as written ("cz" → "CZ"), except
+ * "uk", which is "GB". A new adjective prefix must be added here; the test
+ * "every company-data manifest prefix maps to a country" fails until it is.
+ */
+export const COMPANY_DATA_PREFIX_ISO: Record<string, string> = {
+  australian: "AU", austrian: "AT", belgian: "BE", brazilian: "BR", bulgarian: "BG",
+  canadian: "CA", croatian: "HR", cypriot: "CY", danish: "DK", dutch: "NL",
+  estonian: "EE", finnish: "FI", french: "FR", german: "DE", greek: "GR",
+  hungarian: "HU", irish: "IE", italian: "IT", japanese: "JP", latvian: "LV",
+  lithuanian: "LT", luxembourgish: "LU", maltese: "MT", norwegian: "NO", polish: "PL",
+  portuguese: "PT", romanian: "RO", singapore: "SG", slovak: "SK", slovenian: "SI",
+  spanish: "ES", swedish: "SE", swiss: "CH", uk: "GB",
+};
+
+/** ISO code for a company-data slug prefix, or null when the prefix is not a known country. */
+export function prefixToIso(prefix: string): string | null {
+  if (prefix in COMPANY_DATA_PREFIX_ISO) return COMPANY_DATA_PREFIX_ISO[prefix];
+  return /^[a-z]{2}$/.test(prefix) ? prefix.toUpperCase() : null;
+}
 
 export async function computePlatformFacts(): Promise<PlatformFacts> {
   const db = getDb();
@@ -222,8 +257,8 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
       COUNT(*) FILTER (WHERE lifecycle_state = 'active')::int AS active_total,
       COUNT(*) FILTER (WHERE lifecycle_state != 'deactivated')::int AS catalogued,
       ARRAY_AGG(slug) FILTER (WHERE is_free_tier = true) AS free_tier_slugs,
-      ARRAY_AGG(slug) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND slug LIKE '%-company-data') AS active_country_slugs,
-      ARRAY_AGG(slug) FILTER (WHERE slug LIKE '%-company-data') AS all_country_slugs
+      ARRAY_AGG(slug) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND slug LIKE '%-company-data%') AS active_country_slugs,
+      ARRAY_AGG(slug) FILTER (WHERE slug LIKE '%-company-data%') AS all_country_slugs
     FROM capabilities
   `);
 
@@ -257,6 +292,7 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
     countries: {
       company_data_active: activeCountries,
       company_data_ever: allCountries,
+      company_data_active_iso: countriesToIso(activeCountries),
     },
     processing_region: getProcessingLocation(),
     processing_jurisdiction: getStraleJurisdiction(),
@@ -265,15 +301,24 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
   };
 }
 
-// Exported for tests. Pulls the leading {cc} out of "{cc}-company-data".
-// Skips any slug whose prefix isn't 2 letters (e.g. "swedish-company-data"
-// returns "swedish" — keep it as-is so prose names survive too; UI layer
-// can map names → ISO codes if it wants ISO).
+// Exported for tests. Pulls the prefix out of "{prefix}-company-data[-vendor]".
+// Prose prefixes survive as written ("swedish-company-data" returns
+// "swedish"); countriesToIso maps them to one ISO code per country.
 export function extractCountryCodes(slugs: string[]): string[] {
   const out = new Set<string>();
   for (const s of slugs) {
     const m = s.match(COMPANY_DATA_SLUG_PATTERN);
     if (m) out.add(m[1]);
+  }
+  return [...out].sort();
+}
+
+/** One ISO code per country for a list of prefixes; unknown prefixes are left out. */
+export function countriesToIso(prefixes: string[]): string[] {
+  const out = new Set<string>();
+  for (const p of prefixes) {
+    const iso = prefixToIso(p);
+    if (iso) out.add(iso);
   }
   return [...out].sort();
 }

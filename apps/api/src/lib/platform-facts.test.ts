@@ -5,6 +5,8 @@ import {
   STATIC_FACTS,
   STALE_VENDORS,
   extractCountryCodes,
+  countriesToIso,
+  prefixToIso,
   getActiveVendorNames,
   getStaleVendorNames,
 } from "./platform-facts.js";
@@ -176,5 +178,31 @@ describe("extractCountryCodes", () => {
 
   it("empty input → empty output", () => {
     expect(extractCountryCodes([])).toEqual([]);
+  });
+
+  it("keeps prefixes longer than 12 letters (luxembourgish)", () => {
+    expect(extractCountryCodes(["luxembourgish-company-data"])).toEqual(["luxembourgish"]);
+  });
+
+  it("keeps vendor-suffixed slugs (us-company-data-cobalt)", () => {
+    expect(extractCountryCodes(["us-company-data-cobalt", "sanctions-check"])).toEqual(["us"]);
+  });
+});
+
+describe("countriesToIso", () => {
+  it("counts each country once, whatever its prefix", () => {
+    expect(countriesToIso(["au", "australian", "uk", "swedish", "cz", "us"])).toEqual(["AU", "CZ", "GB", "SE", "US"]);
+  });
+
+  it("drops a prefix that is not a known country rather than guessing", () => {
+    expect(countriesToIso(["martian"])).toEqual([]);
+  });
+
+  it("every company-data manifest prefix maps to a country", () => {
+    const dir = resolve(import.meta.dirname, "../../../../manifests");
+    const slugs = readdirSync(dir).filter((f) => f.endsWith(".yaml")).map((f) => f.replace(/\.yaml$/, ""));
+    const prefixes = extractCountryCodes(slugs);
+    expect(prefixes.length).toBeGreaterThan(20);
+    expect(prefixes.filter((p) => prefixToIso(p) === null)).toEqual([]);
   });
 });

@@ -81,7 +81,7 @@ describe("the card itself, built against a stubbed catalogue", () => {
     vi.doMock("../lib/platform-facts.js", () => ({
       computePlatformFacts: () => Promise.resolve({
         capability_counts: { active_visible: 3 },
-        countries: { company_data_active: ["se"] },
+        countries: { company_data_active: ["se"], company_data_active_iso: ["SE"] },
       }),
     }));
     const { buildAgentCard } = await import("./a2a.js");
