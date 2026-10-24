@@ -490,6 +490,49 @@ describe("tier 1 never hands Strale's own refusals to Chrome", () => {
     expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("REGRESSION: a body that breaks off mid-read ('terminated': a reset, a bad encoding) still renders, after a plain look", async () => {
+    for (const code of ["UND_ERR_SOCKET", "Z_DATA_ERROR"]) {
+      safeFetchMock.mockClear();
+      browserlessFetchMock.mockClear();
+      __resetWebProviderCacheForTests();
+      let calls = 0;
+      pageResponse = () => {
+        calls += 1;
+        if (calls > 1) return html(REAL_PAGE);
+        const broken = Object.assign(new TypeError("terminated"), { cause: Object.assign(new Error("other side closed"), { code }) });
+        return new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("<html><body>"));
+              controller.error(broken);
+            },
+          }),
+          { status: 200, headers: { "content-type": "text/html" } },
+        );
+      };
+      await expect(fetchPage(PAGE), code).resolves.toBeDefined();
+      // The first answer was never fully seen, so a plain look came before Chrome.
+      expect(pageCalls(), code).toHaveLength(2);
+      expect(browserlessFetchMock, code).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it("a refused connection is reported, not rendered", async () => {
+    pageResponse = () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }) });
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/connection was refused/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a redirect to an invalid URL ends the call with a readable sentence", async () => {
+    pageResponse = () => {
+      throw Object.assign(new TypeError("Invalid URL"), { code: "ERR_INVALID_URL" });
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/redirected to an address that is not a valid URL/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
   it("a page tier 1 saw (a JavaScript shell) is rendered without a second plain look", async () => {
     pageResponse = () => html("<html><body><div id=root></div></body></html>");
     await fetchPage(PAGE);

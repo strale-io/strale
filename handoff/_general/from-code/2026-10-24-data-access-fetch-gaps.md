@@ -40,12 +40,14 @@ Intent: close three fetch-path gaps of DEC-20261023-A adoption item 1 that the t
   - refusals are passed on;
   - DNS failures and refused connections are reported, where the old
     substring checks never matched undici's "fetch failed";
-  - any other transport failure falls through, after a plain look whenever
-    no plain request saw the site's first answer.
+  - any other transport failure falls through, including a body that breaks
+    off mid-read ("terminated"). Whenever no plain request fully saw the
+    site's first answer, a plain look comes first.
+  - A redirect to an invalid URL ends the call with a readable sentence.
 - `company-enrich` keeps rendering a 404 or 400 page as it did before this
   branch (it ignores the preflight's status): a quality question, not a
   data-access one.
-- **Tests.** Six regression tests, each failing with its fix reverted. Two
+- **Tests.** Regression tests for each fix, each confirmed to fail with its fix reverted, plus behaviour-kept tests (a JavaScript shell renders after one plain request). Two
   suites that queue Browserless responses on the global `fetch` mock
   (`web-extract-resilience`, `screenshot-url`) answer the ranged preflight
   separately.

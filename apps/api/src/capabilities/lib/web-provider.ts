@@ -563,8 +563,6 @@ async function fetchPageOnce(
         await discardBody(plainResp, "plain-fetch redirect target disallowed by robots.txt");
         throw err;
       }
-      // Every branch below checks this response for a block or a challenge.
-      sawFirstAnswer = true;
 
       if (plainResp.ok) {
         const contentType = plainResp.headers.get("content-type") ?? "";
@@ -598,6 +596,8 @@ async function fetchPageOnce(
           if (looksLikeJsChallenge(html)) {
             throw siteAccessRefusal(targetUrl, { kind: "challenge" });
           }
+          // The whole body was read and is not a challenge.
+          sawFirstAnswer = true;
           if (html.length > 2000 && visibleText().length > 200) {
             const fetchTimeMs = Date.now() - start;
             if (!skipCache) setCache(renderMode, targetUrl, html);
@@ -606,6 +606,8 @@ async function fetchPageOnce(
         } else {
           // Not HTML at all — nothing here will be read, so release it (#428).
           await discardBody(plainResp, `plain-fetch content-type ${contentType || "(none)"}`);
+          // Not a page, so not a challenge page: the status was the answer.
+          sawFirstAnswer = true;
         }
         // HTTP response received but not usable HTML (a JavaScript shell, a
         // non-HTML body) — not a block, so rendering it is allowed.
@@ -634,6 +636,9 @@ async function fetchPageOnce(
         if (looksLikeJsChallenge(errText)) {
           throw siteAccessRefusal(targetUrl, { kind: "challenge" });
         }
+        // An empty read may be a body that broke off (the reader swallows
+        // that), so only a body actually seen counts as the first answer.
+        if (errText) sawFirstAnswer = true;
       }
     } catch (err) {
       // #428: an oversized page is TERMINAL, never a reason to fall through.
@@ -650,15 +655,19 @@ async function fetchPageOnce(
       // A refusal Strale made itself (validateUrl or the blocklist on a
       // redirect hop), or the 4xx message built above: never a reason to have
       // Chrome visit the same place.
-      if (!isPreflightTransportFailure(err)) throw err;
-      // A name that does not resolve, or a refused connection, will not render
-      // either; no point paying Browserless for it. (undici's message is
-      // always "fetch failed"; the reason is the cause's code.)
+      if (!isPreflightTransportFailure(err)) throw readableRedirectError(err, targetUrl);
+      // A name that does not resolve, or a refused connection (a firewall
+      // refusing this network is a block), will not render either; no point
+      // paying Browserless for it. undici's message is always "fetch failed";
+      // the reason is the cause's code. TLS failures fall through: Node is
+      // stricter than Chrome about legacy servers and incomplete chains.
       const code = (err as { cause?: { code?: unknown } }).cause?.code;
       if (code === "ENOTFOUND" || code === "ECONNREFUSED") {
         const hostname = new URL(targetUrl).hostname;
         throw new Error(
-          `Could not reach ${hostname}. The domain may not exist or is not responding. Check the URL and try again.`,
+          code === "ENOTFOUND"
+            ? `Could not reach ${hostname} (or a site it redirects to): the domain name does not resolve. Check the URL and try again.`
+            : `Could not reach ${hostname} (or a site it redirects to): the connection was refused. Check the URL and try again.`,
         );
       }
       // Timeouts, a long redirect chain, other transport failures: fall
@@ -864,9 +873,25 @@ function ssrfRefusalIn(err: unknown): Error | null {
 function isPreflightTransportFailure(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   if (err.name === "AbortError" || err.name === "TimeoutError") return true;
-  if (err instanceof TypeError && err.message === "fetch failed") return true;
+  // undici: "fetch failed" before the response, "terminated" while reading
+  // the body (a reset, a corrupt encoding), each with the reason in `cause`.
+  if (err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated" || err.cause instanceof Error)) {
+    return true;
+  }
   // safeFetch's own message names the cap first and the caller's URL last.
   return err.message.startsWith("Too many redirects");
+}
+
+/**
+ * A redirect whose Location is not a URL surfaces as a bare TypeError
+ * "Invalid URL" from safeFetch's redirect loop. Chrome fails on it too, so it
+ * is the call's end; this gives it a sentence the caller can act on.
+ */
+function readableRedirectError(err: unknown, targetUrl: string): unknown {
+  if (err instanceof TypeError && (err as { code?: unknown }).code === "ERR_INVALID_URL") {
+    return new Error(`${new URL(targetUrl).hostname} redirected to an address that is not a valid URL, so the page could not be loaded.`);
+  }
+  return err;
 }
 
 /**
@@ -893,7 +918,7 @@ export async function assertPlainPreflightAllowed(targetUrl: string): Promise<nu
     const ssrf = ssrfRefusalIn(err);
     if (ssrf) throw ssrf;
     if (isPreflightTransportFailure(err)) return undefined;
-    throw err;
+    throw readableRedirectError(err, targetUrl);
   }
   try {
     await assertRedirectAllowed(targetUrl, res.url);
