@@ -36,7 +36,9 @@ export const PROHIBITED_UPSTREAM_HOSTS: ReadonlyMap<string, string> = new Map([
   ["rpc.ankr.com", "Ankr bars commercial exploitation of the Service without written consent"],
   ["eth.llamarpc.com", "terms unreadable and the endpoint answered HTTP 525 when checked"],
   ["cloudflare-eth.com", "Cloudflare's anonymous Ethereum gateway is discontinued"],
-  // 2026-10-24 (DEC-20261023-A; see VENDOR_TERMS_RECORDS below)
+  // 2026-10-24 (DEC-20261023-A; see VENDOR_TERMS_RECORDS below). Listed for the
+  // rule's never lane item 2 (getting around blocks) as much as for its terms,
+  // which are unrecorded: this list also holds hosts barred for HOW they fetch.
   ["r.jina.ai", "Jina Reader retries a blocked fetch through its own proxy pool by default and was used on an anonymous tier whose commercial terms were never recorded"],
 ]);
 
@@ -56,9 +58,10 @@ export function prohibitedHostsIn(text: string): string[] {
  * terms permit resale, verified and recorded").
  *
  * `resale` is what the terms SAY, not what Strale would like: "unverified"
- * means nobody has read a current copy that settles it. An unverified vendor
- * is not prohibited by this file — `PROHIBITED_UPSTREAM_HOSTS` is — but it is
- * an open decision, and the entry names where that decision is queued.
+ * means nobody has read a current copy that settles it. Being unverified does
+ * not by itself put a vendor on `PROHIBITED_UPSTREAM_HOSTS` (Jina is there
+ * for how it fetches, see above); a vendor still in use with unverified terms
+ * is an open decision, and the entry names where that decision is queued.
  *
  * `vendor-terms.test.ts` holds `capabilities` to the source tree: every
  * executor that calls one of `hosts` must be listed, so the record cannot
@@ -67,6 +70,8 @@ export function prohibitedHostsIn(text: string): string[] {
 export interface VendorTermsRecord {
   vendor: string;
   hosts: readonly string[];
+  /** Vendor id passed to meteredVendorFetch, when calls go through it. */
+  metered_id?: string;
   /** Executors that call one of `hosts`. */
   capabilities: readonly string[];
   resale: "permitted" | "prohibited" | "unverified";
@@ -84,6 +89,7 @@ export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
   {
     vendor: "Serper.dev",
     hosts: ["google.serper.dev"],
+    metered_id: "serper",
     capabilities: [
       "adverse-media-check",
       "backlink-check",
@@ -99,7 +105,9 @@ export const VENDOR_TERMS_RECORDS: readonly VendorTermsRecord[] = [
     accessed: "2026-10-24",
     how_read:
       "serper.dev was unreachable from the 2026-10-24 session (environment network policy). Read instead: a " +
-      "search engine's cached copy, about 878 days old per the search tool — not a current, dated copy.",
+      "web-search tool's summary of, and excerpts from, a cached copy about 878 days old per that tool. The " +
+      "quotations below are the tool's excerpts, not verified word-for-word against the page, and an ellipsis may " +
+      "hide qualifying words.",
     findings: [
       "Licence is a B2B use licence ('Permission is granted to download the materials … for as long as your use case " +
         "requires'), not a transfer of title; no clause grants resale or sublicensing of results.",

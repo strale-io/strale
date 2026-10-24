@@ -14,7 +14,7 @@ fill the expanded panel.
 
 ## OPEN
 
-**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · no deadline — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
+**DQ-39** · `your_call` · owner Petter · raised 2026-10-24 · no deadline (a two-week window is recommended below) — **eight of our tools resell Google results bought from Serper, and Serper's terms, as far as I could read them, do not permit that**
 
 Under the data-access rule you adopted today (DEC-20261023-A), we may resell a
 vendor's data only when the vendor's terms permit resale, checked and written
@@ -27,9 +27,10 @@ first three alone earned about €138 in the 90 days to 23 October.
 *What is established:*
 - I could not open serper.dev/terms from this session: its network
   policy blocks the site.
-- What I could read is a search engine's cached copy, about two and a
-  half years old (an estimate from the search tool, not a date stamped on
-  the page). In that copy:
+- What I could read is a web-search tool's summary of, and excerpts from, a
+  cached copy about two and a half years old (the tool's estimate, not a
+  date stamped on the page). The quotations are the tool's excerpts, not
+  checked word-for-word against the page. In that copy:
   - there is no permission to resell;
   - it forbids "mirror[ing] the materials on any other server as-is with
     no-value-added", which is close to what our plain google-search tool
@@ -49,17 +50,29 @@ first three alone earned about €138 in the 90 days to 23 October.
    (pay-as-you-go) and Brave Search API (its own index rather than
    Google's). SerpApi is out: it is a defendant in the Reddit and Google
    cases, and the rule excludes a vendor sued over how it collects.
-3. **Switch the eight tools off** until 1 or 2 resolves.
+3. **Stop using Serper** until 1 or 2 resolves: switch off the seven tools
+   that depend on it entirely, and remove the backup search from
+   adverse-media-check, which runs on Dilisense first and keeps working
+   without it.
+
+*What each option costs:*
+- *Option 1:* nothing, and a wait of days to weeks.
+- *Option 2:* engineering time, plus a per-call price that may differ from
+  Serper's. Results may differ where the new vendor is not Google-based.
+- *Option 3:* at least €46 a month in revenue (google-search, serp-analyze
+  and brand-mention-search alone earned €138 in 90 days). Agents calling
+  those tools get errors until a replacement exists.
 
 *My recommendation:*
 - **Today:** do option 1, ask Serper.
 - **Meanwhile:** strictly, the rule says unverified vendor data should not be
   resold. Keeping the eight tools running while we wait is therefore an
   exception only you can grant. I recommend granting it, time-boxed to two
-  weeks. Switching them off costs at least €46 a month in revenue (the three biggest alone), they have
-  run this way for months, and no claim or complaint has arrived (the
-  rule's own trigger for acting at once). If you'd rather apply the rule
-  strictly, choose option 3 now.
+  weeks. Option 3 has a real cost, the tools have run this way for months,
+  and no claim, complaint or demand has arrived (the rule acts at once on
+  a site owner's demand, and revisits the vendor lane if a claim reaches us
+  as a vendor's customer). If you'd rather apply the rule strictly, choose
+  option 3 now.
 - **If Serper says no or doesn't answer within two weeks:** do option 2, and
   switch off only the tools with no replacement.
 - **Option 2 groundwork:** I can prepare it in the meantime without
@@ -69,7 +82,7 @@ first three alone earned about €138 in the 90 days to 23 October.
 Moonlighter AB. Switching off revenue earners is also your call
 (DEC-20260812-A).
 
-*If you do nothing:* the eight tools keep reselling data whose terms we have
+*If you do nothing:* the eight tools keep using Serper data whose terms we have
 not confirmed. Under the rule you adopted, that is the "never" lane
 (reselling against vendor terms) if the terms turn out to forbid it.
 

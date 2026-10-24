@@ -178,19 +178,31 @@ describe("the licensed paths", () => {
 
 describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recorded)", () => {
   const CAPS = resolve(SRC, "capabilities");
-  const executors = readdirSync(CAPS)
-    .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
-    .map((f) => readFileSync(join(CAPS, f), "utf8"))
-    .map((src) => ({ slug: src.match(/registerCapability\(\s*"([^"]+)"/)?.[1], code: codeOnly(src) }))
-    .filter((e): e is { slug: string; code: string } => typeof e.slug === "string");
+  // Every source file under capabilities/, recursively, with comments stripped
+  // so an explanation that names a host is not mistaken for a call.
+  const files = walk(CAPS).map((f) => {
+    const src = readFileSync(f, "utf8");
+    const code = codeOnly(src);
+    return { file: rel(f), code, slug: code.match(/registerCapability\(\s*["'`]([^"'`]+)["'`]/)?.[1] };
+  });
+  const callsVendor = (code: string, record: (typeof VENDOR_TERMS_RECORDS)[number]) =>
+    record.hosts.some((h) => code.includes(h)) || code.includes(`meteredVendorFetch("${record.metered_id ?? "\u0000"}"`);
 
   for (const record of VENDOR_TERMS_RECORDS) {
     it(`${record.vendor}: lists exactly the executors that call it`, () => {
-      const callers = executors
-        .filter((e) => record.hosts.some((h) => e.code.includes(h)))
-        .map((e) => e.slug)
+      const callers = files
+        .filter((f) => f.slug && callsVendor(f.code, record))
+        .map((f) => f.slug as string)
         .sort();
       expect([...record.capabilities].sort()).toEqual(callers);
+    });
+
+    it(`${record.vendor}: no shared client outside an executor calls it unrecorded`, () => {
+      // A call routed through capabilities/lib or providers/ would hide its
+      // callers from the check above, so any such client fails here and must
+      // be handled explicitly.
+      const shared = files.filter((f) => !f.slug && callsVendor(f.code, record)).map((f) => f.file);
+      expect(shared).toEqual([]);
     });
 
     it(`${record.vendor}: carries its evidence`, () => {
@@ -202,12 +214,15 @@ describe("recorded vendor terms (DEC-20261023-A: resale terms verified and recor
     });
   }
 
-  it("an unverified vendor still in use names an open decision-queue entry that exists", () => {
+  it("an unverified vendor still in use names a decision-queue entry that is OPEN and your_call", () => {
     const queue = readFileSync(resolve(SRC, "../../../docs/company/DECISION-QUEUE.md"), "utf8");
+    const open = queue.slice(queue.indexOf("## OPEN"), queue.indexOf("## DECIDED"));
     for (const r of VENDOR_TERMS_RECORDS.filter((x) => x.resale === "unverified" && x.capabilities.length > 0)) {
       const dq = r.decision_ref.match(/DQ-\d+/)?.[0];
       expect(dq, `${r.vendor} has no DQ reference`).toBeDefined();
-      expect(queue).toContain(`**${dq}**`);
+      const line = open.split("\n").find((l) => l.startsWith(`**${dq}**`));
+      expect(line, `${dq} is not in the OPEN section`).toBeDefined();
+      expect(line).toContain("`your_call`");
     }
   });
 
