@@ -3,6 +3,7 @@ import { registerCapability, type CapabilityInput } from "./index.js";
 import { fetchRenderedHtml, htmlToText } from "./lib/browserless-extract.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
+import { SourceBlockedError } from "../lib/site-access.js";
 
 // ─── Container tracking — ISO 6346 validation + Browserless scraping ────────
 
@@ -253,6 +254,7 @@ registerCapability("container-track", async (input: CapabilityInput) => {
 
   // Try to scrape tracking info via Browserless
   let trackingData: Record<string, unknown> | null = null;
+  let blockedByCarrier = false;
 
   try {
     // Choose the best URL to scrape based on detected carrier
@@ -324,8 +326,11 @@ ${text.slice(0, 12000)}`,
         parseFailureError: () => new Error("Failed to parse container tracking data."),
       });
     }
-  } catch {
-    // Tracking scrape failed — return validation results with tracking URLs
+  } catch (err) {
+    // Tracking scrape failed — return validation results with tracking URLs.
+    // DEC-20261023-A: if the carrier's site refused Strale, say so rather
+    // than implying a transient failure.
+    if (err instanceof SourceBlockedError) blockedByCarrier = true;
   }
 
   return {
@@ -340,7 +345,9 @@ ${text.slice(0, 12000)}`,
       tracking_urls: trackingUrls,
       ...(trackingData ?? {
         status: "tracking_unavailable",
-        note: "Live tracking data could not be retrieved. Use the tracking URLs above to check manually.",
+        note: blockedByCarrier
+          ? "The carrier's website refuses automated access, and Strale does not route around a site's block. Use the tracking URLs above to check manually."
+          : "Live tracking data could not be retrieved. Use the tracking URLs above to check manually.",
       }),
     },
     provenance: {

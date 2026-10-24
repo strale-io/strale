@@ -116,6 +116,13 @@ describe("parse and match (RFC 9309 §2.1–2.2)", () => {
     expect(Date.now() - start).toBeLessThan(500);
   });
 
+  it("REGRESSION: one malformed escape does not switch percent-decoding off for the rest", () => {
+    // `%E9` alone is not valid UTF-8. Decoding all-or-nothing left `%73`
+    // encoded, so `/%73earch` slipped past `Disallow: /search`.
+    expect(allowed("User-agent: *\nDisallow: /search\n", "/%73earch?q=%E9")).toBe(false);
+    expect(allowed("User-agent: *\nDisallow: /caf%C3%A9/\n", "/caf%C3%A9/?x=%E9")).toBe(false);
+  });
+
   it("wildcard matching is exact, not just fast", () => {
     const robots = "User-agent: *\nDisallow: /a*b*c$\n";
     expect(allowed(robots, "/axxbyyc")).toBe(false);
@@ -191,6 +198,31 @@ describe("assertRobotsAllowed (access results, RFC 9309 §2.3.1)", () => {
     await expect(assertRobotsAllowed("https://site.test/x")).resolves.toBeUndefined();
     await expect(assertRobotsAllowed("https://site.test/y")).resolves.toBeUndefined();
     expect(safeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a body that stalls after the headers is a transport failure, cached like one", async () => {
+    const stalled = new Response(
+      new ReadableStream({
+        start(c) {
+          c.error(new Error("The operation was aborted due to timeout"));
+        },
+      }),
+      { status: 200 },
+    );
+    safeFetchMock.mockResolvedValueOnce(stalled);
+    await expect(assertRobotsAllowed("https://site.test/x")).resolves.toBeUndefined();
+    await expect(assertRobotsAllowed("https://site.test/y")).resolves.toBeUndefined();
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("REGRESSION: an over-long URL is refused before matching (bounds rules × path work)", async () => {
+    safeFetchMock.mockResolvedValue(text(`User-agent: *\n${"Disallow: /*aaaa*b\n".repeat(2000)}`));
+    const err = (await assertRobotsAllowed("https://site.test/" + "a".repeat(5000)).catch((e: unknown) => e)) as Error;
+    expect(err.message).toMatch(/^'url' must be 4096 characters or less/);
+    expect(isCapabilityRefusal(err)).toBe(true);
+    const start = Date.now();
+    await assertRobotsAllowed("https://site.test/" + "a".repeat(4000));
+    expect(Date.now() - start).toBeLessThan(1000);
   });
 
   it("concurrent checks for one origin share a single robots.txt request", async () => {

@@ -274,6 +274,12 @@ describe("a block on a source STRALE chose is a capability fault, not a refusal"
     expect(err.message).not.toMatch(/Use a page the site serves publicly/);
   });
 
+  it("the trust surfaces label it upstream, not a Strale defect", async () => {
+    pageResponse = () => html("denied", 403);
+    const err = (await fetchPage(PAGE, { source: "strale" }).catch((e: unknown) => e)) as Error;
+    expect(categorizeError(err)).toBe("upstream_error");
+  });
+
   it("a robots.txt disallow on a Strale-chosen source counts too", async () => {
     robotsBody = "User-agent: *\nDisallow: /\n";
     const err = (await fetchPage(PAGE, { source: "strale" }).catch((e: unknown) => e)) as Error;

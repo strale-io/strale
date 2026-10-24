@@ -1,5 +1,5 @@
 import { registerCapability, type CapabilityInput } from "./index.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
 import { MAX_SCRAPED_CONTACT_BYTES, readTextTruncated } from "../lib/resource-limits.js";
 import { assertTargetAllowed } from "./lib/tos-blocklist.js";
 import { assertRedirectAllowed, assertRobotsAllowed } from "../lib/robots-txt.js";
@@ -326,7 +326,12 @@ registerCapability("domain-contact-extract", async (input: CapabilityInput) => {
     }
     // Decode at the boundary so every extractor below sees one canonical
     // form, whichever variant the origin served this region.
-    await assertRedirectAllowed(homepageUrl, resp.url);
+    try {
+      await assertRedirectAllowed(homepageUrl, resp.url);
+    } catch (err) {
+      await discardBody(resp, "domain-contact-extract: redirect target disallowed by robots.txt");
+      throw err;
+    }
     homepageHtml = decodeJsonUnicodeEscapes(await readTextTruncated(resp, MAX_SCRAPED_CONTACT_BYTES));
     if (looksLikeJsChallenge(homepageHtml)) throw siteAccessRefusal(homepageUrl, { kind: "challenge" });
     fetchedUrls.push(homepageUrl);

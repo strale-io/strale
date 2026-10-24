@@ -38,8 +38,13 @@
  * per origin per five minutes, not on every call.
  *
  * Redirects: a fetch that ends on a different URL is checked again against
- * the final URL's robots.txt (`assertRedirectAllowed`), so an allowed URL
- * cannot be used to reach a disallowed one.
+ * the final URL's robots.txt (`assertRedirectAllowed`), and the page is
+ * refused. This runs AFTER the transport has followed the redirect — safeFetch
+ * and Browserless both follow it before Strale sees the final URL — so the
+ * disallowed page has been requested once; what the check guarantees is that
+ * its content is never used or returned. Checking every hop beforehand would
+ * need a per-hop hook in safeFetch's redirect loop, and is not possible on the
+ * Browserless route.
  *
  * Not a crawler: Strale fetches one page per call, so Crawl-delay is not
  * consulted.
@@ -125,11 +130,21 @@ export function rulesFor(groups: RobotsGroup[], token: string): RobotsRule[] {
  * as written rather than refusing the whole file.
  */
 function decodeForMatch(s: string): string {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s.replace(/%[0-9a-f]{2}/gi, (m) => m.toUpperCase());
-  }
+  // Per run of escapes, not all-or-nothing: one invalid sequence must not
+  // leave the rest encoded, or `/%73earch?q=%E9` would slip past
+  // `Disallow: /search` (independent review, 2026-10-24). Within a run that
+  // is not valid UTF-8, ASCII escapes still decode and the rest stay as
+  // upper-cased escapes.
+  return s.replace(/(?:%[0-9a-f]{2})+/gi, (run) => {
+    try {
+      return decodeURIComponent(run);
+    } catch {
+      return run.replace(/%([0-9a-f]{2})/gi, (m, hex: string) => {
+        const code = parseInt(hex, 16);
+        return code < 0x80 ? String.fromCharCode(code) : m.toUpperCase();
+      });
+    }
+  });
 }
 
 interface CompiledPattern {
@@ -174,11 +189,24 @@ function matches(p: CompiledPattern, target: string): boolean {
  * wins a tie; no matching rule means allowed.
  */
 export function isPathAllowed(rules: RobotsRule[], pathAndQuery: string): boolean {
+  return isAllowedCompiled(compileRules(rules), pathAndQuery);
+}
+
+interface CompiledRule {
+  allow: boolean;
+  pattern: CompiledPattern;
+}
+
+function compileRules(rules: RobotsRule[]): CompiledRule[] {
+  return rules.map((r) => ({ allow: r.allow, pattern: compilePattern(r.pattern) }));
+}
+
+function isAllowedCompiled(rules: CompiledRule[], pathAndQuery: string): boolean {
   if (pathAndQuery === "/robots.txt") return true;
   const target = decodeForMatch(pathAndQuery);
   let best: { allow: boolean; length: number } | null = null;
   for (const rule of rules) {
-    const compiled = compilePattern(rule.pattern);
+    const compiled = rule.pattern;
     if (!matches(compiled, target)) continue;
     if (
       !best ||
@@ -195,7 +223,7 @@ export function isPathAllowed(rules: RobotsRule[], pathAndQuery: string): boolea
 
 /** What one origin's robots.txt says, as far as this module needs. */
 type RobotsVerdict =
-  | { kind: "rules"; rules: RobotsRule[] }
+  | { kind: "rules"; rules: CompiledRule[] }
   | { kind: "allow_all" }
   | { kind: "transport_failed" }
   | { kind: "unreachable"; status: number };
@@ -209,6 +237,8 @@ const OK_TTL_MS = 60 * 60 * 1000;
 const UNREACHABLE_TTL_MS = 5 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 1000;
 const ROBOTS_TIMEOUT_MS = 5000;
+/** See assertRobotsAllowed: bounds rules × path-length matching work. */
+const MAX_MATCHED_PATH_CHARS = 4096;
 /** RFC 9309 §2.3.1.2: follow at least five consecutive redirects. */
 const ROBOTS_MAX_REDIRECTS = 5;
 
@@ -259,8 +289,19 @@ async function fetchVerdict(origin: string): Promise<RobotsVerdict> {
   }
 
   if (response.ok) {
-    const text = await readRobotsTxt(response);
-    return remember(origin, { kind: "rules", rules: rulesFor(parseRobotsTxt(text), STRALE_ROBOTS_TOKEN) });
+    let text: string;
+    try {
+      text = await readRobotsTxt(response);
+    } catch {
+      // Headers arrived, then the body stalled or broke: the same transport
+      // failure as above, and cached the same way, so a robots.txt that hangs
+      // mid-body does not cost its timeout on every call.
+      return remember(origin, { kind: "transport_failed" });
+    }
+    return remember(origin, {
+      kind: "rules",
+      rules: compileRules(rulesFor(parseRobotsTxt(text), STRALE_ROBOTS_TOKEN)),
+    });
   }
   await discardBody(response, `robots.txt HTTP ${response.status}`);
   if (response.status >= 500 || response.status === 429) {
@@ -290,7 +331,17 @@ export async function assertRobotsAllowed(targetUrl: string): Promise<void> {
   if (verdict.kind === "unreachable") {
     throw siteAccessRefusal(targetUrl, { kind: "robots_unavailable", status: verdict.status });
   }
-  if (!isPathAllowed(verdict.rules, `${parsed.pathname}${parsed.search}`)) {
+  const pathAndQuery = `${parsed.pathname}${parsed.search}`;
+  // Matching is linear per rule, so its cost is rules × path length. A site
+  // owner controls the rules (up to 500 KiB) and, on a customer-directed
+  // fetch, can control the URL too; capping the URL bounds the product.
+  // Servers commonly refuse request lines past 8 KiB (HTTP 414) anyway.
+  if (pathAndQuery.length > MAX_MATCHED_PATH_CHARS) {
+    throw new Error(
+      `'url' must be ${MAX_MATCHED_PATH_CHARS} characters or less in its path and query to be checked against robots.txt.`,
+    );
+  }
+  if (!isAllowedCompiled(verdict.rules, pathAndQuery)) {
     throw siteAccessRefusal(targetUrl, { kind: "robots_disallow" });
   }
 }

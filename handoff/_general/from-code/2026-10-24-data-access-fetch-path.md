@@ -73,10 +73,10 @@ as Strale on every route. (Adoption list: `docs/strategy/2026-10-23-data-access-
     makes it count as `upstream` and lets it open the breaker, so a dead
     source cannot stay listed unnoticed.
   - `fetchCompanyPage` always uses it.
-  - Marked with `source: "strale"`: `australian-company-data`,
+  - Marked with `source: "strale"`: the seven live readers
     `container-track`, `customs-duty-lookup`, `eu-trademark-search`,
     `gdpr-fine-lookup`, `japanese-company-data`, `price-compare` and
-    `youtube-summarize`.
+    `youtube-summarize`, plus the deactivated `australian-company-data`.
 - **Latency.** A robots.txt transport failure is cached for 5 min, and
   concurrent checks for one origin share one request.
 - **RFC 9309 fixes:** `Sitemap:` lines no longer split groups; matching
@@ -92,6 +92,34 @@ as Strale on every route. (Adoption list: `docs/strategy/2026-10-23-data-access-
 - **Every non-block 4xx is terminal.** This is deliberate and now stated in
   `site-access.ts`. A 400 stays an ordinary "URL returned HTTP 400" failure,
   not a refusal (tested).
+
+## Second independent review (fresh context, on the fix commit)
+
+Nothing blocking. Fixed:
+- Percent-decoding is now done per run of escapes. One invalid escape had
+  switched all decoding off, so `/%73earch?q=%E9` got past
+  `Disallow: /search`.
+- YouTube's HTTP-200 "confirm you're not a bot" page is treated as a block,
+  and the direct fetch now checks robots.txt and challenge pages.
+- The URL checked against robots.txt is capped at 4,096 characters, and
+  patterns are compiled once per origin. This bounds the rules × path
+  matching cost: about 750 ms measured with 20,000 adversarial rules and an
+  8 KB path.
+- A robots.txt body that stalls after the headers is cached as a transport
+  failure.
+- `domain-contact-extract` now releases the body when a redirect is refused.
+- The trust surfaces label a `SourceBlockedError` `upstream_error`, not
+  `internal_error`.
+- `container-track` says the carrier refused Strale when it did.
+
+Documented rather than changed:
+- The redirect re-check runs after the transport has followed the redirect.
+  The disallowed page is requested once, but its content is never used.
+- A block on a Strale source whose message carries "HTTP 403" trips the
+  breaker immediately, the same as a plain HTTP 403 did before.
+- `container-track` still degrades to a successful validation-only answer
+  when tracking fails, so a carrier block there does not count against the
+  capability. That is the product's existing design.
 
 ## Tests
 

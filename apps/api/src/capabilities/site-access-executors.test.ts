@@ -42,7 +42,12 @@ vi.mock("../lib/url-validator.js", async (importOriginal) => ({
 
 import { getDirectExecutor } from "./index.js";
 import { __resetRobotsCacheForTests } from "../lib/robots-txt.js";
-import { STRALE_USER_AGENT, SiteAccessRefusedError, siteAccessRefusal } from "../lib/site-access.js";
+import {
+  STRALE_USER_AGENT,
+  SiteAccessRefusedError,
+  SourceBlockedError,
+  siteAccessRefusal,
+} from "../lib/site-access.js";
 import { isCapabilityRefusal } from "../lib/capability-refusal.js";
 import { classifyTransactionFailure } from "../lib/transaction-failure-taxonomy.js";
 
@@ -56,6 +61,8 @@ import "./privacy-policy-analyze.js";
 import "./screenshot-url.js";
 import "./html-to-pdf.js";
 import "./youtube-summarize.js";
+import "./landing-page-roast.js";
+import "./container-track.js";
 
 const PAGE_HTML = `<html><head><title>t</title></head><body><p>${"Real words here. ".repeat(300)}</p></body></html>`;
 
@@ -290,10 +297,57 @@ describe("screenshots and PDFs of a block page are refused, not billed", () => {
 });
 
 describe("youtube-summarize", () => {
+  it("REGRESSION: YouTube's HTTP-200 'confirm you're not a bot' page is a block, not a reason to render", async () => {
+    pageResponse = () => html("<html><body>Sign in to confirm you’re not a bot</body></html>");
+    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    expect(fetchRenderedHtml).not.toHaveBeenCalled();
+  });
+
+  it("a robots.txt disallow on the watch page is a block too", async () => {
+    robotsBody = "User-agent: *\nDisallow: /watch\n";
+    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    expect(fetchRenderedHtml).not.toHaveBeenCalled();
+    expect(pageCalls()).toHaveLength(0);
+  });
+
+  it("POSITIVE CONTROL: a 200 page without captions and without a block still renders", async () => {
+    pageResponse = () => html("<html><body>watch page, captions load via JS</body></html>");
+    fetchRenderedHtml.mockResolvedValue("<html>no captions here either</html>");
+    await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
+    expect(fetchRenderedHtml).toHaveBeenCalledTimes(1);
+  });
+
   it("REGRESSION: a refused watch page is not re-fetched through Browserless", async () => {
     pageResponse = () => html("no", 429);
     await run("youtube-summarize", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" });
     expect(fetchRenderedHtml).not.toHaveBeenCalled();
+  });
+});
+
+describe("landing-page-roast", () => {
+  it("refuses when Browserless reports the target's 403 on the screenshot", async () => {
+    browserlessFetchMock.mockResolvedValue(
+      new Response(Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
+        status: 200,
+        headers: { "content-type": "image/png", "x-response-code": "403" },
+      }),
+    );
+    const err = await run("landing-page-roast", { url: "https://site.test" });
+    expect(err).toBeInstanceOf(SiteAccessRefusedError);
+  });
+});
+
+describe("container-track", () => {
+  it("says the carrier refused Strale, when it did", async () => {
+    fetchRenderedHtml.mockRejectedValue(
+      new SourceBlockedError("Source unavailable to Strale: carrier refuses automated access (HTTP 403).", {
+        kind: "http",
+        status: 403,
+      }),
+    );
+    const exec = getDirectExecutor("container-track")!;
+    const r = await exec({ container_number: "MSCU1234565", carrier: "msc" });
+    expect(String(r.output.note)).toMatch(/refuses automated access/);
   });
 });
 
