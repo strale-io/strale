@@ -537,6 +537,10 @@ async function fetchPageOnce(
   // Browserless if the response looks like an SPA shell or is too short.
   // IMPORTANT: DNS failures and connection refused are fatal — don't waste
   // 30+ seconds on Browserless for a URL that doesn't resolve.
+  // Whether a plain request has seen the site's first answer (and so its
+  // block or challenge) before Chrome is asked; if not, the preflight below
+  // takes that look (DEC-20261023-A).
+  let sawFirstAnswer = false;
   if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
     try {
       const start = Date.now();
@@ -559,6 +563,8 @@ async function fetchPageOnce(
         await discardBody(plainResp, "plain-fetch redirect target disallowed by robots.txt");
         throw err;
       }
+      // Every branch below checks this response for a block or a challenge.
+      sawFirstAnswer = true;
 
       if (plainResp.ok) {
         const contentType = plainResp.headers.get("content-type") ?? "";
@@ -638,31 +644,31 @@ async function fetchPageOnce(
       if (err instanceof ResourceLimitError) throw err;
       // A block is terminal too — never a reason to try the next route.
       if (err instanceof SiteAccessRefusedError) throw err;
-      const msg = err instanceof Error ? err.message : String(err);
-      // Helpful 4xx message already constructed upstream — propagate as-is.
-      if (msg.includes("URL returned HTTP 4")) {
-        throw err;
-      }
-      // DNS failures, connection refused, and SSL errors are fatal — no point
-      // sending to Browserless, the domain simply doesn't resolve.
-      if (
-        msg.includes("ENOTFOUND") ||
-        msg.includes("ECONNREFUSED") ||
-        msg.includes("ERR_TLS") ||
-        msg.includes("getaddrinfo")
-      ) {
+      // A connection-time SSRF refusal is Strale's own, not a transport blip.
+      const ssrf = ssrfRefusalIn(err);
+      if (ssrf) throw ssrf;
+      // A refusal Strale made itself (validateUrl or the blocklist on a
+      // redirect hop), or the 4xx message built above: never a reason to have
+      // Chrome visit the same place.
+      if (!isPreflightTransportFailure(err)) throw err;
+      // A name that does not resolve, or a refused connection, will not render
+      // either; no point paying Browserless for it. (undici's message is
+      // always "fetch failed"; the reason is the cause's code.)
+      const code = (err as { cause?: { code?: unknown } }).cause?.code;
+      if (code === "ENOTFOUND" || code === "ECONNREFUSED") {
         const hostname = new URL(targetUrl).hostname;
         throw new Error(
           `Could not reach ${hostname}. The domain may not exist or is not responding. Check the URL and try again.`,
         );
       }
-      // Timeouts and other transient errors: fall through to Browserless
+      // Timeouts, a long redirect chain, other transport failures: fall
+      // through to Browserless, after the plain look below.
     }
   }
 
-  // When tier 1 did not run, nothing has seen the site's first answer before
-  // Chrome runs its scripts, so look at it plainly first (DEC-20261023-A).
-  if (skipFallback || (options?.waitUntil && options.waitUntil !== "networkidle0")) {
+  // When no plain request saw the site's first answer (no tier 1, or tier 1
+  // failed in transport), look at it plainly before Chrome runs its scripts.
+  if (!sawFirstAnswer) {
     const status = await assertPlainPreflightAllowed(targetUrl);
     // As in tier 1, any other 4xx is the target's final answer about this
     // URL; 416 is the one a ranged GET can draw by itself.

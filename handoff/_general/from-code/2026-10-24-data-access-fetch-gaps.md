@@ -33,6 +33,18 @@ Intent: close three fetch-path gaps of DEC-20261023-A adoption item 1 that the t
     SSRF refusal is rethrown as its cause, so its "restricted address"
     message reaches the failure taxonomy.
   - Cost: one plain request per call on those routes, no vendor cost.
+- **Tier 1 no longer hands Strale's own refusals to Chrome.** Its catch
+  sent every unrecognised error to Browserless, including a blocklisted
+  host on a redirect hop and the connection-time SSRF block. Chrome then
+  visited the place Strale had refused. It now uses the preflight's split:
+  - refusals are passed on;
+  - DNS failures and refused connections are reported, where the old
+    substring checks never matched undici's "fetch failed";
+  - any other transport failure falls through, after a plain look whenever
+    no plain request saw the site's first answer.
+- `company-enrich` keeps rendering a 404 or 400 page as it did before this
+  branch (it ignores the preflight's status): a quality question, not a
+  data-access one.
 - **Tests.** Six regression tests, each failing with its fix reverted. Two
   suites that queue Browserless responses on the global `fetch` mock
   (`web-extract-resilience`, `screenshot-url`) answer the ranged preflight

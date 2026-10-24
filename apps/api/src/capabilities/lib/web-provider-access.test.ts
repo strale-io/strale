@@ -439,3 +439,61 @@ describe("a Browserless redirect is held to the blocklist", () => {
     await expect(assertRenderedTargetAllowed(PAGE, res)).resolves.toBeUndefined();
   });
 });
+
+describe("tier 1 never hands Strale's own refusals to Chrome", () => {
+  // Before this, any tier-1 error the catch did not recognise fell through to
+  // Browserless — including a blocklist refusal on a redirect hop and the
+  // connection-time SSRF block — so Chrome visited the place Strale refused.
+  it("REGRESSION: a blocklisted host on a redirect hop is refused, and Chrome is not asked", async () => {
+    pageResponse = () => {
+      throw new Error("LinkedIn is not a supported source: its Terms of Service prohibit automated access, so Strale does not fetch it.");
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/Terms of Service prohibit automated access/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: a connection-time SSRF block is refused as itself, and Chrome is not asked", async () => {
+    const refusal = Object.assign(new Error("Resolved host targets a restricted address."), { code: "ESSRFBLOCKED" });
+    pageResponse = () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: refusal });
+    };
+    await expect(fetchPage(PAGE)).rejects.toBe(refusal);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: a name that does not resolve is reported, not rendered (undici's message is only 'fetch failed')", async () => {
+    pageResponse = () => {
+      throw Object.assign(new TypeError("fetch failed"), { cause: Object.assign(new Error("getaddrinfo ENOTFOUND site.test"), { code: "ENOTFOUND" }) });
+    };
+    await expect(fetchPage(PAGE)).rejects.toThrow(/Could not reach site\.test/);
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("REGRESSION: after a tier-1 transport failure, a challenge seen by the plain look stops the call", async () => {
+    let calls = 0;
+    pageResponse = () => {
+      calls += 1;
+      if (calls === 1) throw new Error("Too many redirects (>3) — refusing to follow further. Starting URL: https://site.test/page.");
+      return html(CHALLENGE);
+    };
+    const err = await refusalFrom(fetchPage(PAGE));
+    expect(err.block.kind).toBe("challenge");
+    expect(browserlessFetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a tier-1 timeout still reaches Chrome once the plain look also fails in transport", async () => {
+    pageResponse = () => {
+      throw Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError", code: 23 });
+    };
+    await expect(fetchPage(PAGE)).resolves.toBeDefined();
+    expect(pageCalls()).toHaveLength(2);
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("a page tier 1 saw (a JavaScript shell) is rendered without a second plain look", async () => {
+    pageResponse = () => html("<html><body><div id=root></div></body></html>");
+    await fetchPage(PAGE);
+    expect(pageCalls()).toHaveLength(1);
+    expect(browserlessFetchMock).toHaveBeenCalledTimes(1);
+  });
+});
