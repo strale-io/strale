@@ -106,6 +106,9 @@ export const SLUG_GROUP: Record<string, JobId> = {
   "screenshot-url": "web",
 };
 
+/** Company-registry tools are named `<country>-company-data[-vendor]`, whatever their API category. */
+const REGISTRY = /^[a-z]+-company-data(?:-[a-z0-9-]+)?$/;
+
 export function jobFor(slug: string, category: string): JobId | undefined {
-  return SLUG_GROUP[slug] ?? CATEGORY_GROUP[category];
+  return SLUG_GROUP[slug] ?? (REGISTRY.test(slug) ? "company" : CATEGORY_GROUP[category]);
 }
