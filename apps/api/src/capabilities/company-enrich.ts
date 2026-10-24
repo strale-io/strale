@@ -8,7 +8,7 @@ import { browserlessFetch } from "../lib/metered-vendor-fetch.js";
 import { readPageHtml } from "../lib/resource-limits.js";
 import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { STRALE_USER_AGENT, siteAccessRefusal } from "../lib/site-access.js";
-import { assertRenderedTargetAllowed, looksLikeJsChallenge } from "./lib/web-provider.js";
+import { assertPlainPreflightAllowed, assertRenderedTargetAllowed, looksLikeJsChallenge } from "./lib/web-provider.js";
 
 const EXTRACTION_PROMPT = `You are a company intelligence extraction system.
 
@@ -70,8 +70,11 @@ async function scrapeUrl(url: string): Promise<string> {
   // undici Dispatcher can't protect that hop. The only layer we own is
   // refusing to forward — validateUrl throws on private IPs / bad schemes.
   await validateUrl(url);
-  // DEC-20261023-A: robots.txt before Browserless is asked for the page.
+  // DEC-20261023-A: robots.txt before Browserless is asked for the page, and
+  // a plain look first, so a block or a JavaScript challenge stops here
+  // instead of being run by Chrome.
   await assertRobotsAllowed(url);
+  await assertPlainPreflightAllowed(url);
 
   const browserlessUrl = process.env.BROWSERLESS_URL;
   const browserlessKey = process.env.BROWSERLESS_API_KEY;

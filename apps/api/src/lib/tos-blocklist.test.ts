@@ -87,6 +87,12 @@ describe("findProhibitedTarget", () => {
 });
 
 describe("Reddit (DEC-20261023-A never lane, item 4)", () => {
+  it("REGRESSION: blocks the commercial registry aggregators the rule names (never lane item 5)", () => {
+    for (const url of ["https://www.allabolag.se/5560125790", "https://www.northdata.com/Acme", "https://www.northdata.de/Acme"]) {
+      expect(() => assertTargetAllowed(url), url).toThrow(TOS_REFUSAL_MARKER);
+    }
+  });
+
   it("REGRESSION: blocks reddit.com, its subdomains and redd.it", () => {
     for (const url of [
       "https://www.reddit.com/user/acme/",

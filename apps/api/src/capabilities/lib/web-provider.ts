@@ -537,6 +537,10 @@ async function fetchPageOnce(
   // Browserless if the response looks like an SPA shell or is too short.
   // IMPORTANT: DNS failures and connection refused are fatal — don't waste
   // 30+ seconds on Browserless for a URL that doesn't resolve.
+  // Whether a plain request has seen the site's first answer (and so its
+  // block or challenge) before Chrome is asked; if not, the preflight below
+  // takes that look (DEC-20261023-A).
+  let sawFirstAnswer = false;
   if (!skipFallback && (!options?.waitUntil || options.waitUntil === "networkidle0")) {
     try {
       const start = Date.now();
@@ -592,6 +596,8 @@ async function fetchPageOnce(
           if (looksLikeJsChallenge(html)) {
             throw siteAccessRefusal(targetUrl, { kind: "challenge" });
           }
+          // The whole body was read and is not a challenge.
+          sawFirstAnswer = true;
           if (html.length > 2000 && visibleText().length > 200) {
             const fetchTimeMs = Date.now() - start;
             if (!skipCache) setCache(renderMode, targetUrl, html);
@@ -600,6 +606,8 @@ async function fetchPageOnce(
         } else {
           // Not HTML at all — nothing here will be read, so release it (#428).
           await discardBody(plainResp, `plain-fetch content-type ${contentType || "(none)"}`);
+          // Not a page, so not a challenge page: the status was the answer.
+          sawFirstAnswer = true;
         }
         // HTTP response received but not usable HTML (a JavaScript shell, a
         // non-HTML body) — not a block, so rendering it is allowed.
@@ -628,6 +636,9 @@ async function fetchPageOnce(
         if (looksLikeJsChallenge(errText)) {
           throw siteAccessRefusal(targetUrl, { kind: "challenge" });
         }
+        // An empty read may be a body that broke off (the reader swallows
+        // that), so only a body actually seen counts as the first answer.
+        if (errText) sawFirstAnswer = true;
       }
     } catch (err) {
       // #428: an oversized page is TERMINAL, never a reason to fall through.
@@ -638,25 +649,40 @@ async function fetchPageOnce(
       if (err instanceof ResourceLimitError) throw err;
       // A block is terminal too — never a reason to try the next route.
       if (err instanceof SiteAccessRefusedError) throw err;
-      const msg = err instanceof Error ? err.message : String(err);
-      // Helpful 4xx message already constructed upstream — propagate as-is.
-      if (msg.includes("URL returned HTTP 4")) {
-        throw err;
-      }
-      // DNS failures, connection refused, and SSL errors are fatal — no point
-      // sending to Browserless, the domain simply doesn't resolve.
-      if (
-        msg.includes("ENOTFOUND") ||
-        msg.includes("ECONNREFUSED") ||
-        msg.includes("ERR_TLS") ||
-        msg.includes("getaddrinfo")
-      ) {
+      // A connection-time SSRF refusal is Strale's own, not a transport blip.
+      const ssrf = ssrfRefusalIn(err);
+      if (ssrf) throw ssrf;
+      // A refusal Strale made itself (validateUrl or the blocklist on a
+      // redirect hop), or the 4xx message built above: never a reason to have
+      // Chrome visit the same place.
+      if (!isPreflightTransportFailure(err)) throw readableRedirectError(err, targetUrl);
+      // A name that does not resolve, or a refused connection (a firewall
+      // refusing this network is a block), will not render either; no point
+      // paying Browserless for it. undici's message is always "fetch failed";
+      // the reason is the cause's code. TLS failures fall through: Node is
+      // stricter than Chrome about legacy servers and incomplete chains.
+      const code = (err as { cause?: { code?: unknown } }).cause?.code;
+      if (code === "ENOTFOUND" || code === "ECONNREFUSED") {
         const hostname = new URL(targetUrl).hostname;
         throw new Error(
-          `Could not reach ${hostname}. The domain may not exist or is not responding. Check the URL and try again.`,
+          code === "ENOTFOUND"
+            ? `Could not reach ${hostname} (or a site it redirects to): the domain name does not resolve. Check the URL and try again.`
+            : `Could not reach ${hostname} (or a site it redirects to): the connection was refused. Check the URL and try again.`,
         );
       }
-      // Timeouts and other transient errors: fall through to Browserless
+      // Timeouts, a long redirect chain, other transport failures: fall
+      // through to Browserless, after the plain look below.
+    }
+  }
+
+  // When no plain request saw the site's first answer (no tier 1, or tier 1
+  // failed in transport), look at it plainly before Chrome runs its scripts.
+  if (!sawFirstAnswer) {
+    const status = await assertPlainPreflightAllowed(targetUrl);
+    // As in tier 1, any other 4xx is the target's final answer about this
+    // URL; 416 is the one a ranged GET can draw by itself.
+    if (status !== undefined && status >= 400 && status < 500 && status !== 416) {
+      throw new Error(`URL returned HTTP ${status}. ${humanizeBrowserlessStatus(status, targetUrl)}`);
     }
   }
 
@@ -808,12 +834,105 @@ export async function assertRenderedTargetAllowed(targetUrl: string, response: R
     await discardBody(response, `browserless target HTTP ${targetStatus} (site block)`);
     throw siteAccessRefusal(targetUrl, { kind: "http", status: targetStatus });
   }
+  const finalUrl = response.headers.get("x-response-url");
   try {
-    await assertRedirectAllowed(targetUrl, response.headers.get("x-response-url"));
+    // Chrome followed the redirects itself, so the blocklist safeFetch applies
+    // to every hop has not seen where it landed.
+    if (finalUrl) assertTargetAllowed(finalUrl);
+    await assertRedirectAllowed(targetUrl, finalUrl);
   } catch (err) {
-    await discardBody(response, "browserless redirect target disallowed by robots.txt");
+    await discardBody(response, "browserless redirect target refused");
     throw err;
   }
+}
+
+/** The bytes the preflight reads: looksLikeJsChallenge looks at the first 6000 characters. */
+export const PREFLIGHT_RANGE = "bytes=0-8191";
+
+/** Chrome follows up to 20 redirects; the preflight follows the same chain. */
+const PREFLIGHT_MAX_REDIRECTS = 20;
+
+/**
+ * The connection-time SSRF refusal inside an undici "fetch failed", if that is
+ * what `err` is. Rethrown as itself so its own message ("restricted address")
+ * reaches the failure taxonomy, which excuses it as caller input.
+ */
+function ssrfRefusalIn(err: unknown): Error | null {
+  const cause = (err as { cause?: unknown } | null)?.cause;
+  return cause instanceof Error && (cause as { code?: unknown }).code === "ESSRFBLOCKED" ? cause : null;
+}
+
+/**
+ * Whether a preflight error is a transport failure the render may still get
+ * past, and will report in its own terms. undici reports every transport
+ * failure (DNS, connect, TLS, a malformed response) as a TypeError "fetch
+ * failed" with the reason in `cause`; a timeout is a TimeoutError. A refusal
+ * Strale makes itself (validateUrl, the blocklist on a redirect hop) is a
+ * plain Error and is never one; the SSRF refusal is handled before this.
+ */
+function isPreflightTransportFailure(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (err.name === "AbortError" || err.name === "TimeoutError") return true;
+  // undici: "fetch failed" before the response, "terminated" while reading
+  // the body (a reset, a corrupt encoding), each with the reason in `cause`.
+  if (err instanceof TypeError && (err.message === "fetch failed" || err.message === "terminated" || err.cause instanceof Error)) {
+    return true;
+  }
+  // safeFetch's own message names the cap first and the caller's URL last.
+  return err.message.startsWith("Too many redirects");
+}
+
+/**
+ * A redirect whose Location is not a URL surfaces as a bare TypeError
+ * "Invalid URL" from safeFetch's redirect loop. Chrome fails on it too, so it
+ * is the call's end; this gives it a sentence the caller can act on.
+ */
+function readableRedirectError(err: unknown, targetUrl: string): unknown {
+  if (err instanceof TypeError && (err as { code?: unknown }).code === "ERR_INVALID_URL") {
+    return new Error(`${new URL(targetUrl).hostname} redirected to an address that is not a valid URL, so the page could not be loaded.`);
+  }
+  return err;
+}
+
+/**
+ * A plain look at `targetUrl` before a rendered route that has no plain tier
+ * (web-provider with skipFallback, /screenshot, /pdf). Chrome can run a
+ * JavaScript challenge to completion before the page is read, which the rule
+ * forbids (DEC-20261023-A: getting around blocks); the plain response shows
+ * the block or the challenge before any script runs. Refuses a block status,
+ * a challenge page (on any status), and a redirect robots.txt disallows;
+ * safeFetch refuses a blocklisted host on every hop. Returns the status, so a
+ * caller that ends on other 4xx answers (fetchPage, as in tier 1) can. A
+ * transport failure is left to the rendered route and returns undefined.
+ */
+export async function assertPlainPreflightAllowed(targetUrl: string): Promise<number | undefined> {
+  let res: Response;
+  try {
+    res = await safeFetch(targetUrl, {
+      // Only the start of the body is read, so ask for only that.
+      headers: { "User-Agent": STRALE_USER_AGENT, "Accept": "text/html,application/xhtml+xml", "Range": PREFLIGHT_RANGE },
+      maxRedirects: PREFLIGHT_MAX_REDIRECTS,
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch (err) {
+    const ssrf = ssrfRefusalIn(err);
+    if (ssrf) throw ssrf;
+    if (isPreflightTransportFailure(err)) return undefined;
+    throw readableRedirectError(err, targetUrl);
+  }
+  try {
+    await assertRedirectAllowed(targetUrl, res.url);
+  } catch (err) {
+    await discardBody(res, "preflight redirect target disallowed by robots.txt");
+    throw err;
+  }
+  if (isBlockStatus(res.status)) {
+    await discardBody(res, `preflight HTTP ${res.status} (site block)`);
+    throw siteAccessRefusal(targetUrl, { kind: "http", status: res.status });
+  }
+  const head = await readErrorTextTruncated(res, 8192);
+  if (looksLikeJsChallenge(head)) throw siteAccessRefusal(targetUrl, { kind: "challenge" });
+  return res.status;
 }
 
 // ─── Convenience wrappers (drop-in replacements for browserless-extract) ────
