@@ -47,7 +47,16 @@ The first pass FAILED and everything it found was fixed in the third commit:
 - Phones get visible labels and a distinct IBAN glyph. The tool tags are hidden from screen readers, and the line length resets on resize.
 - Tokens are used for easing and the magnet reach, and the button transitions are complete.
 
+**Second batch (same PR): the missing pages**
+- `/pricing` (mine). `/docs` plus `/docs/mcp`, `/docs/api`, `/docs/sdks` and `/docs/x402`, `/security`, `/about`, and `/use-cases` plus six job pages were built by three worktree agents and merged here.
+- The homepage got a confident copy pass, per Petter: "I do not want language that is overly conservative or language that doesn't belong on a marketing page". Precision moves to the docs and /security.
+- `content/retention.ts` is the single switch for the 90-day content claim. It was briefly false on a mistaken production query of `deleted_at`. The correct check is `redacted_at`, which shows 5 of 732,115 rows past 90 days still uncleared, all under a day late, so the switch is true.
+- Independent review of the new pages: the first pass FAILED on a blanket "straight from the official register" claim on the homepage. That and every should-fix were fixed in 033ed834.
+  - One item was rejected with evidence: the invoice-check example keys match the bundle's published `example_output`.
+
 **Not done / open**
+- Not built: `/signup`, `/topup`, `/terms`, `/privacy` and `/guides`, which the footer and the signup CTAs link to. These are functional and legal pages carried over from strale-frontend (SITE-STRUCTURE §15–17).
+- The `invoice-verify-*` published `example_output` disclaimer still names OpenSanctions. The vendor is Dilisense (DEC-20260429-A), so this is a stale public claim in the solutions data.
 - The live panel shows recent *tests*, not recent customer calls. There is no
   public source of calls, and publishing one would expose traffic.
 - The hero lab artifact (claude.ai) holds the rejected variants for reference.
