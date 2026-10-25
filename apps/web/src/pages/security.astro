@@ -30,6 +30,11 @@ const PLACE_SHORT: Record<string, string> = { US: "United States", EU: "European
 
 const days = (n: number) => `${plural(n, "day")}${n % 365 === 0 && n >= 365 ? ` (${n / 365} years)` : ""}`;
 const contentDays = facts.static.pii_retention_days;
+// The 90-day content clearing is the policy, but on 2026-10-25 a production query found it was not
+// running (732,114 calls past 90 days still held content). Until the fix is deployed and verified
+// in production (session "Fix 90-day call-content clearing"), the page states only the record
+// period. Set to true in the PR that verifies the drain.
+const CONTENT_CLEARING_VERIFIED = false;
 const recordDays = facts.static.retention_days_default;
 
 // What each vendor key does, in words. Names always come from facts; a new key
@@ -69,7 +74,7 @@ const disputeCall = [
 
 const glance = [
   { term: "Calls processed in", value: place ? PLACE_SHORT[facts.processing_jurisdiction] : "Named in each call’s audit record" },
-  { term: "Call content cleared after", value: plural(contentDays, "day") },
+  ...(CONTENT_CLEARING_VERIFIED ? [{ term: "Call content cleared after", value: plural(contentDays, "day") }] : []),
   { term: "Call records kept for", value: plural(recordDays, "day") },
   { term: "API keys stored as", value: "SHA-256 hashes" },
 ];
@@ -117,6 +122,8 @@ const glance = [
     <div class="container split">
       <h2 id="retention-title" class="t-section">What is kept, and for how long</h2>
       <div class="stack-loose prose">
+        {CONTENT_CLEARING_VERIFIED ? (
+          <>
         <p class="t-body">Every call leaves a record, and the record has two parts on two clocks.</p>
         <div class="grid-2 clocks">
           <article class="card">
@@ -131,6 +138,10 @@ const glance = [
           </article>
         </div>
         <p class="t-body">Content is cleared in place, so the chain of integrity hashes stays verifiable after the content is gone. A dispute raised within {plural(contentDays, "day")} can be checked against what the call actually sent and returned; after that, the record still shows that the call ran, when, and with which tool.</p>
+          </>
+        ) : (
+          <p class="t-body">Every call leaves a record: which tool ran, when, the outcome, the price, how long it took, and the integrity hash that links it to the record before it. Records are kept for {days(recordDays)}.</p>
+        )}
         <p class="small muted">A record under legal hold is kept until the hold ends.</p>
       </div>
     </div>
