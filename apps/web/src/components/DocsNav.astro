@@ -1,0 +1,108 @@
+---
+// The frame every Docs page shares: page head, left navigation, and the shared styles for
+// step lists and reference tables inside `.docs-body`. Used only by pages/docs/*.
+import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
+import Base from "../layouts/Base.astro";
+
+export type DocsPage = "overview" | "mcp" | "api" | "sdks" | "x402";
+interface Props {
+  title: string;
+  description: string;
+  current: DocsPage;
+  /** Small label above the heading. */
+  label?: string;
+  /** The page heading. */
+  heading: string;
+  lead: string;
+  /** Illustration for the page head, shown from 1024px up. */
+  art?: ImageMetadata;
+  /** Anchors on this page, listed under the route links on wide screens. */
+  toc?: { id: string; label: string }[];
+}
+const { title, description, current, label = "Docs", heading, lead, art, toc = [] } = Astro.props;
+const routes: { id: DocsPage; href: string; label: string }[] = [
+  { id: "overview", href: "/docs", label: "Start here" },
+  { id: "mcp", href: "/docs/mcp", label: "MCP" },
+  { id: "api", href: "/docs/api", label: "REST API" },
+  { id: "sdks", href: "/docs/sdks", label: "SDKs" },
+  { id: "x402", href: "/docs/x402", label: "x402" },
+];
+---
+<Base title={title} description={description} current="docs">
+  <section class="page-head">
+    <div class:list={["container", "page-head-grid", { "has-art": !!art }]}>
+      <div class="stack">
+        <p class="label">{label}</p>
+        <h1 class="t-campaign">{heading}</h1>
+        <p class="t-lead">{lead}</p>
+      </div>
+      {art && <div class="plate page-head-art"><Image src={art} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>}
+    </div>
+  </section>
+
+  <div class="container docs">
+    <nav class="docs-nav" aria-label="Docs">
+      <p class="label">Connect</p>
+      <ul class="plain-list docs-links" role="list">
+        {routes.map((r) => (
+          <li><a class="docs-link" href={r.href} aria-current={r.id === current ? "page" : undefined}>{r.label}</a></li>
+        ))}
+      </ul>
+      {toc.length > 0 && (
+        <div class="docs-toc">
+          <p class="label">On this page</p>
+          <ul class="plain-list docs-links" role="list">
+            {toc.map((t) => <li><a class="docs-link" href={`#${t.id}`}>{t.label}</a></li>)}
+          </ul>
+        </div>
+      )}
+    </nav>
+    <div class="docs-body">
+      <slot />
+    </div>
+  </div>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-32); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid.has-art { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
+    .page-head-art { display: block; }
+  }
+
+  .docs { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); padding-block: var(--space-32) var(--space-96); }
+  .docs-nav { display: grid; gap: var(--space-12); align-content: start; min-width: 0; }
+  .docs-links { display: flex; flex-wrap: wrap; gap: var(--space-8); }
+  .docs-link { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
+  .docs-link:hover { background: var(--action-subtle); }
+  .docs-link[aria-current="page"] { background: var(--action); border-color: var(--action); color: var(--text-on-action); }
+  .docs-toc { display: none; }
+  @media (min-width: 1024px) {
+    .docs { grid-template-columns: calc(var(--space-160) + var(--space-48)) minmax(0, 1fr); gap: var(--space-64); }
+    .docs-nav { position: sticky; top: calc(var(--nav-h) + var(--space-24)); align-self: start; gap: var(--space-8); }
+    .docs-links { flex-direction: column; flex-wrap: nowrap; gap: var(--space-2); }
+    .docs-link { border: 0; border-radius: var(--radius-control); background: none; padding-inline: var(--space-12); min-height: var(--control-h-sm); font-size: var(--type-compact-size); }
+    .docs-link[aria-current="page"] { background: var(--action-subtle); color: var(--text); }
+    .docs-toc { display: grid; gap: var(--space-8); margin-top: var(--space-24); padding-top: var(--space-24); border-top: var(--border-width) solid var(--border); }
+  }
+</style>
+
+<style is:global>
+  .docs-body { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-64); align-content: start; }
+  .docs-body > section { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-24); align-content: start; min-width: 0; }
+  .docs-body > section > * { min-width: 0; }
+  .docs-body .doc-list { padding-left: var(--space-24); display: grid; gap: var(--space-8); max-width: var(--type-body-measure); }
+  .docs-body .doc-note { max-width: var(--type-body-measure); }
+  .docs-body .steps { list-style: none; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-32); counter-reset: step; }
+  .docs-body .steps > li { counter-increment: step; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-12); min-width: 0; }
+  .docs-body .steps > li > h3::before { content: counter(step); display: inline-grid; place-items: center; width: var(--space-32); height: var(--space-32); margin-right: var(--space-12); border-radius: var(--radius-pill); background: var(--surface-blue); color: var(--text); font-family: var(--type-numeric-family); font-size: var(--type-ui-size); vertical-align: middle; }
+  .docs-body .steps > li > * { min-width: 0; }
+  .docs-body :not(pre) > code { overflow-wrap: anywhere; }
+  .docs-body .code { min-width: 0; max-width: 100%; }
+  .docs-body .code-head > .tabs { min-width: 0; }
+  .docs-body .route-card { text-decoration: none; }
+  .docs-body .next-links { display: grid; gap: var(--space-8); }
+</style>

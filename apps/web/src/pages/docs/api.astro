@@ -1,0 +1,180 @@
+---
+// Docs: the REST API (SITE-STRUCTURE.md page 10). Request and response shapes are those of
+// apps/api/src/routes/do.ts (POST /v1/do), solution-execute.ts, wallet.ts and auth.ts; the base URL
+// is lib/site-data.ts API_BASE.
+import DocsNav from "../../components/DocsNav.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData, tools as allTools, API_BASE } from "../../lib/site-data.ts";
+import { solutionSnippets, toolSnippets, pyValue } from "../../lib/snippets.ts";
+import { formatEur, json } from "../../lib/format.ts";
+import { FREE_TIER_DAILY_LIMIT, MIN_TOPUP_CENTS } from "../../lib/code-facts.ts";
+import { firstCallTool, KEY_REQUESTS_PER_SECOND } from "../../content/docs-facts.ts";
+
+const data = await getSiteData();
+const { tool, inputs } = firstCallTool(data);
+
+const curl = [
+  `curl -X POST ${API_BASE}/v1/do \\`,
+  `  -H 'Content-Type: application/json' \\`,
+  `  -d '${json({ capability_slug: tool.slug, inputs, max_price_cents: 1 }).replace(/\n/g, "\n  ")}'`,
+].join("\n");
+const js = [
+  `const res = await fetch("${API_BASE}/v1/do", {`,
+  `  method: "POST",`,
+  `  headers: { "Content-Type": "application/json" },`,
+  `  body: JSON.stringify({`,
+  `    capability_slug: "${tool.slug}",`,
+  `    inputs: ${JSON.stringify(inputs)},`,
+  `    max_price_cents: 1,`,
+  `  }),`,
+  `});`,
+  `const body = await res.json();`,
+  `if (!res.ok) throw new Error(\`\${body.error_code}: \${body.message}\`);`,
+  `console.log(body.result.output);`,
+].join("\n");
+const py = [
+  `import requests`,
+  ``,
+  `res = requests.post(`,
+  `    "${API_BASE}/v1/do",`,
+  `    json={`,
+  `        "capability_slug": "${tool.slug}",`,
+  `        "inputs": ${pyValue(inputs, 2)},`,
+  `        "max_price_cents": 1,`,
+  `    },`,
+  `    timeout=60,`,
+  `)`,
+  `body = res.json()`,
+  `if not res.ok:`,
+  `    raise RuntimeError(f"{body['error_code']}: {body['message']}")`,
+  `print(body["result"]["output"])`,
+].join("\n");
+
+const withKey = [
+  `curl -X POST ${API_BASE}/v1/do \\`,
+  `  -H "Authorization: Bearer $STRALE_API_KEY" \\`,
+  `  -H 'Content-Type: application/json' \\`,
+  `  -d '${json({ capability_slug: tool.slug, inputs, max_price_cents: 1 }).replace(/\n/g, "\n  ")}'`,
+].join("\n");
+
+// The cheapest paid tool that has an example input, for the paid-call example.
+const paid = allTools(data)
+  .filter((t) => !t.free && t.price_cents > 0 && data.manifests.get(t.slug)?.example_input)
+  .sort((a, b) => a.price_cents - b.price_cents || a.slug.localeCompare(b.slug))[0];
+const paidCall = paid && toolSnippets({ slug: paid.slug, inputs: data.manifests.get(paid.slug)!.example_input!, priceCents: paid.price_cents, free: false, x402: null }).find((s) => s.label === "API")!;
+
+// One bundled check with a published example input (live builds carry it).
+const bundle = data.solutions.find((s) => s.detail?.example_input);
+const bundleCall = bundle && solutionSnippets({ slug: bundle.slug, inputs: bundle.detail!.example_input!, priceCents: bundle.price_cents, x402: null })[0];
+
+const topup = [
+  `curl -X POST ${API_BASE}/v1/wallet/topup \\`,
+  `  -H "Authorization: Bearer $STRALE_API_KEY" \\`,
+  `  -H 'Content-Type: application/json' \\`,
+  `  -d '{"amount_cents": ${MIN_TOPUP_CENTS}}'`,
+].join("\n");
+
+const toc = [
+  { id: "first-call", label: "Make your first call" },
+  { id: "auth", label: "Authenticate" },
+  { id: "paid", label: "Call a paid tool" },
+  { id: "bundles", label: "Run a bundled check" },
+  { id: "next", label: "Next steps" },
+];
+---
+<DocsNav
+  title="Use the REST API"
+  description="Call any Strale tool with POST /v1/do: request and response shapes, authentication, paid tools and bundled checks."
+  current="api"
+  label="Docs · REST API"
+  heading="Use the REST API"
+  lead="One endpoint runs every tool. Send the tool and its inputs, and read the result."
+  toc={toc}
+>
+  <section id="first-call" aria-labelledby="first-call-title">
+    <h2 id="first-call-title" class="t-section">Make your first call</h2>
+    <p class="t-body">Free tools run without a key, {FREE_TIER_DAILY_LIMIT} calls a day per IP address. This call runs <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>.</p>
+    <ol class="steps">
+      <li>
+        <h3 class="t-subhead">Send the request</h3>
+        <CodeBlock id="api-first" title="POST /v1/do" panels={[
+          { label: "curl", lang: "shell", code: curl },
+          { label: "JavaScript", lang: "plain", code: js },
+          { label: "Python", lang: "plain", code: py },
+        ]} />
+      </li>
+      <li>
+        <h3 class="t-subhead">Read the response</h3>
+        <p class="t-body">A success is HTTP 200. The tool’s answer is in <code>result.output</code>, the price charged in <code>result.price_cents</code> (<code>0</code> for a free tool), and the source in <code>result.provenance</code>. Keyless calls also return <code>free_tier: true</code> and a <code>usage</code> block. The <a class="link" href="/docs#shape">full shape</a> is on the Docs overview.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Add a key for more</h3>
+        <p class="t-body">With a key, <code>max_price_cents</code> is required and free tools never charge. The same call with a key:</p>
+        <CodeBlock id="api-key-call" title="With an API key" panels={[{ label: "curl", lang: "shell", code: withKey }]} />
+      </li>
+    </ol>
+  </section>
+
+  <section id="auth" aria-labelledby="auth-title">
+    <h2 id="auth-title" class="t-section">Authenticate</h2>
+    <p class="t-body"><a class="link" href="/signup">Sign up</a> for a key. It starts with <code>sk_live_</code> and is shown once, so store it. Send it on every call.</p>
+    <CodeBlock id="api-auth" title="Authorization header" panels={[{ label: "Header", lang: "shell", code: "Authorization: Bearer sk_live_your_key_here" }]} />
+    <ul class="doc-list t-body">
+      <li>A key may send {KEY_REQUESTS_PER_SECOND} requests a second. Past that, calls return <code>rate_limited</code> with a <code>Retry-After</code> header.</li>
+      <li><code>GET {API_BASE}/v1/wallet/balance</code> returns <code>balance_cents</code> and <code>currency</code>.</li>
+      <li><code>POST {API_BASE}/v1/auth/api-key</code>, called with your current key, issues a new key and ends the old one.</li>
+    </ul>
+    <h3 class="t-subhead">Add to your balance</h3>
+    <p class="t-body">Top up with a card. The call returns a <code>checkout_url</code>; open it to pay. The minimum is {formatEur(MIN_TOPUP_CENTS)}.</p>
+    <CodeBlock id="api-topup" title="Top up" panels={[{ label: "curl", lang: "shell", code: topup }]} />
+  </section>
+
+  <section id="paid" aria-labelledby="paid-title">
+    <h2 id="paid-title" class="t-section">Call a paid tool</h2>
+    <p class="t-body">A paid tool takes the same request with a key and a price ceiling. The call is refused before it runs if the tool costs more than <code>max_price_cents</code>, and you are charged only when it succeeds.</p>
+    {paid && paidCall ? (
+      <>
+        <CodeBlock id="api-paid" title={`${paid.name}, ${formatEur(paid.price_cents)} per call`} panels={[paidCall]} />
+        <p class="t-compact muted">Each <a class="link" href="/tools">tool page</a> shows the price, the inputs and a call you can copy. The response adds <code>result.wallet_balance_cents</code>, your balance after the call.</p>
+      </>
+    ) : (
+      <p class="t-compact muted">Each <a class="link" href="/tools">tool page</a> shows the price, the inputs and a call you can copy.</p>
+    )}
+    <p class="t-body">Use <code>capability_slug</code> when you know the tool. To describe the job in words, send <code>task</code> in its place and Strale picks a tool within your price ceiling.</p>
+  </section>
+
+  <section id="bundles" aria-labelledby="bundles-title">
+    <h2 id="bundles-title" class="t-section">Run a bundled check</h2>
+    <p class="t-body">A bundled check runs several tools as one call at one price. It has its own endpoint, <code>POST {API_BASE}/v1/solutions/{"{slug}"}/execute</code>, and needs a key. The body takes <code>inputs</code> and an optional <code>max_price_cents</code>.</p>
+    {bundle && bundleCall ? (
+      <CodeBlock id="api-bundle" title={`${bundle.name}, ${formatEur(bundle.price_cents)} per check`} panels={[bundleCall]} />
+    ) : (
+      <p class="t-compact muted">Bundled checks and their example inputs are on the <a class="link" href="/tools#bundled">tools page</a>.</p>
+    )}
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Bundled check statuses">
+      <table class="table">
+        <thead><tr><th scope="col"><code>result.status</code></th><th scope="col">Meaning</th><th scope="col">Charge</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>completed</code></th><td>Every step returned a result.</td><td>Charged in full.</td></tr>
+          <tr><th scope="row"><code>partial</code></th><td>Some steps returned results and some failed. <code>result.errors</code> lists the failures.</td><td>Charged in full.</td></tr>
+          <tr><th scope="row"><code>failed</code></th><td>Every step failed.</td><td>Refunded.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="t-body">Results are in <code>result.steps</code>, keyed by tool. If a step finds that the check cannot continue, <code>result.gated</code> says which step stopped it and why, and the call is not charged.</p>
+  </section>
+
+  <section id="next" aria-labelledby="next-title">
+    <h2 id="next-title" class="t-section">Next steps</h2>
+    <ul class="doc-list t-body">
+      <li><a class="link" href="/docs#errors">Handle errors and retries</a>: every error code and what to do.</li>
+      <li><a class="link" href="/docs#safety">Retry safely and cap spend</a>: <code>Idempotency-Key</code>, per-call ceilings and the hourly limit.</li>
+      <li><a class="link" href="/docs#past-calls">Retrieve a past call</a> by its transaction ID.</li>
+      <li>The <a class="link" href={`${API_BASE}/openapi.json`}>OpenAPI document</a> lists every endpoint.</li>
+    </ul>
+    <div class="row">
+      <a class="btn btn-primary" href="/signup">Get an API key</a>
+      <a class="btn btn-secondary" href="/docs/sdks">Use an SDK</a>
+    </div>
+  </section>
+</DocsNav>
