@@ -165,7 +165,6 @@
   --duration-reveal-signature: 1600ms;
   --duration-reveal-atmosphere: 2200ms;
   --duration-ambient: 9000ms;
-  --duration-ambient-slow: 28000ms;
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-enter: cubic-bezier(0, 0, 0, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
@@ -414,6 +413,5 @@
     --duration-reveal-signature: 0ms;
     --duration-reveal-atmosphere: 0ms;
     --duration-ambient: 0ms;
-    --duration-ambient-slow: 0ms;
   }
 }

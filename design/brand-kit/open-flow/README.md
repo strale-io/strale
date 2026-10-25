@@ -1,6 +1,6 @@
 > **Adopted 2026-10-24 by Petter (DEC-20261024-B).** The candidate's status is `adopted` and its values are the `website` surface of `design/tokens/active.json`; `apps/web` builds from that surface. Where the text below says "candidate" or "not adopted", read it as the status before 24 October.
 
-> **Revised to 0.2, Daylight, on 2026-10-25 by Petter (DEC-20261025-A).** The light canvas is white and the light tinted surfaces are paler and cooler, so colour appears only in the artwork, the primary action and illustrations. The kit's no-loop rule is narrowed to ambient-only: a slow loop is allowed in the home hero artwork and the live-tests panel. Spot illustrations live in `apps/web/src/assets/illustrations/` with their briefs in `provenance.json`. Kit colours, type, spacing and the dark theme are unchanged.
+> **Revised to 0.2, Daylight, on 2026-10-25 by Petter (DEC-20261025-A).** The light canvas is white and the light tinted surfaces are paler and cooler, so colour appears only in the artwork, the primary action and illustrations. The kit's no-loop rule is narrowed to ambient-only: a slow loop is allowed in the home Switchboard hero and the pulsing status dots, and lists and copy stay still. Spot illustrations live in `apps/web/src/assets/illustrations/` with their briefs in `provenance.json`. Kit colours, type, spacing and the dark theme are unchanged.
 
 # Open Flow — Strale website design system
 
@@ -33,7 +33,7 @@ It replaces [Quiet Material](../README.md) as the visual direction. Quiet Materi
 2. **One message per section.** A section opens with a statement, then explains. Add detail by grouping it, never by shrinking type below its role.
 3. **Artwork stays whole.** Each image is composed for one format. Show it at its own ratio, uncropped. Put text only in the reading region the kit declared. If copy doesn't fit there, put the text beside the image.
 4. **States are words plus colour.** Every status has an icon and a label. Focus is always a visible 2px ring.
-5. **The reading surface never moves.** Graphics reveal in place and settle. Since 0.2 a slow ambient loop is allowed in two places only, the home hero artwork and the live-tests panel; everything else reveals once. Loading indicators repeat while loading.
+5. **The reading surface never moves.** Graphics reveal in place and settle. Since 0.2 a slow ambient loop is allowed only in the home Switchboard hero (which has a Pause control and holds while the pointer or focus is in it) and in the pulsing status dots; everything else reveals once. Loading indicators repeat while loading.
 
 ## Colour
 
@@ -104,7 +104,7 @@ Space Grotesk introduces and Instrument Sans explains. Use at most two weights i
 
 ## Motion
 
-Durations: fast 120ms (colour and border), base 200ms (elevation, disclosure), slow 320ms (panel entrance), reveal-signature 1600ms (bands), reveal-atmosphere 2200ms (glow or field). Easing `standard` for state changes, `reveal` for reveals only. Reveals open a clip region over artwork that stays still. Text never slides in, with one exception since 0.2: the home headline rises in word by word, once, on load. Pointer micro-interactions (a slight lean on primary buttons, an arrow nudge, a light under the pointer on cards, a lift on chips, a sheen across primary buttons, an underline growing on nav links) respond to the pointer and never run on their own. Ambient 9000ms (one example call in the home Switchboard) and ambient-slow 28000ms (one roll of the live-tests list) are the only loops, and only in those two places. Spinners and skeletons repeat only while something is loading. Under `prefers-reduced-motion` every duration becomes 0, reveals show their final frame, ambient loops stop and the spinner stops.
+Durations: fast 120ms (colour and border), base 200ms (elevation, disclosure), slow 320ms (panel entrance), reveal-signature 1600ms (bands), reveal-atmosphere 2200ms (glow or field). Easing `standard` for state changes, `reveal` for reveals only. Reveals open a clip region over artwork that stays still. Text never slides in, with one exception since 0.2: the home headline rises in word by word, once, on load. Pointer micro-interactions (a slight lean on primary buttons, an arrow nudge, a light under the pointer on cards, a lift on chips, a sheen across primary buttons, an underline growing on nav links) respond to the pointer and never run on their own. Ambient 9000ms (one example call in the home Switchboard) is the only content loop; the status dots pulse at reveal-atmosphere. Spinners and skeletons repeat only while something is loading. Under `prefers-reduced-motion` every duration becomes 0, reveals show their final frame, ambient loops stop and the spinner stops.
 
 ## Imagery
 

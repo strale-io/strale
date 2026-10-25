@@ -98,11 +98,13 @@ document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) => {
 const finePointer = matchMedia("(pointer: fine)").matches && !matchMedia("(prefers-reduced-motion: reduce)").matches;
 if (finePointer) {
   // Magnetic buttons lean a little towards the pointer.
+  // The lean is at most --space-4 each way.
+  const reach = 2 * (parseFloat(getComputedStyle(root).getPropertyValue("--space-4")) || 0);
   document.querySelectorAll<HTMLElement>("[data-magnet]").forEach((el) => {
     el.addEventListener("pointermove", (e) => {
       const r = el.getBoundingClientRect();
-      el.style.setProperty("--_mx", `${((e.clientX - r.left) / r.width - 0.5) * 8}px`);
-      el.style.setProperty("--_my", `${((e.clientY - r.top) / r.height - 0.5) * 8}px`);
+      el.style.setProperty("--_mx", `${((e.clientX - r.left) / r.width - 0.5) * reach}px`);
+      el.style.setProperty("--_my", `${((e.clientY - r.top) / r.height - 0.5) * reach}px`);
     });
     el.addEventListener("pointerleave", () => { el.style.removeProperty("--_mx"); el.style.removeProperty("--_my"); });
   });

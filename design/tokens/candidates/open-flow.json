@@ -3,7 +3,7 @@
   "status": "adopted",
   "supersedes": "quiet-material-v0.7",
   "superseded_by": null,
-  "notes": "Website design system derived from BrandKit Lab strale-reference-kit-06 (9 September 2026), chosen by the founder as the visual direction on 23 October 2026. The eleven kit colours (brand.* except brand.image-ground, which is sampled from the kit artwork), the font families, the type roles hero, campaign, section, detail, body, compact and label, the 8px control radius and the reveal durations are carried over from the kit unchanged. The dark theme, interaction/status/code/chart colours, the extra type roles (subhead, lead, ui, small, code, stat), spacing, elevation, grid and motion easing are derived here and are not in the kit. Palette keys: brand.* are theme-independent; light.* and dark.* are role colours that resolve to the same CSS custom property per theme; chart.light.* and chart.dark.* are the categorical chart slots, in fixed order. Human guide: design/brand-kit/open-flow/README.md. Contrast proof is generated from layout.contrast by design/brand-kit/open-flow/build.mjs into CONTRAST.md. Adopted by DEC-20261024-B on 2026-10-24. Revised to 0.2 (Daylight) by DEC-20261025-A on 2026-10-25: the light canvas is white, the light tinted surfaces are paler and cooler, and the kit's no-loop rule is narrowed to ambient-only (home hero artwork and the live-calls panel). The kit colours, type, spacing and dark theme are unchanged. These values are the website surface in design/tokens/active.json, and design:check fails if the two differ.",
+  "notes": "Website design system derived from BrandKit Lab strale-reference-kit-06 (9 September 2026), chosen by the founder as the visual direction on 23 October 2026. The eleven kit colours (brand.* except brand.image-ground, which is sampled from the kit artwork), the font families, the type roles hero, campaign, section, detail, body, compact and label, the 8px control radius and the reveal durations are carried over from the kit unchanged. The dark theme, interaction/status/code/chart colours, the extra type roles (subhead, lead, ui, small, code, stat), spacing, elevation, grid and motion easing are derived here and are not in the kit. Palette keys: brand.* are theme-independent; light.* and dark.* are role colours that resolve to the same CSS custom property per theme; chart.light.* and chart.dark.* are the categorical chart slots, in fixed order. Human guide: design/brand-kit/open-flow/README.md. Contrast proof is generated from layout.contrast by design/brand-kit/open-flow/build.mjs into CONTRAST.md. Adopted by DEC-20261024-B on 2026-10-24. Revised to 0.2 (Daylight) by DEC-20261025-A on 2026-10-25: the light canvas is white, the light tinted surfaces are paler and cooler, and the kit's no-loop rule is narrowed to ambient-only (the home Switchboard hero and the pulsing status dots). The kit colours, type, spacing and dark theme are unchanged. These values are the website surface in design/tokens/active.json, and design:check fails if the two differ.",
   "palette": {
     "brand.blue": "#3027ff",
     "brand.violet": "#7222ff",
@@ -331,8 +331,7 @@
       "slow": 320,
       "reveal-signature": 1600,
       "reveal-atmosphere": 2200,
-      "ambient": 9000,
-      "ambient-slow": 28000
+      "ambient": 9000
     },
     "easing": {
       "standard": "cubic-bezier(0.2, 0, 0, 1)",
@@ -343,7 +342,7 @@
     "rules": {
       "reading_surface_moves": false,
       "loop": "ambient-only",
-      "ambient": "Ambient loops are allowed only in the home hero (the Switchboard) and the live-tests panel: slow, continuous, never moving text the reader is reading. The home headline may rise in once on load; pointer micro-interactions respond to the pointer and never run on their own. Everything else reveals once and settles. Under prefers-reduced-motion ambient motion stops on its final frame.",
+      "ambient": "Ambient loops are allowed only in the home Switchboard hero and the pulsing status dots: slow, continuous, never moving text the reader is reading; lists and copy stay still. The home headline may rise in once on load; pointer micro-interactions respond to the pointer and never run on their own. Everything else reveals once and settles. Under prefers-reduced-motion ambient motion stops on its final frame.",
       "reduced_motion": "All transitions become instant; reveals render their settled final frame; ambient loops stop.",
       "source": "reveal durations and settled-still reduced motion from kit-06 rule motion-reveal; the kit's no-loop rule is narrowed to ambient-only by DEC-20261025-A; other durations and easings derived"
     }

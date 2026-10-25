@@ -35,6 +35,18 @@ and the founder-reserved public cutover happens.
   passed". The trust projection's `pass_rate` is the share of a tool's test
   suites whose latest run passed, so it now says that.
 
+**Independent review (fresh Claude agent, same provider, separate context)**
+The first pass FAILED and everything it found was fixed in the third commit:
+- Free tools were shown as priced. They now show "free" and "nothing, free tool".
+- The tested panel showed a green tick at any pass rate. The tick now appears only at 100%; anything lower gets a warning mark.
+- The section heading overclaimed "tested against their live sources". It is reworded: test types vary, some tests replay a saved response, and not every tool is tested on a schedule.
+- The console now cycles silently (aria-live off) and announces only calls the visitor chose. It holds while the pointer or focus is in the board and has a Pause button.
+- The tested list is now still, so the ambient-slow token is removed.
+- The build no longer crashes when no example qualifies.
+- Hero inputs are taken from each tool's published example, so the question, the call and the result agree. The live examples for url-to-markdown and dns-lookup differ from the manifests.
+- Phones get visible labels and a distinct IBAN glyph. The tool tags are hidden from screen readers, and the line length resets on resize.
+- Tokens are used for easing and the magnet reach, and the button transitions are complete.
+
 **Not done / open**
 - The live panel shows recent *tests*, not recent customer calls. There is no
   public source of calls, and publishing one would expose traffic.

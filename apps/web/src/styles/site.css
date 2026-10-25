@@ -386,7 +386,7 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .btn-primary::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 35%, var(--brand-paper) 50%, transparent 65%); opacity: 0.3; transform: translateX(-120%); transition: transform calc(var(--duration-slow) * 2) var(--ease-standard); }
 .btn-primary:hover::after { transform: translateX(120%); }
 /* Magnetic buttons lean a little towards the pointer (site.ts sets --_mx/--_my). */
-[data-magnet] { --_mx: 0; --_my: 0; translate: var(--_mx) var(--_my); transition: translate var(--duration-base) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+[data-magnet] { --_mx: 0; --_my: 0; translate: var(--_mx) var(--_my); transition: translate var(--duration-base) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
 /* Arrows nudge forward. */
 .link-standalone .icon, .btn .icon { transition: transform var(--duration-base) var(--ease-standard); }
 .link-standalone:hover .icon, .btn:hover .icon { transform: translateX(var(--space-2)); }

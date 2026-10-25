@@ -65,6 +65,13 @@ const demoResponse = demo
     })
   : "";
 
+// §4b tested: the most recently tested tools, as the public trust projection reports them.
+const testedRows = tools
+  .map((t) => ({ t, tr: data.trust.get(t.slug)! }))
+  .filter((r) => r.tr?.tested && r.tr.last_tested_at && r.tr.pass_rate !== null)
+  .sort((a, b) => Date.parse(b.tr.last_tested_at!) - Date.parse(a.tr.last_tested_at!))
+  .slice(0, 5);
+
 // §5 flagship: countries with a live registry tool, grouped by region; screening tools by name.
 const countries = coverage(data);
 const byRegion = REGIONS.map((r) => ({ region: r, list: countries.filter((c) => c.region === r) })).filter((r) => r.list.length > 0);
@@ -159,17 +166,19 @@ const freeCount = tools.filter((t) => t.free).length;
     </section>
   )}
 
-  <!-- §4b Tested against live sources: evidence beside the claim, from the public trust projection. -->
-  <section class="section section-sunken" aria-labelledby="tested-title">
-    <div class="container split split-even">
-      <div class="stack">
-        <h2 id="tested-title" class="t-section">Tools are tested against their live sources</h2>
-        <p class="t-lead muted">Strale runs its own tests on its tools: a known answer, the shape of the result, bad input, and whether the source is up.</p>
-        <p class="t-compact muted">The list shows the most recently tested tools and the share of each tool’s tests that passed on their latest run. Not every tool is tested on a schedule; each tool’s page says when it was last tested.</p>
+  <!-- §4b Tested: evidence beside the claim, from the public trust projection. Shown only when the build has test results. -->
+  {testedRows.length > 0 && (
+    <section class="section section-sunken" aria-labelledby="tested-title">
+      <div class="container split split-even">
+        <div class="stack">
+          <h2 id="tested-title" class="t-section">Strale tests its tools and shows the results</h2>
+          <p class="t-lead muted">Tests run on many of the tools, and what each one checks varies. It can include a known answer, the shape of the result, bad input, and whether the source is up.</p>
+          <p class="t-compact muted">The list shows the most recently tested tools and the share of each tool’s tests that passed on their latest run. Some tests replay a saved response instead of calling the source, and not every tool is tested on a schedule. Each tool’s page says when it was last tested.</p>
+        </div>
+        <TestedNow rows={testedRows} loadedAt={data.loaded_at} />
       </div>
-      <TestedNow tools={tools} trust={data.trust} loadedAt={data.loaded_at} />
-    </div>
-  </section>
+    </section>
+  )}
 
   <!-- §5 Company and compliance data: the flagship, below the breadth. -->
   <section class="section section-flagship" aria-labelledby="company-title">
@@ -294,7 +303,6 @@ const freeCount = tools.filter((t) => t.free).length;
   .job:hover .plate img { transform: scale(1.04); }
   @media (min-width: 640px) {
     .job { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: center; }
-    .plate { max-width: none; }
   }
   @media (prefers-reduced-motion: reduce) { .job { transition: none; } .job:hover { transform: none; } .job:hover .plate img { transform: none; } }
   .chip-row { margin: 0; padding: 0; list-style: none; }

@@ -1,9 +1,14 @@
 // Home hero "Switchboard" behaviour. The page is server-rendered with one call complete; this
-// draws the circuit lines from measured positions and cycles the example calls. Timing comes
-// from the motion tokens (--duration-*), so reduced motion (every duration 0) shows the
-// current call still and never advances on its own; choosing a tool still swaps it.
-// Sets SVG geometry attributes and toggles classes; never sets style values.
-interface PortData { slug: string; x: number; y: number; ask: string; input: Record<string, unknown>; out: Record<string, unknown>; src: string; price: string }
+// draws the circuit lines from measured positions and cycles the example calls.
+// - Timing and easing come from the motion tokens (--duration-*, --ease-*), so reduced motion
+//   (every duration 0) shows the current call still and never advances on its own; choosing a
+//   tool still swaps it.
+// - The automatic cycle is silent to screen readers (aria-live="off"); a call the visitor chose is
+//   announced. It pauses while the pointer or keyboard focus is in the board, and the Pause button
+//   stops it until pressed again (WCAG 2.2.2).
+// Sets SVG geometry attributes and toggles classes; the Web Animations it runs are the line draw,
+// the packet, and the progress bar.
+interface PortData { slug: string; x: number; y: number; ask: string; input: Record<string, unknown>; out: Record<string, unknown>; src: string; price: string; charged: string }
 
 const NS = "http://www.w3.org/2000/svg";
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -21,16 +26,20 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
   if (!wrap || !board || !svg || !desk) continue;
   const data = JSON.parse(wrap.dataset.ports ?? "[]") as PortData[];
   const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-port]"));
+  const live = desk.querySelector<HTMLElement>("[data-live]")!;
   const rows = { ask: desk.querySelector<HTMLElement>('[data-row="ask"]')!, call: desk.querySelector<HTMLElement>('[data-row="call"]')!, out: desk.querySelector<HTMLElement>('[data-row="out"]')! };
   const bar = desk.querySelector<HTMLElement>(".sb-progress i")!;
+  const pauseBtn = desk.querySelector<HTMLButtonElement>("[data-pause]")!;
   const fPrice = desk.querySelector<HTMLElement>('[data-f="price"]')!;
   const fSrc = desk.querySelector<HTMLElement>('[data-f="src"]')!;
 
+  const css = getComputedStyle(root);
   const ms = (name: string) => {
-    const v = getComputedStyle(root).getPropertyValue(name).trim();
+    const v = css.getPropertyValue(name).trim();
     return v.endsWith("ms") ? parseFloat(v) : v.endsWith("s") ? parseFloat(v) * 1000 : 0;
   };
-  const T = { draw: ms("--duration-reveal-signature"), step: ms("--duration-slow") * 3, cycle: ms("--duration-ambient") };
+  const T = { draw: ms("--duration-reveal-signature") * 0.6, step: ms("--duration-slow") * 3, cycle: ms("--duration-ambient") };
+  const EASE = css.getPropertyValue("--ease-reveal").trim() || "ease-in-out";
 
   const mk = (tag: string, attrs: Record<string, string>) => {
     const e = document.createElementNS(NS, tag);
@@ -40,17 +49,16 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
   const restIn = data.map(() => mk("path", { class: "rest" }));
   const restOut = data.map(() => mk("path", { class: "rest out" }));
   const nodes = data.map(() => mk("circle", { class: "node", r: "3.5" }));
-  const live = mk("path", { class: "live" }) as SVGPathElement;
+  const wire = mk("path", { class: "live" }) as SVGPathElement;
   const packet = mk("circle", { class: "packet", r: "4", opacity: "0" });
 
   const R = 12;
-  const left = (i: number) => data[i].x < 0.5;
   const drawn = () => getComputedStyle(svg).display !== "none";
   // Orthogonal route with rounded corners: out of the port, along to a bus column, up or down, into the console.
   function route(i: number) {
     const b = board!.getBoundingClientRect(), d = desk!.getBoundingClientRect(), btn = buttons[i].getBoundingClientRect();
     const px = btn.left + btn.width / 2 - b.left, py = btn.top + btn.height / 2 - b.top, half = btn.width / 2;
-    const L = left(i), k = data.filter((p, j) => (p.x < 0.5) === L && j < i).length;
+    const L = data[i].x < 0.5, k = data.filter((p, j) => (p.x < 0.5) === L && j < i).length;
     const sx = L ? px + half : px - half;
     const ex = (L ? d.left : d.right) - b.left, ey = d.top - b.top + d.height * (0.32 + k * 0.18);
     const bus = L ? ex - 34 - k * 14 : ex + 34 + k * 14, dir = L ? 1 : -1, v = Math.sign(ey - py);
@@ -58,8 +66,13 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
     if (Math.abs(ey - py) < R * 3) return { d: `M${sx} ${py} H ${ex}`, node: [bus, py], out };
     return { d: `M${sx} ${py} H ${bus - dir * R} Q ${bus} ${py} ${bus} ${py + v * R} V ${ey - v * R} Q ${bus} ${ey} ${bus + dir * R} ${ey} H ${ex}`, node: [bus, py], out };
   }
-  let cur = buttons.findIndex((b) => b.classList.contains("on"));
-  if (cur < 0) cur = 0;
+  let cur = Math.max(0, buttons.findIndex((b) => b.classList.contains("on")));
+  function setWire(i: number) {
+    wire.setAttribute("d", route(i).d);
+    const len = wire.getTotalLength();
+    wire.setAttribute("stroke-dasharray", String(len));
+    return len;
+  }
   function layout() {
     if (!drawn()) return;
     data.forEach((_, i) => {
@@ -68,79 +81,95 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
       restOut[i].setAttribute("d", r.out);
       nodes[i].setAttribute("cx", String(r.node[0]));
       nodes[i].setAttribute("cy", String(r.node[1]));
-      if (i === cur) live.setAttribute("d", r.d);
     });
+    setWire(cur);
   }
   new ResizeObserver(layout).observe(board);
 
-  let token = 0, hovering = false, visible = true;
+  let token = 0, held = false, paused = false, visible = true;
+  const running = () => T.cycle > 0 && !held && !paused && visible;
   const wait = (t: number, tk: number) => new Promise<boolean>((r) => setTimeout(() => r(tk === token), t));
   const show = (row: HTMLElement, html: string) => { row.querySelector("pre")!.innerHTML = html; row.classList.add("show"); };
 
-  async function play(i: number, animate = true) {
+  async function play(i: number, chosen: boolean) {
     const tk = ++token;
     cur = i;
     const p = data[i];
+    live.setAttribute("aria-live", chosen ? "polite" : "off");
     buttons.forEach((b, j) => { b.classList.toggle("on", j === i); b.setAttribute("aria-pressed", String(j === i)); });
     if (drawn()) {
-      const r = route(i);
-      live.setAttribute("d", r.d);
-      const len = live.getTotalLength();
-      live.setAttribute("stroke-dasharray", String(len));
-      if (animate && T.draw > 0) {
-        live.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: T.draw * 0.6, easing: "cubic-bezier(.6,0,.2,1)", fill: "forwards" });
-        packet.animate([{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.9 }, { opacity: 0 }], { duration: T.draw * 0.6, fill: "forwards" });
+      const len = setWire(i);
+      if (T.draw > 0) {
+        wire.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: T.draw, easing: EASE, fill: "forwards" });
+        packet.animate([{ opacity: 0 }, { opacity: 1, offset: 0.1 }, { opacity: 1, offset: 0.9 }, { opacity: 0 }], { duration: T.draw, fill: "forwards" });
         const t0 = performance.now();
         const move = (now: number) => {
-          const u = Math.min(1, (now - t0) / (T.draw * 0.6));
+          const u = Math.min(1, (now - t0) / T.draw);
           const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
-          const pt = live.getPointAtLength(len * e);
+          const pt = wire.getPointAtLength(len * e);
           packet.setAttribute("cx", String(pt.x));
           packet.setAttribute("cy", String(pt.y));
           if (u < 1 && tk === token) requestAnimationFrame(move);
         };
         requestAnimationFrame(move);
-      } else live.setAttribute("stroke-dashoffset", "0");
+      } else wire.setAttribute("stroke-dashoffset", "0");
     }
     const call = `<span class="tk-s">${esc(p.slug)}</span> · ${esc(p.price)}\n${tint(p.input)}`;
-    if (!animate || T.step === 0) {
+    if (T.step === 0) {
       show(rows.ask, esc(p.ask)); show(rows.call, call); show(rows.out, tint(p.out));
-      fPrice.textContent = p.price; fSrc.textContent = p.src;
+      fPrice.textContent = p.charged; fSrc.textContent = p.src;
       return;
     }
     Object.values(rows).forEach((r) => { r.classList.remove("show"); r.querySelector("pre")!.textContent = ""; });
     fPrice.textContent = "–"; fSrc.textContent = "–";
-    if (T.cycle > 0) bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: T.cycle, easing: "linear", fill: "forwards" });
+    if (T.cycle > 0) bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: T.cycle, fill: "forwards" });
     show(rows.ask, esc(p.ask));
     if (!(await wait(T.step, tk))) return;
     show(rows.call, call);
     if (!(await wait(T.step, tk))) return;
     show(rows.out, tint(p.out));
-    fPrice.textContent = p.price; fSrc.textContent = p.src;
+    fPrice.textContent = p.charged; fSrc.textContent = p.src;
+    await advanceLater(tk);
+  }
+  // Move to the next tool after the rest of the cycle, unless held, paused or off screen.
+  async function advanceLater(tk: number) {
     if (T.cycle === 0) return;
     if (!(await wait(T.cycle - 2 * T.step, tk))) return;
-    if (!hovering && visible) play((i + 1) % data.length);
+    if (running()) play((cur + 1) % data.length, false);
   }
+  const resume = () => { if (running()) advanceLater(++token); };
 
   buttons.forEach((b, i) => {
-    b.addEventListener("pointerenter", (e) => { if ((e as PointerEvent).pointerType !== "mouse") return; hovering = true; if (cur !== i) play(i); });
-    b.addEventListener("pointerleave", () => {
-      hovering = false;
-      const tk = token;
-      setTimeout(() => { if (tk === token && !hovering && visible && T.cycle > 0) play((cur + 1) % data.length); }, T.cycle / 3);
-    });
-    b.addEventListener("focus", () => { if (cur !== i) play(i); });
-    b.addEventListener("click", () => play(i));
+    b.addEventListener("click", () => play(i, true));
+    b.addEventListener("focus", () => { if (cur !== i) play(i, true); });
+    b.addEventListener("pointerenter", (e) => { if ((e as PointerEvent).pointerType === "mouse" && cur !== i) play(i, true); });
   });
+  // Hold the cycle while the pointer or keyboard focus is in the board; a call already showing finishes.
+  const hold = () => { held = true; };
+  const release = () => { held = false; resume(); };
+  board.addEventListener("pointerenter", hold);
+  board.addEventListener("pointerleave", release);
+  board.addEventListener("focusin", hold);
+  board.addEventListener("focusout", (e) => { if (!board.contains(e.relatedTarget as Node | null)) release(); });
+
+  if (T.cycle > 0) {
+    pauseBtn.hidden = false;
+    pauseBtn.addEventListener("click", () => {
+      paused = !paused;
+      pauseBtn.setAttribute("aria-pressed", String(paused));
+      pauseBtn.textContent = paused ? "Play" : "Pause";
+      if (paused) bar.getAnimations().forEach((a) => a.pause());
+      else play((cur + 1) % data.length, false);
+    });
+  }
 
   // Run only while the hero is on screen; resume where it was.
   new IntersectionObserver(([entry]) => {
     const was = visible;
     visible = entry.isIntersecting;
-    if (visible && !was && T.cycle > 0) play(cur);
-    if (!visible) token++;
+    if (visible && !was) resume();
   }).observe(root);
 
   layout();
-  if (T.cycle > 0) play(cur);
+  if (T.cycle > 0) play(cur, false);
 }
