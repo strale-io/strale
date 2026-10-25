@@ -1,0 +1,145 @@
+---
+// About (SITE-STRUCTURE.md page 13): who runs this, and will it still be here next year?
+// The story is SENTENCE and L1 from content/positioning.ts (DEC-20261023-B). Counts come
+// from the catalogue; vendor names and company facts from /v1/platform/facts. The founder
+// is not named (his choice, not yet made).
+import { Image } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import artLibrary from "../assets/illustrations/tool-library.webp";
+import { getSiteData, tools as allTools, coverage, API_BASE } from "../lib/site-data.ts";
+import { plural } from "../lib/format.ts";
+import { SENTENCE, L1 } from "../content/positioning.ts";
+
+const data = await getSiteData();
+const facts = data.facts;
+const tools = allTools(data);
+const countries = coverage(data);
+const free = tools.filter((t) => t.free).length;
+const contact = facts.static.controller?.contact_email;
+const incorporated = facts.static.controller?.incorporation_jurisdiction;
+
+// Providers the agent never needs an account with (MESSAGING-LEVELS L1.1), read from facts.
+const v = facts.static.vendors;
+const providers = [...new Set([v.sanctions, v.adverse_media_fallback, v.headless_browser, v.us_company_registry].filter(Boolean).map((n) => n.replace(/\s*\(.*\)$/, "")))];
+const providerList = providers.length > 1 ? `${providers.slice(0, -1).join(", ")} or ${providers.at(-1)}` : providers[0];
+
+const stats = [
+  { value: tools.length.toLocaleString("en-GB"), label: "tools in the library", href: "/tools" },
+  { value: countries.length.toLocaleString("en-GB"), label: "countries with company records", href: "/company-data" },
+  ...(free > 0 ? [{ value: free.toLocaleString("en-GB"), label: "free tools to try without a key", href: "/tools?free=1" }] : []),
+];
+---
+<Base title="About" description={SENTENCE}>
+  <section class="page-head">
+    <div class="container page-head-grid">
+      <div class="stack">
+        <p class="label">About Strale</p>
+        <h1 class="t-campaign">One connection to the tools your agent needs</h1>
+        <p class="t-lead">{SENTENCE}</p>
+      </div>
+      <div class="plate page-head-art"><Image src={artLibrary} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
+    </div>
+  </section>
+
+  <section class="section-tight" aria-label="The library today">
+    <div class="container">
+      <ul class="stats" role="list">
+        {stats.map((s) => (
+          <li><a class="stat" href={s.href} data-spotlight><span class="t-stat num">{s.value}</span><span class="stat-label">{s.label}</span></a></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="why-title">
+    <div class="container split">
+      <h2 id="why-title" class="t-section">What Strale is for</h2>
+      <div class="stack prose">
+        <p class="t-body">An agent becomes useful when it can act: search the web, read a document, check a VAT number, look up a company in its register. Each of those jobs sits with a different provider, and each provider wants its own account, key, contract and bill.</p>
+        <p class="t-body">That works for one tool. It breaks down as the list grows, and it never works for an agent that finds out mid-task that it needs something new.</p>
+        <p class="t-body"><strong>{L1.headline}</strong> Strale holds the provider relationships{providerList && <>, so your agent never needs an account with {providerList}</>}. It reaches every tool through one connection: MCP, the REST API or an SDK. {L1.support}</p>
+        <p class="t-body">{L1.perCall} {L1.x402}</p>
+        <p class="t-body">The deepest part of the library is company and compliance data: company records from official sources in {plural(countries.length, "country", "countries")}, and sanctions, PEP and adverse-media screening, with each source named on the tool’s page.</p>
+        <div class="row">
+          <a class="link-standalone" href="/tools">Browse the tools <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+          <a class="link-standalone" href="/company-data">See company data coverage <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="company-title">
+    <div class="container split">
+      <h2 id="company-title" class="t-section">The company</h2>
+      <div class="stack prose">
+        <p class="t-body">Strale is built and run by Moonlighter AB{incorporated && <>, a company incorporated in {incorporated}</>}.</p>
+        <p class="t-body">Nothing about Strale locks you in. Your agent connects over open interfaces (MCP, a REST API, x402), pays per call with no contract, and can stop whenever it likes. Every tool’s price, inputs, source and limits are public on its page, and the whole catalogue is <a class="link" href={`${API_BASE}/v1/capabilities`}>available as JSON</a> from the API.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="grow-title">
+    <div class="container split">
+      <h2 id="grow-title" class="t-section">How the catalogue grows</h2>
+      <div class="stack prose">
+        <p class="t-body">From what agents ask for. When an agent asks Strale for a job that no tool can do, the request is logged as demand. Those requests are read every week, and they shape what gets built next.</p>
+        <p class="t-body">New tools join the same connection, so your agent reaches them with the key or wallet it already has. Tools that stop working are taken out of the catalogue until a fix passes their checks.</p>
+        {contact && <a class="link-standalone" href={`mailto:${contact}?subject=${encodeURIComponent("Tool request")}`}>Tell us the tool your agent needs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="sourcing-title">
+    <div class="container split">
+      <h2 id="sourcing-title" class="t-section">How Strale sources data</h2>
+      <div class="stack prose">
+        <p class="t-body">Strale goes to the source of record first: official registers and APIs, then licensed vendors, then public pages read one request at a time. It reads only what is public and logged out, treats a block as an answer, says who it is in every request, and does not harvest data about people. Each tool’s page names where its data comes from.</p>
+        <a class="link-standalone" href="/security#sources">Read the full sourcing rules <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+    </div>
+  </section>
+
+  {contact && (
+    <section class="section section-sunken" aria-labelledby="contact-title">
+      <div class="container split">
+        <h2 id="contact-title" class="t-section">Contact</h2>
+        <div class="stack prose">
+          <p class="t-body">Questions, partnerships, a tool you need or a result that looks wrong: write to us and a person answers.</p>
+          <a class="link-standalone" href={`mailto:${contact}`}>Email {contact} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+        </div>
+      </div>
+    </section>
+  )}
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-32); }
+  .page-head .t-lead { max-width: var(--measure-body); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
+    .page-head-art { display: block; }
+  }
+  .section { padding-block: var(--section-space); }
+  .section-tight { padding-block: var(--space-16) var(--space-48); }
+  .section-sunken { background: var(--surface-sunken); }
+
+  .stats { display: grid; gap: var(--space-12); grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; }
+  @media (min-width: 768px) {
+    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .stat { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: var(--space-20) var(--space-24); }
+  }
+  .stat { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: var(--space-12); height: 100%; padding: var(--space-16) var(--space-20); background: var(--surface); color: var(--text); text-decoration: none; border: var(--border-width) solid var(--border); border-radius: var(--radius-card); transition: border-color var(--duration-fast) var(--ease-standard); }
+  .stat:hover { border-color: var(--border-strong); }
+  .stat:hover .stat-label { color: var(--link); }
+  .stat-label { color: var(--text-muted); font-size: var(--type-compact-size); line-height: var(--type-compact-line); }
+
+  .split { display: grid; gap: var(--space-24); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) {
+    .split { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-64); align-items: start; }
+  }
+  .prose { max-width: var(--measure-body); }
+  .prose .t-body { margin-bottom: 0; }
+  .prose .row { gap: var(--space-24); }
+</style>
