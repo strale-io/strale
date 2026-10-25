@@ -18,10 +18,6 @@ const free = tools.filter((t) => t.free).length;
 const contact = facts.static.controller?.contact_email;
 const incorporated = facts.static.controller?.incorporation_jurisdiction;
 
-// Providers the agent never needs an account with (MESSAGING-LEVELS L1.1), read from facts.
-const v = facts.static.vendors;
-const providers = [...new Set([v.sanctions, v.adverse_media_fallback, v.headless_browser, v.us_company_registry].filter(Boolean).map((n) => n.replace(/\s*\(.*\)$/, "")))];
-const providerList = providers.length > 1 ? `${providers.slice(0, -1).join(", ")} or ${providers.at(-1)}` : providers[0];
 
 const stats = [
   { value: tools.length.toLocaleString("en-GB"), label: "tools in the library", href: "/tools" },
@@ -57,7 +53,7 @@ const stats = [
       <div class="stack prose">
         <p class="t-body">An agent becomes useful when it can act: search the web, read a document, check a VAT number, look up a company in its register. Each of those jobs sits with a different provider, and each provider wants its own account, key, contract and bill.</p>
         <p class="t-body">That works for one tool. It breaks down as the list grows, and it never works for an agent that finds out mid-task that it needs something new.</p>
-        <p class="t-body"><strong>{L1.headline}</strong> Strale holds the provider relationships{providerList && <>, so your agent never needs an account with {providerList}</>}. It reaches every tool through one connection: MCP, the REST API or an SDK. {L1.support}</p>
+        <p class="t-body"><strong>{L1.headline}</strong> Strale holds the provider relationships, so your agent never needs an account, a contract or a bill with any of them. It reaches every tool through one connection: MCP, the REST API or an SDK. {L1.support}</p>
         <p class="t-body">{L1.perCall} {L1.x402}</p>
         <p class="t-body">The deepest part of the library is company and compliance data: company records from official sources in {plural(countries.length, "country", "countries")}, and sanctions, PEP and adverse-media screening, with each source named on the tool’s page.</p>
         <div class="row">

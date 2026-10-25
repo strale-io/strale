@@ -60,7 +60,6 @@ const call = (s: ResolvedStep, i: number): Snippet => {
   return { ...toolSnippets({ slug: s.slug, inputs: s.input, priceCents: s.listPriceCents ?? 0, free: s.free, x402: s.x402 })[0], label };
 };
 const calls = u.steps.map(call);
-const anyPublished = u.steps.some((s) => s.outputSource === "published");
 ---
 <Base title={u.title} current="use-cases" description={u.line}>
   <article>
@@ -135,7 +134,7 @@ const anyPublished = u.steps.some((s) => s.outputSource === "published");
         <div class="section-head">
           <p class="label">Illustrative example</p>
           <h2 id="example-title" class="t-section">One run, start to finish</h2>
-          <p class="t-compact muted">What the agent sends and what comes back, step by step. The values are illustrative{anyPublished ? " except where a step shows the tool’s published example" : ""}; the field names are the tools’ own, and a real call returns live values.</p>
+          <p class="t-compact muted">What the agent sends and what comes back, step by step.</p>
         </div>
         <ol class="example-steps" role="list">
           {u.steps.map((s, i) => (
