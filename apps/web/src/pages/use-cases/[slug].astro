@@ -1,0 +1,340 @@
+---
+// Use-case detail (SITE-STRUCTURE.md page 8): the job in the reader's terms, the
+// tools in call order, one worked example (labelled illustrative), the cost of one
+// run from live prices, a code sketch for one route, and where the person stays in
+// the loop for checks that feed a decision about a person or company. Copy is
+// editorial (src/content/use-cases.ts); names, prices, steps and eligibility are
+// read from the catalogue at build time.
+import { Image } from "astro:assets";
+import Base from "../../layouts/Base.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import artWeb from "../../assets/illustrations/search-web.webp";
+import artDocuments from "../../assets/illustrations/read-documents.webp";
+import artCheck from "../../assets/illustrations/check-details.webp";
+import artCompany from "../../assets/illustrations/company-records.webp";
+import artScreening from "../../assets/illustrations/screening.webp";
+import artBalance from "../../assets/illustrations/pay-balance.webp";
+import artDeveloper from "../../assets/illustrations/developer-jobs.webp";
+import { getSiteData, tools as allTools } from "../../lib/site-data.ts";
+import { formatEur, formatUsd, json, plural } from "../../lib/format.ts";
+import { toolSnippets, solutionSnippets, type Snippet } from "../../lib/snippets.ts";
+import { USE_CASES, resolveUseCases, type Illustration, type ResolvedStep } from "../../content/use-cases.ts";
+
+export function getStaticPaths() {
+  return USE_CASES.map((u) => ({ params: { slug: u.slug }, props: { slug: u.slug } }));
+}
+
+const ART: Record<Illustration, ImageMetadata> = {
+  "search-web": artWeb,
+  "read-documents": artDocuments,
+  "check-details": artCheck,
+  "company-records": artCompany,
+  screening: artScreening,
+  "pay-balance": artBalance,
+  "developer-jobs": artDeveloper,
+};
+
+const { slug } = Astro.props as { slug: string };
+const data = await getSiteData();
+const all = resolveUseCases(data);
+const u = all.find((x) => x.slug === slug)!;
+const others = all.filter((x) => x.slug !== slug);
+const first = u.steps[0];
+const toolCount = allTools(data).length;
+
+// Cost of one run with an API key. Free tools count as free; a bundled check counts at its own price.
+const price = (s: ResolvedStep) => (s.priceCents === null ? null : s.free ? "Free" : formatEur(s.priceCents));
+const hasBundle = u.steps.some((s) => s.bundle);
+const hasFree = u.steps.some((s) => s.free);
+// Keyless over x402 only when every step of the run is eligible; the quote is the sum of the steps' USDC prices.
+const x402Total = u.steps.every((s) => s.x402 && s.available) ? u.steps.reduce((a, s) => a + s.x402!.price_usd, 0) : null;
+const routes = ["API", "MCP", "SDKs", ...(x402Total !== null ? ["x402"] : [])].join(", ").replace(/, ([^,]*)$/, " and $1");
+
+// Code sketch: the REST API route for each step, from lib/snippets.ts with the worked example's inputs.
+const call = (s: ResolvedStep, i: number): Snippet => {
+  const label = `${i + 1}. ${s.name}`;
+  if (s.bundle) {
+    if (s.priceCents === null) return { label, lang: "shell", code: `# Bundled checks are read from the live API; this preview build has none.\n# The live site shows the call for ${s.slug} here.` };
+    return { ...solutionSnippets({ slug: s.slug, inputs: s.input, priceCents: s.priceCents, x402: s.x402 })[0], label };
+  }
+  return { ...toolSnippets({ slug: s.slug, inputs: s.input, priceCents: s.listPriceCents ?? 0, free: s.free, x402: s.x402 })[0], label };
+};
+const calls = u.steps.map(call);
+const anyPublished = u.steps.some((s) => s.outputSource === "published");
+---
+<Base title={u.title} current="use-cases" description={u.line}>
+  <article>
+    <header class="page-head">
+      <div class="container page-head-grid">
+        <div class="stack">
+          <nav aria-label="Breadcrumb" class="small"><a class="link" href="/use-cases">Use cases</a> <span aria-hidden="true">/</span> <span>{u.title}</span></nav>
+          <h1 class="t-campaign">{u.headline}</h1>
+          <p class="t-lead">{u.lead}</p>
+          <div class="row head-actions">
+            <a class="btn btn-primary btn-lg" href={first.href} data-magnet>Open {first.name} <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+            <a class="link-standalone" href="#cost">What one run costs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+          </div>
+          <ul class="facts" role="list" aria-label="This job at a glance">
+            <li><span class="label">Calls</span><span class="fact">{plural(u.steps.length, hasBundle ? "step" : "tool")}</span></li>
+            {u.totalCents !== null && <li><span class="label">One run</span><span class="fact num">{u.totalCents === 0 ? "Free" : formatEur(u.totalCents)}</span></li>}
+            <li><span class="label">Routes</span><span class="fact">{routes}</span></li>
+          </ul>
+        </div>
+        <div class="plate page-head-art"><Image src={ART[u.art]} alt="" widths={[320, 480, 640]} sizes="(min-width: 1024px) 320px, 0px" loading="eager" /></div>
+      </div>
+    </header>
+
+    <!-- (2) The tools, in call order. -->
+    <section class="section" aria-labelledby="flow-title">
+      <div class="container split">
+        <div class="stack split-intro">
+          <p class="label">How your agent does it</p>
+          <h2 id="flow-title" class="t-section">{plural(u.steps.length, hasBundle ? "step" : "call")}, one connection</h2>
+          <p class="t-lead muted">{u.scenario}</p>
+          <p class="t-compact muted">Every step goes through the same key and the same connection, with no account at any of the providers behind them.</p>
+        </div>
+        <ol class="flow" role="list">
+          {u.steps.map((s, i) => (
+            <li class="flow-step" data-spotlight>
+              <span class="flow-num num" aria-hidden="true">{i + 1}</span>
+              <div class="flow-body">
+                <p class="flow-head">
+                  <a class="flow-name" href={s.href}><span class="visually-hidden">Step {i + 1}: </span>{s.name}</a>
+                  {price(s) && <span class="flow-price num">{price(s)}</span>}
+                </p>
+                <p class="t-compact">{s.does}</p>
+                <div class="row tags">
+                  {s.bundle && <span class="tag tag-soft">Bundled check{s.bundleSteps.length > 0 && ` · ${plural(s.bundleSteps.length, "step")}`}</span>}
+                  {s.free && <span class="tag tag-teal">Free to try</span>}
+                  {s.x402 && <span class="tag tag-kit">x402</span>}
+                  <code class="slug">{s.slug}</code>
+                </div>
+                {s.bundle && s.bundleSteps.length > 0 && (
+                  <ul class="chip-row sub-steps" role="list" aria-label={`Steps in ${s.name}`}>
+                    {s.bundleSteps.map((b) => <li><a class="sub-chip" href={`/tools/${b.slug}`}>{b.name}</a></li>)}
+                  </ul>
+                )}
+                {!s.available && <p class="small muted">Bundled checks are read from the live API; this preview build has none, so the steps and price appear on the live site.</p>}
+              </div>
+            </li>
+          ))}
+          <li class="flow-step flow-end">
+            <span class="flow-num" aria-hidden="true"><svg class="icon icon-sm"><use href="#i-check" /></svg></span>
+            <div class="flow-body">
+              <p class="flow-head"><span class="flow-name-plain">The result</span></p>
+              <p class="t-compact">{u.outcome}</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- (3) One worked example, labelled illustrative. -->
+    <section class="section section-sunken" aria-labelledby="example-title">
+      <div class="container stack-loose">
+        <div class="section-head">
+          <p class="label">Illustrative example</p>
+          <h2 id="example-title" class="t-section">One run, start to finish</h2>
+          <p class="t-compact muted">What the agent sends and what comes back, step by step. The values are illustrative{anyPublished ? " except where a step shows the tool’s published example" : ""}; the field names are the tools’ own, and a real call returns live values.</p>
+        </div>
+        <ol class="example-steps" role="list">
+          {u.steps.map((s, i) => (
+            <li class="stack-tight">
+              <h3 class="t-subhead example-title"><span class="example-num num">{i + 1}</span> {s.name}</h3>
+              <div class="grid-2 example-grid">
+                <CodeBlock id={`ex-${i}-in`} title="Agent sends" wrap panels={[{ label: "Input", lang: "json", code: json(s.input) }]} />
+                {s.output && <CodeBlock id={`ex-${i}-out`} title={s.outputSource === "published" ? "Comes back · published example" : "Comes back"} wrap panels={[{ label: "Output", lang: "json", code: json(s.output) }]} />}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <!-- (4) Cost per run, from live prices. -->
+    <section class="section" id="cost" aria-labelledby="cost-title">
+      <div class="container stack-loose">
+        <div class="section-head">
+          <h2 id="cost-title" class="t-section">What one run costs</h2>
+          <p class="t-lead muted">Priced per call from the live catalogue, with no subscription and no provider accounts.</p>
+        </div>
+        <div class:list={["cost-grid", { "cost-grid-two": u.oneCall || x402Total !== null }]}>
+          <div class="card cost-card">
+            <ul class="cost-list" role="list">
+              {u.steps.map((s, i) => (
+                <li class="cost-row">
+                  <span class="cost-step"><span class="num muted">{i + 1}</span> <a class="link-quiet" href={s.href}>{s.name}</a></span>
+                  <span class="num">{price(s) ?? <span class="muted small">Price on the live site</span>}</span>
+                </li>
+              ))}
+            </ul>
+            <div class="cost-total">
+              <span class="label">One run, with an API key</span>
+              {u.totalCents !== null ? <span class="t-stat">{u.totalCents === 0 ? "Free" : formatEur(u.totalCents)}</span> : <span class="muted">Shown on the live site, once the bundled check’s price is read</span>}
+            </div>
+            <p class="small muted">
+              {hasFree && "Free tools cost nothing when called with a key. "}
+              Each tool is charged only when its call succeeds.
+              {hasBundle && " A bundled check is charged once at its own price when its steps return results, and refunded when every step fails or Strale withholds a step."}
+            </p>
+          </div>
+          {(u.oneCall || x402Total !== null) && (
+            <div class="stack-loose">
+              {u.oneCall && (
+                <a class="card card-link one-call" href={u.oneCall.href} data-spotlight>
+                  <span class="label">The same job in one call</span>
+                  <span class="card-title">{u.oneCall.name}</span>
+                  <span class="card-body">{u.oneCall.pitch}</span>
+                  <span class="card-meta">
+                    <span class="small muted">{u.oneCall.bundleSteps.length > 0 ? `${plural(u.oneCall.bundleSteps.length, "step")}, one price` : "Steps read from the live API"}</span>
+                    {u.oneCall.priceCents !== null && <span class="price"><span class="num">{formatEur(u.oneCall.priceCents)}</span><span class="unit">per check</span></span>}
+                  </span>
+                </a>
+              )}
+              {x402Total !== null && (
+                <div class="card x402-card">
+                  <span class="label">No account at all</span>
+                  <p class="card-title">Pay per request from a wallet</p>
+                  <p class="card-body">Every step of this run is eligible for x402. Your agent pays each request in USDC as it goes: <span class="num">{formatUsd(x402Total)}</span> for the run, quoted before anything is paid.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+
+    <!-- (5) A code sketch for one route. -->
+    <section class="section section-sunken" aria-labelledby="code-title">
+      <div class="container split split-code">
+        <div class="stack">
+          <h2 id="code-title" class="t-section">The calls, in code</h2>
+          <p class="t-lead muted">Each step through the REST API, with one key and the example’s inputs. Your agent passes what one step returns into the next.</p>
+          <p class="t-compact muted">The same tools work over MCP and the SDKs{x402Total !== null ? ", and keyless over x402" : ""}. Each tool’s page has the call for every route.</p>
+          <a class="link-standalone" href="/docs">Read the docs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+        </div>
+        <CodeBlock id="calls" title="Calls, in order" panels={calls} />
+      </div>
+    </section>
+
+    <!-- (6) Where the person stays in the loop: only for checks that feed a decision about a person or company. -->
+    {u.human && (
+      <section class="section" aria-labelledby="human-title">
+        <div class="container">
+          <div class="human">
+            <span class="human-icon" aria-hidden="true"><svg class="icon icon-lg"><use href="#i-check" /></svg></span>
+            <div class="stack">
+              <p class="label">Built for a reviewer</p>
+              <h2 id="human-title" class="t-section">{u.human.title}</h2>
+              <p class="t-lead muted">{u.human.body}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    )}
+
+    <section class:list={["section", { "section-sunken": !!u.human }]} aria-labelledby="others-title">
+      <div class="container stack-loose">
+        <div class="section-head">
+          <h2 id="others-title" class="t-section">More jobs agents do with Strale</h2>
+          <p class="t-compact muted">Or search all {plural(toolCount, "tool")} in the <a class="link" href="/tools">catalogue</a>.</p>
+        </div>
+        <ul class="grid-3 others" role="list">
+          {others.map((o) => (
+            <li><a class="card card-link other" href={`/use-cases/${o.slug}`} data-spotlight><span class="card-title">{o.title}</span><span class="card-body">{o.line}</span></a></li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section class="cta-band" aria-labelledby="start-title">
+      <div class="container">
+        <div class="cta-copy">
+          <h2 id="start-title" class="t-section">Give your agent this job today</h2>
+          <p class="t-lead">Start with {first.name}, then add the next step through the same connection.</p>
+          <div class="row">
+            <a class="btn btn-inverse btn-lg" href={first.href} data-magnet>Open {first.name}</a>
+            <a class="btn btn-inverse-outline btn-lg" href="/signup">Get an API key</a>
+          </div>
+        </div>
+      </div>
+      <img class="cta-bands" src="/brand/bands.svg" alt="" width="800" height="380" />
+    </section>
+  </article>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-48) var(--space-48); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
+    .page-head-art { display: block; }
+  }
+  .head-actions { margin-top: var(--space-24); gap: var(--space-16) var(--space-24); }
+  .facts { display: flex; flex-wrap: wrap; gap: var(--space-16) var(--space-40); margin: 0; margin-top: var(--space-32); padding: var(--space-20) 0 0; list-style: none; border-top: var(--border-width) solid var(--border); }
+  .facts li { display: grid; gap: var(--space-4); }
+  .fact { font-family: var(--type-detail-family); font-weight: var(--type-detail-weight); font-size: var(--type-compact-size); }
+
+  .section { padding-block: var(--section-space); }
+  .section-sunken { background: var(--surface-sunken); }
+  .section-head { display: grid; gap: var(--space-12); }
+  .section-head .t-lead { max-width: var(--measure-lead); }
+  .split { display: grid; gap: var(--space-40); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) {
+    .split { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-64); align-items: start; }
+    .split-intro { position: sticky; top: calc(var(--nav-h) + var(--space-32)); }
+  }
+
+  /* The step sequence: numbered nodes on a rail. */
+  .flow { --_node: var(--space-40); display: grid; gap: var(--space-16); margin: 0; padding: 0; list-style: none; }
+  .flow-step { position: relative; display: grid; grid-template-columns: var(--_node) minmax(0, 1fr); gap: var(--space-16); padding: var(--space-20); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-1); transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard); }
+  .flow-step:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); }
+  .flow-step + .flow-step::after { content: ""; position: absolute; left: calc(var(--space-20) + var(--_node) / 2 - var(--border-width)); top: calc(-1 * var(--space-16) - var(--border-width)); height: var(--space-16); width: calc(var(--border-width) * 2); background: var(--border-strong); }
+  .flow-num { display: inline-grid; place-items: center; width: var(--_node); height: var(--_node); border-radius: var(--radius-pill); background: var(--action); color: var(--text-on-action); font-size: var(--type-compact-size); }
+  .flow-end { background: var(--surface-teal); border-color: transparent; box-shadow: none; }
+  .flow-end .flow-num { background: var(--surface); color: var(--success); }
+  .flow-body { display: grid; gap: var(--space-8); min-width: 0; align-content: start; }
+  .flow-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-4) var(--space-16); min-height: var(--_node); align-content: center; }
+  .flow-name, .flow-name-plain { font-family: var(--type-subhead-family); font-size: var(--type-subhead-size); font-weight: var(--type-subhead-weight); line-height: var(--type-subhead-line); letter-spacing: var(--type-subhead-tracking); color: var(--text); text-decoration: none; }
+  .flow-name:hover { color: var(--link); text-decoration: underline; text-underline-offset: var(--space-4); }
+  .flow-price { font-size: var(--type-ui-size); }
+  .tags { gap: var(--space-8); }
+  .slug { font-size: var(--type-small-size); }
+  .sub-steps { margin: var(--space-4) 0 0; padding: 0; list-style: none; gap: var(--space-4) var(--space-8); }
+  .sub-chip { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border); background: var(--surface-sunken); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-small-size); }
+  .sub-chip:hover { border-color: var(--link); color: var(--link); }
+
+  /* Worked example. */
+  .example-steps { display: grid; gap: var(--space-40); margin: 0; padding: 0; list-style: none; }
+  .example-title { display: flex; align-items: center; gap: var(--space-12); }
+  .example-num { display: inline-grid; place-items: center; width: var(--space-32); height: var(--space-32); border-radius: var(--radius-pill); background: var(--surface); border: var(--border-width) solid var(--border-strong); font-size: var(--type-small-size); flex: none; }
+  .example-grid { align-items: start; }
+
+  /* Cost. */
+  .cost-grid { display: grid; gap: var(--space-24); grid-template-columns: minmax(0, 1fr); align-items: start; }
+  @media (min-width: 1024px) { .cost-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); } .cost-grid:not(.cost-grid-two) { grid-template-columns: minmax(0, 7fr); } }
+  .cost-card { gap: var(--space-20); }
+  .cost-list { margin: 0; padding: 0; list-style: none; display: grid; }
+  .cost-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-16); padding-block: var(--space-12); border-bottom: var(--border-width) dashed var(--border); }
+  .cost-step { display: inline-flex; gap: var(--space-12); align-items: baseline; min-width: 0; }
+  .cost-total { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: var(--space-8) var(--space-16); padding-top: var(--space-4); }
+  .one-call, .x402-card { gap: var(--space-8); }
+  .one-call .card-meta { margin-top: var(--space-8); }
+
+  /* Code. */
+  @media (min-width: 1024px) { .split-code { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+
+  /* The person in the loop. */
+  .human { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; padding: var(--space-32); border-radius: var(--radius-card); background: var(--surface-blue); }
+  .human-icon { display: inline-grid; place-items: center; width: var(--space-64); height: var(--space-64); border-radius: var(--radius-pill); background: var(--surface); color: var(--link); }
+  .human .t-section { max-width: var(--measure-section); }
+  @media (min-width: 768px) { .human { grid-template-columns: auto minmax(0, 1fr); align-items: start; padding: var(--space-48); gap: var(--space-40); } }
+
+  .others { margin: 0; padding: 0; list-style: none; }
+  .others > li { display: grid; }
+  .other { color: var(--text); }
+  .cta-band .row { margin-top: var(--space-8); }
+
+  @media (prefers-reduced-motion: reduce) { .flow-step { transition: none; } }
+</style>

@@ -1,0 +1,118 @@
+---
+// Use cases (SITE-STRUCTURE.md page 7): one card per job, each with a one-line
+// description and the tools it uses. The jobs, their tools and their copy are
+// editorial (src/content/use-cases.ts); every tool, price and count is read from
+// the catalogue at build time, and a slug the catalogue lacks fails the build.
+import { Image } from "astro:assets";
+import Base from "../../layouts/Base.astro";
+import artLibrary from "../../assets/illustrations/tool-library.webp";
+import artWeb from "../../assets/illustrations/search-web.webp";
+import artDocuments from "../../assets/illustrations/read-documents.webp";
+import artCheck from "../../assets/illustrations/check-details.webp";
+import artCompany from "../../assets/illustrations/company-records.webp";
+import artScreening from "../../assets/illustrations/screening.webp";
+import artBalance from "../../assets/illustrations/pay-balance.webp";
+import artDeveloper from "../../assets/illustrations/developer-jobs.webp";
+import { getSiteData, tools as allTools } from "../../lib/site-data.ts";
+import { formatEur, plural } from "../../lib/format.ts";
+import { resolveUseCases, type Illustration } from "../../content/use-cases.ts";
+
+const ART: Record<Illustration, ImageMetadata> = {
+  "search-web": artWeb,
+  "read-documents": artDocuments,
+  "check-details": artCheck,
+  "company-records": artCompany,
+  screening: artScreening,
+  "pay-balance": artBalance,
+  "developer-jobs": artDeveloper,
+};
+
+const data = await getSiteData();
+const useCases = resolveUseCases(data);
+const libraryCount = allTools(data).length;
+---
+<Base title="Use cases" current="use-cases" description="The jobs AI agents are built to do, and the Strale tools for each: research, documents, data checks, supplier onboarding, invoice issuers and website audits.">
+  <section class="page-head">
+    <div class="container page-head-grid">
+      <div class="stack">
+        <p class="label">Use cases</p>
+        <h1 class="t-campaign">The jobs agents are built to do, and the tools to do them</h1>
+        <p class="t-lead">Research a question, read a document, check a detail, vet a supplier, check an invoice before it is paid, audit a website. For each job: the tools your agent calls, in order, what comes back, what one run costs and the code to start.</p>
+      </div>
+      <div class="plate page-head-art"><Image src={artLibrary} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
+    </div>
+  </section>
+
+  <section class="section-cards" aria-label="Use cases">
+    <div class="container">
+      <ul class="grid-2 uc-grid" role="list">
+        {useCases.map((u) => (
+          <li>
+            <a class="card card-link uc-card" href={`/use-cases/${u.slug}`} data-spotlight>
+              <div class="plate uc-art"><Image src={ART[u.art]} alt="" widths={[200, 300, 400]} sizes="(min-width: 640px) 200px, 40vw" loading="lazy" /></div>
+              <div class="uc-copy">
+                <p class="uc-meta small">
+                  <span>{plural(u.steps.length, u.steps.some((s) => s.bundle) ? "step" : "tool")}</span>
+                  {u.totalCents !== null && <span class="num">{u.totalCents === 0 ? "Free per run" : `${formatEur(u.totalCents)} per run`}</span>}
+                </p>
+                <h2 class="card-title">{u.title}</h2>
+                <p class="card-body">{u.line}</p>
+                <ul class="chip-row uc-chips" role="list" aria-label={`Tools used: ${u.title}`}>
+                  {u.steps.map((s) => <li class="uc-chip">{s.name}</li>)}
+                </ul>
+                <span class="uc-more">See the job, step by step <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></span>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="more-title">
+    <div class="container more">
+      <div class="stack">
+        <h2 id="more-title" class="t-section">Your agent’s job is not on this list?</h2>
+        <p class="t-lead muted">The catalogue has {plural(libraryCount, "tool")}, from exchange rates to company records, all through the same key and the same connection.</p>
+      </div>
+      <div class="row">
+        <a class="btn btn-primary" href="/tools" data-magnet>Browse tools</a>
+        <a class="link-standalone" href="/company-data">Company data by country <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-32); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
+    .page-head-art { display: block; }
+  }
+  .section { padding-block: var(--section-space); }
+  .section-sunken { background: var(--surface-sunken); }
+  .section-cards { padding-block: var(--space-16) var(--section-space); }
+
+  .uc-grid { margin: 0; padding: 0; list-style: none; gap: var(--space-24); }
+  .uc-grid > li { display: grid; }
+  .uc-card { grid-template-columns: minmax(0, 1fr); gap: var(--space-20); padding: var(--space-20); color: var(--text); }
+  .uc-art { width: 100%; max-width: calc(var(--space-160) + var(--space-40)); }
+  .uc-card:hover .uc-art img { transform: scale(1.04); }
+  .uc-copy { display: grid; gap: var(--space-12); align-content: start; min-width: 0; }
+  .uc-meta { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-12); color: var(--text-muted); }
+  .uc-meta span + span::before { content: "·"; margin-right: var(--space-12); }
+  .uc-chips { margin: 0; padding: 0; list-style: none; gap: var(--space-4) var(--space-8); }
+  .uc-chip { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border); background: var(--surface-sunken); color: var(--text); font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
+  .uc-more { display: inline-flex; align-items: center; gap: var(--space-4); color: var(--link); font-family: var(--type-ui-family); font-weight: var(--type-ui-weight); margin-top: var(--space-4); }
+  .uc-more .icon { transition: transform var(--duration-base) var(--ease-standard); }
+  .uc-card:hover .uc-more .icon { transform: translateX(var(--space-2)); }
+  @media (min-width: 640px) {
+    .uc-card { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: center; }
+  }
+  @media (prefers-reduced-motion: reduce) { .uc-card:hover .uc-art img, .uc-card:hover .uc-more .icon { transform: none; } }
+
+  .more { display: grid; gap: var(--space-24); }
+  @media (min-width: 1024px) { .more { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: end; } .more .row { justify-content: flex-end; } }
+</style>
