@@ -4,8 +4,8 @@
 //   (every duration 0) shows the current call still and never advances on its own; choosing a
 //   tool still swaps it.
 // - The automatic cycle is silent to screen readers (aria-live="off"); a call the visitor chose is
-//   announced. It pauses while the pointer or keyboard focus is in the board, and the Pause button
-//   stops it until pressed again (WCAG 2.2.2).
+//   announced. It holds while the pointer or keyboard focus is on a tool, and the Pause button stops
+//   it until pressed again (WCAG 2.2.2).
 // Sets SVG geometry attributes and toggles classes; the Web Animations it runs are the line draw,
 // the packet, and the progress bar.
 interface PortData { slug: string; x: number; y: number; ask: string; input: Record<string, unknown>; out: Record<string, unknown>; src: string; price: string; charged: string }
@@ -17,6 +17,19 @@ const tint = (o: Record<string, unknown>) =>
     .replace(/"([^"]+)":/g, '<span class="tk-p">"$1"</span>:')
     .replace(/: "([^"]*)"/g, ': <span class="tk-s">"$1"</span>')
     .replace(/: (true|false|[\d.]+)/g, ': <span class="tk-n">$1</span>');
+
+/** Easing function for a CSS cubic-bezier() token, so the packet follows the line's easing. */
+function bezier(css: string): (t: number) => number {
+  const m = css.match(/cubic-bezier\(([^)]+)\)/);
+  if (!m) return (t) => t;
+  const [x1, y1, x2, y2] = m[1].split(",").map(Number);
+  const at = (a: number, b: number, t: number) => 3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3;
+  return (x) => {
+    let lo = 0, hi = 1;
+    for (let k = 0; k < 24; k++) { const mid = (lo + hi) / 2; if (at(x1, x2, mid) < x) lo = mid; else hi = mid; }
+    return at(y1, y2, (lo + hi) / 2);
+  };
+}
 
 for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]")) {
   const wrap = root.querySelector<HTMLElement>("[data-ports]");
@@ -86,16 +99,19 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
   }
   new ResizeObserver(layout).observe(board);
 
-  let token = 0, held = false, paused = false, visible = true;
+  // Two tokens: a new play cancels the previous play's reveal; a new cycle timer cancels the previous
+  // timer. Holding, releasing or scrolling never cancels a reveal that is under way.
+  let playTk = 0, cycleTk = 0, held = false, paused = false, visible = true, revealing = false;
   const running = () => T.cycle > 0 && !held && !paused && visible;
-  const wait = (t: number, tk: number) => new Promise<boolean>((r) => setTimeout(() => r(tk === token), t));
+  const sleep = (t: number) => new Promise<void>((r) => setTimeout(r, t));
   const show = (row: HTMLElement, html: string) => { row.querySelector("pre")!.innerHTML = html; row.classList.add("show"); };
+  const ease = bezier(EASE);
 
   async function play(i: number, chosen: boolean) {
-    const tk = ++token;
+    const tk = ++playTk;
+    ++cycleTk;
     cur = i;
     const p = data[i];
-    live.setAttribute("aria-live", chosen ? "polite" : "off");
     buttons.forEach((b, j) => { b.classList.toggle("on", j === i); b.setAttribute("aria-pressed", String(j === i)); });
     if (drawn()) {
       const len = setWire(i);
@@ -105,60 +121,67 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-switchboard]"))
         const t0 = performance.now();
         const move = (now: number) => {
           const u = Math.min(1, (now - t0) / T.draw);
-          const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
-          const pt = wire.getPointAtLength(len * e);
+          const pt = wire.getPointAtLength(len * ease(u));
           packet.setAttribute("cx", String(pt.x));
           packet.setAttribute("cy", String(pt.y));
-          if (u < 1 && tk === token) requestAnimationFrame(move);
+          if (u < 1 && tk === playTk) requestAnimationFrame(move);
         };
         requestAnimationFrame(move);
       } else wire.setAttribute("stroke-dashoffset", "0");
     }
     const call = `<span class="tk-s">${esc(p.slug)}</span> · ${esc(p.price)}\n${tint(p.input)}`;
+    // Announce only calls the visitor chose; switch the live region on a frame before the first write.
+    live.setAttribute("aria-live", chosen ? "polite" : "off");
+    await new Promise((r) => requestAnimationFrame(r));
+    if (tk !== playTk) return;
     if (T.step === 0) {
       show(rows.ask, esc(p.ask)); show(rows.call, call); show(rows.out, tint(p.out));
       fPrice.textContent = p.charged; fSrc.textContent = p.src;
       return;
     }
+    revealing = true;
     Object.values(rows).forEach((r) => { r.classList.remove("show"); r.querySelector("pre")!.textContent = ""; });
     fPrice.textContent = "–"; fSrc.textContent = "–";
-    if (T.cycle > 0) bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: T.cycle, fill: "forwards" });
+    bar.getAnimations().forEach((a) => a.cancel());
+    if (T.cycle > 0 && !paused) bar.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: T.cycle, fill: "forwards" });
     show(rows.ask, esc(p.ask));
-    if (!(await wait(T.step, tk))) return;
+    await sleep(T.step);
+    if (tk !== playTk) return;
     show(rows.call, call);
-    if (!(await wait(T.step, tk))) return;
+    await sleep(T.step);
+    if (tk !== playTk) return;
     show(rows.out, tint(p.out));
     fPrice.textContent = p.charged; fSrc.textContent = p.src;
-    await advanceLater(tk);
+    revealing = false;
+    advanceLater(T.cycle - 2 * T.step);
   }
-  // Move to the next tool after the rest of the cycle, unless held, paused or off screen.
-  async function advanceLater(tk: number) {
+  // Move to the next tool after `after` ms, unless a newer timer, play, hold, pause or scroll intervenes.
+  async function advanceLater(after: number) {
     if (T.cycle === 0) return;
-    if (!(await wait(T.cycle - 2 * T.step, tk))) return;
-    if (running()) play((cur + 1) % data.length, false);
+    const ck = ++cycleTk;
+    await sleep(after);
+    if (ck === cycleTk && running()) play((cur + 1) % data.length, false);
   }
-  const resume = () => { if (running()) advanceLater(++token); };
+  // After a hold, pause or scroll ends: a reveal under way schedules its own next step.
+  const resume = () => { if (running() && !revealing) advanceLater(T.cycle / 3); };
 
   buttons.forEach((b, i) => {
     b.addEventListener("click", () => play(i, true));
     b.addEventListener("focus", () => { if (cur !== i) play(i, true); });
     b.addEventListener("pointerenter", (e) => { if ((e as PointerEvent).pointerType === "mouse" && cur !== i) play(i, true); });
+    // Hold the cycle while the pointer is on a tool or keyboard focus is on one.
+    b.addEventListener("pointerenter", () => { held = true; });
+    b.addEventListener("pointerleave", () => { held = false; resume(); });
+    b.addEventListener("focusin", () => { held = true; });
+    b.addEventListener("focusout", (e) => { if (!buttons.includes(e.relatedTarget as HTMLButtonElement)) { held = false; resume(); } });
   });
-  // Hold the cycle while the pointer or keyboard focus is in the board; a call already showing finishes.
-  const hold = () => { held = true; };
-  const release = () => { held = false; resume(); };
-  board.addEventListener("pointerenter", hold);
-  board.addEventListener("pointerleave", release);
-  board.addEventListener("focusin", hold);
-  board.addEventListener("focusout", (e) => { if (!board.contains(e.relatedTarget as Node | null)) release(); });
 
   if (T.cycle > 0) {
     pauseBtn.hidden = false;
     pauseBtn.addEventListener("click", () => {
       paused = !paused;
-      pauseBtn.setAttribute("aria-pressed", String(paused));
       pauseBtn.textContent = paused ? "Play" : "Pause";
-      if (paused) bar.getAnimations().forEach((a) => a.pause());
+      if (paused) { ++cycleTk; bar.getAnimations().forEach((a) => a.cancel()); }
       else play((cur + 1) % data.length, false);
     });
   }
