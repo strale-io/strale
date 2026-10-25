@@ -162,12 +162,12 @@ const glance = [
       </div>
       <div class="stack prose">
         <p class="t-body">The services that handle screening, payments, page rendering and logs for Strale, and the vendors behind some company-data tools. Your agent has no account with any of them: Strale holds the relationships.</p>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Vendors by role">
           <table class="table">
             <caption class="visually-hidden">Vendors by role</caption>
             <thead><tr><th scope="col">Used for</th><th scope="col">Vendor</th></tr></thead>
             <tbody>
-              {vendorRows.map((v) => <tr><td>{v.role}</td><td>{v.name}</td></tr>)}
+              {vendorRows.map((v) => <tr><th scope="row">{v.role}</th><td>{v.name}</td></tr>)}
             </tbody>
           </table>
         </div>

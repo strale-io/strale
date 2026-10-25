@@ -67,7 +67,7 @@ const toc = [
       { label: "Claude Code", lang: "shell", code: claudeCode },
     ]} />
     <ul class="doc-list t-body">
-      <li><strong>Claude Desktop.</strong> Merge the JSON into <code>claude_desktop_config.json</code>, then restart the app. On macOS the file is in <code>~/Library/Application Support/Claude/</code>. On Windows it is in <code>%APPDATA%\Claude\</code>.</li>
+      <li><strong>Claude Desktop.</strong> For the hosted server, add <code>{hosted}</code> as a custom connector under Settings → Connectors. For the local server, merge the Local (npx) JSON into <code>claude_desktop_config.json</code> and restart the app. On macOS the file is in <code>~/Library/Application Support/Claude/</code>; on Windows it is in <code>%APPDATA%\Claude\</code>.</li>
       <li><strong>Cursor.</strong> Put the same JSON in <code>.cursor/mcp.json</code>.</li>
       <li><strong>Any other MCP client.</strong> Point it at <code>{hosted}</code> over streamable HTTP. To use a key, send <code>Authorization: Bearer</code> with it.</li>
       <li><strong>Local.</strong> Needs Node.js 20 or later. The server reads <code>STRALE_API_KEY</code> from its environment. Leave it out to use free tools only.</li>
@@ -103,7 +103,7 @@ const toc = [
       </li>
       <li>
         <h3 class="t-subhead">Read the result</h3>
-        <p class="t-body">{output ? <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance. For this input the output is:</> : <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance.</>}</p>
+        <p class="t-body">{output ? <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance. The tool’s published example:</> : <>The result carries the tool’s output, the price charged (<code>0</code> for a free tool), the latency and the provenance.</>}</p>
         {output && <CodeBlock id="mcp-out" title="Output" wrap panels={[{ label: "Output", lang: "json", code: json(output) }]} />}
         <p class="t-compact muted">Without a key, free tools allow {FREE_TIER_DAILY_LIMIT} calls a day per IP address across all free tools.</p>
       </li>

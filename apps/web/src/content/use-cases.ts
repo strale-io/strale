@@ -107,13 +107,13 @@ export const USE_CASES: UseCase[] = [
         slug: "image-to-text",
         does: "Reads the text off the photographed receipt.",
         input: { image_url: "https://example.com/receipts/2024-01-15.jpg" },
-        output: { text: "Starbucks Coffee\nDate: 2024-01-15\nCaffe Latte x1 $5.50\nTotal: $5.50\nVisa ending 4242", confidence: "high" },
+        output: { text: "Example Coffee\nDate: 2024-01-15\nCaffe Latte x1 $5.50\nTotal: $5.50\nVisa ending 4242", confidence: "high" },
       },
       {
         slug: "receipt-categorize",
         does: "Turns the receipt text into an expense: vendor, date, amount and category.",
-        input: { text: "Starbucks Coffee\nDate: 2024-01-15\nCaffe Latte x1 $5.50\nTotal: $5.50\nVisa ending 4242" },
-        output: { vendor_name: "Starbucks Coffee", date: "2024-01-15", total_amount: 5.5, currency: "USD", category: "meals" },
+        input: { text: "Example Coffee\nDate: 2024-01-15\nCaffe Latte x1 $5.50\nTotal: $5.50\nVisa ending 4242" },
+        output: { vendor_name: "Example Coffee", date: "2024-01-15", total_amount: 5.5, currency: "USD", category: "meals" },
       },
       {
         slug: "invoice-extract",
@@ -142,14 +142,14 @@ export const USE_CASES: UseCase[] = [
       {
         slug: "email-validate",
         does: "Checks the address can receive mail: syntax, mail server, disposable and role addresses.",
-        input: { email: "maria.santos@gmial.com" },
-        output: { email: "maria.santos@gmial.com", valid: false, domain: "gmial.com", has_mx_records: false, is_disposable: false },
+        input: { email: "maria.santos@gmail.con" },
+        output: { email: "maria.santos@gmail.con", valid: false, domain: "gmail.con", has_mx_records: false, is_disposable: false },
       },
       {
         slug: "phone-validate",
         does: "Checks the phone number and returns it in international format, with its country and type.",
-        input: { phone_number: "+46701234567" },
-        output: { valid: true, e164: "+46701234567", country_code: "SE", phone_type: "mobile" },
+        input: { phone_number: "+46701740605" },
+        output: { valid: true, e164: "+46701740605", country_code: "SE", phone_type: "mobile" },
       },
       {
         slug: "iban-validate",
@@ -171,7 +171,7 @@ export const USE_CASES: UseCase[] = [
     title: "Onboard a supplier or customer",
     headline: "Your agent looks up the company and screens it before you sign.",
     line: "Find the company in official records, screen it against sanctions lists and adverse media, or run the full check in one call.",
-    lead: "Onboarding a business means the same checks every time: is the company real, is it active, is it on a sanctions list, is it in the news for the wrong reasons. Your agent runs them in seconds and hands your team the evidence.",
+    lead: "Onboarding a business means the same checks every time: is the company real, is it active, is it on a sanctions list, is it in the news for the wrong reasons. Your agent runs them and hands your team the evidence.",
     scenario: "A buyer adds a new UK supplier, Example Supplies Ltd, and the agent prepares the onboarding file.",
     outcome: "The onboarding file holds the register record and both screening results, ready for the person who approves the supplier.",
     steps: [

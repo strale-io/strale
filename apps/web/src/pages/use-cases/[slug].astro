@@ -174,7 +174,7 @@ const calls = u.steps.map(call);
             <p class="small muted">
               {hasFree && "Free tools cost nothing when called with a key. "}
               Each tool is charged only when its call succeeds.
-              {hasBundle && " A bundled check is charged once at its own price when its steps return results, and refunded when every step fails or Strale withholds a step."}
+              {hasBundle && " A bundled check is charged once at its own price when its steps return results, and refunded when every step fails or the check stops early."}
             </p>
           </div>
           {(u.oneCall || x402Total !== null) && (

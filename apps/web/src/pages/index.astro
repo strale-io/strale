@@ -107,7 +107,7 @@ const freeCount = tools.filter((t) => t.free).length;
           <h3 class="card-title">{L1.x402}</h3>
           {quoteTool?.x402 ? (
             <>
-              <p class="card-body">Your agent calls the tool with no key, gets a price quote back, pays it in USDC and gets the answer. No signup, no invoices.</p>
+              <p class="card-body">Your agent calls an x402 tool with no key, gets a price quote back, pays it in USDC and gets the answer. No signup, no invoices.</p>
               <CodeBlock id="quote" wrap title={`402 quote · ${quoteTool.name}`} panels={[{ label: "Request and quote", lang: "plain", code: `POST ${quoteTool.x402.endpoint}\n\nHTTP/1.1 402 Payment Required\n{\n  "x402Version": 1,\n  "error": "Payment required. ${quoteTool.name} costs $${quoteTool.x402.price_usd.toFixed(4)} USDC per call.",\n  "accepts": [{\n    "scheme": "exact",\n    "network": "${data.x402.network}",\n    "maxAmountRequired": "${usdcAtomic(quoteTool.x402.price_usd)}",\n    …\n  }]\n}` }]} />
             </>
           ) : (
@@ -170,7 +170,7 @@ const freeCount = tools.filter((t) => t.free).length;
         <div class="stack">
           <h2 id="tested-title" class="t-section">Tested, with the results in the open</h2>
           <p class="t-lead muted">Strale runs its own tests on its tools, from known answers to checks that the source is up, and publishes the results tool by tool.</p>
-          <p class="t-compact muted">Each tool page shows its latest test: when it ran and how it did. <a class="link" href="/security#testing">How testing works</a></p>
+          <p class="t-compact muted">Tool pages show the latest test: when it ran and how it did. <a class="link" href="/security#testing">How testing works</a></p>
         </div>
         <TestedNow rows={testedRows} loadedAt={data.loaded_at} />
       </div>
@@ -184,7 +184,7 @@ const freeCount = tools.filter((t) => t.free).length;
         <div class="section-head">
           <p class="label">Company and compliance data</p>
           <h2 id="company-title" class="t-section">Look up companies in official records in {plural(countries.length, "country", "countries")}</h2>
-          <p class="t-lead">Straight from the official register: name, registration number, status, address and directors. Each country page shows the register, what comes back and the price.</p>
+          <p class="t-lead">From each country’s official source: name, registration number and status, plus address and directors wherever the register publishes them. Each country page names the source, what comes back and the price.</p>
         </div>
         <div class="plate flagship-art"><Image src={artCompany} alt="" widths={[320, 480, 640]} sizes="(min-width: 1024px) 320px, 60vw" loading="lazy" /></div>
       </div>
@@ -206,7 +206,7 @@ const freeCount = tools.filter((t) => t.free).length;
         </div>
         <div class="stack-tight">
           <h3 class="t-subhead">Run a whole check in one call</h3>
-          <p class="t-compact muted">A full company check or an invoice-issuer check in a single call, at one price, with every step’s result. The full checks finish with a written risk summary.</p>
+          <p class="t-compact muted">A full company check or an invoice-issuer check in a single call, at one price, with every step’s result. The full checks finish with an AI-written risk summary for your reviewer.</p>
           {bundles > 0 && <p class="small muted">{plural(bundles, "bundled check")} ready to call.</p>}
         </div>
       </div>

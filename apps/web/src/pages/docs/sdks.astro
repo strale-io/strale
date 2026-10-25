@@ -22,6 +22,8 @@ const py = snippets.find((s) => s.label === "Python")!.code + "\nprint(result.ou
 const errorsTs = [
   `import { Strale, StraleError, InsufficientBalanceError } from "${PACKAGES.typescript}";`,
   ``,
+  `const strale = new Strale({ apiKey: process.env.STRALE_API_KEY! });`,
+  ``,
   `try {`,
   `  const result = await strale.do({ capability_slug: "${tool.slug}", inputs: ${tsInputs}, max_price_cents: 1 });`,
   `} catch (err) {`,
@@ -35,7 +37,10 @@ const errorsTs = [
   `}`,
 ].join("\n");
 const errorsPy = [
-  `from ${PACKAGES.python} import DoRequest, InsufficientBalanceError, StraleError`,
+  `import os`,
+  `from ${PACKAGES.python} import Strale, DoRequest, InsufficientBalanceError, StraleError`,
+  ``,
+  `strale = Strale(api_key=os.environ["STRALE_API_KEY"])`,
   ``,
   `try:`,
   `    result = strale.do(DoRequest(capability_slug="${tool.slug}", inputs=${pyInputs}, max_price_cents=1))`,

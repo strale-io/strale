@@ -9,6 +9,7 @@ import Base from "../layouts/Base.astro";
 import { getSiteData, tools as allTools } from "../lib/site-data";
 import { formatEur, formatUsd, plural } from "../lib/format";
 import { JOB_GROUPS } from "../content/jobs";
+import { MAX_PRICE_CAP_CENTS, FREE_TIER_DAILY_LIMIT } from "../lib/code-facts";
 import artBalance from "../assets/illustrations/pay-balance.webp";
 import artWallet from "../assets/illustrations/pay-wallet.webp";
 
@@ -89,7 +90,7 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
           <ul class="ticks" role="list">
             <li>One account and one key for every tool and bundled check</li>
             <li>Top up a EUR balance by card; each paid call is charged from it</li>
-            <li>Set a price cap on every call, up to {formatEur(2000)}, and a tool that costs more is refused</li>
+            <li>Set a price cap on every call, up to {formatEur(MAX_PRICE_CAP_CENTS)}, and a tool that costs more is refused</li>
             <li>Every call is on record and can be fetched again by its transaction ID</li>
           </ul>
           <a class="btn btn-primary" href="/signup" data-magnet>Get an API key</a>
@@ -150,7 +151,7 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
       <div class="container stack-loose">
         <div class="section-head">
           <h2 id="free-title" class="t-section">Free to try, right now</h2>
-          <p class="t-lead muted">Call these with no key and no account, up to ten times a day. With an API key they stay free.</p>
+          <p class="t-lead muted">Call these with no key and no account, up to {FREE_TIER_DAILY_LIMIT} times a day. With an API key they stay free.</p>
         </div>
         <ul class="chip-row" role="list">
           {free.map((t) => <li><a class="tool-chip" href={`/tools/${t.slug}`}>{t.name}</a></li>)}
@@ -166,7 +167,7 @@ const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) 
         <details><summary>Is there a subscription or a minimum spend?</summary><p>No. You pay for the calls your agent makes and nothing else.</p></details>
         <details><summary>Can I try paid tools before I pay?</summary><p>Yes. New accounts start with trial credit, and the free tools need no account at all.</p></details>
         <details><summary>What happens when a call fails?</summary><p>A single tool is charged only when it succeeds, so a failed call costs nothing. A bundled check is one price for all its steps, and if every step fails you get it back.</p></details>
-        <details><summary>How do I stop my agent from overspending?</summary><p>Every API call carries a price cap you set, up to {formatEur(2000)} per call. A tool that costs more is refused before it runs. With x402 your agent sees the price before it pays.</p></details>
+        <details><summary>How do I stop my agent from overspending?</summary><p>Every API call carries a price cap you set, up to {formatEur(MAX_PRICE_CAP_CENTS)} per call. A tool that costs more is refused before it runs. With x402 your agent sees the price before it pays.</p></details>
         <details><summary>Which currency am I charged in?</summary><p>Balances and tool prices are in euros. x402 payments are in USDC on {network}, with the dollar price quoted on each request.</p></details>
         <details><summary>Can my agent pay for itself?</summary><p>Yes. With x402 an agent with a wallet pays per request, with no account and no key. {plural(x402Tools, "tool")} take x402 payments today.</p></details>
       </div>
