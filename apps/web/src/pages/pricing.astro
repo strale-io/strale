@@ -1,0 +1,243 @@
+---
+// Pricing (SITE-STRUCTURE.md page 9). Every price, range and count is computed from the
+// build's catalogue data; nothing is typed. The charging rules are the API's:
+// a single tool is charged only on success (claims.yaml pay-per-successful-call), a bundled
+// check is one price and is refunded when every step fails (routes/solution-execute.ts),
+// and an API call carries a price cap of at most €20 (routes/do.ts MAX_PRICE_CAP_CENTS).
+import { Image } from "astro:assets";
+import Base from "../layouts/Base.astro";
+import { getSiteData, tools as allTools } from "../lib/site-data";
+import { formatEur, formatUsd, plural } from "../lib/format";
+import { JOB_GROUPS } from "../content/jobs";
+import artBalance from "../assets/illustrations/pay-balance.webp";
+import artWallet from "../assets/illustrations/pay-wallet.webp";
+
+const data = await getSiteData();
+const tools = allTools(data);
+const paid = tools.filter((t) => !t.free && t.price_cents > 0);
+const free = tools.filter((t) => t.free).sort((a, b) => a.name.localeCompare(b.name));
+const bundles = data.solutions.filter((s) => s.price_cents > 0);
+const range = (cents: number[]) => (cents.length ? { lo: Math.min(...cents), hi: Math.max(...cents) } : null);
+const toolRange = range(paid.map((t) => t.price_cents));
+const bundleRange = range(bundles.map((s) => s.price_cents));
+const x402Tools = data.x402.capabilities.length;
+const x402Bundles = data.x402.solutions.length;
+const usd = data.x402.capabilities.map((x) => x.price_usd).filter((v) => v > 0);
+const usdRange = usd.length ? { lo: Math.min(...usd), hi: Math.max(...usd) } : null;
+const network = data.x402.network === "base" ? "Base" : data.x402.network;
+
+// Price by job: count and range per job group, so a reader can find their own job's cost.
+const byJob = JOB_GROUPS.map((g) => {
+  const inJob = tools.filter((t) => t.job === g.id);
+  const r = range(inJob.filter((t) => !t.free && t.price_cents > 0).map((t) => t.price_cents));
+  return { ...g, count: inJob.length, free: inJob.filter((t) => t.free).length, r };
+}).filter((g) => g.count > 0);
+const span = (r: { lo: number; hi: number } | null, fmt: (n: number) => string) => (r ? (r.lo === r.hi ? fmt(r.lo) : `${fmt(r.lo)} to ${fmt(r.hi)}`) : "free");
+---
+<Base title="Pricing" current="pricing" description="Pay per call with no subscription: one price per tool, charged only when the call succeeds. Pay from a prepaid balance with an API key, or per request from a wallet over x402.">
+  <section class="page-head">
+    <div class="container page-head-grid">
+      <div class="stack">
+        <p class="label">Pricing</p>
+        <h1 class="t-campaign">Pay for the calls your agent makes. Nothing else.</h1>
+        <p class="t-lead">No subscription, no contract, no minimum. Every tool has one price per call, and a call that fails costs nothing.</p>
+        <div class="row">
+          <a class="btn btn-primary btn-lg" href="/signup" data-magnet>Get an API key <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+          <a class="link-standalone" href="/tools?free=1">Try a free tool <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+        </div>
+      </div>
+      <div class="plate page-head-art"><Image src={artBalance} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
+    </div>
+  </section>
+
+  <section class="section-tight" aria-label="Prices at a glance">
+    <div class="container">
+      <ul class="stats" role="list">
+        {toolRange && (
+          <li class="stat card" data-spotlight>
+            <span class="label">Tools</span>
+            <span class="t-stat">{formatEur(toolRange.lo)}<span class="to"> to </span>{formatEur(toolRange.hi)}</span>
+            <span class="t-compact muted">per call, across {plural(paid.length, "paid tool")}</span>
+          </li>
+        )}
+        {bundleRange && (
+          <li class="stat card" data-spotlight>
+            <span class="label">Bundled checks</span>
+            <span class="t-stat">{bundleRange.lo === bundleRange.hi ? formatEur(bundleRange.lo) : <>{formatEur(bundleRange.lo)}<span class="to"> to </span>{formatEur(bundleRange.hi)}</>}</span>
+            <span class="t-compact muted">per check, every step included, across {plural(bundles.length, "bundled check")}</span>
+          </li>
+        )}
+        <li class="stat card" data-spotlight>
+          <span class="label">Free</span>
+          <span class="t-stat">{free.length}</span>
+          <span class="t-compact muted">tools you can call right now, with no key and no account</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="ways-title">
+    <div class="container stack-loose">
+      <div class="section-head">
+        <h2 id="ways-title" class="t-section">Two ways to pay</h2>
+        <p class="t-lead muted">The same tools either way. Pick the one that fits how your agent runs.</p>
+      </div>
+      <div class="grid-2 ways">
+        <article class="card way" data-spotlight>
+          <div class="plate way-art"><Image src={artBalance} alt="" widths={[160, 240, 320]} sizes="160px" loading="lazy" /></div>
+          <h3 class="t-subhead">An API key and a balance</h3>
+          <ul class="ticks" role="list">
+            <li>One account and one key for every tool and bundled check</li>
+            <li>Top up a EUR balance by card; each paid call is charged from it</li>
+            <li>Set a price cap on every call, up to {formatEur(2000)}, and a tool that costs more is refused</li>
+            <li>Every call is on record and can be fetched again by its transaction ID</li>
+          </ul>
+          <a class="btn btn-primary" href="/signup" data-magnet>Get an API key</a>
+        </article>
+        <article class="card way" data-spotlight>
+          <div class="plate way-art"><Image src={artWallet} alt="" widths={[160, 240, 320]} sizes="160px" loading="lazy" /></div>
+          <h3 class="t-subhead">A wallet, with no account</h3>
+          <ul class="ticks" role="list">
+            <li>Your agent pays each request in USDC on {network} over x402</li>
+            <li>The price is quoted before anything is paid{usdRange && <>: {span(usdRange, formatUsd)} per call</>}</li>
+            <li>{plural(x402Tools, "tool")}{x402Bundles > 0 ? ` and ${plural(x402Bundles, "bundled check")}` : ""} take x402 payments today</li>
+            <li>No signup, no key: the payment is the authorisation</li>
+          </ul>
+          <a class="btn btn-secondary" href="/docs/x402">Pay with x402</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="rules-title">
+    <div class="container stack-loose">
+      <h2 id="rules-title" class="t-section">How charging works</h2>
+      <div class="grid-4 rules">
+        <div class="rule"><span class="rule-mark" aria-hidden="true"><svg class="icon"><use href="#i-check" /></svg></span><h3 class="t-subhead">Pay on success</h3><p class="t-compact muted">A tool is charged only when the call succeeds. A failed call is free.</p></div>
+        <div class="rule"><span class="rule-mark" aria-hidden="true"><svg class="icon"><use href="#i-flow" /></svg></span><h3 class="t-subhead">One price per check</h3><p class="t-compact muted">A bundled check runs every step for one price. If every step fails, you get it back.</p></div>
+        <div class="rule"><span class="rule-mark" aria-hidden="true"><svg class="icon"><use href="#i-tool" /></svg></span><h3 class="t-subhead">Your cap, every call</h3><p class="t-compact muted">Each API call carries the most you will pay for it. Anything pricier is refused, not charged.</p></div>
+        <div class="rule"><span class="rule-mark" aria-hidden="true"><svg class="icon"><use href="#i-search" /></svg></span><h3 class="t-subhead">Prices in the open</h3><p class="t-compact muted">Every tool page shows its price per call, and every x402 call is quoted before it is paid.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-sunken" aria-labelledby="jobs-title">
+    <div class="container stack-loose">
+      <div class="section-head">
+        <h2 id="jobs-title" class="t-section">What a job costs</h2>
+        <p class="t-lead muted">Prices per call, by the kind of work your agent does.</p>
+      </div>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Prices by job">
+        <table class="table jobs-table">
+          <thead><tr><th scope="col">Job</th><th scope="col" class="num">Tools</th><th scope="col" class="num">Price per call</th><th scope="col"><span class="visually-hidden">Browse</span></th></tr></thead>
+          <tbody>
+            {byJob.map((g) => (
+              <tr>
+                <th scope="row">{g.label}</th>
+                <td class="num">{g.count}{g.free > 0 && <span class="muted"> · {g.free} free</span>}</td>
+                <td class="num">{span(g.r, formatEur)}</td>
+                <td><a class="link-standalone" href={`/tools?job=${g.id}`}>See tools <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {free.length > 0 && (
+    <section class="section" aria-labelledby="free-title">
+      <div class="container stack-loose">
+        <div class="section-head">
+          <h2 id="free-title" class="t-section">Free to try, right now</h2>
+          <p class="t-lead muted">Call these with no key and no account, up to ten times a day. With an API key they stay free.</p>
+        </div>
+        <ul class="chip-row" role="list">
+          {free.map((t) => <li><a class="tool-chip" href={`/tools/${t.slug}`}>{t.name}</a></li>)}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  <section class="section section-sunken" aria-labelledby="faq-title">
+    <div class="container faq-grid">
+      <h2 id="faq-title" class="t-section">Questions</h2>
+      <div class="faq">
+        <details><summary>Is there a subscription or a minimum spend?</summary><p>No. You pay for the calls your agent makes and nothing else.</p></details>
+        <details><summary>Can I try paid tools before I pay?</summary><p>Yes. New accounts start with trial credit, and the free tools need no account at all.</p></details>
+        <details><summary>What happens when a call fails?</summary><p>A single tool is charged only when it succeeds, so a failed call costs nothing. A bundled check is one price for all its steps, and if every step fails you get it back.</p></details>
+        <details><summary>How do I stop my agent from overspending?</summary><p>Every API call carries a price cap you set, up to {formatEur(2000)} per call. A tool that costs more is refused before it runs. With x402 your agent sees the price before it pays.</p></details>
+        <details><summary>Which currency am I charged in?</summary><p>Balances and tool prices are in euros. x402 payments are in USDC on {network}, with the dollar price quoted on each request.</p></details>
+        <details><summary>Can my agent pay for itself?</summary><p>Yes. With x402 an agent with a wallet pays per request, with no account and no key. {plural(x402Tools, "tool")} take x402 payments today.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-band" aria-labelledby="start-title">
+    <div class="container">
+      <div class="cta-copy">
+        <h2 id="start-title" class="t-section">Make your agent’s first call</h2>
+        <p class="t-lead">Get an API key for every tool, or start with a free tool and no key at all.</p>
+        <div class="row">
+          <a class="btn btn-inverse btn-lg" href="/signup" data-magnet>Get an API key</a>
+          <a class="btn btn-inverse-outline btn-lg" href="/tools?free=1">Try a free tool</a>
+        </div>
+      </div>
+    </div>
+    <img class="cta-bands" src="/brand/bands.svg" alt="" width="800" height="380" />
+  </section>
+</Base>
+
+<style>
+  .page-head { padding-block: var(--space-64) var(--space-48); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-grid .stack > .row { margin-top: var(--space-24); }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
+    .page-head-art { display: block; }
+  }
+  .section { padding-block: var(--section-space); }
+  .section-tight { padding-block: 0 var(--section-space); }
+  .section-sunken { background: var(--surface-sunken); }
+  .section-head { display: grid; gap: var(--space-12); }
+
+  .stats { display: grid; gap: var(--space-16); grid-template-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; }
+  @media (min-width: 768px) { .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .stat { gap: var(--space-8); }
+  .stat .t-stat { display: block; }
+  .stat .to { font-size: var(--type-lead-size); color: var(--text-muted); font-weight: var(--type-body-weight); }
+
+  .ways { gap: var(--space-24); align-items: stretch; }
+  .way { gap: var(--space-16); align-content: start; padding: var(--space-32); }
+  .way-art { width: calc(var(--space-96) + var(--space-32)); }
+  .way .btn { justify-self: start; margin-top: var(--space-8); }
+  .ticks { display: grid; gap: var(--space-12); margin: 0; padding: 0; list-style: none; }
+  .ticks li { position: relative; padding-left: calc(var(--icon-md) + var(--space-12)); color: var(--text); }
+  .ticks li::before { content: ""; position: absolute; left: 0; top: var(--space-4); width: var(--icon-md); height: var(--icon-md); border-radius: var(--radius-pill); background: var(--action-subtle); }
+  .ticks li::after { content: ""; position: absolute; left: calc(var(--icon-md) / 2 - var(--space-4)); top: calc(var(--space-4) + var(--icon-md) / 2 - var(--space-4)); width: var(--space-8); height: var(--space-8); border-radius: var(--radius-pill); background: var(--action); }
+
+  .rules { gap: var(--space-32) var(--column-gap); }
+  .rule { display: grid; gap: var(--space-12); align-content: start; }
+  .rule-mark { display: inline-grid; place-items: center; width: var(--space-48); height: var(--space-48); border-radius: var(--radius-control); background: var(--surface-blue); color: var(--link); }
+
+  .jobs-table th[scope="row"] { font-weight: var(--type-ui-weight); }
+  .jobs-table td:last-child { text-align: right; white-space: nowrap; }
+  .jobs-table .link-standalone { min-height: 0; }
+
+  .tool-chip { display: inline-flex; align-items: center; min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
+  .tool-chip:hover { background: var(--action-subtle); border-color: var(--link); }
+
+  .faq-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 1024px) { .faq-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); } }
+  .faq { display: grid; gap: var(--space-8); }
+  .faq details { background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); padding: var(--space-16) var(--space-20); transition: border-color var(--duration-fast) var(--ease-standard); }
+  .faq details[open] { border-color: var(--border-strong); }
+  .faq summary { cursor: pointer; font-family: var(--type-ui-family); font-weight: var(--type-ui-weight); list-style: none; display: flex; justify-content: space-between; gap: var(--space-16); }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--text-muted); transition: transform var(--duration-base) var(--ease-standard); }
+  .faq details[open] summary::after { transform: rotate(45deg); }
+  .faq details p { margin-top: var(--space-12); color: var(--text-muted); max-width: var(--measure-body); }
+  .cta-band .row { margin-top: var(--space-8); }
+  @media (prefers-reduced-motion: reduce) { .faq summary::after, .faq details { transition: none; } }
+</style>
