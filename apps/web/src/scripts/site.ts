@@ -1,5 +1,6 @@
 // Site behaviour: theme switch, disclosures (mobile menu), tabs, copy buttons.
-// Adapted from the Open Flow specimen script. Toggles classes and attributes only; never sets style values.
+// Adapted from the Open Flow specimen script. Toggles classes and attributes; the only style values it sets
+// are the pointer-position custom properties at the end of this file.
 const root = document.documentElement;
 const THEME_KEY = "strale-theme";
 
@@ -90,5 +91,29 @@ document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((b) => {
     }
   });
 });
+
+// Pointer micro-interactions (DEC-20261025-A). They set only component-local custom
+// properties (--_mx/--_my, --_sx/--_sy) that site.css turns into motion; fine pointers
+// only, and none under reduced motion.
+const finePointer = matchMedia("(pointer: fine)").matches && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (finePointer) {
+  // Magnetic buttons lean a little towards the pointer.
+  document.querySelectorAll<HTMLElement>("[data-magnet]").forEach((el) => {
+    el.addEventListener("pointermove", (e) => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--_mx", `${((e.clientX - r.left) / r.width - 0.5) * 8}px`);
+      el.style.setProperty("--_my", `${((e.clientY - r.top) / r.height - 0.5) * 8}px`);
+    });
+    el.addEventListener("pointerleave", () => { el.style.removeProperty("--_mx"); el.style.removeProperty("--_my"); });
+  });
+  // Cards light up where the pointer is.
+  document.addEventListener("pointermove", (e) => {
+    const el = (e.target as Element | null)?.closest<HTMLElement>(".card-link, [data-spotlight]");
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty("--_sx", `${e.clientX - r.left}px`);
+    el.style.setProperty("--_sy", `${e.clientY - r.top}px`);
+  }, { passive: true });
+}
 
 export {};

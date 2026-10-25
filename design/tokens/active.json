@@ -395,7 +395,7 @@
         "rules": {
           "reading_surface_moves": false,
           "loop": "ambient-only",
-          "ambient": "Ambient loops are allowed only in the home hero artwork and the live-calls panel: slow, continuous, never moving text the reader is reading. Everything else reveals once and settles. Under prefers-reduced-motion ambient motion stops on its final frame.",
+          "ambient": "Ambient loops are allowed only in the home hero (the Switchboard) and the live-tests panel: slow, continuous, never moving text the reader is reading. The home headline may rise in once on load; pointer micro-interactions respond to the pointer and never run on their own. Everything else reveals once and settles. Under prefers-reduced-motion ambient motion stops on its final frame.",
           "reduced_motion": "All transitions become instant; reveals render their settled final frame; ambient loops stop.",
           "source": "reveal durations and settled-still reduced motion from kit-06 rule motion-reveal; the kit's no-loop rule is narrowed to ambient-only by DEC-20261025-A; other durations and easings derived"
         }

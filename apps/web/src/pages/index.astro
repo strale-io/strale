@@ -6,7 +6,7 @@
 import { Image } from "astro:assets";
 import Base from "../layouts/Base.astro";
 import CodeBlock from "../components/CodeBlock.astro";
-import HeroFlow from "../components/HeroFlow.astro";
+import SwitchboardHero from "../components/SwitchboardHero.astro";
 import TestedNow from "../components/TestedNow.astro";
 // Spot illustrations (Open Flow 0.2, Daylight); briefs and hashes in assets/illustrations/provenance.json.
 import artWeb from "../assets/illustrations/search-web.webp";
@@ -33,12 +33,6 @@ const libraryCount = tools.length;
 const priced = ["url-to-markdown", "invoice-extract", "vat-validate", "sanctions-check"].map((s) => bySlug.get(s)).filter((t) => t && t.price_cents > 0).slice(0, 3);
 const quoted = (t?: (typeof tools)[number]) => !!t?.x402 && t.x402.price_usd > 0;
 const quoteTool = ["vat-validate", "invoice-extract", "sanctions-check"].map((s) => bySlug.get(s)).find(quoted) ?? tools.find(quoted);
-
-// §1 hero artwork: real priced calls, one or two per job, skipped when not live.
-const heroCalls = ["invoice-extract", "vat-validate", "url-to-markdown", "sanctions-check", "swedish-company-data", "dns-lookup"]
-  .map((s) => bySlug.get(s))
-  .filter((t) => t && t.price_cents > 0)
-  .map((t) => ({ slug: t!.slug, price_cents: t!.price_cents }));
 
 // §3 breadth: the four non-flagship job groups, with live counts and visible examples.
 const JOB_ART = { web: artWeb, documents: artDocuments, check: artCheck, developer: artDeveloper } as const;
@@ -83,33 +77,8 @@ const x402Bundles = data.x402.solutions.length;
 const freeCount = tools.filter((t) => t.free).length;
 ---
 <Base title="Strale — tools your agent can use and pay for per call" description={SHORT_DESCRIPTION}>
-  <!-- §1 Hero. Copy beside the flow artwork, which shows real priced calls arriving at one agent. -->
-  <section class="hero" aria-labelledby="hero-title">
-    <div class="container hero-grid">
-      <div class="hero-copy">
-        <h1 id="hero-title" class="t-hero">{L1.headline}</h1>
-        <p class="t-lead">{L1.support}</p>
-        <form class="hero-search" action="/tools" method="get" role="search">
-          <label class="field-label" for="hero-q">Find a tool for a job</label>
-          <div class="hero-search-row">
-            <div class="input-wrap">
-              <svg class="icon lead-icon" aria-hidden="true"><use href="#i-search" /></svg>
-              <input class="input has-lead" id="hero-q" name="q" type="search" placeholder="Read a PDF invoice, check a VAT number…" autocomplete="off" />
-            </div>
-            <button class="btn btn-primary" type="submit">Search</button>
-          </div>
-          <p class="field-help">{plural(libraryCount, "tool")} in the library on {formatDate(data.loaded_at)}.</p>
-        </form>
-        <div class="row">
-          <a class="btn btn-secondary btn-lg" href="/tools">Browse tools</a>
-          <a class="link-standalone" href="/docs">Read the docs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
-        </div>
-      </div>
-      <div class="hero-art">
-        <HeroFlow calls={heroCalls} />
-      </div>
-    </div>
-  </section>
+  <!-- §1 Hero: the Switchboard (DEC-20261025-A). L1 headline and support line, catalogue search, Browse tools and Read the docs (SITE-STRUCTURE §1). -->
+  <SwitchboardHero tools={tools} libraryCount={libraryCount} headline={L1.headline} support={L1.support} />
 
   <!-- §2 Benefits, each beside a concrete example. -->
   <section class="section" aria-labelledby="benefits-title">
@@ -153,7 +122,7 @@ const freeCount = tools.filter((t) => t.free).length;
       </div>
       <div class="grid-2 jobs">
         {breadth.map((g) => (
-          <article class="job">
+          <article class="job" data-spotlight>
             <div class="plate"><Image src={g.art} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 40vw" loading="lazy" /></div>
             <div class="job-copy">
               <h3 class="t-subhead">{g.label}</h3>
@@ -298,7 +267,7 @@ const freeCount = tools.filter((t) => t.free).length;
         <h2 id="start-title" class="t-section">Make your agent’s first call</h2>
         <p class="t-lead">Get an API key for every tool, or start with a free tool and no key at all.</p>
         <div class="row">
-          <a class="btn btn-inverse btn-lg" href="/signup">Get an API key</a>
+          <a class="btn btn-inverse btn-lg" href="/signup" data-magnet>Get an API key</a>
           <a class="btn btn-inverse-outline btn-lg" href="/tools?free=1">Try a free tool</a>
         </div>
       </div>
@@ -313,20 +282,6 @@ const freeCount = tools.filter((t) => t.free).length;
   .section-head { display: grid; gap: var(--space-12); }
   .section-head .t-lead { max-width: var(--measure-lead); }
 
-  /* Hero: copy beside the flow artwork from 1024px; stacked above it below. White in light, the canvas in dark. */
-  .hero { background: var(--canvas); color: var(--text); overflow: hidden; border-bottom: var(--border-width) solid var(--border); }
-  .hero-grid { display: grid; gap: var(--space-32); padding-block: var(--space-48); }
-  .hero + .section { padding-top: var(--space-64); }
-  .hero-copy { display: grid; gap: var(--space-24); align-content: center; }
-  .hero-copy .t-lead { color: var(--text-muted); }
-  .hero-search { display: grid; gap: var(--space-8); max-width: var(--measure-lead); }
-  .hero-search-row { display: grid; gap: var(--space-8); grid-template-columns: minmax(0, 1fr) auto; }
-  .hero-search .input { min-height: var(--control-h-lg); box-shadow: var(--shadow-1); }
-  .hero-search .btn { min-height: var(--control-h-lg); }
-  .hero-art { position: relative; min-width: 0; }
-  @media (min-width: 1024px) {
-    .hero-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--space-48); padding-block: var(--space-80) var(--space-96); align-items: center; }
-  }
 
   .benefits { align-items: start; }
   .benefits .price-row { grid-template-columns: minmax(0, 1fr) auto; }

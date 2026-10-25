@@ -85,7 +85,6 @@ ul[role="list"], .plain-list { list-style: none; padding: 0; }
 .nav-links, .nav-actions { display: none; }
 .nav-link { display: inline-flex; align-items: center; gap: var(--space-4); min-height: var(--target-min); padding-inline: var(--space-12); border-radius: var(--radius-control); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-ui-size); font-weight: var(--type-ui-weight); background: none; border: 0; cursor: pointer; position: relative; }
 .nav-link:hover { background: var(--action-subtle); }
-.nav-link[aria-current="page"]::after { content: ""; position: absolute; left: var(--space-12); right: var(--space-12); bottom: var(--space-4); height: var(--focus-width); background: var(--indicator); border-radius: var(--radius-pill); }
 .nav-link[aria-expanded="true"] .icon { transform: rotate(180deg); }
 .nav-item { position: relative; }
 .nav-dropdown { position: absolute; top: calc(100% + var(--space-8)); left: 0; z-index: var(--z-dropdown); min-width: calc(var(--space-160) + var(--space-96)); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-3); padding: var(--space-8); }
@@ -378,6 +377,35 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 @media (min-width: 1024px) {
   .cta-glow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .cta-glow .reading-surface { padding: var(--space-64); }
+}
+
+/* ---------- micro-interactions (Open Flow 0.2, DEC-20261025-A) ----------
+   All short, all on state changes, all off under reduced motion (the duration tokens become 0). */
+/* Primary buttons catch a light sheen on hover. */
+.btn-primary { position: relative; overflow: hidden; isolation: isolate; }
+.btn-primary::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(105deg, transparent 35%, var(--brand-paper) 50%, transparent 65%); opacity: 0.3; transform: translateX(-120%); transition: transform calc(var(--duration-slow) * 2) var(--ease-standard); }
+.btn-primary:hover::after { transform: translateX(120%); }
+/* Magnetic buttons lean a little towards the pointer (site.ts sets --_mx/--_my). */
+[data-magnet] { --_mx: 0; --_my: 0; translate: var(--_mx) var(--_my); transition: translate var(--duration-base) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+/* Arrows nudge forward. */
+.link-standalone .icon, .btn .icon { transition: transform var(--duration-base) var(--ease-standard); }
+.link-standalone:hover .icon, .btn:hover .icon { transform: translateX(var(--space-2)); }
+/* Nav links underline from the left on hover; the current page keeps its underline. */
+.nav-link::after { content: ""; position: absolute; left: var(--space-12); right: var(--space-12); bottom: var(--space-4); height: var(--focus-width); background: var(--indicator); border-radius: var(--radius-pill); transform: scaleX(0); transform-origin: left; transition: transform var(--duration-slow) var(--ease-standard); }
+.nav-link:hover::after, .nav-link[aria-current="page"]::after { transform: scaleX(1); }
+.nav-link[aria-expanded]::after { display: none; }
+/* Cards light up under the pointer (site.ts sets --_sx/--_sy on [data-spotlight] and .card-link). */
+.card-link, [data-spotlight] { --_sx: 50%; --_sy: 50%; position: relative; }
+.card-link::before, [data-spotlight]::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(circle calc(var(--space-160) * 1.4) at var(--_sx) var(--_sy), var(--action-subtle), transparent 70%); opacity: 0; transition: opacity var(--duration-base) var(--ease-standard); }
+.card-link:hover::before, [data-spotlight]:hover::before { opacity: 0.9; }
+.card-link > *, [data-spotlight] > * { position: relative; }
+/* Chips lift. */
+.tool-chip, .chip { transition: background-color var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
+.tool-chip:hover, .chip:hover { transform: translateY(calc(-1 * var(--space-2))); }
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary::after { display: none; }
+  [data-magnet] { translate: none; }
+  .tool-chip:hover, .chip:hover { transform: none; }
 }
 
 /* ---------- site additions ---------- */
