@@ -173,7 +173,7 @@ const freeCount = tools.filter((t) => t.free).length;
         <div class="stack">
           <h2 id="tested-title" class="t-section">Strale tests its tools and shows the results</h2>
           <p class="t-lead muted">Tests run on many of the tools, and what each one checks varies. It can include a known answer, the shape of the result, bad input, and whether the source is up.</p>
-          <p class="t-compact muted">The list shows the most recently tested tools and the share of each tool’s tests that passed on their latest run. Some tests replay a saved response instead of calling the source, and not every tool is tested on a schedule. Each tool’s page says when it was last tested.</p>
+          <p class="t-compact muted">The list shows the most recently tested tools and the share of each tool’s tests that passed on their latest run. Some tests replay a saved response instead of calling the source, and some tools are not tested on a schedule at all. Each tool’s page says when it was last tested.</p>
         </div>
         <TestedNow rows={testedRows} loadedAt={data.loaded_at} />
       </div>
