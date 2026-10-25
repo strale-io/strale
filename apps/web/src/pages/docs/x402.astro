@@ -1,0 +1,183 @@
+---
+// Docs: x402, keyless pay-per-request (SITE-STRUCTURE.md page 10). Flow, headers and response
+// shapes are those of apps/api/src/routes/x402-gateway-v2.ts and lib/x402-gateway.ts; the buyer
+// script follows examples/x402-autonomous-buyer. Counts and prices come from the x402 catalogue
+// (getSiteData().x402), never typed. Eligibility is a subset of the catalogue.
+import DocsNav from "../../components/DocsNav.astro";
+import CodeBlock from "../../components/CodeBlock.astro";
+import { getSiteData, API_BASE } from "../../lib/site-data.ts";
+import { formatUsd, json, plural } from "../../lib/format.ts";
+import { cheapestX402Tool, caip2, BASE_USDC_ADDRESS, X402_PAYMENT_TIMEOUT_SECONDS } from "../../content/docs-facts.ts";
+
+const data = await getSiteData();
+const { tool, inputs, method, priceUsd, atomic, v2Url } = cheapestX402Tool(data);
+const network = data.x402.network;
+const networkName = network === "base" ? "Base" : network;
+const nTools = data.x402.capabilities.length;
+const nBundles = data.x402.solutions.length;
+
+const quoteCmd = method === "GET"
+  ? `curl -i '${v2Url}'`
+  : `curl -i -X POST ${API_BASE}/x402/v2/${tool.slug} \\\n  -H 'Content-Type: application/json' \\\n  -d '${JSON.stringify(inputs)}'`;
+const quote = {
+  x402Version: 2,
+  error: `Payment required. ${tool.name} costs $${priceUsd.toFixed(4)} USDC per call.`,
+  accepts: [{
+    scheme: "exact",
+    network: caip2(network),
+    amount: atomic,
+    asset: BASE_USDC_ADDRESS,
+    payTo: "<Strale’s payee address>",
+    maxTimeoutSeconds: X402_PAYMENT_TIMEOUT_SECONDS,
+    extra: { name: "USD Coin", version: "2" },
+  }],
+};
+
+const requestInit = method === "GET"
+  ? { first: `await fetch(url)`, paid: `await fetch(url, { headers: http.encodePaymentSignatureHeader(payload) })`, prelude: `` }
+  : {
+      first: `await fetch(url, { ...init, headers: json })`,
+      paid: `await fetch(url, { ...init, headers: { ...json, ...http.encodePaymentSignatureHeader(payload) } })`,
+      prelude: `const init = { method: "POST", body: JSON.stringify(${JSON.stringify(inputs)}) };\nconst json = { "Content-Type": "application/json" };\n`,
+    };
+const script = [
+  `import { x402Client, x402HTTPClient } from "@x402/core/client";`,
+  `import { ExactEvmScheme } from "@x402/evm";`,
+  `import { privateKeyToAccount } from "viem/accounts";`,
+  ``,
+  `const account = privateKeyToAccount(process.env.X402_PRIVATE_KEY as \`0x\${string}\`);`,
+  `const client = x402Client.fromConfig({`,
+  `  schemes: [{ network: "${caip2(network)}", client: new ExactEvmScheme(account) }],`,
+  `});`,
+  `const http = new x402HTTPClient(client);`,
+  ``,
+  `const url = "${method === "GET" ? v2Url : `${API_BASE}/x402/v2/${tool.slug}`}";`,
+  requestInit.prelude + `const first = ${requestInit.first};`,
+  `if (first.status !== 402) {`,
+  `  console.log(first.status, await first.json());`,
+  `  process.exit(0);`,
+  `}`,
+  ``,
+  `// The 402 body is the price quote. Sign a payment for exactly that amount.`,
+  `const quote = await first.json();`,
+  `const payload = await client.createPaymentPayload(quote);`,
+  ``,
+  `const paid = ${requestInit.paid};`,
+  `console.log(paid.status, JSON.stringify(await paid.json(), null, 2));`,
+  `console.log(paid.headers.get("X-PAYMENT-RESPONSE")); // base64 JSON with the settlement transaction`,
+].join("\n");
+
+const toc = [
+  { id: "flow", label: "How a request is paid" },
+  { id: "quote", label: "See a price quote" },
+  { id: "pay", label: "Make a paid call" },
+  { id: "eligible", label: "Eligible tools" },
+  { id: "responses", label: "Responses and errors" },
+];
+---
+<DocsNav
+  title="Pay per request with x402"
+  description="Call eligible Strale tools with no account and no key: your agent gets a price quote, pays in USDC on Base and repeats the request."
+  current="x402"
+  label="Docs · x402"
+  heading="Pay per request with x402"
+  lead="No account and no key. Your agent asks, gets a price in USDC, pays it from its own wallet and gets the result."
+  toc={toc}
+>
+  <section id="flow" aria-labelledby="flow-title">
+    <h2 id="flow-title" class="t-section">How a request is paid</h2>
+    <ol class="steps">
+      <li>
+        <h3 class="t-subhead">Request</h3>
+        <p class="t-body">Your agent calls a tool’s x402 endpoint with no payment attached.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Quote</h3>
+        <p class="t-body">Strale answers <code>402 Payment Required</code> with the price in USDC on {networkName}, the payee address and how long the quote stays valid.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Pay</h3>
+        <p class="t-body">The agent’s wallet signs a USDC authorisation for that amount. Signing costs the buyer no gas, so the wallet needs USDC and no ETH.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Repeat</h3>
+        <p class="t-body">The agent sends the same request again with the signed payment in the <code>PAYMENT-SIGNATURE</code> header. Strale runs the tool, settles the payment once the tool returns a usable result, and answers with the result. A failed call is not charged.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="quote" aria-labelledby="quote-title">
+    <h2 id="quote-title" class="t-section">See a price quote</h2>
+    <p class="t-body">Asking for a quote costs nothing and needs no wallet. This asks for <a class="link" href={`/tools/${tool.slug}`}>{tool.name}</a>, the lowest-priced eligible tool in the catalogue at <span class="num">{formatUsd(priceUsd)}</span> USDC a call.</p>
+    <CodeBlock id="x402-quote-cmd" title="Ask for a quote" wrap panels={[{ label: "curl", lang: "shell", code: quoteCmd }]} />
+    <p class="t-body">The response is HTTP 402. The quote is in the body, and also in the <code>PAYMENT-REQUIRED</code> header on <code>/x402/v2/</code> paths. Trimmed:</p>
+    <CodeBlock id="x402-quote" title="402 response" wrap panels={[{ label: "Response", lang: "json", code: json(quote) }]} />
+    <p class="t-compact muted"><code>amount</code> is in USDC atomic units, six decimals: {atomic} is {formatUsd(priceUsd)}. The quote is valid for {X402_PAYMENT_TIMEOUT_SECONDS} seconds.</p>
+  </section>
+
+  <section id="pay" aria-labelledby="pay-title">
+    <h2 id="pay-title" class="t-section">Make a paid call</h2>
+    <ol class="steps">
+      <li>
+        <h3 class="t-subhead">Fund a wallet</h3>
+        <p class="t-body">Use a wallet on {networkName} that holds a little USDC. The tool above costs {formatUsd(priceUsd)} a call. Export its private key as <code>X402_PRIVATE_KEY</code> for this script, and use a dedicated wallet for it.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Install the x402 client</h3>
+        <CodeBlock id="x402-install" title="Install" panels={[{ label: "npm", lang: "shell", code: "npm install @x402/core @x402/evm viem" }]} />
+      </li>
+      <li>
+        <h3 class="t-subhead">Run the script</h3>
+        <p class="t-body">It requests the tool, reads the quote, signs a payment for that amount and repeats the request.</p>
+        <CodeBlock id="x402-script" title="buy.ts" panels={[{ label: "TypeScript", lang: "plain", code: script }]} />
+        <p class="t-compact muted">Run it with <code>X402_PRIVATE_KEY=0x… npx tsx buy.ts</code>. A runnable version is in the repository at <code>examples/x402-autonomous-buyer</code>.</p>
+      </li>
+      <li>
+        <h3 class="t-subhead">Read the result</h3>
+        <p class="t-body">A paid call returns HTTP 200 with the tool’s output as the body. The extra <code>_meta</code> field carries the capability, the latency, the provenance and the payment, including the settlement ID. The <code>X-PAYMENT-RESPONSE</code> header holds the settlement transaction as base64 JSON.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="eligible" aria-labelledby="eligible-title">
+    <h2 id="eligible-title" class="t-section">Eligible tools</h2>
+    <p class="t-body">{plural(nTools, "tool")}{nBundles > 0 ? ` and ${plural(nBundles, "bundled check")}` : ""} accept x402 today. The set changes, so read it from the catalogue instead of assuming a tool is on it. Tools that are not on it run with an API key through the <a class="link" href="/docs/api">REST API</a> or <a class="link" href="/docs/mcp">MCP</a>.</p>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="x402 discovery">
+      <table class="table">
+        <thead><tr><th scope="col">What</th><th scope="col">Where</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Catalogue with prices, inputs and endpoints</th><td><a class="link" href={`${API_BASE}/x402/catalog`}><code>{API_BASE}/x402/catalog</code></a></td></tr>
+          <tr><th scope="row">Machine-readable discovery</th><td><a class="link" href={`${API_BASE}/.well-known/x402.json`}><code>{API_BASE}/.well-known/x402.json</code></a></td></tr>
+          <tr><th scope="row">A tool</th><td><code>{API_BASE}/x402/v2/{"{slug}"}</code>. Tools with simple inputs take <code>GET</code> with the inputs in the query string. The catalogue gives each tool’s <code>method</code>; use <code>POST</code> with a JSON body when it says so.</td></tr>
+          <tr><th scope="row">A bundled check</th><td><code>POST {API_BASE}/x402/solutions/{"{slug}"}</code> with a JSON body of inputs.</td></tr>
+          <tr><th scope="row">On the website</th><td><a class="link" href="/tools?x402=1">Tools that accept x402</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="t-body">Both <code>/x402/{"{slug}"}</code> and <code>/x402/v2/{"{slug}"}</code> work. The <code>v2</code> path always sends the current quote format with CAIP-2 network names; the older path serves older clients. Use <code>v2</code> for new code. Free tools need no payment at all: call them with the <a class="link" href="/docs/api">REST API</a> without a key.</p>
+  </section>
+
+  <section id="responses" aria-labelledby="responses-title">
+    <h2 id="responses-title" class="t-section">Responses and errors</h2>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="x402 responses">
+      <table class="table">
+        <thead><tr><th scope="col">HTTP</th><th scope="col">Meaning</th><th scope="col">What to do</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">200</th><td>Paid and done. The body is the tool’s output plus <code>_meta</code>.</td><td>Use the output.</td></tr>
+          <tr><th scope="row">402</th><td>No payment, or the payment did not verify. The body is a fresh quote, and <code>error</code> says why a payment failed, for example an empty wallet.</td><td>Sign the quote in the body and repeat the request.</td></tr>
+          <tr><th scope="row">400</th><td>The inputs are wrong. The body has <code>error_code</code> (<code>invalid_request</code> or <code>execution_failed</code>), <code>charged: false</code>, the tool’s <code>input_schema</code> and an <code>example</code>.</td><td>Fix the inputs. On <code>execution_failed</code> the inputs may be fine and the source failed: retry with backoff.</td></tr>
+          <tr><th scope="row">404</th><td>No such tool, or it is not on x402.</td><td>Check the catalogue.</td></tr>
+          <tr><th scope="row">503</th><td>The tool was switched off for x402, or x402 is not available right now. No payment was taken.</td><td>Retry later, or use an API key.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="doc-list t-body">
+      <li>There are no transaction IDs on this route. Keep <code>_meta.payment.settlement_id</code> as your record of a call.</li>
+      <li>Each call stands alone. There is no balance, no spend cap and no <code>max_price_cents</code>; the quote is the price you agree to by signing it.</li>
+    </ul>
+    <div class="row">
+      <a class="btn btn-primary" href="/tools?x402=1">See eligible tools</a>
+      <a class="btn btn-secondary" href="/docs">Back to Docs</a>
+    </div>
+  </section>
+</DocsNav>
