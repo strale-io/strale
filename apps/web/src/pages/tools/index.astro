@@ -2,7 +2,9 @@
 // Tools catalogue (SITE-STRUCTURE.md page 2). Every visible tool is in the HTML,
 // so the page works and is indexable without script; the script only filters.
 // Filters use the job-group vocabulary (src/content/jobs.ts), not API categories.
+import { Image } from "astro:assets";
 import Base from "../../layouts/Base.astro";
+import artLibrary from "../../assets/illustrations/tool-library.webp";
 import { getSiteData, tools as allTools, coverage } from "../../lib/site-data.ts";
 import { formatEur, formatUsd, plural } from "../../lib/format.ts";
 import { firstSentence } from "../../lib/describe.ts";
@@ -18,9 +20,12 @@ const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).jo
 ---
 <Base title="Tools" current="tools" description="Search every tool AI agents can call through Strale: price per call, how to call it, and its limits.">
   <section class="page-head">
-    <div class="container stack">
-      <h1 class="t-campaign">Tools</h1>
-      <p class="t-lead">One API key and one balance for every tool, or no account at all with an x402 wallet on eligible tools. Connect over MCP, the REST API or the SDKs, and try the free tools without signing up.</p>
+    <div class="container page-head-grid">
+      <div class="stack">
+        <h1 class="t-campaign">Tools</h1>
+        <p class="t-lead">One API key and one balance for every tool, or no account at all with an x402 wallet on eligible tools. Connect over MCP, the REST API or the SDKs, and try the free tools without signing up.</p>
+      </div>
+      <div class="plate page-head-art"><Image src={artLibrary} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 0px" loading="eager" /></div>
     </div>
   </section>
 
@@ -127,6 +132,12 @@ const index = (parts: (string | undefined | null)[]) => parts.filter(Boolean).jo
 
 <style>
   .page-head { padding-block: var(--space-64) var(--space-32); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
+    .page-head-art { display: block; }
+  }
   .section { padding-block: var(--section-space); }
   .section-sunken { background: var(--surface-sunken); }
   .section-head { display: grid; gap: var(--space-12); }

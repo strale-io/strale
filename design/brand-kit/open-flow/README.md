@@ -1,5 +1,7 @@
 > **Adopted 2026-10-24 by Petter (DEC-20261024-B).** The candidate's status is `adopted` and its values are the `website` surface of `design/tokens/active.json`; `apps/web` builds from that surface. Where the text below says "candidate" or "not adopted", read it as the status before 24 October.
 
+> **Revised to 0.2, Daylight, on 2026-10-25 by Petter (DEC-20261025-A).** The light canvas is white and the light tinted surfaces are paler and cooler, so colour appears only in the artwork, the primary action and illustrations. The kit's no-loop rule is narrowed to ambient-only: a slow loop is allowed in the home hero artwork and the live-tests panel. Spot illustrations live in `apps/web/src/assets/illustrations/` with their briefs in `provenance.json`. Kit colours, type, spacing and the dark theme are unchanged.
+
 # Open Flow — Strale website design system
 
 **Status: candidate 0.1, proposed for founder review.** Not adopted. Production still runs [`design/tokens/active.json`](../../tokens/active.json). The website will be built in `apps/web` (DEC-20260902-A) once a decision adopts this system.
@@ -23,7 +25,7 @@ It replaces [Quiet Material](../README.md) as the visual direction. Quiet Materi
 
 **Derived here (the kit doesn't have them):** the whole dark theme; interaction, status, code and chart colours; the subhead, lead, ui, small, code, stat and numeric type roles; IBM Plex Mono for code; the spacing scale, radius scale, elevation, grid, containers and breakpoints; motion easings and short durations; every component and section pattern. The kit calls its component specimens "a starting point, not a complete interactive library". It has no dark theme, and its logo rule records no reversed or dark-background logo asset. Those gaps are filled here.
 
-**The page canvas is `#fdf7fe`.** This is the pale pink-lilac ground of the flow artwork, sampled from `wide.png`. Full-bleed artwork then meets the page with no visible edge. Cards sit on white (`--surface`).
+**The page canvas is white (`#ffffff`) since 0.2.** In 0.1 it was `#fdf7fe`, the pink-lilac ground sampled from `wide.png`, which made every page read pink. That ground is kept as `--brand-image-ground` for the raster artwork only. Cards on the white canvas are set off by their border and a light shadow.
 
 ## Principles
 
@@ -31,7 +33,7 @@ It replaces [Quiet Material](../README.md) as the visual direction. Quiet Materi
 2. **One message per section.** A section opens with a statement, then explains. Add detail by grouping it, never by shrinking type below its role.
 3. **Artwork stays whole.** Each image is composed for one format. Show it at its own ratio, uncropped. Put text only in the reading region the kit declared. If copy doesn't fit there, put the text beside the image.
 4. **States are words plus colour.** Every status has an icon and a label. Focus is always a visible 2px ring.
-5. **The reading surface never moves.** Graphics reveal in place and settle. Artwork never loops; only loading indicators repeat.
+5. **The reading surface never moves.** Graphics reveal in place and settle. Since 0.2 a slow ambient loop is allowed in two places only, the home hero artwork and the live-tests panel; everything else reveals once. Loading indicators repeat while loading.
 
 ## Colour
 
@@ -39,11 +41,11 @@ Components use **role tokens** only (`--canvas`, `--text`, `--action` and so on)
 
 | Role | Light | Dark | Use |
 |---|---|---|---|
-| `--canvas` | #fdf7fe | #130d21 | Page background |
+| `--canvas` | #ffffff | #130d21 | Page background |
 | `--surface` | #ffffff | #1c1530 | Cards, panels, inputs |
-| `--surface-sunken` | #f6ecf8 | #0f0a1b | Alternate sections, disabled fields, inline code |
-| `--surface-soft` | #eecff2 | #2a1d40 | Editorial emphasis, with dark text |
-| `--surface-blue` / `--surface-teal` | #e4e8ff / #d7efeb | #1f1a4a / #0f2a2a | Grouped information, the recommended column, icon tiles |
+| `--surface-sunken` | #f6f6f9 | #0f0a1b | Alternate sections, disabled fields, inline code |
+| `--surface-soft` | #f4effa | #2a1d40 | Editorial emphasis, with dark text |
+| `--surface-blue` / `--surface-teal` | #eef0ff / #e8f5f2 | #1f1a4a / #0f2a2a | Grouped information, the recommended column, icon tiles |
 | `--surface-inverse` | #29164b | #29164b | CTA band, section statement. Light text only |
 | `--text` / `--text-muted` | #17151c / #5c5468 | #f7f3fb / #bdb4cc | Reading text / secondary text. Both pass AA on every surface above |
 | `--border` | #d2cfd8 | #3a3050 | Decorative dividers only |
@@ -102,7 +104,7 @@ Space Grotesk introduces and Instrument Sans explains. Use at most two weights i
 
 ## Motion
 
-Durations: fast 120ms (colour and border), base 200ms (elevation, disclosure), slow 320ms (panel entrance), reveal-signature 1600ms (bands), reveal-atmosphere 2200ms (glow or field). Easing `standard` for state changes, `reveal` for reveals only. Reveals open a clip region over artwork that stays still. Text never slides in. Artwork never loops; spinners and skeletons repeat only while something is loading. Under `prefers-reduced-motion` every duration becomes 0, reveals show their final frame, and the spinner stops.
+Durations: fast 120ms (colour and border), base 200ms (elevation, disclosure), slow 320ms (panel entrance), reveal-signature 1600ms (bands), reveal-atmosphere 2200ms (glow or field). Easing `standard` for state changes, `reveal` for reveals only. Reveals open a clip region over artwork that stays still. Text never slides in. Ambient 9000ms (one pass of a call along a hero band) and ambient-slow 28000ms (one roll of the live-tests list) are the only loops, and only in those two places. Spinners and skeletons repeat only while something is loading. Under `prefers-reduced-motion` every duration becomes 0, reveals show their final frame, ambient loops stop and the spinner stops.
 
 ## Imagery
 

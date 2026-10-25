@@ -10,54 +10,54 @@ This proves the token pairs. It does not certify text placed over imagery: text 
 
 | Foreground | Background | Ratio | Minimum | Result | Use |
 |---|---|---:|---:|---|---|
-| `text` #17151c | `canvas` #fdf7fe | 17.16 | 4.5 | pass | Body text on page |
+| `text` #17151c | `canvas` #ffffff | 18.10 | 4.5 | pass | Body text on page |
 | `text` #17151c | `surface` #ffffff | 18.10 | 4.5 | pass | Body text on cards |
-| `text` #17151c | `surface-sunken` #f6ecf8 | 15.75 | 4.5 | pass | Body text on alternate sections |
-| `text` #17151c | `surface-soft` #eecff2 | 12.79 | 4.5 | pass | Editorial text on soft lilac |
-| `text` #17151c | `surface-blue` #e4e8ff | 14.90 | 4.5 | pass | Text on blue mist |
-| `text` #17151c | `surface-teal` #d7efeb | 15.02 | 4.5 | pass | Text on teal mist |
-| `text-muted` #5c5468 | `canvas` #fdf7fe | 6.81 | 4.5 | pass | Secondary text on page |
+| `text` #17151c | `surface-sunken` #f6f6f9 | 16.78 | 4.5 | pass | Body text on alternate sections |
+| `text` #17151c | `surface-soft` #f4effa | 16.01 | 4.5 | pass | Editorial text on soft lilac |
+| `text` #17151c | `surface-blue` #eef0ff | 15.98 | 4.5 | pass | Text on blue mist |
+| `text` #17151c | `surface-teal` #e8f5f2 | 16.18 | 4.5 | pass | Text on teal mist |
+| `text-muted` #5c5468 | `canvas` #ffffff | 7.18 | 4.5 | pass | Secondary text on page |
 | `text-muted` #5c5468 | `surface` #ffffff | 7.18 | 4.5 | pass | Secondary text on cards |
-| `text-muted` #5c5468 | `surface-sunken` #f6ecf8 | 6.25 | 4.5 | pass | Secondary text on alternate sections |
-| `text-muted` #5c5468 | `surface-soft` #eecff2 | 5.08 | 4.5 | pass | Secondary text on soft lilac |
-| `text-muted` #5c5468 | `surface-blue` #e4e8ff | 5.91 | 4.5 | pass | Secondary text on blue mist |
-| `text-muted` #5c5468 | `surface-teal` #d7efeb | 5.96 | 4.5 | pass | Secondary text on teal mist |
+| `text-muted` #5c5468 | `surface-sunken` #f6f6f9 | 6.66 | 4.5 | pass | Secondary text on alternate sections |
+| `text-muted` #5c5468 | `surface-soft` #f4effa | 6.35 | 4.5 | pass | Secondary text on soft lilac |
+| `text-muted` #5c5468 | `surface-blue` #eef0ff | 6.34 | 4.5 | pass | Secondary text on blue mist |
+| `text-muted` #5c5468 | `surface-teal` #e8f5f2 | 6.42 | 4.5 | pass | Secondary text on teal mist |
 | `text-inverse` #ffffff | `surface-inverse` #29164b | 16.02 | 4.5 | pass | Text in CTA band / deep violet field |
 | `text-on-action` #ffffff | `action` #3027ff | 7.34 | 4.5 | pass | Primary button label |
 | `text-on-action` #ffffff | `action-hover` #2118d6 | 9.69 | 4.5 | pass | Primary button label, hover |
 | `text-on-action` #ffffff | `action-active` #1a10b0 | 12.03 | 4.5 | pass | Primary button label, pressed |
 | `text` #17151c | `action-subtle` #e4e8ff | 14.90 | 4.5 | pass | Selected row / secondary hover |
-| `link` #3027ff | `canvas` #fdf7fe | 6.96 | 4.5 | pass | Inline link on page |
+| `link` #3027ff | `canvas` #ffffff | 7.34 | 4.5 | pass | Inline link on page |
 | `link` #3027ff | `surface` #ffffff | 7.34 | 4.5 | pass | Inline link on cards |
-| `link` #3027ff | `surface-sunken` #f6ecf8 | 6.39 | 4.5 | pass | Inline link on alternate sections |
-| `link-hover` #2118d6 | `canvas` #fdf7fe | 9.19 | 4.5 | pass | Inline link hover |
-| `focus` #3027ff | `canvas` #fdf7fe | 6.96 | 3 | pass | Focus ring on page (non-text) |
+| `link` #3027ff | `surface-sunken` #f6f6f9 | 6.81 | 4.5 | pass | Inline link on alternate sections |
+| `link-hover` #2118d6 | `canvas` #ffffff | 9.69 | 4.5 | pass | Inline link hover |
+| `focus` #3027ff | `canvas` #ffffff | 7.34 | 3 | pass | Focus ring on page (non-text) |
 | `focus` #3027ff | `surface` #ffffff | 7.34 | 3 | pass | Focus ring on cards (non-text) |
-| `focus` #3027ff | `surface-sunken` #f6ecf8 | 6.39 | 3 | pass | Focus ring on alternate sections (non-text) |
-| `border-strong` #7a7287 | `canvas` #fdf7fe | 4.34 | 3 | pass | Form field boundary on page (non-text) |
+| `focus` #3027ff | `surface-sunken` #f6f6f9 | 6.81 | 3 | pass | Focus ring on alternate sections (non-text) |
+| `border-strong` #7a7287 | `canvas` #ffffff | 4.58 | 3 | pass | Form field boundary on page (non-text) |
 | `border-strong` #7a7287 | `surface` #ffffff | 4.58 | 3 | pass | Form field boundary on cards (non-text) |
-| `border-strong` #7a7287 | `surface-sunken` #f6ecf8 | 3.99 | 3 | pass | Form field boundary on alternate sections (non-text) |
-| `border-strong` #7a7287 | `surface-soft` #eecff2 | 3.24 | 3 | pass | Form field boundary on surface-soft (non-text) |
-| `link` #3027ff | `surface-soft` #eecff2 | 5.19 | 4.5 | pass | Inline link on surface-soft |
-| `focus` #3027ff | `surface-soft` #eecff2 | 5.19 | 3 | pass | Focus ring on surface-soft (non-text) |
-| `border-strong` #7a7287 | `surface-blue` #e4e8ff | 3.77 | 3 | pass | Form field boundary on surface-blue (non-text) |
-| `link` #3027ff | `surface-blue` #e4e8ff | 6.04 | 4.5 | pass | Inline link on surface-blue |
-| `focus` #3027ff | `surface-blue` #e4e8ff | 6.04 | 3 | pass | Focus ring on surface-blue (non-text) |
-| `border-strong` #7a7287 | `surface-teal` #d7efeb | 3.80 | 3 | pass | Form field boundary on surface-teal (non-text) |
-| `link` #3027ff | `surface-teal` #d7efeb | 6.10 | 4.5 | pass | Inline link on surface-teal |
-| `focus` #3027ff | `surface-teal` #d7efeb | 6.10 | 3 | pass | Focus ring on surface-teal (non-text) |
+| `border-strong` #7a7287 | `surface-sunken` #f6f6f9 | 4.25 | 3 | pass | Form field boundary on alternate sections (non-text) |
+| `border-strong` #7a7287 | `surface-soft` #f4effa | 4.05 | 3 | pass | Form field boundary on surface-soft (non-text) |
+| `link` #3027ff | `surface-soft` #f4effa | 6.49 | 4.5 | pass | Inline link on surface-soft |
+| `focus` #3027ff | `surface-soft` #f4effa | 6.49 | 3 | pass | Focus ring on surface-soft (non-text) |
+| `border-strong` #7a7287 | `surface-blue` #eef0ff | 4.04 | 3 | pass | Form field boundary on surface-blue (non-text) |
+| `link` #3027ff | `surface-blue` #eef0ff | 6.48 | 4.5 | pass | Inline link on surface-blue |
+| `focus` #3027ff | `surface-blue` #eef0ff | 6.48 | 3 | pass | Focus ring on surface-blue (non-text) |
+| `border-strong` #7a7287 | `surface-teal` #e8f5f2 | 4.10 | 3 | pass | Form field boundary on surface-teal (non-text) |
+| `link` #3027ff | `surface-teal` #e8f5f2 | 6.56 | 4.5 | pass | Inline link on surface-teal |
+| `focus` #3027ff | `surface-teal` #e8f5f2 | 6.56 | 3 | pass | Focus ring on surface-teal (non-text) |
 | `focus-inverse` #ffffff | `surface-inverse` #29164b | 16.02 | 3 | pass | Focus ring on the deep-violet band (non-text) |
 | `focus-code` #b9b5ff | `code-bg` #1a1427 | 9.47 | 3 | pass | Focus ring inside code blocks (non-text) |
-| `indicator` #3027ff | `canvas` #fdf7fe | 6.96 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on canvas (non-text) |
+| `indicator` #3027ff | `canvas` #ffffff | 7.34 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on canvas (non-text) |
 | `indicator` #3027ff | `surface` #ffffff | 7.34 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface (non-text) |
-| `indicator` #3027ff | `surface-sunken` #f6ecf8 | 6.39 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text) |
+| `indicator` #3027ff | `surface-sunken` #f6f6f9 | 6.81 | 3 | pass | Selected tab / current page underline, checkbox and radio fill on surface-sunken (non-text) |
 | `success` #16703f | `success-bg` #e6f4ea | 5.40 | 4.5 | pass | Success notice text |
 | `success` #16703f | `surface` #ffffff | 6.13 | 4.5 | pass | Success inline text |
 | `warning` #8a5300 | `warning-bg` #fdf0d9 | 5.62 | 4.5 | pass | Warning notice text |
 | `warning` #8a5300 | `surface` #ffffff | 6.33 | 4.5 | pass | Warning inline text |
 | `danger` #b3261e | `danger-bg` #fde8e7 | 5.56 | 4.5 | pass | Error notice text |
 | `danger` #b3261e | `surface` #ffffff | 6.54 | 4.5 | pass | Field error message |
-| `danger` #b3261e | `canvas` #fdf7fe | 6.20 | 4.5 | pass | Field error message on page |
+| `danger` #b3261e | `canvas` #ffffff | 6.54 | 4.5 | pass | Field error message on page |
 | `info` #3027ff | `info-bg` #e4e8ff | 6.04 | 4.5 | pass | Info notice text |
 | `code-text` #ece8f3 | `code-bg` #1a1427 | 14.83 | 4.5 | pass | Code |
 | `code-muted` #a59db5 | `code-bg` #1a1427 | 6.90 | 4.5 | pass | Code comments, line numbers |
@@ -65,12 +65,12 @@ This proves the token pairs. It does not certify text placed over imagery: text 
 | `code-string` #7fe0c9 | `code-bg` #1a1427 | 11.43 | 4.5 | pass | Code strings |
 | `code-number` #ffb86b | `code-bg` #1a1427 | 10.50 | 4.5 | pass | Code numbers |
 | `code-property` #f0a0d8 | `code-bg` #1a1427 | 9.14 | 4.5 | pass | Code keys |
-| `chart-1` #3027ff | `canvas` #fdf7fe | 6.96 | 3 | pass | Chart mark against page (non-text) |
-| `chart-2` #0a9a8f | `canvas` #fdf7fe | 3.30 | 3 | pass | Chart mark against page (non-text) |
-| `chart-3` #7a3cff | `canvas` #fdf7fe | 5.08 | 3 | pass | Chart mark against page (non-text) |
-| `chart-4` #b87400 | `canvas` #fdf7fe | 3.60 | 3 | pass | Chart mark against page (non-text) |
-| `chart-5` #c2188f | `canvas` #fdf7fe | 5.21 | 3 | pass | Chart mark against page (non-text) |
-| `chart-6` #2f86e0 | `canvas` #fdf7fe | 3.55 | 3 | pass | Chart mark against page (non-text) |
+| `chart-1` #3027ff | `canvas` #ffffff | 7.34 | 3 | pass | Chart mark against page (non-text) |
+| `chart-2` #0a9a8f | `canvas` #ffffff | 3.48 | 3 | pass | Chart mark against page (non-text) |
+| `chart-3` #7a3cff | `canvas` #ffffff | 5.36 | 3 | pass | Chart mark against page (non-text) |
+| `chart-4` #b87400 | `canvas` #ffffff | 3.79 | 3 | pass | Chart mark against page (non-text) |
+| `chart-5` #c2188f | `canvas` #ffffff | 5.50 | 3 | pass | Chart mark against page (non-text) |
+| `chart-6` #2f86e0 | `canvas` #ffffff | 3.75 | 3 | pass | Chart mark against page (non-text) |
 
 ## Dark theme
 

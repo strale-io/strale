@@ -3,7 +3,10 @@
 // agent can get, for which countries, from which source, at what price. The matrix is
 // built from the live catalogue; a country without a scheduled test says so and is
 // never hidden or given a badge it has not earned (MESSAGING-LEVELS L3.10).
+import { Image } from "astro:assets";
 import Base from "../../layouts/Base.astro";
+import artCompany from "../../assets/illustrations/company-records.webp";
+import artScreening from "../../assets/illustrations/screening.webp";
 import { getSiteData, tools as allTools } from "../../lib/site-data.ts";
 import { countryRows, returns, accepts, screeningTools, bundlesWithoutRegister, SCREENING, OWNERSHIP, BUNDLE_LABEL, type BundleKind } from "../../lib/company-data.ts";
 import { COUNTRY_BY_PREFIX } from "../../content/countries.ts";
@@ -29,7 +32,7 @@ const noTest = data.mode === "live" ? "No test recorded" : "Not in this preview 
 const ret = (t: (typeof registryTools)[number]) => returns(t, data.manifests.get(t.slug)?.output_field_reliability ?? {}).join(", ");
 const lastTest = (slug: string) => {
   const t = data.trust.get(slug);
-  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% passed` : ""}` : null;
+  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of its tests passed on their latest run` : ""}` : null;
 };
 const regions = byRegion.map((r) => (r.region === "Americas" ? "the Americas" : r.region)).join(", ").replace(/, ([^,]*)$/, " and $1");
 const hasPsc = ownership.some((t) => t.slug === "beneficial-ownership-lookup");
@@ -37,10 +40,13 @@ const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
 ---
 <Base title="Company and compliance data" current="company-data" description="Company records from official sources in many countries, plus sanctions, PEP and adverse-media screening, with the source, price and last test for each.">
   <section class="page-head">
-    <div class="container stack">
-      <p class="label">Company and compliance data</p>
-      <h1 class="t-campaign">Look up companies in official records in {plural(rows.length, "country", "countries")}</h1>
-      <p class="t-lead">Across {regions}. Your agent gets the name and registration number, plus status, address and directors where the source provides them.{screening.length > 0 && " It can screen companies and people against sanctions and politically exposed person lists and adverse media."}{withBundles.length > 0 && " It can also run a whole company or invoice-issuer check in one call at one price."}</p>
+    <div class="container page-head-grid">
+      <div class="stack">
+        <p class="label">Company and compliance data</p>
+        <h1 class="t-campaign">Look up companies in official records in {plural(rows.length, "country", "countries")}</h1>
+        <p class="t-lead">Across {regions}. Your agent gets the name and registration number, plus status, address and directors where the source provides them.{screening.length > 0 && " It can screen companies and people against sanctions and politically exposed person lists and adverse media."}{withBundles.length > 0 && " It can also run a whole company or invoice-issuer check in one call at one price."}</p>
+      </div>
+      <div class="plate page-head-art"><Image src={artCompany} alt="" widths={[320, 480, 640]} sizes="(min-width: 1024px) 320px, 0px" loading="eager" /></div>
     </div>
   </section>
 
@@ -95,6 +101,7 @@ const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
   <section class="section section-sunken" aria-labelledby="screening-title">
     <div class="container grid-2">
       <div class="stack">
+        <div class="plate section-art"><Image src={artScreening} alt="" widths={[128, 256]} sizes="128px" loading="lazy" /></div>
         <h2 id="screening-title" class="t-section">Screening</h2>
         <p class="t-compact muted">Check a company or a person against sanctions and politically exposed person lists, and search adverse media. Results are matches for a person to review, not a verdict.</p>
         <ul class="plain-list stack-tight">
@@ -167,6 +174,12 @@ const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
 <style>
   .page-head { padding-block: var(--space-64) var(--space-32); }
   .page-head .t-lead { max-width: var(--measure-body); }
+  .page-head-grid { display: grid; gap: var(--space-32); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .page-head-art { display: none; width: 100%; }
+  @media (min-width: 1024px) {
+    .page-head-grid { grid-template-columns: minmax(0, 8fr) minmax(0, 3fr); }
+    .page-head-art { display: block; }
+  }
   .section { padding-block: var(--section-space); }
   .section-tight { padding-block: var(--space-32) var(--section-space); }
   .section-sunken { background: var(--surface-sunken); }
@@ -184,6 +197,7 @@ const hasLei = ownership.some((t) => t.slug.startsWith("gleif-"));
   @media (min-width: 768px) { .matrix-wide { display: block; } .matrix-cards { display: none; } }
   .matrix td { min-width: calc(var(--space-96) + var(--space-24)); }
   .screen-item p { margin-top: var(--space-4); }
+  .section-art { width: calc(var(--space-96) + var(--space-32)); }
   .limits-list { display: grid; gap: var(--space-12); margin: 0; padding-left: var(--space-20); max-width: var(--measure-body); }
   .notice > div { display: grid; gap: var(--space-4); }
 </style>

@@ -128,7 +128,7 @@ const transparency = tool.transparency_tag ? TRANSPARENCY[tool.transparency_tag]
         <section class="card stack-tight" aria-labelledby="test-title">
           <h2 id="test-title" class="label">Last recorded test</h2>
           {trust?.tested && trust.last_tested_at ? (
-            <p class="t-compact">{formatDate(trust.last_tested_at)}{trust.pass_rate !== null && <span class="muted">. {trust.pass_rate}% of recent test runs passed.</span>}</p>
+            <p class="t-compact">{formatDate(trust.last_tested_at)}{trust.pass_rate !== null && <span class="muted">. {trust.pass_rate}% of its tests passed on their latest run.</span>}</p>
           ) : (
             <p class="t-compact muted">No test result is recorded for this tool{data.mode !== "live" ? " in this preview build" : ""}.</p>
           )}

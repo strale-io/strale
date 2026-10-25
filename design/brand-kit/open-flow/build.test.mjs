@@ -84,7 +84,7 @@ test('the candidate must stay adopted and identical to the active.json website s
   drifted.palette['light.canvas'] = '#fdf7ff';
   assert.throws(() => validate(drifted, prov, { checkFiles: false }), /website\.palette differs/);
   const website = { ...structuredClone(tokens), adopted_by: 'DEC-OTHER' };
-  assert.throws(() => validate(tokens, prov, { checkFiles: false, website }), /adopted by DEC-20261024-B/);
+  assert.throws(() => validate(tokens, prov, { checkFiles: false, website }), /adopted by DEC-20261025-A/);
 });
 
 test('renderTokensCss can point fonts at a web path', () => {

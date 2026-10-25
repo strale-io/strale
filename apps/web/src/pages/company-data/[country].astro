@@ -25,7 +25,7 @@ const country = countryRows(data).find((c) => c.iso === iso)!;
 const screening = screeningTools(data).filter((t) => SCREENING.includes(t.slug));
 const testOf = (slug: string) => {
   const t = data.trust.get(slug);
-  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of recent runs passed` : ""}` : null;
+  return t?.tested && t.last_tested_at ? `${formatDate(t.last_tested_at)}${t.pass_rate !== null ? `, ${t.pass_rate}% of its tests passed on their latest run` : ""}` : null;
 };
 ---
 <Base title={`Company records in ${country.inSentence}`} current="company-data" description={`How an AI agent looks up a company in ${country.inSentence}: accepted input, the fields that come back, the source, the price and how to call it.`}>

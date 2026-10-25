@@ -6,7 +6,16 @@
 import { Image } from "astro:assets";
 import Base from "../layouts/Base.astro";
 import CodeBlock from "../components/CodeBlock.astro";
-import wide from "@design/brand-kit/open-flow/assets/imagery/wide.png";
+import HeroFlow from "../components/HeroFlow.astro";
+import TestedNow from "../components/TestedNow.astro";
+// Spot illustrations (Open Flow 0.2, Daylight); briefs and hashes in assets/illustrations/provenance.json.
+import artWeb from "../assets/illustrations/search-web.webp";
+import artDocuments from "../assets/illustrations/read-documents.webp";
+import artCheck from "../assets/illustrations/check-details.webp";
+import artDeveloper from "../assets/illustrations/developer-jobs.webp";
+import artCompany from "../assets/illustrations/company-records.webp";
+import artBalance from "../assets/illustrations/pay-balance.webp";
+import artWallet from "../assets/illustrations/pay-wallet.webp";
 import { getSiteData, tools as allTools, coverage, API_BASE } from "../lib/site-data";
 import { formatEur, formatUsd, formatDate, json, plural, usdcAtomic } from "../lib/format";
 import { executorSource } from "../lib/code-facts";
@@ -25,9 +34,17 @@ const priced = ["url-to-markdown", "invoice-extract", "vat-validate", "sanctions
 const quoted = (t?: (typeof tools)[number]) => !!t?.x402 && t.x402.price_usd > 0;
 const quoteTool = ["vat-validate", "invoice-extract", "sanctions-check"].map((s) => bySlug.get(s)).find(quoted) ?? tools.find(quoted);
 
+// §1 hero artwork: real priced calls, one or two per job, skipped when not live.
+const heroCalls = ["invoice-extract", "vat-validate", "url-to-markdown", "sanctions-check", "swedish-company-data", "dns-lookup"]
+  .map((s) => bySlug.get(s))
+  .filter((t) => t && t.price_cents > 0)
+  .map((t) => ({ slug: t!.slug, price_cents: t!.price_cents }));
+
 // §3 breadth: the four non-flagship job groups, with live counts and visible examples.
+const JOB_ART = { web: artWeb, documents: artDocuments, check: artCheck, developer: artDeveloper } as const;
 const breadth = JOB_GROUPS.filter((g) => ["web", "documents", "check", "developer"].includes(g.id)).map((g) => ({
   ...g,
+  art: JOB_ART[g.id as keyof typeof JOB_ART],
   count: tools.filter((t) => t.job === g.id).length,
   picks: g.examples.map((s) => bySlug.get(s)).filter((t) => t !== undefined),
 }));
@@ -66,7 +83,7 @@ const x402Bundles = data.x402.solutions.length;
 const freeCount = tools.filter((t) => t.free).length;
 ---
 <Base title="Strale — tools your agent can use and pay for per call" description={SHORT_DESCRIPTION}>
-  <!-- §1 Hero. The headline outgrows wide.png's reading region at every width, so the copy sits beside the artwork, never on it (Open Flow imagery rule). -->
+  <!-- §1 Hero. Copy beside the flow artwork, which shows real priced calls arriving at one agent. -->
   <section class="hero" aria-labelledby="hero-title">
     <div class="container hero-grid">
       <div class="hero-copy">
@@ -88,9 +105,8 @@ const freeCount = tools.filter((t) => t.free).length;
           <a class="link-standalone" href="/docs">Read the docs <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
         </div>
       </div>
-      <div class="hero-art" aria-hidden="true">
-        <Image class="hero-raster" src={wide} alt="" widths={[640, 960, 1280, 1600]} sizes="(min-width: 1024px) 50vw, 100vw" loading="eager" />
-        <img class="hero-bands" src="/brand/bands.svg" alt="" width="800" height="380" />
+      <div class="hero-art">
+        <HeroFlow calls={heroCalls} />
       </div>
     </div>
   </section>
@@ -138,12 +154,15 @@ const freeCount = tools.filter((t) => t.free).length;
       <div class="grid-2 jobs">
         {breadth.map((g) => (
           <article class="job">
-            <h3 class="t-subhead">{g.label}</h3>
-            <p class="t-compact muted">{g.line}</p>
-            <ul class="chip-row" role="list" aria-label={`Example tools: ${g.label}`}>
-              {g.picks.map((t) => <li><a class="tool-chip" href={`/tools/${t!.slug}`}>{t!.name}</a></li>)}
-            </ul>
-            <a class="link-standalone" href={`/tools?job=${g.id}`}>All {plural(g.count, "tool")} for this job <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+            <div class="plate"><Image src={g.art} alt="" widths={[240, 360, 480]} sizes="(min-width: 1024px) 240px, 40vw" loading="lazy" /></div>
+            <div class="job-copy">
+              <h3 class="t-subhead">{g.label}</h3>
+              <p class="t-compact muted">{g.line}</p>
+              <ul class="chip-row" role="list" aria-label={`Example tools: ${g.label}`}>
+                {g.picks.map((t) => <li><a class="tool-chip" href={`/tools/${t!.slug}`}>{t!.name}</a></li>)}
+              </ul>
+              <a class="link-standalone" href={`/tools?job=${g.id}`}>All {plural(g.count, "tool")} for this job <svg class="icon icon-sm" aria-hidden="true"><use href="#i-arrow" /></svg></a>
+            </div>
           </article>
         ))}
       </div>
@@ -171,13 +190,28 @@ const freeCount = tools.filter((t) => t.free).length;
     </section>
   )}
 
+  <!-- §4b Tested against live sources: evidence beside the claim, from the public trust projection. -->
+  <section class="section section-sunken" aria-labelledby="tested-title">
+    <div class="container split split-even">
+      <div class="stack">
+        <h2 id="tested-title" class="t-section">Tools are tested against their live sources</h2>
+        <p class="t-lead muted">Strale runs its own tests on its tools: a known answer, the shape of the result, bad input, and whether the source is up.</p>
+        <p class="t-compact muted">The list shows the most recently tested tools and the share of each tool’s tests that passed on their latest run. Not every tool is tested on a schedule; each tool’s page says when it was last tested.</p>
+      </div>
+      <TestedNow tools={tools} trust={data.trust} loadedAt={data.loaded_at} />
+    </div>
+  </section>
+
   <!-- §5 Company and compliance data: the flagship, below the breadth. -->
   <section class="section section-flagship" aria-labelledby="company-title">
     <div class="container stack-loose">
-      <div class="section-head">
-        <p class="label">Company and compliance data</p>
-        <h2 id="company-title" class="t-section">Look up companies in official records in {plural(countries.length, "country", "countries")}</h2>
-        <p class="t-lead">Name and registration number, plus status, address and directors where the source provides them. What comes back differs by country, and each country’s page names the source.</p>
+      <div class="flagship-head">
+        <div class="section-head">
+          <p class="label">Company and compliance data</p>
+          <h2 id="company-title" class="t-section">Look up companies in official records in {plural(countries.length, "country", "countries")}</h2>
+          <p class="t-lead">Name and registration number, plus status, address and directors where the source provides them. What comes back differs by country, and each country’s page names the source.</p>
+        </div>
+        <div class="plate flagship-art"><Image src={artCompany} alt="" widths={[320, 480, 640]} sizes="(min-width: 1024px) 320px, 60vw" loading="lazy" /></div>
       </div>
       <div class="coverage" role="group" aria-label="Countries with a company-records tool">
         {byRegion.map((r) => (
@@ -209,9 +243,25 @@ const freeCount = tools.filter((t) => t.free).length;
   </section>
 
   <!-- §6 Two ways to pay. -->
-  <section class="section" aria-labelledby="pay-title">
+  <section class="section section-sunken" aria-labelledby="pay-title">
     <div class="container stack-loose">
       <h2 id="pay-title" class="t-section">Two ways to pay</h2>
+      <div class="grid-2 pay-ways">
+        <article class="pay-way">
+          <div class="plate pay-art"><Image src={artBalance} alt="" widths={[160, 240, 320]} sizes="160px" loading="lazy" /></div>
+          <div class="stack-tight">
+            <h3 class="t-subhead">An API key and a balance</h3>
+            <p class="t-compact muted">One Strale account and one key for every tool and bundled check. Top up a EUR balance by card; each paid call is charged from it.</p>
+          </div>
+        </article>
+        <article class="pay-way">
+          <div class="plate pay-art"><Image src={artWallet} alt="" widths={[160, 240, 320]} sizes="160px" loading="lazy" /></div>
+          <div class="stack-tight">
+            <h3 class="t-subhead">A wallet, with no account</h3>
+            <p class="t-compact muted">On eligible tools the agent pays each request in USDC over x402. The price is quoted before anything is paid.</p>
+          </div>
+        </article>
+      </div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="Two ways to pay, compared">
         <table class="table pay-table">
           <caption class="visually-hidden">API key with a prepaid balance compared with an x402 wallet</caption>
@@ -229,7 +279,7 @@ const freeCount = tools.filter((t) => t.free).length;
   </section>
 
   <!-- §7 Ways in. -->
-  <section class="section section-sunken" aria-labelledby="ways-title">
+  <section class="section" aria-labelledby="ways-title">
     <div class="container stack-loose">
       <h2 id="ways-title" class="t-section">Ways in</h2>
       <ul class="grid-4 ways" role="list">
@@ -263,42 +313,35 @@ const freeCount = tools.filter((t) => t.free).length;
   .section-head { display: grid; gap: var(--space-12); }
   .section-head .t-lead { max-width: var(--measure-lead); }
 
-  /* Hero: copy beside the artwork from 1024px; stacked above it below. */
-  .hero { background: var(--brand-image-ground); color: var(--brand-ink); overflow: hidden; }
-  .hero-grid { display: grid; gap: var(--space-32); padding-block: var(--space-48) 0; }
+  /* Hero: copy beside the flow artwork from 1024px; stacked above it below. White in light, the canvas in dark. */
+  .hero { background: var(--canvas); color: var(--text); overflow: hidden; border-bottom: var(--border-width) solid var(--border); }
+  .hero-grid { display: grid; gap: var(--space-32); padding-block: var(--space-48); }
   .hero + .section { padding-top: var(--space-64); }
   .hero-copy { display: grid; gap: var(--space-24); align-content: center; }
-  .hero-copy .t-lead { color: var(--brand-ink); }
+  .hero-copy .t-lead { color: var(--text-muted); }
   .hero-search { display: grid; gap: var(--space-8); max-width: var(--measure-lead); }
-  .hero-search .field-label { color: var(--brand-ink); }
   .hero-search-row { display: grid; gap: var(--space-8); grid-template-columns: minmax(0, 1fr) auto; }
-  .hero-search .input { min-height: var(--control-h-lg); }
+  .hero-search .input { min-height: var(--control-h-lg); box-shadow: var(--shadow-1); }
   .hero-search .btn { min-height: var(--control-h-lg); }
-  .hero-art { position: relative; }
-  .hero-raster { width: 100%; height: auto; }
-  @media (min-width: 1024px) { .hero-raster { mask-image: linear-gradient(to right, transparent, black 12%); } }
-  .hero-bands { display: none; width: 100%; height: auto; }
+  .hero-art { position: relative; min-width: 0; }
   @media (min-width: 1024px) {
-    /* Copy aligns with the content container; the artwork runs to the page edge. */
-    .hero-grid { max-width: none; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); padding-block: var(--space-80); padding-left: max(var(--gutter), calc((100% - var(--container-content)) / 2)); padding-right: 0; align-items: center; }
+    .hero-grid { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: var(--space-48); padding-block: var(--space-80) var(--space-96); align-items: center; }
   }
-  /* Dark: the rasters have a light ground, so dark shows the transparent bands on the dark canvas. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .hero { background: var(--canvas); color: var(--text); }
-    :root:not([data-theme="light"]) .hero-copy .t-lead, :root:not([data-theme="light"]) .hero-search .field-label { color: var(--text-muted); }
-    :root:not([data-theme="light"]) .hero-raster { display: none; }
-    :root:not([data-theme="light"]) .hero-bands { display: block; }
-  }
-  :root[data-theme="dark"] .hero { background: var(--canvas); color: var(--text); }
-  :root[data-theme="dark"] .hero-copy .t-lead, :root[data-theme="dark"] .hero-search .field-label { color: var(--text-muted); }
-  :root[data-theme="dark"] .hero-raster { display: none; }
-  :root[data-theme="dark"] .hero-bands { display: block; }
 
   .benefits { align-items: start; }
   .benefits .price-row { grid-template-columns: minmax(0, 1fr) auto; }
 
-  .jobs { gap: var(--space-48) var(--column-gap); }
-  .job { display: grid; gap: var(--space-12); align-content: start; padding-top: var(--space-24); border-top: var(--border-width) solid var(--border-strong); }
+  .jobs { gap: var(--space-24); }
+  .job { display: grid; gap: var(--space-20); grid-template-columns: minmax(0, 1fr); align-content: start; padding: var(--space-20); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); box-shadow: var(--shadow-1); transition: box-shadow var(--duration-base) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard), transform var(--duration-base) var(--ease-standard); }
+  .job:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); transform: translateY(calc(-1 * var(--space-2))); }
+  .job-copy { display: grid; gap: var(--space-12); align-content: start; min-width: 0; }
+  .job .plate { max-width: calc(var(--space-160) + var(--space-80)); }
+  .job:hover .plate img { transform: scale(1.04); }
+  @media (min-width: 640px) {
+    .job { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: center; }
+    .plate { max-width: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .job { transition: none; } .job:hover { transform: none; } .job:hover .plate img { transform: none; } }
   .chip-row { margin: 0; padding: 0; list-style: none; }
   .tool-chip { display: inline-flex; align-items: center; gap: var(--space-8); min-height: var(--control-h-sm); padding-inline: var(--space-12); border-radius: var(--radius-pill); border: var(--border-width) solid var(--border-strong); background: var(--surface); color: var(--text); text-decoration: none; font-family: var(--type-ui-family); font-size: var(--type-small-size); font-weight: var(--type-ui-weight); }
   .tool-chip:hover { background: var(--action-subtle); border-color: var(--link); }
@@ -309,7 +352,15 @@ const freeCount = tools.filter((t) => t.free).length;
   .steps { display: grid; gap: var(--space-16); padding-left: var(--space-20); margin: 0; }
   .steps li { padding-left: var(--space-4); }
 
-  .section-flagship { background: var(--surface-blue); }
+  .split-even { align-items: center; }
+  @media (min-width: 1024px) { .split-even { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); } }
+  .section-flagship { background: var(--canvas); }
+  .flagship-head { display: grid; gap: var(--space-24); grid-template-columns: minmax(0, 1fr); align-items: center; }
+  .flagship-art { width: 100%; max-width: calc(var(--space-160) * 2); justify-self: center; }
+  @media (min-width: 1024px) { .flagship-head { grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); } .flagship-art { justify-self: end; } }
+  .pay-ways { gap: var(--space-24); }
+  .pay-way { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-20); align-items: center; padding: var(--space-20); background: var(--surface); border: var(--border-width) solid var(--border); border-radius: var(--radius-card); }
+  .pay-art { width: calc(var(--space-96) + var(--space-32)); border-radius: var(--radius-control); }
   .coverage { display: grid; gap: var(--space-24); }
   .coverage-region { display: grid; gap: var(--space-12); }
 

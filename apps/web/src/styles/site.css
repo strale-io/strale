@@ -347,6 +347,11 @@ th:not([aria-sort]) .sort-btn .icon { opacity: 0.4; }
 .feature-list { display: grid; gap: var(--space-16); padding: 0; list-style: none; }
 .feature-list li { display: flex; gap: var(--space-12); align-items: flex-start; }
 .feature-list .icon { color: var(--link); margin-top: var(--space-2); }
+/* illustration plate (Open Flow 0.2): spot illustrations have a near-white ground, so they sit on paper in both
+   themes and multiply into it; no grey box shows on the white canvas, and dark mode gets a deliberate light tile. */
+.plate { background: var(--brand-paper); border-radius: var(--radius-media); overflow: hidden; aspect-ratio: 1; isolation: isolate; }
+.plate img { width: 100%; height: 100%; object-fit: cover; mix-blend-mode: multiply; transition: transform var(--duration-slow) var(--ease-standard); }
+@media (prefers-reduced-motion: reduce) { .plate img { transition: none; } }
 /* catalogue */
 .catalogue-bar { display: grid; gap: var(--space-16); }
 @media (min-width: 1024px) { .catalogue-bar { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
