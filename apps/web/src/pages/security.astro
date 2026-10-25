@@ -14,6 +14,7 @@
 // honest user agent and stops at blocks (DEC-20261023-A, PR #723).
 import { Image } from "astro:assets";
 import Base from "../layouts/Base.astro";
+import { CONTENT_CLEARING_VERIFIED } from "../content/retention";
 import CodeBlock from "../components/CodeBlock.astro";
 import artScreening from "../assets/illustrations/screening.webp";
 import { getSiteData, tools as allTools, API_BASE } from "../lib/site-data.ts";
@@ -30,11 +31,7 @@ const PLACE_SHORT: Record<string, string> = { US: "United States", EU: "European
 
 const days = (n: number) => `${plural(n, "day")}${n % 365 === 0 && n >= 365 ? ` (${n / 365} years)` : ""}`;
 const contentDays = facts.static.pii_retention_days;
-// The 90-day content clearing is the policy, but on 2026-10-25 a production query found it was not
-// running (732,114 calls past 90 days still held content). Until the fix is deployed and verified
-// in production (session "Fix 90-day call-content clearing"), the page states only the record
-// period. Set to true in the PR that verifies the drain.
-const CONTENT_CLEARING_VERIFIED = false;
+// Content-period statements wait for production verification (content/retention.ts).
 const recordDays = facts.static.retention_days_default;
 
 // What each vendor key does, in words. Names always come from facts; a new key

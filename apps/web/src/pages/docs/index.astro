@@ -2,6 +2,7 @@
 // Docs overview (SITE-STRUCTURE.md page 10): choose a route, make the first call with a free tool,
 // then the request and response shape, errors, idempotency and spend caps, past calls, reference.
 // Limits come from the API source (content/docs-facts.ts), prices and counts from the catalogue.
+import { CONTENT_CLEARING_VERIFIED } from "../../content/retention";
 import DocsNav from "../../components/DocsNav.astro";
 import CodeBlock from "../../components/CodeBlock.astro";
 import artDocs from "../../assets/illustrations/developer-jobs.webp";
@@ -166,7 +167,7 @@ const toc = [
     ]} />
     <ul class="doc-list t-body">
       <li>The record has the status, the input and output, the price, the latency, the provenance and the audit record.</li>
-      <li>Input, output, error and audit content are cleared {retentionDays} days after the call. The record of the call itself stays.</li>
+      {CONTENT_CLEARING_VERIFIED && <li>Input, output, error and audit content are cleared {retentionDays} days after the call. The record of the call itself stays.</li>}
       <li><code>GET /v1/transactions</code> lists your most recent calls.</li>
       <li>Calls made without a key can be looked up by anyone with the ID, with the content left out.</li>
       <li>x402 responses carry no transaction ID. The payment details are in <code>_meta.payment</code> of the response.</li>
