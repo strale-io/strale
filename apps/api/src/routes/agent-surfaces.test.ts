@@ -6,6 +6,10 @@ vi.mock("../lib/platform-facts.js", () => ({ computePlatformFacts: compute }));
 vi.mock("../lib/attribution.js", () => ({ recordDiscoveryHit: record }));
 vi.mock("../lib/trial-eligibility.js", () => ({ TRIAL_CREDITS_CENTS: 731 }));
 vi.mock("../lib/pricing-constants.js", () => ({ MIN_TOPUP_CENTS: 2345 }));
+// The MCP card counts marketplace-listed rows itself (DEC-20260503-A); 417 rows match facts.active_visible here.
+vi.mock("../db/index.js", () => ({
+  getDb: () => ({ select: () => ({ from: () => ({ where: async () => Array.from({ length: 417 }, (_, i) => ({ slug: `s${i}` })) }) }) }),
+}));
 
 const facts = {
   capability_counts: { active_visible: 417, free_tier_slugs: ["test-free-a", "test-free-b"] },

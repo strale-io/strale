@@ -140,16 +140,16 @@ describe("GET /llms-full.txt", () => {
 });
 
 describe("GET /.well-known/mcp.json", () => {
-  it("counts visible capabilities through platform facts", async () => {
+  it("counts visible, marketplace-listed capabilities only", async () => {
     vi.doUnmock("../lib/platform-facts.js");
     vi.doMock("../db/index.js", () => ({ getDb: () => makeDbStub([]) }));
     const { mcpServerCardRoute } = await import("./mcp-server-card.js");
     const response = await mcpServerCardRoute.request("/");
     expect(response.status).toBe(200);
-    const capabilityQuery = executed.map(rendered).find((p) => p.includes("active_visible"));
-    expect(capabilityQuery).toBeDefined();
-    expect(capabilityQuery).toContain("visible = true");
-    expect(capabilityQuery).toContain("lifecycle_state = 'active'");
+
+    const capabilityQuery = captured.map(rendered).find((p) => p.includes("marketplace_eligible"));
+    expect(capabilityQuery, `no capability query captured: ${JSON.stringify(captured.map(rendered))}`).toBeDefined();
+    expect(capabilityQuery).toContain("visible");
   });
 });
 

@@ -184,7 +184,7 @@ export interface CapabilityCounts {
   active_total: number;
   /** Total non-deactivated rows including draft + validating + probation. */
   catalogued: number;
-  /** Slugs flagged is_free_tier=true. */
+  /** Free-tier slugs that are currently servable (getFreeTierSlugs: active, visible, not withheld), not every row flagged is_free_tier. */
   free_tier_slugs: string[];
 }
 
@@ -209,7 +209,7 @@ export interface CountryCoverage {
 export interface PlatformFacts {
   capability_counts: CapabilityCounts;
   solution_count_active: number;
-  /** Lowest positive price among active, visible tools; null if none exist. */
+  /** Lowest positive price among active, visible, marketplace-listed paid tools; null if none exist. */
   price_floor_cents: number | null;
   countries: CountryCoverage;
   /** Computed from Railway region; honest about US-East deploy. */
@@ -264,7 +264,7 @@ export async function computePlatformFacts(): Promise<PlatformFacts> {
       COUNT(*) FILTER (WHERE lifecycle_state = 'active' AND visible = true)::int AS active_visible,
       COUNT(*) FILTER (WHERE lifecycle_state = 'active')::int AS active_total,
       COUNT(*) FILTER (WHERE lifecycle_state != 'deactivated')::int AS catalogued,
-      MIN(price_cents) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND is_free_tier = false AND price_cents > 0)::int AS price_floor_cents,
+      MIN(price_cents) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND is_free_tier = false AND marketplace_eligible = true AND price_cents > 0)::int AS price_floor_cents,
       ARRAY_AGG(slug) FILTER (WHERE lifecycle_state = 'active' AND visible = true AND slug LIKE '%-company-data%') AS active_country_slugs,
       ARRAY_AGG(slug) FILTER (WHERE slug LIKE '%-company-data%') AS all_country_slugs
     FROM capabilities

@@ -6,6 +6,9 @@
  */
 
 import { Hono } from "hono";
+import { and, eq } from "drizzle-orm";
+import { getDb } from "../db/index.js";
+import { capabilities } from "../db/schema.js";
 import { computePlatformFacts } from "../lib/platform-facts.js";
 
 const mcpServerCardRoute = new Hono();
@@ -21,8 +24,24 @@ async function buildCard(): Promise<object> {
   const now = Date.now();
   if (cached && now - cached.at < CACHE_TTL_MS) return cached.json;
 
+  const db = getDb();
+  const rows = await db
+    .select({ slug: capabilities.slug })
+    .from(capabilities)
+    .where(
+      and(
+        eq(capabilities.isActive, true),
+        // strale.dev surfacing per DEC-20260503-A.
+        eq(capabilities.marketplaceEligible, true),
+        // Counted withdrawn capabilities, so the advertised number was up to
+        // ten too high. No capability is named here — only the count — but a
+        // public claim about how many services exist has to match the number a
+        // reader can actually see.
+        eq(capabilities.visible, true),
+      ),
+    );
+  const count = rows.length;
   const facts = await computePlatformFacts();
-  const count = facts.capability_counts.active_visible;
   const countryCount = facts.countries.company_data_active_iso.length;
 
   const card = {

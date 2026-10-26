@@ -13,7 +13,7 @@ describe("live catalogue pricing facts", () => {
     expect(facts.price_floor_cents).toBe(7);
     expect(facts.capability_counts.free_tier_slugs).toEqual(["servable-free-tool"]);
     const query = new PgDialect().sqlToQuery(execute.mock.calls[0][0]).sql;
-    expect(query).toMatch(/MIN\(price_cents\) FILTER \(WHERE lifecycle_state = 'active' AND visible = true AND is_free_tier = false AND price_cents > 0\)::int AS price_floor_cents/);
+    expect(query).toMatch(/MIN\(price_cents\) FILTER \(WHERE lifecycle_state = 'active' AND visible = true AND is_free_tier = false AND marketplace_eligible = true AND price_cents > 0\)::int AS price_floor_cents/);
     execute.mockClear();
   });
 

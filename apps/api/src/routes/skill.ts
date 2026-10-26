@@ -36,7 +36,8 @@ For paid API-key calls, use a Strale account and send:
 
 \`Authorization: Bearer <STRALE_API_KEY>\`
 
-Register at https://strale.dev/signup. Eligible first-time addresses can receive
+Register with \`POST https://api.strale.io/v1/auth/register\` (or at https://strale.dev/signup); the
+response carries your API key and \`wallet_balance_cents\`. Eligible first-time addresses can receive
 ${euros(TRIAL_CREDITS_CENTS)} in trial credits; read the granted balance from the signup
 response rather than assuming eligibility. No credit card is required for the trial.
 Free tools can be called without an API key, subject to the per-IP daily limit.
@@ -55,7 +56,7 @@ the placeholders before sending:
 
 \`{ "capability_slug": "<discovered slug>", "inputs": { "url": "<public URL>" }, "max_price_cents": <your integer budget> }\`
 
-Set \`dry_run: true\` to preview execution. Inputs differ between tools.
+Set \`dry_run: true\` to see the price and whether your wallet covers it, without executing. Inputs differ between tools.
 If a call returns an asynchronous response, poll
 \`GET /v1/transactions/{transaction_id}\` using the same API key until it finishes.
 
@@ -82,8 +83,8 @@ USDC on Base. Eligibility is a subset of the catalogue.
 Pay per call, with no subscription or contract.
 ${facts.price_floor_cents == null ? "No paid-tool price floor is currently available." : `Paid tools start at ${euros(facts.price_floor_cents)} per call in the current catalogue.`}
 The minimum card wallet top-up is ${euros(MIN_TOPUP_CENTS)}.
-A single tool is charged only when the call succeeds; a bundled check is refunded
-only if every step fails. Read the current price before calling.
+A failed call is not charged; an asynchronous call holds its price until it finishes.
+A bundled check is not charged when it cannot deliver; a partial result is charged. Read the current price before calling.
 
 There are ${free.length} free-tier tools: ${free.length ? free.map((slug) => `\`${slug}\``).join(", ") : "none currently listed"}.
 `;
