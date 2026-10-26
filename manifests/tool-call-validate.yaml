@@ -100,3 +100,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Combine with runtime testing against the actual tool to verify that parameter values produce expected results
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

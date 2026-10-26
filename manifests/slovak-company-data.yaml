@@ -203,3 +203,8 @@ output_field_reliability:
   primary_registration_id: common
   registered_address: guaranteed
   date_incorporated: common
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

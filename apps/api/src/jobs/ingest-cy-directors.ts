@@ -7,7 +7,8 @@
  * the `cy_directors` table. The handler (`capabilities/cypriot-company-
  * data.ts`) queries this table at request time to populate
  * `legal_representatives[]` for tier-2 KYB coverage. Implements DEC-20260518-E
- * exhaustive-enumeration outcome for CY and DEC-20260518-F attribution.
+ * exhaustive-enumeration outcome for CY and the attribution requirement of
+ * DEC-20260518-F (carried into DEC-20261023-A).
  *
  * Upstream:
  *   URL:    https://data.gov.cy/sites/default/files/organisation_officials_83.csv

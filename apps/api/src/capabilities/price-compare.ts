@@ -54,7 +54,7 @@ registerCapability("price-compare", async (input: CapabilityInput) => {
     throw new Error(`No PriceRunner site for country "${country}". Supported: SE, NO, DK, FI.`);
   }
   const prUrl = `https://www.pricerunner.${prTld}/search?q=${encodeURIComponent(product)}`;
-  const html = await fetchRenderedHtml(prUrl);
+  const html = await fetchRenderedHtml(prUrl, { source: "strale" });
   pageText = htmlToText(html).slice(0, 12000);
   sourceUsed = `pricerunner.${prTld}`;
 

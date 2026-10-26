@@ -91,3 +91,8 @@ limitations:
     workaround: >-
       Cache successful validations and implement retry logic; the EORI database is updated weekly so cached results
       remain valid short-term
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: preferred
+  acquisition_method: direct_api

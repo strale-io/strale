@@ -1,3 +1,4 @@
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import {
   MAX_PAGESPEED_REPORT_BYTES,
@@ -34,6 +35,11 @@ registerCapability("page-speed-test", async (input: CapabilityInput) => {
   if (strategy !== "mobile" && strategy !== "desktop") {
     throw new Error("'strategy' must be 'mobile' or 'desktop'.");
   }
+
+  // DEC-20261023-A: Google's Lighthouse fetches the page (identifying itself
+  // as Chrome-Lighthouse), but Strale directs that fetch, so the page's
+  // robots.txt is honoured first.
+  await assertRobotsAllowed(url);
 
   // Build PageSpeed Insights API URL
   let apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${strategy}&category=performance`;

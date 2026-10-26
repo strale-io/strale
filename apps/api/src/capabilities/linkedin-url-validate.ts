@@ -1,3 +1,4 @@
+import { STRALE_USER_AGENT } from "../lib/site-access.js";
 import { registerCapability, type CapabilityInput } from "./index.js";
 import { safeFetch } from "../lib/safe-fetch.js";
 
@@ -103,8 +104,7 @@ async function checkAccessibility(
       const response = await safeFetch(url, {
         method: "GET",
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "User-Agent": STRALE_USER_AGENT,
           Accept: "text/html",
         },
         // safeFetch follows up to 3 hops with per-hop re-validation

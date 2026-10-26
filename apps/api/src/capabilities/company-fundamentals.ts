@@ -3,7 +3,8 @@ import { readJsonWithLimit } from "../lib/resource-limits.js";
 
 // SEC XBRL company-concept API — the primary source for US filers' reported
 // financials, free and keyless. Preferred over a commercial aggregator under
-// the preference order in DEC-20260813-A: official API first.
+// the preferred lane of DEC-20261023-A (formerly DEC-20260813-A's preference
+// order): official API first.
 //
 // The SEC requires a descriptive User-Agent with a contact address and asks
 // for no more than 10 requests/second, so concepts are fetched in bounded

@@ -216,7 +216,8 @@ registerCapability("cypriot-company-data", async (input: CapabilityInput) => {
     "C-37/20 ruling; legitimate-interest gate applies. Programmatic UBO " +
     "lookup not exposed at v1.";
 
-  // Augment provenance with the open-data attribution per DEC-20260518-F
+  // Augment provenance with the open-data attribution (DEC-20261023-A keeps
+  // DEC-20260518-F's attribution and provenance requirement)
   // constraint (d). The Openapi-resolver already populated the top-level
   // provenance with required {source, fetched_at}; we add tier-2 fields.
   const baseProvenance = __etResult.provenance;

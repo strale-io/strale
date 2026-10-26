@@ -218,3 +218,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Provide target audience, tone, and key messaging points in the input for more tailored outlines
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

@@ -133,3 +133,8 @@ limitations:
     category: coverage
     severity: info
     workaround: Review the generated .gitignore against your actual build output directory and add project-specific patterns
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

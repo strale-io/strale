@@ -100,7 +100,7 @@ registerCapability("brazilian-company-data", async (input: CapabilityInput) => {
       attribution:
         "Data sourced from ReceitaWS, a third-party JSON wrapper of the Brazilian Receita Federal CNPJ register. Underlying records are statutory public records published by Receita Federal do Brasil.",
       source_note:
-        "Tier-2 vendor-mediated public records (DEC-20260428-A). Long-term migration to first-party ingest of Receita Federal CNPJ open data (dados.gov.br) is queued for when BR enters v1.x scope.",
+        "Vendor-mediated public records. ReceitaWS's resale terms are not yet recorded by Strale. Long-term migration to first-party ingest of Receita Federal CNPJ open data (dados.gov.br) is queued for when BR enters v1.x scope.",
     },
   };
 });

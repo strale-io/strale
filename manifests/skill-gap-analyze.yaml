@@ -112,3 +112,8 @@ limitations:
     category: accuracy
     severity: info
     workaround: Use as a starting point for development planning and validate critical gaps with skills assessments or interviews
+
+# Data-access lane and acquisition method (DEC-20261023-A; lib/data-access.ts).
+data_access:
+  lane: not_applicable
+  acquisition_method: computed

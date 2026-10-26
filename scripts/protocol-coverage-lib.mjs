@@ -18,7 +18,8 @@
  * neither; EXCLUSION_STALE when an excluded_sections entry names a heading
  * no longer in CLAUDE.md). Review round 1 replaced the previous
  * "heading contains the word Protocol" heuristic, which silently left
- * code-enforced sections like "Review routing" (npm run codex:check) and
+ * code-enforced sections like "Review routing" (npm run codex:check, retired
+ * 2026-10-24 under DEC-20261024-A) and
  * "Drift-prevention surfaces" (check-platform-facts-drift.ts) uncovered. It
  * also proves docs/project/PROTOCOL-ROUTER.md -- generated from this
  * manifest by protocolRouterMarkdown/protocolRouterGeneratedFiles below --

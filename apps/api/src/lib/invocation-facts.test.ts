@@ -155,7 +155,7 @@ describe("the floor can see a capability that only runs inside solutions", () =>
     }
 
     // A ToS refusal is an answer the platform is required to give under
-    // DEC-20260428-A. Scoring it as a defect would delist capabilities for
+    // DEC-20261023-A (formerly DEC-20260428-A). Scoring it as a defect would delist capabilities for
     // obeying policy.
     const refusal = outcomeFromError(
       new CapabilityRefusalError(

@@ -2990,9 +2990,11 @@ function buildFullAudit(params: {
   } = params;
 
   // CRIT-10 / F-AUDIT-17: validate provenance at the audit-build boundary.
-  // Logs warnings when provenance is missing/invalid or when DEC-20260428-A
-  // Tier-2 disclosure (upstream_vendor / acquisition_method / primary_source_
-  // _reference) is incomplete for vendor-scraping capabilities. Warn-only in
+  // Logs warnings when provenance is missing/invalid or when the vendor
+  // sourcing disclosure (upstream_vendor / acquisition_method / primary_source_
+  // _reference; DEC-20261023-A requires vendor and method on every answer,
+  // superseding DEC-20260428-A Tier 2) is incomplete for vendor-scraping
+  // capabilities. Warn-only in
   // v1; v1.1 escalates to block once we've quantified production failure rate.
   // capabilityType="scraping" is used as a proxy for data_source_type=scrape
   // since manifests aren't queryable as a column today.

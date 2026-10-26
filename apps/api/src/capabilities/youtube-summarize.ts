@@ -6,7 +6,10 @@ import {
   readPageHtml,
   readTextWithLimit,
 } from "../lib/resource-limits.js";
-import { safeFetch } from "../lib/safe-fetch.js";
+import { discardBody, safeFetch } from "../lib/safe-fetch.js";
+import { STRALE_USER_AGENT, SiteAccessRefusedError, isBlockStatus } from "../lib/site-access.js";
+import { assertRobotsAllowed } from "../lib/robots-txt.js";
+import { looksLikeJsChallenge } from "./lib/web-provider.js";
 import Anthropic from "@anthropic-ai/sdk";
 import { fetchRenderedHtml } from "./lib/browserless-extract.js";
 import { extractJsonWithLlm } from "./lib/llm-extract.js";
@@ -98,27 +101,49 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
+/** YouTube's soft block: a 200 watch page asking to sign in to prove you are not a bot. */
+export function looksLikeYouTubeBotCheck(html: string): boolean {
+  return /confirm you(?:'|\u2019|’)?re not a bot/i.test(html);
+}
+
 async function fetchTranscript(videoId: string): Promise<string | null> {
   const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-  // Try direct fetch first (works from residential IPs), then Browserless
+  // Try direct fetch first, then Browserless for a page that needs rendering.
+  // DEC-20261023-A: if YouTube refuses the direct fetch, rendering the same
+  // page in a real browser is retrying a blocked request through another
+  // route, so the fallback is skipped. A refusal is any of: robots.txt
+  // disallowing the page, HTTP 401/403/407/429, an anti-bot challenge, or
+  // YouTube's own soft block — HTTP 200 with "Sign in to confirm you're not a
+  // bot" and no captions, which it serves to datacenter IPs.
   let pageHtml: string | null = null;
+  let blocked = false;
 
   try {
+    await assertRobotsAllowed(ytUrl);
     const pageRes = await safeFetch(ytUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; StraleBot/1.0; +https://strale.dev)", "Accept-Language": "en-US,en;q=0.9" },
+      headers: { "User-Agent": STRALE_USER_AGENT, "Accept-Language": "en-US,en;q=0.9" },
       signal: AbortSignal.timeout(10000),
     });
     if (pageRes.ok) {
       const html = await readPageHtml(pageRes);
       if (html.includes('"captions"')) pageHtml = html;
+      else blocked = looksLikeJsChallenge(html) || looksLikeYouTubeBotCheck(html);
+    } else {
+      await discardBody(pageRes, `youtube watch page HTTP ${pageRes.status}`);
+      blocked = isBlockStatus(pageRes.status);
     }
-  } catch { /* fall through to Browserless */ }
+  } catch (err) {
+    // A site-access refusal (robots.txt) is a block; anything else falls
+    // through to the render.
+    blocked = err instanceof SiteAccessRefusedError;
+  }
 
-  // Fallback: use Browserless (EU West) which renders full JS and gets captions
-  if (!pageHtml) {
+  // Fallback: Browserless renders full JS and gets captions — only when the
+  // direct fetch was not refused.
+  if (!pageHtml && !blocked) {
     try {
-      const html = await fetchRenderedHtml(ytUrl);
+      const html = await fetchRenderedHtml(ytUrl, { source: "strale" });
       if (html.includes('"captions"') || html.includes('captionTracks')) pageHtml = html;
     } catch { /* both failed */ }
   }
